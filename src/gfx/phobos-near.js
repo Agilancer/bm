@@ -7,7 +7,7 @@
 // What stops a body is none of this: every house's walls are colliders from the start, the doorway left open.
 
 import { buildPhobosCell } from '../core/sites.js';
-import { CASTLE_CELLS, CELL, cellOf, phobosHouses } from '../core/phobos-build.js';
+import { CASTLE_CELLS, CELL, cellOf, phobosHouses, wallCells } from '../core/phobos-build.js';
 import { CITY, CRAG } from '../core/east.js';
 
 const NEAR = 150, FAR = 230, KEEP = 30;   // metres to build a cell at, and to let it go at; how many are kept at most
@@ -17,7 +17,7 @@ export class PhobosNear {
     this.r = renderer;
     this.cells = new Map();       // cell -> { VB, IB, opaque, cut, x, z }
     // (The cells with houses in, and the crag's: src/core/phobos-build.js castleNear.)
-    this.have = new Set([...phobosHouses().map((h) => h.cell), ...CASTLE_CELLS]);
+    this.have = new Set([...phobosHouses().map((h) => h.cell), ...CASTLE_CELLS, ...wallCells()]);
     this.count = 0;
   }
 

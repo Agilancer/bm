@@ -544,6 +544,14 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
       // (And the Keep's own, 'char': near black, and matte, so the sun on a round shaft doesn't turn it silver.)
       if (tintK == 13u) { albedo = vec3f(lum * 0.5) * vec3f(0.52, 0.47, 0.47); rough = max(rough, 0.8); }
     }
+    // Phobos's walls weathered: rain-streaks down every face from whatever's over it, and a broad blotching, so a drum a
+    // hundred metres high isn't one even tone. (Only there, in the box of the city and the crag: src/core/phobos-build.js.)
+    if (p.x > 9300.0 && p.x < 11500.0 && abs(p.z) < 900.0 && abs(n0.y) < 0.45 && params.z >= 0.0) {
+      let along = select(p.z, p.x, abs(n0.z) > abs(n0.x));
+      let sk = textureSampleLevel(noiseTex, repeatSmp, vec2f(along * 0.21, p.y * 0.006), 0.0).r;
+      let blot = textureSampleLevel(noiseTex, repeatSmp, vec2f(along * 0.0045 + 0.3, p.y * 0.0045 + 0.7), 0.0).g;
+      albedo *= (1.0 - 0.36 * smoothstep(0.5, 0.8, sk)) * (0.74 + 0.5 * blot);
+    }
     n = perturbD(n0, dp1, dp2, dx, dy, det.rg, select(1.0, mix(1.4, 0.7, smoothstep(5.0, 20.0, dist)), params.z < 0.0));
     if (params.z < 0.0) {
       // What the damp has done, in world space, so it runs on across every tile and joint. Mortar and hollows first.

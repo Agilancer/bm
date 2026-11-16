@@ -2530,7 +2530,7 @@ export class Renderer {
     // (And one that reaches far counts as nearer by half its reach: a fire hung over a hall is kept before a candle.)
     // (And a fire or a candle indoors, src/core/phobos-build.js houseNear's, counts as further off again from out in the
     // street, where its light is all on the inside of a wall: the street's lanterns are kept before it.)
-    for (const e of lit) { const dd = Math.hypot(e.L.p[0] - cam.x, e.L.p[2] - cam.z); e.d = dd - e.L.r * 0.5 + ((e.L.p[0] - cam.x) * cam.fx + (e.L.p[2] - cam.z) * cam.fz < 0 ? 12 : 0) + (e.L.indoor && dd > 9 ? 24 : 0); }
+    for (const e of lit) { const dd = Math.hypot(e.L.p[0] - cam.x, e.L.p[2] - cam.z); e.d = dd - e.L.r * 0.5 + ((e.L.p[0] - cam.x) * cam.fx + (e.L.p[2] - cam.z) * cam.fz < 0 ? 12 : 0) + (e.L.indoor && dd > 9 ? 24 : 0) - (e.L.prio || 0); }
     if (take < lit.length) lit.sort((a, b) => a.d - b.d);
     const nextD = take < lit.length ? lit[take].d : 1e9;
     for (let i = 0; i < take; i++) {
@@ -3415,6 +3415,8 @@ export class Renderer {
     drawGlow(this, mp, this.interior, vis.hall || vis.deep);
     // (Down a delve, its fires: flames that face you. src/core/delve-build.js fire().)
     if (vis.warrens && !vis.testHall) drawDelveFires(this, mp, this.interior, this.delveFires ||= buildDelveFires(this, buildSites().fires), delveAt(cam.x, cam.z));
+    // (And Phobos's, out in the open: the Approach's braziers and the fire bowls on its towers. src/core/phobos-build.js fire().)
+    else if (!vis.warrens && cam.x > 8700 && cam.x < 11700 && Math.abs(cam.z) < 1400) drawDelveFires(this, mp, this.interior, this.delveFires ||= buildDelveFires(this, buildSites().fires), 'phobos');
     this.openingStage?.drawGlow(mp);
     this.trail?.draw(mp);
     if (tier.lean) {

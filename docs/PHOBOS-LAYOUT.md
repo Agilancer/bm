@@ -162,7 +162,7 @@ Twenty-four wings in three wards. Every wing has one great room with a use (each
   Gallery). The Treasury (two keys deep: a unique reward and a whole idol part). the Observatory (names the Keep's
   spires and shows which are won). The Throne Antechambers (the idol's door).
 
-**The castle answers you**: bells rung change the patrols, and each key turns a ward (lamps lit, a gate left open,
+**The castle answers you**: horns sounded change the patrols, and each key turns a ward (lamps lit, a gate left open,
 the household's people moving in).
 
 **Eight dungeons.** Each one's own door is opened by a line of the Librarian's household's quests (dozens in all).

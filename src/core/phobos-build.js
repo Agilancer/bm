@@ -200,6 +200,16 @@ function houseNear(K, h) {
     band(top - 0.42, 0.42, 0.24);
     if (flag) { const by = top - 0.9, len = Math.min(7, by - fy - 3.4), [bx, , bz] = P(0, 0, fz); if (len > 2.5) { K.hanging('cloth_red', bx, by, bz, [f * s, f * c], 1.7, len, 3); K.beam('iron', P(-0.88, by + 0.04, fz + f * 0.1), P(0.88, by + 0.04, fz + f * 0.1), 0.045); } }
   }
+  // A jettied front on some along the named streets: the first floor's beam carried out over the street on brackets; and
+  // where there's no shop's awning under it, a pent roof of the house's tiles along the ground floor.
+  if (h.spine && !ruin && storeys >= 2 && r(33) < 0.5) {
+    const jy = fy + 3.3 - 0.4, [bx, , bz] = P(0, 0, fz + f * 0.26);
+    K.box('dark:wood', bx, jy, bz, h.hx + 0.1, 0.34, 0.26, h.yaw, { collide: false });
+    for (let k = 0, n = Math.max(2, Math.round(h.hx / 1.3)); k <= n; k++) { const [kx, , kz] = P(-h.hx + 0.2 + (2 * h.hx - 0.4) * k / n, 0, fz + f * 0.2); K.box('dark:wood', kx, jy - 0.55, kz, 0.08, 0.55, 0.2, h.yaw, { collide: false }); }
+    if (!h.shop) { const py = jy - 0.05; K.quad(h.roof, P(-h.hx, py + 0.5, fz + f * 0.02), P(h.hx, py + 0.5, fz + f * 0.02), P(h.hx, py - 0.15, fz + f * 0.85), P(-h.hx, py - 0.15, fz + f * 0.85), [f * s * 0.6, 0.8, f * c * 0.6]); }
+  }
+  // A lean-to against the back of one house in five off the named streets: a woodstore, a pen, somewhere out of the rain.
+  if (!h.spine && !ruin && h.hx > 2.6 && r(34) < 0.2) { const [lx, , lz] = P((r(35) - 0.5) * (h.hx - 1.2), 0, -f * (h.hz + 0.65)); K.leanTo(lx, lz, h.yaw + (f > 0 ? Math.PI : 0), 0.9 + 0.4 * r(36), 0.65, 2.3, h.roof || 'roof_4', 'dark:wood'); }
   if (r(8) < (h.shop ? 0.9 : 0.5)) { const q = P(DOOR + 0.5, fy + 2.5, fz); K.wallLamp(...q, [f * s, f * c]); if (r(8) < 0.3) (K.lamps ||= []).push({ p: [q[0] + f * s * 0.5, q[1] - 0.4, q[2] + f * c * 0.5], c: [1, 0.62, 0.3], r: 18, i: 11, flicker: 0.4 }); }
   // A shop's front, on the named streets: an awning over the door, a board hung out on an iron bracket, goods by the step.
   if (h.shop && !ruin) {
@@ -325,6 +335,31 @@ function upstairsNear(K, h, up, P, r) {
     bx('dark:wood', ix - 0.4, uy, f * 1.6, 0.3, 0.75, 0.2);
   }
 }
+// A curtain wall with relief: a heavy course along its foot, a pilaster every eighteen metres a step lighter than the
+// wall, and an arrow slit both faces between each pair. (Forty metres of blank wall read as a cliff, not a wall built.)
+function curtain(K, layer, ax, az, bx, bz, t, h, o = {}) {
+  K.wall(layer, ax, az, bx, bz, t, h, o);
+  if (K.lean) return;
+  const len = Math.hypot(bx - ax, bz - az), yaw = Math.atan2(bx - ax, bz - az) - Math.PI / 2, ux = (bx - ax) / len, uz = (bz - az) / len;
+  const lite = layer.startsWith('soot:') ? layer.slice(5) : layer.startsWith('char:') ? 'soot:' + layer.slice(5) : 'soot:' + layer.replace(/^\w+:/, '');
+  const n = Math.max(1, Math.round(len / 18));
+  for (let k = 0; k <= n; k++) { const x = ax + (bx - ax) * k / n, z = az + (bz - az) * k / n; K.box(lite, x, Y(x, z) - 0.5, z, 0.9, h * 0.94, t / 2 + 0.7, yaw, { collide: false }); }
+  for (let k = 0; k < n; k++) {
+    const x = ax + (bx - ax) * (k + 0.5) / n, z = az + (bz - az) * (k + 0.5) / n, y = Y(x, z) - 0.5;
+    K.box(lite, x, y, z, len / n / 2, 3.4, t / 2 + 0.9, yaw, { collide: false });
+    for (const s of [-1, 1]) { const fx = x - uz * s * (t / 2 + 0.03), fz = z + ux * s * (t / 2 + 0.03), sy = y + h * 0.55; K.quad('iron', [fx - ux * 0.3, sy, fz - uz * 0.3], [fx + ux * 0.3, sy, fz + uz * 0.3], [fx + ux * 0.3, sy + 3.2, fz + uz * 0.3], [fx - ux * 0.3, sy + 3.2, fz - uz * 0.3], [-uz * s, 0, ux * s]); }
+  }
+}
+
+// A fire that moves: a flame that turns to face you and the warm air round it (the delves' fires, src/gfx/interior.js GLOW,
+// drawn near Phobos by src/gfx/renderer.js), over a low bed of coals, which is all a far eye and the shadows get.
+function fire(K, x, y, z, w, h, hue = 'dark:flame') {
+  K.cone('blood:flame', x, y, z, w * 0.85, h * 0.12, 6);
+  const seed = hash2(Math.round(x * 3), Math.round(z * 3));
+  (K.fires ||= []).push({ delve: 'phobos', hue, kind: 'flame', x, y, z, w, h, ember: 0, seed },
+    { delve: 'phobos', hue, kind: 'glow', x, y: y + h * 0.45, z, w: w * 2.6, h: w * 2.6, ember: 0, seed: 0 });
+}
+
 // A round tower from the ground (or y) up, with a steep cone (one small one in five a needle) or a crown of merlons (a fire
 // in an iron bowl on some); a ring gallery near its head if big. And the kit that makes it masonry at three hundred metres
 // (not on a phone): a battered foot, a dark string course every eighteen metres, slits staggered up it, a few lit at
@@ -338,7 +373,7 @@ function tower(K, layer, x, z, r, h, roof, o = {}) {
   if (roof) { if (r < 9 && hash2(id, 11) < 0.08) K.cone(roof, x, y + h, z, r + 0.5, r * (o.steep ?? 2.4) * 1.8, sides); else K.cone(roof, x, y + h, z, r + (r >= 8 ? 2.4 : 0.8), r * (o.steep ?? 2.4), sides); }
   else {
     for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; K.box(layer, x + Math.cos(a) * (r - 0.5), y + h, z + Math.sin(a) * (r - 0.5), 0.8, 1.6, 0.5, -a, { collide: false }); }
-    if (hash2(id, 12) < 0.45) { K.drum('iron', x, y + h, z, r * 0.22, 1.2, 8, { r2: r * 0.34, open: true, collide: false }); K.cone('dark:flame', x, y + h + 0.6, z, r * 0.26, r * 0.55, 6); }
+    if (hash2(id, 12) < 0.45) { K.drum('iron', x, y + h, z, r * 0.22, 1.2, 8, { r2: r * 0.34, open: true, collide: false }); fire(K, x, y + h + 0.6, z, r * 0.24, r * 0.62); }
   }
   if (K.lean || o.plain) return y + h;
   // (The bands, and the corbels under a small one's head, a step lighter than the tower's own stone (the same stone less
@@ -353,7 +388,7 @@ function tower(K, layer, x, z, r, h, roof, o = {}) {
   const n = Math.max(4, Math.round(h / 9)), sw = 0.22 + r * 0.03, sh = 1.2 + r * 0.16;
   for (let k = 0; k < n; k++) {
     const a = (((k * 5 + (k & 1) * Math.floor(sides / 2) + id) % sides) + 0.5) / sides * TAU, yy = y + 6 + (h - 16) * (k + 0.5) / n, cx = x + Math.cos(a) * (ri + 0.05), cz = z + Math.sin(a) * (ri + 0.05), tx = -Math.sin(a) * sw, tz = Math.cos(a) * sw;
-    K.quad(hash2(id + k, 13) < 0.22 ? 'eve:flame' : 'iron', [cx - tx, yy, cz - tz], [cx + tx, yy, cz + tz], [cx + tx, yy + sh, cz + tz], [cx - tx, yy + sh, cz - tz], [Math.cos(a), 0, Math.sin(a)]);
+    K.quad(hash2(id + k, 13) < (o.lit ?? 0.22) ? 'eve:flame' : 'iron', [cx - tx, yy, cz - tz], [cx + tx, yy, cz + tz], [cx + tx, yy + sh, cz + tz], [cx - tx, yy + sh, cz - tz], [Math.cos(a), 0, Math.sin(a)]);
   }
   return y + h;
 }
@@ -496,7 +531,7 @@ const LOOK = {
   wharf: { lot: [16, 13], h: [8, 11], fill: 0.9, wall: ['ph_poor_brick', 'rubble'], roof: ['slate:roof_4', 'soot:roof_4', 'umber:roof_4'], row: 2 },
   tanners: { lot: [8, 10], h: [7, 11], fill: 0.94, wall: ['ph_daub', 'ph_poor_brick', 'ph_daub'], roof: ['umber:roof_3', 'umber:roof_4', 'roof_4', 'soot:roof_3'] },
   bones: { lot: [10, 13], h: [6, 10], fill: 0.3, wall: ['pale:stone', 'pale:rubble'], roof: ['dark:roof_2', 'slate:roof_2'], row: 3, alley: 7 },
-  barracks: { lot: [22, 11], h: [9, 12], fill: 0.9, wall: ['block', 'course'], roof: ['slate:roof_2', 'blood:roof_2', 'slate:roof_1'], open: 62, row: 2, alley: 5 },
+  barracks: { lot: [22, 11], h: [9, 12], fill: 0.9, wall: ['soot:block', 'slate:course'], roof: ['slate:roof_2', 'blood:roof_2', 'slate:roof_1'], open: 62, row: 2, alley: 5 },
   mages: { lot: [11, 12], h: [11, 16], fill: 0.9, spireWall: 'slate:course', wall: ['slate:ph_dressed', 'ph_rich_brick', 'frost:course'], roof: ['slate:roof_2', 'dark:roof_2', 'slate:roof_1'], spires: 0.06, row: 3 },
   dukes: { lot: [15, 15], h: [10, 14], fill: 0.85, wall: ['slate:ph_dressed', 'ph_rich_brick'], roof: ['blood:roof_1', 'slate:roof_2', 'dark:roof_2', 'blood:roof_2'], spires: 0.04, row: 2, alley: 5 },
   approach: { lot: [11, 12], h: [9, 14], fill: 0.85, wall: ['ph_granite', 'slate:ph_dressed'], roof: ['dark:roof_2', 'blood:roof_2', 'slate:roof_2'], row: 3 },
@@ -567,8 +602,8 @@ function wall(K) {
   }
   // The ways up onto it: a stair inside the wall beside the Drawbridge Gate (south of it) and one beside the Castle Gate
   // (north of it), from the street to the walk.
-  { const fx = CITY.x - CITY.a + T / 2, zc = 70; stairs(K, 'dark:stone', fx, zc, Y(fx + 8, zc), TOP[5], 1); }
-  { const fx = CITY.x + CITY.a - T / 2, zc = -70; stairs(K, 'dark:stone', fx, zc, Y(fx - 8, zc), TOP[11], -1); }
+  { const fx = CITY.x - CITY.a + T / 2, zc = 70; stairs(K, L, fx, zc, Y(fx + 8, zc), TOP[5], 1); }
+  { const fx = CITY.x + CITY.a - T / 2, zc = -70; stairs(K, L, fx, zc, Y(fx - 8, zc), TOP[11], -1); }
   // The barbican outside the Drawbridge Gate: two towers and a yard wall past the moat, and the bridge's deck over it.
   const bx = CITY.x - CITY.a - 34;
   for (const s of [-1, 1]) tower(K, L, bx, s * 24 - 6, 10, 48, 'soot:roof_2');
@@ -773,6 +808,43 @@ export const CASTLE_CELLS = (() => {
   return s;
 })();
 const inCell = (cell, x, z) => cellOf(x, z) === cell;
+// The city wall from near: a pilaster every eighteen metres, its own stone less sooted; a heavy course along the foot of
+// each bay and two slits up it, both faces. (Far off it's the land's plain wall: this, round the whole of it, would cost the
+// land's budget twice over.) wallBays(): where each pilaster stands, clear of the gates.
+let BAYS = null;
+function wallBays() {
+  if (BAYS) return BAYS;
+  const W = CITY_WALL, gates = PHOBOS.gates.map((g) => [g.x, g.z]);
+  BAYS = [];
+  for (let i = 0; i < 12; i++) {
+    const a = W[i], b = W[(i + 1) % 12], len = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / len, uz = (b[1] - a[1]) / len;
+    const yaw = Math.atan2(b[0] - a[0], b[1] - a[1]) - Math.PI / 2;
+    let top = -Infinity; for (let k = 0; k <= 40; k++) top = Math.max(top, Y(a[0] + (b[0] - a[0]) * k / 40, a[1] + (b[1] - a[1]) * k / 40));
+    for (let t = 16, k = 0; t < len - 16; t += 11 + 3 * hash2(i * 41 + k++, 61)) {
+      const x = a[0] + ux * t, z = a[1] + uz * t;
+      if (!gates.some((q) => Math.hypot(q[0] - x, q[1] - z) < 46)) BAYS.push({ x, z, ux, uz, yaw, top: top + 50, cell: cellOf(x, z) });
+    }
+  }
+  return BAYS;
+}
+export const wallCells = () => wallBays().map((w) => w.cell);
+function wallNear(K, cell) {
+  const T = 12;
+  for (const w of wallBays()) if (w.cell === cell) {
+    // (A buttress: a stepped plinth, the shaft, a weathered cap under the parapet. Wide and few enough not to read as planks.)
+    const y = Y(w.x, w.z) - 0.5, nx = -w.uz, nz = w.ux;
+    K.box('soot:ph_basalt', w.x, y, w.z, 2.3, 7, T / 2 + 2.2, w.yaw, { collide: false });
+    K.box('ph_basalt', w.x, y + 7, w.z, 1.7, 1.1, T / 2 + 1.7, w.yaw, { collide: false });
+    K.box('ph_basalt', w.x, y + 8, w.z, 1.4, w.top - 5.2 - (y + 8), T / 2 + 1.1, w.yaw, { collide: false });
+    K.box('soot:ph_basalt', w.x, w.top - 5.2, w.z, 1.6, 1.4, T / 2 + 1.4, w.yaw, { collide: false });
+    const mx = w.x + w.ux * 6, mz = w.z + w.uz * 6, my = Y(mx, mz) - 0.5;
+    K.box('ph_basalt', mx, my, mz, 4.2, 3.2, T / 2 + 0.6, w.yaw, { collide: false });
+    for (const s of [-1, 1]) for (const hy of [0.42, 0.7]) {
+      const fx = mx + nx * s * (T / 2 + 0.03), fz = mz + nz * s * (T / 2 + 0.03), sy = my + (w.top - my) * hy;
+      K.quad('iron', [fx - w.ux * 0.35, sy, fz - w.uz * 0.35], [fx + w.ux * 0.35, sy, fz + w.uz * 0.35], [fx + w.ux * 0.35, sy + 3.4, fz + w.uz * 0.35], [fx - w.ux * 0.35, sy + 3.4, fz - w.uz * 0.35], [nx * s, 0, nz * s]);
+    }
+  }
+}
 export function phobosCell(K, cell) {
   const n0 = K.colliders.length;
   for (const l of phobosLamps()) if (l.cell === cell) {
@@ -783,6 +855,7 @@ export function phobosCell(K, cell) {
   for (const h of byCell().get(cell) || []) { if (h.spire) tower(K, h.wall, h.x, h.z, h.r, h.h, 'soot:roof_2', { steep: 2.2 }); else houseNear(K, h); }
   for (const hb of HUBS) if (cellOf(hb.x, hb.z) === cell) hubNear(K, hb);
   if (CASTLE_CELLS.has(cell)) castleNear(K, cell);
+  wallNear(K, cell);
   // A seal's square: dark flags laid round it, an iron lantern at each corner. (The seal itself: src/core/sites.js.)
   for (const s of PHOBOS_SEALS) if (cellOf(s.x, s.z) === cell) {
     K.paving('dark:stone', s.x, s.z, SEAL_SQUARE, SEAL_SQUARE, s.yaw, 0.04);
@@ -805,13 +878,13 @@ function landmarks(K) {
   // Chainmarket: the gibbet tower in the square's middle, chains out from its head.
   { const d = { x: D.market.x + 4, z: D.market.z - 34 }, top = tower(K, 'ph_basalt', d.x, d.z, 8, 72, null); for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; K.beam('iron', [d.x + Math.cos(a) * 7, top - 3, d.z + Math.sin(a) * 7], [d.x + Math.cos(a) * 30, top - 40, d.z + Math.sin(a) * 30], 0.45); } }
   // The Barracks Ward: the parade ground's four corner forts, the long drill hall, and the Marshal's tower over it.
-  { const d = D.barracks, y = Y(d.x, d.z); for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) tower(K, 'block', d.x + sx * 60, d.z + sz * 60, 11, 46, null); hall(K, 'block', 'roof_2', d.x, y - 1, d.z - 84, 54, 26, 13, 0, { buttress: false }); K.box('block', d.x + 70, y - 2, d.z - 84, 12, 84, 12, 0); K.cone('roof_2', d.x + 70, y + 82, d.z - 84, 15, 30, 4, Math.PI / 4); }
+  { const d = D.barracks, y = Y(d.x, d.z); for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) tower(K, 'soot:block', d.x + sx * 60, d.z + sz * 60, 11, 46, null); hall(K, 'block', 'roof_2', d.x, y - 1, d.z - 84, 54, 26, 13, 0, { buttress: false }); K.box('block', d.x + 70, y - 2, d.z - 84, 12, 84, 12, 0); K.cone('roof_2', d.x + 70, y + 82, d.z - 84, 15, 30, 4, Math.PI / 4); }
   // The Mages' Rise: the Tower of the Ninefold Eye, taller than anything in the city, and two lesser by it.
   { const g = dun('mages'); const top = tower(K, 'frost:course', g.x, g.z, 15, 196, 'soot:roof_2', { steep: 3.6, sides: 16 }); K.drum('frost:flame', g.x, top - 24, g.z, 15.3, 8, 16, { open: true, collide: false }); tower(K, 'frost:course', g.x - 34, g.z + 20, 7, 104, 'soot:roof_2', { steep: 4 }); tower(K, 'frost:course', g.x + 26, g.z + 30, 6, 86, 'soot:roof_2', { steep: 4 }); }
   // Dukes' Row: the Gilded Vault, a domed counting house.
   { const q = dun('dukes'), g = { x: q.x + 26, z: q.z + 30 }, y = Y(g.x, g.z); K.box('pale:course', g.x, y - 2, g.z, 34, 40, 34, 0.3); K.drum('pale:stone', g.x, y + 38, g.z, 25, 12, 16); K.cone('roof_1', g.x, y + 50, g.z, 26, 28, 16); for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) tower(K, 'pale:course', g.x + sx * 36, g.z + sz * 36, 5, 62, 'roof_1', { steep: 3 }); }
   // The Rookeries: the Rotting Hospice, a hulk over the tenements, with a fire cage on its tower.
-  { const g = dun('rookeries'), y = Y(g.x, g.z); hall(K, 'rubble', 'roof_4', g.x, y - 1, g.z, 40, 44, 16, 0.9, { buttress: false }); K.box('rubble', g.x + 30, y - 1, g.z + 30, 7, 76, 7, 0.9); { const cx = g.x + 30, cz = g.z + 30, c9 = Math.cos(0.9), s9 = Math.sin(0.9); for (const [u, v] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) K.box('iron', cx + (u * c9 + v * s9) * 5.8, y + 75, cz + (-u * s9 + v * c9) * 5.8, 0.25, 8, 0.25, 0.9, { collide: false }); K.drum('iron', cx, y + 75, cz, 5.4, 1.2, 8, { r2: 6.2, open: true, collide: false }); K.cone('dark:flame', cx, y + 75.5, cz, 4.2, 7, 6); K.cone('soot:roof_2', cx, y + 83, cz, 7.4, 6, 4, 0.9 + Math.PI / 4); } }
+  { const g = dun('rookeries'), y = Y(g.x, g.z); hall(K, 'rubble', 'roof_4', g.x, y - 1, g.z, 40, 44, 16, 0.9, { buttress: false }); K.box('rubble', g.x + 30, y - 1, g.z + 30, 7, 76, 7, 0.9); { const cx = g.x + 30, cz = g.z + 30, c9 = Math.cos(0.9), s9 = Math.sin(0.9); for (const [u, v] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) K.box('iron', cx + (u * c9 + v * s9) * 5.8, y + 75, cz + (-u * s9 + v * c9) * 5.8, 0.25, 8, 0.25, 0.9, { collide: false }); K.drum('iron', cx, y + 75, cz, 5.4, 1.2, 8, { r2: 6.2, open: true, collide: false }); fire(K, cx, y + 75.5, cz, 3.6, 8); K.cone('soot:roof_2', cx, y + 83, cz, 7.4, 6, 4, 0.9 + Math.PI / 4); } }
   // The Drowned Wharf: the sluice house and its wheel tower. The Tanners' Steps: the great stack.
   { const g = dun('wharf'); tower(K, 'dark:course', g.x, g.z, 14, 64, 'roof_4', { steep: 1.4, sides: 16 }); }
   { const d = { x: D.tanners.x - 85, z: D.tanners.z + 70 }, y = Y(d.x + 30, d.z - 20); K.drum('rubble', d.x + 30, y - 2, d.z - 20, 9, 96, 12, { r2: 5 }); K.box('rubble', d.x + 30, y - 2, d.z - 20, 20, 22, 16, 0.4); }
@@ -874,17 +947,17 @@ export function phobosCastle(K) {
   ring.forEach((p, i) => {
     const q = ring[(i + 1) % ring.length];
     if (Math.abs(p[1]) < 22 && p[0] < CRAG.x) return;   // (the gate, at the west end)
-    K.wall(B, p[0], p[1], q[0], q[1], 5, 24, { crenel: true });
+    curtain(K, B, p[0], p[1], q[0], q[1], 5, 24, { crenel: true });
     if (i % 3 === 0) tower(K, C, p[0], p[1], 8, 48 + 14 * hash2(i, 4), i % 2 ? R : null, { steep: 2.6 });
   });
   // (Only the Middle Ward's: where the High Ward's wall would run the Keep's body stands.)
   for (const [i, x0] of [[1, WARDS[1][0]]]) {
-    for (const s of [-1, 1]) { K.wall(B, x0 - s * 46 * 0.22 - 0, s * 24, x0 - s * 250 * 0.22, s * 250, 8, 48, { crenel: true }); tower(K, C, x0, s * 24, 13, 96, R, { steep: 2.4, sides: 16 }); for (const zz of [90, 170]) tower(K, C, x0 - s * zz * 0.22, s * zz, 9, 70, zz > 100 ? R : null); }
+    for (const s of [-1, 1]) { curtain(K, B, x0 - s * 46 * 0.22 - 0, s * 24, x0 - s * 250 * 0.22, s * 250, 8, 48, { crenel: true }); tower(K, C, x0, s * 24, 13, 96, R, { steep: 2.4, sides: 16 }); for (const zz of [90, 170]) tower(K, C, x0 - s * zz * 0.22, s * zz, 9, 70, zz > 100 ? R : null); }
     K.box(S, x0, Y(x0, 0) + 14, 0, 9, 44, 16, 0, { collide: false });
   }
   // The gatehouse at the head of the Approach: two great drums and the gate's head between.
   const gx = CRAG.x - CRAG.a * 0.86, gy = Y(gx, 0);
-  for (const s of [-1, 1]) tower(K, S, gx, s * 22, 13, 74, R, { steep: 2.2 });
+  for (const s of [-1, 1]) tower(K, S, gx, s * 22, 13, 74, R, { steep: 2.2, lit: 0.65 });
   K.box(S, gx, gy + 13, 0, 9, 40, 10, 0, { collide: false });
   { // (The passage under its head: dark walls and a dark vault, its mouths pointed both ends: the spandrels filled in.)
     for (const s of [-1, 1]) K.box('dark:stone', gx, gy - 0.5, s * 9.3, 9, 13.5, 0.3, 0, { collide: false, top: false });
@@ -901,8 +974,21 @@ export function phobosCastle(K) {
     K.hanging('cloth_red', gx - 11.3, gy + 52.5, -5, [-1, 0], 4.5, 30, 5); K.hanging('cloth_red', gx - 11.3, gy + 52.5, 5, [-1, 0], 4.5, 30, 5);
   }
   // A brazier: an iron bowl of his fire on a dark stone pillar, tapering.
-  const brazier = (bx, bz, h = 2.4) => { const by = Y(bx, bz); K.drum('dark:stone', bx, by - 0.3, bz, 0.75, h + 0.3, 4, { r2: 0.5, turn: Math.PI / 4 }); K.drum('iron', bx, by + h, bz, 0.45, 0.7, 8, { r2: 1.0, open: true, collide: false }); K.cone('dark:flame', bx, by + h + 0.25, bz, 0.75, 1.7, 6); };
+  const brazier = (bx, bz, h = 2.4) => { const by = Y(bx, bz); K.drum('dark:stone', bx, by - 0.3, bz, 0.75, h + 0.3, 4, { r2: 0.5, turn: Math.PI / 4 }); K.drum('iron', bx, by + h, bz, 0.45, 0.7, 8, { r2: 1.0, open: true, collide: false }); fire(K, bx, by + h + 0.3, bz, 0.62, 2.1); (K.lamps ||= []).push({ p: [bx, by + h + 1.6, bz], c: [1, 0.42, 0.18], r: h > 3 ? 36 : 26, i: h > 3 ? 70 : 44, flicker: 0.35 }); };
   for (const s of [-1, 1]) brazier(gx - 15, s * 12.5, 3.2);
+  // (The braziers' red thrown up the drums' faces at night, from low by each: so the castle's threshold is two lit towers
+  // and a mouth between, not a void. Big, so it wins one of the frame's lights from all down the Approach.)
+  for (const s of [-1, 1]) (K.lamps ||= []).push({ p: [gx - 18.5, gy + 2.5, s * 22], c: [1, 0.4, 0.16], r: 56, i: 320, flicker: 0.25, prio: 60 });
+  // (And a lantern hung in the passage's vault on a chain, an iron cage with a fire in it, so the way in is a red mouth at
+  // night and not a hole. Bars down the cage, none across.)
+  for (const lx of [gx - 4, gx + 4]) {
+    const ly = gy + 7.4;
+    K.beam('iron', [lx, ly + 1.1, 0], [lx, gy + 13, 0], 0.035);
+    K.cone('iron', lx, ly + 0.95, 0, 0.42, 0.35, 6); K.drum('iron', lx, ly - 0.1, 0, 0.3, 0.12, 6, { collide: false });
+    for (let k = 0; k < 6; k++) { const t = k / 6 * TAU; K.box('iron', lx + Math.cos(t) * 0.33, ly, Math.sin(t) * 0.33, 0.025, 0.95, 0.025, 0, { collide: false }); }
+    K.cone('flame', lx, ly + 0.02, 0, 0.2, 0.62, 5);
+    (K.lamps ||= []).push({ p: [lx, ly + 0.4, 0], c: [1, 0.5, 0.22], r: 20, i: 34, flicker: 0.3 });
+  }
   // The Approach: flagged down its crown, a low parapet along both edges (broken every so often, so what's on the slopes
   // can come up), and pillars of fire in pairs up its top half: from where the King's Mile, slanting up onto it, has come
   // into its middle (src/core/lands.js ROUTES), so nothing stands in the road.
@@ -990,11 +1076,20 @@ export function phobosKeep(K) {
     // twelve lit at evening: three hundred metres of wall reads as a building, not a crate.)
     if (!K.lean) {
       for (let yy = P(a) + 12; yy < P(b) - 5; yy += 12) K.box(G, cx, yy, z, hx + 0.6, 0.9, hz + 0.6, 0, { collide: false, top: false });
-      const win = (wx, wy, wz, nx, nz, lit) => { const ax = nz * 0.75, az = -nx * 0.75; K.quad(lit ? 'eve:flame' : 'slate:iron', [wx - ax, wy, wz - az], [wx + ax, wy, wz + az], [wx + ax, wy + 3.6, wz + az], [wx - ax, wy + 3.6, wz - az], [nx, 0, nz]); };
+      // (Not every bay the same, or it's an office block: some blind, some a pair of tall slits, some a window running
+      // most of the storey's height, now and then one with a balcony on corbels under it.)
+      const pane = (wx, wy, wz, nx, nz, w, h, lit) => { const ax = nz * w, az = -nx * w; K.quad(lit ? 'eve:flame' : 'slate:iron', [wx - ax, wy, wz - az], [wx + ax, wy, wz + az], [wx + ax, wy + h, wz + az], [wx - ax, wy + h, wz - az], [nx, 0, nz]); };
+      const win = (wx, wy, wz, nx, nz, v, lit) => {
+        if (v < 0.16) return;
+        if (v < 0.32) { for (const e of [-0.6, 0.6]) pane(wx + nz * e, wy - 1, wz - nx * e, nx, nz, 0.22, 7.2, lit); return; }
+        if (v > 0.88) { pane(wx, wy, wz, nx, nz, 0.75, 7.4, lit); return; }
+        pane(wx, wy, wz, nx, nz, 0.75, 3.6, lit);
+        if (v > 0.82) { const bxh = nz ? 1.8 : 0.9, bzh = nz ? 0.9 : 1.8; K.box(G, wx + nx * 0.9, wy - 0.7, wz + nz * 0.9, bxh, 0.45, bzh, 0, { collide: false }); K.box(G, wx + nx * 1.7, wy - 0.25, wz + nz * 1.7, nz ? 1.8 : 0.12, 1.0, nz ? 0.12 : 1.8, 0, { collide: false }); }
+      };
       for (let yy = P(a) + 3.5; yy + 5 < P(b) - 3; yy += 12) for (const sd of [-1, 1]) {
         const nX = fins(hx), nZ = fins(hz);
-        for (let k = 0; k < nX; k++) win(cx - hx + 2 * hx * (k + 0.5) / nX, yy, z + sd * (hz + 0.04), 0, sd, hash2(k * 7 + i, Math.round(yy) + sd) < 0.085);
-        for (let k = 0; k < nZ; k++) win(cx + sd * (hx + 0.04), yy, z - hz + 2 * hz * (k + 0.5) / nZ, sd, 0, hash2(k * 11 + i, Math.round(yy) - sd) < 0.085);
+        for (let k = 0; k < nX; k++) win(cx - hx + 2 * hx * (k + 0.5) / nX, yy, z + sd * (hz + 0.04), 0, sd, hash2(k * 5 + i * 3, Math.round(yy) * 2 + sd), hash2(k * 7 + i, Math.round(yy) + sd) < 0.085);
+        for (let k = 0; k < nZ; k++) win(cx + sd * (hx + 0.04), yy, z - hz + 2 * hz * (k + 0.5) / nZ, sd, 0, hash2(k * 9 + i * 3, Math.round(yy) * 2 - sd), hash2(k * 11 + i, Math.round(yy) - sd) < 0.085);
       }
     }
   });
