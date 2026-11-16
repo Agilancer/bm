@@ -26,6 +26,7 @@ import { clamp, wrapAngle } from '../core/math.js';
 import { MOVES, tipBody } from './moves.js';
 import { ELEM, FX } from './spells.js';
 import { ELDER_FIGHTS } from './elder-fights.js';
+import { SEWER_FIGHTS } from './sewer-fights.js';
 
 const { FIRE, FROST, ARCANE, STORM, DRAIN, BONE, VOID, POISON, SPIRIT, STONE, LIGHT } = ELEM;
 const TAU = Math.PI * 2;
@@ -1289,5 +1290,5 @@ export const FIGHTS = {
   },
 };
 // (The Elder Dragon Gods' four, in a file of their own.)
-Object.assign(FIGHTS, ELDER_FIGHTS);
+Object.assign(FIGHTS, ELDER_FIGHTS, SEWER_FIGHTS);
 void rnd; void gap; void POISON; void DEMONS; void STORM;

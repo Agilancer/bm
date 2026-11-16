@@ -16,10 +16,13 @@ import { HUB, inHub, hubPost } from '../src/core/phobos-hubs.js';
 import { phobosHouses } from '../src/core/phobos-build.js';
 import { questLevel } from '../src/ui/autobrain.js';
 import { describe as describeWho } from '../src/ui/questlog.js';
+import { delveByKey, toWorld } from '../src/core/dungeon.js';
 
 const IDS = Object.keys(PHOBOS_RULES);
 const WHO = new Set([...FOLK, ...BEYOND].map((p) => p.id));
 const HUBFOLK = POSTED.filter((p) => p.hub);
+// Where to stand for a place: a delve's (the sewers') is down in its first hall past the way in, not at its mouth on the land.
+const spotIn = (k) => { const d = delveByKey(k); if (!d) return placeSpot(k); const r = d.rooms[1], [x, z] = toWorld(r.x, r.z, d); return { x, z }; };
 const book = () => new QuestBook({ change() {}, toast() {}, done() {} });
 
 test('three hubs, each with its giver in its own yard, clear of the lairs and of the houses', () => {
@@ -52,7 +55,7 @@ test('every Phobos quest names someone, somewhere and something that is there, a
     for (const st of R.steps) {
       for (const k of [st.enter, st.kill, ...(st.visit || [])].filter(Boolean)) {
         assert.ok(hasArea(k), `${id}: no such place ${k}`);
-        const at = placeSpot(k);
+        const at = spotIn(k);
         assert.ok(at && areaAt(k, at.x, 30, at.z), `${id}: ${k} can't be stood in`);
       }
       if (st.kill?.startsWith('lair:')) {
@@ -97,7 +100,7 @@ test('the two letters keep apart: nothing of the other side in the city, and the
 });
 
 test('each Phobos quest can be taken, walked through as the game reports it, and handed in', () => {
-  const inside = (k) => { const p = placeSpot(k); return [p.x, 30, p.z]; };
+  const inside = (k) => { const p = spotIn(k); return [p.x, 30, p.z]; };
   for (const id of IDS) {
     const Q = book(), R = PHOBOS_RULES[id], q = QUESTS[id];
     for (let need = R.needs; need; need = RULES[need].needs) Q.q[need] = { stage: 'done' };
@@ -117,6 +120,9 @@ test('each Phobos quest can be taken, walked through as the game reports it, and
         Q.kill(9000, 20, 0, 5, 'Goblins');
         assert.equal(Q.state(id).n, 0, `${id}: a kill outside its lair counted`);
         for (let i = 0; i < st.n; i++) Q.kill(...inside(st.kill), 5, 'Goblins');
+      } else if (st.boss) {
+        Q.boss('nobody'); assert.equal(Q.state(id).step, k, `${id}: another's death counted`);
+        Q.boss(st.boss);
       } else if (st.talk) {
         assert.equal(Q.mark(st.talk, {}, 0), 'ready', `${id}: no ? over ${st.talk}`);
         if (st.end) { Q.finish(id); assert.ok(Q.done(id)); continue; }

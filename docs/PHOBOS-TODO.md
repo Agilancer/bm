@@ -58,7 +58,7 @@ pictures**; nothing else in the zone starts until the owner approves these three
   texture for Apricot in round 3, so the critics never saw her final brows, lips, lashes and freckles. Always fetch
   `<id>_c.webp` with `cache: 'reload'` before shooting.
 - [ ] Waiting on the owner's look at `art/phobos/review/before_after.jpg`.
-- [ ] Not placed in the world (that's chunk 6, the Sewers). Never seen in the game's own renderer, only the viewer.
+- [x] Placed in the world (chunk 6): the brothers in the keepers' office in the West Drains, Apricot in the Sunk Garden. Seen in the game's own renderer.
 - Design notes: the brothers nod at a famous pair of plumbers without copying them (no overalls, no brimmed caps, no letters,
   no white gloves; medieval leather jerkins, hoods, waders, tool belts). Apricot avoids the famous princess's look too (no
   pink gown, no gold crown): red curly hair and undercut, apricot and cream, copper tiara. No blue with gold anywhere (T's
@@ -366,14 +366,36 @@ world-space grime layer (soot, damp, moss, rust, cracks) that chunk 2 asked for.
 - [ ] Drip quests from elsewhere in the world by level band; the endgame arc after all other quests.
 - [ ] Auto-play taught all of it.
 
-## Chunk 6: the Sewers — not started
+## Chunk 6: the Sewers — under way
 
-- [ ] Labyrinth generator; entrances from the city and outfalls to the moat/outside.
-- [ ] Monsters: undead, spiders, worms, slimes, rats, drowned things, fungus horrors.
-- [ ] The sewer-keepers' office (near an entrance) with Martleboro and Louis G; mushroom picking and corpse-mushroom quests;
-  errands across the sewers.
-- [ ] Princess Apricot's court on the far side, and her quests.
+- [x] Four sectors, built by hand rather than generated (src/core/delve-sewers.js), west to east under the city: the West
+  Drains (level 30, the Spider Queen), the Slough Mains (38, the Great Worm), the Charnel Runs (45, the Drowned Abbot) and the
+  High Conduits (53, the Lamplighter). Each has two mouths in the city's streets (its portal, and a second way that comes out
+  in another street), and gates at each end into the next sector. They're solo (no party) and count as Phobos for the seals.
+  New props: water channels with kerbs, a weir wheel, a spout.
+- [x] Monsters: spiders, worms, drowned folk, wick-men, rats and slimes in packs, from the existing monster library and palette
+  swaps. Four boss fights in src/sim/sewer-fights.js.
+- [x] The keepers' office in the West Drains with Martleboro and Louis G; Princess Apricot in the Sunk Garden at the far end
+  of the High Conduits. Nine quests (src/folk/phobos-quests.js, words in src/folk/lines/phobos-sewers.js): down_the_drains,
+  two drain-cap gathering quests, a clear-out, letters to the princess across all four sectors, and one for each boss.
+- [x] Drain Caps: a material that drops only from what dies down the sewers. Auto-play farms them in the sector the quest names.
+- [ ] Outfalls to the moat/outside.
+- [ ] Sewer seals that know which sector they're in (the seals count the mouths' squares only, for now).
 - [ ] World bosses.
+- [x] Critics: round 1 both REJECT 6.5 (boss halls on the routes, fights that didn't do what their calls said, a bare
+  Sunk Garden, empty long runs, every gate the same). Fixed: bypass culverts round three boss halls (Silt Bypass, Gate Cut,
+  Lamp Cut); scripted adds (brood to the cocoons, brothers to the Abbot, wick-men to the lamps), webs that hold, the
+  Worm that really goes under; daylight shaft and caps in the Garden; dim-lit ambient; mid-run packs; gate lamps in the
+  next sector's colour; named rewards; letters gated on the Worm, not the caps. Round 2: young APPROVE 8, veteran
+  APPROVE 7.5, both on the condition that the letters and Abbot directions go by the street stairs, not through the
+  level-53 Conduits (done).
+- [ ] Critics' leftovers: a cocoon should burst when a brood-spider feeds the Queen; the Lamplighter's ring should start
+  unlit and flare as each lamp is lit (now the candles burn from the start); something at the end of each spur tunnel
+  (a lone elite, gold, caps); Apricot's first line assumes "all the way across"; the Garden's light reads as a flat disc,
+  not a beam; log lamps lit / cocoons fed / brothers arrived per wave from tools/dungeon/fight.mjs (aim 1-2 per wave);
+  in-game shots of the Worm, Abbot (black circles over his black pool) and Lamplighter fights.
+- [ ] Untested: the sectors walked end to end by a human; the four fights fought at level by a human (the headless sim
+  wins all four with a hired party); cap drop rates in play; the phone.
 
 ## Chunk 7: the city's six dungeons — not started
 

@@ -1123,6 +1123,48 @@ export const PROPS = {
       box(stone, 0, my + sill + high + 0.45, top, hw);
     }
   },
+  // ---- the sewers of Phobos (src/core/delve-sewers.js) ----
+  // A sewer's run: a hand of water down the middle of a passage from here to `to`, a kerb either side, following the floor.
+  channel(K, d, p, x, y, z) {
+    const tx = d.x + p.to[0], tz = d.z + p.to[1], L = Math.hypot(tx - x, tz - z) || 1, ux = (tx - x) / L, uz = (tz - z) / L, sx = -uz, sz = ux, w = p.w || 1.3;
+    const n = Math.max(1, Math.round(L / 4)), kerb = d.look.foot || d.look.wall;
+    for (let k = 0; k < n; k++) {
+      const a = k / n * L, b = (k + 1) / n * L, ax = x + ux * a, az = z + uz * a, bx = x + ux * b, bz = z + uz * b;
+      const ya = caveFloorY(ax, az) + 0.04, yb = caveFloorY(bx, bz) + 0.04;
+      K.quad('lake', [ax + sx * w, ya, az + sz * w], [bx + sx * w, yb, bz + sz * w], [bx - sx * w, yb, bz - sz * w], [ax - sx * w, ya, az - sz * w], [0, 1, 0]);
+      const mx = (ax + bx) / 2, mz = (az + bz) / 2, my = Math.min(ya, yb) - 0.1, yaw = Math.atan2(ux, uz);
+      // (A kerb a shin high, so the run reads as a channel down the passage and not a stripe on its floor.)
+      for (const e of [-1, 1]) K.box(kerb, mx + sx * (w + 0.14) * e, my, mz + sz * (w + 0.14) * e, 0.16, 0.44, (b - a) / 2 + 0.02, yaw, NO);
+    }
+  },
+  // A great wheel of timber and iron high in a wall, facing south: the Wharf's sluice wheel, seen from under it.
+  wheel(K, d, p, x, y, z) {
+    const cy = y + p.up, r = p.r, N = 16;
+    for (let k = 0; k < N; k++) {
+      const a = k / N * TAU, b = (k + 1) / N * TAU;
+      rod(K, 'wood', x + Math.cos(a) * r, cy + Math.sin(a) * r, z, x + Math.cos(b) * r, cy + Math.sin(b) * r, z, 0.22);
+      K.box('wood', x + Math.cos(a + 0.2) * (r + 0.4), cy + Math.sin(a + 0.2) * (r + 0.4) - 0.5, z + 0.1, 0.08, 1, 0.7, 0, NO);
+      if (k % 2 === 0) rod(K, 'wood', x, cy, z + 0.2, x + Math.cos(a) * r, cy + Math.sin(a) * r, z + 0.2, 0.14);
+    }
+    K.drum('iron', x, cy - 0.5, z, 0.7, 1, 10, NO);
+    rod(K, 'iron', x, cy, z - 1.2, x, cy, z + 1.2, 0.25);
+  },
+  // A stone spout high in a wall, facing south, and the water off its lip down to the floor.
+  spout(K, d, p, x, y, z) {
+    const top = y + p.up, w = p.w;
+    K.box(d.look.foot || 'block', x, top - 0.5, z + 0.6, w + 0.4, 0.5, 1.4, 0, NO);
+    K.box(d.look.foot || 'block', x, top, z + 0.2, w + 0.6, 1.2, 1, 0, NO);
+    K.quad('falls', [x - w, y - 0.1, z + 3.2], [x + w, y - 0.1, z + 3.2], [x + w, top - 0.5, z + 1.9], [x - w, top - 0.5, z + 1.9]);
+    K.quad('falls', [x + w, y - 0.1, z + 3.2], [x - w, y - 0.1, z + 3.2], [x - w, top - 0.5, z + 1.9], [x + w, top - 0.5, z + 1.9]);
+  },
+  // A shaft of daylight down from a garden over the roof: the sky's disc where the roof's open, and the light's pool on the
+  // floor under it (its lamp: src/core/dungeon.js braziers, LIT).
+  daylight(K, d, p, x, y, z) {
+    const top = caveRoofY(x, z), r = p.r;
+    K.drum('pale:flame', x, top - 0.25, z, r, 0.2, 16, { collide: false });
+    K.drum('pale:stone', x, top - 0.45, z, r + 0.5, 0.2, 16, { r2: r, open: true, collide: false });
+    K.drum('pale:flame', x, y + 0.01, z, r * 1.15, 0.02, 16, { collide: false });
+  },
   sluicegate(K, d, p, x, y, z) {
     const c = Math.cos(p.yaw), s = Math.sin(p.yaw), w = p.w;
     for (const u of [-w, w]) K.box('pale:rubble', x + u * c, y - 0.4, z - u * s, 0.5, 4.2, 0.5, p.yaw, NO);
@@ -1660,6 +1702,21 @@ export function buildDelves(K, portalWall, only = DELVES) {
     K.delve = d;
     portalWall(K, d.x + d.exitIn.x, d.z + d.exitIn.z, d.exitIn.yaw ?? Math.PI, `${d.tag}_in`, caveFloorY);
     portalWall(K, d.x + d.exitOut.x, d.z + d.exitOut.z, d.exitOut.yaw ?? 0, `${d.tag}_out`, caveFloorY);
+    // (A sewer's: the ladder-head under each of its second mouths, and its gates into the next sector.)
+    (d.ways || []).forEach((w, i) => portalWall(K, d.x + w.in.x, d.z + w.in.z, w.in.yaw, `${d.tag}_u${i}`, caveFloorY));
+    (d.links || []).forEach((l, i) => {
+      portalWall(K, d.x + l.x, d.z + l.z, l.yaw, `${d.tag}_l${i}`, caveFloorY);
+      // Two lamps on posts either side of a gate, burning the colour of the sector it goes to (green, blue, violet, amber),
+      // in that sector's stone: so a gate says where it leads before it's gone through.
+      const to = DELVES.find((q) => q.key === l.to), flame = to?.look.flame || 'flame', post = to?.look.foot || 'block';
+      const c = Math.cos(l.yaw), s = Math.sin(l.yaw);
+      for (const u of [-5, 5]) {
+        const x = d.x + l.x + u * c, z = d.z + l.z - u * s, y = caveFloorY(x, z);
+        K.box(post, x, y - 0.2, z, 0.32, 1.9, 0.32, l.yaw, NO);
+        K.drum(post, x, y + 1.7, z, 0.5, 0.18, 8, { r2: 0.42, collide: false });
+        K.drum(flame, x, y + 1.88, z, 0.34, 0.55, 8, { r2: 0.08, collide: false });
+      }
+    });
     K.delve = null;
   }
 }

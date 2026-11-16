@@ -3,6 +3,8 @@
 // squares and paves them). Each name ends "- Phobos", as the Sill's does, so the travel list says where it goes.
 // Spots found flat (under 0.1 m across the dais), beside a street, clear of the hubs, the lairs, the dungeons and the forts.
 // { key, x, z, yaw (the square's turn, along its street), name }
+import { SEWERS } from './delve-sewers.js';
+
 export const PHOBOS_SEALS = [
   { key: 'ph_barbican', x: 9463.8, z: 27.7, along: [0.5145, 0.8575], name: 'The Barbican - Phobos' },
   { key: 'ph_market', x: 9819.9, z: -86.1, along: [0.9615, -0.2747], name: 'Chainmarket - Phobos' },
@@ -13,11 +15,15 @@ export const PHOBOS_SEALS = [
 
 // A seal's square: 11 m by 11 m, turned with its street.
 export const SEAL_SQUARE = 5.5;
-// The seal whose square (x, z) is in, pad metres round it allowed for; or null.
+// And the sewers' mouths in its streets (src/core/delve-sewers.js: each sector's portal and its second way down), each a
+// delve's stair-and-wall (src/core/sites.js portalWall) in a square of its own, turned with it, kept as the seals' are.
+export const SEWER_MOUTHS = SEWERS.flatMap((d) => [d.portal, ...(d.ways || [])]).map((p) => ({ x: p.x, z: p.z, yaw: p.yaw }));
+export const MOUTH_SQUARE = 9.5;
+// The seal (or sewer mouth) whose square (x, z) is in, pad metres round it allowed for; or null.
 export function inSealSquare(x, z, pad = 0) {
-  for (const s of PHOBOS_SEALS) {
+  for (const [list, half] of [[PHOBOS_SEALS, SEAL_SQUARE], [SEWER_MOUTHS, MOUTH_SQUARE]]) for (const s of list) {
     const dx = x - s.x, dz = z - s.z, c = Math.cos(s.yaw), n = Math.sin(s.yaw);
-    if (Math.abs(dx * c - dz * n) < SEAL_SQUARE + pad && Math.abs(dx * n + dz * c) < SEAL_SQUARE + pad) return s;
+    if (Math.abs(dx * c - dz * n) < half + pad && Math.abs(dx * n + dz * c) < half + pad) return s;
   }
   return null;
 }

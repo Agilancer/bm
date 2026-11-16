@@ -86,6 +86,12 @@ export const POSTED = [
   // has work for you there. Their quests: src/folk/phobos-quests.js; their words: src/folk/lines/phobos-hubs.js.
   posted({ id: 'ph_penny', hub: 'pennyless', name: 'Fennick Lowe', title: "the Pennyless' Purse", body: 'ph_penny', sex: 'm', age: 46, post: [9613.8, -288.9], face: -2.415, idles: ['fold_arms', 'look_around', 'idle'] }),
   posted({ id: 'ph_watch', hub: 'watch', name: 'Maud Treller', title: 'Captain of the Quiet Watch', body: 'ph_watch', sex: 'f', age: 41, post: [10005.9, 631.2], face: -2.406, idles: ['fold_arms', 'wait', 'look_around'] }),
+  // Down Phobos's sewers (src/core/delve-sewers.js): the two keepers in their office off the Great Grate in the West Drains,
+  // and Princess Apricot in her Sunk Garden at the far end of the High Conduits. Stood on the delves' own floors (post's y),
+  // seen only from down there (src/gfx/folk.js). Their words: src/folk/lines/phobos-sewers.js.
+  posted({ id: 'martleboro', sewer: 'westdrains', name: 'Martleboro', title: 'Keeper of the Drains', body: 'martleboro', sex: 'm', age: 44, post: [9291.6, -5843, -73], face: -1.571, idles: ['fold_arms', 'look_around', 'idle'] }),
+  posted({ id: 'louis_g', sewer: 'westdrains', name: 'Louis G', title: 'Keeper of the Far Drains', body: 'louis_g', sex: 'm', age: 41, post: [9286.5, -5849, -73], face: -0.983, idles: ['look_around', 'scratch', 'idle'] }),
+  posted({ id: 'apricot', sewer: 'highconduits', name: 'Princess Apricot', title: 'of the Sunk Garden', body: 'apricot', sex: 'f', age: 26, post: [10406, -6044.5, -63], face: 0, idles: ['idle', 'look_around', 'fold_arms'] }),
   posted({ id: 'ph_ash', hub: 'ash', name: 'Edda Grail', title: 'Warden of the Ashwardens', body: 'ph_ash', sex: 'f', age: 52, post: [10059.7, -551.4], face: -3.11, idles: ['fold_arms_ual', 'idle_ual', 'look_around'] }),
 ];
 // City State Phobos's street crowd: ruffians, riff-raff and adventurer folk, on the town's own thread with no house, bed or

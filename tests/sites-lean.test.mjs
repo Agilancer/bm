@@ -31,7 +31,7 @@ test('the land\'s corners are typed arrays of just their length, and can be let 
   const phone = buildSites(true, true);
   let pv = 0;
   for (const p of phone.parts.values()) { assert.ok(typed(p) && whole(p)); pv += p.pos.length / 3; }
-  assert.ok(pv > 150000 && pv < 900000, `${pv} corners on a phone`);   // (as above: Phobos's block-out is 350,000 of them even with flat-lidded houses, and a phone holds them all)
+  assert.ok(pv > 150000 && pv < 950000, `${pv} corners on a phone`);   // (as above: Phobos's block-out is 350,000 of them even with flat-lidded houses, and a phone holds them all; and its sewers' eight stairs down)
   assert.equal(phone.colliders.length, full.colliders.length, 'a phone is stopped by what a PC is');
   dropSiteGeometry();
   assert.equal(buildSites().parts.size, 0);

@@ -8,7 +8,7 @@
 // it's on as READING (the same handshake as the fight's snapshot, src/core/layout.js).
 
 // (The town's people, those posted out in the land, and City State Phobos's street crowd: src/folk/people.js FOLK.)
-export const FOLK_MAX = 75;
+export const FOLK_MAX = 78;
 // Palette joints a person can have: their own (55 at most in the owner's models) and the four the skirt borrows.
 export const FOLK_JOINTS = 72;
 

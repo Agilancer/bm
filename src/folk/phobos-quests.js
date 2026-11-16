@@ -22,10 +22,27 @@ export const PHOBOS_RULES = {
   still_the_rows: { steps: [{ kill: 'lair:phobos_boneyards', n: 5 }, { back: true, say: "The rows by the north wall are still. The big ones too." }], gold: 440, xp: 3600 },
   bone_tithe: { needs: 'still_the_rows', steps: [{ bring: 'bone', n: 12, at: 'lair:phobos_boneyards' }], gold: 380, xp: 2800 },
   lamps_on_the_rise: { needs: 'still_the_rows', steps: [{ kill: 'lair:phobos_mages', n: 3 }, { back: true, say: 'The lord on the Mages\' Rise is put out, and his two lamps with him.' }], gold: 600, xp: 5200, item: 'staff', named: "The Warden's Ember", seed: 0x51a7e },
+  // ---- down the sewers (src/core/delve-sewers.js; words in src/folk/lines/phobos-sewers.js) ----
+  // The way down, from the Pennyless: to the keepers' office off the Great Grate.
+  down_the_drains: { steps: [{ enter: 'westdrains' }, { talk: 'louis_g', say: 'Fennick Lowe sent me down.' }, { talk: 'martleboro', say: "Lowe says you two know every drain in the city.", end: true }], gold: 400, xp: 5000 },
+  // Martleboro's: caps, the West Drains cleared, the Spider Queen; then the Great Worm, for his brother.
+  caps_for_the_keepers: { needs: 'down_the_drains', steps: [{ bring: 'cap', n: 10, at: 'westdrains' }], gold: 500, xp: 6000 },
+  the_main_runs_clear: { needs: 'down_the_drains', steps: [{ kill: 'westdrains', n: 12 }, { back: true, say: 'Twelve of them. The Main runs clear.' }], gold: 600, xp: 7500 },
+  the_queens_larder: { needs: 'the_main_runs_clear', steps: [{ boss: 'spiderqueen' }, { back: true, say: 'The Spider Queen is dead.' }], gold: 900, xp: 12000, item: 'staff', named: 'The Larder Rake', seed: 0x5e3a1 },
+  the_great_worm: { needs: 'the_queens_larder', steps: [{ boss: 'greatworm' }, { back: true, say: 'The Great Worm is dead.' }], gold: 1300, xp: 18000, item: 'skull', named: "Louis G's Lucky Skull", seed: 0x10a15 },
+  // Louis G's: the Slough's blue caps, and the princess's letters, all the way across.
+  caps_of_the_slough: { needs: 'caps_for_the_keepers', steps: [{ bring: 'cap', n: 15, at: 'sloughmains' }], gold: 800, xp: 11000 },
+  letters_for_the_princess: { needs: 'the_great_worm', steps: [{ enter: 'sloughmains' }, { enter: 'charnelruns' }, { enter: 'highconduits' }, { talk: 'apricot', say: 'Letters for you, from Louis G.', end: true }], gold: 1200, xp: 20000, item: 'robe', named: 'The Garden-Grown Robe', seed: 0xa9c03 },
+  // Princess Apricot's: the Drowned Abbot's singing stopped, and the Lamplighter put out.
+  the_drowned_abbot: { needs: 'letters_for_the_princess', steps: [{ boss: 'drownedabbot' }, { back: true, say: 'The Drowned Abbot sings no more.' }], gold: 1800, xp: 26000, item: 'skull', named: "The Abbot's Last Hour", seed: 0xab07 },
+  lamps_out_in_the_conduits: { needs: 'the_drowned_abbot', steps: [{ boss: 'lamplighter' }, { back: true, say: "The Lamplighter's out, and every lamp of his." }], gold: 2600, xp: 36000, item: 'robe', named: 'The Sunk Garden Silk', seed: 0xa9c07 },
 };
 // The level each wants (src/ui/autobrain.js PLAN): you come to Phobos at about twenty.
 export const PHOBOS_LEVELS = [
   ['smoke_in_the_east', 20], ['loaves_for_the_rookeries', 20], ['the_pennyless_word', 21], ['quiet_men', 22], ['asking_around', 22], ['cinder_floors', 22],
   ['wardens_of_ash', 23], ['the_watchs_word', 23], ['still_the_rows', 24], ['bone_tithe', 25], ['the_wharf_web', 25], ['red_purses', 26],
   ['lamps_on_the_rise', 27], ['the_approach_by_night', 28],
+  // (The sewers: the West Drains 28-36, the Slough Mains 34-42, the Charnel Runs 40-50, the High Conduits 48-58.)
+  ['down_the_drains', 28], ['caps_for_the_keepers', 29], ['the_main_runs_clear', 30], ['the_queens_larder', 33], ['caps_of_the_slough', 36],
+  ['the_great_worm', 40], ['letters_for_the_princess', 43], ['the_drowned_abbot', 47], ['lamps_out_in_the_conduits', 54],
 ];
