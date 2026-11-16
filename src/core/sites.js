@@ -22,6 +22,7 @@ import { dressRoads } from './roadside.js';
 import { smithYard } from './smithyard.js';
 import { marches } from './marches.js';
 import { phobos, phobosCell } from './phobos-build.js';
+import { PHOBOS_SEALS } from './phobos-seals.js';
 import { PH_TILE } from './phobos-tiles.js';
 import { buildHouse, buildTower } from './belltower.js';
 
@@ -1370,7 +1371,8 @@ function sorrowhorn(K) {
 }
 
 
-// Every seal's place: the sites that have one, and Bellmourn's own beside the south road.
+// Every seal's place: the sites that have one, Bellmourn's own beside the south road, and City State Phobos's in its
+// districts (src/core/phobos-seals.js). The Sill's, where the road first shows you Phobos, says so too.
 export const SEALS = [{ key: 'bellmourn', x: 7.6, z: 86, name: 'Bellmourn' }].concat(
   Object.keys(SITES).filter((k) => SITES[k].portal).map((k) => {
     const s = SITES[k];
@@ -1378,8 +1380,9 @@ export const SEALS = [{ key: 'bellmourn', x: 7.6, z: 86, name: 'Bellmourn' }].co
     const off = { farm: [-30, -26], hamlet: [6, 14], falls: [-48, -10], belltower: [-6, 26], sallow: [118, 24], abbey: [36, 22], khel: [10, 46], keep: [112, 18], stones: [0, 30], frostwatch: [0, 40], crossroads: [-14, 16], stair: [-20, 14], crown: [MOUNT.lake + 40, 0] }[k] || [0, s.r * 0.7];
     // (The two small towns' are inside their walls, on the level, where nothing's built.)
     const set = { thornwick: [2396, 1833], cinderford: [-2088, -162], sill: [8931, 19] }[k];   // (the Sill's: on its shelf, back from the lip)
-    return set ? { key: k, x: set[0], z: set[1], name: s.name } : { key: k, ...flattest(s.x + off[0], s.z + off[1]), name: s.name };
-  }));
+    const name = k === 'sill' ? `${s.name} - Phobos` : s.name;
+    return set ? { key: k, x: set[0], z: set[1], name } : { key: k, ...flattest(s.x + off[0], s.z + off[1]), name };
+  }), PHOBOS_SEALS.map((s) => ({ key: s.key, x: s.x, z: s.z, name: s.name })));
 
 // The flattest ground for a seal's dais within 16 m of where it was meant to go: how far the land under it rises and falls,
 // and a little for going further.

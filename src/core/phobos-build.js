@@ -13,6 +13,7 @@ import { hash2 } from './terrain-noise.js';
 import { CITY, CITY_WALL, CRAG, HAUNTS, KEEP, PLAIN, SLOUGH, WARDS, cityIn } from './east.js';
 import { PHOBOS } from './phobos-data.js';
 import { HUBS, hubHouses, hubFar, hubNear, inHub } from './phobos-hubs.js';
+import { PHOBOS_SEALS, SEAL_SQUARE, inSealSquare } from './phobos-seals.js';
 
 const TAU = Math.PI * 2;
 const Y = (x, z) => terrainHeight(x, z);
@@ -552,7 +553,7 @@ export function phobosHouses() {
   const span = (h, ax, az) => { const c = Math.cos(h.yaw || 0), s = Math.sin(h.yaw || 0), m = h.x * ax + h.z * az, e = Math.abs(h.hx * (c * ax - s * az)) + Math.abs(h.hz * (s * ax + c * az)); return [m - e, m + e]; };
   const hits = (a, b) => [a, b].every((h) => { const c = Math.cos(h.yaw || 0), s = Math.sin(h.yaw || 0); return [[c, -s], [s, c]].every(([ax, az]) => { const [a0, a1] = span(a, ax, az), [b0, b1] = span(b, ax, az); return Math.min(a1, b1) - Math.max(a0, b0) > 0.15; }); });
   const put = (o) => {
-    if (o.spire && inHub(o.x, o.z, o.r + 1)) return;
+    if (o.spire && (inHub(o.x, o.z, o.r + 1) || inSealSquare(o.x, o.z, o.r + 1))) return;
     if (!o.spire) {
       const kx = Math.floor(o.x / 30), kz = Math.floor(o.z / 30);
       for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) for (const q of grid.get(`${kx + a}_${kz + b}`) || []) if (hits(o, q)) return;
@@ -563,6 +564,8 @@ export function phobosHouses() {
   // (The hubs' halls first, and their yards kept clear: a yard's a rect no city house may stand in.)
   for (const hb of HUBS) (grid.get(gk(hb.x, hb.z)) || grid.set(gk(hb.x, hb.z), []).get(gk(hb.x, hb.z))).push({ x: hb.x, z: hb.z, yaw: hb.yaw, hx: hb.hx + 1, hz: hb.hz + 1, yard: true });
   for (const o of hubHouses()) { o.cell = cellOf(o.x, o.z); out.push(o); }
+  // (And the seals' squares: src/core/phobos-seals.js.)
+  for (const s of PHOBOS_SEALS) (grid.get(gk(s.x, s.z)) || grid.set(gk(s.x, s.z), []).get(gk(s.x, s.z))).push({ x: s.x, z: s.z, yaw: s.yaw, hx: SEAL_SQUARE + 0.5, hz: SEAL_SQUARE + 0.5, yard: true });
   const zones = [...PHOBOS.districts.map((d, i) => ({ key: d.key, x: d.x, z: d.z, r: d.r * 1.35, turn: (hash2(i, 77) - 0.5) * 1.5 })), { key: 'other', x: CITY.x, z: CITY.z, r: 900, turn: 0.31 }];
   for (const zn of zones) {
     const S = LOOK[zn.key], [uw, ud] = S.lot, n = S.row || 4, ALLEY = S.alley || 3, YARD = 2;
@@ -652,7 +655,7 @@ export function phobosLamps() {
     const a = st.pts[i], b = st.pts[i + 1], L = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / L, uz = (b[1] - a[1]) / L, n = Math.floor(L / 22);
     for (let k = 0; k < n; k++) {
       const sd = (k + i) % 2 ? 1 : -1, t = (k + 0.5) * 22, off = st.w - 0.5, x = a[0] + ux * t - uz * off * sd, z = a[1] + uz * t + ux * off * sd;
-      if (cityIn(x, z) > 0.97 || sloughD(x, z) < 6) continue;
+      if (cityIn(x, z) > 0.97 || sloughD(x, z) < 6 || inSealSquare(x, z, 1)) continue;
       LAMPS.push({ x, z, yaw: Math.atan2(-uz, ux) + (sd > 0 ? Math.PI / 2 : -Math.PI / 2), iron: st.w > 5, cell: cellOf(x, z) });
     }
   }
@@ -667,6 +670,16 @@ export function phobosCell(K, cell) {
   }
   for (const h of byCell().get(cell) || []) { if (h.spire) tower(K, h.wall, h.x, h.z, h.r, h.h, 'dark:roof_2', { steep: 3 }); else houseNear(K, h); }
   for (const hb of HUBS) if (cellOf(hb.x, hb.z) === cell) hubNear(K, hb);
+  // A seal's square: dark flags laid round it, an iron lantern at each corner. (The seal itself: src/core/sites.js.)
+  for (const s of PHOBOS_SEALS) if (cellOf(s.x, s.z) === cell) {
+    K.paving('dark:stone', s.x, s.z, SEAL_SQUARE, SEAL_SQUARE, s.yaw, 0.04);
+    const c = Math.cos(s.yaw), n = Math.sin(s.yaw), e = SEAL_SQUARE - 0.6;
+    for (const [u, v] of [[-e, -e], [e, -e], [e, e], [-e, e]]) {
+      const x = s.x + u * c + v * n, z = s.z - u * n + v * c, face = Math.atan2(s.x - x, s.z - z);
+      K.lantern(x, z, 3.4, face, 'iron');
+      (K.lamps ||= []).push({ p: [x, Y(x, z) + 3.0, z], c: [1, 0.62, 0.3], r: 26, i: 16, flicker: 0.3 });
+    }
+  }
   K.colliders.length = n0;
 }
 
