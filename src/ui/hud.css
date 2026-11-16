@@ -173,7 +173,18 @@ body.touch #debug { top: calc(var(--st) + 60 * var(--u)); left: calc(var(--sl) +
 body.touch #msg { font-size: clamp(26px, 6vw, 54px); }
 
 /* The game's other pieces, on a phone (their own rules are in src/ui/*.js). */
-body.touch #partyFrames { left: calc(var(--hl) + var(--t-side, 5) * var(--u)); top: calc(var(--st) + 78 * var(--u)); transform: scale(.82); transform-origin: 0 0; }
+/* (Over the stick's layer, #touch, z-index 6: the frames let a touch through, but their ▶ and the calls are the thumb's to
+   press, not the stick's. Their sizes: PARTY in src/ui/thumbs.js.) */
+body.touch #partyFrames { left: calc(var(--hl) + var(--t-side, 5) * var(--u)); top: calc(var(--st) + var(--t-party-top, 78) * var(--u)); transform: scale(.82); transform-origin: 0 0; z-index: 7; }
+body.touch #partyFrames .pf-play { width: calc(var(--t-party-play, 36) * var(--u)); height: calc(var(--t-party-play, 36) * var(--u)); right: calc((var(--t-party-play, 36) + 6) * var(--u) * -1); font-size: calc(14 * var(--u)); line-height: 1; touch-action: none; }
+body.touch #partyFrames .pf-play::after { content: ''; position: absolute; inset: calc(var(--t-party-reach, 10) * var(--u) * -1); border-radius: 50%; }
+body.touch.has-party #heroCalls { display: flex !important; z-index: 7; bottom: auto; gap: calc(5 * var(--u)); pointer-events: none; font-size: calc(12 * var(--u)); }
+body.touch #heroCalls span { display: flex; align-items: center; justify-content: center; min-width: calc(var(--t-party-call, 40) * var(--u)); height: calc(var(--t-party-call, 40) * var(--u)); box-sizing: border-box; padding: 0 calc(6 * var(--u)); border-radius: calc(6 * var(--u)); pointer-events: auto; touch-action: none; }
+body.touch #heroCalls span b { display: none; }
+body.touch #heroCalls span.down { background: rgba(60,46,24,.9); border-color: #f1d68a; }
+body.touch.hero-play #heroBar { z-index: 7; }
+body.touch.has-party #heroChat:not(:empty) { display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; }
+body.touch.menu-up :is(#heroCalls, #heroBar), body.touch.paused :is(#heroCalls, #heroBar), body.touch.map-open :is(#heroCalls, #heroBar) { visibility: hidden; }
 body.touch #raidWarn { font-size: calc(16 * var(--u)); top: 34%; }
 body.touch #heroChat { left: calc(var(--hl) + 32 * var(--u)); bottom: calc(var(--hb) + 12 * var(--u)); width: 40vw; font-size: calc(11.5 * var(--u)); }
 body.touch #vskull { top: calc(var(--st) + (var(--t-pad, 8) + var(--t-mini, 92) - 12) * var(--u)); right: calc(var(--hr) + 2 * var(--u)); width: calc(30 * var(--u)); height: calc(30 * var(--u)); }

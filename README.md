@@ -621,6 +621,10 @@ the screen's height, so a small phone and a tablet get the same picture:
   (`body.menu-up`, `body.paused`, `body.map-open`). A word with someone lays what you can say out as rows a thumb can't
   miss, with no key names; the pack's cells are as big as the height allows, with the charm pouch in its heading and
   what's in your hands said in the bar beneath; the pause and the title's menu are two columns of plates.
+- **Your party**, on the left under your life: each one's frame with the ▶ that puts you in their body, and under the
+  frames the four calls, Go!, To me!, Wait! and Help! (Z X C G on a keyboard), as buttons. They're over the stick's side
+  of the screen, so they're laid over the stick's layer (`#touch`): a tap on them is theirs and never takes up the stick.
+  So is the bar of a hero you're playing, at the top. The chat's lines under the calls grow up only as far as them.
 
 The numbers for all of it are one table, `src/ui/thumbs.js`: where each button is from the staff's, how big, the top
 row, the stick. `place()` hands them to the stylesheet, and `node --test tests/touch-hud.test.mjs` checks with them that
@@ -2560,8 +2564,9 @@ and the woods loaded at the start, where the models themselves would have to be 
 **The note the game leaves** (`src/core/lastrun.js`). Since nothing can catch the kill, the game writes down what it's
 doing as it goes: loading, at the title, playing, for how long and where, every eight seconds of play. Leaving the page or
 putting it away marks the note; one found unmarked at the next start is a page the browser killed. The title then says so
-(when, and where you stood), offers **Continue** from the last autosave, and on a phone loads lighter: after one death
-four of the other heroes instead of eight and no model's picture over 256 a side, after two only two of them. The
+(when, and where you stood), offers **Continue** from the last autosave, and on a phone loads lighter: no model's picture
+over 256 a side. It never has fewer of the other heroes about: a party for the Warrens is
+hired from them (four, with a tank and a healer), so a cast cut down would leave no way into a dungeon. The
 level is kept in this browser (`velscour.light`); `?light=0` puts it back, `?light=2` tries the lightest. If it still
 happens, what the title says is what to pass on: whether it died loading or playing, and after how long.
 

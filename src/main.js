@@ -430,10 +430,9 @@ async function boot(plan, poolSize) {
   // The other Tessariels this session (src/core/heroes.js): who they are is kept, so the same people are about next time.
   // How many: by the tier, the setting, or ?heroes=N for tests.
   const heroCount = params.has('heroes') ? Number(params.get('heroes')) : settings.heroes === 'off' ? 0
-    : Math.min(settings.heroes === 'few' ? 8 : 99, HERO_SLOTS[gpu.tier.lean ? 'lean' : 'desktop'],
-      // (Each is a body, its pictures and its rig, some 10 MB: a phone that's been killed once has four, twice two. Not
-      // none: the quartermasters come with the cast, and they're how a party is hired.)
-      gpu.mobile && RUN.light ? (RUN.light > 1 ? 2 : 4) : 99);
+    // (Never fewer for a browser that closed the game last time, src/core/lastrun.js: the party for the Warrens is hired from
+    // these, four with a tank and a healer, and a cast cut to two or four left none to be had, or no choice of who.)
+    : Math.min(settings.heroes === 'few' ? 8 : 99, HERO_SLOTS[gpu.tier.lean ? 'lean' : 'desktop']);
   let cast = [];
   if (heroCount > 0) {
     try {
@@ -883,7 +882,7 @@ async function boot(plan, poolSize) {
     await new Promise((r) => setTimeout(r, 700));
     const kept = !!saves.newest();
     const text = `The browser closed the game last time, ${deathWords(RUN.died)}. It does that when a page wants more memory than the device has to give.`
-      + `${gpu.mobile && RUN.light ? ` This time the game is using less: ${RUN.light > 1 ? 'only two' : 'fewer'} of the other heroes are about, and bodies are painted smaller.` : ''}`
+      + `${gpu.mobile && RUN.light ? ' This time the game is using less: bodies are painted smaller.' : ''}`
       + `${lighterWords()}`
       + `${kept ? ' Continue picks up from where the game was last kept.' : ''}`;
     if (await title.confirm({ title: 'The game was closed', text, yes: kept ? 'Continue' : 'Back', no: kept ? 'Main Menu' : false }) && kept) {

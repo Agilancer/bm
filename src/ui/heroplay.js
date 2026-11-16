@@ -128,7 +128,7 @@ export class HeroPlayUI {
       #heroCalls span { padding: 2px 7px; background: rgba(8,6,4,.62); border: 1px solid rgba(140,115,68,.45); border-radius: 3px; }
       #heroCalls span b { color: #c9a35c; margin-right: 4px; font-weight: 400; }
       #heroCalls span.on { color: #fff4da; border-color: #f1d68a; box-shadow: 0 0 8px rgba(241,214,138,.5); }
-      body.touch #heroCalls, body.touch #heroVit { display: none !important; }
+      body.touch #heroVit { display: none !important; }
       body.touch #heroBar { bottom: auto; top: 10px; }
     `;
     document.head.appendChild(css);
@@ -137,6 +137,15 @@ export class HeroPlayUI {
     this.vitEl.innerHTML = '<div class="who"></div><div class="bar"><i></i></div>';
     this.targetEl.innerHTML = '<div class="n"></div><div class="bar"><i></i></div>';
     this.callsEl.innerHTML = CALLS.map((k) => `<span data-c="${k}"><b>${CALL_TEXT[k][0]}</b>${CALL_TEXT[k][1]}</span>`).join('');
+    // (On a phone they're buttons, under the party's frames and over the stick's layer: src/ui/hud.css, PARTY in thumbs.js.
+    // A tap is the call, and goes no further, so it never takes up the stick.)
+    for (const s of this.callsEl.children) {
+      const press = (e) => { e.preventDefault(); e.stopPropagation(); if (this.input.enabled && !this.input.menu) { s.classList.add('down'); this.call(s.dataset.c); } };
+      const up = () => s.classList.remove('down');
+      s.addEventListener('touchstart', press, { passive: false });
+      s.addEventListener('mousedown', press);
+      for (const t of ['touchend', 'touchcancel', 'mouseup', 'mouseleave']) s.addEventListener(t, up);
+    }
   }
 
   // The ▶ on a party frame.
@@ -166,6 +175,23 @@ export class HeroPlayUI {
     if (this.heldOn === on) return;
     this.heldOn = on;
     this.sim.postMessage({ type: 'heroPlay', op: 'held', on });
+  }
+
+  // On a phone, the calls sit just under the party's frames, however many there are (and wherever Move Buttons put them).
+  placeCalls() {
+    const f = this.party.frames?.getBoundingClientRect();
+    if (!f || !f.height) return;
+    const at = `${Math.round(f.left)},${Math.round(f.bottom)},${innerHeight}`;
+    if (at === this.callsAt) return;
+    this.callsAt = at;
+    this.callsEl.style.left = `${Math.round(f.left)}px`;
+    this.callsEl.style.top = `${Math.round(f.bottom + 6)}px`;
+    // (The chat's lines, under them, grow up only so far as the calls: the oldest go out of sight at the top.)
+    const chat = document.getElementById('heroChat');
+    if (chat) {
+      const c = this.callsEl.getBoundingClientRect(), bottom = innerHeight - (parseFloat(getComputedStyle(chat).bottom) || 0);
+      chat.style.maxHeight = `${Math.max(40, Math.round(bottom - c.bottom - 4))}px`;
+    }
   }
 
   call(kind) {
@@ -246,6 +272,7 @@ export class HeroPlayUI {
     if (!snap) return;
     const o = H.PLAY, who = (snap[o] | 0) - 1;
     document.body.classList.toggle('has-party', this.party.members.length > 0);
+    if (this.input.touch && this.party.members.length) this.placeCalls();
     // Auto-play on or off, told as it changes.
     const auto = !!this.autoplay?.on;
     if (auto !== this.autoSent && who >= 0) { this.autoSent = auto; this.sim.postMessage({ type: 'heroPlay', op: 'auto', on: auto }); }

@@ -10,8 +10,8 @@ const read = (k) => { try { return JSON.parse(localStorage.getItem(k) || 'null')
 const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* no storage, or full */ } };
 
 // How much lighter a phone loads, from how often it's been killed: 0 as the tier says, 1 after one death, 2 after another.
-// (What each level does is where it's used: the other heroes' number in src/main.js, the models' pictures in
-// src/gfx/gpu.js lighten.) ?light=N sets it by hand, and keeps it.
+// (What each level does is where it's used: the models' pictures in src/gfx/gpu.js lighten. Never the other heroes'
+// number: a party for the Warrens is hired from them. tests/crash-party.test.mjs.) ?light=N sets it by hand, and keeps it.
 export const LIGHT_MOST = 2;
 // On a PC, how soon into play a death or a lost GPU says the game didn't fit (beginRun pc).
 export const PC_EARLY_MINS = 5;
