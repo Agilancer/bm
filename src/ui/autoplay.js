@@ -271,6 +271,8 @@ export class AutoPlay {
     if (!this.on || !snap) return;
     if (!input.enabled) { this.toggle(false); return; }
     if (this.o.shared.input[INPUT.PAUSE]) { this.brain.halt(); return; }
+    // (Stood in awe at first sight of Phobos, while the camera's away looking: src/ui/firstsight.js.)
+    if (this.o.game.firstSight?.active) { this.brain.halt(); return; }
     // Hands on the keys: theirs, for a moment.
     if (input.handsOn) {
       if (this.yieldT <= 0) this.status('You have the controls.');

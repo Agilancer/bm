@@ -47,6 +47,16 @@ export class World {
   constructor(data, interior) {
     // The portals' platforms: level stone to stand on, over the land or the Warrens' floor (src/core/sites.js portalWall, seal).
     this.platforms = buildSites().floors;
+    // (By the 64 m cell each one's reach touches, in the order they were made: Phobos's houses have ten thousand upstairs
+    // floors among them, and a body's height is asked for every step.)
+    this.platGrid = new Map();
+    this.platforms.forEach((p, n) => {
+      for (let i = Math.floor((p.x - p.r) / 64); i <= Math.floor((p.x + p.r) / 64); i++) for (let j = Math.floor((p.z - p.r) / 64); j <= Math.floor((p.z + p.r) / 64); j++) {
+        const k = boxKey(i, j);
+        if (!this.platGrid.has(k)) this.platGrid.set(k, []);
+        this.platGrid.get(k).push(p);
+      }
+    });
     // The pines' trunks, by the cell they're in. As far as you can go, and no further.
     // (Worked out a cell at a time, the first time anyone comes near it: the land's 11 km across.)
     this.trunks = new Map();
@@ -250,8 +260,11 @@ export class World {
   // bell tower's stair: stack) is stood on at the highest of them within a step of y, the feet's height; without y (anyone
   // but the player, who all stay on the ground floor) at its lowest.
   platformAt(x, z, y) {
-    for (let i = 0; i < this.platforms.length; i++) {
-      const p = this.platforms[i];
+    let over = null;
+    const list = this.platGrid.get(boxKey(Math.floor(x / 64), Math.floor(z / 64)));
+    if (!list) return null;
+    for (let i = 0; i < list.length; i++) {
+      const p = list[i];
       if (Math.abs(x - p.x) > p.r || Math.abs(z - p.z) > p.r) continue;
       let best = null, low = null;
       for (const f of p.rects) {
@@ -261,10 +274,15 @@ export class World {
         if (low === null || f.y < low) low = f.y;
         if (y !== undefined && f.y <= y + 0.7 && (best === null || f.y > best)) best = f.y;
       }
+      // (over: a deck high over ground that's walked on too, Phobos's patio, stairs and steps, src/core/phobos-build.js. It's
+      // stood on only by feet that are up at it: under it, and for everyone but the player, the ground's the ground.)
+      // Such decks stand one over another (the Keep's steps, a stair's flights), so it's the highest of all of them within
+      // a step of the feet, not the first found.
+      if (p.over) { if (best !== null && (over === null || best > over)) over = best; continue; }
       if (best !== null) return best;
       if (low !== null) return low;
     }
-    return null;
+    return over;
   }
 
   height(x, z, y) {

@@ -168,6 +168,9 @@ export class FolkRig {
     this.headTop = theirs.t[this.head * 3 + 1];
     // Per body: how far the upper arms are drawn out from the body, for a gown or a big frame (radians), and the skirt.
     this.armOut = opts.armOut || 0;
+    // How far this body closes its fists on the run, 0..1 (folk.json's "fist"): a body whose fingers are coarse or
+    // thick-gloved (the Phobos three, from Meshy) tears at a full fist, so it runs with a loose half fist.
+    this.fistAmount = opts.fist ?? 1;
     this.skirt = opts.skirt || null;
   }
 
@@ -281,7 +284,7 @@ export class FolkPose {
     if (run > 0.01) {
       const F = C.fist;
       for (let i = 0; i < F.length; i += 3) {
-        const a = F[i + 1] * run * (F[i + 2] ? -0.8 : 1) * 0.5;
+        const a = F[i + 1] * run * rig.fistAmount * (F[i + 2] ? -0.8 : 1) * 0.5;
         FQ[0] = 0; FQ[1] = F[i + 2] ? Math.sin(a) : 0; FQ[2] = F[i + 2] ? 0 : Math.sin(a); FQ[3] = Math.cos(a);
         quatMul(sa, F[i] * 4, sa, F[i] * 4, FQ, 0);
       }

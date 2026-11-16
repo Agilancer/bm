@@ -1,7 +1,7 @@
 // WGSL for everything drawn in the world pass.
 import { COMMON } from './shaders.js';
 import { CHURCH_Z } from '../core/church.js';
-import { RD_CELL, RD_HALF, RD_MAX, RD_N } from '../core/roads.js';
+import { RD_CELL, RD_HALF, RD_MAX, RD_N, RD_NX } from '../core/roads.js';
 
 export const TERRAIN = COMMON + /* wgsl */ `
 @group(1) @binding(0) var groundColor: texture_2d_array<f32>;
@@ -13,7 +13,7 @@ export const TERRAIN = COMMON + /* wgsl */ `
 // lists; and each stretch as two vec4: (ax, az, bx, bz), (half-width, what it's laid with, how far along its way a is, length).
 @group(1) @binding(5) var<storage, read> roadIdx: array<u32>;
 @group(1) @binding(6) var<storage, read> roadSeg: array<vec4f>;
-const RD_HALF = ${RD_HALF.toFixed(1)}; const RD_CELL = ${RD_CELL.toFixed(1)}; const RD_N = ${RD_N}; const RD_MAX = ${RD_MAX}u;
+const RD_HALF = ${RD_HALF.toFixed(1)}; const RD_CELL = ${RD_CELL.toFixed(1)}; const RD_N = ${RD_N}; const RD_NX = ${RD_NX}; const RD_MAX = ${RD_MAX}u;
 
 // The nearest way to q: how far outside its edge (less than nothing: on it), its half-width, what it's laid with, how far
 // along and across it q is, and which way it runs.
@@ -21,8 +21,8 @@ struct RoadHit { e: f32, w: f32, kind: f32, along: f32, across: f32, dir: vec2f 
 fn roadAt(q: vec2f) -> RoadHit {
   var h = RoadHit(99.0, 0.0, 0.0, 0.0, 0.0, vec2f(1.0, 0.0));
   let c = vec2i(floor((q + RD_HALF) / RD_CELL));
-  if (c.x < 0 || c.y < 0 || c.x >= RD_N || c.y >= RD_N) { return h; }
-  let k = u32(c.y * RD_N + c.x) * 2u;
+  if (c.x < 0 || c.y < 0 || c.x >= RD_NX || c.y >= RD_N) { return h; }
+  let k = u32(c.y * RD_NX + c.x) * 2u;
   let first = roadIdx[k];
   let n = min(roadIdx[k + 1u], RD_MAX);
   for (var i = 0u; i < n; i++) {
@@ -59,7 +59,7 @@ fn rot(p: vec2f, a: f32) -> vec2f { let c = cos(a); let s = sin(a); return vec2f
   let gm = textureSampleLevel(groundMap, clampSmp, gmUv, 0.0);
   let inMap = step(0.0, gmUv.x) * step(gmUv.x, 1.0) * step(0.0, gmUv.y) * step(gmUv.y, 1.0);
   // Past the fine map of the village there's a coarse one of all the land: the roads, and where the pines stand.
-  let fuv = p.xz / FAR_SPAN + 0.5;
+  let fuv = (p.xz - FAR_ORG) / FAR_SPAN;
   let fm = textureSampleLevel(farMap, clampSmp, fuv, 0.0);
   // The far countries (src/core/lands.js): their tint and wet, snow on the heights, rock on the steeps.
   let ft = textureSampleLevel(farTint, clampSmp, fuv, 0.0);

@@ -7,7 +7,8 @@
 // as a skinning palette. The writer fills a slot nobody is reading and then publishes it as LATEST; a reader marks the one
 // it's on as READING (the same handshake as the fight's snapshot, src/core/layout.js).
 
-export const FOLK_MAX = 48;
+// (The town's people, those posted out in the land, and City State Phobos's street crowd: src/folk/people.js FOLK.)
+export const FOLK_MAX = 72;
 // Palette joints a person can have: their own (55 at most in the owner's models) and the four the skirt borrows.
 export const FOLK_JOINTS = 72;
 
@@ -22,7 +23,7 @@ export const FIN = {
   // Up to 8 dangers the town should run from (anything hunting within reach of town): x, z pairs, and how many.
   DANGER_N: 13, DANGER: 14,
   // Per person (by body), 1 when the renderer drew them or their shadow last frame (src/gfx/folk.js cull): they're posed more often.
-  SEEN: 32, SIZE: 80,
+  SEEN: 32, SIZE: 32 + FOLK_MAX,
 };
 
 // Per person, in a slot.

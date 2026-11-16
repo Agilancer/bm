@@ -1,0 +1,22 @@
+{
+  "_": "Chunk 0 design pictures for City State Phobos (docs/PHOBOS.md). Meshy nano-banana-pro, 9 credits each. The owner said no critics on these; pictures first, and no 3D until the owner approves them. Then: meshy_image_to_3d meshy-t2.5 smart topology 30000 tris + meshy-n1 texture, pose_mode t-pose (15 credits), meshy_rig (5), clips from Lisandra's bank like the townsfolk. Apricot's references are renders of the redhead townswoman (Tamsin Reed) made with tools/phobos/render_front.py in background Blender, saved in art/phobos/ref/.",
+  "apricot": {
+    "tool": "meshy_image_to_image",
+    "ai_model": "nano-banana-pro",
+    "reference_file_paths": ["art/phobos/ref/redhead_front.png", "art/phobos/ref/redhead_head.png"],
+    "source_model": "F:/!    BM V2/! TRIPO GENERATED NPC/FEMALE VILLAGER - PETITE RED CURLY UNDERCUT.glb",
+    "prompt": "Keep this exact same adult woman (in her thirties): the same face, freckles, blue eyes, the same long red curly hair swept over one side with the shaved undercut on the other side, the same petite curvy body and height, the same T-pose with arms straight out, the same realistic 3D game-character render style, plain light grey background, full body, front view. Change ONLY her clothes: take off the villager dress, vest, leggings and belt pouch. Dress her as a flirtatious fantasy \"sewer princess\" in a revealing, tasteful game outfit in apricot-orange and cream silk: a cropped laced corset top with a low sweetheart neckline and bare shoulders, bare midriff, a short ruffled apricot silk skirt with a high slit at one hip, a thin copper chain belt, sheer apricot gauze ribbons tied around the upper arms, short cream lace fingerless gloves, a pearl choker, knee-high soft cream leather boots with copper buckles, and a small delicate copper tiara with one round apricot-orange gem. Bare legs above the boots. Nothing held in the hands. No text, no letters, no logos, no emblems, no blue, no gold."
+  },
+  "martleboro": {
+    "tool": "meshy_text_to_image",
+    "ai_model": "nano-banana-pro",
+    "pose_mode": "t-pose",
+    "prompt": "Realistic 3D game character render for a dark medieval fantasy RPG, full body, front view, T-pose, plain light grey background, soft neutral studio light, PBR materials. Martleboro, a sewer-keeper of a grim castle city: a short, stocky, barrel-chested man of about forty, round ruddy cheerful face, big bulbous nose, an enormous bushy dark-brown handlebar mustache, thick dark eyebrows, short dark hair under a close-fitting red leather hood that leaves the face open. Light leather armour: a padded red-dyed leather jerkin with riveted leather shoulder guards and laced front, worn over a cream linen shirt with sleeves rolled to the elbow; thick brown leather work gloves; a heavy brown leather tool belt hung with brass pipe-keys, an iron valve wrench, a coil of rope and a small hooded tin lantern; brown leather breeches; tall black waxed-leather wading boots to the knee with grime splashed on them. Grimy, sturdy, friendly working man. Nothing held in the hands. Not overalls, no cap with a brim, no white gloves, no blue. No text, no letters, no logos, no emblems."
+  },
+  "louis_g": {
+    "tool": "meshy_text_to_image",
+    "ai_model": "nano-banana-pro",
+    "pose_mode": "t-pose",
+    "prompt": "Realistic 3D game character render for a dark medieval fantasy RPG, full body, front view, T-pose, plain light grey background, soft neutral studio light, PBR materials. Louis G, a sewer-keeper of a grim castle city and the younger brother: a tall, lanky, thin man of about thirty-seven, long face, long nose, a neat dark-brown mustache (thinner and tidier than a handlebar), kind slightly nervous expression, short dark hair under a close-fitting green leather hood that leaves the face open. Light leather armour: a long green-dyed leather jerkin reaching mid-thigh with laced sides and riveted leather shoulder guards, worn over a cream linen shirt with sleeves rolled to the elbow; brown leather work gloves; a brown leather belt with brass pipe-keys, a small curved herb knife in a sheath and a canvas satchel bulging with pale mushrooms; brown leather breeches; tall black waxed-leather wading boots to the knee with grime splashed on them. Gangly, careful, gentle. Nothing held in the hands. Not overalls, no cap with a brim, no white gloves, no blue. No text, no letters, no logos, no emblems."
+  }
+}

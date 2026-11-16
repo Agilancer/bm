@@ -10,6 +10,7 @@ import { CAVE_PATH, PATHS, PLOTS, ROADS, fbm, hash2, nearest, openingTerrain, se
 import { forestAmount } from './forest.js';
 import { inCaveBox, onWay } from './opening.js';
 import { CLIFF, COUNTRY_KEYS, MOUNT, WATERS, countryWeights, groundCover, routeDist, siteAt } from './lands.js';
+import { cityIn } from './east.js';
 import { churchSite } from './church.js';
 import { PORTAL } from './dungeon.js';
 import { huntEdge } from './hunts.js';
@@ -60,6 +61,7 @@ export function roadEdge(x, z) {
 
 // Nowhere a stone may lie: the town, the church's ground, the houses' plots, the cave, the places, the water, the cliff's face.
 function barred(x, z) {
+  if (x > 9300 && x < 10800 && cityIn(x, z) < 1.0) return true;   // (nothing lies about in Phobos's streets: src/core/phobos-build.js dresses them)
   if (Math.hypot(x, z) < TOWN) return true;
   // (And the town's east end, built since on the ground the church stood on: the manor, the bakehouse and the herbalist's. A boulder
   // lay against the herbalist's wall, and stones in the manor's forecourt.)
@@ -86,7 +88,7 @@ function lie(x, z) {
 }
 
 // How stony each country is, over the scatter everywhere gets (src/core/lands.js COUNTRIES).
-const STONY = { darkwood: 0.12, downs: 0.35, fen: 0.1, rustwood: 0.25, ashen: 0.6, barrow: 0.45, rimeholt: 0.45, gallows: 0.3, deepwood: 0.3 };
+const STONY = { darkwood: 0.12, downs: 0.35, fen: 0.1, rustwood: 0.25, ashen: 0.6, barrow: 0.45, rimeholt: 0.45, gallows: 0.3, deepwood: 0.3, marches: 0.4, phobos: 0.5 };
 const STONY_OF = COUNTRY_KEYS.map((k) => STONY[k] ?? 0.1);
 const CW = new Float32Array(COUNTRY_KEYS.length);
 function stony(x, z) {
@@ -113,6 +115,8 @@ function rockInCell(i, j, big, out) {
   const on = e.d < -0.35;
   if (on && e.d < -e.w * 0.55) return;
   const L = lie(x, z);
+  // (Nothing lies on the east's cliffs, the Chasm's walls and the basin's: it would hang in the air off them.)
+  if (x > 7000 && L.slope > 0.42) return;
   const forest = forestAmount(x, z);
   // Outcrops: the land's stone comes up in patches.
   const clump = fbm(x * 0.017 + 5.3, z * 0.017 - 2.1, 2);

@@ -26,11 +26,12 @@ test('the land\'s corners are typed arrays of just their length, and can be let 
   for (const p of full.parts.values()) { assert.ok(typed(p) && whole(p)); verts += p.pos.length / 3; }
   // (A PC's land has the outposts' fences, tents and stones as well, src/core/wild-dress.js, and the roads' carts, stumps and
   // cold fires, src/core/roadside.js; a phone's, below, hasn't.)
-  assert.ok(verts > 150000 && verts < 900000, `${verts} corners: the land's, and none of the delves'`);
+  assert.ok(verts > 150000 && verts < 1600000,   // (a million and a half with Phobos blocked out: src/core/phobos-build.js. It wants a build of its own, like the delves', before it's detailed.)
+    `${verts} corners: the land's, and none of the delves'`);
   const phone = buildSites(true, true);
   let pv = 0;
   for (const p of phone.parts.values()) { assert.ok(typed(p) && whole(p)); pv += p.pos.length / 3; }
-  assert.ok(pv > 150000 && pv < 600000, `${pv} corners on a phone`);
+  assert.ok(pv > 150000 && pv < 900000, `${pv} corners on a phone`);   // (as above: Phobos's block-out is 350,000 of them even with flat-lidded houses, and a phone holds them all)
   assert.equal(phone.colliders.length, full.colliders.length, 'a phone is stopped by what a PC is');
   dropSiteGeometry();
   assert.equal(buildSites().parts.size, 0);

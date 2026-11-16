@@ -12,8 +12,15 @@
 import { fbm, hash2, sstep } from './terrain-noise.js';
 import { OUTPOSTS } from './wilds-data.js';
 import { WAYS } from './roads-data.js';
+import { CHASM, EAST_FROM, WORLD_EAST, eastHeight, eastSteep } from './east.js';
+import { PHOBOS } from './phobos-data.js';
 
+// How far the land goes: this far north, south and west of the well, and WORLD_EAST east of it, where the Marches run out to
+// the City State of Phobos (src/core/east.js). LAND: the same as a box.
 export const WORLD_EDGE = 5600;
+export { WORLD_EAST };
+export const LAND = { x0: -WORLD_EDGE, x1: WORLD_EAST, z0: -WORLD_EDGE, z1: WORLD_EDGE };
+export const inLand = (x, z, m = 0) => x > LAND.x0 - m && x < LAND.x1 + m && z > LAND.z0 - m && z < LAND.z1 + m;
 
 // The countries. c: where each one is thickest (warped nearest-centre, as land.js did it). hills: how much of the far hills it
 // keeps. trees: how thick the pines stand, and code: their tint (0 green, 1 rust, 2 snow-dusted, 3 dead). ground: the shader's tint
@@ -28,6 +35,10 @@ export const COUNTRIES = {
   rimeholt: { name: 'The Rimeholt Fells', c: [[600, 3900], [-700, 3300], [1500, 4700]], hills: 1.15, trees: 0.35, code: 2, tint: [1, 1, 1], wet: 0, dry: 0, snow: 0.8 },
   gallows: { name: 'The Gallowswood', c: [[4100, 3200], [4800, 1600], [3100, 4500]], hills: 0.5, trees: 0.7, code: 3, tint: [0.84, 0.82, 0.78], wet: 0.1, dry: 0.4, snow: 0 },
   deepwood: { name: 'The Deepwood', c: [[-1300, -1500], [-1700, -600]], hills: 0.75, trees: 1.25, code: 0, tint: [0.82, 0.9, 0.82], wet: 0.2, dry: 0, snow: 0 },
+  // Out east, past the old edge (east: they hold no ground west of it, and the old countries none east of it): Velscour's
+  // watch country, and the dead high ground round his city.
+  marches: { name: 'The Marches', c: [[6400, -4600], [6400, -2300], [6400, 0], [6400, 2300], [6400, 4600]], hills: 0.6, trees: 0.3, code: 3, tint: [0.74, 0.76, 0.72], wet: 0, dry: 0.6, snow: 0, east: true },
+  phobos: { name: 'Phobos', c: [[8400, -4600], [8400, -2300], [8400, 0], [8400, 2300], [8400, 4600], [10400, -3500], [10400, 0], [10400, 3500]], hills: 0.3, trees: 0, code: 3, tint: [0.8, 0.76, 0.77], wet: 0, dry: 0.7, snow: 0, east: true },
 };
 export const COUNTRY_KEYS = Object.keys(COUNTRIES);
 const LIST = COUNTRY_KEYS.map((k) => COUNTRIES[k]);
@@ -94,8 +105,23 @@ export const SITES = {
   wayhouse: { x: -1720, z: 2378, r: 35, name: 'The Moor Wayhouse', pad: 14 },
   oldtoll: { x: 3314, z: 2581, r: 35, name: 'The Old Toll', pad: 12 },
   quarry: { x: 2924, z: -1676, r: 45, name: 'Ossery Quarry', pad: 16 },
+  // The Marches (docs/PHOBOS-LAYOUT.md): Velscour's three watch keeps and two towers on the roads east, each with a job.
+  greywarden: { x: 5900, z: -1900, r: 90, name: 'Greywarden Keep', pad: 64, keep: true },
+  lantern: { x: 6800, z: -1000, r: 40, name: 'The Lantern', pad: 18, keep: true },
+  gatewatch: { x: 6600, z: 150, r: 90, name: 'Gatewatch Keep', pad: 64, keep: true },
+  needle: { x: 7050, z: 1200, r: 40, name: 'The Needle', pad: 18, keep: true },
+  marshal: { x: 6100, z: 2100, r: 100, name: "Marshal's Hold", pad: 72, keep: true },
+  // The one way over the ridge and down: the pass, the Chasm's fallen bridge, and the shelf at its mouth where Phobos is
+  // first seen. The Sill's seal is the first of the city's.
+  notch: { x: 7500, z: 0, r: 50, name: "Widow's Notch" },
+  span: { x: 8400, z: 120, r: 50, name: 'The Broken Span' },
+  sill: { x: 8950, z: 0, r: 45, name: 'The Sill', portal: true },
 };
 export const SITE_KEYS = Object.keys(SITES);
+// The knolls under the Lantern and the Needle: [x, z, radius, height]. And where no tree stands so a thing can be seen: them,
+// and the toll gate on the Throne Road. [x, z, radius]
+const TOWER_KNOLLS = [[6800, -1000, 110, 20], [7050, 1200, 120, 26]];
+const BARE = [[6800, -1000, 130], [7050, 1200, 140], [6790, 51, 95], [6600, 150, 150], [7480, 10, 120]];
 
 // The roads, as polylines (x, z) with a half-width. Drawn worn into the ground, kept clear of trees, and on the map.
 export const ROUTES = [
@@ -125,10 +151,19 @@ export const ROUTES = [
   { name: 'the Sunken Mile', w: 1.6, pts: [[-150, -2640], [-260, -2690], [-378, -2700]] },
   { name: 'the Cairn Path', w: 1.4, pts: [[1250, 90], [1210, -150], [1240, -372]] },
   { name: 'the Mill Track', w: 1.6, pts: [[-3020, -453], [-3100, -700], [-3135, -962]] },
+  // East, past the old edge: the March Road from the woodcutters' camp by Greywarden Keep and the Lantern to Gatewatch's toll;
+  // the Marshal's Road from Mother Grawl's by Marshal's Hold and the Needle to the same gate; and from there the one way on,
+  // over Widow's Notch, down the Chasm and off the Sill to the drawbridge (src/core/east.js CHASM).
+  { name: 'the March Road', w: 3, pts: [[4745, -1300], [5200, -1380], [5600, -1560], [5830, -1790], [6000, -1830], [6400, -1500], [6740, -1040], [6830, -900], [6790, -300], [6700, 60]] },
+  { name: "the Marshal's Road", w: 2.6, pts: [[4840, 1600], [5300, 1640], [5700, 1820], [5990, 2030], [6230, 2040], [6700, 1600], [7000, 1230], [6960, 800], [6760, 260], [6700, 60]] },
+  { name: 'the Throne Road', w: 3.4, pts: [[6700, 60], [6900, 40], ...CHASM.map((p) => [p[0], p[1]])] },
+  // Phobos's own streets (tools/phobos/layout.json, src/core/phobos-data.js): the King's Mile from the Drawbridge Gate to the
+  // castle's, and the four named streets off it. Paved, on the map, and kept clear like any road.
+  ...PHOBOS.streets.map((st) => ({ name: st.name, w: st.w > 5 ? 6.5 : 2.6, pts: st.pts })),
 ];
 // What each is, for how it's drawn and laid (src/core/roads.js SURFACES): the great roads, paved once and worn back to gravel
 // in stretches; the plain roads between the towns; lanes to the lesser places; and footpaths.
-const CLASS_OF = { 'the Hill Road': 'great', 'the Vigil Road': 'great', 'the Frost Road': 'great', 'the Gallows Road': 'great', 'the Abbey Road': 'great',
+const CLASS_OF = { "The King's Mile": 'great', 'Ash Lane': 'road', 'The Low Road': 'road', 'The High Loop': 'road', 'The Corpse Quay': 'road', 'the Throne Road': 'great', 'the March Road': 'great', "the Marshal's Road": 'road', 'the Hill Road': 'great', 'the Vigil Road': 'great', 'the Frost Road': 'great', 'the Gallows Road': 'great', 'the Abbey Road': 'great',
   "the Pilgrims' Road": 'road', 'the Fen Way': 'road', 'the Barrow Track': 'road' };
 for (const r of ROUTES) r.cls = CLASS_OF[r.name] || 'lane';
 // The roads, lanes and footpaths laid over the land between everything else (tools/roads/lay.mjs, src/core/roads-data.js), so
@@ -196,6 +231,8 @@ export function countryWeights(x, z, out = W) {
     let d = 1e18;
     const c = CENTRES[i];
     for (let k = 0; k < c.length; k += 2) d = Math.min(d, Math.hypot(wx - c[k], wz - c[k + 1]));
+    // (The east's countries keep to the east of the old edge, and the old ones to the west of it.)
+    d += 4 * Math.max(0, LIST[i].east ? EAST_FROM + 100 - wx : wx - EAST_FROM - 100);
     out[i] = d; dmin = Math.min(dmin, d);
   }
   let tot = 0;
@@ -268,6 +305,10 @@ export function landHeight(x, z, level, raw = false) {
   if (Math.abs(x - BARROWS[0][0]) < 200 && Math.abs(z - BARROWS[0][1]) < 200) {
     for (const [bx, bz, br, bh] of BARROWS) { const q = 1 - ((x - bx) ** 2 + (z - bz) ** 2) / (br * br); if (q > 0) h += bh * Math.pow(q, 0.7); }
   }
+  // The east: the ridge, the Chasm, the bowl Phobos stands in and the castle's crag.
+  if (x > 7000) h = eastHeight(x, z, h);
+  // (And the bare knolls the Marches' two towers stand on, to be seen from the roads.)
+  if (x > 6600 && x < 7250) for (const [kx, kz, kr, kh] of TOWER_KNOLLS) { const d = Math.hypot(x - kx, z - kz); if (d < kr) h += kh * Math.pow(1 - d / kr, 1.5); }
   if (raw) return h;
   // Roads: smoothed, so they don't climb every hummock (blended toward the land's own lie a little way off).
   const rd = routeDist(x, z);
@@ -331,6 +372,8 @@ export function landTrees(x, z) {
   if (siteAt(x, z, 15)) return 0;
   for (const wt of WATERS) if ((x - wt.x) ** 2 + (z - wt.z) ** 2 < (wt.r + 10) ** 2) return 0;
   if (Math.abs(x - CLIFF.x) < 14 && z > CLIFF.z0 && z < CLIFF.z1) return 0;
+  if (x > 7000 && eastSteep(x, z)) return 0;   // (nor on the east's cliffs)
+  if (x > 6400 && x < 7700) for (const [bx, bz, br] of BARE) if ((x - bx) ** 2 + (z - bz) ** 2 < br * br) return 0;
   const w = countryWeights(x, z);
   let t = 0;
   for (let i = 0; i < LIST.length; i++) t += w[i] * LIST[i].trees;

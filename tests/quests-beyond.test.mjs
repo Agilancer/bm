@@ -275,7 +275,8 @@ test('a day and a night at their posts: they stand where they were put, turn to 
     }
   }
   // Nobody of the town's has been sent out to them, or anywhere off the town's own ground.
-  for (const me of life.folk) if (!me.posted) assert.ok(Math.hypot(me.x, me.z) < 400, `${me.id} is at ${me.x | 0}, ${me.z | 0}`);
+  // (Phobos's street crowd's parked in the city till you're in it: tests/phobos-crowd.test.mjs.)
+  for (const me of life.folk) if (!me.posted && !me.crowd) assert.ok(Math.hypot(me.x, me.z) < 400, `${me.id} is at ${me.x | 0}, ${me.z | 0}`);
   // Someone walks up: they look, and turn; and say something as you stand there.
   const at = [who.x + 1.8, who.y, who.z + 1.2];
   for (let k = 0; k < 200; k++) { life.update(dt, { hour: 10, day: 1, player: at, dangers: [] }); talk.update(dt, { player: at, cast: 0 }); }

@@ -55,6 +55,7 @@ import { TownUI } from './ui/folk.js';
 import { BOSS_CHEST, LAST_CHEST, hands, matName, RARITIES } from './items/items.js';
 import { Lands } from './ui/lands.js';
 import { AutoPlay } from './ui/autoplay.js';
+import { FirstSight } from './ui/firstsight.js';
 import { FoeBars, isBoss } from './ui/foebars.js';
 import { Arrange } from './ui/arrange.js';
 import { groundAt, setHomes } from './ui/places.js';
@@ -1067,6 +1068,9 @@ async function boot(plan, poolSize) {
     base: BASE, opening: OPENING_ENABLED, game, shared, input, hud, audio, pack, inventory, townUI, lands, renderer, town,
     spellbar: () => game.spellbar, paused: () => state.paused, pause: (on) => input.onPauseChange(on), foeNames: FOE_NAMES, settings,
   });
+  // First sight of Phobos, from the Sill: auto-play stops and the camera goes to look (src/ui/firstsight.js).
+  game.firstSight = new FirstSight({ game, input, settings, renderer, tip: (t, s) => hud.tip(t, s), autoOn: () => !!game.autoplay?.on, paused: () => state.paused });
+  if (window.bm) window.bm.firstSight = (t = 0) => { const s = game.currentSnap(); if (s) { game.firstSight.begin(s); game.firstSight.t = t; } };   // (from t seconds in)
   // Move Buttons, on the pause screen: every button, bar and the map where the player wants them, kept for every game after
   // (src/ui/arrange.js). The game stays paused under it; the pause screen comes back when it's done.
   game.arrange = new Arrange({
@@ -1618,6 +1622,7 @@ class GameView {
       this.updateTrail(dt, snap);
       this.updateDrops(dt, snap);
       this.autoplay?.frame(dt, snap);
+      this.firstSight?.frame(dt, snap);
       const c = this.overrideCam || this.cam;
       if (this.town) this.town.frame(snap, c, this.renderer.hour, !!this.shared.input[INPUT.PAUSE] || !!this.idle);
       this.questTrail?.frame(dt, snap);

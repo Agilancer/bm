@@ -267,6 +267,66 @@
    "name": "course",
    "kind": "stone",
    "cutout": false
+  },
+  {
+   "name": "ph_poor_brick",
+   "kind": "stone",
+   "cutout": false
+  },
+  {
+   "name": "ph_soot_brick",
+   "kind": "stone",
+   "cutout": false
+  },
+  {
+   "name": "ph_burnt_wall",
+   "kind": "stone",
+   "cutout": false
+  },
+  {
+   "name": "ph_market_wall",
+   "kind": "stone",
+   "cutout": false
+  },
+  {
+   "name": "ph_rich_brick",
+   "kind": "stone",
+   "cutout": false
+  },
+  {
+   "name": "ph_dressed",
+   "kind": "stone",
+   "cutout": false
+  },
+  {
+   "name": "ph_daub",
+   "kind": "stone",
+   "cutout": false
+  },
+  {
+   "name": "ph_basalt",
+   "kind": "stone",
+   "cutout": false
+  },
+  {
+   "name": "ph_granite",
+   "kind": "stone",
+   "cutout": false
+  },
+  {
+   "name": "ph_keep_wall",
+   "kind": "stone",
+   "cutout": false
+  },
+  {
+   "name": "ph_grey_plaster",
+   "kind": "stone",
+   "cutout": false
+  },
+  {
+   "name": "ph_boards",
+   "kind": "stone",
+   "cutout": false
   }
  ],
  "ground": [

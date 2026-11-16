@@ -35,7 +35,8 @@ import { ELDER } from './delve-elder.js';
 import { WARRENS_PROPS, WARRENS_NICHES } from './delve-warrens.js';
 
 // Where it lies: its entrance, in the world, and the height its rooms are measured from.
-export const DUNGEON = { name: 'The Hollowfang Warrens', x: 5760, z: -40, y: -50 };
+// (It lay out past the east edge until the land grew that way, to the Marches and Phobos: now it's past the north one.)
+export const DUNGEON = { name: 'The Hollowfang Warrens', x: 4760, z: -5740, y: -50 };
 // The cave mouth near the kobolds' den where its portal stands, and where the quartermaster waits. It's built into a wall
 // across the hillside (src/core/sites.js portalWall), facing down the hill, the wall holding the hill back behind it: yaw is
 // straight down the slope there.

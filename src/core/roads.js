@@ -6,8 +6,9 @@
 // trails (src/core/lands.js ROUTES), and the roads, lanes and footpaths laid between everything else by tools/roads/lay.mjs
 // (src/core/roads-data.js). To change where a way runs, change those and run the tool again; never the data by hand.
 import { CAVE_PATH, PATHS, ROADS } from './terrain.js';
-import { COUNTRY_KEYS, ROUTES, SITES, countryWeights } from './lands.js';
+import { COUNTRY_KEYS, ROUTES, SITES, WORLD_EAST, countryWeights } from './lands.js';
 import { townDist } from './town.js';
+import { cityIn } from './east.js';
 import { hash2 } from './terrain-noise.js';
 
 // What a way's laid with, by number (the ground's layers 17 + n: assets/game/tex/manifest.json ground, made by
@@ -25,6 +26,8 @@ const ASHEN = COUNTRY_KEYS.indexOf('ashen'), FEN = COUNTRY_KEYS.indexOf('fen');
 // The surface of a stretch of a way of class cls (great, road, lane, path) whose middle is (x, z); n: its place along the way, for
 // the great roads' paving that comes and goes.
 export function surfaceOf(cls, x, z, n = 0) {
+  // (Inside Phobos's wall every way is paved: the King's Mile flagged, the rest in setts.)
+  if (x > 9300 && x < 10800 && cityIn(x, z) < 1.01) return cls === 'great' ? SURFACE.FLAG : SURFACE.SETT;
   if (Math.hypot(x, z) > 1150) {
     countryWeights(x, z, CW);
     if (CW[ASHEN] > 0.5) return SURFACE.ASH;
@@ -56,6 +59,8 @@ export function allWays(opening = false) {
 // idx = [first, count] per square, then the lists; seg = two vec4 per stretch: (ax, az, bx, bz), (half-width, surface, how far
 // along its way a starts, length).
 export const RD_CELL = 64, RD_HALF = 5632, RD_N = Math.ceil(2 * RD_HALF / RD_CELL);
+// (RD_N rows north to south; RD_NX squares along each, from the west edge out to the east's: the land's longer that way.)
+export const RD_NX = Math.ceil((WORLD_EAST + 32 + RD_HALF) / RD_CELL);
 const REACH = 7;   // past a way's edge that the shader still looks (its verge, and a far way drawn a little wide)
 export function roadSegments(opening = false) {
   const segs = [];
@@ -76,22 +81,22 @@ export function roadSegments(opening = false) {
       s += L;
     }
   }
-  const cells = Array.from({ length: RD_N * RD_N }, () => null);
+  const cells = Array.from({ length: RD_NX * RD_N }, () => null);
   segs.forEach((g, n) => {
     const [ax, az, bx, bz, w] = g, m = w + REACH;
-    const i0 = Math.max(0, Math.floor((Math.min(ax, bx) - m + RD_HALF) / RD_CELL)), i1 = Math.min(RD_N - 1, Math.floor((Math.max(ax, bx) + m + RD_HALF) / RD_CELL));
+    const i0 = Math.max(0, Math.floor((Math.min(ax, bx) - m + RD_HALF) / RD_CELL)), i1 = Math.min(RD_NX - 1, Math.floor((Math.max(ax, bx) + m + RD_HALF) / RD_CELL));
     const j0 = Math.max(0, Math.floor((Math.min(az, bz) - m + RD_HALF) / RD_CELL)), j1 = Math.min(RD_N - 1, Math.floor((Math.max(az, bz) + m + RD_HALF) / RD_CELL));
     for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
       // (Only the squares it really comes within reach of: a long diagonal stretch's box holds many it never nears.)
       const qx = (i + 0.5) * RD_CELL - RD_HALF, qz = (j + 0.5) * RD_CELL - RD_HALF;
       if (segDist(qx, qz, ax, az, bx, bz) > m + RD_CELL * 0.7072) continue;
-      (cells[j * RD_N + i] ||= []).push(n);
+      (cells[j * RD_NX + i] ||= []).push(n);
     }
   });
   let total = 0;
   for (const c of cells) if (c) total += Math.min(c.length, RD_MAX);
-  const idx = new Uint32Array(RD_N * RD_N * 2 + total);
-  let at = RD_N * RD_N * 2;
+  const idx = new Uint32Array(RD_NX * RD_N * 2 + total);
+  let at = RD_NX * RD_N * 2;
   cells.forEach((c, k) => {
     if (!c) return;
     // (The widest and the old town ways first, so if a square's ever over full it's the footpaths that go.)

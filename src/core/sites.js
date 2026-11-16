@@ -20,6 +20,9 @@ import { dressLairs } from './lair-dress.js';
 import { dressWilds } from './wild-dress.js';
 import { dressRoads } from './roadside.js';
 import { smithYard } from './smithyard.js';
+import { marches } from './marches.js';
+import { phobos, phobosCell } from './phobos-build.js';
+import { PH_TILE } from './phobos-tiles.js';
 import { buildHouse, buildTower } from './belltower.js';
 
 const TAU = Math.PI * 2;
@@ -30,6 +33,7 @@ const TILE = { wall: [7, 4.2], roof: [4, 2.3], stone: [3, 1.7], rubble: [3, 1.7]
   block: [8.1, 4.1, 5.4], course: [8.1, 4.1, 5.4], ashlar: [8.4, 4.2, 5.6], flags: [8.1, 4.2, 5.4] };
 export const tileOf = (layer) => {
   const n = layer.replace(/^(dark|pale|frost|mire|spore|void):/, '');
+  if (n.startsWith('ph_')) return PH_TILE[n] || TILE.stone;   // (Phobos's own: tools/phobos/textures/wire_layers.py)
   return n.startsWith('wall') || n === 'door_wall' ? TILE.wall : n.startsWith('roof') ? TILE.roof : n.startsWith('door') ? TILE.door : TILE[n] || TILE.cloth;
 };
 
@@ -85,11 +89,12 @@ export class Kit {
   quad(layer, a, b, c, d, nrm = null, uvs = null) {
     if (!this.geometry) return;
     const p = this.part(layer), base = p.pos.length / 3;
-    if (!nrm) {
-      const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = d[0] - a[0], vy = d[1] - a[1], vz = d[2] - a[2];
-      nrm = [uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx];
-      const l = Math.hypot(...nrm) || 1; nrm = nrm.map((v) => v / l);
-    }
+    const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = d[0] - a[0], vy = d[1] - a[1], vz = d[2] - a[2];
+    const g = [uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx];
+    if (!nrm) { const l = Math.hypot(...g) || 1; nrm = g.map((v) => v / l); }
+    // (A face given its normal is wound to agree with it: the shader turns a face's normal round when its back is seen,
+    // so one wound the other way, a mirrored house's ceiling say, is lit from the side it isn't seen from.)
+    else if (g[0] * nrm[0] + g[1] * nrm[1] + g[2] * nrm[2] < 0) { [b, d] = [d, b]; if (uvs) uvs = [uvs[0], uvs[3], uvs[2], uvs[1]]; }
     if (!uvs) {
       const [tw, th] = tileOf(layer);
       const w = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]), h = Math.hypot(d[0] - a[0], d[1] - a[1], d[2] - a[2]);
@@ -1372,7 +1377,7 @@ export const SEALS = [{ key: 'bellmourn', x: 7.6, z: 86, name: 'Bellmourn' }].co
     // (Off to one side of each place, on its own ground: where a seal stood in the first game, at the edge of things.)
     const off = { farm: [-30, -26], hamlet: [6, 14], falls: [-48, -10], belltower: [-6, 26], sallow: [118, 24], abbey: [36, 22], khel: [10, 46], keep: [112, 18], stones: [0, 30], frostwatch: [0, 40], crossroads: [-14, 16], stair: [-20, 14], crown: [MOUNT.lake + 40, 0] }[k] || [0, s.r * 0.7];
     // (The two small towns' are inside their walls, on the level, where nothing's built.)
-    const set = { thornwick: [2396, 1833], cinderford: [-2088, -162] }[k];
+    const set = { thornwick: [2396, 1833], cinderford: [-2088, -162], sill: [8931, 19] }[k];   // (the Sill's: on its shelf, back from the lip)
     return set ? { key: k, x: set[0], z: set[1], name: s.name } : { key: k, ...flattest(s.x + off[0], s.z + off[1]), name: s.name };
   }));
 
@@ -1410,6 +1415,8 @@ export function buildSites(geometry = false, lean = false) {
   K.lean = lean;
   downs(K); fen(K); rustwood(K); ashen(K); barrow(K); rimeholt(K); gallows(K); deepwood(K); sorrowhorn(K);
   thornwick(K); cinderford(K); lesser(K);   // (the small towns and the lesser places: src/core/places.js)
+  marches(K);   // (the east's keeps and towers, and the way to Phobos: src/core/marches.js)
+  phobos(K);    // (City State Phobos, Castle Velscour and the Keep, blocked out: src/core/phobos-build.js)
   warrensMouth(K);
   smithYard(K);   // (what's built in the smith's yard in Bellmourn: src/core/smithyard.js)
   // (The delves, and the Test Dungeon's white hall, out past the world's west edge: src/core/testhall.js. What stops a
@@ -1451,6 +1458,15 @@ export function buildUnder(key) {
   }
   K.finish();
   return { parts: K.under, groups: K.groups };
+}
+
+/** One 100 m cell of Phobos's houses as they are from near (src/core/phobos-build.js phobosCell, src/gfx/phobos-near.js):
+ * { parts: Map(layer -> {pos, nrm, uv, idx}), lamps: its lights, as the land's are }. Built afresh each time it's asked for. */
+export function buildPhobosCell(cell) {
+  const K = new Kit(true);
+  phobosCell(K, cell);
+  K.finish();
+  return { parts: K.parts, lamps: K.lamps || [] };
 }
 
 /** The parts let go, once they're in the renderer's buffer. Everything else stays. */

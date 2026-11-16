@@ -1,0 +1,2143 @@
+{
+ "_": "City State Phobos : Castle Velscour, the layout bible's data. World metres, +x east, +z south (src/core/lands.js). Drawn by tools/phobos/draw_layout.py into art/phobos/layout/. Names are drafts for the owner. Explained in docs/PHOBOS-LAYOUT.md.",
+ "edge": {
+  "west": -5600,
+  "east": 11700,
+  "north": -5600,
+  "south": 5600
+ },
+ "bands": [
+  {
+   "name": "The Marches",
+   "x0": 5600,
+   "x1": 7300,
+   "levels": [
+    14,
+    22
+   ]
+  },
+  {
+   "name": "The ridge",
+   "x0": 7300,
+   "x1": 7700
+  },
+  {
+   "name": "The Chasm",
+   "x0": 7700,
+   "x1": 8950
+  },
+  {
+   "name": "The moat plain",
+   "x0": 8950,
+   "x1": 9350
+  },
+  {
+   "name": "The City State",
+   "x0": 9350,
+   "x1": 10750,
+   "levels": [
+    20,
+    45
+   ]
+  },
+  {
+   "name": "Castle Velscour, the Keep on top of it",
+   "x0": 10750,
+   "x1": 11400,
+   "levels": [
+    58,
+    180
+   ]
+  }
+ ],
+ "t_sites": [
+  {
+   "name": "Abbey of Saint Ossery",
+   "x": 3950,
+   "z": -2880,
+   "seal": true
+  },
+  {
+   "name": "Hangman's Cross",
+   "x": 4100,
+   "z": 3200,
+   "seal": true
+  }
+ ],
+ "marches": {
+  "keeps": [
+   {
+    "name": "Greywarden Keep",
+    "x": 5900,
+    "z": -1900,
+    "kind": "keep",
+    "does": "its beacon calls the patrols; put it out and the road is quiet for a day"
+   },
+   {
+    "name": "The Lantern",
+    "x": 6800,
+    "z": -1000,
+    "kind": "tower",
+    "does": "signal tower; lit, it shows the safe line to the pass on the map"
+   },
+   {
+    "name": "Gatewatch Keep",
+    "x": 6600,
+    "z": 150,
+    "kind": "keep",
+    "does": "the toll chain across the road; lower it or pay"
+   },
+   {
+    "name": "The Needle",
+    "x": 7050,
+    "z": 1200,
+    "kind": "tower",
+    "does": "lookout; from its top the Marches' map opens"
+   },
+   {
+    "name": "Marshal's Hold",
+    "x": 6100,
+    "z": 2100,
+    "kind": "keep",
+    "does": "Old Marshal Brannoch (world boss)"
+   }
+  ],
+  "roads": [
+   {
+    "name": "The Hill Road east",
+    "pts": [
+     [
+      5600,
+      -1300
+     ],
+     [
+      5900,
+      -1900
+     ],
+     [
+      6800,
+      -1000
+     ],
+     [
+      6600,
+      150
+     ],
+     [
+      7500,
+      0
+     ]
+    ]
+   },
+   {
+    "name": "The Gallows Road east",
+    "pts": [
+     [
+      5600,
+      1600
+     ],
+     [
+      6100,
+      2100
+     ],
+     [
+      7050,
+      1200
+     ],
+     [
+      6600,
+      150
+     ]
+    ]
+   }
+  ],
+  "pass": {
+   "name": "Widow's Notch",
+   "x": 7500,
+   "z": 0
+  },
+  "chasm": {
+   "pts": [
+    [
+     7500,
+     0
+    ],
+    [
+     7640,
+     -70
+    ],
+    [
+     7780,
+     -250
+    ],
+    [
+     7950,
+     -300
+    ],
+    [
+     8080,
+     -150
+    ],
+    [
+     8130,
+     50
+    ],
+    [
+     8250,
+     210
+    ],
+    [
+     8400,
+     120
+    ],
+    [
+     8500,
+     -50
+    ],
+    [
+     8550,
+     -200
+    ],
+    [
+     8690,
+     -270
+    ],
+    [
+     8810,
+     -150
+    ],
+    [
+     8870,
+     -10
+    ],
+    [
+     8950,
+     0
+    ]
+   ],
+   "sill": {
+    "name": "The Sill (first sight)",
+    "x": 8950,
+    "z": 0
+   },
+   "setpiece": {
+    "name": "The Broken Span",
+    "x": 8400,
+    "z": 120,
+    "what": "the bridge at the second bend is down; an ambush from the ledges above while you find the way across the fallen stones"
+   },
+   "_": "Owner, 2026-11-15: the way there meanders. It winds north under the ridge, back south through a slot to the Broken Span, north again round a buttress and out at the Sill; the causeway sweeps down to the drawbridge in an S (src/core/east.js WAY)."
+  }
+ },
+ "city": {
+  "centre": [
+   10050,
+   0
+  ],
+  "a": 700,
+  "b": 800,
+  "moat": 30,
+  "towers_every": 60,
+  "gates": [
+   {
+    "name": "The Drawbridge Gate",
+    "x": 9350,
+    "z": 0,
+    "note": "raised at first: you go in by the West outfall and winch it down from the gatehouse, bells ringing (the second reveal). Bent, uphill passage, inner gate offset."
+   },
+   {
+    "name": "The Charnel Gate",
+    "x": 9900,
+    "z": -800,
+    "note": "north; a shortcut, opened from inside by the Ashwardens' line"
+   },
+   {
+    "name": "The Tanners' Water Gate",
+    "x": 9950,
+    "z": 800,
+    "note": "south, on the Slough; a shortcut, opened from inside by the Quiet Watch's line"
+   },
+   {
+    "name": "The Castle Gate",
+    "x": 10750,
+    "z": 0,
+    "note": "east; held by the Gate Captain (a hard wall at level 68). The Aqueduct from Apricot's garden is the way in before you can beat him."
+   }
+  ],
+  "spine": {
+   "name": "The King's Mile",
+   "pts": [
+    [
+     9350,
+     0
+    ],
+    [
+     9480,
+     20
+    ],
+    [
+     9830,
+     -80
+    ],
+    [
+     10200,
+     120
+    ],
+    [
+     10620,
+     0
+    ],
+    [
+     10745,
+     0
+    ]
+   ]
+  },
+  "canal": {
+   "name": "The Slough",
+   "pts": [
+    [
+     9880,
+     -780
+    ],
+    [
+     9860,
+     -300
+    ],
+    [
+     9900,
+     100
+    ],
+    [
+     9930,
+     380
+    ],
+    [
+     9950,
+     794
+    ]
+   ]
+  },
+  "districts": [
+   {
+    "key": "barbican",
+    "name": "The Barbican",
+    "x": 9440,
+    "z": 0,
+    "r": 90,
+    "height": 0,
+    "look": "killing ground, gatehouses",
+    "levels": [
+     20,
+     24
+    ],
+    "verb": "storm or slip the killing ground; the winch-house"
+   },
+   {
+    "key": "cinder",
+    "name": "The Cinder Quarter",
+    "x": 9640,
+    "z": -380,
+    "r": 170,
+    "height": 5,
+    "look": "burnt out, roofless, ash",
+    "levels": [
+     20,
+     26
+    ],
+    "verb": "floors that give way, embers that flare: pick your footing"
+   },
+   {
+    "key": "rookeries",
+    "name": "The Rookeries",
+    "x": 9640,
+    "z": 340,
+    "r": 180,
+    "height": 0,
+    "look": "slum tenements, alleys a cart can't pass",
+    "levels": [
+     22,
+     28
+    ],
+    "verb": "roof-running: chases over the tenements, lines to cut"
+   },
+   {
+    "key": "market",
+    "name": "Chainmarket",
+    "x": 9830,
+    "z": -80,
+    "r": 110,
+    "height": 8,
+    "look": "the one big square, gibbets, stalls",
+    "levels": [
+     24,
+     30
+    ],
+    "verb": "the patrols' crossroads: time the watch changes, cut prisoners down"
+   },
+   {
+    "key": "wharf",
+    "name": "The Drowned Wharf",
+    "x": 9930,
+    "z": 380,
+    "r": 100,
+    "height": -3,
+    "look": "half-sunk quays on the Slough",
+    "levels": [
+     26,
+     32
+    ],
+    "verb": "one great sluice wheel raises boats into bridges"
+   },
+   {
+    "key": "tanners",
+    "name": "The Tanners' Steps",
+    "x": 9960,
+    "z": 630,
+    "r": 130,
+    "height": 4,
+    "look": "vats, drying racks, stepped lanes",
+    "levels": [
+     26,
+     32
+    ],
+    "verb": "climb the stepped lanes under dye-vat ambushes"
+   },
+   {
+    "key": "bones",
+    "name": "The Bone Yards",
+    "x": 10000,
+    "z": -600,
+    "r": 150,
+    "height": 10,
+    "look": "graves, charnel houses, the City Ossuary",
+    "levels": [
+     28,
+     36
+    ],
+    "verb": "the dead rise by rows: break a row's marker to still it"
+   },
+   {
+    "key": "barracks",
+    "name": "The Barracks Ward",
+    "x": 10200,
+    "z": 120,
+    "r": 150,
+    "height": 18,
+    "look": "parade ground, forts, drill yards",
+    "levels": [
+     30,
+     38
+    ],
+    "verb": "curfew: stay out of the lantern light or the alarm pulls the patrol"
+   },
+   {
+    "key": "mages",
+    "name": "The Mages' Rise",
+    "x": 10350,
+    "z": -380,
+    "r": 170,
+    "height": 35,
+    "look": "fine stone houses, towers, wards",
+    "levels": [
+     34,
+     42
+    ],
+    "verb": "wards on every door: find and break each house's anchor"
+   },
+   {
+    "key": "dukes",
+    "name": "Dukes' Row",
+    "x": 10400,
+    "z": 420,
+    "r": 160,
+    "height": 35,
+    "look": "walled town houses, gardens gone to rot",
+    "levels": [
+     34,
+     42
+    ],
+    "verb": "walled gardens and guard dogs: the heist district"
+   },
+   {
+    "key": "approach",
+    "name": "The Castle Approach",
+    "x": 10620,
+    "z": 0,
+    "r": 110,
+    "height": 55,
+    "look": "the switchback road under the walls",
+    "levels": [
+     40,
+     45
+    ],
+    "verb": "the switchback under arrow fire: shield walls move with you"
+   }
+  ],
+  "hubs": [
+   {
+    "name": "The Pennyless (thieves' guild)",
+    "x": 9600,
+    "z": -430,
+    "where": "under a burnt chandlery in the Cinder Quarter",
+    "safe": true
+   },
+   {
+    "name": "The Quiet Watch (hidden knights)",
+    "x": 9990,
+    "z": 660,
+    "where": "behind a dye works on the Tanners' Steps; found by word of mouth or invitation; no T marks",
+    "safe": true
+   },
+   {
+    "name": "The Ashwardens (demon hunters)",
+    "x": 10060,
+    "z": -745,
+    "where": "a walled-up charnel house at the far north tip, behind the Ossuary",
+    "safe": true
+   }
+  ],
+  "dungeons": [
+   {
+    "n": 1,
+    "name": "The Rotting Hospice",
+    "x": 9600,
+    "z": 390,
+    "district": "rookeries",
+    "level": 30,
+    "theme": "plague house"
+   },
+   {
+    "n": 2,
+    "name": "The Cistern Maze",
+    "x": 9905,
+    "z": 420,
+    "district": "wharf",
+    "level": 34,
+    "theme": "flooded locks and sluices"
+   },
+   {
+    "n": 3,
+    "name": "The Undercroft",
+    "x": 10020,
+    "z": -620,
+    "district": "bones",
+    "level": 38,
+    "theme": "giant catacombs under the Ossuary"
+   },
+   {
+    "n": 4,
+    "name": "Ironmercy Gaol",
+    "x": 10260,
+    "z": 170,
+    "district": "barracks",
+    "level": 44,
+    "theme": "the prison; its warden holds the Approach's portcullis key"
+   },
+   {
+    "n": 5,
+    "name": "The Tower of the Ninefold Eye",
+    "x": 10400,
+    "z": -430,
+    "district": "mages",
+    "level": 50,
+    "theme": "a wizard's tower, floor by floor"
+   },
+   {
+    "n": 6,
+    "name": "The Gilded Vault",
+    "x": 10450,
+    "z": 450,
+    "district": "dukes",
+    "level": 56,
+    "theme": "the dukes' counting house; a heist with the Pennyless"
+   }
+  ],
+  "seals": [
+   {
+    "name": "The Sill",
+    "x": 8930,
+    "z": 20
+   },
+   {
+    "name": "Barbican Yard",
+    "x": 9470,
+    "z": 30
+   },
+   {
+    "name": "Chainmarket",
+    "x": 9840,
+    "z": -60
+   },
+   {
+    "name": "Parade Ground",
+    "x": 10190,
+    "z": 100
+   },
+   {
+    "name": "Castle Gate",
+    "x": 10700,
+    "z": 10
+   },
+   {
+    "name": "The Pennyless",
+    "x": 9600,
+    "z": -430
+   },
+   {
+    "name": "The Quiet Watch",
+    "x": 9990,
+    "z": 660
+   },
+   {
+    "name": "The Ashwardens",
+    "x": 10060,
+    "z": -745
+   }
+  ],
+  "bosses": [
+   {
+    "name": "The Chain Duke",
+    "x": 9830,
+    "z": -110,
+    "where": "Chainmarket",
+    "level": 30
+   },
+   {
+    "name": "The Ossuary Colossus",
+    "x": 9980,
+    "z": -650,
+    "where": "the Bone Yards",
+    "level": 36
+   },
+   {
+    "name": "General Varkoth",
+    "x": 10210,
+    "z": 90,
+    "where": "the parade ground",
+    "level": 40
+   }
+  ],
+  "unbuilt": "About 40% of the ground inside the wall is not streets: the burnt fields of the Cinder Quarter, the grave rows, the parade ground, the Slough's basin, the crag's foot.",
+  "forts": [
+   {
+    "name": "The Barbican Fort",
+    "x": 9440,
+    "z": -60
+   },
+   {
+    "name": "The Parade Fort",
+    "x": 10240,
+    "z": 60
+   },
+   {
+    "name": "The Dukes' Redoubt",
+    "x": 10470,
+    "z": 360
+   }
+  ],
+  "ring": "The Guard Tower Ring: of about 78 wall towers, eight are forts you can take (a chest, a view, a chain that opens a stretch of wall-walk as a shortcut). The rest are scenery.",
+  "route_bones": "The Corpse Quay: a towpath up the Slough's east bank from the Wharf to the Bone Yards, so the north is not a detour.",
+  "reacts": "The city answers you: each hub's finished line turns its district (the Pennyless reopen Cinder stalls, the Quiet Watch man the Water Gate, the Ashwardens still the Bone Yards' rows), and the hubs visibly grow.",
+  "streets": [
+   {
+    "name": "Ash Lane",
+    "pts": [
+     [
+      9440,
+      0
+     ],
+     [
+      9560,
+      -220
+     ],
+     [
+      9640,
+      -380
+     ],
+     [
+      9820,
+      -520
+     ],
+     [
+      10000,
+      -600
+     ]
+    ]
+   },
+   {
+    "name": "The Low Road",
+    "pts": [
+     [
+      9440,
+      0
+     ],
+     [
+      9560,
+      200
+     ],
+     [
+      9640,
+      340
+     ],
+     [
+      9800,
+      400
+     ],
+     [
+      9930,
+      380
+     ],
+     [
+      9960,
+      630
+     ]
+    ]
+   },
+   {
+    "name": "The High Loop",
+    "pts": [
+     [
+      10000,
+      -600
+     ],
+     [
+      10200,
+      -500
+     ],
+     [
+      10350,
+      -380
+     ],
+     [
+      10520,
+      -200
+     ],
+     [
+      10620,
+      0
+     ],
+     [
+      10540,
+      240
+     ],
+     [
+      10400,
+      420
+     ],
+     [
+      10200,
+      560
+     ],
+     [
+      9960,
+      630
+     ]
+    ]
+   },
+   {
+    "name": "The Corpse Quay",
+    "pts": [
+     [
+      9930,
+      380
+     ],
+     [
+      9920,
+      100
+     ],
+     [
+      9890,
+      -300
+     ],
+     [
+      10000,
+      -600
+     ]
+    ]
+   }
+  ],
+  "towers": [
+   {
+    "name": "Winch Tower",
+    "deg": 172
+   },
+   {
+    "name": "Cinder Watch",
+    "deg": 150
+   },
+   {
+    "name": "Charnel Tower",
+    "deg": 100
+   },
+   {
+    "name": "Mage's Finger",
+    "deg": 55
+   },
+   {
+    "name": "Castle Bastion",
+    "deg": 8
+   },
+   {
+    "name": "Dukes' Tower",
+    "deg": 320
+   },
+   {
+    "name": "Dyers' Tower",
+    "deg": 265
+   },
+   {
+    "name": "Rook Tower",
+    "deg": 215
+   }
+  ],
+  "outfall_run": "The Outfall Run: the west outfall to the Barbican's drain is its own short level-20 stretch, grated off from the West Drains proper, which open at 28.",
+  "dungeon_rule": "Each dungeon sits a tier above its district: you clear the streets first and come back for the door.",
+  "towers_note": "deg: 0 east, 90 north, 180 west, 270 south (z = centre z - b sin).",
+  "wall": {
+   "_": "Owner, 2026-11-15: the city wall is a dodecagon, not a round. Twelve straight sides; the middles of the sides lie on the old oval (a, b), so a flat side is square to the drawbridge, the castle, and the north and south gates. Corners from the south-east round by the south (src/core/east.js CITY_WALL).",
+   "shape": "dodecagon",
+   "pts": [
+    [
+     10750,
+     214
+    ],
+    [
+     10562,
+     586
+    ],
+    [
+     10238,
+     800
+    ],
+    [
+     9862,
+     800
+    ],
+    [
+     9538,
+     586
+    ],
+    [
+     9350,
+     214
+    ],
+    [
+     9350,
+     -214
+    ],
+    [
+     9538,
+     -586
+    ],
+    [
+     9862,
+     -800
+    ],
+    [
+     10238,
+     -800
+    ],
+    [
+     10562,
+     -586
+    ],
+    [
+     10750,
+     -214
+    ]
+   ]
+  }
+ },
+ "sewers": {
+  "sectors": [
+   {
+    "name": "The West Drains",
+    "under": [
+     "barbican",
+     "cinder",
+     "rookeries"
+    ],
+    "light": "green (fungus)",
+    "landmark": "the Great Grate, a fallen street you can see sky through",
+    "levels": [
+     28,
+     36
+    ],
+    "seal": true
+   },
+   {
+    "name": "The Slough Mains",
+    "under": [
+     "market",
+     "wharf",
+     "tanners"
+    ],
+    "light": "blue (water glow)",
+    "landmark": "the Weir Hall and its one great sluice wheel (the Wharf's wheel, seen from below)",
+    "levels": [
+     34,
+     42
+    ],
+    "seal": true
+   },
+   {
+    "name": "The Charnel Runs",
+    "under": [
+     "bones",
+     "mages"
+    ],
+    "light": "violet (grave light)",
+    "landmark": "the Bone Stair, down into older catacombs",
+    "levels": [
+     40,
+     50
+    ],
+    "seal": true
+   },
+   {
+    "name": "The High Conduits",
+    "under": [
+     "barracks",
+     "dukes",
+     "approach"
+    ],
+    "light": "amber (old lamps)",
+    "landmark": "the Aqueduct Fall, water dropping from the castle crag",
+    "levels": [
+     48,
+     58
+    ],
+    "seal": true
+   }
+  ],
+  "entrances": [
+   {
+    "name": "Barbican drain",
+    "x": 9450,
+    "z": -40
+   },
+   {
+    "name": "Chandlery cellar (the Pennyless)",
+    "x": 9605,
+    "z": -425
+   },
+   {
+    "name": "Rookery well (the keepers' office)",
+    "x": 9660,
+    "z": 300
+   },
+   {
+    "name": "Market gibbet pit",
+    "x": 9820,
+    "z": -95
+   },
+   {
+    "name": "Wharf sluice",
+    "x": 9940,
+    "z": 400
+   },
+   {
+    "name": "Ossuary crypt",
+    "x": 10010,
+    "z": -610
+   },
+   {
+    "name": "Gaol sump",
+    "x": 10250,
+    "z": 180
+   },
+   {
+    "name": "Dukes' Row garden grate",
+    "x": 10420,
+    "z": 440
+   }
+  ],
+  "outfalls": [
+   {
+    "name": "West outfall",
+    "x": 9345,
+    "z": 260
+   },
+   {
+    "name": "North outfall",
+    "x": 9760,
+    "z": -740
+   },
+   {
+    "name": "South outfall (the Slough)",
+    "x": 9955,
+    "z": 800
+   }
+  ],
+  "hubs": [
+   {
+    "name": "The sewer-keepers' office (Martleboro and Louis G)",
+    "x": 9665,
+    "z": 295,
+    "where": "at the Great Grate in the West Drains, by the Rookery well: the first sector, the first thing you find",
+    "safe": true,
+    "seal": true
+   },
+   {
+    "name": "Princess Apricot's court, the Sunk Garden",
+    "x": 10680,
+    "z": -140,
+    "where": "the far east end of the High Conduits, under the castle crag; the Aqueduct climbs from it into the castle",
+    "safe": true,
+    "seal": true
+   }
+  ],
+  "bosses": [
+   {
+    "name": "The Spider Queen",
+    "x": 9620,
+    "z": -150,
+    "where": "West Drains",
+    "level": 36
+   },
+   {
+    "name": "The Great Worm",
+    "x": 9900,
+    "z": 150,
+    "where": "Slough Mains",
+    "level": 42
+   },
+   {
+    "name": "The Drowned Abbot",
+    "x": 10150,
+    "z": -520,
+    "where": "Charnel Runs",
+    "level": 50
+   },
+   {
+    "name": "The Lamplighter",
+    "x": 10420,
+    "z": 200,
+    "where": "High Conduits",
+    "level": 56
+   }
+  ],
+  "size": "About 6 km of tunnel: four landmark halls and the connectors between them. Not a mirror of every street.",
+  "halls": [
+   {
+    "name": "The Great Grate",
+    "x": 9660,
+    "z": 300,
+    "sector": 0
+   },
+   {
+    "name": "The Weir Hall",
+    "x": 9930,
+    "z": 385,
+    "sector": 1
+   },
+   {
+    "name": "The Bone Stair",
+    "x": 10020,
+    "z": -560,
+    "sector": 2
+   },
+   {
+    "name": "The Aqueduct Fall",
+    "x": 10560,
+    "z": -60,
+    "sector": 3
+   }
+  ],
+  "tunnels": [
+   {
+    "sector": -1,
+    "name": "The Outfall Run (level 20, grated off)",
+    "pts": [
+     [
+      9345,
+      260
+     ],
+     [
+      9450,
+      120
+     ],
+     [
+      9450,
+      -40
+     ]
+    ]
+   },
+   {
+    "sector": 0,
+    "pts": [
+     [
+      9450,
+      120
+     ],
+     [
+      9660,
+      300
+     ]
+    ]
+   },
+   {
+    "sector": 0,
+    "pts": [
+     [
+      9450,
+      -40
+     ],
+     [
+      9605,
+      -425
+     ]
+    ]
+   },
+   {
+    "sector": 0,
+    "pts": [
+     [
+      9605,
+      -425
+     ],
+     [
+      9620,
+      -150
+     ],
+     [
+      9660,
+      300
+     ]
+    ]
+   },
+   {
+    "sector": 0,
+    "pts": [
+     [
+      9660,
+      300
+     ],
+     [
+      9820,
+      -95
+     ]
+    ]
+   },
+   {
+    "sector": 1,
+    "pts": [
+     [
+      9660,
+      300
+     ],
+     [
+      9930,
+      385
+     ]
+    ]
+   },
+   {
+    "sector": 1,
+    "pts": [
+     [
+      9820,
+      -95
+     ],
+     [
+      9900,
+      150
+     ],
+     [
+      9930,
+      385
+     ]
+    ]
+   },
+   {
+    "sector": 1,
+    "pts": [
+     [
+      9930,
+      385
+     ],
+     [
+      9955,
+      800
+     ]
+    ]
+   },
+   {
+    "sector": 2,
+    "pts": [
+     [
+      9820,
+      -95
+     ],
+     [
+      10020,
+      -560
+     ]
+    ]
+   },
+   {
+    "sector": 2,
+    "pts": [
+     [
+      10010,
+      -610
+     ],
+     [
+      10020,
+      -560
+     ]
+    ]
+   },
+   {
+    "sector": 2,
+    "pts": [
+     [
+      10020,
+      -560
+     ],
+     [
+      9760,
+      -740
+     ]
+    ]
+   },
+   {
+    "sector": 2,
+    "pts": [
+     [
+      10020,
+      -560
+     ],
+     [
+      10150,
+      -520
+     ],
+     [
+      10330,
+      -300
+     ]
+    ]
+   },
+   {
+    "sector": 3,
+    "pts": [
+     [
+      10330,
+      -300
+     ],
+     [
+      10560,
+      -60
+     ]
+    ]
+   },
+   {
+    "sector": 3,
+    "pts": [
+     [
+      9930,
+      385
+     ],
+     [
+      10250,
+      180
+     ]
+    ]
+   },
+   {
+    "sector": 3,
+    "pts": [
+     [
+      10250,
+      180
+     ],
+     [
+      10420,
+      200
+     ],
+     [
+      10560,
+      -60
+     ]
+    ]
+   },
+   {
+    "sector": 3,
+    "pts": [
+     [
+      10250,
+      180
+     ],
+     [
+      10420,
+      440
+     ]
+    ]
+   },
+   {
+    "sector": 3,
+    "pts": [
+     [
+      10420,
+      440
+     ],
+     [
+      10560,
+      -60
+     ]
+    ]
+   },
+   {
+    "sector": 3,
+    "pts": [
+     [
+      10560,
+      -60
+     ],
+     [
+      10680,
+      -140
+     ]
+    ]
+   }
+  ]
+ },
+ "castle": {
+  "centre": [
+   11050,
+   0
+  ],
+  "height": 175,
+  "wards": [
+   {
+    "name": "The Lower Ward",
+    "x": 10850,
+    "height": 120,
+    "levels": [
+     58,
+     75
+    ]
+   },
+   {
+    "name": "The Middle Ward",
+    "x": 11050,
+    "height": 175,
+    "levels": [
+     75,
+     95
+    ]
+   },
+   {
+    "name": "The High Ward",
+    "x": 11250,
+    "height": 235,
+    "levels": [
+     95,
+     112
+    ]
+   }
+  ],
+  "wings": [
+   {
+    "key": "gate",
+    "name": "The Gatehouse and Outer Court",
+    "ward": 0,
+    "sx": 0,
+    "sy": 3,
+    "rest": true,
+    "room": "the Gate Captain's yard"
+   },
+   {
+    "key": "kitchens",
+    "name": "The Kitchens and Cellars",
+    "ward": 0,
+    "sx": 0,
+    "sy": 1,
+    "room": "the Great Hearth: the Lower Ward's second rest point",
+    "rest": true
+   },
+   {
+    "key": "warren",
+    "name": "The Servants' Warren",
+    "ward": 0,
+    "sx": 1,
+    "sy": 0,
+    "room": "servants' passages: unseen ways behind six wings"
+   },
+   {
+    "key": "barracks",
+    "name": "The Barracks and Drill Halls",
+    "ward": 0,
+    "sx": 0,
+    "sy": 5,
+    "dungeon": "The Iron Barracks",
+    "room": "the drill floor: spar the garrison's ghosts for a weapon skill"
+   },
+   {
+    "key": "armoury",
+    "name": "The Armoury",
+    "ward": 0,
+    "sx": 1,
+    "sy": 6,
+    "room": "racks you arm the Quiet Watch from"
+   },
+   {
+    "key": "forge",
+    "name": "The Forge",
+    "ward": 0,
+    "sx": 0,
+    "sy": 7,
+    "room": "craft: the idol is cast here, and gear reforged"
+   },
+   {
+    "key": "oubliettes",
+    "name": "The Oubliettes",
+    "ward": 0,
+    "sx": 1,
+    "sy": 4,
+    "down": true,
+    "room": "the pit stair; prisoners to free who join the Crown Court later"
+   },
+   {
+    "key": "aqueduct",
+    "name": "The Aqueduct",
+    "ward": 0,
+    "sx": 1,
+    "sy": 2,
+    "note": "falls into the sewers' High Conduits; the back way in",
+    "room": "the back way from the Sunk Garden"
+   },
+   {
+    "key": "hall",
+    "name": "The Great Hall",
+    "ward": 1,
+    "sx": 3,
+    "sy": 3,
+    "rest": true,
+    "room": "the long table, the Feast That Walks"
+   },
+   {
+    "key": "gallery",
+    "name": "The Portrait Gallery",
+    "ward": 1,
+    "sx": 3,
+    "sy": 1,
+    "dungeon": "The Gallery of a Thousand Portraits",
+    "room": "painting doors: three secret links not on any map"
+   },
+   {
+    "key": "library",
+    "name": "The Ancient Library",
+    "ward": 1,
+    "sx": 4,
+    "sy": 0,
+    "dungeon": "The Drowned Archive",
+    "hub": "The Librarian's home (safe)",
+    "rest": true,
+    "room": "the stacks; the Librarian's home"
+   },
+   {
+    "key": "maps",
+    "name": "The Map Room",
+    "ward": 1,
+    "sx": 4,
+    "sy": 2,
+    "room": "the table map: it marks every secret you have not found"
+   },
+   {
+    "key": "alchemy",
+    "name": "The Alchemists' Wing",
+    "ward": 1,
+    "sx": 3,
+    "sy": 5,
+    "dungeon": "The Alchemists' Undercroft",
+    "room": "the still room: potions brewed past shop strength"
+   },
+   {
+    "key": "conservatory",
+    "name": "The Conservatory of Dead Plants",
+    "ward": 1,
+    "sx": 4,
+    "sy": 6,
+    "room": "the glass house: reagents for the Alchemists' line, a boss seed"
+   },
+   {
+    "key": "menagerie",
+    "name": "The Menagerie",
+    "ward": 1,
+    "sx": 3,
+    "sy": 7,
+    "dungeon": "The Menagerie of Chains",
+    "room": "the cage rows",
+    "keys": [
+     "The Iron Barracks"
+    ]
+   },
+   {
+    "key": "clock",
+    "name": "The Clock Tower",
+    "ward": 1,
+    "sx": 4,
+    "sy": 4,
+    "dungeon": "The Clockworks",
+    "up": true,
+    "room": "the works: a shaft climbed on moving gears",
+    "keys": [
+     "The Gallery of a Thousand Portraits"
+    ]
+   },
+   {
+    "key": "bells",
+    "name": "The Bell Galleries",
+    "ward": 1,
+    "sx": 5,
+    "sy": 4,
+    "up": true,
+    "room": "ring them to change the castle's patrols and what walks the wards"
+   },
+   {
+    "key": "sanctuaries",
+    "name": "The Sanctuaries",
+    "ward": 2,
+    "sx": 6,
+    "sy": 1,
+    "room": "V only: the black nave",
+    "rest": true
+   },
+   {
+    "key": "chapel",
+    "name": "The Ossuary Chapel",
+    "ward": 2,
+    "sx": 7,
+    "sy": 0,
+    "dungeon": "The Ossuary Chapel",
+    "room": "entered by the Sexton's rites (a quest line), not a key"
+   },
+   {
+    "key": "crypt",
+    "name": "The Generals' Crypt",
+    "ward": 2,
+    "sx": 7,
+    "sy": 2,
+    "down": true,
+    "room": "the generals lie here and get up"
+   },
+   {
+    "key": "mirrors",
+    "name": "The Hall of Mirrors",
+    "ward": 2,
+    "sx": 6,
+    "sy": 5,
+    "dungeon": "The Hall of Mirrors",
+    "room": "the hall where the way is in the glass: a secret link to the Portrait Gallery",
+    "keys": [
+     "The Clockworks"
+    ]
+   },
+   {
+    "key": "treasury",
+    "name": "The Treasury",
+    "ward": 2,
+    "sx": 7,
+    "sy": 6,
+    "room": "two keys deep: a unique reward and a whole idol part",
+    "keys": [
+     "The Menagerie of Chains",
+     "The Hall of Mirrors"
+    ]
+   },
+   {
+    "key": "observatory",
+    "name": "The Observatory",
+    "ward": 2,
+    "sx": 7,
+    "sy": 4,
+    "up": true,
+    "room": "the dome: names the Keep's spires and shows which are won"
+   },
+   {
+    "key": "antechambers",
+    "name": "The Throne Antechambers",
+    "ward": 2,
+    "sx": 8,
+    "sy": 3,
+    "note": "the idol's door to the Keep",
+    "room": "the idol's door; the foot of the first stair up to the Keep",
+    "keys": [
+     "the sacrificial idol"
+    ]
+   }
+  ],
+  "stairs": [
+   [
+    "gate",
+    "kitchens"
+   ],
+   [
+    "gate",
+    "barracks"
+   ],
+   [
+    "gate",
+    "oubliettes"
+   ],
+   [
+    "gate",
+    "hall"
+   ],
+   [
+    "kitchens",
+    "warren"
+   ],
+   [
+    "kitchens",
+    "aqueduct"
+   ],
+   [
+    "warren",
+    "library"
+   ],
+   [
+    "warren",
+    "gallery"
+   ],
+   [
+    "barracks",
+    "armoury"
+   ],
+   [
+    "barracks",
+    "forge"
+   ],
+   [
+    "armoury",
+    "alchemy"
+   ],
+   [
+    "forge",
+    "menagerie"
+   ],
+   [
+    "oubliettes",
+    "crypt"
+   ],
+   [
+    "oubliettes",
+    "alchemy"
+   ],
+   [
+    "aqueduct",
+    "maps"
+   ],
+   [
+    "hall",
+    "gallery"
+   ],
+   [
+    "hall",
+    "alchemy"
+   ],
+   [
+    "hall",
+    "clock"
+   ],
+   [
+    "hall",
+    "maps"
+   ],
+   [
+    "gallery",
+    "library"
+   ],
+   [
+    "library",
+    "maps"
+   ],
+   [
+    "library",
+    "sanctuaries"
+   ],
+   [
+    "alchemy",
+    "conservatory"
+   ],
+   [
+    "conservatory",
+    "menagerie"
+   ],
+   [
+    "conservatory",
+    "mirrors"
+   ],
+   [
+    "menagerie",
+    "treasury"
+   ],
+   [
+    "clock",
+    "bells"
+   ],
+   [
+    "bells",
+    "observatory"
+   ],
+   [
+    "sanctuaries",
+    "chapel"
+   ],
+   [
+    "sanctuaries",
+    "crypt"
+   ],
+   [
+    "crypt",
+    "antechambers"
+   ],
+   [
+    "mirrors",
+    "treasury"
+   ],
+   [
+    "mirrors",
+    "observatory"
+   ],
+   [
+    "observatory",
+    "antechambers"
+   ],
+   [
+    "treasury",
+    "antechambers"
+   ],
+   [
+    "hall",
+    "antechambers"
+   ]
+  ],
+  "bosses": [
+   {
+    "name": "The Gate Captain, Sir Dreyle",
+    "wing": "gate",
+    "level": 68
+   },
+   {
+    "name": "The Feast That Walks",
+    "wing": "hall",
+    "level": 88
+   },
+   {
+    "name": "The Sexton of the High Ward",
+    "wing": "sanctuaries",
+    "level": 105
+   }
+  ],
+  "idol": {
+   "name": "The sacrificial idol",
+   "made_with": "the Librarian, cast at the Forge",
+   "needs": "one part from each of the eight castle dungeons; five clears a part (the owner's rule), no two alike: clear 1 is the story run, 2 to 5 each take a different route, boss order and modifier, and leave a permanent shortcut. Spare fifths (from castle world bosses and the household's quests) never shorten the five: they go to the part's second tier, which strengthens what that part opened. Every finished part opens something at once."
+  },
+  "quest_gates": "Every dungeon's own door is opened by a line of the Librarian's household's quests (dozens in all); the Ossuary Chapel by the Sexton's rites.",
+  "household": [
+   {
+    "role": "the Librarian",
+    "what": "a mage hiding his loyalty behind deception magic; the idol"
+   },
+   {
+    "role": "his ward, a map-maker",
+    "what": "the Map Room's secrets, the secret links"
+   },
+   {
+    "role": "a lapsed sister of the Sanctuaries",
+    "what": "the Sexton's rites, the Ossuary Chapel"
+   },
+   {
+    "role": "an old quartermaster",
+    "what": "the Armoury, the Forge, arming the Quiet Watch"
+   },
+   {
+    "role": "a bell-ringer boy",
+    "what": "the Bell Galleries, the patrols"
+   }
+  ],
+  "locked_links": [
+   {
+    "a": "library",
+    "b": "sanctuaries",
+    "name": "The Sanctuaries Stair",
+    "key": "The Drowned Archive"
+   },
+   {
+    "a": "oubliettes",
+    "b": "crypt",
+    "name": "The Crypt door",
+    "key": "The Alchemists' Undercroft"
+   },
+   {
+    "a": "bells",
+    "b": "observatory",
+    "name": "The Bell Bridge",
+    "key": "The Ossuary Chapel"
+   }
+  ],
+  "reacts": "The castle answers you: bells rung change the patrols; each key turns a ward (lamps lit, a gate left open, the household's people moving in).",
+  "high_ward_note": "The High Ward opens by the Sanctuaries Stair (the Archive's key, level 80) or the Crypt door (the Alchemists' key, 86); its rest point is the Sanctuaries, the first wing you reach.",
+  "_": "Owner, 2026-11-15: far taller than first laid out (the wards were +70, +90, +115). Now +120, +175, +235 m over the plain (src/core/east.js WARDS)."
+ },
+ "keep": {
+  "_": "Owner, 2026-11-15: the Keep is on top of the castle. Its towers rise from the High Ward's roofs; the Throne Antechambers are the foot of the first stair up. Raised 2026-11-15 on the owner's word (even taller, more towers, more bridges): the trunk to 680 m, the five spires 410 to 640 m, 16 satellites and two dozen lesser towers, all bridged (src/core/phobos-build.js SPIRES, phobosKeep). The spires' heights and places below are the first layout's and are superseded by that file until the Keep's own chunk re-lays its floors.",
+  "centre": [
+   11215,
+   0
+  ],
+  "base": 235,
+  "top": 680,
+  "towers": [
+   {
+    "key": "ember",
+    "name": "The Ember Spire",
+    "sx": 0,
+    "sy": 2,
+    "floors": 6,
+    "dungeon": "The Ember Spire",
+    "level": 114,
+    "opens": "the Storm Bridge",
+    "rule": "rising fire: the floors below burn behind you",
+    "foot": 115,
+    "top": 175,
+    "routes": "inside by the floors, or outside by ledges and chains (harder, shorter)",
+    "stands_on": "the Sanctuaries' nave roof",
+    "x": 11168,
+    "part": "the Ember Coal",
+    "z": -70
+   },
+   {
+    "key": "storm",
+    "name": "The Storm Spire",
+    "sx": 1,
+    "sy": 0,
+    "floors": 7,
+    "dungeon": "The Storm Spire",
+    "level": 126,
+    "opens": "the Ossein Stair (outside)",
+    "rule": "wind: half the climb is on outside ledges",
+    "foot": 150,
+    "top": 215,
+    "routes": "inside by the floors, or outside by ledges and chains (harder, shorter)",
+    "stands_on": "the Clock Tower's head",
+    "x": 11240,
+    "part": "the Storm Glass",
+    "z": -95
+   },
+   {
+    "key": "bone",
+    "name": "The Bone Spire",
+    "sx": 3,
+    "sy": 0,
+    "floors": 7,
+    "dungeon": "The Bone Spire",
+    "level": 138,
+    "opens": "the Gloam Balconies",
+    "rule": "a descent first: down the marrow shaft, then up",
+    "foot": 190,
+    "top": 250,
+    "routes": "inside by the floors, or outside by ledges and chains (harder, shorter)",
+    "stands_on": "the Bell Galleries' campanile",
+    "x": 11300,
+    "part": "the Marrow Key",
+    "z": -40
+   },
+   {
+    "key": "shadow",
+    "name": "The Shadow Spire",
+    "sx": 4,
+    "sy": 2,
+    "floors": 8,
+    "dungeon": "The Shadow Spire",
+    "level": 150,
+    "opens": "the Red Span",
+    "rule": "darkness: lamps you carry and relight",
+    "foot": 225,
+    "top": 285,
+    "routes": "inside by the floors, or outside by ledges and chains (harder, shorter)",
+    "stands_on": "the Observatory's drum",
+    "x": 11345,
+    "part": "the Shade Wick",
+    "z": 45
+   },
+   {
+    "key": "blood",
+    "name": "The Blood Spire",
+    "sx": 3,
+    "sy": 4,
+    "floors": 8,
+    "dungeon": "The Blood Spire",
+    "level": 162,
+    "opens": "the Throne Tower's doors",
+    "rule": "a timed bleed: the tower drains you between its fonts",
+    "foot": 255,
+    "top": 305,
+    "routes": "inside by the floors, or outside by ledges and chains (harder, shorter)",
+    "stands_on": "the Great Pier, a buttress off the Hall of Mirrors",
+    "x": 11290,
+    "part": "the Blood Seal",
+    "z": 95
+   },
+   {
+    "key": "throne",
+    "name": "The Throne Tower",
+    "sx": 2,
+    "sy": 2,
+    "floors": 12,
+    "dungeon": "The Throne Above (final)",
+    "level": 175,
+    "rule": "twelve floors, one run, no repeats",
+    "foot": 115,
+    "top": 330,
+    "routes": "inside by the floors, or outside by ledges and chains (harder, shorter)",
+    "once": true,
+    "stands_on": "its own trunk, rising from the Throne Antechambers through the Crown Court",
+    "x": 11205,
+    "climb_from": 285,
+    "note": "its lower trunk (+115 to +285) is solid but for the Crown Court lift; the last dungeon is the twelve floors from the Last Stair's landing up",
+    "z": 0
+   }
+  ],
+  "links": [
+   {
+    "a": "ember",
+    "b": "storm",
+    "name": "The Storm Bridge",
+    "kind": "bridge",
+    "boss": "The Bridge Warden",
+    "leaves": 170,
+    "lands": 160,
+    "seal": true,
+    "seen_from": "the spire below: the boss paces in view before you reach it"
+   },
+   {
+    "a": "storm",
+    "b": "bone",
+    "name": "The Ossein Stair",
+    "kind": "outside stair",
+    "boss": "The Twin Gargoyles",
+    "leaves": 210,
+    "lands": 200,
+    "seal": true,
+    "seen_from": "the spire below: the boss paces in view before you reach it"
+   },
+   {
+    "a": "bone",
+    "b": "shadow",
+    "name": "The Gloam Balconies",
+    "kind": "balconies",
+    "boss": "The Balcony Duellist",
+    "leaves": 245,
+    "lands": 235,
+    "seal": true,
+    "seen_from": "the spire below: the boss paces in view before you reach it"
+   },
+   {
+    "a": "shadow",
+    "b": "blood",
+    "name": "The Red Span",
+    "kind": "bridge",
+    "boss": "The Bleeding Knight",
+    "leaves": 280,
+    "lands": 270,
+    "seal": true,
+    "seen_from": "the spire below: the boss paces in view before you reach it"
+   },
+   {
+    "a": "blood",
+    "b": "throne",
+    "name": "The Last Stair",
+    "kind": "outside stair",
+    "boss": "Velscour's Herald",
+    "leaves": 300,
+    "lands": 285,
+    "seal": true,
+    "seen_from": "the spire below: the boss paces in view before you reach it"
+   }
+  ],
+  "boss": {
+   "name": "The Chained Wyrm of the Crown Court",
+   "where": "chained to the High Ward's roofs under the Ember Spire",
+   "level": 112
+  },
+  "hub": {
+   "name": "The Crown Court",
+   "where": "the roof terrace of the High Ward at the spires' feet: the Keep's rest point (seal), reached by a lift from the Throne Antechambers; a lift comes down to it from every crossing once that crossing is won",
+   "safe": true,
+   "height": 115
+  },
+  "cast": "The Crown Court's people: one prisoner freed on each spire's first clear stays at the Court (a smith, a healer, a scout, a herald, a jailer turned), each with quests of their own. Their quests, the Wyrm and each crossing boss give spare fifths of the part of the spire just climbed; spares never shorten the five clears, they raise that part's second tier.",
+  "reacts": "The Keep answers you: a spire won is lit, and its light is seen from the whole city.",
+  "plan_note": "In plan the five spires ring the trunk on its north, east and south sides (z from -95 to +95), so from the west they stand out to either side of it: a trunk with shoulders."
+ },
+ "marches_bosses": [
+  {
+   "name": "Old Marshal Brannoch",
+   "x": 6100,
+   "z": 2060,
+   "where": "Marshal's Hold",
+   "level": 20
+  },
+  {
+   "name": "The Toll-Giant of Widow's Notch",
+   "x": 7480,
+   "z": 30,
+   "where": "the pass",
+   "level": 22
+  }
+ ],
+ "sight": {
+  "target": {
+   "name": "the Throne Tower's top",
+   "x": 11200,
+   "z": 0,
+   "h": 330
+  },
+  "from": [
+   {
+    "name": "The Sill",
+    "x": 8950,
+    "z": 0,
+    "h": 60
+   },
+   {
+    "name": "Drawbridge Gate",
+    "x": 9350,
+    "z": 0,
+    "h": 2
+   },
+   {
+    "name": "Chainmarket",
+    "x": 9830,
+    "z": -80,
+    "h": 10
+   },
+   {
+    "name": "Rookeries roofs",
+    "x": 9640,
+    "z": 340,
+    "h": 14
+   },
+   {
+    "name": "Bone Yards",
+    "x": 10000,
+    "z": -600,
+    "h": 12
+   },
+   {
+    "name": "Parade Ground",
+    "x": 10200,
+    "z": 120,
+    "h": 20
+   },
+   {
+    "name": "Castle Approach",
+    "x": 10620,
+    "z": 0,
+    "h": 57
+   },
+   {
+    "name": "Lower Ward court",
+    "x": 10850,
+    "z": 0,
+    "h": 72
+   },
+   {
+    "name": "Great Hall steps",
+    "x": 11050,
+    "z": 0,
+    "h": 92
+   }
+  ],
+  "walls": [
+   {
+    "name": "the city wall",
+    "x": 9350,
+    "h": 14
+   },
+   {
+    "name": "Lower Ward wall",
+    "x": 10760,
+    "h": 88
+   },
+   {
+    "name": "Middle Ward wall",
+    "x": 10950,
+    "h": 106
+   },
+   {
+    "name": "High Ward wall",
+    "x": 11150,
+    "h": 133
+   }
+  ]
+ },
+ "scene": [
+  {
+   "t": "0:00",
+   "beat": "The pinch opens. Low camera at the hero's boots on the Sill; the moat plain, the wall, the raised drawbridge. A bell, far off.",
+   "sound": "a single bell; wind; the hero's breath"
+  },
+  {
+   "t": "1:00",
+   "beat": "The city: the camera slides along the wall from the Barbican to the Slough's gate; smoke over the Cinder Quarter, lamps on the Mages' Rise.",
+   "sound": "Lisandra's voice, far off: one line naming the city; low strings begin"
+  },
+  {
+   "t": "2:00",
+   "beat": "The wards: a slow climb up the Castle Approach's switchback and over the three ward walls, each higher.",
+   "sound": "drums under the strings as each ward wall is crossed"
+  },
+  {
+   "t": "3:00",
+   "beat": "The Keep: the five spires named one by one as the camera rounds them, the Wyrm stirring on the Crown Court's roofs.",
+   "sound": "the choir enters; each spire's name is spoken as it is passed; the Wyrm's chains"
+  },
+  {
+   "t": "4:00",
+   "beat": "The Throne Tower's top, a figure on its balcony; the camera falls all the way back to the hero. Control returns.",
+   "sound": "silence, then one struck bell as the figure turns; the music resolves as control returns"
+  }
+ ],
+ "scene_phone": "On Low the scene runs on a fixed camera path with the castle and Keep swapped to their full meshes for its length only and the city held at its far level of detail; beats 3 and 4 never bring the city's streets into close view.",
+ "liveries": {
+  "_": "Owner, 2026-11-15: Velscour's knights, necromancers, wizards and the rest are palette swaps of the existing models. Outside his area they wear various swaps; once in his area, blood red. Some castle and Keep wings have their own colour; some areas mix the schemes, the bigger boss fights above all. Swaps only (recoloured textures), no new models.",
+  "schemes": {
+   "blood": "blood-red armour: the default everywhere in Phobos",
+   "royal": "royal-blue armour",
+   "bone": "white armour with extra skulls",
+   "forest": "forest-green armour",
+   "gilt": "grey armour with gold highlights"
+  },
+  "where": {
+   "marches": "the world's existing swaps, a different one at each keep",
+   "city": "blood",
+   "sewers": "blood, tarnished",
+   "castle": {
+    "lower_ward": "blood",
+    "barracks, armoury, forge": "gilt",
+    "library, gallery, map room": "royal",
+    "menagerie, conservatory, alchemists": "forest",
+    "sanctuaries, ossuary chapel, crypt": "bone",
+    "great hall, clock tower, hall of mirrors, treasury, antechambers": "mixed"
+   },
+   "keep": {
+    "ember": "blood",
+    "storm": "royal",
+    "bone": "bone",
+    "shadow": "gilt",
+    "blood": "forest",
+    "throne": "mixed",
+    "crossings": "mixed: each crossing boss wears two schemes"
+   }
+  },
+  "rule": "Owner, 2026-11-15: royal blue and grey-with-gold are kept apart (blue beside gold is Tessariel's). Never on one figure, never side by side in one pack or one boss fight. Mixed areas pair royal with blood, bone or forest, and gilt with blood, bone or forest."
+ },
+ "basin": {
+  "_": "Owner, 2026-11-15: the basin the city and castle stand in is not round; its cliffs stand right up against the north and south gates (about 40 m outside the wall there) and are drawn in hard against the castle's crag north and south. The outline is src/core/east.js BASIN_N, BASIN_S; drawn in art/phobos/east/relief.jpg."
+ }
+}

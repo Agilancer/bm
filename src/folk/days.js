@@ -44,6 +44,8 @@ export const DAYS = {
   herbalist: [[0, 'sleep'], [6, 'home'], [6.5, 'eat'], [7.2, 'work'], [11, 'shop'], [12.3, 'eat'], [13, 'shop'], [17.5, 'home'], [18, 'eat'], [19, 'home'], [21.8, 'sleep']],
   // Out in the land, at their post, all day and all night (src/folk/people.js POSTED).
   posted: [[0, 'posted']],
+  // About Phobos's streets near you, all day and all night (src/folk/people.js CROWD).
+  roam: [[0, 'roam']],
   child: [[0, 'sleep'], [7, 'home'], [7.3, 'eat'], [7.9, 'play'], [9, 'lesson'], [11, 'play'], [12, 'eat'], [12.8, 'play'], [15, 'help'], [16.2, 'play'], [17.6, 'home'], [18, 'eat'], [18.6, 'play'], [19.7, 'home'], [20.2, 'sleep']],
 };
 

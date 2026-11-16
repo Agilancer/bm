@@ -9,7 +9,7 @@
 // on a road, in water, on a seal, where somebody stands (K.spots), or inside something already built. No cloth, no mark
 // of either side (README "The two sides").
 import { terrainHeight } from './terrain.js';
-import { routeDist, waterAt } from './lands.js';
+import { inLand, routeDist, waterAt } from './lands.js';
 import { hash2 } from './terrain-noise.js';
 import { LAIRS } from './tripo-monsters.js';
 
@@ -31,7 +31,7 @@ export function lairKind(l) {
 export function dressLairs(K, seals = []) {
   const kept = K.colliders.length;
   const spots = Object.values(K.spots);
-  const solid = K.colliders.filter((c) => Math.abs(c.x) < 5600 && Math.abs(c.z) < 5600);
+  const solid = K.colliders.filter((c) => inLand(c.x, c.z));
   for (const [n, l] of LAIRS.entries()) {
     const near = solid.filter((c) => Math.abs(c.x - l.x) < 60 && Math.abs(c.z - l.z) < 60);
     // Is this a place to lay something r wide?

@@ -3,7 +3,7 @@
 
 import { CAVE_MOUTH, CAVE_OUT, LANDINGS, LEDGE, LEDGE_Y, WAY, landingEdge, wayLevel } from './opening.js';
 import { fbm, hash2, sstep } from './terrain-noise.js';
-import { WORLD_EDGE, landHeight, setLandBase } from './lands.js';
+import { WORLD_EAST, WORLD_EDGE, landHeight, setLandBase } from './lands.js';
 import { CHURCH_GUARD, CHURCH_SITE, churchSite } from './church.js';
 import { OLD_CHURCH_GROUND, oldChurchGround } from './town.js';
 import { PORTAL, PORTAL_PAD } from './dungeon.js';
@@ -169,6 +169,8 @@ function portalCut(x, z, level) {
 
 // How far you can go, either way along x and z. An unseen wall stands here. (Only so much of it is worked out for the things that hunt you: NAV_EDGE, in src/sim/world.js.)
 export const LAND_EDGE = WORLD_EDGE;
+// (East it's further: the Marches and Phobos, src/core/east.js.)
+export const LAND_EAST = WORLD_EAST;
 
 // Paths, as (x, z) polylines with half-widths. Door steps to the well and a road out to the south-west.
 // (The worn way off Lisandra's ledge: the shelf, the steps and the path down onto the road. src/core/opening.js WAY.)

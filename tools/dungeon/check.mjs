@@ -8,7 +8,7 @@ import { ALL_PACKS, BOSSES, CaveNav, DELVES, GRID_UNIT, WARN, WARNINGS, braziers
 import { PROP_KINDS, buildDelves } from '../../src/core/delve-build.js';
 import { FIGHTS } from '../../src/sim/delve-fights.js';
 import { VARIANTS } from '../../src/core/tripo-monsters.js';
-import { WORLD_EDGE } from '../../src/core/lands.js';
+import { LAND } from '../../src/core/lands.js';
 import { HALL_BOX } from '../../src/core/testhall.js';
 
 let bad = 0;
@@ -18,8 +18,8 @@ for (const d of DELVES) {
   const t0 = performance.now();
   const g = grid(d), B = d.box;
   console.log(`\n${d.name} (${d.key}, level ${d.level}, ${d.style}): field ${g.W}x${g.H} in ${(performance.now() - t0).toFixed(0)} ms; box x ${B.x0.toFixed(0)}..${B.x1.toFixed(0)} z ${B.z0.toFixed(0)}..${B.z1.toFixed(0)}`);
-  if (Math.max(Math.abs(B.x0), Math.abs(B.x1)) < WORLD_EDGE + 40 && Math.max(Math.abs(B.z0), Math.abs(B.z1)) < WORLD_EDGE + 40) fail(`${d.key}: its box is inside the land's edge`);
-  if (!(Math.min(Math.abs(B.x0), Math.abs(B.x1)) > WORLD_EDGE + 20 || Math.min(Math.abs(B.z0), Math.abs(B.z1)) > WORLD_EDGE + 20)) fail(`${d.key}: part of its box lies under the land`);
+  // (The land's a box, longer to the east: src/core/lands.js LAND.)
+  if (!(B.x1 < LAND.x0 - 20 || B.x0 > LAND.x1 + 20 || B.z1 < LAND.z0 - 20 || B.z0 > LAND.z1 + 20)) fail(`${d.key}: part of its box lies under the land`);
   for (const o of DELVES) if (o !== d && B.x0 < o.box.x1 && B.x1 > o.box.x0 && B.z0 < o.box.z1 && B.z1 > o.box.z0) fail(`${d.key}: its box overlaps ${o.key}'s`);
   if (B.x0 < HALL_BOX.x1 && B.x1 > HALL_BOX.x0 && B.z0 < HALL_BOX.z1 && B.z1 > HALL_BOX.z0) fail(`${d.key}: its box overlaps the Test Dungeon's`);
   if (delveAt(d.portal.x, d.portal.z)) fail(`${d.key}: its portal on the land is inside a delve's box`);

@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { WAYS } from '../src/core/roads-data.js';
-import { RD_CELL, RD_HALF, RD_MAX, RD_N, SURFACE_LAYERS, allWays, overLand, roadGraph, roadSegments } from '../src/core/roads.js';
+import { RD_CELL, RD_HALF, RD_MAX, RD_N, RD_NX, SURFACE_LAYERS, allWays, overLand, roadGraph, roadSegments } from '../src/core/roads.js';
 import { ROUTES, SITES } from '../src/core/lands.js';
 import { Kit } from '../src/core/sites.js';
 import { dressRoads } from '../src/core/roadside.js';
@@ -16,7 +16,7 @@ test('the laid ways are whole, in the land, and in the routes', () => {
   for (const w of WAYS) {
     assert.ok(['road', 'lane', 'path'].includes(w.cls) && w.w > 0.5 && w.w < 4, w.name);
     assert.ok(w.pts.length >= 2, w.name);
-    for (const [x, z] of w.pts) assert.ok(Number.isFinite(x) && Number.isFinite(z) && Math.abs(x) < 5600 && Math.abs(z) < 5600, w.name);
+    for (const [x, z] of w.pts) assert.ok(Number.isFinite(x) && Number.isFinite(z) && x > -5600 && x < 11700 && Math.abs(z) < 5600, w.name);
     for (let i = 0; i + 1 < w.pts.length; i++) km += Math.hypot(w.pts[i + 1][0] - w.pts[i][0], w.pts[i + 1][1] - w.pts[i][1]) / 1000;
   }
   assert.ok(km > 150, `${km.toFixed(0)} km of new ways`);
@@ -27,12 +27,12 @@ test('the shader sees every stretch near it, and never more in a square than it 
   const { idx, seg, count } = roadSegments();
   assert.equal(seg.length, count * 8);
   let most = 0;
-  for (let k = 0; k < RD_N * RD_N; k++) most = Math.max(most, idx[k * 2 + 1]);
+  for (let k = 0; k < RD_NX * RD_N; k++) most = Math.max(most, idx[k * 2 + 1]);
   assert.ok(most <= RD_MAX, `a ${RD_CELL} m square lists ${most} stretches; the shader reads ${RD_MAX}`);
   // (A point on a way, anywhere: its square lists a stretch it's on.)
   for (const w of allWays().filter((_, i) => i % 7 === 0)) {
     const [ax, az] = w.pts[0], [bx, bz] = w.pts[1], x = (ax + bx) / 2, z = (az + bz) / 2;
-    const k = (Math.floor((z + RD_HALF) / RD_CELL) * RD_N + Math.floor((x + RD_HALF) / RD_CELL)) * 2;
+    const k = (Math.floor((z + RD_HALF) / RD_CELL) * RD_NX + Math.floor((x + RD_HALF) / RD_CELL)) * 2;
     let near = Infinity;
     for (let i = 0; i < idx[k + 1]; i++) {
       const s = idx[idx[k] + i] * 8, dx = seg[s + 2] - seg[s], dz = seg[s + 3] - seg[s + 1], L2 = dx * dx + dz * dz || 1;

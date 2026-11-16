@@ -34,7 +34,10 @@
     "old_man": {"glb": "old_man.glb", "c": "old_man_c.webp", "n": "old_man_n.webp", "m": "old_man_m.webp", "height": 1.72, "hips": 0.904, "head": 1.529, "joints": 55, "tris": 8992},
     "wes": {"glb": "wes.glb", "c": "wes_c.webp", "n": "wes_n.webp", "m": "wes_m.webp", "height": 1.81, "hips": 0.979, "head": 1.624, "joints": 55, "tris": 8990},
     "worker_2": {"glb": "worker_2.glb", "c": "worker_2_c.webp", "n": "worker_2_n.webp", "m": "worker_2_m.webp", "height": 1.77, "hips": 0.958, "head": 1.567, "joints": 52, "tris": 8986},
-    "worker": {"glb": "worker.glb", "c": "worker_c.webp", "n": "worker_n.webp", "m": "worker_m.webp", "height": 1.83, "hips": 0.99, "head": 1.62, "joints": 52, "tris": 8990}
+    "worker": {"glb": "worker.glb", "c": "worker_c.webp", "n": "worker_n.webp", "m": "worker_m.webp", "height": 1.83, "hips": 0.99, "head": 1.62, "joints": 52, "tris": 8990},
+    "apricot": {"glb": "apricot.glb", "c": "apricot_c.webp", "n": "apricot_n.webp", "m": "apricot_m.webp", "height": 1.57, "hips": 0.865, "head": 1.319, "joints": 54, "tris": 30984, "fist": 0.45},
+    "martleboro": {"glb": "martleboro.glb", "c": "martleboro_c.webp", "n": "martleboro_n.webp", "m": "martleboro_m.webp", "height": 1.63, "hips": 0.807, "head": 1.348, "joints": 53, "tris": 31303, "fist": 0.45},
+    "louis_g": {"glb": "louis_g.glb", "c": "louis_g_c.webp", "n": "louis_g_n.webp", "m": "louis_g_m.webp", "height": 1.88, "hips": 1.052, "head": 1.604, "joints": 53, "tris": 30931, "fist": 0.45}
   },
   "swaps": {
     "kit": {"base": "boy_1", "c": "kit_c.webp", "note": "Pip's little brother: same face, russet hood, moss-green breeches, hair a shade lighter"},
@@ -51,6 +54,24 @@
     "hasket": {"base": "worker_f", "c": "hasket_c.webp", "note": "Cinderford's watch-sergeant: the baker's body in dark drab (tools/folk/posted_swaps.py)"},
     "colm": {"base": "elder", "c": "colm_c.webp", "note": "the charcoal burner: the innkeeper's body, sooted dark (tools/folk/posted_swaps.py)"},
     "ysolt": {"base": "young_4", "c": "ysolt_c.webp", "note": "out of Khel: the dyer's body with the dye gone out of it, ash-grey (tools/folk/posted_swaps.py)", "skirt": {"center": [-0.019, -0.0], "legRadii": [0.085, 0.061, 0.052]}},
-    "garrick": {"base": "wes", "c": "garrick_c.webp", "note": "Frostwatch's warden: the tanner's body in cold blue-grey (tools/folk/posted_swaps.py)"}
+    "garrick": {"base": "wes", "c": "garrick_c.webp", "note": "Frostwatch's warden: the tanner's body in cold blue-grey (tools/folk/posted_swaps.py)"},
+    "ph_cut": {"base": "worker", "c": "ph_cut_c.webp", "note": "Phobos's crowd: a cutpurse: soot-grey hood, slate jerkin"},
+    "ph_sword": {"base": "wes", "c": "ph_sword_c.webp", "note": "Phobos's crowd: a sellsword: oxblood leathers gone brown"},
+    "ph_drunk": {"base": "elder", "c": "ph_drunk_c.webp", "note": "Phobos's crowd: a drunk: mustard coat stained dark"},
+    "ph_beggar": {"base": "old_man", "c": "ph_beggar_c.webp", "note": "Phobos's crowd: a beggar: rags with the colour gone out of them"},
+    "ph_dicer": {"base": "dude", "c": "ph_dicer_c.webp", "note": "Phobos's crowd: a dicer: plum doublet, dirty"},
+    "ph_fence": {"base": "sage", "c": "ph_fence_c.webp", "note": "Phobos's crowd: a fence: bottle-green robe, greasy"},
+    "ph_delver": {"base": "worker_2", "c": "ph_delver_c.webp", "note": "Phobos's crowd: a delver: tan leathers, rust kerchief"},
+    "ph_hunter": {"base": "smith", "c": "ph_hunter_c.webp", "note": "Phobos's crowd: a demon hunter: charcoal and iron"},
+    "ph_crone": {"base": "crone", "c": "ph_crone_c.webp", "note": "Phobos's crowd: a fortune-teller: faded violet shawl"},
+    "ph_doxy": {"base": "young_5", "c": "ph_doxy_c.webp", "note": "Phobos's crowd: a tavern girl: wine-red bodice"},
+    "ph_rat": {"base": "worker_f", "c": "ph_rat_c.webp", "note": "Phobos's crowd: a rat-catcher: moss and mud"},
+    "ph_urchin": {"base": "boy_3", "c": "ph_urchin_c.webp", "note": "Phobos's crowd: an urchin: brown rags"},
+    "ph_bravo": {"base": "dude", "c": "ph_bravo_c.webp", "note": "Phobos's crowd: a bravo: rust and soot"},
+    "ph_knuckle": {"base": "youth_red", "c": "ph_knuckle_c.webp", "note": "Phobos's crowd: a ruffian: the noble's cut gone mouldy green"},
+    "ph_lark": {"base": "young_1", "c": "ph_lark_c.webp", "note": "Phobos's crowd: a delver: dusk-blue jerkin"},
+    "ph_brute": {"base": "worker", "c": "ph_brute_c.webp", "note": "Phobos's crowd: a hired brute: dun leather"},
+    "ph_glass": {"base": "young_3", "c": "ph_glass_c.webp", "note": "Phobos's crowd: a tavern girl: madder skirt"},
+    "ph_tib": {"base": "girl_3", "c": "ph_tib_c.webp", "note": "Phobos's crowd: a street girl: faded teal rags"}
   }
 }
