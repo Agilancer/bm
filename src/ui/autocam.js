@@ -117,7 +117,7 @@ export class AutoCam {
       const g = brain.goal, togo = g && brain.useGoal ? Math.hypot(g.x - x, g.z - z) : 0;
       want = wanted({
         fighting: !!brain.fighting, talking: !!other, sky, riding: snap[H.SURF] > 0.5 && sp > 4.5,
-        orbit: !!show?.orbit, arrived: !!show?.arrived, travelling: (brain.hurry || togo > 90) && sp > 2.5, sinceShot: this.sinceShot, turn: this.turn,
+        orbit: !!show?.orbit, arrived: !!show?.arrived, travelling: togo > 90 && sp > 2.5, sinceShot: this.sinceShot, turn: this.turn,
       });
       if (want && this.t - (this.last[want] ?? -99) < SHOTS[want].again) want = null;
       // (Asked for in a fight or under a roof, a one-off waits a little, then is forgotten.)

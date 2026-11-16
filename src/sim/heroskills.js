@@ -43,6 +43,18 @@ const RAINBOW = [FIRE, LIGHT, HEAL, SPIRIT, FROST, ARCANE, STORM, DRAIN];
 // line (needs a clear line), move (takes the hero off his feet or his place: not from a post), aoe (better the more there
 // are), gap (closes one), finish (for what's nearly dead), def (for when he's hurt), big (kept for what's worth it), crowd
 // (that many about the foe), w (how much it's liked), need (h, m, x) for anything else, name (as the Company's books have it).
+// Each class's first moves (src/sim/hero.js fires them; the AI picks them by chooseSkill, as it does MORE_SKILLS).
+export const SKILLS = {
+  paladin: [{ key: 'blessed_hammers', cd: 4, range: [0, 3] }, { key: 'hammer_throw', cd: 7, range: [3, 16] }, { key: 'smite', cd: 6, range: [0, 1.6] }, { key: 'consecration', cd: 15, range: [0, 3.5], crowd: 2, orUndead: true }, { key: 'holy_light', cd: 9, heal: true }],
+  lancer: [{ key: 'charge', cd: 8, range: [5.5, 11] }, { key: 'shield_wall', cd: 16, range: [0, 6], crowd: 3 }, { key: 'shield_bash', cd: 7, range: [0, 1.6] }],
+  archer: [{ key: 'rain_of_arrows', cd: 14, range: [5, 20], crowd: 2 }, { key: 'volley', cd: 9, range: [4, 20], crowd: 2 }, { key: 'strafe', cd: 5, range: [2, 14] }],
+  rogue: [{ key: 'vanish', cd: 13, range: [0, 8] }, { key: 'flurry', cd: 5, range: [0, 1.4] }],
+  ninja: [{ key: 'shadow_step', cd: 9, range: [4, 9.7] }, { key: 'leaping_kick', cd: 7, range: [2.5, 7] }, { key: 'throwing_stars', cd: 6, range: [4, 15] }, { key: 'ninja_flurry', cd: 6, range: [0, 1.5] }],
+  dragoon: [{ key: 'spear_barrage', cd: 8, range: [0, 2.6], after: true }, { key: 'jump', cd: 2.6, range: [0, 12] }],
+  boomerang: [{ key: 'double_throw', cd: 10, range: [3, 8] }],
+  bard: [{ key: 'war_song', cd: 30, song: true }, { key: 'marching_song', cd: 40, song: true, travel: true }, { key: 'mending_song', cd: 26, song: true, heal: true }],
+};
+
 export const MORE_SKILLS = {
   paladin: [
     { key: 'zeal', name: 'Zeal', cd: 6, range: [0, 1.9], lvl: 2 },

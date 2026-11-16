@@ -55,6 +55,8 @@ html.art-icons #charmRow .ch img[src$=".webp"] { image-rendering: auto; }
 #mapRing { position: absolute; right: calc(20px + var(--sr)); top: calc(18px + var(--st)); width: 168px; height: 168px; border-radius: 6px; pointer-events: none; display: none;
   box-shadow: inset 0 0 0 2px var(--rim), inset 0 0 0 5px rgba(8, 6, 4, .75), inset 0 0 0 6px var(--rim-dim), 0 2px 10px rgba(0, 0, 0, .7); }
 #mapMini { box-shadow: none; }
+/* (With the mouse free, Tab's or auto-play's, a click on the corner map opens the big one: src/main.js.) */
+body:not(.touch) #mapMini { pointer-events: auto; cursor: pointer; }
 
 /* ---- a button's picture (src/ui/icons.js) ---- */
 .sch { display: none; position: relative; width: 1.3em; height: 1.3em; margin-right: -2px; align-self: center; --ic-size: contain; }
@@ -103,11 +105,14 @@ body.touch #spells { position: absolute; inset: 0; left: 0; bottom: 0; transform
 body.touch #spells .spell { position: absolute; padding: 0; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; pointer-events: auto; touch-action: none;
   background: radial-gradient(circle at 50% 34%, rgba(46, 38, 30, .84), rgba(10, 8, 6, .84) 70%);
   box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--c) 62%, #000), inset 0 0 0 3.500px rgba(8, 6, 4, .6), 0 2px 6px rgba(0, 0, 0, .55); }
+/* (The Utility three, 0, - and +, in the outermost ring: edged in pale bone, so they read as their own.) */
+body.touch #spells .spell.util { box-shadow: inset 0 0 0 1.5px rgba(233, 223, 201, .6), inset 0 0 0 3.500px rgba(8, 6, 4, .6), 0 2px 6px rgba(0, 0, 0, .55); }
 body.touch #spells .spell svg { width: 56%; height: 56%; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .9)); }
 body.touch #spells .spell b { left: auto; right: 50%; top: auto; bottom: -1px; transform: translateX(50%); font: 700 calc(8 * var(--u))/1 Georgia, serif; color: #cdbf9f; opacity: .8; }
 body.touch #spells .spell.now { box-shadow: inset 0 0 0 2px var(--c), inset 0 0 0 3.500px rgba(8, 6, 4, .6), inset 0 0 calc(12 * var(--u)) -2px var(--c), 0 0 calc(10 * var(--u)) -2px var(--c); }
 body.touch #spells .spell.up, body.touch #spells .spell.down { transform: scale(.93); filter: brightness(1.3); box-shadow: inset 0 0 0 2px var(--c), inset 0 0 calc(16 * var(--u)) var(--c), 0 0 calc(16 * var(--u)) var(--c); }
 body.touch #spells .spell.empty { background: rgba(10, 8, 6, .35); box-shadow: inset 0 0 0 1.5px rgba(201, 163, 92, .28); border: 0; }
+body.touch #spells .spell.util.empty { box-shadow: inset 0 0 0 1.5px rgba(233, 223, 201, .3); }
 body.touch #spells .spell .cd { font: 700 calc(17 * var(--u)) Georgia, serif; border-radius: 50%; }
 body.touch #spellOpen, body.touch #viewBtn { display: none !important; }
 body.touch #spellName { left: auto; right: calc(var(--hr) + 300 * var(--u)); bottom: calc(var(--hb) + 10 * var(--u)); transform: none; margin: 0; font-size: calc(11.5 * var(--u)); text-align: right; opacity: .85; }
@@ -228,7 +233,7 @@ body.touch #hallPanel button.hb { min-height: 34px; }
 
 /* The pack: its × is the way out, and the cells are as big as the screen's height lets them be. What's in your hands is said
    in the bar underneath, and the charm pouch is in the pack's heading (src/ui/inventory.js moves the two). */
-body.touch #inv { --cell: min(calc((100vh - 100px) / 8), calc((100vw - var(--sl) - var(--sr) - 78px) / 16.2), 56px); justify-content: center; gap: 4px; padding: 4px; }
+body.touch #inv { --cell: min(calc((100vh - 100px) / var(--rows, 8)), calc((100vw - var(--sl) - var(--sr) - 78px) / 16.2), 56px); justify-content: center; gap: 4px; padding: 4px; }
 body.touch #invBody { margin-top: 0; gap: 8px; }
 body.touch #invBody > .panel:first-child { width: auto; }
 body.touch #inv .panel { padding: 5px 8px 8px; }
@@ -251,9 +256,8 @@ body.touch #invTip, body.touch #invTip2 { max-width: min(300px, 44vw); font-size
 /* The book. */
 body.touch #spellClose { min-width: 44px; height: 40px; }
 body.touch .tspend { min-height: 42px; }
-body.touch .tslots { gap: 4px; flex-wrap: nowrap; }
-body.touch .tslots span { flex: none; }
-body.touch .tslots button { flex: 1 1 0; min-width: 0; max-width: 38px; width: auto; height: 36px; padding: 0; }
+body.touch .tslots { gap: 4px; }
+body.touch .tslots button { max-width: 38px; height: 36px; }
 body.touch .tbranch { padding: 8px 10px; }
 body.touch #treeTabs button { min-height: 36px; }
 
@@ -291,6 +295,8 @@ html.art-btn_round #bTake { background: var(--art-btn_round_on, var(--art-btn_ro
 html.art-slot_spell #spells .spell { background: var(--art-slot_spell) center / 100% 100% no-repeat; border: 0; border-radius: 50%; box-shadow: none; }
 html.art-slot_spell #spells .spell.empty { opacity: .6; }
 html.art-slot_spell_on #spells .spell.now { background-image: var(--art-slot_spell_on); box-shadow: 0 0 12px -3px var(--c); }
+/* (The Utility three over the painted frame: a thin ring of pale bone round it.) */
+html.art-slot_spell #spells .spell.util:not(.now):not(.up):not(.down) { box-shadow: 0 0 0 1.5px rgba(233, 223, 201, .42); }
 html.art-spells #spells .spell svg { width: 74%; height: 74%; }
 /* (On a desk a painted spell fills its own square and the frame's well is about three quarters of the slot: the picture is
    drawn at two thirds, in the middle of it. The slot is a grid, so it's the middle whatever its size.) */
@@ -329,7 +335,7 @@ html.art-panel body.touch { --pw: 26px; --po: 5px; --pb: 9px; }
 html.art-panel :is(#inv .panel, #folkTalk, #folkBook, #heroTalk, #hirePanel, #hallPanel, .lands-panel, #title .t-frame, #treeInfo, #invTip, #invTip2, #autoMenu, #autoLog) {
   border: var(--pb) solid transparent; border-image: var(--art-panel) 72 fill / var(--pw) / var(--po) round; background: none; box-shadow: none; outline: 0; }
 html.art-panel #treeInfo { --pw: 22px; --po: 3px; --pb: 8px; padding: 6px 8px; }
-html.art-panel body.touch #inv { --cell: min(calc((100vh - 120px) / 8), calc((100vw - var(--sl) - var(--sr) - 112px) / 16.2), 56px); gap: 9px; }
+html.art-panel body.touch #inv { --cell: min(calc((100vh - 120px) / var(--rows, 8)), calc((100vw - var(--sl) - var(--sr) - 112px) / 16.2), 56px); gap: 9px; }
 html.art-panel body.touch #invBody { gap: 14px; }
 html.art-panel #title .t-frame::before { display: none; }
 html.art-panel :is(#invTip, #invTip2) { --pw: 20px; --po: 4px; --pb: 6px; padding: 5px 8px; }
@@ -375,3 +381,12 @@ body.touch #wildTrack { min-width: 0; max-width: 100%; padding: calc(3 * var(--u
 /* (In the stack they take room only while they're up.) */
 body.touch #topStack #wildTrack:not(.on), body.touch #topStack #wildBanner:not(.on) { display: none; }
 body.touch #topStack #wildBanner { max-width: 100%; }
+
+/* The beacon stone's fifteen seconds (src/ui/beacon.js): a bar over the middle of the screen, filling in blue. */
+#beaconCast { position: fixed; left: 50%; bottom: 18%; transform: translateX(-50%); z-index: 6; width: min(300px, 70vw); display: none;
+  pointer-events: none; text-align: center; font: 600 13px/1.2 Georgia, serif; color: #d8ecff; text-shadow: 0 1px 2px #000; }
+#beaconCast.on { display: block; }
+#beaconCast .bc-bar { height: 9px; margin: 4px 0 3px; border: 1px solid rgba(160,200,240,.55); background: rgba(6,10,18,.65); box-shadow: 0 0 10px rgba(80,160,255,.35); }
+#beaconCast .bc-bar i { display: block; height: 100%; transform-origin: left; transform: scaleX(0); background: linear-gradient(90deg, #2a6fd8, #7fc4ff); }
+#beaconCast .bc-left { font-size: 11.5px; opacity: .8; }
+body.paused #beaconCast { display: none; }

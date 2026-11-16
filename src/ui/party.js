@@ -15,7 +15,10 @@ import { autoSpend, freshTree, treeMods } from '../core/partytree.js';
 import { makeRng } from '../items/items.js';
 import { CLASSES, CLASS_NAMES } from '../core/heroes.js';
 import { movesOf } from '../sim/heroskills.js';
-import { BOSSES, DELVE, DELVES, PARTY, WARNINGS, roleOf } from '../core/dungeon.js';
+import { BOSSES, DELVE, DELVES, PARTY, WARNINGS, WARN_CALM, roleOf } from '../core/dungeon.js';
+import { Ticker } from './ticker.js';
+import { SAY_NAME } from '../core/delve-elder.js';
+const GOD_SAY = new RegExp(`^(${Object.values(SAY_NAME).join('|')}): (.*)$`);
 import { C, CHARS_START, C_HERO, C_SIZE } from '../core/layout.js';
 import { priceText } from '../folk/shops.js';
 import { CLOSE_X } from './menu-x.js';
@@ -72,6 +75,18 @@ export class PartyUI {
       #raidWarn { position: fixed; left: 50%; top: 22%; transform: translateX(-50%); z-index: 7; width: min(760px, 92vw); text-align: center; pointer-events: none;
         font: 700 22px/1.3 Georgia, serif; color: #ffcf6a; text-shadow: 0 0 6px #000, 0 2px 3px #000, 0 0 14px rgba(120,30,0,.8); }
       #raidWarn div { animation: rwIn .25s ease-out; transition: opacity .6s; margin-bottom: 6px; }
+      /* An Elder Dragon God speaking: a large speech bubble over its head (godSpeak, placed each frame in update), its
+         name over its words, a tail down toward it. Its words go in the chat log too. */
+      #godBubble { position: fixed; left: 0; top: 0; z-index: 8; pointer-events: none; display: none; box-sizing: border-box; width: max-content; max-width: min(760px, 86vw);
+        padding: 16px 30px 20px; border-radius: 22px; background: linear-gradient(rgba(16,7,30,.95), rgba(6,3,14,.96)); border: 2px solid rgba(178,138,246,.75);
+        box-shadow: 0 10px 34px rgba(0,0,0,.65), 0 0 28px rgba(120,60,210,.35); text-align: center;
+        font: italic 400 27px/1.32 Georgia, serif; color: #f1e7ff; text-shadow: 0 0 6px #000, 0 2px 3px #000; transition: opacity .5s; }
+      #godBubble b { display: block; margin-bottom: 5px; font: 700 13px/1.4 Cinzel, Georgia, serif; letter-spacing: .34em; font-style: normal; color: #b993ff; }
+      #godBubble::after { content: ''; position: absolute; left: var(--tail, 50%); bottom: -19px; margin-left: -16px; border: 16px solid transparent; border-bottom: 0; border-top: 19px solid rgba(178,138,246,.75); }
+      #godBubble::before { content: ''; position: absolute; left: var(--tail, 50%); bottom: -15px; margin-left: -13px; border: 13px solid transparent; border-bottom: 0; border-top: 16px solid rgba(6,3,14,.98); z-index: 1; }
+      #godBubble.up::after, #godBubble.up::before { display: none; }
+      @media (max-width: 820px) { #godBubble { font-size: 19px; padding: 11px 18px 14px; } }
+      @keyframes rwSay { from { opacity: 0; letter-spacing: .04em; } to { opacity: 1; } }
       @keyframes rwIn { from { opacity: 0; transform: scale(1.15); } to { opacity: 1; transform: none; } }
       #hirePanel { position: fixed; z-index: 12; left: 50%; bottom: max(3vh, 14px); transform: translateX(-50%); width: min(720px, 95vw); max-height: 78vh; overflow-y: auto; padding: 13px 18px 12px; display: none; flex-direction: column;
         background: rgba(11,9,7,.96); border: 1px solid var(--gold-dim, #8c7344); box-shadow: 0 10px 34px #000b; color: var(--bone, #e9dfc8); font-family: Georgia, serif; }
@@ -98,6 +113,7 @@ export class PartyUI {
     this.warnEl = document.createElement('div'); this.warnEl.id = 'raidWarn';
     this.panel = document.createElement('div'); this.panel.id = 'hirePanel';
     document.body.append(this.frames, this.bossEl, this.warnEl, this.panel);
+    this.ticker = new Ticker();
     this.frameEls = [];
   }
 
@@ -471,6 +487,8 @@ export class PartyUI {
       const [rn, col, mark] = ROLE[roleOf(m.cls)];
       el.innerHTML = `<div class="nm"><span style="color:${col}">${mark}</span><span>${esc(m.name)}</span><em>${m.level} ${esc(CLASSES[m.cls].title)}</em></div><div class="bar"><i></i></div>`;
       el.title = rn;
+      // (The ▶ that puts you in their body: src/ui/heroplay.js.)
+      this.playButton?.(el, m);
       this.frames.appendChild(el);
       return { el, bar: el.querySelector('i'), m, w: -1, cls: '' };
     });
@@ -479,6 +497,8 @@ export class PartyUI {
   // Each frame: life bars, the boss's bar, the calls fading.
   update(dt, snap) {
     if (!snap) return;
+    this.lastSnap = snap;
+    if (this.godT > 0) { this.godT -= dt; if (this.godT <= 0) { this.godEl.style.opacity = 0; setTimeout(() => { if (!(this.godT > 0)) this.godEl.style.display = 'none'; }, 520); } else this.placeGod(snap); }
     // Your level, told to the world now and then: the other Tessariels out in it keep pace with you (HeroWorld.keepPace).
     if ((this.paceT = (this.paceT || 0) - dt) <= 0) { this.paceT = 4; const L = this.level(); if (L !== this.paceSent) { this.paceSent = L; this.sim.postMessage({ type: 'playerLevel', level: L }); } }
     const first = this.firstHero();
@@ -504,10 +524,55 @@ export class PartyUI {
 
   warn(text, secs = 5) {
     const d = document.createElement('div');
+    // (An Elder God speaking, not a call: a large bubble over its head and a line in the chat log. godSpeak.)
+    const god = GOD_SAY.exec(text);
+    if (god) { this.godSpeak(god[1], god[2]); this.warned?.(text); return; }
     d.textContent = text;
     this.warnEl.appendChild(d);
     while (this.warnEl.children.length > 3) this.warnEl.firstChild.remove();
     setTimeout(() => { d.style.opacity = 0; setTimeout(() => d.remove(), 700); }, secs * 1000);
+    this.warned?.(text);
+  }
+
+  // An Elder Dragon God's words: in a large speech bubble over its head (placed each frame: update), held long enough to
+  // read, and in the chat log under its name.
+  godSpeak(name, words) {
+    if (!this.godEl) { this.godEl = document.createElement('div'); this.godEl.id = 'godBubble'; document.body.append(this.godEl); }
+    this.godEl.replaceChildren(Object.assign(document.createElement('b'), { textContent: name }), words);
+    this.godEl.style.display = 'block'; this.godEl.style.opacity = 1;
+    this.godT = Math.max(6, 2.5 + words.length * 0.065);
+    this.placeGod(this.lastSnap);
+    this.chatLog?.line('god', name.replace(/(\w)(\w*)/g, (m, a, b) => a + b.toLowerCase()), words);
+  }
+  // Over the god's head on the screen, kept on it; or top and centre when it's behind you or there's none to see.
+  placeGod(snap) {
+    const el = this.godEl;
+    if (!el || !(this.godT > 0)) return;
+    const W = innerWidth, Ht = innerHeight, w = el.offsetWidth, h = el.offsetHeight, m = this.viewProj?.();
+    let x = W / 2, y = Ht * 0.2 + h, tail = 50, up = true;
+    const id = this.boss?.ids.find((q) => snap && snap[CHARS_START + q * C_SIZE + C.ACTIVE] > 0.5);
+    if (m && snap && id !== undefined) {
+      const co = CHARS_START + id * C_SIZE, wx = snap[co + C.X], wy = snap[co + C.Y] + 13, wz = snap[co + C.Z];
+      const cx = m[0] * wx + m[4] * wy + m[8] * wz + m[12], cy = m[1] * wx + m[5] * wy + m[9] * wz + m[13], cw = m[3] * wx + m[7] * wy + m[11] * wz + m[15];
+      if (cw > 0.1) {
+        const sx = (cx / cw * 0.5 + 0.5) * W, sy = (0.5 - cy / cw * 0.5) * Ht;
+        x = Math.max(w / 2 + 14, Math.min(W - w / 2 - 14, sx));
+        y = Math.max(h + 96, Math.min(Ht * 0.62, sy - 22));
+        tail = Math.max(8, Math.min(92, 50 + (sx - x) / w * 100));
+        up = false;
+      }
+    }
+    el.style.transform = `translate(${Math.round(x - w / 2)}px, ${Math.round(y - h)}px)`;
+    el.style.setProperty('--tail', `${tail}%`);
+    el.classList.toggle('up', up);
+  }
+
+  // A fight's call: shouted along the emergency ticker, unless it's a god speaking or a calm word on how the fight goes.
+  call(i) {
+    const text = WARNINGS[i] || '';
+    if (!text) return;
+    if (WARN_CALM.has(i) || GOD_SAY.test(text)) { this.warn(text, 5); return; }
+    this.ticker.push(text);
     this.warned?.(text);
   }
 
@@ -536,12 +601,12 @@ export class PartyUI {
         break;
       }
       case DELVE.ENTER: this.warn(a ? `${d.name}. Your dead foes are as you left them.` : d.words.enter, 6); break;
-      case DELVE.LEAVE: this.hideBoss(); break;
+      case DELVE.LEAVE: this.hideBoss(); this.ticker.clear(); if (this.godEl) { this.godT = 0; this.godEl.style.display = 'none'; } break;
       case DELVE.CLEAR: this.hideBoss(); this.warn(d.words.clear, 7); this.clearsBy[d.key] = (this.clearsBy[d.key] || 0) + 1; if (d.key === 'warrens') this.clears++; this.cleared?.(d); break;
-      case DELVE.WARN: this.warn(WARNINGS[a | 0] || '', 5); break;
+      case DELVE.WARN: this.call(a | 0); break;
       case DELVE.BOSS: this.showBoss(a | 0, [b | 0, c | 0]); this.warn(`${BOSSES[a | 0]?.name || ''}!`, 3); break;
       case DELVE.BOSS_DOWN: this.hideBoss(); this.warn(`${BOSSES[a | 0]?.name || 'The boss'} is dead!`, 5); this.bossDown?.(BOSSES[a | 0]?.key); break;
-      case DELVE.WIPE: this.wipes = (this.wipes || 0) + 1; this.hideBoss(); this.warn(d.words.wipe, 5); break;
+      case DELVE.WIPE: this.wipes = (this.wipes || 0) + 1; this.hideBoss(); this.ticker.clear(); this.warn(d.words.wipe, 5); break;
       default: break;
     }
   }

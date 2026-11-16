@@ -4,11 +4,13 @@ import { EV, FX_FLOATS, FX_START, H, INPUT, MAX_FX, SPELL_PALETTE, WEAPONS } fro
 import { SHIELD_FACE_POINT, shieldRise, shieldX, shieldY } from '../core/shield-pose.js';
 import { EYE } from './player.js';
 import { struck } from './ragdoll.js';
-import { ELEM, FX, MANA_REGEN, MAX_MANA, SPELLS } from './spells.js';
+import { ELEM, FX, MANA_REGEN, MAX_MANA, REACH, SPELLS } from './spells.js';
 import { DMG_FIELDS, effectiveAll } from './skills.js';
 import { STAFFS2 } from '../items/staffs2.js';
 import { STAFF_GRAND, STAFF_SHOTS, installStaffShots } from './staffshots.js';
 import { BUFFS, installTreeSpells } from './treespells.js';
+// The frame's shapes kept back from bursts for the marks and what comes after (stepBursts).
+const BURST_SPARE = 160;
 
 const TAU = Math.PI * 2;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -36,6 +38,8 @@ const STAFF_SHOT = {
 const STAFF_BITE = 0.55, STAFF_MANA = 5, STAFF_BLAST = 2.5;   // (Raised when the swords went: this is the left click now, the thing you do between spells.)
 const SPELL_BITE = 0.6;   // every spell against the quicker dying of the overhaul: a firebolt takes a zombie, ten take a knight
 const STAFF_AHEAD = 0.85;   // how far along the head's ray a bolt starts, as a palm's does
+// What hangs in the air of its own nature, and at the end of its reach stops there and hangs out its time (spend()).
+const HANG = new Set(['lightning', 'orb', 'well', 'singularity']);
 
 // The hands' camera is wider than the world's: this turns a slope from one into the slope under the same pixel in the other.
 const WORLD_HALF_TAN = Math.tan(32 * Math.PI / 180);
@@ -108,7 +112,8 @@ export class Casting {
     this.castSeen = input[INPUT.CAST_N];
     // (A press made mid-swing waits for the swing, a moment.)
     this.asked = tapped ? 0.35 : Math.max(0, this.asked - dt);
-    const none = input[INPUT.SPELL] < 0;   // (No spell learned yet: a staff's bolt is another matter.)
+    // (No spell learned yet: a staff's bolt is another matter. And none of yours while you're one of your party: heroplay.js.)
+    const none = input[INPUT.SPELL] < 0 || !!sim.heroPlay?.on;
     if (none) this.asked = 0;
     const held = input[INPUT.CAST] > 0.5 && !none;
     this.selected = clamp(input[INPUT.SPELL] | 0, 0, SPELLS.length - 1);
@@ -170,7 +175,9 @@ export class Casting {
       if (k >= 1) continue;
       const grow = 1 - (1 - k) ** b.ease;
       const a = (1 - k) ** 1.5;
-      this.fx(b.shape, b.elem, b.x, b.y, b.z, b.s0 + (b.s1 - b.s0) * grow, b.ax, b.ay, b.az, b.len, b.alpha * a, b.light * a, b.lightR, k, b.seed, b.extra);
+      // (Puffs and sparks never take the last of the frame's room: what's drawn after them is the warnings on the ground,
+      // src/sim/perils.js, and those must show. Past it they go on unseen.)
+      if (this.n < MAX_FX - BURST_SPARE) this.fx(b.shape, b.elem, b.x, b.y, b.z, b.s0 + (b.s1 - b.s0) * grow, b.ax, b.ay, b.az, b.len, b.alpha * a, b.light * a, b.lightR, k, b.seed, b.extra);
       keep.push(b);
     }
     this.bursts = keep;
@@ -642,7 +649,9 @@ export class Casting {
     for (const [k, a] of this.aff) {
       // (A body that's dead and still: forgotten, or every slime and lair monster ever touched stays in here for good.)
       if (k.dead && !(a.h > 0) && Math.abs(a.vx) + Math.abs(a.vz) <= 0.02) { this.aff.delete(k); continue; }
-      // Thrown about: a slide on the ground and a flight off it.
+      // Thrown about: a slide on the ground and a flight off it. (Not an Elder God its fight is flying over the void: the
+      // ground would take it back to the edge it flew from. src/sim/elder-fights.js.)
+      if (k.free) { a.vx = 0; a.vz = 0; }
       if (Math.abs(a.vx) + Math.abs(a.vz) > 0.02) {
         out3[0] = k.x + a.vx * dt; out3[1] = 0; out3[2] = k.z + a.vz * dt;
         sim.world.resolve(out3, radiusOf(k), k.y + 0.2);
@@ -699,6 +708,8 @@ export class Casting {
 
   cast_bolt(def, sim, head = null) {
     const aim = [0, 0, 0], from = head || this.palm(this.side, 0.85, sim, [0, 0, 0]);
+    // (leash: where your eyes were as it left, which it can go no further than REACH from.)
+    const p = sim.player, leash = [p.x, p.y + EYE, p.z];
     this.aim(sim, 90, aim);
     // (twin: a branch's second of the same, thrown wide of the first.)
     const n = def.shards || (def.twin ? 2 : 1), spread = def.spread ?? 0.16;
@@ -716,7 +727,7 @@ export class Casting {
       this.bolts.push({
         def, elem: def.elem, x: from[0], y: from[1], z: from[2], vx: dx * def.speed, vy: dy * def.speed, vz: dz * def.speed, age: 0,
         size: def.size * (def.gather ? 0.45 + 0.55 * g : 1), power: g, grav: def.grav || 0, through: def.pierce ? new Set() : null, seed: Math.random(), lashT: 0,
-        maxAge: def.fuse || def.life || 3,
+        maxAge: def.fuse || def.life || 3, leash,
       });
     }
     this.burst(FX.FLARE, def.elem, from[0], from[1], from[2], 0.09, head ? 0.18 : 0.26, head ? 0.1 : 0.14, { alpha: head ? -0.55 : -0.8 });
@@ -727,6 +738,14 @@ export class Casting {
     const keep = [];
     for (const b of this.bolts) {
       b.age += dt;
+      // Hanging where its reach ran out (spend()), till its time's up, or till something walks into it.
+      if (b.hung) {
+        const [dx, dy, dz] = b.hung, foe = b.def.ghost ? null : this.foeOn(sim, b.x, b.y, b.z, dx, dy, dz, 0, b.size * 0.3, b.through);
+        if ((foe && !b.through) || b.age > b.maxAge) { this.land(b, sim, foe ? foe.k : null, dx, dy, dz, !!foe); continue; }
+        this.drawBolt(b, dx, dy, dz, 0, dt, sim);
+        keep.push(b);
+        continue;
+      }
       b.vy -= b.grav * dt;
       const sp = Math.hypot(b.vx, b.vy, b.vz) || 1, dx = b.vx / sp, dy = b.vy / sp, dz = b.vz / sp, step = sp * dt;
       const end = this.trace(sim, b.x, b.y, b.z, dx, dy, dz, step);
@@ -749,10 +768,24 @@ export class Casting {
       }
       b.x += dx * end; b.y += dy * end; b.z += dz * end;
       if (end < step - 1e-4 || b.age > b.maxAge) { this.land(b, sim, null, dx, dy, dz, end < step - 1e-4); continue; }
+      if (b.leash && Math.hypot(b.x - b.leash[0], b.y - b.leash[1], b.z - b.leash[2]) > REACH && this.spend(b, sim, dx, dy, dz)) continue;
       this.drawBolt(b, dx, dy, dz, sp, dt, sim);
       keep.push(b);
     }
     this.bolts = keep;
+  }
+
+  // A bolt of yours gone as far as it reaches. What hangs in the air of its nature (HANG) stops and hangs out its time; what's
+  // thrown and falls drops where it is, and lands as it would; what ends with its time ends now, as it would then; the rest go
+  // out in a puff, having struck nothing. Returns whether it's gone.
+  spend(b, sim, dx, dy, dz) {
+    if (HANG.has(b.def.key)) { b.leash = null; b.hung = [dx, dy, dz]; b.vx = 0; b.vy = 0; b.vz = 0; return false; }
+    if (b.grav > 0) { b.leash = null; b.vx = 0; b.vz = 0; b.vy = Math.min(b.vy, 0); return false; }
+    // (Its leash kept: a phoenix reborn out of its ring is no further on than this one got.)
+    if (b.def.life || b.def.fuse) { this.land(b, sim, null, dx, dy, dz, false); return true; }
+    this.burst(FX.PUFF, b.elem, b.x, b.y, b.z, b.size * 0.5, b.size * 2, 0.35, { alpha: 0.45 });
+    this.burst(FX.FLARE, b.elem, b.x, b.y, b.z, b.size * 0.9, 0.04, 0.18, { alpha: 0.6 });
+    return true;
   }
 
   drawBolt(b, dx, dy, dz, sp, dt, sim) {
@@ -871,7 +904,7 @@ export class Casting {
         if (foe) { this.hurt(sim, foe, def.dmg, elem, x, y, z, x, z, 20); this.freezeFor(sim, foe, def.freeze); }
         sim.event(EV.SPELL_BOOM, elem, x, y, z, 1.4);
         this.burst(FX.SHOCK, elem, x, y, z, 0.3, 2.2, 0.3, { light: 12, lightR: 7 });
-        this.spray(b, foe, def.spray, (a, off) => this.bolts.push({ ...b, def: { ...def, key: 'frost', dmg: def.dmg * 0.45, chill: 3 }, x: x + Math.cos(a) * off, y: y + 0.5, z: z + Math.sin(a) * off, vx: Math.cos(a) * 22, vy: 0, vz: Math.sin(a) * 22, age: 0, maxAge: 0.45 }));
+        this.spray(b, foe, def.spray, (a, off) => this.bolts.push({ ...b, def: { ...def, key: 'frost', dmg: def.dmg * 0.45, chill: 3 }, leash: null, x: x + Math.cos(a) * off, y: y + 0.5, z: z + Math.sin(a) * off, vx: Math.cos(a) * 22, vy: 0, vz: Math.sin(a) * 22, age: 0, maxAge: 0.45 }));
         break;
       case 'boulder': {
         // (gain: Momentum, each bound harder than the last. part: a piece of one that broke, at half.)
@@ -918,7 +951,7 @@ export class Casting {
   // Embers out of a burst, each a small fire of its own where it comes down.
   embers(b, foe, n, dmg) {
     const { x, y, z, def } = b;
-    this.spray(b, foe, n, (a, off) => this.bolts.push({ ...b, def: { ...def, key: 'ember', dmg, radius: 1.5, embers: 0 }, through: null, x: x + Math.cos(a) * off, y: y + 0.4, z: z + Math.sin(a) * off, vx: Math.cos(a) * 7, vy: 7 + Math.random() * 3, vz: Math.sin(a) * 7, size: 0.16, grav: 18, age: 0, maxAge: 2 }));
+    this.spray(b, foe, n, (a, off) => this.bolts.push({ ...b, def: { ...def, key: 'ember', dmg, radius: 1.5, embers: 0 }, leash: null, through: null, x: x + Math.cos(a) * off, y: y + 0.4, z: z + Math.sin(a) * off, vx: Math.cos(a) * 7, vy: 7 + Math.random() * 3, vz: Math.sin(a) * 7, size: 0.16, grav: 18, age: 0, maxAge: 2 }));
   }
 
   // Things thrown out all round from a landing: clear of the body it struck, or the first thing they'd hit is that.
@@ -986,7 +1019,7 @@ export class Casting {
     const aim = [0, 0, 0];
     this.aim(sim, 60, aim);
     const dx = aim[0] - sim.player.x, dz = aim[2] - sim.player.z, L = Math.hypot(dx, dz) || 1;
-    this.zones.push({ kind: 'gale', def, x: from[0], y: from[1], z: from[2], dx: dx / L, dz: dz / L, t: 0, life: def.life, tickT: 0, seed: Math.random() });
+    this.zones.push({ kind: 'gale', def, x: from[0], y: from[1], z: from[2], dx: dx / L, dz: dz / L, t: 0, life: def.life, tickT: 0, seed: Math.random(), leash: [sim.player.x, sim.player.z] });
     this.burst(FX.FLARE, def.elem, from[0], from[1], from[2], 0.09, 0.2, 0.12, { alpha: -0.55 });
     sim.event(EV.SPELL_BOOM, def.elem, from[0], from[1], from[2], 0.5);
   }
@@ -995,10 +1028,11 @@ export class Casting {
     const def = z.def, e = def.elem, grow = smooth(z.t / (def.life * 0.8)), R = 0.18 + 3 * grow, tall = 0.5 + 7.5 * grow, end = z.t > def.life - 0.35 ? (def.life - z.t) / 0.35 : 1;
     const sp = 8 - 4.5 * grow, step = sp * dt, gh = sim.world.height(z.x, z.z);
     z.y += (gh - z.y) * Math.min(1, 7 * dt);
+    // (And at the end of your reach it goes no further: it turns where it stands till it's spent.)
     if (this.trace(sim, z.x, gh + 1, z.z, z.dx, 0, z.dz, step + 0.3) < step + 0.3) {
       // Round a wall, not through it.
       const t = z.dx, turn = hash(z.seed) > 0.5 ? 1 : -1; z.dx = -z.dz * turn; z.dz = t * turn;
-    } else { z.x += z.dx * step; z.z += z.dz * step; }
+    } else if (Math.hypot(z.x + z.dx * step - z.leash[0], z.z + z.dz * step - z.leash[1]) <= REACH) { z.x += z.dx * step; z.z += z.dz * step; }
     const rings = 9;
     for (let i = 0; i < rings; i++) {
       const u = i / (rings - 1), r = (0.12 + u ** 1.4 * 0.95) * R * end;
@@ -1272,7 +1306,7 @@ export class Casting {
         const seen = new Set(), r = def.radius;
         for (let i = 0; i < def.count; i++) {
           const a = b.ang + i * TAU / def.count, x = p.x + Math.cos(a) * r, y = p.y + 1.1, z = p.z + Math.sin(a) * r;
-          const k = this.nearestFoe(sim, x, y, z, 22, seen) || this.nearestFoe(sim, x, y, z, 22);
+          const k = this.nearestFoe(sim, x, y, z, REACH, seen) || this.nearestFoe(sim, x, y, z, REACH);
           if (!k) continue;
           seen.add(k);
           const L = Math.hypot(k.x - x, chestOf(k) - y, k.z - z) || 1;
@@ -1312,6 +1346,7 @@ export class Casting {
     const hit = new Set();
     let px = p.x, py = p.y, pz = p.z, made = 0;
     for (let i = 0; i < def.count; i++) {
+      if (1.5 + i * def.step > REACH) break;   // (and no further than you reach)
       const x = p.x + s * (1.5 + i * def.step), z = p.z + c * (1.5 + i * def.step);
       const step = Math.hypot(x - px, z - pz);
       const wall = sim.world.rayBoxes(px, py + 0.6, pz, s, 0, c, step);
@@ -1752,10 +1787,10 @@ export class Casting {
       let m = null;
       for (const o of this.missiles) if (o.state === 'hover' && (!m || o.hoverT > m.hoverT)) m = o;
       if (!m || (m.def.barrage && holding)) break;
-      const foe = this.lockOn(sim, 60, 1.1) || this.nearestFoe(sim, m.x, m.y, m.z, 40);
+      const foe = this.lockOn(sim, REACH, 1.1) || this.nearestFoe(sim, m.x, m.y, m.z, REACH);
       // Nothing to hunt for long, it goes where you look.
       if (!foe && !(m.hoverT > 8 && this.state !== 'hold')) break;
-      m.state = 'seek'; m.target = foe; m.age = 0;
+      m.state = 'seek'; m.target = foe; m.age = 0; m.leash = [p.x, p.y + EYE, p.z];
       if (m.def.barrage) m.amp = 1 + m.def.barrage;
       const to = [0, 0, 0];
       if (foe) { to[0] = foe.x; to[1] = chestOf(foe); to[2] = foe.z; } else this.aim(sim, 60, to);
@@ -1783,7 +1818,7 @@ export class Casting {
         keep.push(m);
         continue;
       }
-      if (m.target && m.target.dead) m.target = this.nearestFoe(sim, m.x, m.y, m.z, 40);
+      if (m.target && m.target.dead) m.target = this.nearestFoe(sim, m.x, m.y, m.z, REACH);
       const sp = Math.min(m.def.speed || 26, 7 + m.age * 90);
       let dx = m.vx, dy = m.vy, dz = m.vz;
       const L = 1 / (Math.hypot(dx, dy, dz) || 1);
@@ -1797,6 +1832,8 @@ export class Casting {
       m.vx = dx * sp; m.vy = dy * sp; m.vz = dz * sp;
       const step = sp * dt, end = this.trace(sim, m.x, m.y, m.z, dx, dy, dz, step);
       const foe = this.foeOn(sim, m.x, m.y, m.z, dx, dy, dz, end, 0.08);
+      // (No further than you reach: there it goes out, as a bolt does.)
+      if (!foe && Math.hypot(m.x - m.leash[0], m.y - m.leash[1], m.z - m.leash[2]) > REACH) { this.burst(FX.FLARE, e, m.x, m.y, m.z, 0.25, 0.04, 0.18, { alpha: 0.6 }); continue; }
       if (foe || end < step - 1e-4 || m.age > 4) {
         const t = foe ? foe.t : end, x = m.x + dx * t, y = m.y + dy * t, z = m.z + dz * t;
         if (foe) {

@@ -447,7 +447,11 @@
    "kind": "lance",
    "length": 2.9993,
    "reach": 2.3995,
-   "butt": 0.5999
+   "butt": 0.5999,
+   "bell": [
+    0.0528,
+    0.174
+   ]
   },
   "bluewheel_mace": {
    "kind": "mace",
@@ -519,13 +523,21 @@
    "kind": "lance",
    "length": 2.9983,
    "reach": 2.3986,
-   "butt": 0.5997
+   "butt": 0.5997,
+   "bell": [
+    0.1275,
+    0.2032
+   ]
   },
   "gold_tourney_lance": {
    "kind": "lance",
    "length": 2.9978,
    "reach": 2.3982,
-   "butt": 0.5996
+   "butt": 0.5996,
+   "bell": [
+    0.0482,
+    0.1662
+   ]
   },
   "goldcross_spear": {
    "kind": "spear",
@@ -543,7 +555,11 @@
    "kind": "lance",
    "length": 3.0008,
    "reach": 2.4006,
-   "butt": 0.6002
+   "butt": 0.6002,
+   "bell": [
+    0.1308,
+    0.2023
+   ]
   },
   "horned_dagger": {
    "kind": "dagger",
@@ -591,85 +607,155 @@
    "kind": "kite",
    "length": 0.8446,
    "reach": 0.4223,
-   "butt": 0.4223
+   "butt": 0.4223,
+   "half": [
+    0.1958,
+    0.4223,
+    0.0735
+   ]
   },
   "kite_blue_fleur": {
    "kind": "kite",
    "length": 0.8155,
    "reach": 0.4078,
-   "butt": 0.4078
+   "butt": 0.4078,
+   "half": [
+    0.2023,
+    0.4078,
+    0.0631
+   ]
   },
   "kite_chevron": {
    "kind": "kite",
    "length": 0.8214,
    "reach": 0.4107,
-   "butt": 0.4107
+   "butt": 0.4107,
+   "half": [
+    0.2007,
+    0.4107,
+    0.0632
+   ]
   },
   "kite_compass": {
    "kind": "kite",
    "length": 0.8374,
    "reach": 0.4187,
-   "butt": 0.4187
+   "butt": 0.4187,
+   "half": [
+    0.1965,
+    0.4187,
+    0.0566
+   ]
   },
   "kite_dawnstar": {
    "kind": "kite",
    "length": 0.8525,
    "reach": 0.4263,
-   "butt": 0.4263
+   "butt": 0.4263,
+   "half": [
+    0.1939,
+    0.4263,
+    0.0798
+   ]
   },
   "kite_eclipse": {
    "kind": "kite",
    "length": 0.8896,
    "reach": 0.4448,
-   "butt": 0.4448
+   "butt": 0.4448,
+   "half": [
+    0.1858,
+    0.4448,
+    0.0651
+   ]
   },
   "kite_gilded_drake": {
    "kind": "kite",
    "length": 0.9001,
    "reach": 0.4501,
-   "butt": 0.4501
+   "butt": 0.4501,
+   "half": [
+    0.184,
+    0.4501,
+    0.0635
+   ]
   },
   "kite_gold_lion": {
    "kind": "kite",
    "length": 0.8227,
    "reach": 0.4114,
-   "butt": 0.4114
+   "butt": 0.4114,
+   "half": [
+    0.2,
+    0.4114,
+    0.0659
+   ]
   },
   "kite_greenwood": {
    "kind": "kite",
    "length": 0.8742,
    "reach": 0.4371,
-   "butt": 0.4371
+   "butt": 0.4371,
+   "half": [
+    0.1888,
+    0.4371,
+    0.0717
+   ]
   },
   "kite_griffin": {
    "kind": "kite",
    "length": 0.8381,
    "reach": 0.419,
-   "butt": 0.419
+   "butt": 0.419,
+   "half": [
+    0.1965,
+    0.419,
+    0.0555
+   ]
   },
   "kite_palewyrm": {
    "kind": "kite",
    "length": 0.8974,
    "reach": 0.4487,
-   "butt": 0.4487
+   "butt": 0.4487,
+   "half": [
+    0.1839,
+    0.4487,
+    0.064
+   ]
   },
   "kite_radiant": {
    "kind": "kite",
    "length": 0.8462,
    "reach": 0.4231,
-   "butt": 0.4231
+   "butt": 0.4231,
+   "half": [
+    0.1962,
+    0.4231,
+    0.0835
+   ]
   },
   "kite_red_cross": {
    "kind": "kite",
    "length": 0.814,
    "reach": 0.407,
-   "butt": 0.407
+   "butt": 0.407,
+   "half": [
+    0.2023,
+    0.407,
+    0.067
+   ]
   },
   "kite_sun_cross": {
    "kind": "kite",
    "length": 0.8398,
    "reach": 0.4199,
-   "butt": 0.4199
+   "butt": 0.4199,
+   "half": [
+    0.1962,
+    0.4199,
+    0.0574
+   ]
   },
   "leafwing_bow": {
    "tips": [
@@ -699,7 +785,11 @@
    "kind": "lance",
    "length": 2.9981,
    "reach": 2.3985,
-   "butt": 0.5996
+   "butt": 0.5996,
+   "bell": [
+    0.4962,
+    0.2148
+   ]
   },
   "moonring_sword": {
    "kind": "sword",
@@ -777,7 +867,11 @@
    "kind": "lance",
    "length": 2.9298,
    "reach": 2.3439,
-   "butt": 0.586
+   "butt": 0.586,
+   "bell": [
+    0.4278,
+    0.2233
+   ]
   },
   "spiked_boomerang": {
    "kind": "boomerang",
@@ -795,43 +889,78 @@
    "kind": "tower",
    "length": 1.1234,
    "reach": 0.5617,
-   "butt": 0.5617
+   "butt": 0.5617,
+   "half": [
+    0.2227,
+    0.5617,
+    0.0905
+   ]
   },
   "tower_eagle": {
    "kind": "tower",
    "length": 1.0866,
    "reach": 0.5433,
-   "butt": 0.5433
+   "butt": 0.5433,
+   "half": [
+    0.2304,
+    0.5433,
+    0.0933
+   ]
   },
   "tower_gold_lion": {
    "kind": "tower",
    "length": 1.0886,
    "reach": 0.5443,
-   "butt": 0.5443
+   "butt": 0.5443,
+   "half": [
+    0.2298,
+    0.5443,
+    0.0908
+   ]
   },
   "tower_griffin": {
    "kind": "tower",
    "length": 1.0999,
    "reach": 0.5499,
-   "butt": 0.5499
+   "butt": 0.5499,
+   "half": [
+    0.2271,
+    0.5499,
+    0.0807
+   ]
   },
   "tower_ivy": {
    "kind": "tower",
    "length": 1.1158,
    "reach": 0.5579,
-   "butt": 0.5579
+   "butt": 0.5579,
+   "half": [
+    0.224,
+    0.5579,
+    0.0861
+   ]
   },
   "tower_laurel": {
    "kind": "tower",
    "length": 1.0824,
    "reach": 0.5412,
-   "butt": 0.5412
+   "butt": 0.5412,
+   "half": [
+    0.2307,
+    0.5412,
+    0.0739
+   ]
   },
   "tower_sunburst": {
    "kind": "tower",
    "length": 1.0966,
    "reach": 0.5483,
-   "butt": 0.5483
+   "butt": 0.5483,
+   "half": [
+    0.2283,
+    0.5483,
+    0.0948
+   ]
   },
   "venom_dagger": {
    "kind": "dagger",
@@ -849,7 +978,11 @@
    "kind": "lance",
    "length": 2.9795,
    "reach": 2.3836,
-   "butt": 0.5959
+   "butt": 0.5959,
+   "bell": [
+    0.5645,
+    0.1982
+   ]
   },
   "whitegem_dagger": {
    "kind": "dagger",

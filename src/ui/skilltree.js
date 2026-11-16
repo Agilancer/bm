@@ -1,7 +1,7 @@
 // The six trees, drawn in the book under the bar's slots (src/ui/spellbar.js): a tab a school, its spells left to right by
 // tier with the lines of what grows from what, each spell's two branches hanging under it, and the school's mastery. Beside
 // it, whatever is picked out: what it does, its numbers now and at the next rank, why a point can't go in if it can't, the
-// button that spends one, and for a spell you know the six slots to put it in.
+// button that spends one, and for a spell you know the slots it can go in (0, - and + for a Utility spell only).
 import { SPELLS } from '../sim/spells.js';
 import { MASTERY, MAX_RANK, NODES, TIER_LEVEL, TIER_POINTS, TREES, statLines } from '../sim/skills.js';
 import { COLOURS, MARKS, glyph, svg } from './spellglyphs.js';
@@ -66,7 +66,7 @@ export class SkillTree {
     this.skills.spend(id);
     this.sound?.(first ? 'scroll' : 'uiConfirm');
     // (A spell just learned goes into the first empty slot, as one read from a scroll does.)
-    if (first) { const k = this.bar.loadout.indexOf(-1); if (k >= 0) this.bar.assign(k, n.spell); }
+    if (first) { const k = this.bar.freeSlot(n.spell); if (k >= 0) this.bar.assign(k, n.spell); }
     return true;
   }
 
@@ -103,7 +103,7 @@ export class SkillTree {
     for (const n of t.spells) {
       const d = SPELLS[n.spell], x = cx(n), y = top(n), r = S.rank(n.id), slot = bar.loadout.indexOf(n.spell);
       for (const k of n.req) { const p = NODES[k], x1 = cx(p) + NODE / 2, y1 = cy(p), x2 = x - NODE / 2, y2 = cy(n); lines += `<path class="${S.rank(k) > 0 ? 'on' : ''}" d="M${x1} ${y1}C${x1 + 34} ${y1} ${x2 - 34} ${y2} ${x2} ${y2}"/>`; }
-      html += `<button class="tnode spell ${state(n.id)}" data-id="${n.id}" data-spell="${n.spell}" style="left:${x - NODE / 2}px;top:${y}px">${glyph(d)}<b>${r}/${n.max}</b>${slot >= 0 ? `<kbd>${slot + 1}</kbd>` : ''}</button>`;
+      html += `<button class="tnode spell ${state(n.id)}" data-id="${n.id}" data-spell="${n.spell}" style="left:${x - NODE / 2}px;top:${y}px">${glyph(d)}<b>${r}/${n.max}</b>${slot >= 0 ? `<kbd>${bar.keyOf(slot)}</kbd>` : ''}</button>`;
       html += `<div class="tname ${r > 0 ? 'known' : ''}" style="left:${n.tier * CW}px;top:${y + NODE + 3}px;width:${CW}px">${esc(d.name)}</div>`;
       n.augs.forEach((a, i) => {
         const ax = x + (i ? OUT : -OUT), ay = y + 92, ar = S.rank(a.id);
@@ -130,7 +130,8 @@ export class SkillTree {
       h += `<p>${esc(d.desc)}</p>`;
       h += `<table>${statLines(n.spell, S.ranks).map(([label, a, z]) => `<tr><td>${label}</td><td>${a}</td><td>${z ? `&rarr; ${z}` : ''}</td></tr>`).join('')}</table>`;
       h += spendBtn(r ? `Raise to rank ${r + 1}` : 'Learn it');
-      if (r > 0) h += `<div class="tslots"><span>On the bar:</span>${this.bar.loadout.map((s, k) => `<button data-slot="${k}" class="${s === n.spell ? 'on' : ''}">${k + 1}</button>`).join('')}</div>`;
+      // (1 to 9 on a line, and a Utility spell's 0, - and + under them.)
+      if (r > 0) h += `<div class="tslots"><span>On the bar:</span>${this.bar.loadout.map((s, k) => (this.bar.fits(k, n.spell) ? `${k === this.bar.main ? '<i class="br"></i>' : ''}<button data-slot="${k}" class="${s === n.spell ? 'on' : ''}${k >= this.bar.main ? ' util' : ''}">${this.bar.keyOf(k)}</button>` : '')).join('')}</div>`;
       h += '<h4>Its branches: one or the other</h4>';
       for (const a of n.augs) h += `<button class="tbranch ${S.rank(a.id) ? 'on' : ''}" data-pick="${a.id}"><b>${esc(a.name)}</b><i>${S.rank(a.id)}/${a.max}</i><span>${esc(a.desc)}</span></button>`;
     } else if (n.kind === 'branch') {

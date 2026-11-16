@@ -1,6 +1,7 @@
 // The doors about the world, shut until you open them, and shut again when you say. Like the chests these are the render thread's: it swings them, and tells the sim
 // which are open as a mask in the input block, so the sim's collision has a shut door in the doorway and an open one against the wall (World.setDoors).
-// Which are open goes in a save. A door's leaves share its id: the cathedral's two open as one.
+// Which are open goes in a save. A door's leaves share its id: the cathedral's two open as one. (The town's are the interior's
+// things; the land's, the bell tower's and the Bellwright's, come from src/core/sites.js buildSites().doors.)
 const SWING = 0.75;                 // seconds to open or shut; the great doors take longer
 const NEAR = 24;                    // the relief is modelled this near, and left to the picture further off
 const FACING = 0.3;
@@ -14,7 +15,7 @@ export class Doors {
     this.doors = [];
     for (const l of this.leaves) {
       let d = this.doors.find((o) => o.id === l.id);
-      if (!d) { d = { id: l.id, leaves: [], open: false, cx: l.cx, cz: l.cz, y: l.y, reach: l.reach, far: l.far, lock: l.lock || null }; this.doors.push(d); }
+      if (!d) { d = { id: l.id, leaves: [], open: false, cx: l.cx, cz: l.cz, y: l.y, reach: l.reach, far: l.far, tall: l.tall ?? 14, lock: l.lock || null }; this.doors.push(d); }
       d.leaves.push(l);
     }
     // What fills the corners over a house's arched door stays put.
@@ -53,7 +54,8 @@ export class Doors {
       }
       const dx = d.cx - px, dz = d.cz - pz, dist = Math.hypot(dx, dz), dy = Math.abs(d.y - py);
       if (d.shutting && (dist > 1.6 || dy > 2.5)) { d.shutting = false; d.folk = false; this.toggle(d, true); }
-      if (dy > 14 || dist > d.far) continue;
+      // (Drawn this far off, and this far up or down: the bell tower's is seen from up its stair.)
+      if (dy > d.tall || dist > d.far) continue;
       const lod = dist > NEAR;
       for (const l of d.leaves) {
         l.item.piece = lod ? `${l.piece}_far` : l.piece;

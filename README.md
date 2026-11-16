@@ -7,7 +7,7 @@ Bellmourn v2.
 The game is now ranged spell combat. Everything below about swords and armour describes files and code kept on the repo but out of play.
 
 - **Out of play:** one and two-handed swords (`BASES` rows with grade `retired`, never rolled) and the armour suits and gauntlets (`GEAR`, `rollArmor`, `assets/fp/gauntlets_*`). Hands are bare. An old save's swords and armour are removed on load.
-- **Right hand:** staffs. Left click fires the staff's bolt. Spells are on `1`-`6`, six at a time, chosen in the spellbook from the ones you've learned.
+- **Right hand:** staffs. Left click fires the staff's bolt. Spells are on `1`-`9`, nine at a time, and three of the Utility school on `0`, `-` and `+`, chosen in the spellbook from the ones you've learned.
 - **Six schools:** Fire, Ice, Earth, Arcane, Lightning and Utility, ten spells each (sixty in all), in skill trees in the spellbook (`B`). You start with the first spell of each, and every level brings a point to spend. See "Spells" below.
 - **Left hand:** skulls, the catacomb models (`tools/wizard/build_items.py`, `skull_hold.py`, `fix_arm.py`), in the same five rarities with rolled stats and sockets. Held in a claw: the hand over the crown, the skull hanging under it.
 - **Shield:** riding it (hold Space as you jump) is a core mechanic. With a skull equipped the shield still goes under your feet, but the skull is what you hold, you can't guard, and the shield's gems give no stats. With no skull, the right button raises it with a shove, staff still in the other hand. Each blow it takes comes out of your breath, and with none left the guard breaks: the screen says **Your guard is broken: out of breath.** (A knight's guard breaking beside you says **His guard is broken!**; both used to say the same thing, so it read as yours every time.) **Not enough mana.** is only ever about your own casts now: it used to come up whenever a blow broke one of the dead's workings, too.
@@ -51,13 +51,16 @@ shrinks them to a quarter; and the far land's map is 15 s of one thread's work o
 | Dodge | `Q` | The dash, left of the staff's button |
 | Fire your staff | Left click | The big button, bottom right |
 | Raise the shield and bash, hold to block, let go and it drops at once. With no shield, a wide swing | Right click | The shield, between the dodge and the jump |
-| Cast the spell in a slot | `1` to `6`, or click its button | Tap it, in the ring round those; hold to keep casting |
+| Cast the spell in a slot | `1` to `9`, or click its button | Tap it, in the two rings round those; hold to keep casting |
+| Cast the Utility spell in one of the last three slots (Utility spells only) | `0`, `-` and `+` (the `=` key), or click its button | Tap it, in the outermost ring |
 | Spellbook: the six trees, your points, and what's on the bar | `B` | The book, in the top row |
 | Pack: staffs, skulls, robes and gems | `I` | The pack, in the top row |
+| Beacon stone: stand still for fifteen seconds and you and your party are home by Bellmourn's seal. Once every ten minutes | `H`, or right-click the stone in the pack | Double tap the stone in the pack |
 | Take up what's on the ground, open a chest or a door, or talk | `E` | The gold button that comes up beside the ring |
 | Quest log | `J` | The page, in the top row |
-| The big map | `M` | Tap the small one in the corner |
-| Pause: save, load, settings | `Esc` | The bars, in the top row |
+| The big map | `M`, or click the small one in the corner with the mouse free | Tap the small one in the corner |
+| Free the mouse to click what's on the screen (the corner map, the skull, Auto, a spell), the keys still moving you and the game going on; again and the mouse looks about | `Tab` | (A thumb's free already) |
+| Pause: save, load, settings | `Esc` (the only key that pauses: with the mouse free too) | The bars, in the top row |
 | First person or third, once you're out of Lisandra's cave | `V`, or the eye by the spell bar (hold `Alt` to free the mouse for it) | The figure (or the eye), at the end of the top row |
 
 Moving backward while cutting gives a rising backhand, running gives an overhead chop, and cutting in the air gives a slam.
@@ -334,6 +337,8 @@ What stands at each place in `SITES` (`src/core/lands.js`) is plain geometry mad
 
 `node tools/lands/check-sites.mjs` fails if a collider stands on a road, a seal, a spot or the ground kept for a dungeon's portal (before Blackvigil's gate, the Howling Mouth's middle), and prints the triangle count. The places out in the land are about 75,000 triangles (15,000 before this pass), drawn in the village's one call. Looked at in headless pictures on a software GPU (`tools/world/views.mjs`); not walked by a person, and not measured for frame time.
 
+**Inside the Bell Tower.** The tower and the Bellwright's house are hollow, built in `src/core/belltower.js` (`buildTower`, `buildHouse`; `belltower` in `src/core/sites.js` calls them). Each has a real door, E to open and E to shut: the tower's pointed oak door (id 19) and the house's (id 20) are leaves from `assets/game/items/doors.glb`, swung by `src/items/doors.js` like the town's; the land's doors come from `buildSites().doors`, and `World` stands their shut and open boxes in the site grid. Door ids go in a 24-bit mask (`INPUT.DOORS`), so keep new ones under 24. In the tower a stone flight and seven oak ones climb the walls round the open well, landing at each corner, lit by lamps on the landings and by the slits; the stair is one stacked floor (`stack` on a platform: the highest of its rects at or under your feet), which only the player is given a height on, so nothing else climbs it. At the top, the belfry floor under the frame: four oak posts, the beams the bells' gudgeons turn on, and four bells (`BELLS`: the tenor, D, on the south; the third, E; the second, F sharp; the treble, G), each on a headstock with a wheel and its rope down to the floor through an iron guide. Stand at a rope, E: `src/items/bells.js` swings that bell, and each pull swings it higher (to 62 degrees); at each end of a swing, if it's swinging past 16 degrees, the sound bow meets the clapper and it strikes, louder the higher it swings, until it dies away (about 12 seconds to a third). The bells are the render thread's alone, like the doors: their models are `assets/game/items/bells.glb`, made in Blender by `tools/belltower/bells.py`, and their sound is made in the page (`bell` in `src/audio.js`: a bell's partials over the note, the hum an octave down ringing longest, heard far off). The house has a hearth, a bed, a table and a shelf, and windows with shutters. Inside both, the light is a room's (`INDOORS`, read by `src/gfx/shaders.js`) and the third-person camera stays low (`underRoof`, read by `src/sim/sim.worker.js`). Seen in a real Chrome off screen: the climb takes about ten seconds; never played by a human, nor heard by one.
+
 **More than two kinds of stone.** The places and the party dungeons were built from two paintings of masonry, `stone` and `rubble`, and their tinted copies: Blackvigil's outside was 84% one of them, the abbey 83%, the keep's halls 57%. Four more are in the static array now, taken from the catacombs' own paintings (none with a mark on it) by `python tools/village/more_stone.py`, which lays each three across and two up in the array's shape and adds it to the end of `assets/game/tex/manifest.json`: `block` (coursed blocks), `course` (rough coursed wall), `ashlar` (big dressed stone) and `flags` (a flagged floor). They take the tints like any other (`dark:block`, `pale:ashlar`, `frost:course`), and `TILE` in `src/core/sites.js` says how far one repeat goes (a third number for a floor's other way). Where they went: Blackvigil's curtain in black blocks, its towers coursed or dressed and the great block of the keep dressed; the dungeons' portal terraces; the abbey's long walls dressed and its west front in blocks; Khel's wall and towers; Frostwatch's wall; the bell tower's shaft; the obelisks' ring flagged; and inside the dungeons each room can have its own (`rock`, `seam`, `foot`, `ground` on a room: the keep's wards and halls in grey block and ashlar on flags, black where his sorcerers, his chapel and his throne are; the Warrens' feasting hall and thrones flagged; the Deeps' Goat-King's hall rimed coursework). `node --test tests/lair-dress.test.mjs` checks that every painting asked for exists and that no one painting is most of a dungeon. The four cost about 12 MB of texture each on a PC (a quarter of that on a phone). Seen in headless pictures on a software GPU only.
 
 **What lies about the lairs.** The 101 lairs stood on bare ground. `src/core/lair-dress.js` (`dressLairs`, called last by `buildSites`) gives each what its kind would leave, by who lives there (`lairKind`): a goblins' or kobolds' camp its fire, logs, midden, bones and a ring of stakes; spiders their dead poles with strands strung between and what they've wrapped; the dead children, the possessed and the necromancers a plot of leaning stones and turned earth; goat men and demons a ring of black stones round a slab; a dragon or a worm a banked, scorched bed with ribs standing in it; harpies and bats their perches and a nest; a wolf its den under boulders; Velscour's knights and the plague's a picket of stakes and a cold fire. It's for the eye only: nothing in it has a collider, so no fight and no path changes; it's kept low or out at the rim; nothing is laid on a road, in water, on a seal, on a spot where somebody stands or inside anything built; and it has no cloth and no mark of either side. About 33,000 triangles in all (the places are 261,000 with it: `node tools/lands/check-sites.mjs`).
@@ -593,10 +598,11 @@ the screen's height, so a small phone and a tablet get the same picture:
 
 - **Bottom right, the right thumb.** The staff's button is the big one in the corner. Round it, in reach without
   stretching: dodge to its left, jump above it, and between them the shield, when there's one on your arm and no skull in
-  your hand. Round those, in a wider ring, the six spells, one to six from the bottom up: **a tap casts, a hold keeps
-  casting**, as a key does on a desk (there's no separate cast button any more, but for the one cast the opening asks
-  of you in the cave). Each spell is as far from the next as every other, and both rings are even about the corner. Over
-  spell six, the run. Every button steers too: a thumb that lands on one can go on to look about.
+  your hand. Round those, in a wider ring, spells one to six from the bottom up; further out, seven to nine; and
+  outermost, a little smaller and edged in pale bone, the three Utility slots, 0, − and + (`SLOTS` in
+  `src/ui/thumbs.js`): **a tap casts, a hold keeps casting**, as a key does on a desk (there's no separate cast button any
+  more, but for the one cast the opening asks of you in the cave). The spells of each ring are evenly spaced. Over spell
+  six, the run. Every button steers too: a thumb that lands on one can go on to look about.
 - **Beside the ring**, only when there's something in reach: a gold button that takes, talks, opens, shuts or tries the
   door, with a picture and a word for which, and what it is said just above it.
 - **Bottom left, the left thumb.** The stick comes up wherever the thumb lands, and nothing of it is drawn until a thumb is
@@ -623,7 +629,7 @@ stick's side of the screen, that every button has a picture and something listen
 fall-back numbers are the table's. To move something, change the table.
 
 **Move Buttons** (on the pause screen, a desk's or a phone's) lets the player put any of it where they like: every button
-of both thumbs, each of the six spells, the stick, the top row one by one, the map, the skull, Auto and its line, the medal
+of both thumbs, each of the twelve spell slots, the stick, the top row one by one, the map, the skull, Auto and its line, the medal
 and its bars, what's on you, the party, the chat and the foe's bar on a phone; on a desk the spell bar, the medal and bars,
 the map, the clock, the skull, Auto, the party, the chat and the foe's bar. Drag a piece's dashed box to move it; tap one and
 Bigger or Smaller grows it about its middle (60% to 180%); Reset this, Reset all, Cancel, Save. The box of buttons can be
@@ -707,7 +713,7 @@ Under a roof both maps show the place's own chart instead, as Bellmourn's map do
 
 The **Auto** button sits under Velscour's Skull whenever you're playing, taken from Velscour (`assets/ui/btn_auto.webp`,
 and its blue glow from Velscour's `css/style.css`). The button, or **P**, brings up a menu asking what it should do, and
-stops it once it's on; it needs no word. With the mouse held by the game, press P, or free the mouse (Esc or Alt) and click
+stops it once it's on; it needs no word. With the mouse held by the game, press P, or free the mouse (Tab, or hold Alt) and click
 it. Its nav thread takes a few seconds to come up, so it isn't started until auto-play is first wanted (the pointer over the
 button is enough to start it).
 
@@ -852,12 +858,12 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
       among them.
     - Only under the sky, with breath for the run and the jump, never uphill, and only where the nav thread says the way
       is open for a dozen metres. It steps off as it slows, at anything in its way, or after five seconds.
-  - **The staff between spells, and all six spells on its bar.** The staff is what it fights with while a spell cools. A
+  - **The staff between spells, and all twelve spells on its bar.** The staff is what it fights with while a spell cools. A
     spell comes as often as its mana allows: every second or two with its mana full, every several with it low, and at
     once when it's in trouble (a Mend when it's low; a Frost Nova, a Thunderclap or Turn the Dead, whichever it knows and
     has ready, when it's surrounded). It won't cast a spell that isn't ready again yet. It keeps mana back for a Mend
     when it's been hurt, doesn't spend a Meteor on something nearly dead, and takes up sooner a spell that hasn't been in
-    its hands for a while, so all six get used.
+    its hands for a while, so all twelve get used.
   - **It presses the keys as a player does.** A Firebolt is held while it gathers and a channel while it pours (never
     past the mana it has for it). Everything else is a tap, and only with its hands free of the last spell and the last
     staff shot. A key held on casts again the moment the first cast is done, and a hitch in the frames while it was down
@@ -868,21 +874,26 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
     for when they're on it; Turn the Dead for the packs; a Thunderbolt at 11, which is what it takes to the black knight's
     shield; then Fire, to a Meteor at 18; then masteries, more ranks, and Ice to a Frost Nova. Past the end of the build a
     point goes into the known spell with the fewest ranks. Every point it spends is in the balance log.
-  - **It sets its own spell bar** from what it has learned, and casts from it as the 1 to 6 keys do, so the six between
-    them cover a fight (`bar`):
+  - **It sets its own spell bar** from what it has learned, and casts from it as the keys 1 to 9, 0, - and + do, so the
+    nine between them cover a fight and the three on 0, - and + hold its Utility spells (`bar`):
     - What it always keeps, once it knows them: Firebolt (the opener, and from range); Mend; the first it has of a Frost
       Nova, a Thunderclap or Turn the Dead (when they're on it); and the first it has of a Meteor or a Thunderbolt (a
-      crowd, something big, or a raised shield).
-    - One for a crowd or a line of them (`SLOT_A`): Chain Lightning, Gravity Well, Ball Lightning, Blizzard, Bone Lance,
+      crowd, something big, or a raised shield). Mend, and Turn the Dead, go in the three.
+    - Then the rest of the nine, one of each kind in turn till they're full. For a crowd or a line of them (`SLOT_A`): Chain Lightning, Gravity Well, Ball Lightning, Blizzard, Bone Lance,
       Plague Flask, Wall of Fire, Earthsplitter, and of the new ones Cinderburst, Ring of Fire, Phoenix, Cone of Cold,
       Frozen Orb, Deadwinter, Rolling Boulder, Grasping Vines, Earthquake, Starfall, Forked Lightning, Thunderstorm and
       the rest of their kind.
-    - One to pour on a single mark or get it out of trouble (`SLOT_B`): Arcane Blast, Life Drain, Frost Shards, Magic
-      Missiles, Fire Beam, Spirit Blades, Blink, and of the new ones Flame Wyrm, Cinder Brand, Rime Lance, Stone Shard,
-      Monolith, Spark, Stoneskin, Renew, Aegis, Empower and the rest of their kind.
-    - Those last two change every four minutes, so in time every spell it knows has been in its hands and in the log.
+    - To pour on a single mark or get it out of trouble (`SLOT_B`): Arcane Blast, Frost Shards, Magic Missiles, Fire
+      Beam, Spirit Blades, Blink, and of the new ones Flame Wyrm, Cinder Brand, Rime Lance, Stone Shard, Monolith, Spark,
+      Stoneskin and the rest of their kind. What's still empty takes anything else it knows that isn't Utility.
+    - The three, on 0, - and + (`UTIL_TURN`): Mend and Turn the Dead when it knows them, then Renew, Aegis, Sanctuary,
+      Stillness, Empower, Fleetfoot and Life Drain in their turn. Nothing but a Utility spell goes there, as for you; a
+      Utility spell they've no room for goes in the nine if any of those is still empty. Wisp Light it never slots: it's
+      cast from the book, down among the dead.
+    - The lists change every four minutes, so in time every spell it knows has been in its hands and in the log.
     - Stormstep it never slots: it would carry it in among them, and it fights from a distance.
-    - With a healer hired, Mend's slot goes to a second crowd spell: the healer mends it, and the tank holds them in a knot.
+    - With a healer hired, Mend comes off and another Utility spell has its slot: the healer mends it. With a tank as well,
+      the nine start with two crowd spells, as the tank holds them in a knot.
   - It picks the spell that suits the moment from what's on its bar (`USE` in `src/ui/autobrain.js`, a rule for each of
     the sixty). Some of them:
     - The first Firebolt of a fight is gathered a second and a half, as you'd hold it on something that hasn't seen you.
@@ -1008,17 +1019,14 @@ That menu keeps the last choice after 12 seconds.
   ground. In third person the X is the camera's, a step to his right, so the head turns its look that much
   (`thirdLead`) to put the X on its mark.
 - **The narrator** (`src/ui/autoshow.js`; Banners in auto-play). Under its line, what that amounts to: how many are on
-  him and how much life he has left, how far there is to go, that the road's being hurried. Below that, the last few
+  him and how much life he has left, how far there is to go. Below that, the last few
   things worth telling (not on a phone). The same things come large over the picture for a few seconds: a level, a
   quest done, a spell learned, something big put down, a new country, a fall. The banners stay when the interface is
   put away.
 - **Talk** (Talk in auto-play). A line said to him is left up as long as it takes to read (`readTime`, by its length)
   before he answers it; at a counter, a moment. It used to answer every line inside a second.
-- **Long walks** (Long walks in auto-play). Out in the open with more than `HURRY_FAR` metres to go and nothing alive
-  within `HURRY_CLEAR`, the world's clock runs at twice its pace (`CTRL.HASTE`: the sim steps through twice the time in
-  ticks no longer than ever, `src/sim/sim.worker.js`), and at its own again the moment anything's near, he's in the
-  town, or you touch the controls. Everything on the sim's clock goes with it; the townsfolk and the hour of the day
-  keep their own.
+- **Long walks.** At his own pace, always: the world's clock is never run faster for him (it used to be, at twice its
+  pace, with a setting to turn it off; both are gone).
 - **The recap.** A card of what a stretch came to: the time, the levels, the quests done, what was put down, the closest
   call, the best thing put on, the gold. It comes when auto-play is stopped after a minute or more, when you touch
   anything after leaving it be for three minutes (While you were away), and from **Recap** in the menu.
@@ -1031,7 +1039,7 @@ That menu keeps the last choice after 12 seconds.
 
 `node --test tests/auto-show.test.mjs` checks the shots (he's in every one), the turn of the look, the reading time, the
 recap, the settings and the clock. Run headless, drawing stubbed (as below): the view behind him, a talk framed, the
-ride, the walk's and the arrival's shots, the road hurried and let go, the banners, the tally, and a chest in the town
+ride, the walk's and the arrival's shots, the banners, the tally, and a chest in the town
 no longer holding him. Seen on a phone's screen: the banner, the narrator's line, the recap card and the menu. Nobody
 has watched the shots themselves drawn, or the desk's layout of the feed: look at those first.
 
@@ -1142,6 +1150,21 @@ bought as written (it's played through from level 1 to 50), and a new block of m
   when it had someone to talk to next, and it walked to whoever stood outside a door when it meant the chest inside.
   Not watched: a quest handed in indoors, the shops, and the catacombs' doors since. Nobody has watched it with their
   own eyes.
+- **It keeps to the paths in town.** When it walks to an errand in or near Bellmourn (a shop, someone with a quest, its bed), it asks the nav
+  worker for a polite way (`politePath`, `src/sim/nav.worker.js`). Inside Bellmourn and 24 m round it, grass costs 0.8 more
+  per metre, less where the ground is worn. The roads, lanes and the square are free (the same `PATHS` and `allWays()` the
+  townsfolk keep to). When the path is straightened, a shortcut is only taken if it crosses no more grass than the path it
+  replaces, so it doesn't cut round the sides of houses. Indoors and out in the land nothing changes, and neither do
+  its lines on a foe. `tests/town-polite.test.mjs` walks eight trips across the town: 41 m on grass in all, where the
+  shortest ways had 317 m, and none of them more than a few metres longer.
+  `node tools/autoplay/polite-sweep.mjs` checks the polite way against the plain one on 4,085 trips across the town
+  (14 s). The polite way reached every place the plain one did, none was much further round, and none took over 60 ms.
+- **The beacon stone.** When the job it has picked is in Bellmourn (to sell, to be mended, a quest to hand in) and is
+  more than 300 m off, the stone is lit, and nothing is within 20 m, it uses the stone instead of walking. It stands
+  still for the fifteen seconds unless something comes within 14 m, and then it fights. Settings' auto-play "Getting
+  home" can set it to walk back instead (`aiBeacon`).
+- **Pack room.** In town, with coin to spare, it has Wes Harrow let the pack out, a cell at a time, up to six on a
+  visit, while the next cell costs no more than a tenth of its purse. It never asks Lisandra to unbind it.
 
 ### The Free Company: a party of your own
 
@@ -2354,7 +2377,7 @@ is his) and nothing else: the Test Dungeon's book reads the roster.
 
 ### Swords, gems and the pack
 
-You start with a common staff in hand and a kite shield on the arm, and nothing in the pack (`startingKit` in `src/items/pack.js`). `I` (or the pack in a phone's top row) opens it and holds the fight. Click or drag to
+You start with a common staff in hand, a kite shield on the arm, and only the beacon stone in the pack (`startingKit` in `src/items/pack.js`; see "The beacon stone, pack room and unbinding"). `I` (or the pack in a phone's top row) opens it and holds the fight. Click or drag to
 move things, right-click or double tap to equip or stow, and click outside the panels to drop. A gem set on a sword goes in an
 open socket, for good. Only the Sword slot does anything yet; the others wait for items. The pack stays with you through a new
 fight, and only New Game starts it over.
@@ -2374,6 +2397,36 @@ swords, add the sheet to `tools/swords/sheets.py`, run `separate.py` and `render
 Five suits of armour come apart into six pieces each: helm, cuirass, pauldrons, gauntlets, tassets and greaves, in slots of their own. A piece rolls the same five rarities, with its
 suit's armour value and affixes, and lies on the ground as a small copy of itself, hovering, slowly turning, and glowing its rarity's colour. Knights and crabs sometimes drop one. Velscour's
 side only ever drops the plain Knight's suit: see "The two sides". A chest can hold a piece too: a house's any suit, the priest's and what the dead keep only the Knight's, since those are in Velscour's church. Breakable boxes and pots aren't in the game yet.
+
+### The beacon stone, pack room and unbinding
+
+Every game starts with a **beacon stone** in the top-left cell of the pack. A save made before it existed is given one when
+it loads, or as soon as there is a free cell. Press `H`, right-click the stone in the pack, or double tap it on a phone,
+and it takes fifteen seconds. Blue light gathers at the feet of you and of everyone alive in your party. It climbs and
+closes in until it covers you all at fifteen seconds. Then you are all set down together 5.5 m from Bellmourn's seal, on
+the town side, and the light fades off you there. Anyone in your party who had fallen is brought back. A bar under the
+middle of the screen counts the seconds down.
+
+You have to stand still for it. Walking more than 0.8 m, jumping, dodging, the staff, a spell or the shield stops it, and
+that costs nothing. A blow doesn't stop it unless it knocks you off your spot. While the pack or the pause menu is open,
+it waits and carries on afterwards. It won't start in the Test Dungeon, while you lie fallen, or before Lisandra has
+brought you down to the town. Used from a delve, it ends the run the way leaving does.
+
+After it is used, the stone is dark for ten minutes of play. Its card in the pack says how long is left. The time is kept
+in the pack, so a save keeps it. Nobody will buy the stone and it can't be dropped. The stone is
+`src/items/beacon.js`, the channel and its light are `src/ui/beacon.js`, the light's motes are orbit kind 11 in
+`src/gfx/post.js`, and the move is sim command 28 (`src/sim/dungeon.js` `home`).
+
+**Pack room.** Wes Harrow the tanner lets your pack out: "Could you let my pack out?" buys one more cell at a time, or
+five at once. The cells are added as new rows under the pack's eight rows, filled from the left; cells not bought yet
+are drawn hatched. The first cell costs 30 gold, and each one after costs a tenth more than the last, up to 48 more
+cells (about 2,650 gold for the last one, 28,800 for all of them; `slotPrice` and `MAX_EXTRA` in `src/items/pack.js`).
+What you've bought is kept in the save. Pinnacle points' bag space can add to `pack.extra` the same way.
+
+**Unbinding.** Lisandra will undo everything you've learned: "Could you undo what I've learned?" takes back every point
+in the six trees for 5 gold plus 2 per level (25 gold at level 10). The option only shows once you've spent a point. The
+spellbook's own Unlearn button still works, anywhere, at its higher price. Pinnacle points, once they're in, add
+themselves to `game.respecs` in `src/main.js`, and her unbinding resets them too.
 
 ### Gauntlets over the hands
 
@@ -2891,7 +2944,7 @@ What each school is for:
 - **Unlearning** gives every point back for gold (20 and 12 a level). What a scroll taught stays known.
 - **Cooldowns.** Most spells are limited only by mana. The spells that stay on you (Stoneskin, Aegis, Fleetfoot and the rest), the great ones and a few others can't be cast again for some seconds; a spell that lasts counts from when it ends. The slot shows the seconds, and what's on you shows over the bar.
 
-In the book, a tab is a school. Its spells stand left to right by tier with their branches under them. A gold edge marks what a point can go into now. Click a node to read it, with its numbers now and at the next rank; the button, or a double click, spends the point. A spell you know goes on the bar by clicking a slot, dragging it there, or pressing 1 to 6 over it.
+In the book, a tab is a school. Its spells stand left to right by tier with their branches under them. A gold edge marks what a point can go into now. Click a node to read it, with its numbers now and at the next rank; the button, or a double click, spends the point. A spell you know goes on the bar by clicking a slot, dragging it there, or pressing the slot's key over it. The bar has twelve: 1 to 9 take any spell, and the last three, on 0, - and +, take the Utility school's alone (Wisp Light, Mend, Fleetfoot, Turn the Dead, Renew, Life Drain, Aegis, Sanctuary, Empower, Stillness; `UTILITY` in `src/sim/skills.js`). A spell learned goes into the first empty slot it may: a Utility spell into 0, - or + first. A bar saved with six slots loads into 1 to 6.
 
 ### How spells meet each other
 

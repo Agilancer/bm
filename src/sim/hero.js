@@ -10,6 +10,7 @@ import { C, C_HERO, C_PROPS, EV } from '../core/layout.js';
 import { clamp, damp, mat4FromQT, quatAxisAngle, quatMul, quatNlerp, quatRotate, wrapAngle } from '../core/math.js';
 import { floorAt, homeFloor, inPit } from '../core/interior.js';
 import { ELEM, FX, FX_CARRIED, SHIELDS } from './spells.js';
+export { SKILLS } from './heroskills.js';
 import { DAWN_HOUR, DUSK_HOUR } from '../gfx/daylight.js';
 import { Knight, S, matToQuat, norm, orth, cross, restHold, turn } from './knight.js';
 import { stepStow } from '../core/stow.js';
@@ -27,7 +28,7 @@ import { struck } from './ragdoll.js';
 import { BROKER_SPOTS, PORTAL, delveAt, delveOf, inDungeon, roleOf } from '../core/dungeon.js';
 import { foeOf } from './foes.js';
 import { cleanLine } from './sight.js';
-import { MORE_SKILLS, arrive, arrow3, castSkill, chooseSkill, classRoutine, cutArc, diveDraw, hammer3, install, pike3, pluckNote, shield3, rank, stepShotX, strumFx, tintOf } from './heroskills.js';
+import { MORE_SKILLS, SKILLS, arrive, arrow3, castSkill, chooseSkill, classRoutine, cutArc, diveDraw, hammer3, install, pike3, pluckNote, shield3, rank, stepShotX, strumFx, tintOf } from './heroskills.js';
 
 const STRING_ELEM = { gold: ELEM.LIGHT, azure: ELEM.FROST, emerald: ELEM.HEAL, violet: ELEM.ARCANE, crimson: ELEM.DRAIN, silver: ELEM.SPIRIT, ember: ELEM.FIRE, rose: ELEM.STORM };
 const GAP = 1.2;                 // hips to hips, hero to anything
@@ -57,14 +58,14 @@ export function mobKind(m) {
 // `below`, set each tick by HeroWorld.stepCompany. They used to walk the catacombs at your heels and never lift a hand.)
 let below = false;
 const outdoors = (m) => floorAt(m.x, m.z) === null;
-function fightable(m) {
+export function fightable(m) {
   if (!m || m.dead || m.dormant || m.hp <= 0 || m instanceof Hydra || m instanceof Hero) return false;
   if (m instanceof Knight) return m.kind === 0;
   return (outdoors(m) || (below && inChurch(m.x, m.y + 1, m.z))) && !inPit(m.x, m.z);
 }
 
 // (A Tripo monster has its own girth: a dragon's is far past a goblin's.)
-const radiusOf = (m) => (m instanceof Gravehart ? 2.2 : m instanceof FieldCreature ? Math.max(0.6, m.meta ? m.opts.radius * 1.2 : 1) : m.scale > 1.2 ? 1 : m instanceof Crab ? 1.4 : 0.5);
+export const radiusOf = (m) => (m instanceof Gravehart ? 2.2 : m instanceof FieldCreature ? Math.max(0.6, m.meta ? m.opts.radius * 1.2 : 1) : m.scale > 1.2 ? 1 : m instanceof Crab ? 1.4 : 0.5);
 
 // ---- class moves ----------------------------------------------------------------------------------------------------
 // clip: from the heroes' bank. hit: when in the clip it lands (fractions). dmg: before level. reach: past the hips.
@@ -94,16 +95,6 @@ const BLOW_MOVE = { lancer: 'lance_thrust', archer: 'aimed_shot', rogue: 'flurry
 // dragoon leaps again and again and then plants a ring of spears, the archer keeps her distance and rains arrows.
 // crowd: that many standing near the foe (orUndead: or the foe is one of the dead). after: only once the class's
 // rhythm says so (the dragoon's barrage, after so many leaps).
-export const SKILLS = {
-  paladin: [{ key: 'blessed_hammers', cd: 4, range: [0, 3] }, { key: 'hammer_throw', cd: 7, range: [3, 16] }, { key: 'smite', cd: 6, range: [0, 1.6] }, { key: 'consecration', cd: 15, range: [0, 3.5], crowd: 2, orUndead: true }, { key: 'holy_light', cd: 9, heal: true }],
-  lancer: [{ key: 'charge', cd: 8, range: [5.5, 11] }, { key: 'shield_wall', cd: 16, range: [0, 6], crowd: 3 }, { key: 'shield_bash', cd: 7, range: [0, 1.6] }],
-  archer: [{ key: 'rain_of_arrows', cd: 14, range: [5, 20], crowd: 2 }, { key: 'volley', cd: 9, range: [4, 20], crowd: 2 }, { key: 'strafe', cd: 5, range: [2, 14] }],
-  rogue: [{ key: 'vanish', cd: 13, range: [0, 8] }, { key: 'flurry', cd: 5, range: [0, 1.4] }],
-  ninja: [{ key: 'shadow_step', cd: 9, range: [4, 9.7] }, { key: 'leaping_kick', cd: 7, range: [2.5, 7] }, { key: 'throwing_stars', cd: 6, range: [4, 15] }, { key: 'ninja_flurry', cd: 6, range: [0, 1.5] }],
-  dragoon: [{ key: 'spear_barrage', cd: 8, range: [0, 2.6], after: true }, { key: 'jump', cd: 2.6, range: [0, 12] }],
-  boomerang: [{ key: 'double_throw', cd: 10, range: [3, 8] }],
-  bard: [{ key: 'war_song', cd: 30, song: true }, { key: 'marching_song', cd: 40, song: true, travel: true }, { key: 'mending_song', cd: 26, song: true, heal: true }],
-};
 // Leaps and dashes: how a class flies at its foe (see Hero.leap). T: seconds in the air. apex: metres up. r: the landing's reach.
 const LEAPS = {
   jump: { T: 0.66, apex: 1.9, r: 2, dmg: 14, elem: ELEM.SPIRIT, lance: true, snap: true, air: 'NinjaJump_Idle_Loop', draw: diveDraw(ELEM.SPIRIT) },
@@ -168,6 +159,11 @@ const CARRY = {
   ground: { butt: [0.25, 0.35], fist: [0.17, 0.28, 1.24] },
   slope: { fist: [0.3, 0.05, 0.37], aim: norm([-0.3, 0.05, 0.5]), hand: 0.14 },
 };
+// A lance kept under the board on his back (Hero.lanceSlot): the way it lies (at rest, [to his left, up, forward]: its point
+// to his right, and back off his head), how far inside the board's face its bell comes, how far off the ground its butt is
+// kept (in a 1.8 m body's metres), and the most its bell is below the board's middle (for the board's narrower foot), and
+// below the board's top (for the taper above it), in metres of board.
+const LANCE_BACK = { way: norm([-0.26, 0.96, -0.1]), inside: 0.015, butt: 0.45, low: 0.2, taper: 0.35 };
 // How far each joint of a finger turns in, knuckle to tip, to shut a half-open hand on a haft.
 const FIST = [0.75, 0.95, 0.6];
 // What a lancer puts his lance on his back for: what wants both hands, or the whole body.
@@ -267,11 +263,15 @@ export class Hero extends Knight {
     {
       const hold = restHold(rig, bank), u = rig.height / 1.8, pj = this.J.pelvis, sj = this.J.spine3, hipY = hold.y(pj) + 0.02 * u;
       const M = this.mainP, long = M && (LONG_ARMS.has(M.kind) || M.length > 1.3);
+      // (Where the board goes is kept as well as its slot: a lancer's lance is put under it, by its measure: lanceSlot.)
+      this.boardRest = this.shieldStyle ? { y: [0.12, 1, 0.05], z: [0, 0.1, 1], at: [0.05 * u, hold.y(sj) - 0.2 * u, -0.2 * u - (long && M.kind !== 'lance' ? 0.07 * u : 0)] } : null;
+      this.stowHold = hold;
       if (long) {
         // (Its middle at the middle of the back; a lance, twice his height, as low as keeps its butt off the ground.)
         const y = norm([-0.26, 0.96, -0.06]), up = M.kind === 'bow' ? 0 : (M.reach - M.butt) / 2;
         const gy = Math.max(hold.y(sj) - 0.1 * u - y[1] * up, 0.3 + (M.butt || 0) * y[1]), over = (gy - (hold.y(sj) - 0.1 * u)) / y[1];
-        // (A lance, with its bell of a vamplate, stands beside the board at his right shoulder blade: not jammed under it.)
+        // (A lance, with its bell of a vamplate, stands at his right shoulder blade, for when the board isn't on his back
+        // with it: in his hand or under his feet. With the board there it goes under it: lanceSlot.)
         const lance = M.kind === 'lance';
         this.stowMain = hold(sj, y, [0, 0.1, 1], [(lance ? -0.3 : 0.03) * u + y[0] * (over - up), gy, (lance ? -0.2 : -0.17) * u]);
         this.stowPush = lance ? 0 : 0.07 * u;
@@ -283,7 +283,7 @@ export class Hero extends Knight {
         // its head goes through a paladin's cape.)
         this.stowMain = hold(pj, [0.2, -0.97, 0.12], [1, 0.2, 0], [0.24 * u, hipY + 0.02 * u, 0.04 * u]);
       } else if (M) this.stowMain = hold(pj, [0.12, -0.86, -0.5], [1, 0.1, 0], [0.2 * u, hipY, 0.03 * u]);
-      if (this.shieldStyle) this.stowOff = hold(sj, [0.12, 1, 0.05], [0, 0.1, 1], [0.05 * u, hold.y(sj) - 0.2 * u, -0.2 * u - (long && M.kind !== 'lance' ? 0.07 * u : 0)]);
+      if (this.shieldStyle) this.stowOff = hold(sj, this.boardRest.y, this.boardRest.z, this.boardRest.at);
       else if (this.offP && this.offP.kind === 'boomerang') this.stowOff = hold(pj, [-0.1, -0.9, -0.42], [-0.25, 0.3, 1], [-0.22 * u, hipY - 0.08 * u, -0.02 * u]);
       else if (this.offP) this.stowOff = hold(pj, [-0.12, -0.86, -0.5], [-1, 0.1, 0], [-0.2 * u, hipY, 0.03 * u]);
     }
@@ -333,7 +333,7 @@ export class Hero extends Knight {
       skirm: null, tumbleCd: 0, combo: 0, ward: 0, wardT: 0,
       // A lancer's hold in a fight (poseLance). lanceW: how far into it. boardW: the shield arm's part of it (off while a clip
       // has the board doing something of its own). jab: the lance arm, drawn back (-1) to out at full reach (1). rushW: the run.
-      lanceW: 0, boardW: 0, armW: 0, jab: 0, jabTo: 0, jabHold: 0, rushW: 0, carryW: 0, lanceAway: 0, punch: 0, punchTo: 0, sweepW: 0,
+      lanceW: 0, boardW: 0, armW: 0, jab: 0, jabTo: 0, jabHold: 0, rushW: 0, lanceCarry: 0, lanceAway: 0, boardBack: 0, punch: 0, punchTo: 0, sweepW: 0,
       // What the arms do that no clip has (afterPose). point: the weapon arm out along a line, the weapon down it. tossing: an
       // arm thrown with no clip in it. bowW, pull, bowPitch: the bow arm up, the string hand back, how high it's aimed
       // (bowLoftT: at the sky, for an arrow meant to fall). spread: both arms held wide. gripAt: a hand kept on a spear
@@ -363,7 +363,17 @@ export class Hero extends Knight {
     // A shield wall (the lancer's) turns most of it from any side, for a few seconds.
     // (A hired tank's board turns about half: enough to hold a boss with a healer behind him, not so much he needs none.
     // What falls from the roof or burns on the floor no board stops.)
-    const guard = unblockable ? 1 : this.hired ? (this.shieldUp > 0.6 && front ? 0.65 : 1) * (this.guardT > 0 ? 0.6 : 1)
+    // (The one you're playing (src/sim/heroplay.js), the board held up with the right button: what comes at its face is
+    // turned, near enough all of it, as TERA's lancer's is, and the counter's offered.)
+    if (this.driven && this.playBlock && front && !unblockable) {
+      const hurt = amount * 0.08 * (this.style === 'lance' ? 1 : 2.5);
+      this.hp -= hurt; this.stam = Math.max(0, (this.stam ?? 100) - 6);
+      this.lastHitBy = { x: fromX, z: fromZ, t: sim.time };
+      sim.heroPlay?.blocked();
+      if (this.hp <= 0) this.die(sim);
+      return true;
+    }
+    const guard = unblockable ? 1 : this.hired ?(this.shieldUp > 0.6 && front ? 0.65 : 1) * (this.guardT > 0 ? 0.6 : 1)
       : (this.shieldUp > 0.6 && front ? 0.25 : 1) * (this.guardT > 0 ? 0.4 : 1);
     let hurt = amount * armor * guard * (this.party && !this.hired ? 0.8 : 1) * (1 - (this.mods?.ward || 0));
     // (A ward of light, a paladin's or a bard's, takes what it can first.)
@@ -433,11 +443,12 @@ export class Hero extends Knight {
     if (!this.foe && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + dt * (this.task?.kind === 'rest' ? 12 : 3));
     if (this.hp > this.maxHp * 0.6) this.hurtSay = false;
 
-    world.think(this, dt);
+    // (The one you're playing has your hands for a brain: src/sim/heroplay.js.)
+    if (this.driven && sim.heroPlay) sim.heroPlay.think(this, dt); else world.think(this, dt);
     this.flyThings(dt, sim);
     if (this.surf) { if (this.surf.free) this.updateFreeSurf(dt, sim, world); else this.updateSurf(dt, sim, world); }
     else {
-      if (this.foe) this.fight(dt, sim, world);
+      if (this.foe && (!this.driven || this.driveAuto)) this.fight(dt, sim, world);
       this.runSwing(dt, sim);
       this.walk(dt, sim);
       this.move(dt, sim);
@@ -462,7 +473,7 @@ export class Hero extends Knight {
     // Head toward the player when near, as the town's knights do; square on while being talked to.
     const pdx = p.x - this.x, pdz = p.z - this.z, to = Math.atan2(pdx, pdz);
     // (Only close by: a street of strangers all turning to stare would be uncanny.)
-    const off = wrapAngle(to - this.faceYaw), near = this.near < (this.talkUntil ? 9 : 4.5) && Math.abs(off) < 1.6 && !this.foe;
+    const off = wrapAngle(to - this.faceYaw), near = !this.driven && this.near < (this.talkUntil ? 9 : 4.5) && Math.abs(off) < 1.6 && !this.foe;
     this.lookYaw = damp(this.lookYaw || 0, near ? clamp(off, -1, 1) : 0, 5, dt);
     const eyeDrop = (p.y + 1.6) - (this.y + this.rig.height * 0.9);
     this.lookPitch = damp(this.lookPitch || 0, near ? clamp(Math.atan2(-eyeDrop, Math.max(this.near, 0.5)), -0.5, 0.5) : 0, 5, dt);
@@ -503,6 +514,13 @@ export class Hero extends Knight {
   walk(dt, sim) {
     if (this.swing?.root || this.knock > 0) {
       if (this.knock > 0) { this.vx = this.knockX * this.knock; this.vz = this.knockZ * this.knock; this.knock = Math.max(0, this.knock - dt * 9); }
+      return;
+    }
+    // The one you're playing goes where the keys say, and faces the crosshair or the way it's going (src/sim/heroplay.js).
+    // Quick to turn and to get going, as a body under a hand is: no AI easing into it.
+    if (this.driven && !this.driveAuto) {
+      if (this.driveFace !== undefined) this.faceYaw = turn(this.faceYaw, this.driveFace, 16 * dt);
+      this.steer(dt, this.driveVX || 0, this.driveVZ || 0, 14, this.driveFace);
       return;
     }
     const g = this.goal;
@@ -1541,7 +1559,7 @@ export class Hero extends Knight {
     }
     // Put away, out of a fight: each to its place on him, and the board on his back stood off for what's under it.
     if (this.stow > 0.001 && !(this.dead && this.deadT > 1.5)) {
-      // (A lancer's lance goes to his back only for what needs his hands, lanceHold: by its own measure, not the calm's.)
+      // (A lancer's lance goes to his back by its own measure, lanceAway: when his arms are put away, or for what needs his hands.)
       // (Whatever the lute's doing: a sword left part-way between the hand and the hip while the lute came off or went back
       // hung in the air beside an open hand.)
       if (this.stowMain && this.style !== 'lance') this.putAway(out, off, this.stowMain, 1);
@@ -1551,7 +1569,7 @@ export class Hero extends Knight {
         out[bo + 12] += dx / l * k; out[bo + 14] += dz / l * k;
       }
     }
-    if (this.style === 'lance' && this.lanceAway > 0.001 && this.stowMain && !(this.dead && this.deadT > 1.5)) { const st = this.stow; this.stow = this.lanceAway; this.putAway(out, off, this.stowMain, 1); this.stow = st; }
+    if (this.style === 'lance' && this.lanceAway > 0.001 && this.stowMain && !(this.dead && this.deadT > 1.5)) { const st = this.stow; this.stow = this.lanceAway; this.putAway(out, off, this.lanceSlot(), 1); this.stow = st; }
     // (The bow's tips, for its string, where the bow is now: in the hand, or on the back.)
     if (this.style === 'bow' && this.mainP?.tips && out[off + 15] !== 0) this.bowTips = this.mainP.tips.map((t) => [out[off] * t[0] + out[off + 4] * t[1] + out[off + 8] * t[2] + out[off + 12], out[off + 1] * t[0] + out[off + 5] * t[1] + out[off + 9] * t[2] + out[off + 13], out[off + 2] * t[0] + out[off + 6] * t[1] + out[off + 10] * t[2] + out[off + 14]]);
     // Out of its hand altogether: a board thrown, a spear standing in the ground.
@@ -1576,7 +1594,7 @@ export class Hero extends Knight {
       // (A lancer's kept so through his whole hold and as a run ends, so nothing jumps when the run's clip lets go.)
       if ((this.swing || this.charge || this.tossing || this.lanceW > 0.01) && !this.jump && !this.surf) this.capPitch(this.charge || this.rushW > 0.05 ? 0.45 : 0.72);
       if (this.swing && this.swing.clip.name === 'Sword_Attack') this.guardArm();
-      if (this.lanceW > 0.01 || (this.style === 'lance' && this.carryW > 0.01)) this.poseLance();
+      if (this.lanceW > 0.01 || (this.style === 'lance' && this.lanceCarry > 0.01)) this.poseLance();
       // Hands shut on what's in them: a sword's grip, a knife in each fist, a bow's, a board's. (A lancer's, a dragoon's and a
       // maul's are their hold's own, poseLance. A hand that's thrown what it held is open till it's back.)
       if (!HOLD_STYLES.has(this.style)) {
@@ -1697,15 +1715,20 @@ export class Hero extends Knight {
     // down, a maul's swing) has the arm to itself.
     const armOn = on && (!sw || (!maul && (!!sw.aimed || !!sw.stab || !!this.charge || !!sw.bash)));
     this.armW = damp(this.armW, armOn ? 1 : 0, 14, dt);
-    // (A lancer out of a fight has his lance in his hand: there's nowhere on a man to put one away. Standing, its butt is on
-    // the ground by his right foot and his hand's on the shaft at his chest, as a guard stands with a spear; walking, it's
-    // sloped on his right shoulder, his hand low on it before him and its point up behind. carryAim, poseLance. On his back
-    // only for what needs both hands or the whole body: sitting, a dance, the ride down the Fall.)
-    const carry = lance && !on && !this.dead && !this.jump && !this.surf && !this.sitting && !this.below && !this.tossing && !this.point && !(this.gesture && AWAY_GESTURES.has(this.gesture) && !this.reviewMove);
-    this.carryW = damp(this.carryW, carry ? 1 : 0, 8, dt);
+    // (A lancer just out of a fight has his lance still in his hand. Standing, its butt is on the ground by his right foot
+    // and his hand's on the shaft at his chest, as a guard stands with a spear; walking, it's sloped on his right shoulder,
+    // his hand low on it before him and its point up behind. carryAim, poseLance. Once he's put his arms away (src/core/
+    // stow.js), it goes on his back under the board, as everyone's long arm does, for the road and the town (lanceSlot);
+    // and for what needs both hands or the whole body: sitting, a dance, the ride down the Fall.)
+    const carry = lance && !on && !this.dead && !this.jump && !this.surf && !this.sitting && !this.below && !this.tossing && !this.point && !(this.stow > 0.05) && !(this.gesture && AWAY_GESTURES.has(this.gesture) && !this.reviewMove);
+    this.lanceCarry = damp(this.lanceCarry, carry ? 1 : 0, 8, dt);
     this.carryMove = damp(this.carryMove || 0, this.speed > 0.5 || this.reviewMove ? 1 : 0, 4.5, dt);
     this.carryBack = 0;
-    this.lanceAway = damp(this.lanceAway, lance && !on && !carry ? 1 : 0, 4, dt);
+    // (Off his back quickly when there's a fight: as quickly as anyone else's arms come out.)
+    this.lanceAway = damp(this.lanceAway, lance && !on && !carry ? 1 : 0, on ? 10 : 4, dt);
+    // (How far his board's on his back with it, for where it goes there: lanceSlot. Not when he's riding the board, nor
+    // with it out of his hand.)
+    this.boardBack = damp(this.boardBack || 0, lance && !this.surf && !this.free[1] ? this.stow : 0, 8, dt);
     // The other hand's part: a board up before a lancer (but for the board's own moves, and one that's out of his hand); a
     // hand on the shaft for a dragoon; on the haft for a maul, between blows and through its own.
     const boardOn = on && lance && (!BOARD_CLIPS.has(act) || !!sw?.bash) && !this.free[1];
@@ -1729,8 +1752,8 @@ export class Hero extends Knight {
     const f = this.foe, inside = !!f && !rush && !sw?.stab && (!!sw?.bash || Math.hypot(f.x - this.x, f.z - this.z) - radiusOf(f) < (this.mainP?.reach ?? 2.4) - 0.15);
     this.lanceUp = damp(this.lanceUp || 0, inside ? 1 : 0, sw?.bash ? 12 : inside ? 5 : rush ? 20 : sw?.stab ? 18 : 4.5, dt);
     // (His own hold's aim is made anew each tick; one a move has set is the move's.)
-    if ((armOn || this.carryW > 0.01 || (lance && this.lanceW > 0.01 && !busy)) && (!this.aim || this.aim === this.heldAim)) {
-      const L = lance ? ease(this.lanceW) * (armOn || this.carryW > 0.01 ? 1 : 0) + (armOn || this.carryW > 0.01 ? 0 : 1) : 1;
+    if ((armOn || this.lanceCarry > 0.01 || (lance && this.lanceW > 0.01 && !busy)) && (!this.aim || this.aim === this.heldAim)) {
+      const L = lance ? ease(this.lanceW) * (armOn || this.lanceCarry > 0.01 ? 1 : 0) + (armOn || this.lanceCarry > 0.01 ? 0 : 1) : 1;
       const level = maul ? 1.0 : ((spear ? 0.2 : 0.07) - (spear ? 0.26 : 0.13) * Math.max(0, this.jab)) * (1 - this.rushW) - 0.03 + (spear ? 0.75 : 0.95) * ease(this.lanceUp) * (1 - this.rushW);
       const co = Math.cos(level), A = [Math.sin(this.yaw) * co, Math.sin(level), Math.cos(this.yaw) * co];
       if (L < 0.999) {
@@ -1740,6 +1763,38 @@ export class Hero extends Knight {
       }
       this.aim = this.heldAim = norm(A);
     } else if (this.aim && this.aim === this.heldAim) this.aim = null;      // (his hold's own aim doesn't outlast his hold)
+  }
+
+  // Where a lancer's lance is kept on his back (lanceAway). With his board on his back too, under it, as anyone's long arm
+  // is; its bell (the vamplate, wider than there's room for between a man's back and a board) where the board hides it:
+  // on the board's middle line, in from its face by its own width, as high on the board as keeps the butt off the ground
+  // but not so high that its taper shows over the top; and on the slant the others' are, its point up past his right
+  // shoulder. Without the board on his back (in his hand, or under his feet), at his right shoulder blade: stowMain.
+  // Made for the lance and the board he has now (gear changes them: HeroWorld.setKit); eased between the two as the
+  // board comes and goes (boardBack).
+  lanceSlot() {
+    const M = this.mainP, O = this.offP, B = this.boardRest, key = `${M?.id}|${O?.id}`;
+    if (this.lanceKey !== key) {
+      this.lanceKey = key;
+      this.lanceUnder = null;
+      if (M?.bell && O?.half && B && this.stowHold) {
+        const u = this.rig.height / 1.8, si = this.opts.shieldScale, [by, br] = M.bell, hh = O.half[1], hd = O.half[2], L = LANCE_BACK.way;
+        // (The board's own up, and its +Z: toward him.)
+        const Yb = norm(B.y), Zb = norm(orth(B.z, Yb));
+        const zc = br - hd * si + LANCE_BACK.inside;
+        const hc = clamp((LANCE_BACK.butt * u + L[1] * (by + M.butt) - B.at[1] - Zb[1] * zc) / Yb[1], -LANCE_BACK.low * si, hh * si - LANCE_BACK.taper);
+        const G = [0, 1, 2].map((i) => B.at[i] + Yb[i] * hc + Zb[i] * zc - L[i] * by);
+        this.lanceUnder = this.stowHold(this.J.spine3, L, [0, 0.1, 1], G);
+        this.lanceMix = { j: this.J.spine3, q: new Float32Array(4), t: new Float32Array(3) };
+      }
+    }
+    const A = this.stowMain, U = this.lanceUnder, w = ease(this.boardBack || 0);
+    if (!U || w < 0.001) return A;
+    if (w > 0.999) return U;
+    const X = this.lanceMix;
+    quatNlerp(X.q, 0, A.q, 0, U.q, 0, w);
+    for (let i = 0; i < 3; i++) X.t[i] = A.t[i] + (U.t[i] - A.t[i]) * w;
+    return X;
   }
 
   // A lance at ease: the way it lies, and how far it's slid through his fist from its grip (toward its butt: [x, y, z, slide]).
@@ -1756,8 +1811,8 @@ export class Hero extends Knight {
 
   poseLance() {
     const { wq, wt } = this.pose, u = this.rig.height / 1.8, spear = this.style === 'spear', maul = this.style === 'two_hand', lance = this.style === 'lance';
-    // (A lancer's lance is in his fist whether he's fighting or not; the others' arms come from where they're put away.)
-    const hold = ease(this.lanceW * (lance ? 1 : 1 - this.stow)), w = lance ? ease(Math.max(this.lanceW, this.carryW)) : hold;
+    // (A lancer's lance is in his fist in a fight and for a while after it, lanceCarry; the others' arms come from where they're put away.)
+    const hold = ease(this.lanceW * (lance ? 1 : 1 - this.stow)), w = lance ? ease(Math.max(this.lanceW, this.lanceCarry)) : hold;
     if (w < 0.01) return;
     const s = Math.sin(this.yaw), c = Math.cos(this.yaw), j = this.jab, back = Math.max(0, -j), out = Math.max(0, j), r = this.rushW, b = this.boardW, arm = lance ? Math.max(this.armW, 1 - hold) : this.armW, pu = this.punch || 0, sweepW = this.sweepW || 0;
     // (His own left is [c, 0, -s]; forward [s, 0, c].)
@@ -3523,6 +3578,29 @@ export class HeroWorld {
     this.sim.casting.burst(FX.COLUMN, ELEM.LIGHT, h.x, h.y, h.z, 0.5, 1, 0.8, { light: 10, lightR: 5, len: 2.5 });
   }
 
+  // Getting one of you up mid-fight: to them at a run, down on a knee beside them a few seconds, and up they come with a
+  // third of their life. True while it's being done. (stepCompany sends someone.)
+  raise(h, dt) {
+    const o = h.raising, sim = this.sim;
+    if (!o || !o.dead || !this.company.members.has(o) || h.dead) {
+      if (h.raiseT && h.swing && !h.dead) { h.swing = null; h.stopAction(0.2); }
+      h.raising = null; h.raiseT = 0; return false;
+    }
+    const d = Math.hypot(o.x - h.x, o.z - h.z);
+    this.endBit(h); h.foe = null;
+    if (d > 1.3) { h.goal = { x: o.x, z: o.z, speed: 7.5, stop: 1.0, face: Math.atan2(o.x - h.x, o.z - h.z) }; h.dodgeT = 0.2; h.raiseT = 0; return true; }
+    h.goal = null; h.faceYaw = Math.atan2(o.x - h.x, o.z - h.z);
+    if (!h.raiseT) { h.startSwing('Fixing_Kneeling', 1, [], () => {}, { still: true, loop: true }); if (h.fxOk()) sim.casting.burst(FX.RING, ELEM.HEAL, o.x, o.y + 0.05, o.z, 0.3, 1.4, 2.6, { alpha: 0.6 }); }
+    h.raiseT += dt;
+    if (h.raiseT > 2.6) {
+      h.raising = null; h.raiseT = 0;
+      if (h.swing) { h.swing = null; h.stopAction(0.2); }
+      this.revive(o, 0.35);
+      o.say(sim, 'hero_return');
+    }
+    return true;
+  }
+
   // What's fighting you and yours: anything awake and at one of you, or that you've hit, within a stone's throw.
   companyFight() {
     const sim = this.sim, p = sim.player;
@@ -3573,7 +3651,7 @@ export class HeroWorld {
     if (out || told?.to) this.endBit(h);
     if (out) { h.goal = { x: out[0], z: out[1], speed: 7.5, stop: 0.2 }; h.dodgeT = 0.35; if (h.role === 'heal') this.mend(h, true); return; }
     if (told?.to) {
-      h.foe = this.pickFoe(h, fight.filter((m) => !m.flying));
+      h.foe = this.pickFoe(h, fight.filter((m) => !m.flying || m.perched));
       const dt2 = Math.hypot(told.to[0] - h.x, told.to[1] - h.z);
       if (dt2 > 0.7 || !h.foe) { h.goal = { x: told.to[0], z: told.to[1], speed: 8, stop: 0.3 }; h.dodgeT = 0.25; if (h.role === 'heal') this.mend(h, true); return; }
       // (There: fighting on from it, if what they're on can be reached from it.)
@@ -3588,7 +3666,7 @@ export class HeroWorld {
       const hide = W.hideFrom(h.x, h.z);
       if (hide) {
         this.endBit(h);
-        h.foe = this.pickFoe(h, fight.filter((m) => !m.flying));
+        h.foe = this.pickFoe(h, fight.filter((m) => !m.flying || m.perched));
         const dh = Math.hypot(hide[0] - h.x, hide[1] - h.z);
         if (dh > 0.6 || !h.foe) { h.goal = { x: hide[0], z: hide[1], speed: 8, stop: 0.3 }; h.dodgeT = 0.25; }
         else h.post = hide;
@@ -3596,9 +3674,27 @@ export class HeroWorld {
         return;
       }
     }
+    // One of you down in the fight: the one sent to them (stepCompany: Dragon's Dogma's pawns) goes and gets them up.
+    if (h.raising && this.raise(h, dt)) return;
+    // Your calls (Z X C G: src/sim/heroplay.js order), as Dragon's Dogma's pawns take theirs.
+    const call = this.call;
+    if (call?.kind === 'come' && d > 3.5) { this.endBit(h); h.foe = null; h.goal = { x: p.x, z: p.z, speed: 7, stop: 2.5 }; h.dodgeT = 0.2; return; }
+    if (call?.kind === 'wait' && h.waitAt) {
+      const close = fight.find((m) => Math.hypot(m.x - h.x, m.z - h.z) < 4.5);
+      if (!close) { this.endBit(h); h.foe = null; h.goal = { x: h.waitAt[0], z: h.waitAt[1], speed: 5, stop: 0.6 }; if (h.role === 'heal') this.mend(h, true); return; }
+    }
     if (h.role === 'heal' && this.mend(h)) { this.endBit(h); return; }
     h.foe = this.pickFoe(h, fight);
+    if (call?.kind === 'go' && call.foe && fightable(call.foe)) h.foe = call.foe;
+    if (call?.kind === 'help' && fight.length) {
+      // (Help: onto whatever's on you, and the tank calls it off you.)
+      let best = null, bd = 12;
+      for (const m of fight) { const dm = Math.hypot(m.x - p.x, m.z - p.z); if (dm < bd) { bd = dm; best = m; } }
+      if (best) { h.foe = best; if (h.role === 'tank') { best.tauntBy = h; best.tauntT = sim.time + 4; } }
+    }
     if (h.foe) { this.endBit(h); this.stance(h, h.foe, fight); this.fallBack(h, fight); return; }
+    // (The one you're playing, on auto-play, walks where auto-play walks you between fights: src/sim/heroplay.js.)
+    if (h.driven) return;
     this.heel(h, dt);
   }
 
@@ -3623,7 +3719,7 @@ export class HeroWorld {
     const near = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
     const by = (list, from) => { let best = null, bd = Infinity; for (const m of list) { const d = near(m, from); if (d < bd) { bd = d; best = m; } } return best; };
     if (h.role === 'tank') {
-      const loose = fight.filter((m) => foeOf(m, sim) !== h && !m.flying);
+      const loose = fight.filter((m) => foeOf(m, sim) !== h && (!m.flying || m.perched));
       // (A taunt for what's loose near him: everything within eleven metres turns on him.)
       if (loose.length && h.tauntCd <= 0 && !h.dead) {
         const close = loose.filter((m) => near(m, h) < 11);
@@ -3638,7 +3734,7 @@ export class HeroWorld {
       const healer = [...this.company.members].find((o) => o.role === 'heal' && !o.dead) || p;
       if (loose.length) return by(loose, healer);
       if (h.foe && fight.includes(h.foe)) return h.foe;
-      return by(fight.filter((m) => !m.flying), h) || by(fight, h);
+      return by(fight.filter((m) => !m.flying || m.perched), h) || by(fight, h);
     }
     const adds = fight.filter((m) => m.lair?.add);
     if (adds.length) return by(adds, h);
@@ -3646,7 +3742,8 @@ export class HeroWorld {
     const want = sim.warrens?.focus();
     if (want && fight.includes(want)) return want;
     const tank = [...this.company.members].find((o) => o.role === 'tank' && !o.dead);
-    if (tank?.foe && fight.includes(tank.foe) && !tank.foe.flying) return tank.foe;
+    // (perched: on the wing but hung within reach, to be struck as if it stood: Morvekh off the Rimespire's shelves.)
+    if (tank?.foe && fight.includes(tank.foe) && (!tank.foe.flying || tank.foe.perched)) return tank.foe;
     const mine = fight.filter((m) => sim.time - (m.playerHitT ?? -1e9) < 4);
     if (mine.length) return by(mine, p);
     if (h.foe && fight.includes(h.foe)) return h.foe;
@@ -3723,13 +3820,19 @@ export class HeroWorld {
       if (o.bit) this.endBit(h);
       o.rest = null; o.wait = rand(0.6, 3.5);
       const ux = this.head[0], uz = this.head[1];
-      // Running on ahead: for a while, out in the open, two of you at most, and given up when you turn off another way.
+      // Running on ahead: for a while, out in the open, two of you at most, and given up when you turn off another way. (The
+      // while is counted from when they're out at their place ahead of you, not from when they set off for it: going by takes
+      // as long as you take to ease off for them, and counted from the start a short lead ran out before they were by, so you
+      // eased off for nothing. Not by in twenty seconds, they give it up.)
       o.leadCd -= dt;
-      if (o.lead && ((o.lead.t -= dt) <= 0 || !open || ux * o.lead.ux + uz * o.lead.uz < 0.4)) { o.lead = null; o.leadCd = rand(8, 26); }
+      if (o.lead) { if (o.lead.there) o.lead.t -= dt; else o.lead.by += dt; }
+      if (o.lead && (o.lead.t <= 0 || o.lead.by > 20 || !open || ux * o.lead.ux + uz * o.lead.uz < 0.4)) { o.lead = null; o.leadCd = rand(8, 26); }
       else if (!o.lead && open && this.moveT > 2.5 && o.leadCd <= 0) {
         o.leadCd = rand(2, 5);
         const eager = (LEAD_EAGER[h.person.cls] ?? 1) * (h.lean.roam || 1) * (h.role === 'heal' ? 0.4 : 1);
-        if (mates.filter((m) => m.own?.lead).length < 2 && Math.random() < 0.3 * eager) o.lead = { t: rand(6, 16), ahead: rand(4.5, 9), side: (Math.random() < 0.5 ? -1 : 1) * rand(0.8, 3.2), ux, uz };
+        // (On their own side of you, as on the board (boardLeads): given back, they fall in again where they were, never
+        // crossing in front of you to the other side to get there.)
+        if (mates.filter((m) => m.own?.lead).length < 2 && Math.random() < 0.3 * eager) o.lead = { t: rand(6, 16), by: 0, there: false, ahead: rand(4.5, 9), side: (i % 2 ? 1 : -1) * rand(0.8, 3.2), ux, uz };
       }
       if (o.lead) {
         const L = o.lead;
@@ -3743,6 +3846,7 @@ export class HeroWorld {
           const along = (h.x - p.x) * ux + (h.z - p.z) * uz;
           if (along < -8) { o.lead = null; o.leadCd = rand(6, 14); }
           else {
+            if (along >= L.ahead - 1) L.there = true;
             h.wantsLead = along < 1;
             const speed = along < L.ahead - 1 ? Math.max(pv * 1.08, (this.pace || 0) * 0.95) : pv * clamp(1 + (L.ahead - along) * 0.12, 0.85, 1.1);
             h.goal = { x: sx + ux * 3, z: sz + uz * 3, speed: Math.max(1.4, speed), stop: 0.5 };
@@ -3763,6 +3867,16 @@ export class HeroWorld {
       }
       const side = (i % 2 ? 1 : -1) * (0.9 + 0.5 * Math.sin(o.drift));
       x += p.vz / pv * side; z -= p.vx / pv * side;
+      // (Out in front of it, as when a lead's given back out there or you've turned back the way you came: they ease off and
+      // let it come up to them, still going your way and edging over to its side (a stride in three at most, not cutting
+      // across), slower than you (whoever walks fastest included), and stand facing your way if that's slower than a walk:
+      // never turned round to walk back to it against you.)
+      const over = (h.x - x) * ux + (h.z - z) * uz;
+      if (over > 0.5) {
+        const v = pv * clamp(0.85 - over * 0.1, 0.45, 0.85), lat = clamp((x - h.x) * uz - (z - h.z) * ux, -1.2, 1.2);
+        h.goal = v < 1 ? { x: h.x, z: h.z, speed: 1, stop: 0.5, face: Math.atan2(ux, uz) } : { x: h.x + ux * 3 + uz * lat, z: h.z + uz * 3 - ux * lat, speed: v, stop: 0.5 };
+        return;
+      }
       const far = Math.hypot(x - h.x, z - h.z);
       h.goal = { x, z, speed: far > 9 ? Math.max(9.8, pv * 1.25) : far > 3 ? Math.max(2.2, pv * 1.15) : Math.max(1.3, pv), stop: 0.7 };
       return;
@@ -3909,7 +4023,17 @@ export class HeroWorld {
     for (const h of this.company.members) {
       if (!h.dead) continue;
       h.reviveT = fighting || p.dead ? 0 : h.reviveT + dt;
-      if (h.reviveT > 4) { this.revive(h, 0.5); h.say(sim, 'hero_return'); }
+      if (h.reviveT > 4) { this.revive(h, 0.5); h.say(sim, 'hero_return'); continue; }
+      // Down mid-fight: one of the rest goes to them (Dragon's Dogma's pawns do), after a moment, the nearest who isn't
+      // holding the fight (the tank) or the one you're playing. The one you're playing first of all.
+      if (!fighting || h.deadT < 1.5 || [...this.company.members].some((o) => o.raising === h)) continue;
+      let best = null, bd = 40;
+      for (const o of this.company.members) {
+        if (o.dead || o.driven || o.raising || (o.role === 'tank' && this.company.members.size > 2)) continue;
+        const dd = Math.hypot(o.x - h.x, o.z - h.z);
+        if (dd < bd) { bd = dd; best = o; }
+      }
+      if (best && (h.driven || Math.random() < dt * 0.6)) { best.raising = h; best.raiseT = 0; best.say(sim, 'ally_down', h.slot); }
     }
   }
 

@@ -4,8 +4,9 @@
 import { STAFFS2 } from '../items/staffs2.js';
 
 // (Room for the other Tessariels, src/sim/hero.js: HERO_SLOTS in src/core/heroes.js; and the Tripo monsters' slots, TRIPO_SLOTS.)
-export const MAX_CHARS = 104;   // (103 are up on a desktop: Lisandra's two forms, 16 Tessariels, their six quartermasters and the Test Dungeon's keeper, the rest (the road's own dead among them), and your own body after them all)
-export const MAX_JOINTS = 104;
+export const MAX_CHARS = 105;   // (104 are up on a desktop: Lisandra's two forms, 16 Tessariels, their seven quartermasters and the Test Dungeon's keeper, the rest (the road's own dead among them), and your own body after them all)
+// (The Elder Dragon Gods' rigs have 109-115 joints, every finger of both wings: a joint past this is written over the props.)
+export const MAX_JOINTS = 120;
 export const VM_JOINTS = 56;
 export const MAX_GASH = 24;
 export const MAX_PIECES = 64;
@@ -17,9 +18,7 @@ export const GASH_FLOATS = 16;
 // count of the asks to wake on. SNAP_US: for each of the three snapshot slots, the PACE_US the world had reached when it was written.
 // STEP_US, STEPS, STEP_MAX: what the sim's ticks have cost since the render thread last took the totals (microseconds), for the
 // Frame rate readout. (src/sim/sim.worker.js's loop, GameView.pace in src/main.js.)
-// HASTE: how fast the world's clock runs, in hundredths (0 or 100: as ever). Auto-play hurries a long walk with it
-// (src/ui/autoplay.js haste): the sim steps through that much more time each frame, in ticks no longer than ever.
-export const CTRL = { LATEST: 0, READING: 1, TICK: 2, EV_HEAD: 3, INPUT_SEQ: 4, PLAN_RUN: 5, PLAN_SEQ: 6, PUB_MS: 7, PACE_US: 8, PACE_SEQ: 9, SNAP_US: 10, STEP_US: 13, STEPS: 14, STEP_MAX: 15, HASTE: 16, SIZE: 17 };
+export const CTRL = { LATEST: 0, READING: 1, TICK: 2, EV_HEAD: 3, INPUT_SEQ: 4, PLAN_RUN: 5, PLAN_SEQ: 6, PUB_MS: 7, PACE_US: 8, PACE_SEQ: 9, SNAP_US: 10, STEP_US: 13, STEPS: 14, STEP_MAX: 15, SIZE: 16 };
 
 // Input block (Float32Array)
 // INPUT.ABIL's bits: a charm's gift (double jump, sure foot), or the skull's cheats (src/ui/skull.js).
@@ -50,7 +49,9 @@ export const INPUT = { MOVE_X: 0, MOVE_Z: 1, YAW: 2, PITCH: 3, SPRINT: 4, ATTACK
   MOUTH: 46,
   // For each character slot, 1 when the renderer drew it or its shadow last frame (renderer.chars[i].casts, written after each frame
   // by GameView in src/main.js): the sim poses those often and the rest seldom (Sim.poseGap in src/sim/sim.worker.js).
-  SEEN: 47, SIZE: 47 + MAX_CHARS };
+  SEEN: 47,
+  // Your level (src/main.js arm): a delve's gods weigh it against their own (src/sim/elder-fights.js underHundred).
+  LEVEL: 47 + MAX_CHARS, SIZE: 48 + MAX_CHARS };
 
 // Snapshot header (float offsets)
 export const H = {
@@ -70,7 +71,11 @@ export const H = {
   // Your staff, skull and shield put away, out of a fight: 0 (in hand) to 1 (on your back and hip). Sim.stepStow.
   STOW: 180,
   // How many are awake and at you, near (STOW.near): for the music's fights (src/music.js). Sim.stepStow.
-  THREAT: 181, SIZE: 182,
+  THREAT: 181,
+  // Playing as one of your party (src/sim/heroplay.js write): 20 floats. Who (slot + 1, 0 none), the crosshair's foe (a
+  // knight's index), the chain offered (bar slot + 1) and how long it's left, blocking, the evade's wait, the party's call,
+  // auto-play on, the bar's ten waits, a chained move off the bar (MOVE_KEYS), and their life.
+  PLAY: 182, SIZE: 202,
 };
 
 // Per-character block

@@ -6,7 +6,9 @@
 // The channels, as the log shows them: its label and its colour.
 export const CHANNEL = { say: ['Say', '#efe6d2'], party: ['Party', '#9cc3ff'], guild: ['Guild', '#86dc95'], trade: ['Trade', '#efae66'], shout: ['Shout', '#ff8a6a'], system: ['', '#f1d68a'],
   // Lisandra, to you.
-  her: ['', '#f4ead3'] };
+  her: ['', '#f4ead3'],
+  // An Elder Dragon God, to all of you (src/ui/party.js godSpeak).
+  god: ['', '#dcc2ff'] };
 
 const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
@@ -22,6 +24,7 @@ export class ChatLog {
       #heroChat div { color: #efe6d2; text-shadow: 0 0 3px #000, 0 1px 2px #000; margin-top: 2px; transition: opacity 1.2s; }
       #heroChat div span.n { color: #bfe0ff; } #heroChat div span.c { opacity: .85; }
       #heroChat div.her span.n { color: #e8c77a; }
+      #heroChat div.god { font-style: italic; } #heroChat div.god span.n { color: #b993ff; font-style: normal; font-weight: 700; letter-spacing: .06em; }
       #heroChat div.her.soft { font-style: italic; }
       /* While the opening's story has the screen: only what she says, under her bubble (which keeps clear of it: src/ui/speech.js). */
       body.cinematic #heroChat { z-index: 11; }
@@ -38,6 +41,7 @@ export class ChatLog {
     const [label, colour] = CHANNEL[channel] || CHANNEL.say;
     const el = document.createElement('div');
     el.style.color = colour;
+    if (channel === 'god') el.className = 'god';
     if (channel === 'her') el.className = `her${opts.story ? ' story' : ''}${opts.soft ? ' soft' : ''}`;
     const tag = label ? `<span class="c">[${label}]</span> ` : '';
     el.innerHTML = `${tag}${who ? `<span class="n">${esc(who)}:</span> ` : ''}${esc(text)}`;

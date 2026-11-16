@@ -73,4 +73,8 @@ export const LAND_RULES = {
   // The Kingsbarrow, in the great mound of the Barrows (Jory's, after the wayhouse).
   sung_open: { needs: 'moor_wayhouse', steps: [{ enter: 'barrows' }, { enter: 'kingsbarrow' }, { boss: 'gravewarden' }, { back: true, say: 'The great mound is open. Its warden is down.' }], gold: 360, xp: 3400, item: 'robe' },
   king_under_the_moor: { needs: 'sung_open', steps: [{ boss: 'golem' }, { boss: 'wyrm' }, { back: true, say: 'What the king rode is dead. The moor is dark.' }], gold: 650, xp: 5600, item: 'skull', rarity: 4 },
+  // The Elder Dragon Gods, through the door in the Sorrowhorn's caldera (Hasket's, at Cinderford, once Blackvigil's lords
+  // are dead): the first god, then the other three.
+  storm_over_the_horn: { needs: 'the_castellan', steps: [{ enter: 'elder' }, { boss: 'thyrraxis' }, { back: true, say: 'There is a storm god on an island over nothing. It is dead.' }], gold: 2400, xp: 42000, item: 'staff', rarity: 4 },
+  the_hollow_star: { needs: 'storm_over_the_horn', steps: [{ boss: 'kaldurra' }, { boss: 'morvekh' }, { boss: 'nihvaroth' }, { back: true, say: 'The Hollow Star went into its own Maw. The lights on the Horn are out.' }], gold: 5200, xp: 96000, item: 'skull', rarity: 4 },
 };

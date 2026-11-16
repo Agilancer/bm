@@ -1,0 +1,122 @@
+[
+  {
+    "id": 51,
+    "horizontal_edge_mae": 5.51,
+    "vertical_edge_mae": 5.38,
+    "interior_neighbor_mae": 4.75
+  },
+  {
+    "id": 52,
+    "horizontal_edge_mae": 7.21,
+    "vertical_edge_mae": 7.07,
+    "interior_neighbor_mae": 5.7
+  },
+  {
+    "id": 53,
+    "horizontal_edge_mae": 5.95,
+    "vertical_edge_mae": 5.06,
+    "interior_neighbor_mae": 4.53
+  },
+  {
+    "id": 54,
+    "horizontal_edge_mae": 6.29,
+    "vertical_edge_mae": 5.82,
+    "interior_neighbor_mae": 5.68
+  },
+  {
+    "id": 55,
+    "horizontal_edge_mae": 6.0,
+    "vertical_edge_mae": 5.7,
+    "interior_neighbor_mae": 5.07
+  },
+  {
+    "id": 56,
+    "horizontal_edge_mae": 14.13,
+    "vertical_edge_mae": 15.44,
+    "interior_neighbor_mae": 13.58
+  },
+  {
+    "id": 57,
+    "horizontal_edge_mae": 5.96,
+    "vertical_edge_mae": 5.12,
+    "interior_neighbor_mae": 4.55
+  },
+  {
+    "id": 58,
+    "horizontal_edge_mae": 6.33,
+    "vertical_edge_mae": 18.1,
+    "interior_neighbor_mae": 4.54
+  },
+  {
+    "id": 59,
+    "horizontal_edge_mae": 19.44,
+    "vertical_edge_mae": 9.79,
+    "interior_neighbor_mae": 7.62
+  },
+  {
+    "id": 60,
+    "horizontal_edge_mae": 11.84,
+    "vertical_edge_mae": 6.59,
+    "interior_neighbor_mae": 4.92
+  },
+  {
+    "id": 61,
+    "horizontal_edge_mae": 6.12,
+    "vertical_edge_mae": 33.34,
+    "interior_neighbor_mae": 6.19
+  },
+  {
+    "id": 62,
+    "horizontal_edge_mae": 11.76,
+    "vertical_edge_mae": 10.72,
+    "interior_neighbor_mae": 7.06
+  },
+  {
+    "id": 63,
+    "horizontal_edge_mae": 13.79,
+    "vertical_edge_mae": 11.44,
+    "interior_neighbor_mae": 7.49
+  },
+  {
+    "id": 64,
+    "horizontal_edge_mae": 12.46,
+    "vertical_edge_mae": 12.55,
+    "interior_neighbor_mae": 12.73
+  },
+  {
+    "id": 65,
+    "horizontal_edge_mae": 13.19,
+    "vertical_edge_mae": 13.93,
+    "interior_neighbor_mae": 12.74
+  },
+  {
+    "id": 66,
+    "horizontal_edge_mae": 11.62,
+    "vertical_edge_mae": 11.7,
+    "interior_neighbor_mae": 11.65
+  },
+  {
+    "id": 67,
+    "horizontal_edge_mae": 13.94,
+    "vertical_edge_mae": 12.51,
+    "interior_neighbor_mae": 12.38
+  },
+  {
+    "id": 68,
+    "horizontal_edge_mae": 11.29,
+    "vertical_edge_mae": 13.56,
+    "interior_neighbor_mae": 9.71
+  },
+  {
+    "id": 69,
+    "horizontal_edge_mae": 7.38,
+    "vertical_edge_mae": 8.92,
+    "interior_neighbor_mae": 6.25
+  },
+  {
+    "id": 70,
+    "horizontal_edge_mae": 15.86,
+    "vertical_edge_mae": 8.77,
+    "interior_neighbor_mae": 5.23
+  }
+]

@@ -4,6 +4,11 @@
 
 export const MAX_MANA = 120;
 export const MANA_REGEN = 9;   // a second
+// The furthest anything you cast reaches, staff or spell, in paces from your eyes: a bolt that's gone this far spends itself,
+// and nothing is laid on the ground, poured, struck or sought further off. Shorter than a boss's wheel of fire (11 paces from
+// its middle in the delves, src/sim/moves.js fireWheel), so to hit one from where you stand, you stand where its wheel turns.
+// (Blink and Stormstep are ways to move, not to strike from afar: they keep their own range.)
+export const REACH = 9;
 
 // What each is made of, which picks its colours in the shaders and its noise.
 export const ELEM = { FIRE: 0, FROST: 1, ARCANE: 2, STORM: 3, HEAL: 4, LIGHT: 5, DRAIN: 6, BONE: 7, VOID: 8, POISON: 9, SPIRIT: 10, STONE: 11 };
@@ -54,23 +59,23 @@ export const SPELLS = [
     desc: 'A circle of light closes your wounds, restoring 35 life.' },
   { key: 'wisp', name: 'Wisp Light', elem: LIGHT, rig: 'raise', hands: 1, mana: 15, cast: 'wisp', duration: 90, glow: 1,
     desc: 'A spirit-light that follows you for ninety seconds and lights the dark.' },
-  { key: 'wallfire', name: 'Wall of Fire', elem: FIRE, rig: 'raise', hands: 2, mana: 30, cast: 'wall', range: 24, length: 9, duration: 8, dps: 14, burn: 7,
+  { key: 'wallfire', name: 'Wall of Fire', elem: FIRE, rig: 'raise', hands: 2, mana: 30, cast: 'wall', range: REACH, length: 9, duration: 8, dps: 14, burn: 7,
     desc: 'Raises a wall of fire nine paces long where you look, for eight seconds. What crosses it goes up in flames.' },
   { key: 'missiles', name: 'Magic Missiles', elem: ARCANE, rig: 'attack', hands: 1, mana: 8, cast: 'swarm', channel: true, drain: 12, minHold: 0.2, volley: 4, every: 0.22, interval: 0.1, salvo: 1, max: 9, dmg: 10, speed: 38,
     desc: 'Hold: spinning missiles fan out and hang in the air, more the longer you hold, and dart off one hard after another to seek a foe.' },
   { key: 'arcaneblast', name: 'Arcane Blast', elem: ARCANE, rig: 'attack', hands: 2, mana: 24, cast: 'cone', range: 9, angle: 0.6, dmg: 42, force: 11,
     desc: 'A clap of raw force from both hands: everything in a cone before you is torn at and hurled back.' },
-  { key: 'firebeam', name: 'Fire Beam', elem: FIRE, rig: 'attack', hands: 2, mana: 6, cast: 'beam', channel: true, drain: 15, minHold: 0.3, range: 18, dmg: 11, burn: 3,
+  { key: 'firebeam', name: 'Fire Beam', elem: FIRE, rig: 'attack', hands: 2, mana: 6, cast: 'beam', channel: true, drain: 15, minHold: 0.3, range: REACH, dmg: 11, burn: 3,
     desc: 'Hold: a roaring jet of flame pours from your palms, searing and setting alight whatever it plays across.' },
-  { key: 'chain', name: 'Chain Lightning', elem: STORM, rig: 'attack', hands: 1, mana: 6, cast: 'chain', channel: true, drain: 15, minHold: 0.3, range: 26, jumps: 5, reach: 8, dmg: 9,
+  { key: 'chain', name: 'Chain Lightning', elem: STORM, rig: 'attack', hands: 1, mana: 6, cast: 'chain', channel: true, drain: 15, minHold: 0.3, range: REACH, jumps: 5, reach: 8, dmg: 9,
     desc: 'Hold: lightning streams from your palm, and from whatever it strikes it leaps to the nearest other, up to five times.' },
   { key: 'nova', name: 'Frost Nova', elem: FROST, rig: 'raise', hands: 2, mana: 32, cast: 'nova', radius: 10, freeze: 5, dmg: 12, cd: 8,
     desc: 'Ice bursts out from where you stand: all within ten paces are frozen solid for five seconds, and take half again from every blow.' },
-  { key: 'meteor', name: 'Meteor', elem: FIRE, rig: 'raise', hands: 2, mana: 42, cast: 'meteor', range: 60, fall: 1.3, radius: 5.5, dmg: 150, cd: 10,
+  { key: 'meteor', name: 'Meteor', elem: FIRE, rig: 'raise', hands: 2, mana: 42, cast: 'meteor', range: REACH, fall: 1.3, radius: 5.5, dmg: 150, cd: 10,
     desc: 'Calls a burning stone out of the sky onto where you look, and leaves the ground on fire.' },
-  { key: 'blizzard', name: 'Blizzard', elem: FROST, rig: 'raise', hands: 2, mana: 38, cast: 'storm', range: 38, radius: 5, duration: 7, dmg: 6,
+  { key: 'blizzard', name: 'Blizzard', elem: FROST, rig: 'raise', hands: 2, mana: 38, cast: 'storm', range: REACH, radius: 5, duration: 7, dmg: 6,
     desc: 'Ice rains on the ground you mark for seven seconds, cutting and slowing all beneath.' },
-  { key: 'drain', name: 'Life Drain', elem: DRAIN, rig: 'attack', hands: 1, mana: 4, cast: 'drain', channel: true, drain: 10, minHold: 0.3, range: 18, dmg: 7, heal: 0.7,
+  { key: 'drain', name: 'Life Drain', elem: DRAIN, rig: 'attack', hands: 1, mana: 4, cast: 'drain', channel: true, drain: 10, minHold: 0.3, range: REACH, dmg: 7, heal: 0.7,
     desc: 'Hold: a red thread fastens on the nearest foe before you and pulls its stolen life into yours.' },
   { key: 'blink', name: 'Blink', elem: ARCANE, rig: 'attack', hands: 1, mana: 18, cast: 'blink', range: 14, dmg: 22, cd: 3,
     desc: 'Vanish and step out up to fourteen paces ahead, tearing through anything in the way.' },
@@ -82,13 +87,13 @@ export const SPELLS = [
     desc: 'A lobbed flask that bursts in a choking green cloud: for nine seconds everything inside it rots and slows.' },
   { key: 'blades', name: 'Spirit Blades', elem: SPIRIT, rig: 'raise', hands: 2, mana: 35, cast: 'blades', count: 4, duration: 20, dmg: 16, radius: 1.6,
     desc: 'Four ghostly swords wheel round you for twenty seconds, hacking at anything that comes near.' },
-  { key: 'spikes', name: 'Earthsplitter', elem: STONE, rig: 'attack', hands: 2, mana: 24, cast: 'spikes', count: 13, step: 1.15, dmg: 70,
+  { key: 'spikes', name: 'Earthsplitter', elem: STONE, rig: 'attack', hands: 2, mana: 24, cast: 'spikes', count: 7, step: 1.15, dmg: 70,
     desc: 'Spikes of stone burst from the ground in a line before you, impaling what stands there and flinging it into the air.' },
 
   // ---- Fire ----
   { key: 'comet', name: 'Cinderburst', elem: FIRE, rig: 'attack', hands: 1, mana: 16, cast: 'bolt', speed: 30, size: 0.42, dmg: 55, radius: 3, embers: 6,
     desc: 'A knot of cinders that bursts where it lands and scatters embers all round, each one a small fire of its own.' },
-  { key: 'wyrm', name: 'Flame Wyrm', elem: FIRE, rig: 'attack', hands: 1, mana: 22, cast: 'bolt', speed: 19, size: 0.5, dmg: 62, radius: 3, turn: 3.2, life: 4, seek: 28,
+  { key: 'wyrm', name: 'Flame Wyrm', elem: FIRE, rig: 'attack', hands: 1, mana: 22, cast: 'bolt', speed: 19, size: 0.5, dmg: 62, radius: 3, turn: 3.2, life: 4, seek: REACH,
     desc: 'A serpent of fire that weaves its own way to the nearest foe, and leaves the ground alight where it strikes.' },
   { key: 'firenova', name: 'Ring of Fire', elem: FIRE, rig: 'raise', hands: 2, mana: 28, cast: 'ring', moat: 6, radius: 5, dmg: 30, dps: 16, burn: 4, cd: 10,
     desc: 'A ring of flame rolls out from where you stand, scorching all it passes, and stands there six seconds as a moat: what crosses it burns.' },
@@ -104,15 +109,15 @@ export const SPELLS = [
     desc: 'A breath of winter from both hands: everything in a cone before you is cut by it and slowed.' },
   { key: 'rime', name: 'Rime Lance', elem: FROST, rig: 'attack', hands: 1, mana: 16, cast: 'bolt', speed: 38, size: 0.24, dmg: 50, freeze: 1.6, spray: 6,
     desc: 'A lance of ice that freezes what it strikes for a moment and bursts into shards all round.' },
-  { key: 'frostray', name: 'Ray of Frost', elem: FROST, rig: 'attack', hands: 2, mana: 6, cast: 'beam', channel: true, drain: 16, minHold: 0.3, range: 20, dmg: 7, chill: 2, freezeAfter: 1.6, freeze: 2,
+  { key: 'frostray', name: 'Ray of Frost', elem: FROST, rig: 'attack', hands: 2, mana: 6, cast: 'beam', channel: true, drain: 16, minHold: 0.3, range: REACH, dmg: 7, chill: 2, freezeAfter: 1.6, freeze: 2,
     desc: 'Hold: a ray of bitter cold that slows what it plays on, and freezes solid what it is held on long enough.' },
   { key: 'prism', name: 'Prismatic Shard', elem: FROST, rig: 'attack', hands: 1, mana: 20, cast: 'bolt', speed: 46, size: 0.24, dmg: 40, beams: 3, beamDmg: 34, beamChill: 1.5, reach: 15, fan: 0.55,
     desc: 'A crystal that splits on what it strikes into three beams of cold light, running on through everything behind and slowing it.' },
   { key: 'orb', name: 'Frozen Orb', elem: FROST, rig: 'attack', hands: 2, mana: 34, cast: 'bolt', speed: 6.5, size: 0.6, dmg: 60, radius: 4.5, ghost: true, shard: 20, every: 0.1, chill: 3, life: 3.2, cd: 6,
     desc: 'A slow globe of ice that rolls through the fight throwing shards in every direction, then bursts.' },
-  { key: 'shatter', name: 'Shatter', elem: FROST, rig: 'attack', hands: 1, mana: 24, cast: 'shatter', range: 16, dmg: 55, radius: 3, splash: 0.4, cd: 6,
-    desc: 'Every slowed foe within sixteen paces cracks. Every frozen one breaks out of its ice for twice as much, and the shards cut those beside it.' },
-  { key: 'zero', name: 'Deadwinter', elem: FROST, rig: 'raise', hands: 2, mana: 55, cast: 'field', field: 'zero', range: 40, radius: 8, delay: 1.2, dmg: 90, freeze: 6, cd: 25,
+  { key: 'shatter', name: 'Shatter', elem: FROST, rig: 'attack', hands: 1, mana: 24, cast: 'shatter', range: REACH, dmg: 55, radius: 3, splash: 0.4, cd: 6,
+    desc: 'Every slowed foe within nine paces cracks. Every frozen one breaks out of its ice for twice as much, and the shards cut those beside it.' },
+  { key: 'zero', name: 'Deadwinter', elem: FROST, rig: 'raise', hands: 2, mana: 55, cast: 'field', field: 'zero', range: REACH, radius: 8, delay: 1.2, dmg: 90, freeze: 6, cd: 25,
     desc: 'Marks the ground you look at. A breath later all warmth leaves it: everything inside is frozen solid for six seconds.' },
 
   // ---- Earth ----
@@ -126,27 +131,27 @@ export const SPELLS = [
     desc: 'Where it lands, vines come up under the five nearest, tear at them and hold them fast where they stand.' },
   { key: 'stoneskin', name: 'Stoneskin', elem: STONE, rig: 'raise', hands: 2, mana: 30, cast: 'buff', buff: 'stone', duration: 20, ward: 0.35, cd: 20,
     desc: 'Your skin turns to stone for twenty seconds: every blow that lands does a third less.' },
-  { key: 'monolith', name: 'Monolith', elem: STONE, rig: 'raise', hands: 2, mana: 36, cast: 'field', field: 'monolith', range: 30, dmg: 190, radius: 2.4, splash: 0.4, launch: 9, stun: 1.2, cd: 8,
+  { key: 'monolith', name: 'Monolith', elem: STONE, rig: 'raise', hands: 2, mana: 36, cast: 'field', field: 'monolith', range: REACH, dmg: 190, radius: 2.4, splash: 0.4, launch: 9, stun: 1.2, cd: 8,
     desc: 'A slab of stone bursts up under whatever you look at: one great blow that throws it into the air and leaves it stunned.' },
-  { key: 'quake', name: 'Earthquake', elem: STONE, rig: 'raise', hands: 2, mana: 50, cast: 'field', field: 'quake', range: 30, radius: 8, duration: 6, dmg: 30, jolt: 1.5, cd: 20,
+  { key: 'quake', name: 'Earthquake', elem: STONE, rig: 'raise', hands: 2, mana: 50, cast: 'field', field: 'quake', range: REACH, radius: 8, duration: 6, dmg: 30, jolt: 1.5, cd: 20,
     desc: 'The ground you mark heaves for six seconds: all on it are slowed, and every jolt, one each second and a half, batters them and throws them off their feet.' },
 
   // ---- Arcane ----
-  { key: 'crescent', name: 'Moonblade', elem: SPIRIT, rig: 'attack', hands: 1, mana: 18, cast: 'loose', speed: 24, size: 1, dmg: 42, out: 18,
-    desc: 'A spinning crescent that cuts its way out eighteen paces and comes back to your hand, cutting again.' },
-  { key: 'rune', name: 'Rune of Force', elem: ARCANE, rig: 'raise', hands: 1, mana: 20, cast: 'field', field: 'rune', range: 24, radius: 3.2, dmg: 70, arm: 0.6, duration: 30, max: 3,
+  { key: 'crescent', name: 'Moonblade', elem: SPIRIT, rig: 'attack', hands: 1, mana: 18, cast: 'loose', speed: 24, size: 1, dmg: 42, out: REACH,
+    desc: 'A spinning crescent that cuts its way out nine paces and comes back to your hand, cutting again.' },
+  { key: 'rune', name: 'Rune of Force', elem: ARCANE, rig: 'raise', hands: 1, mana: 20, cast: 'field', field: 'rune', range: REACH, radius: 3.2, dmg: 70, arm: 0.6, duration: 30, max: 3,
     desc: 'Writes a rune on the ground where you look. The first foe to step on it is blown off its feet with everything near. Three may lie at once.' },
   { key: 'stasis', name: 'Stasis', elem: ARCANE, rig: 'attack', hands: 2, mana: 30, cast: 'bolt', speed: 26, size: 0.3, dmg: 75, zoneR: 4.5, hold: 3, cd: 12,
     desc: 'A sphere where time stops. What is inside hangs there for three seconds, then pays for all of it at once.' },
-  { key: 'starfall', name: 'Starfall', elem: ARCANE, rig: 'raise', hands: 2, mana: 44, cast: 'loose', dmg: 55, radius: 3, count: 10, range: 55, spread: 3.2, delay: 0.4, cd: 15,
+  { key: 'starfall', name: 'Starfall', elem: ARCANE, rig: 'raise', hands: 2, mana: 44, cast: 'loose', dmg: 55, radius: 3, count: 10, range: REACH, spread: 3.2, delay: 0.4, cd: 15,
     desc: 'Marks the ground you look at, and a moment later ten stars come down on it one after another.' },
-  { key: 'disintegrate', name: 'Disintegrate', elem: ARCANE, rig: 'attack', hands: 2, mana: 8, cast: 'beam', channel: true, drain: 22, minHold: 0.3, range: 26, dmg: 12, pierce: true, ramp: 0.1, rampMax: 1.5,
+  { key: 'disintegrate', name: 'Disintegrate', elem: ARCANE, rig: 'attack', hands: 2, mana: 8, cast: 'beam', channel: true, drain: 22, minHold: 0.3, range: REACH, dmg: 12, pierce: true, ramp: 0.1, rampMax: 1.5,
     desc: 'Hold: a lance of raw force through everything in its line, biting harder the longer it is held.' },
 
   // ---- Lightning ----
-  { key: 'spark', name: 'Spark', elem: STORM, rig: 'attack', hands: 1, mana: 7, cast: 'zap', range: 32, dmg: 34, leap: 0.5,
+  { key: 'spark', name: 'Spark', elem: STORM, rig: 'attack', hands: 1, mana: 7, cast: 'zap', range: REACH, dmg: 34, leap: 0.5,
     desc: 'A crack of lightning straight to what you look at. Nothing outruns it.' },
-  { key: 'fork', name: 'Forked Lightning', elem: STORM, rig: 'attack', hands: 1, mana: 16, cast: 'fork', range: 22, angle: 0.5, forks: 3, dmg: 30,
+  { key: 'fork', name: 'Forked Lightning', elem: STORM, rig: 'attack', hands: 1, mana: 16, cast: 'fork', range: REACH, angle: 0.5, forks: 3, dmg: 30,
     desc: 'Lightning that splits as it leaves the hand: three forks, each to a foe of its own before you.' },
   { key: 'seed', name: 'Storm Seed', elem: STORM, rig: 'attack', hands: 1, mana: 14, cast: 'bolt', speed: 30, size: 0.32, dmg: 12, reach: 7, hold: 6, relay: 0.6, max: 2,
     desc: 'A spark that sticks to what it strikes, or where it lands, for six seconds. Any lightning that strikes there leaps on to everyone within seven paces. Two may be set at once.' },
@@ -154,11 +159,11 @@ export const SPELLS = [
     desc: 'A clap of thunder from where you stand: all within six paces are thrown back and left stunned.' },
   { key: 'stormstep', name: 'Stormstep', elem: STORM, rig: 'attack', hands: 1, mana: 20, cast: 'blink', charge: true, range: 18, dmg: 40, stun: 1, cd: 5,
     desc: 'You go as lightning to the foe you look at, through everything between, and arrive on it in a crack of thunder that leaves it stunned.' },
-  { key: 'thunder', name: 'Thunderbolt', elem: STORM, rig: 'raise', hands: 1, mana: 30, cast: 'field', field: 'thunder', range: 60, radius: 3, delay: 0.35, dmg: 110, stun: 1.5, cd: 5,
+  { key: 'thunder', name: 'Thunderbolt', elem: STORM, rig: 'raise', hands: 1, mana: 30, cast: 'field', field: 'thunder', range: REACH, radius: 3, delay: 0.35, dmg: 110, stun: 1.5, cd: 5,
     desc: 'Calls a bolt out of the sky onto where you look. What it strikes is stunned, if it lives.' },
   { key: 'staticfield', name: 'Static Field', elem: STORM, rig: 'raise', hands: 2, mana: 32, cast: 'buff', buff: 'static', duration: 15, radius: 6, every: 1, arcs: 3, dmg: 12, cd: 12,
     desc: 'For fifteen seconds lightning leaps from you to the three nearest foes within six paces, once a second.' },
-  { key: 'tempest', name: 'Thunderstorm', elem: STORM, rig: 'raise', hands: 2, mana: 52, cast: 'field', field: 'tempest', range: 40, radius: 9, duration: 8, every: 0.4, dmg: 30, blast: 3, stun: 0.5, cd: 15,
+  { key: 'tempest', name: 'Thunderstorm', elem: STORM, rig: 'raise', hands: 2, mana: 52, cast: 'field', field: 'tempest', range: REACH, radius: 9, duration: 8, every: 0.4, dmg: 30, blast: 3, stun: 0.5, cd: 15,
     desc: 'A storm gathers over the ground you mark: for eight seconds bolt after bolt comes down on whoever is under it.' },
 
   // ---- Utility ----

@@ -29,9 +29,10 @@ export function stage(cls, level = 30, nFoes = 6, more = []) {
     // (Nothing marked on this ground for anyone to step out of: src/sim/perils.js.)
     perils: { marks: [], danger: () => null, safe: () => true } };
   const cast = makeCast(roster, kit, names, 16, 7);
-  // ("paladin:sword_board": the first of that class who fights that way.)
+  // ("paladin:sword_board": the first of that class who fights that way. "lancer_f2": that body, with its own kit.)
   const [c0, st] = cls.split(':');
-  const person = { ...cast.find((p) => p.cls === c0 && (!st || p.kit.style === st)), slot: 0, level };
+  const own = roster.some((h) => h.id === c0) ? makeCast(roster, kit, names, 1, 7, [c0])[0] : null;
+  const person = { ...(own || cast.find((p) => p.cls === c0 && (!st || p.kit.style === st))), slot: 0, level };
   const props = kit.props;
   const hero = new Hero(0, rigOf(person.body), bank, person, props);
   // (Its arms in hand, as in a fight and a while after: src/core/stow.js puts them away otherwise.)

@@ -389,7 +389,7 @@
     {
      "name": "shatter",
      "group": "spells",
-     "what": "Shatter. Every slowed foe within sixteen paces cracks. Every frozen one breaks out of its ice for twice as much, and the shards cut those beside it.",
+     "what": "Shatter. Every slowed foe within nine paces cracks. Every frozen one breaks out of its ice for twice as much, and the shards cut those beside it.",
      "colour": "#8fd4ff"
     },
     {
@@ -549,7 +549,7 @@
     {
      "name": "crescent",
      "group": "spells",
-     "what": "Moonblade. A spinning crescent that cuts its way out eighteen paces and comes back to your hand, cutting again.",
+     "what": "Moonblade. A spinning crescent that cuts its way out nine paces and comes back to your hand, cutting again.",
      "colour": "#7bebff"
     },
     {
@@ -1487,7 +1487,61 @@
     "y": 211.3,
     "r": 23,
     "base": "slot_spell",
+    "icon": null,
+    "scale": 0.72
+   },
+   {
+    "id": "slot7",
+    "x": 645.5,
+    "y": 232.7,
+    "r": 23,
+    "base": "slot_spell",
+    "icon": null,
+    "scale": 0.72
+   },
+   {
+    "id": "slot8",
+    "x": 692,
+    "y": 187.8,
+    "r": 23,
+    "base": "slot_spell",
+    "icon": null,
+    "scale": 0.72
+   },
+   {
+    "id": "slot9",
+    "x": 751,
+    "y": 161.5,
+    "r": 23,
+    "base": "slot_spell",
+    "icon": null,
+    "scale": 0.72
+   },
+   {
+    "id": "slot10",
+    "x": 587.6,
+    "y": 231.2,
+    "r": 23,
+    "base": "slot_spell",
     "icon": "wisp",
+    "scale": 0.72
+   },
+   {
+    "id": "slot11",
+    "x": 632.1,
+    "y": 172.2,
+    "r": 23,
+    "base": "slot_spell",
+    "icon": null,
+    "scale": 0.72
+   },
+   {
+    "id": "slot12",
+    "x": 692.5,
+    "y": 129.9,
+    "r": 23,
+    "base": "slot_spell",
+    "icon": null,
     "scale": 0.72
    },
    {

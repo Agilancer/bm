@@ -48,7 +48,7 @@ const store = {
 
 const SETTINGS_KEY = 'velscour.settings';
 // keep: whether the game's files are kept on this device (coi-sw.js), asked once before the title ('ask' until then).
-export const settings = { volume: 0.8, music: 0.7, ambience: 0.8, look: 1, res: 'auto', gfx: 'auto', perf: 'off', tags: 'full', bubbles: 'on', chatlog: 'on', heroes: 'auto', keep: 'ask', autohide: 'off', autohideMap: 'on', autohideChat: 'on', autocam: 'director', autoread: 'on', autohaste: 'on', autotell: 'on' };
+export const settings = { volume: 0.8, music: 0.7, ambience: 0.8, look: 1, res: 'auto', gfx: 'auto', perf: 'off', tags: 'full', bubbles: 'on', chatlog: 'on', heroes: 'auto', keep: 'ask', autohide: 'off', autohideMap: 'on', autohideChat: 'on', autocam: 'director', autoread: 'on', autotell: 'on' };
 // What auto-play sees to by itself (src/ui/autobrain.js allow()): each 'on' or 'off'. Off, it's left for you to do.
 // [key, what it is, on, off]
 export const AI_PARTS = [
@@ -66,6 +66,7 @@ export const AI_PARTS = [
   ['aiWild', 'Raids, tears and bounties', 'Answered when it can', 'Left alone'],
   ['aiSurf', 'Shield riding in a fight', 'Rides away or across them', 'Keeps its feet'],
   ['aiTeleport', 'Getting to a dungeon', 'By the skull\'s teleport', 'Walks there'],
+  ['aiBeacon', 'Getting home', 'By the beacon stone', 'Walks back'],
 ];
 for (const [k] of AI_PARTS) settings[k] = 'on';
 try { Object.assign(settings, JSON.parse(store.get(SETTINGS_KEY) || '{}')); } catch { /* defaults */ }
@@ -87,13 +88,12 @@ const SETTINGS = `
     <label><span>Ambience</span><input data-k="ambience" type="range" min="0" max="1" step="0.05"></label>
     <label><span>Look speed</span><input data-k="look" type="range" min="0.4" max="2.5" step="0.1"></label>
     <label><span>Resolution</span><select data-k="res"><option value="auto">Auto (holds the frame rate)</option><option value="1">Full</option><option value="0.75">75%</option><option value="0.5">Half</option></select></label>
-    <label><span>Graphics</span><select data-k="gfx"><option value="auto">Auto (from your GPU)</option><option value="ultra">Ultra</option><option value="high">High</option><option value="mobile">Low</option></select></label>
+    <label><span>Graphics</span><select data-k="gfx"><option value="auto">Auto (from your GPU)</option><option value="ultra">Ultra</option><option value="high">High</option><option value="medium">Medium (laptops)</option><option value="mobile">Low</option></select></label>
     <label><span>Names over heads</span><select data-k="tags"><option value="full">Names and guilds</option><option value="names">Names only</option><option value="off">Off</option></select></label>
     <label><span>Speech bubbles</span><select data-k="bubbles"><option value="on">On</option><option value="off">Off</option></select></label>
     <label><span>Chat log</span><select data-k="chatlog"><option value="on">On</option><option value="off">Off</option></select></label>
     <label><span>Camera in auto-play</span><select data-k="autocam"><option value="director">Directed: behind him, with shots</option><option value="third">Behind him</option><option value="first">First person: through his eyes</option><option value="off">As you left it</option></select></label>
     <label><span>Talk in auto-play</span><select data-k="autoread"><option value="on">Left up to be read</option><option value="off">Clicked through</option></select></label>
-    <label><span>Long walks in auto-play</span><select data-k="autohaste"><option value="on">Hurried</option><option value="off">At his own pace</option></select></label>
     <label><span>Banners in auto-play</span><select data-k="autotell"><option value="on">Shown</option><option value="off">Only the feed</option></select></label>
     <label><span>Interface in auto-play</span><select data-k="autohide"><option value="off">Always shown</option><option value="on">Hidden until you tap</option></select></label>
     <label><span>Map in auto-play</span><select data-k="autohideMap"><option value="on">Stays on screen</option><option value="off">Hidden with the rest</option></select></label>
@@ -109,14 +109,14 @@ const SETTINGS = `
   <div class="t-dbtns"><button class="t-btn" data-close><span>Done</span></button></div>`;
 
 const KEYS = [['W A S D', 'move'], ['Mouse', 'look'], ['Shift', 'run'], ['Space', 'jump'], ['Q', 'dodge'],
-  ['Left click', 'cut: two cuts, then a slam'], ['Right click', 'wide swing'], ['I', 'pack: swords and gems'], ['E', 'take up what\'s on the ground'], ['V', 'first or third person, once you\'re out of the cave'], ['Wheel', 'out of first person and further back, or in again'], ['Shift + wheel', 'turn the spell bar'], ['Esc', 'pause: save, load, settings'], ['F3', 'frame time and the thinking']];
+  ['Left click', 'cut: two cuts, then a slam'], ['Right click', 'wide swing'], ['1 to 9', 'cast the spell in that slot'], ['0  −  +', 'cast the Utility spell in that slot'], ['I', 'pack: swords and gems'], ['E', 'take up what\'s on the ground'], ['V', 'first or third person, once you\'re out of the cave'], ['Wheel', 'out of first person and further back, or in again'], ['Shift + wheel', 'turn the spell bar'], ['Tab', 'free the mouse to click the map, the skull or Auto; Tab again to look'], ['Esc', 'pause: save, load, settings'], ['F3', 'frame time and the thinking']];
 const HOWTO = `
   <h2>How to Play</h2><div class="t-rule"></div>
   <div class="t-keys">${KEYS.map(([k, v]) => `<b>${k}</b><span>${v}</span>`).join('')}</div>
   <div class="t-touchkeys">
     <p><b>Left thumb</b> moves: push it right out to run, or press the <b>run</b> button to keep running. <b>Right thumb</b> looks, on or off the buttons.</p>
     <p>The big button fires your <b>staff</b>. Round it: <b>dodge</b>, <b>jump</b> (hold it to ride your shield), and <b>guard</b> when a shield is on your arm.</p>
-    <p>Your six <b>spells</b> stand in a ring round those. Tap one to cast it; hold it to keep casting.</p>
+    <p>Your <b>spells</b> stand in rings round those: one to six, seven to nine further out, and outermost the three <b>Utility</b> slots, 0, − and +. Tap one to cast it; hold it to keep casting.</p>
     <p>When something is in reach a gold button comes up beside them: <b>take</b>, <b>talk</b> or <b>open</b>.</p>
     <p>Along the top: the <b>menu</b> (save, load, settings), your <b>pack</b>, your <b>spellbook</b>, your <b>quest log</b>, and the view from behind. Tap the <b>map in the corner</b> for the big one. <b>Move Buttons</b> on the menu puts any button where your thumbs want it.</p>
     <p>In the pack: tap to lift and set down, double tap to equip or stow, tap outside to drop.</p>

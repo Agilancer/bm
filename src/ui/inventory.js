@@ -5,7 +5,8 @@ import { CHARM_SLOTS, charmIcon, charmTip } from './lands.js';
 import { skinFilter } from '../items/skins.js';
 import { art } from './skin.js';
 import { GEMS, colorOf, compareLines, linesOf, nameOf, statsOf, wornSlot } from '../items/items.js';
-import { PACK_H, PACK_W, SLOTS, sizeOf } from '../items/pack.js';
+import { PACK_W, SLOTS, sizeOf } from '../items/pack.js';
+import { BEACON, COOLDOWN, isBeacon } from '../items/beacon.js';
 import { hgIcon } from './hgicons.js';
 
 const $ = (id) => document.getElementById(id);
@@ -21,6 +22,17 @@ const GEM_SVG = [
 ];
 
 const SOCKETED = new Set(['weapon', 'skull', 'shield']);
+
+// The beacon stone: a worn river stone with a ring cut in it, the ring lit while it's ready and dark while it isn't, the dark
+// going round as it comes back (no letters on it, and none of either side's marks).
+const beaconSvg = (left) => {
+  const k = left > 0 ? Math.min(1, left / COOLDOWN) : 0, lit = k ? 0.18 : 1;
+  const arc = k ? `<circle cx="12" cy="12.6" r="10.2" fill="none" stroke="#000" stroke-opacity=".45" stroke-width="20" pathLength="100" stroke-dasharray="${(k * 100).toFixed(1)} 100" transform="rotate(-90 12 12.6)" clip-path="url(#bsClip)"/>` : '';
+  return `<svg class="gem" viewBox="0 0 24 24"><defs><radialGradient id="bsG" cx=".38" cy=".32" r=".8"><stop offset="0" stop-color="#9aa4ad"/><stop offset=".6" stop-color="#5e6870"/><stop offset="1" stop-color="#2f363c"/></radialGradient><clipPath id="bsClip"><path d="M12 3.2c5.400 0 9 3.600 9 8.800 0 5.600-4.200 9-9 9s-9-3.400-9-9c0-5.200 3.600-8.800 9-8.800z"/></clipPath></defs>`
+    + '<path d="M12 3.2c5.400 0 9 3.600 9 8.800 0 5.600-4.200 9-9 9s-9-3.400-9-9c0-5.200 3.600-8.800 9-8.800z" fill="url(#bsG)" stroke="#20262b" stroke-width=".8"/>'
+    + `<g opacity="${lit}"><circle cx="12" cy="12.4" r="4.6" fill="none" stroke="#9fd6ff" stroke-width="1.5"/><circle cx="12" cy="12.4" r="1.5" fill="#d8f0ff"/><circle cx="12" cy="12.4" r="6.4" fill="none" stroke="#5cb4ff" stroke-width=".6" stroke-dasharray="1.6 1.4"/></g>`
+    + `<circle cx="12" cy="12.4" r="4.6" fill="none" stroke="#1a2026" stroke-width="1.4" opacity="${1 - lit}"/>${arc}</svg>`;
+};
 
 const slotOf = wornSlot;
 const hasOpenSocket = (it) => SOCKETED.has(it?.type) && (it.gems?.length || 0) < (it.sockets || 0);
@@ -44,7 +56,7 @@ export class Inventory {
     this.carryEl = $('invCarry');
     this.note = $('invNote');
     this.grid.style.setProperty('--pw', PACK_W);
-    this.grid.style.setProperty('--ph', PACK_H);
+    this.grid.style.setProperty('--ph', pack.rows);
     this.slotEls = {};
     for (const s of SLOTS) this.slotEls[s] = this.root.querySelector(`[data-slot="${s}"]`);
     this.help = touch
@@ -95,6 +107,7 @@ export class Inventory {
 
   iconOf(item) {
     if (item.type === 'gem') return this.gemSvg(item);
+    if (isBeacon(item)) return beaconSvg(BEACON.left());
     // (Gear for your party: src/ui/hgicons.js. Drawn again once its own colours are made.)
     if (item.type === 'hgear') {
       const h = hgIcon(item, this.base, (this.hgAgain ||= () => { if (this.open) this.render(); }));
@@ -123,6 +136,15 @@ export class Inventory {
       el.style.setProperty('--rc', it ? colorOf(it) : 'transparent');
       el.innerHTML = it ? this.iconOf(it) : `<span>${SLOT_LABEL[s]}</span>`;
     }
+    // The rows there are (more as room's bought from Wes Harrow), and the cells of the last not bought yet, shut.
+    const rows = this.pack.rows;
+    if (this.rowsShown !== rows) { this.rowsShown = rows; this.grid.style.setProperty('--ph', rows); this.root.style.setProperty('--rows', rows); }
+    let shut = this.grid.querySelector('.shut');
+    const left = rows * PACK_W - this.pack.cells;
+    if (left > 0) {
+      if (!shut) { shut = document.createElement('div'); shut.className = 'shut'; shut.title = "Not your pack's yet: Wes Harrow the tanner lets packs out."; this.grid.appendChild(shut); }
+      shut.style.cssText = `--x:${PACK_W - left};--y:${rows - 1};--w:${left};--h:1`;
+    } else shut?.remove();
     this.grid.querySelectorAll('.it').forEach((n) => n.remove());
     for (const e of this.pack.entries) {
       const { w, h } = sizeOf(e.item);
@@ -219,7 +241,7 @@ export class Inventory {
   // The cell a carried item would be set at, about the pointer.
   originFor(item, t) {
     const { w, h } = sizeOf(item);
-    return { x: Math.max(0, Math.min(PACK_W - w, Math.round(t.px - w / 2))), y: Math.max(0, Math.min(PACK_H - h, Math.round(t.py - h / 2))) };
+    return { x: Math.max(0, Math.min(PACK_W - w, Math.round(t.px - w / 2))), y: Math.max(0, Math.min(this.pack.rows - h, Math.round(t.py - h / 2))) };
   }
 
   // ---- hands on -------------------------------------------------------------------------------
@@ -325,6 +347,8 @@ export class Inventory {
       this.on.sound?.(item.type === 'weapon' ? 'equipStaff' : 'equip');
       this.on.change();
     } else if (t.kind === 'ground') {
+      // (The beacon stone stays with you.)
+      if (isBeacon(item)) { this.flash('The beacon stone stays with you.'); return; }
       this.carry = null;
       this.on.drop(item);
     } else return;
@@ -355,6 +379,8 @@ export class Inventory {
   quick(t) {
     const { pack } = this;
     if (this.carry || !t.item) return;
+    // The beacon stone: used, as H uses it (src/ui/beacon.js). It starts once the pack is shut.
+    if (isBeacon(t.item)) { const said = this.on.useBeacon?.(); if (said) this.flash(said, 3000); return; }
     if (t.kind === 'slot') {
       if (pack.slots[t.name]) {
         if (!pack.add(pack.slots[t.name])) { this.flash('No room in the pack.'); return; }
@@ -388,7 +414,8 @@ export class Inventory {
     if (!this.carry) return;
     const { item, from } = this.carry;
     this.carry = null;
-    if (!this.stow(item, from)) this.on.drop(item);
+    // (Never the beacon stone on the ground: back where it was, whatever's there.)
+    if (!this.stow(item, from)) { if (isBeacon(item)) this.pack.entries.push({ item, x: from?.x ?? 0, y: from?.y ?? 0 }); else this.on.drop(item); }
     this.render();
   }
 }

@@ -4,7 +4,8 @@
 // the adds first, the twins kept even. src/ui/autobrain.js calls in here; this keeps the Warrens' rules in one place.
 import { ALL_PACKS, BOSSES, BOSS_KEYS, BROKER_SPOTS, CaveNav, DELVES, PARTY, PERCH, PILLARS, POSTS, caveClear, caveFloorY, caveRoom, delveByKey, delveOf, inDungeon, roleOf, roomOf, roomSpot, toWorld } from '../core/dungeon.js';
 import { hirePrice } from './party.js';
-import { edge, wayOut } from '../core/perils.js';
+import { edge, wayOut, wheelSpot } from '../core/perils.js';
+import { REACH } from '../sim/spells.js';
 import { INPUT } from '../core/layout.js';
 
 // The level it goes down at, the first time (raised two each time the Warrens beat it three times over), and the level it
@@ -27,6 +28,11 @@ export const WAYS = {
   sporehold: ['sh_sink', 'sh_stair', 'sh_ring', 'sh_kennel', 'sh_den', 'sh_ring', 'sh_garden', 'sh_bower', 'sh_ring', 'sh_veil', 'sh_heart'],
   playhouse: ['ph_foyer', 'ph_cloak', 'ph_gallery', 'ph_house', 'ph_wardrobe', 'ph_house', 'ph_props', 'ph_green', 'ph_stage', 'ph_green', 'ph_stair', 'ph_nursery', 'ph_attic'],
   kingsbarrow: ['kb_door', 'kb_dromos', 'kb_south', 'kb_cups', 'kb_east', 'kb_queens', 'kb_warden', 'kb_queens', 'kb_north', 'kb_cross', 'kb_hounds', 'kb_ossuary', 'kb_hounds', 'kb_west', 'kb_shields', 'kb_south', 'kb_stair', 'kb_vault'],
+  // The Elder Dragon Gods: over the Span and the Shards to the Scale Altar, then out along each god's bridge in the order
+  // the seals let you, and back to the altar between: the Galeward, the Cinderwell, up the Rimespire, the Lip of the Maw.
+  // (Their islets are reached in the fights, by a leap or a god's blow: not walked to, so not on the way.)
+  elder: ['ed_threshold', 'ed_span', 'ed_shards', 'ed_altar', 'ed_galegate', 'ed_galeward', 'ed_galegate', 'ed_altar', 'ed_cindergate', 'ed_cinderwell', 'ed_cindergate', 'ed_altar',
+    'ed_rimegate', 'ed_rime0', 'ed_rime1', 'ed_rime2', 'ed_rime3', 'ed_summit', 'ed_rime3', 'ed_rime2', 'ed_rime1', 'ed_rime0', 'ed_rimegate', 'ed_altar', 'ed_mawgate', 'ed_maw'],
 };
 export const WAY = WAYS.warrens;
 // The level it wants before it goes down each the first time (its own, from the delve: the Warrens 7, the Deeps 10,
@@ -47,6 +53,8 @@ export const KNOWN = new Set([
   'sh_stair', 'sh_ring_west', 'sh_ring_east', 'sh_kennel', 'sh_garden', 'sh_veil', 'sh_den_run', 'sh_bower_run', 'mouldfang', 'morel', 'heart',
   'ph_cloak', 'ph_gallery', 'ph_house_back', 'ph_house_front', 'ph_props', 'ph_green', 'ph_stair', 'ph_nursery', 'seamstress', 'leadingman', 'dollmaker',
   'kb_dromos', 'kb_seal', 'kb_cups', 'kb_east', 'kb_queens', 'kb_cross', 'kb_hounds', 'kb_west', 'kb_shields', 'gravewarden', 'golem', 'wyrm',
+  // (The Elder Gods' four likewise: where to stand is all in their orders, a gust stone's way to it among them.)
+  'ed_span', 'ed_shards_west', 'ed_shards_east', 'ed_shards_drake', 'ed_galegate', 'ed_cindergate', 'ed_rimegate', 'ed_mawgate', 'thyrraxis', 'kaldurra', 'morvekh', 'nihvaroth',
 ]);
 export function warrensCoverage() {
   const out = [];
@@ -61,7 +69,7 @@ export function warrensCoverage() {
       if (!KNOWN.has(b.key)) out.push(`${d.name}, boss ${b.key}: no fight taught for it (src/ui/autowarrens.js tactics)`);
       if (!way.includes(b.room)) out.push(`${d.name}, boss ${b.key}: its room ${b.room} isn't on the way through`);
     }
-    for (const r of d.rooms) if (!way.includes(r.id)) out.push(`${d.name}, room ${r.id}: not on the way through, so it never goes there`);
+    for (const r of d.rooms) if (!way.includes(r.id) && !r.leap) out.push(`${d.name}, room ${r.id}: not on the way through, so it never goes there`);
     for (const id of way) if (!d.rooms.some((r) => r.id === id)) out.push(`${d.name}: its way through names a room, ${id}, that isn't there`);
     if (!BOSSES.some((b) => b.key === d.last && b.delve === d.key)) out.push(`${d.name}: no last boss, so it never knows it's done`);
   }
@@ -236,23 +244,30 @@ export function tactics(b, m, foes) {
   // stopped; a pyre's on it and it's clear of everyone); or somewhere to be at once, whatever's under it (the high rock
   // above the tide, the far side of a pillar, his spotlight, the grave's circle).
   const told = f?.order || null;
+  // (Held to a place, or sent somewhere at once, and burning where it is: a step out of the fire first, as a player would.
+  // Not if where it's sent is in the same fire.)
+  if (told?.still || (told?.to && told.urgent)) {
+    const G = b.o.game.perils, burning = (G?.marks || []).filter((h) => h.burn && h.live && !h.soak && edge(h, m.x, m.z) < 0 && !(told.to && edge(h, told.to[0], told.to[1]) < 0));
+    const out = burning.length ? wayOut(burning, m.x, m.z, 0.6, (x, z) => caveRoom(x, z) > 0.8) : null;
+    if (out) return { to: out, run: true, target: pickTarget(live, f, b, m), why: 'Out of the fire.' };
+  }
   if (told?.still) return { to: [m.x, m.z], still: true, target: pickTarget(live, f, b, m), why: 'Not a step.' };
   if (told?.to && told.urgent && dist(m.x, m.z, told.to[0], told.to[1]) > 0.7) return { to: told.to, run: true, target: pickTarget(live, f, b, m), why: 'Where the fight wants me, now.' };
   // Out of whatever's marked, falling, burning or flying at it, first.
   const out = told?.to && told.urgent ? null : perilStep(b, m);
-  if (out) return { to: out, run: true, target: pickTarget(live, f, b, m), why: 'Out of the circle!' };
+  if (out) return { to: out, run: true, target: pickTarget(live, f, b, m), why: out.wheel ? 'Round with the wheel.' : 'Out of the circle!' };
   // (And somewhere to be when it's clear: a pod to tread flat.)
   if (told?.to) return { to: told.to, run: dist(m.x, m.z, told.to[0], told.to[1]) > 3, target: pickTarget(live, f, b, m), why: 'Where the fight wants me.' };
   if (!f) return { to: null, target: pickTarget(live, null, b, m), why: null };
   const bodies = f.bodies || [];
   const boss = bodies[0];
   // A boss turned on it (src/sim/dungeon.js turnOn: called out, then a few seconds when nothing holds it): behind the tank
-  // from it, or well out of its reach with no tank up, shooting it as it comes.
+  // from it, or out of its reach with no tank up, but not out of its own (REACH), shooting it as it comes.
   const turned = bodies.find((q) => q.turning);
   if (turned && !turned.flying) {
     const tank = b.tankNear(m), away = (from, r) => { const dx = m.x - from.x, dz = m.z - from.z, L = Math.hypot(dx, dz) || 1; return [from.x + dx / L * r, from.z + dz / L * r]; };
-    let [tx, tz] = tank ? (() => { const dx = tank.x - turned.x, dz = tank.z - turned.z, L = Math.hypot(dx, dz) || 1; return [tank.x + dx / L * 3.5, tank.z + dz / L * 3.5]; })() : away(turned, 14);
-    if (caveRoom(tx, tz) < 0.8) [tx, tz] = away(turned, 9);
+    let [tx, tz] = tank ? (() => { const dx = tank.x - turned.x, dz = tank.z - turned.z, L = Math.hypot(dx, dz) || 1; return [tank.x + dx / L * 3.5, tank.z + dz / L * 3.5]; })() : away(turned, REACH - 1.5);
+    if (caveRoom(tx, tz) < 0.8) [tx, tz] = away(turned, 6);
     const T = live.find((q) => q.id === turned.id) || pickTarget(live, f, b, m);
     return { to: [tx, tz], run: dist(m.x, m.z, tx, tz) > 3, target: T, why: tank ? 'It turns on me: back behind the tank.' : 'It turns on me: out of its reach.' };
   }
@@ -265,15 +280,16 @@ export function tactics(b, m, foes) {
       const t = pickTarget(live.filter((q) => q.id !== boss.id), f, b, m);
       return { to: hide, run: true, target: t && caveClear(m.x, m.z, t.x, t.z) ? t : null, why: 'Behind a pillar: Venomaw is in the air.', hide: true };
     }
-    // On the ground: off her shoulder, well out, never before her face, and forward of her flank: her tail takes all behind.
+    // On the ground: off her shoulder, as far out as its spells reach, never before her face, and forward of her flank: her
+    // tail takes all behind.
     const rx = Math.cos(boss.yaw), rz = -Math.sin(boss.yaw), side = (m.x - boss.x) * rx + (m.z - boss.z) * rz >= 0 ? 1 : -1;
-    let tx = boss.x + rx * side * 13 + Math.sin(boss.yaw) * 4, tz = boss.z + rz * side * 13 + Math.cos(boss.yaw) * 4;
-    if (caveRoom(tx, tz) < 1) { tx = boss.x - rx * side * 13; tz = boss.z - rz * side * 13; }
+    let tx = boss.x + rx * side * 7 + Math.sin(boss.yaw) * 2.5, tz = boss.z + rz * side * 7 + Math.cos(boss.yaw) * 2.5;
+    if (caveRoom(tx, tz) < 1) { tx = boss.x - rx * side * 7; tz = boss.z - rz * side * 7; }
     return { to: [tx, tz], run: dist(m.x, m.z, tx, tz) > 5, target: pickTarget(live, f, b, m), why: 'At Venomaw\'s side.' };
   }
   // Maldrec sets his shield: nothing gets through it from the front, so round behind him, a spell's reach off, till it's down.
   if (f.boss === 'maldrec' && boss && (boss.ward ?? 1) < 1) {
-    let tx = boss.x - Math.sin(boss.yaw) * 11, tz = boss.z - Math.cos(boss.yaw) * 11;
+    let tx = boss.x - Math.sin(boss.yaw) * 7, tz = boss.z - Math.cos(boss.yaw) * 7;
     if (caveRoom(tx, tz) < 1) { tx = boss.x - Math.sin(boss.yaw) * 5; tz = boss.z - Math.cos(boss.yaw) * 5; }
     if (caveRoom(tx, tz) >= 1) return { to: [tx, tz], run: dist(m.x, m.z, tx, tz) > 4, target: pickTarget(live, f, b, m), why: 'Behind Maldrec\'s shield.' };
   }
@@ -303,10 +319,25 @@ export function perilStep(b, m) {
   const wave = G.marks.find((h) => h.jump && h.live && Math.abs(edge(h, m.x, m.z)) < 1.9);
   if (wave && b.t - (b.waveJump ?? -9) > 0.7) { b.waveJump = b.t; b.o.shared.input[INPUT.JUMP] += 1; }
   // (Not out of one that's to be stood in: a pod, the grave's circle. soak, src/sim/perils.js.)
-  const to = wayOut(G.marks.filter((h) => !h.jump && !h.soak), m.x, m.z, 1, open);
-  if (to) return to;
-  // (Where each shot is now: they've flown on since they were told of.)
+  // A wheel turning near it (a boss's fire wheel): round with it, in a gap between its arms, near enough the boss in the
+  // middle to keep casting at it (everything it casts stops at REACH: src/sim/spells.js). Stepping out of an arm once it's
+  // on it, as with any other mark, it was caught by every arm that came round, and the next. The rest of the marks it steps
+  // out of as ever, first.
   const late = (performance.now() - G.at) / 1000;
+  const marks = G.marks.filter((h) => !h.jump && !h.soak), turning = (h) => h.shape === 'cross' && h.spin;
+  const still = marks.filter((h) => !turning(h)), to = wayOut(still, m.x, m.z, 1, open);
+  // (Out of one of those, but not into an arm: where the wheels' arms will be by the time it gets there, too.)
+  const soon = marks.filter((h) => turning(h) && h.live && dist(m.x, m.z, h.x, h.z) < h.r + 4).map((h) => ({ ...h, yaw: h.yaw + h.spin * (late + 0.4) }));
+  if (to && soon.every((h) => edge(h, to[0], to[1]) > 0.4)) return to;
+  if (to) return wayOut([...still, ...soon], m.x, m.z, 1, open) || to;
+  const wheel = marks.filter(turning).map((h) => [h, dist(m.x, m.z, h.x, h.z)]).sort((a, c) => a[1] - c[1])[0]?.[0];
+  if (wheel) {
+    const p = wheelSpot(wheel, m.x, m.z, late, { want: REACH - 2.5 });
+    if (p && (!open || open(p[0], p[1])) && marks.every((h) => h === wheel || edge(h, p[0], p[1]) > 0.5)) { p.wheel = true; return p; }
+  }
+  const out = wayOut(marks, m.x, m.z, 1, open);
+  if (out) return out;
+  // (Where each shot is now: they've flown on since they were told of.)
   let sx = 0, sz = 0;
   for (const q of G.shots) {
     const qx = q.x + q.vx * late, qz = q.z + q.vz * late, rx = m.x - qx, rz = m.z - qz, v2 = q.vx * q.vx + q.vz * q.vz || 1, t = (rx * q.vx + rz * q.vz) / v2;

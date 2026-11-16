@@ -38,7 +38,7 @@ export class ViewSwitch {
     this.touchBtn?.addEventListener('touchstart', press, { passive: false });
     window.addEventListener('keydown', (e) => { if (e.code === 'KeyV' && !e.repeat && !e.ctrlKey && !e.metaKey) this.toggle(); });
     window.addEventListener('wheel', (e) => {
-      if (e.shiftKey || e.ctrlKey || e.metaKey || !document.pointerLockElement) return;
+      if (e.shiftKey || e.ctrlKey || e.metaKey || !(this.o.input.wheelOk?.(e) ?? document.pointerLockElement)) return;
       // (A notch is 100 or so of deltaY in pixels, 3 in lines; a trackpad sends it a little at a time.)
       this.wheel(e.deltaY * (e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 400 : 1) / 100);
     }, { passive: true });
@@ -86,6 +86,7 @@ export class ViewSwitch {
     const { input } = this.o;
     if (!input.enabled || input.menu || this.o.busy()) return;
     if (!this.allowed) { this.o.tip('Not in here. Once you are out of the cave.', 2.5); return; }
+    if (this.forced) { this.o.tip('Always from behind them while you play as one of your party.', 2.5); return; }
     if (this.auto) { this.setAuto(this.auto !== 'first'); return; }
     this.set(!this.on);
   }
@@ -108,7 +109,8 @@ export class ViewSwitch {
     this.draw();
   }
 
-  get third() { return this.auto ? this.auto === 'third' : this.on; }
+  // (forced: playing as one of your party, src/ui/heroplay.js: always from behind them.)
+  get third() { return this.forced || (this.auto ? this.auto === 'third' : this.on); }
 
   draw() {
     const shown = this.allowed ? '' : 'none', third = this.third && this.allowed;

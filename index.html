@@ -99,7 +99,7 @@
   @media (orientation: portrait) { body.touch.playing #rotate { display: flex; } }
 
   /* The pack */
-  #inv { --cell: min(calc((100vh - 96px) / 8), calc((100vw - 300px) / 12), 52px); position: fixed; inset: 0; z-index: 12; display: none; flex-direction: column; align-items: center; justify-content: flex-start; gap: 8px; background: rgba(6,5,3,.5); padding: 6px; touch-action: none; }
+  #inv { --cell: min(calc((100vh - 96px) / var(--rows, 8)), calc((100vw - 300px) / 12), 52px); position: fixed; inset: 0; z-index: 12; display: none; flex-direction: column; align-items: center; justify-content: flex-start; gap: 8px; background: rgba(6,5,3,.5); padding: 6px; touch-action: none; }
   #invBody { display: flex; gap: 10px; align-items: stretch; margin-top: auto; }
   #inv .inv-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   #inv .inv-head .menu-x { margin: -3px -4px 0 0; }
@@ -124,6 +124,8 @@
     background-image: linear-gradient(rgba(140,115,68,.2) 1px, transparent 1px), linear-gradient(90deg, rgba(140,115,68,.2) 1px, transparent 1px); background-size: var(--cell) var(--cell); }
   #packGrid .it, #packHover { position: absolute; left: calc(var(--x) * var(--cell)); top: calc(var(--y) * var(--cell)); width: calc(var(--w) * var(--cell)); height: calc(var(--h) * var(--cell)); }
   #packGrid .it { display: flex; align-items: center; justify-content: center; background: color-mix(in srgb, var(--rc) 9%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rc) 42%, transparent); }
+  #packGrid .shut { position: absolute; left: calc(var(--x) * var(--cell)); top: calc(var(--y) * var(--cell)); width: calc(var(--w) * var(--cell)); height: calc(var(--h) * var(--cell));
+    background: repeating-linear-gradient(135deg, rgba(0,0,0,.55) 0 5px, rgba(40,32,20,.55) 5px 10px); box-shadow: inset 0 0 0 1px rgba(140,115,68,.35); }
   #packGrid .it:hover { background: color-mix(in srgb, var(--rc) 22%, transparent); }
   #packHover { display: none; pointer-events: none; z-index: 2; }
   #packHover.ok { background: rgba(120,190,120,.26); box-shadow: inset 0 0 0 1px rgba(150,220,150,.7); }
@@ -150,15 +152,17 @@
   /* A short screen (a phone on its side, a small tablet): the gear panel is the tall one, so the cells are sized to fit it, with
      its charm pouch put in two rows of ten (src/ui/lands.js) and the panel kept no wider than that. */
   @media (max-height: 640px) {
-    #inv { --cell: min(calc((100vh - 96px) / 8), calc((100vh - 240px) / 6.8), calc((100vw - 300px) / 12), 52px); }
+    #inv { --cell: min(calc((100vh - 96px) / var(--rows, 8)), calc((100vh - 240px) / 6.8), calc((100vw - 300px) / 12), 52px); }
     #invBody > .panel:first-child { width: min-content; }
     #invStats { width: auto; }
     #eqGrid { justify-content: center; } }
   @media (max-height: 460px) { #invBar { font-size: 10.5px; gap: 10px; } #invNote { min-width: 0; } #inv { gap: 3px; padding: 3px; } #inv .panel { padding: 4px 6px 6px; } #inv .label { margin-bottom: 3px; font-size: 10px; } #invStats { font-size: 11.5px; margin-top: 5px; }
-    #inv { --cell: min(calc((100vh - 96px) / 8), calc((100vh - 200px) / 6.8), calc((100vw - 300px) / 12), 52px); } }
-  /* The six spell slots; the menu that fills them from all twenty. */
-  /* (--slot: a spell slot's size, grown with the screen's height; --hbtn: the round buttons beside them.) */
-  #spells { --slot: clamp(60px, 7.2vh, 84px); --hbtn: calc(var(--slot) * .66); position: absolute; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; align-items: center; gap: calc(var(--slot) * .1); pointer-events: auto; }
+    #inv { --cell: min(calc((100vh - 96px) / var(--rows, 8)), calc((100vh - 200px) / 6.8), calc((100vw - 300px) / 12), 52px); } }
+  /* The twelve spell slots (1 to 9, and the Utility three on 0, - and +); the menu that fills them from all sixty. */
+  /* (--slot: a spell slot's size, grown with the screen's height; --hbtn: the round buttons beside them. The whole bar is
+     15.3 slots across. On a narrow screen a slot is no bigger than lets the bar sit right of the medal and its bars (334px
+     from the left: src/ui/hud.css #vitals), and the bar moves right of the middle as far as it must to stay clear of them.) */
+  #spells { --slot: min(clamp(60px, 7.2vh, 84px), calc((100vw - 352px) / 15.3)); --hbtn: calc(var(--slot) * .66); position: absolute; left: max(50%, calc(338px + var(--slot) * 7.65)); bottom: calc(18px + env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; align-items: center; gap: calc(var(--slot) * .1); pointer-events: auto; }
   /* (The picture is the slot's one child in the flow, set in the middle of it by the grid; the number and the countdown lie over it.) */
   #spells .spell { --c: #ccc; position: relative; display: grid; place-items: center; width: var(--slot); height: var(--slot); padding: 0; box-sizing: border-box; color: var(--c); background: radial-gradient(circle at 50% 40%, rgba(30,24,16,.8), rgba(8,6,4,.85) 70%); border: 1px solid rgba(201,163,92,.45); border-radius: 50%; cursor: pointer; transition: box-shadow .12s, transform .12s, opacity .12s, filter .12s; }
   #spells .spell svg { display: block; width: 50%; height: 50%; }
@@ -171,6 +175,11 @@
   #spells .spell.short { opacity: .42; filter: saturate(.3); }
   #spells .spell.empty { background: rgba(8,6,4,.3); border-style: dashed; }
   #spells .spell.up { box-shadow: 0 0 26px -2px var(--c), inset 0 0 18px -5px var(--c); transform: translateY(-3px); }
+  /* The Utility three (0, - and +), on a desk: set a little apart from 1 to 9, a little smaller, ringed in pale bone. */
+  body:not(.touch) #spells .spell.util { width: calc(var(--slot) * .86); height: calc(var(--slot) * .86); border-color: rgba(233,223,201,.5); }
+  body:not(.touch) #spells .spell.util.now { border-color: rgba(233,200,130,.95); }
+  body:not(.touch) #spells .spell[data-k="9"] { margin-left: calc(var(--slot) * .28); }
+  body:not(.touch) #spells .spell.util b { color: #14100a; background: #d9cfba; border-color: #f4ecdc; }
   /* The book, the quest log and the view, beside the slots on a desk: round, gold-rimmed, with their key on a little cap. */
   body:not(.touch) :is(#spellOpen, #questOpen, #partyOpen, #viewBtn) { position: relative; display: grid; place-items: center; flex: none; width: var(--hbtn); height: var(--hbtn); margin: 0; padding: 0; box-sizing: border-box; color: #ecd9a8; background: radial-gradient(circle at 50% 35%, #2c2318, #0d0b08 72%); border: 0; border-radius: 50%; box-shadow: inset 0 0 0 1.5px rgba(201,163,92,.75), inset 0 0 0 3.5px rgba(8,6,4,.85), inset 0 0 0 4.5px rgba(201,163,92,.3), 0 2px 8px rgba(0,0,0,.75); cursor: pointer; transition: filter .12s, transform .12s; --ic-size: 60%; }
   body:not(.touch) #spellOpen { margin-left: calc(var(--slot) * .14); }
@@ -188,7 +197,14 @@
   #spellbook h2 { margin: 0 0 12px; font-size: 18px; font-weight: 400; letter-spacing: .3em; color: var(--gold); }
   #spellClose { position: absolute; top: calc(14px + env(safe-area-inset-top)); right: calc(18px + env(safe-area-inset-right)); padding: 6px 12px; font: inherit; color: var(--gold); background: none; border: 1px solid rgba(201,163,92,.45); cursor: pointer; }
   #spellHint { margin: 0 0 8px; font-size: 13px; color: #cfc3a8; text-align: center; }
-  #spellSlots { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 7px; width: min(860px, 100%); margin-bottom: 12px; flex: none; }
+  #spellHint.no { color: #f0a77e; }
+  #spellSlots { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 7px; width: min(1240px, 100%); margin-bottom: 12px; flex: none; }
+  /* (The Utility three: a gap before them, a pale edge; and any slot the spell in hand can't go in, dimmed.) */
+  #spellSlots .lslot.util { border-color: rgba(233,223,201,.55); }
+  #spellSlots .lslot[data-k="9"] { margin-left: 10px; }
+  #spellSlots .lslot.util b { color: #e7dcc4; }
+  #spellSlots .lslot.no { opacity: .3; cursor: not-allowed; }
+  .tslots button.util { border-color: rgba(233,223,201,.6); }
   #spellSlots .lslot { --c: #ccc; position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; min-height: 78px; padding: 8px 4px 6px; font: inherit; color: #e7dcc4; background: rgba(20,15,10,.85); border: 1px solid rgba(201,163,92,.5); cursor: pointer; }
   #spellSlots .lslot:hover { border-color: var(--gold); background: rgba(40,30,20,.95); }
   #spellSlots .lslot.empty { border-style: dashed; color: #8d8370; justify-content: center; }
@@ -245,8 +261,10 @@
   .tspend { display: block; width: 100%; padding: 8px; font-size: 14px; letter-spacing: .06em; color: #14100a; background: var(--gold); border: 1px solid var(--gold); }
   .tspend:hover { filter: brightness(1.15); }
   .twhy { padding: 7px 9px; font-size: 12px; color: #c9b48a; border: 1px dashed rgba(201,163,92,.35); }
-  .tslots { display: flex; align-items: center; gap: 5px; margin-top: 9px; font-size: 12px; color: #a89d86; }
-  .tslots button { width: 30px; height: 28px; color: #e7dcc4; background: rgba(8,6,4,.8); border: 1px solid rgba(201,163,92,.4); }
+  .tslots { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: 9px; font-size: 12px; color: #a89d86; }
+  .tslots span, .tslots .br { flex: 0 0 100%; white-space: nowrap; }
+  .tslots .br { height: 0; }
+  .tslots button { flex: 0 0 calc((100% - 40px) / 9); min-width: 0; max-width: 28px; height: 28px; padding: 0; color: #e7dcc4; background: rgba(8,6,4,.8); border: 1px solid rgba(201,163,92,.4); }
   .tslots button.on { color: #14100a; background: var(--gold); }
   .tbranch { display: block; width: 100%; margin-bottom: 5px; padding: 6px 8px; text-align: left; color: #cfc3a8; background: rgba(8,6,4,.7); border: 1px solid rgba(201,163,92,.2); }
   .tbranch:hover { border-color: var(--gold); }
@@ -287,15 +305,19 @@
     #treeInfo .tsub { order: -3; margin: 2px 0 6px; }
     #treeInfo .tspend, #treeInfo .twhy { order: -2; margin-bottom: 6px; }
     #treeInfo .tslots { order: -1; margin: 0 0 8px; flex-wrap: wrap; }
-    #treeInfo .tslots button { width: 32px; height: 32px; }
+    #treeInfo .tslots button { max-width: 32px; height: 32px; }
     .tcanvas { margin: 2px; }
     /* (Velscour's skull floats over the right of the screen: out of the way of what's being read, while the book is open.) */
     #spellbook.open ~ #vskull, #spellbook.open ~ #vskullTag { display: none; }
   }
-  /* And a small phone on its side: the slots are their pictures alone, and the tabs lose their counts, so the points still show. */
-  @media (max-height: 520px) and (max-width: 700px) {
+  /* A phone on its side: twelve slots in its one row leave no room for names, so they're their pictures alone. */
+  @media (max-height: 520px) and (max-width: 1100px) {
     #spellSlots .nm { display: none; }
     #spellSlots .lslot { padding-left: 4px; }
+    #spellSlots .lslot[data-k="9"] { margin-left: 6px; }
+  }
+  /* And a small phone on its side: the tabs lose their counts, so the points still show. */
+  @media (max-height: 520px) and (max-width: 700px) {
     #treeTabs button i { display: none; }
     #treeTabs button { padding: 5px 7px; }
   }

@@ -79,12 +79,15 @@ test('standing, each of your party does something of their own, and they do not 
 });
 
 test('turning your head while you stand moves nobody; setting off gets the one sitting to their feet', () => {
-  const { heroes, p, walk, stand } = party();
+  const { heroes, p, w, walk, stand } = party();
   walk(4, 0, 4);
   stand(3);
-  // (Whatever they're at is stopped, so only the turning could move them.)
-  for (const h of heroes) { h.own.bit = null; h.own.wait = 1e9; }
-  stand(2);
+  // (Whatever they're at is stopped, so only the turning could move them; and they're given the time it takes to come to
+  // their places and stand, as one stopped halfway through a stroll, or still coming up from the back, walks on to theirs.)
+  for (const h of heroes) { w.endBit(h); h.own.wait = 1e9; }
+  const settled = () => heroes.every((h) => h.speed < 0.05 && Math.hypot(h.own.rest[0] - h.x, h.own.rest[1] - h.z) < 1);
+  for (let t = 0; t < 15 && !settled(); t += 0.25) stand(0.25);
+  assert.ok(settled(), `each came to their place and stood (${heroes.map((h) => `${h.person.cls} ${Math.hypot(h.own.rest[0] - h.x, h.own.rest[1] - h.z).toFixed(1)} m off at ${h.speed.toFixed(2)} m/s`).join(', ')})`);
   const at = heroes.map((h) => [h.x, h.z]);
   stand(6, () => { p.yaw += 0.02; });
   heroes.forEach((h, i) => assert.ok(Math.hypot(h.x - at[i][0], h.z - at[i][1]) < 0.3, `${h.person.cls} stood where they were`));

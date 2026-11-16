@@ -25,7 +25,7 @@ test('every piece Move Buttons moves is on the page, or made by the game', () =>
   assert.ok(read('../src/ui/spellbar.js').includes('s.dataset.k = k'));
   const moved = new Set(PIECES.flatMap((p) => p.touch || []));
   for (const m of html.matchAll(/class="tbtn[^"]*" id="([A-Za-z]+)"/g)) assert.ok(moved.has(`#${m[1]}`), `#${m[1]} can't be moved`);
-  for (let k = 0; k < 6; k++) assert.ok(moved.has(`#spells .spell[data-k="${k}"]`), `spell ${k + 1}`);
+  for (let k = 0; k < 12; k++) assert.ok(moved.has(`#spells .spell[data-k="${k}"]`), `spell slot ${k + 1}`);
 });
 
 test('what\'s kept is made safe as it\'s read back', () => {

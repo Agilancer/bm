@@ -2,8 +2,9 @@
 // taken from Velscour (Agilancer/velscour assets/ui/btn_auto.webp, css/style.css .hbtn). The button or P turns it on and off;
 // moving yourself (the keys or the stick) takes the controls back for a moment. The head is src/ui/autobrain.js.
 //
-// The button (or P) brings up a menu first: Complete Quests, Grind monsters for XP (and where: GRINDS) or Dungeon Runs (round
-// every party dungeon whose portal the player has found, easiest first, until it's stopped: DUNGEONS). Clicking the status line while it plays brings the menu
+// The button (or P) brings up a menu first: Complete Quests, Grind monsters for XP (and where: GRINDS), Dungeon Runs (round
+// every party dungeon whose portal the player has found, easiest first, until it's stopped: DUNGEONS; begun down one, through
+// that one first) or Auto Fight (monster to monster round where he is, waiting for more when none are near). Clicking the status line while it plays brings the menu
 // back, to change what it's at. While it's on, the mouse is left free (no pointer lock), so the button and its menu can be
 // clicked; Esc pauses and resumes. On the quests with every quest done, a menu asks where to grind (GRINDS), and keeps the last
 // choice if nobody answers.
@@ -11,13 +12,14 @@
 // It's made to be watched (Settings' Auto-play): the camera stands behind him and is directed (src/ui/autocam.js; or it's first
 // person, through his eyes: V while it plays), what he's at
 // is narrated, with banners for what's worth one and a recap of what he got done (src/ui/autoshow.js), a line said to him is
-// left up to be read, and a long walk with nothing about is hurried (the world's clock at HASTE: CTRL.HASTE, src/sim/sim.worker.js).
+// left up to be read. The world's clock is never run faster for it: he walks and rides at the pace anyone does.
 // The menu also sets his temperament, Careful or Bold (Brain.bold in src/ui/autobrain.js).
 //
 // Settings' Interface in auto-play, Hidden until you tap: while it plays and nobody's touched anything for a few seconds, the
 // interface is put away (body.ui-bare, src/ui/hud.css), all but the map and the chat if those are kept (Map in auto-play, Chat
 // in auto-play: body.bare-map, body.bare-chat). A tap, a click, a key or the mouse moved brings it all back at once.
-import { CTRL, INPUT } from '../core/layout.js';
+import { H, INPUT } from '../core/layout.js';
+import { delveOf } from '../core/dungeon.js';
 import { RULES } from '../folk/quests.js';
 import { Brain, DUNGEONS, GRINDS, MODES, finishedDungeons } from './autobrain.js';
 import { AutoLog } from './autolog.js';
@@ -26,7 +28,6 @@ import { AutoCam } from './autocam.js';
 
 const BTN = 'assets/ui/btn_auto.webp';
 const MENU_WAIT = 12;   // seconds the menu waits for a choice before it keeps the last one
-const HASTE = 2;        // how fast the world runs while a long walk is hurried (Settings' Long walks in auto-play)
 const BARE_AFTER = 4;   // seconds left be before the interface is put away, with Settings' Interface in auto-play: Hidden until you tap
 
 const CSS = `
@@ -60,7 +61,7 @@ body.playing #autoStatus.shown { display: block; }
 #autoMenu.on { display: block; }
 #autoMenu h2 { margin: 0 0 4px; font: 700 20px Cinzel, Georgia, serif; color: #8fe0ff; letter-spacing: .05em; }
 #autoMenu p { margin: 0 0 12px; color: #a8c0cc; }
-#autoMenu .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+#autoMenu .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 #autoMenu .card { font: inherit; color: inherit; text-align: left; background: #0e1a22; border: 1px solid #23485a; padding: 10px; cursor: pointer; border-radius: 3px; }
 #autoMenu .card b { display: block; color: #e8f6fc; margin-bottom: 3px; }
 #autoMenu .card span { display: block; font-size: 12px; color: #93acb8; }
@@ -202,6 +203,7 @@ export class AutoPlay {
     const was = b.mode;
     b.mode = mode;
     if (mode !== was || mode === 'dungeons') { b.job = null; b.jobKey = ''; b.runState = null; b.runKey = null; b.laps = 0; }
+    b.fightHere = null; b.seekOn = null;   // (Auto Fight: here, where it's chosen.)
     this.release();
     if (this.on) { this.o.hud.tip(`Auto-play: ${lower(MODES[mode].name)}.`, 3); return; }
     this.toggle(true);
@@ -227,7 +229,6 @@ export class AutoPlay {
       if (this.mode === 'quests' && this.brain.allQuestsDone()) this.askGrind();
     } else {
       this.brain?.stop();
-      this.haste(false);
       if (this.o.game.viewSwitch) this.o.game.viewSwitch.auto = null;
       this.since = 0; this.setBare(false);
       this.show.stop();
@@ -269,25 +270,17 @@ export class AutoPlay {
     if (snap) this.cam.frame(dt, snap, this);
     if (!this.on || !snap) return;
     if (!input.enabled) { this.toggle(false); return; }
-    if (this.o.shared.input[INPUT.PAUSE]) { this.haste(false); this.brain.halt(); return; }
+    if (this.o.shared.input[INPUT.PAUSE]) { this.brain.halt(); return; }
     // Hands on the keys: theirs, for a moment.
     if (input.handsOn) {
       if (this.yieldT <= 0) this.status('You have the controls.');
       this.yieldT = 1.5;
       input.auto = null;
-      this.haste(false);
       return;
     }
-    if (this.yieldT > 0) { this.yieldT -= dt; if (this.yieldT > 0) return; input.auto = this.brain.auto; this.brain.goal = null; this.brain.sub = null; }
+    if (this.yieldT > 0) { this.yieldT -= dt; if (this.yieldT > 0) return; input.auto = this.brain.auto; this.brain.goal = null; this.brain.sub = null; this.brain.fightHere = null; }
     try { this.brain.step(dt, snap); } catch (err) { console.error('auto-play', err); this.brain.halt(); }
-    this.haste(this.brain.hurry && this.o.settings?.autohaste !== 'off');
     this.show.frame(dt, snap, this.brain, this.brain.me(snap));
-  }
-
-  // The world's clock hurried, or as ever (CTRL.HASTE, in hundredths: src/sim/sim.worker.js).
-  haste(on) {
-    const c = this.o.shared?.ctrl, v = on ? HASTE * 100 : 100;
-    if (c && this.hasted !== v) { this.hasted = v; Atomics.store(c, CTRL.HASTE, v); }
   }
 
   // ---- the menu: what it should do
@@ -322,8 +315,12 @@ export class AutoPlay {
     this.wake();
     this.hold();
     const { townUI, game } = this.o;
-    const done = finishedDungeons(townUI, game);
-    const runs = done.length ? `In this order, round and round: ${done.map((d) => lower(d.name)).join(', ')}.` : `No dungeon portal found yet: ${DUNGEONS.length} of them lie out in the land, and each counts once you've come upon its portal.`;
+    // (Down a dungeon now: that one's run first, from where he is, found portal or not: src/ui/autobrain.js dungeonJob.)
+    const snap = game.currentSnap?.(), here = snap ? delveOf(snap[H.PX], snap[H.PZ]) : null;
+    const done = finishedDungeons(townUI, game, here?.key);
+    const rest = done.filter((d) => d.key !== here?.key);
+    const runs = here ? `Through ${lower(here.name)} first, from where he stands${rest.length ? `; then round the rest: ${rest.map((d) => lower(d.name)).join(', ')}` : ''}.`
+      : done.length ? `In this order, round and round: ${done.map((d) => lower(d.name)).join(', ')}.` : `No dungeon portal found yet: ${DUNGEONS.length} of them lie out in the land, and each counts once you've come upon its portal.`;
     const cards = Object.entries(MODES).map(([k, v]) => {
       const off = k === 'dungeons' && !done.length;
       return `<button type="button" class="card${k === this.mode ? ' sel' : ''}" data-m="${k}"${off ? ' disabled' : ''}><b>${v.name}</b><span>${v.line}</span>${k === 'dungeons' ? `<i>${runs}</i>` : ''}</button>`;
