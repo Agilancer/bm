@@ -108,7 +108,7 @@ const LINEAR_DEPTH = 'r16float';
 const DEPTH = 'depth32float';
 const FLAT = { iron: 100, flame: 101, water: 102, fruit: 103, fruit2: 104, white: 106, tile: 107, glow: 108, lake: 110, falls: 111, ice: 112, seal: 113, obsidian: 114, gold: 115, voidglass: 116, magma: 117, rune: 118, storm: 119 };
 // A painting in another light (src/core/sites.js): its layer plus a thousand times which (materials.js STATIC).
-const TINTS = { dark: 1, pale: 2, frost: 3, mire: 4, spore: 5, void: 6 };
+const TINTS = { dark: 1, pale: 2, frost: 3, mire: 4, spore: 5, void: 6, slate: 7, blood: 8, moss: 9, umber: 10, soot: 11, eve: 12, char: 13 };
 const MAX_GROUND = 160;
 // The portals (portalModel): the Warrens' three in their walls, at these spots (src/core/sites.js portalWall), and a seal's at
 // every seal (seal_*). How big each is drawn is PORTAL_MODELS's. SWIRL: each one's whirl for the shader (src/gfx/materials.js
@@ -774,7 +774,7 @@ export class Renderer {
   packParts(parts) {
     const { layerNames, layers } = this.staticLayers, prims = [];
     for (const [name, part] of parts) {
-      const m = /^(dark|pale|frost|mire|spore|void):(.*)$/.exec(name), base = m ? m[2] : name;
+      const m = /^(dark|pale|frost|mire|spore|void|slate|blood|moss|umber|soot|eve|char):(.*)$/.exec(name), base = m ? m[2] : name;
       let layer = layerNames.indexOf(base);
       if (layer < 0) layer = FLAT[base] ?? 100;
       prims.push({ layer: layer + (m ? TINTS[m[1]] * 1000 : 0), cutout: layer < 100 && layers[layer].cutout ? 1 : 0, ...part });
@@ -805,7 +805,7 @@ export class Renderer {
     const { parts, groups } = buildUnder(key);
     const prims = [];
     for (const [name, part] of parts) {
-      const m = /^(dark|pale|frost|mire|spore|void):(.*)$/.exec(name), base = m ? m[2] : name;
+      const m = /^(dark|pale|frost|mire|spore|void|slate|blood|moss|umber|soot|eve|char):(.*)$/.exec(name), base = m ? m[2] : name;
       let layer = layerNames.indexOf(base);
       if (layer < 0) layer = FLAT[base] ?? 100;
       prims.push({ name, layer: layer + (m ? TINTS[m[1]] * 1000 : 0), cutout: layer < 100 && layers[layer].cutout ? 1 : 0, ...part });
@@ -869,7 +869,7 @@ export class Renderer {
     this.staticLayers = { layerNames, layers };
     const sites = buildSites(true, !!this.tier.lean);
     for (const [name, part] of sites.parts) {
-      const m = /^(dark|pale|frost|mire|spore|void):(.*)$/.exec(name), base = m ? m[2] : name;
+      const m = /^(dark|pale|frost|mire|spore|void|slate|blood|moss|umber|soot|eve|char):(.*)$/.exec(name), base = m ? m[2] : name;
       let layer = layerNames.indexOf(base);
       if (layer < 0) layer = FLAT[base] ?? 100;
       const cutout = layer < 100 && layers[layer].cutout;
@@ -2528,7 +2528,9 @@ export class Renderer {
     const lit = this.litOrder || (this.litOrder = lights.map((L) => ({ L, d: 0 })));
     // (A lamp behind you counts as further off: its glow on a wall you can't see is wasted.)
     // (And one that reaches far counts as nearer by half its reach: a fire hung over a hall is kept before a candle.)
-    for (const e of lit) e.d = Math.hypot(e.L.p[0] - cam.x, e.L.p[2] - cam.z) - e.L.r * 0.5 + ((e.L.p[0] - cam.x) * cam.fx + (e.L.p[2] - cam.z) * cam.fz < 0 ? 12 : 0);
+    // (And a fire or a candle indoors, src/core/phobos-build.js houseNear's, counts as further off again from out in the
+    // street, where its light is all on the inside of a wall: the street's lanterns are kept before it.)
+    for (const e of lit) { const dd = Math.hypot(e.L.p[0] - cam.x, e.L.p[2] - cam.z); e.d = dd - e.L.r * 0.5 + ((e.L.p[0] - cam.x) * cam.fx + (e.L.p[2] - cam.z) * cam.fz < 0 ? 12 : 0) + (e.L.indoor && dd > 9 ? 24 : 0) - (e.L.prio || 0); }
     if (take < lit.length) lit.sort((a, b) => a.d - b.d);
     const nextD = take < lit.length ? lit[take].d : 1e9;
     for (let i = 0; i < take; i++) {
@@ -3413,6 +3415,8 @@ export class Renderer {
     drawGlow(this, mp, this.interior, vis.hall || vis.deep);
     // (Down a delve, its fires: flames that face you. src/core/delve-build.js fire().)
     if (vis.warrens && !vis.testHall) drawDelveFires(this, mp, this.interior, this.delveFires ||= buildDelveFires(this, buildSites().fires), delveAt(cam.x, cam.z));
+    // (And Phobos's, out in the open: the Approach's braziers and the fire bowls on its towers. src/core/phobos-build.js fire().)
+    else if (!vis.warrens && cam.x > 8700 && cam.x < 11700 && Math.abs(cam.z) < 1400) drawDelveFires(this, mp, this.interior, this.delveFires ||= buildDelveFires(this, buildSites().fires), 'phobos');
     this.openingStage?.drawGlow(mp);
     this.trail?.draw(mp);
     if (tier.lean) {

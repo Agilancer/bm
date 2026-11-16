@@ -7,8 +7,8 @@
 // What stops a body is none of this: every house's walls are colliders from the start, the doorway left open.
 
 import { buildPhobosCell } from '../core/sites.js';
-import { CELL, cellOf, phobosHouses } from '../core/phobos-build.js';
-import { CITY } from '../core/east.js';
+import { CASTLE_CELLS, CELL, cellOf, phobosHouses, wallCells } from '../core/phobos-build.js';
+import { CITY, CRAG } from '../core/east.js';
 
 const NEAR = 150, FAR = 230, KEEP = 30;   // metres to build a cell at, and to let it go at; how many are kept at most
 
@@ -16,14 +16,15 @@ export class PhobosNear {
   constructor(renderer) {
     this.r = renderer;
     this.cells = new Map();       // cell -> { VB, IB, opaque, cut, x, z }
-    this.have = new Set(phobosHouses().map((h) => h.cell));
+    // (The cells with houses in, and the crag's: src/core/phobos-build.js castleNear.)
+    this.have = new Set([...phobosHouses().map((h) => h.cell), ...CASTLE_CELLS, ...wallCells()]);
     this.count = 0;
   }
 
   // Each frame: the nearest cell that wants building is built (one a frame: a few milliseconds), and any gone far is let go.
   update(cam) {
     const r = this.r;
-    if (!r.landScenery || Math.abs(cam.x - CITY.x) > CITY.a + FAR || Math.abs(cam.z - CITY.z) > CITY.b + FAR) { if (this.cells.size) this.clear(); return; }
+    if (!r.landScenery || cam.x < CITY.x - CITY.a - FAR || cam.x > CRAG.x + CRAG.a + FAR || Math.abs(cam.z - CITY.z) > CITY.b + FAR) { if (this.cells.size) this.clear(); return; }
     let want = null, best = NEAR;
     for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) {
       const x = cam.x + i * CELL, z = cam.z + j * CELL, key = cellOf(x, z);

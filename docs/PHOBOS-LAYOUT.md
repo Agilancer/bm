@@ -156,13 +156,13 @@ Twenty-four wings in three wards. Every wing has one great room with a use (each
   three secret links on no map). The Ancient Library (the Librarian's home; rest point). The Map Room (its table marks
   every secret you haven't found). The Alchemists' Wing (the still room: potions past shop strength). The Conservatory
   (reagents for the Alchemists' line, and a boss seed). The Menagerie (the cage rows). The Clock Tower (a shaft climbed
-  on moving gears). The Bell Galleries (ring them to change the castle's patrols).
+  on moving gears). The Horn Galleries (sound them to change the castle's patrols).
 - **High Ward** (+115 m, 95–112). The Sanctuaries (V only: the black nave; rest point, the first wing you reach). The Ossuary Chapel (the Sexton's rites).
   The Generals' Crypt (they get up). The Hall of Mirrors (the way is in the glass: a secret link to the Portrait
   Gallery). The Treasury (two keys deep: a unique reward and a whole idol part). the Observatory (names the Keep's
   spires and shows which are won). The Throne Antechambers (the idol's door).
 
-**The castle answers you**: bells rung change the patrols, and each key turns a ward (lamps lit, a gate left open,
+**The castle answers you**: horns sounded change the patrols, and each key turns a ward (lamps lit, a gate left open,
 the household's people moving in).
 
 **Eight dungeons.** Each one's own door is opened by a line of the Librarian's household's quests (dozens in all).
@@ -176,7 +176,7 @@ What their bosses' keys do:
 | The Alchemists' Undercroft (86) | opens **the Crypt door** from the Oubliettes: Lower Ward to the High Ward (its second way in) |
 | The Menagerie of Chains (92) | opens the Treasury (with the Mirrors' key: two keys deep; a unique reward and a whole idol part) |
 | The Clockworks (98) | opens the Hall of Mirrors |
-| The Ossuary Chapel (104; entered by the Sexton's rites, a quest line) | opens **the Bell Bridge**: Bell Galleries straight to the Observatory |
+| The Ossuary Chapel (104; entered by the Sexton's rites, a quest line) | opens **the Horn Bridge**: Horn Galleries straight to the Observatory |
 | The Hall of Mirrors (110) | the Treasury's second key |
 
 Three of the eight keys open shortcuts between wards (thick red lines in `castle.png`), not more doors. The tool's
@@ -185,7 +185,7 @@ Aqueduct, and reaches all 24 wings and all 8 dungeons.
 
 **The household** (all loyal to Tessariel, none showing it): the Librarian (the idol); his ward, a map-maker (the Map
 Room, the secret links); a lapsed sister of the Sanctuaries (the Sexton's rites); an old quartermaster (the Armoury,
-the Forge); a bell-ringer boy (the Bell Galleries).
+the Forge); a horn-blower boy (the Horn Galleries).
 
 **The sacrificial idol.** One part from each of the eight dungeons, five clears a part: the owner's rule. No two
 clears are alike: the first is the story run; the second to fifth each take a different route, boss order and
@@ -213,7 +213,7 @@ World bosses: the Gate Captain (68), the Feast That Walks (88), the Sexton of th
 
 `section.png` is the side view to scale. The spires do not start at one height: each stands on a part of the
 castle that carries it up. The Ember Spire stands on the Sanctuaries' nave roof (+115); the Storm Spire on the Clock
-Tower's head (+150); the Bone Spire on the Bell Galleries' campanile (+190); the Shadow Spire on the Observatory's
+Tower's head (+150); the Bone Spire on the Horn Galleries' campanile (+190); the Shadow Spire on the Observatory's
 drum (+225); the Blood Spire on the Great Pier, a buttress off the Hall of Mirrors (+255). **The Throne Tower** is one
 trunk from the Throne Antechambers (+115) to +330: solid to +285 but for the Crown Court's lift, and the last dungeon
 is the twelve floors above the Last Stair's landing. The Crown Court is at +115. In plan the spires ring the trunk on its north, east and south (z −95 to +95), so from

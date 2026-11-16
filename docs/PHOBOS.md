@@ -147,7 +147,7 @@ Characters' state: see PHOBOS-TODO.md, chunk 0.
 A massive branching labyrinth with stairs up and down in dozens of places. Wings (a first list; chunk 8 lays them out): the
 Ancient Library, the Barracks and drill halls, the Great Hall, the Sanctuaries (V only), the Armoury, the Kitchens and
 cellars, the Servants' Warren, the Portrait Gallery, the Clock Tower, the Alchemists' wing, the Menagerie, the Ossuary
-Chapel, the Treasury, the Map Room, the Observatory, the Hall of Mirrors, the Bell Galleries, the Forge, the Conservatory of
+Chapel, the Treasury, the Map Room, the Observatory, the Hall of Mirrors, the Horn Galleries, the Forge, the Conservatory of
 dead plants, the Aqueduct, the Oubliettes, the Generals' Crypt, the Throne Antechambers.
 
 **Keys**: some wings open only with keys from bosses of particular dungeons, which open as you work through dozens of quests

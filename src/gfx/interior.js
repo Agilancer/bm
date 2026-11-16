@@ -243,7 +243,7 @@ export function drawOpaque(r, mp, it, vis) {
 }
 
 // The delves' fires as glow quads (src/core/delve-build.js fire()): one buffer, each delve's a run of it. { VB, runs: { key: [first, count] } }.
-const HUES = { 'flame': [1, 0.5, 0.13], 'dark:flame': [1, 0.2, 0.045], 'frost:flame': [0.42, 0.72, 1], 'pale:flame': [0.5, 1, 0.6], 'mire:flame': [0.3, 1, 0.45], 'spore:flame': [0.72, 0.4, 1.25] };
+const HUES = { 'flame': [1, 0.5, 0.13], 'dark:flame': [1, 0.2, 0.045], 'blood:flame': [0.85, 0.07, 0.03], 'frost:flame': [0.42, 0.72, 1], 'pale:flame': [0.5, 1, 0.6], 'mire:flame': [0.3, 1, 0.45], 'spore:flame': [0.72, 0.4, 1.25] };
 const KINDS = { flame: 104, glow: 105, wisp: 106 };
 export function buildDelveFires(r, fires) {
   const by = new Map();

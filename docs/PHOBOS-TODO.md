@@ -397,6 +397,33 @@ world-space grime layer (soot, damp, moss, rust, cracks) that chunk 2 asked for.
 - [ ] Untested: the sectors walked end to end by a human; the four fights fought at level by a human (the headless sim
   wins all four with a hired party); cap drop rates in play; the phone.
 
+## Two improvement passes over the city and the castle (owner, 2026-11-16) — done, both critics approved
+
+- [x] **Pass 1**: varied roofs and pitches, gables to the King's Mile, big shop windows, red liveries, string courses;
+  windows dark glass by day ('slate:iron', pane to pane), amber from dusk ('eve:flame'), near black at night; indoor
+  lights give way to street lamps; the castle gate's vault, portcullis, machicolations and braziers up a paved Approach;
+  the tower kit (plinth, courses, corbels, slits, fire bowls); his fire blood red ('blood:flame') behind stone arcades;
+  value steps city, castle ('soot:'), Keep ('char:', new, near black and matte); umber for ochre, no moss roofs, the
+  lilac 'ph_dressed' slated; the Mages' spires halved and slated; bells made horns (V/T). Critics: veteran APPROVE 7/6.5,
+  young APPROVE 7.5/7.
+- [x] **Pass 2**: moving flames on braziers, fire bowls and the rookery beacon (the delves' flame, `fire()`, drawn near
+  Phobos); braziers and the gate lit, the gate drums uplit (`prio` in the renderer's light sort); the Keep's window grid
+  broken (blind bays, slit pairs, tall windows, balconies); `curtain()` relief on the castle's walls; the city wall's
+  buttresses, foot course and slits in the near cells (`wallNear`); the wall stairs in the wall's basalt; shader
+  weathering on Phobos's walls; jettied fronts and pent roofs on the Mile; lean-tos behind one house in five; the
+  barracks' tan stone sooted. Critics: veteran APPROVE 7.5/7, young APPROVE 8/7.
+- **Budget**: the land is at 1,594,437 corners of 1,600,000 (tests/sites-lean.test.mjs). **Everything from here goes in
+  streamed cells** (phobosCell / castleNear) or Phobos's own build, from the first box. Near cells: 240 + 56 wall cells,
+  29 ms a cell on average, 84 ms at worst on the PC in Node; a phone maybe 400 ms in its worker. Unmeasured on a phone.
+- [ ] **Blocker on the first-sight pass** (the owner's rule: last): from the Sill the Drawbridge Gate hides the Keep and
+  the basin's haze turns the city into a white smear.
+- [ ] **Terraces**: the city's ten terraces are 44 m banks with houses and streets on them; they want stepping, with
+  retaining walls and ramps or stairs where the streets cross, and ward floors paved. Ships with Phobos's streamed build,
+  not freestanding walls. Still the city's biggest shape problem (young critic).
+- [ ] Critics' leftovers: the mass by the castle gate (the wall's east stair) still a blank wedge, give it treads when the
+  gate is carved; the Keep's body reads as slats at 300 m (a few deep dark arcades per step); the brazier bowl wants a
+  thick rim and three legs; the castle's cones all one witch hat (vary them per wing); weathering unjudged at 20-60 m.
+
 ## Chunk 7: the city's six dungeons — not started
 
 The Cistern Maze, the Undercroft, the Tower of the Ninefold Eye, Ironmercy Gaol, the Rotting Hospice, the Gilded Vault
@@ -499,4 +526,6 @@ Chunk 2 (textures), left open after both critics approved round 3 (2026-11-15):
 
 ## Untested
 
-(Nothing built yet.)
+- The two passes: never played by a human; the phone (Low tier, lean build) never run on a real phone: on this PC the
+  Mobile tier's GPU time is 1.3-2.1 ms, Ultra's 3.6-4.8 ms, both at the 144 fps cap. Near cells popping in on the Mile
+  when running or surfing. The moving flames and the gate's uplights from a long way off; the weathering up close.
