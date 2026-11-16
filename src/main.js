@@ -595,6 +595,8 @@ async function boot(plan, poolSize) {
     game.heroTalk.fetchScript();
     game.party = new PartyUI({ base: BASE, cast, sim: simWorker, pack, heroTalk: game.heroTalk, level: () => pack.level,
       chatLog, viewProj: () => renderer.frameData,
+      // (An Elder God's line, said aloud if it has a recording: src/core/god-voiced.js.)
+      godVoice: (key) => { if (key) audio.voice(`gods/${key}`, 1); else audio.hush(); },
       firstHero: () => renderer.firstHero, tip: (t, s) => hud.tip(t, s),
       opened: () => { input.menu = true; input.releaseControls(); if (document.pointerLockElement) document.exitPointerLock(); },
       closed: () => { input.menu = false; resume(); },

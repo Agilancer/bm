@@ -174,3 +174,34 @@ When a line's words change, run the three commands again: only the new line is r
 - Pronunciation goes in `say.json`: Velscour is "VEL-skower", Tessariel "Tess-are-ee-ell", Bellmourn "Bell-morn".
 - Write lines to be said: no brackets or stage directions, numbers as words, no lone words, and no names typed in at run
   time.
+
+## The gods (Elder Dragon Gods, November 2026)
+
+The four Elder Dragon Gods' lines (src/core/delve-elder.js LINES, 66 of them) are recorded and **are played**: each
+line is said as the god's speech bubble comes up (src/ui/party.js godSpeak, src/audio.js voice), dry and at one level.
+
+- **One model, one speaker a god.** Qwen3-TTS 1.7B CustomVoice, each god one of the model's own speakers under one
+  fixed description (`tools/voice/gods/gods.json`): Thyrraxis `aiden`, Kaldurra `serena`, Morvekh `eric`, Nihvaroth
+  `ryan`. The owner chose these by ear from candidates; the raw samples are in `tools/voice/gods/refs/`.
+- **The owner's approved treatment**, applied to every line by `style.py` (gods.json `style`): the voice four
+  semitones down; under it one copy an octave lower, one a fifth lower and one a shade flat, each a moment behind; the
+  lows brought up; rumble under 45 Hz cut; a slow compressor and a look-ahead limiter; every line at -15 dB speech
+  level. **Rejected by the owner, never to come back:** echo, reverb, overdrive, and a 70 Hz growl (it crackled).
+  Pitch shifts use long windows (n_fft 4096): short ones smear into static.
+- **Takes and rules.** The first takes were at the model's defaults, which wander in pitch; takes 10 and up use calm
+  sampling (temperature 0.6, top-k 30). The two voice critics' rules, run by `style.py` on each raw take: every word
+  heard exactly as written; median pitch within 120 cents of the god's own median; 90th-percentile pitch at most 1.45
+  times the median; the last fifth of the line between 0.7 and 1.05 of its median (a question may rise); articulation
+  rate within 20% of the god's median; voice-encoder likeness no lower than the god's mean less two SD, and never under
+  0.83; the limiter taking off at most 3 dB. A pause inside a line is cut to 0.7 s. A pitch miss weighs three times
+  any other when choosing.
+- **Lines written to be said.** No lone words, no exact repeats, no words the model mishears ("hearth", "ends").
+  Twenty lines were reworded for this over the two critic rounds.
+- **Status** is in `tools/voice/gods/report.json`, a row a line: `passed`, `unchecked` (no take passed everything; the
+  nearest shipped), or `text only` (a rewrite with no passing take: shown in the bubble, not said).
+- **A human listens at the end.** The critics can't hear. Both asked that the owner listen to Nihvaroth's death line
+  and to each god's unchecked lines against its intro.
+
+To make them again: `node tools/voice/gods/lines.mjs lines.json`, `python tools/voice/gods/record.py lines.json --takes
+DIR --start 10 --n 16` (the qwen venv), then `python tools/voice/gods/style.py lines.json --takes DIR --out
+assets/game/audio/gods` (the chatterbox venv), which also writes `src/core/god-voiced.js`.
