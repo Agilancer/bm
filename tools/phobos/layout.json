@@ -242,7 +242,7 @@
     "name": "The Drawbridge Gate",
     "x": 9350,
     "z": 0,
-    "note": "raised at first: you go in by the West outfall and winch it down from the gatehouse, bells ringing (the second reveal). Bent, uphill passage, inner gate offset."
+    "note": "raised at first: you go in by the West outfall and winch it down from the gatehouse, horns sounding (the second reveal). Bent, uphill passage, inner gate offset."
    },
    {
     "name": "The Charnel Gate",
@@ -1487,13 +1487,13 @@
     ]
    },
    {
-    "key": "bells",
-    "name": "The Bell Galleries",
+    "key": "horns",
+    "name": "The Horn Galleries",
     "ward": 1,
     "sx": 5,
     "sy": 4,
     "up": true,
-    "room": "ring them to change the castle's patrols and what walks the wards"
+    "room": "sound them to change the castle's patrols and what walks the wards"
    },
    {
     "key": "sanctuaries",
@@ -1675,10 +1675,10 @@
    ],
    [
     "clock",
-    "bells"
+    "horns"
    ],
    [
-    "bells",
+    "horns",
     "observatory"
    ],
    [
@@ -1755,8 +1755,8 @@
     "what": "the Armoury, the Forge, arming the Quiet Watch"
    },
    {
-    "role": "a bell-ringer boy",
-    "what": "the Bell Galleries, the patrols"
+    "role": "a horn-blower boy",
+    "what": "the Horn Galleries, the patrols"
    }
   ],
   "locked_links": [
@@ -1773,13 +1773,13 @@
     "key": "The Alchemists' Undercroft"
    },
    {
-    "a": "bells",
+    "a": "horns",
     "b": "observatory",
-    "name": "The Bell Bridge",
+    "name": "The Horn Bridge",
     "key": "The Ossuary Chapel"
    }
   ],
-  "reacts": "The castle answers you: bells rung change the patrols; each key turns a ward (lamps lit, a gate left open, the household's people moving in).",
+  "reacts": "The castle answers you: horns sounded change the patrols; each key turns a ward (lamps lit, a gate left open, the household's people moving in).",
   "high_ward_note": "The High Ward opens by the Sanctuaries Stair (the Archive's key, level 80) or the Crypt door (the Alchemists' key, 86); its rest point is the Sanctuaries, the first wing you reach.",
   "_": "Owner, 2026-11-15: far taller than first laid out (the wards were +70, +90, +115). Now +120, +175, +235 m over the plain (src/core/east.js WARDS)."
  },
@@ -1841,7 +1841,7 @@
     "foot": 190,
     "top": 250,
     "routes": "inside by the floors, or outside by ledges and chains (harder, shorter)",
-    "stands_on": "the Bell Galleries' campanile",
+    "stands_on": "the Horn Galleries' campanile",
     "x": 11300,
     "part": "the Marrow Key",
     "z": -40
@@ -2079,8 +2079,8 @@
  "scene": [
   {
    "t": "0:00",
-   "beat": "The pinch opens. Low camera at the hero's boots on the Sill; the moat plain, the wall, the raised drawbridge. A bell, far off.",
-   "sound": "a single bell; wind; the hero's breath"
+   "beat": "The pinch opens. Low camera at the hero's boots on the Sill; the moat plain, the wall, the raised drawbridge. A horn, far off.",
+   "sound": "a single horn; wind; the hero's breath"
   },
   {
    "t": "1:00",
@@ -2100,7 +2100,7 @@
   {
    "t": "4:00",
    "beat": "The Throne Tower's top, a figure on its balcony; the camera falls all the way back to the hero. Control returns.",
-   "sound": "silence, then one struck bell as the figure turns; the music resolves as control returns"
+   "sound": "silence, then one low horn as the figure turns; the music resolves as control returns"
   }
  ],
  "scene_phone": "On Low the scene runs on a fixed camera path with the castle and Keep swapped to their full meshes for its length only and the city held at its far level of detail; beats 3 and 4 never bring the city's streets into close view.",

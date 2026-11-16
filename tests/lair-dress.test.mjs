@@ -44,7 +44,7 @@ test('the dressing is for the eye: no collider, nothing on a road, no cloth', ()
 test('every painting a place or a dungeon asks for is in the game', () => {
   const have = new Set(manifest.layers.map((l) => l.name));
   for (const layer of [...buildSites(true).parts.keys(), ...buildUnder().parts.keys()]) {
-    const m = /^(dark|pale|frost|mire|spore|void):(.*)$/.exec(layer), base = m ? m[2] : layer;
+    const m = /^(dark|pale|frost|mire|spore|void|slate|blood|moss|umber|soot|eve):(.*)$/.exec(layer), base = m ? m[2] : layer;
     assert.ok(have.has(base) || FLAT.has(base), `no painting called ${base}`);
   }
   for (const n of ['block', 'flags', 'ashlar', 'course']) {

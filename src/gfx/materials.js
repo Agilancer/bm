@@ -480,6 +480,8 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
       emissive = L.rgb * (L.w * 2.2 + 0.05) * (1.0 - 0.6 * heart) + SLIME_RIM[lay - 120u] * fres * 0.55 + vec3f(in.uv.y * 1.6);
     }
     if (lay == 100u || lay == 105u || lay == 115u) { metal = 0.9; }
+    // (Glass in a window that's never lit, Phobos's ('slate:iron'): dark blue-grey, glossy, the sky in it; not a black hole.)
+    if (lay == 100u && tintK == 7u) { albedo = vec3f(0.06, 0.068, 0.085); metal = 0.1; rough = 0.42; }
     if (lay == 108u) { emissive = select(vec3f(6.0, 6.0, 5.6), vec3f(1.6, 1.6, 1.5), F.blood.w < 0.5); albedo = vec3f(0.0); }
     if (lay == 101u) {
       // (Its own light beside it, put out: src/gfx/homelights.js. A light the frame has no room for leaves the flame be.)
@@ -506,7 +508,13 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
       if (tintK == 4u) { emissive = emissive.grb * vec3f(0.55, 0.95, 0.6); }
       if (tintK == 5u) { emissive = vec3f(dot(emissive, vec3f(0.3, 0.5, 0.2))) * vec3f(0.5, 0.2, 0.95); }
       if (tintK == 6u) { emissive = vec3f(dot(emissive, vec3f(0.3, 0.5, 0.2))) * vec3f(0.62, 0.3, 1.0); }
+      // (A window lit at evening ('eve:flame', Phobos's panes): dark glass by day, a lamp behind it as the light goes, warm
+      // and a little red.)
+      let night = 1.0 - smoothstep(0.3, 0.9, F.sunColor.a);
+      if (tintK == 12u) { emissive *= vec3f(0.5, 0.7, 0.95) * night; }
+      if (tintK == 8u) { emissive = vec3f(dot(emissive, vec3f(0.3, 0.5, 0.2))) * vec3f(0.95, 0.1, 0.035); }
       albedo = vec3f(0.0);
+      if (tintK == 12u) { albedo = vec3f(0.06, 0.068, 0.085) * (1.0 - night); metal = 0.1 * (1.0 - night); rough = 0.42; }
     }
   } else {
     if (params.x > 0.0 && tex.a < 0.5) { discard; }
@@ -523,6 +531,13 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
       if (tintK == 5u) { albedo = mix(albedo, vec3f(lum * 1.1) * vec3f(0.74, 0.52, 0.92), 0.78); }
       // The void's stone: black, with violet in it, a little glassy.
       if (tintK == 6u) { albedo = mix(albedo, vec3f(lum * 0.8) * vec3f(0.47, 0.41, 0.58), 0.86); rough = rough * 0.85; }
+      // Phobos's palette swaps (src/core/phobos-build.js): blue-grey slate; his blood red, ox-blood, deep and dark; old stone
+      // and tile gone green-grey with lichen; umber, old fired clay; and soot, brown-black where the smoke's lain for years.
+      if (tintK == 7u) { albedo = mix(albedo, vec3f(lum * 0.95) * vec3f(0.56, 0.62, 0.72), 0.85); rough = rough * 0.9; }
+      if (tintK == 8u) { albedo = mix(albedo, vec3f(lum * 0.72) * vec3f(0.56, 0.14, 0.12), 0.9); }
+      if (tintK == 9u) { albedo = mix(albedo, vec3f(lum) * vec3f(0.55, 0.62, 0.42), 0.62); }
+      if (tintK == 10u) { albedo = mix(albedo, vec3f(lum * 0.82) * vec3f(0.8, 0.53, 0.36), 0.75); }
+      if (tintK == 11u) { albedo = mix(albedo, vec3f(lum * 0.62) * vec3f(0.62, 0.55, 0.5), 0.8); }
     }
     n = perturbD(n0, dp1, dp2, dx, dy, det.rg, select(1.0, mix(1.4, 0.7, smoothstep(5.0, 20.0, dist)), params.z < 0.0));
     if (params.z < 0.0) {
