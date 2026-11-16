@@ -11,6 +11,7 @@ import { QUESTS } from '../folk/lines/quests.js';
 import { BEYOND, LINES as LBEY } from '../folk/lines/beyond.js';
 import { LINES as LLAND } from '../folk/lines/land.js';
 import { LINES as LPHOBOS } from '../folk/lines/phobos.js';
+import { LINES as LHUBS } from '../folk/lines/phobos-hubs.js';
 import { LISANDRA, LINES as LLIS } from '../folk/lines/lisandra.js';
 import { C, CHARS_START, C_PROPS, C_SIZE, H } from '../core/layout.js';
 import { LISANDRA_FORMS } from '../core/lisandra.js';
@@ -26,7 +27,7 @@ import { CLOSE_X } from './menu-x.js';
 import { art } from './skin.js';
 import { giverOf, hintOf, placeOf, questLevel, rewardOf, stepsOf } from './questlog.js';
 
-const LINES = { ...LA, ...LB, ...LC, ...LBEY, ...LLAND, ...LLIS, ...LPHOBOS };
+const LINES = { ...LA, ...LB, ...LC, ...LBEY, ...LLAND, ...LLIS, ...LPHOBOS, ...LHUBS };
 // Where the people out past the town keep (src/folk/lines/beyond.js): the middle of the beat they walk (core/knights.js).
 // (Or, with no knight flagged as theirs, where their entry says they stand: `at`.)
 const BEYOND_AT = Object.fromEntries(BEYOND.map((b) => {

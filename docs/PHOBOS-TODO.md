@@ -306,18 +306,49 @@ Known and not done in the block-out:
 - `src/ui/firstsight.js` still flies the old, lower castle's path: to be redone at the very end.
 - The layout bible's castle and Keep sections (PHOBOS-LAYOUT.md) give the old heights; layout.json has the new ones.
 
-## Chunk 4: wall, moat, drawbridge, the city's bones — not started
+## Chunk 4: wall, moat, drawbridge, the city's bones — under way
 
-- [ ] Wall with guard towers, the moat, the giant drawbridge, the barbican.
+- [~] Wall with guard towers, the moat, the giant drawbridge, the barbican. Done 2026-11-16 (branch phobos-hubs): water
+  in the moat (`waters()` in src/core/phobos-build.js: a ring of quads 3.4 m over the ditch's middle, left out at the four
+  causeways) and in the Slough canal (left out at the street bridges); a portcullis wound up into each gate's head, teeth
+  showing; the Drawbridge Gate's bridge, a walked deck from the far bank to the gate over open water (the leaf near the
+  gate lighter, two iron straps, chains up to the head; dressed-stone abutments and a pier; a post-and-rail fence down the
+  fixed span that stops you). The moat had never been a ditch: two `Math.max(floor, PLAIN + ...)` lines in
+  src/core/east.js eastHeight (the crag, the basin's head) held every floor at PLAIN and filled it back in; they now only
+  lift where they have something to lift, and the Chasm's causeway stops at the moat's far bank. Still to do: the barbican's yard wall and winch-house, gate leaves, the
+  drawbridge really lifting, causeway sides dressed in stone, water that moves.
 - [ ] Street labyrinth generator (main streets, alleys, courtyards, roof-walks, short cuts).
 - [ ] House kit: modular pieces, burnt / ruined / poor / rich, 2–4 storeys, enterable interiors, furniture.
 - [ ] Streaming, instancing and culling so it runs; phone memory budget.
 
-## Chunk 5: the city's people and hubs — not started
+## Chunk 5: the city's people and hubs — under way
 
 - [ ] Factions and foes (thieves, evil mages, necromancers, undead, Velscour's knights, generals, dukes, sergeants, wizards,
   sorcerers, liches), respawn timers.
-- [ ] The Pennyless' hideout, the Quiet Watch's hidden compound (found by word of mouth / invitation), the Ashwardens' hold.
+- [x] The Pennyless' hideout, the Quiet Watch's hidden compound, the Ashwardens' hold (2026-11-16): src/core/phobos-hubs.js.
+  Each a walled yard 30 x 24 m off a street, a gate with piers and a beam and lanterns, a two-storey hall at its back (a
+  house of phobosHouses with a `hub` flag: never barred, upstairs like any other), and its own dressing (the Pennyless:
+  the burnt chandlery out front, roofless; tables, crates, a cookfire, washing. The Watch: six open dye vats, cloth on
+  poles, a rack. The Ashwardens: bones stacked in pale stone, ash heaps, a pyre, four braziers). No city house stands in
+  a yard (the overlap grid is seeded with them). Their givers are POSTED people with `hub` (src/folk/people.js), at
+  hubPost: Fennick Lowe (ph_penny), Captain Maud Treller (ph_watch), Edda Grail (ph_ash); bodies are recoloured
+  townsfolk (tools/phobos/crowd_swaps.py). FOLK_MAX is 75 now.
+- [x] Drip quests and the first hub quests (2026-11-16): 14 in src/folk/phobos-quests.js (words in
+  src/folk/lines/phobos-hubs.js), levels 20-28 in src/ui/autobrain.js PLAN. Three from the land send you in: Hasket
+  (smoke_in_the_east), Hale (quiet_men), Garrick (wardens_of_ash). Each hub gives four or three: kills at the city's six
+  lairs, bread carried to the Rookeries and the Barbican, bone from the Bone Yards' north rows, a walk round three
+  districts with something overheard in each (`heard` in a quest's words, toasted by src/folk/quests.js), the Castle
+  Approach by night, and a word carried from hub to hub. New quest places: 'phobos' and 'ph:<district>' (src/folk/quests.js AREAS, placeSpot). Walked through
+  in tests/phobos-quests.test.mjs. Not yet: the Watch found by invitation only (anyone can walk in now), the endgame arc,
+  quest marks checked in the game, auto-play run through them.
+- Critics on the hubs, the moat and drawbridge and the 14 quests: round 1 veteran 7 REJECT, young 6.5 REJECT; round 2
+  veteran 8 APPROVE, young 7.5 APPROVE. Done after round 2: ragged chandlery tops with a soot band, ash drifts round the
+  pyre, a higher bone heap, taller smoke and steam, no grass on the moat's lip, a hand-out line in each place for Loaves,
+  the levels in chain order; the Throne Road's line now meets the drawbridge head-on (src/core/east.js WAY). Leftovers:
+  a fixed, named staff for Lamps on the Rise (now a random staff); a marker for the Approach by Night; the pyre flame in
+  smaller tilted tongues; the dye vats sunk halfway; the moat's water darker, with a wet band on the banks and pier; the
+  bone heap warmer (ivory); the Watch found by invitation only; quest marks and auto-play not yet run through the quests
+  in the game.
 - [ ] Portals (seals) through the city.
 - [ ] Drip quests from elsewhere in the world by level band; the endgame arc after all other quests.
 - [ ] Auto-play taught all of it.

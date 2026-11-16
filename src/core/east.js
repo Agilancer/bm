@@ -61,7 +61,8 @@ function streetOver(x, z) {
   return best;
 }
 // Whether (x, z) is on the line of one of the four gates, where the moat is left uncut for the way in.
-const gateWay = (x, z) => (Math.abs(z) < 16 && Math.abs(x - CITY.x) > 600) || (Math.abs(x - 9900) < 16 && z < -700) || (Math.abs(x - 9950) < 16 && z > 700);
+// (Not at the Drawbridge Gate: the moat runs under its bridge, src/core/phobos-build.js wall.)
+const gateWay = (x, z) => (Math.abs(z) < 16 && x - CITY.x > 600) || (Math.abs(x - 9900) < 16 && z < -700) || (Math.abs(x - 9950) < 16 && z > 700);
 // The basin Phobos stands in: not round. How far its cliffs' feet stand north and south of the drawbridge's line, at each x
 // (the two sides differ, and both wander): a point at the Sill, bays either side of the plain, pinched in to 40 m outside
 // the wall at the Charnel Gate (north) and the Tanners' Water Gate (south), wide again behind the city, then drawn in hard against the castle's crag, north and south, so the castle fills the
@@ -90,7 +91,7 @@ export function basinIn(x, z) {
 const WAY = [
   [7150, 30, 150], [NOTCH.x, NOTCH.z, NOTCH.y], [7640, -70, 145], [7780, -250, 137], [7950, -300, 129], [8080, -150, 122], [8130, 50, 116],
   [8250, 210, 108], [SPAN.x, SPAN.z, 99], [8500, -50, 94], [8550, -200, 91], [8690, -270, 87], [8810, -150, 84], [8870, -10, 82],
-  [SILL.x, SILL.z, SILL.y], [9010, 46, SILL.y - 5], [9100, 96, 62], [9190, 40, 46], [9265, -34, 31], [9330, 0, PLAIN + 1],
+  [SILL.x, SILL.z, SILL.y], [9010, 46, SILL.y - 5], [9100, 96, 62], [9190, 40, 46], [9250, -26, 33], [9276, 0, 29], [9330, 0, PLAIN + 1],
 ];
 export const CHASM = [];
 for (let i = 0; i + 1 < WAY.length; i++) {
@@ -194,8 +195,9 @@ export function eastHeight(x, z, h) {
     // where the Approach meets it, and a saddle at its back tying it to the basin's head.)
     const rough = sstep(10770, 10900, x);
     const c = Math.hypot((x - CRAG.x) / CRAG.a, (z - CRAG.z) / CRAG.b) + ((fbm(x * 0.006 + 8, z * 0.006, 3) - 0.5) * 0.34 + (fbm(x * 0.03 + 8, z * 0.03, 2) - 0.5) * 0.1) * rough;
-    if (c < 1.2) floor = Math.max(floor, PLAIN + wardAt(x + z * 0.22 + (fbm(z * 0.011, 3, 2) - 0.5) * 90) * (1 - sstep(0.95, 1.06, c)));
-    floor = Math.max(floor, PLAIN + 215 * sstep(11300, 11420, x) * (1 - sstep(110, 250, Math.abs(z))));
+    // (Each only lifts the ground where it has something to lift: as a floor of PLAIN they filled the moat back in.)
+    if (c < 1.06) floor = Math.max(floor, PLAIN + wardAt(x + z * 0.22 + (fbm(z * 0.011, 3, 2) - 0.5) * 90) * (1 - sstep(0.95, 1.06, c)));
+    if (x > 11300) floor = Math.max(floor, PLAIN + 215 * sstep(11300, 11420, x) * (1 - sstep(110, 250, Math.abs(z))));
     // The way up from the Lower Ward: a ramp along the foot of the Middle Ward's wall, in through its gate and round onto
     // the ward (WARD_RAMP). Cut and banked into the rock, as the Chasm's floor is.
     if (x > 10860 && x < 11030 && z > -175 && z < 120) {
@@ -230,7 +232,8 @@ export function eastHeight(x, z, h) {
     if (n.s > SILL_S) w = 9;
     if (y > fl && n.s <= SILL_S + 30) y = Math.min(y, fl + wallUp(Math.max(0, n.d - w + (fbm(x * 0.045, z * 0.045, 2) - 0.5) * 7)));
     else if (y > fl) y = fl + (y - fl) * sstep(w, w + 50, n.d);
-    else if (n.s > SILL_S - 5) y = fl + (y - fl) * sstep(w, w + 46, n.d);
+    // (The causeway ends at the moat's far bank, where the Drawbridge's abutment stands: the ditch runs on under the bridge.)
+    else if (n.s > SILL_S - 5 && cityIn(x, z) > 1.088) y = fl + (y - fl) * sstep(w, w + 46, n.d);
     // The Sill itself: a level shelf at the Chasm's mouth, out over the plain.
     const sd = Math.hypot(x - SILL.x, z - SILL.z);
     if (sd < SILL.r + 26) y = SILL.y + (y - SILL.y) * sstep(SILL.r, SILL.r + 26, sd);
