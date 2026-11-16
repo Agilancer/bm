@@ -1,0 +1,979 @@
+{
+ "size": 1024,
+ "detail": 512,
+ "tiles": {
+  "ash_ground": {
+   "m": [
+    2.5,
+    2.39
+   ],
+   "lay": "random",
+   "cls": "stone",
+   "grade": "ash",
+   "seam": 1.08,
+   "patch": 0.007,
+   "value": 0.27,
+   "source": "p070",
+   "used": [
+    "city_burnt.street"
+   ]
+  },
+  "basalt": {
+   "m": [
+    2.6,
+    3.51
+   ],
+   "lay": "course",
+   "cls": "stone",
+   "grade": "wall",
+   "seam": 1.3,
+   "patch": 0.032,
+   "value": 0.16,
+   "source": "BM_PV_001_bastion_basalt_A",
+   "used": [
+    "wall.wall"
+   ]
+  },
+  "basalt_bone": {
+   "m": [
+    2.6,
+    3.75
+   ],
+   "lay": "course",
+   "cls": "stone",
+   "grade": "wall",
+   "seam": 1.47,
+   "patch": 0.03,
+   "value": 0.171,
+   "source": "BM_PV_002_bastion_basalt_B",
+   "used": [
+    "wall.upper"
+   ]
+  },
+  "boards": {
+   "m": [
+    1.6,
+    1.72
+   ],
+   "lay": "course",
+   "cls": "wood",
+   "grade": "darkwood",
+   "seam": 1.38,
+   "patch": 0.049,
+   "value": 0.13,
+   "source": "BM_PV_047_wood_panelling",
+   "used": [
+    "city_poor.in_floor",
+    "city_market.in_floor"
+   ]
+  },
+  "bone_ashlar": {
+   "m": [
+    3.6,
+    3.78
+   ],
+   "lay": "course",
+   "cls": "stone",
+   "grade": "bone",
+   "seam": 1.2,
+   "patch": 0.013,
+   "value": 0.36,
+   "source": "BM_PV_049_chalk_ashlar",
+   "used": [
+    "city_bones.wall"
+   ]
+  },
+  "bone_stone": {
+   "m": [
+    2.6,
+    2.97
+   ],
+   "lay": "course",
+   "cls": "stone",
+   "grade": "bone",
+   "seam": 1.15,
+   "patch": 0.035,
+   "value": 0.36,
+   "source": "BM_PV_017_limestone_interior_A",
+   "used": [
+    "city_bones.wall_alt"
+   ]
+  },
+  "burnt_wall": {
+   "m": [
+    2.2,
+    4.18
+   ],
+   "lay": "course",
+   "cls": "stone",
+   "grade": "soot",
+   "seam": 1.49,
+   "patch": 0.036,
+   "value": 0.14,
+   "source": "p009",
+   "used": [
+    "city_burnt.wall"
+   ]
+  },
+  "castle_stone": {
+   "m": [
+    2.6,
+    2.97
+   ],
+   "lay": "course",
+   "cls": "stone",
+   "grade": "castle_in",
+   "seam": 1.15,
+   "patch": 0.035,
+   "value": 0.28,
+   "source": "BM_PV_017_limestone_interior_A",
+   "used": [
+    "marches.in_wall",
+    "castle.in_wall"
+   ]
+  },
+  "char_timber": {
+   "m": [
+    1.0,
+    1.08
+   ],
+   "lay": "course",
+   "cls": "wood",
+   "grade": "char",
+   "seam": 1.38,
+   "patch": 0.049,
+   "value": 0.121,
+   "source": "BM_PV_047_wood_panelling",
+   "used": [
+    "city_burnt.timber"
+   ]
+  },
+  "clay_brick": {
+   "m": [
+    0.9,
+    1.1
+   ],
+   "lay": "course",
+   "cls": "brick",
+   "grade": "brickred",
+   "seam": 1.4,
+   "patch": 0.025,
+   "value": 0.24,
+   "source": "BM_PV_009_city_clay_brick_A",
+   "used": [
+    "city_market.brick"
+   ]
+  },
+  "daub": {
+   "m": [
+    3.0,
+    2.71
+   ],
+   "lay": "random",
+   "cls": "plaster",
+   "grade": "ochre",
+   "seam": 1.01,
+   "patch": 0.034,
+   "value": 0.24,
+   "source": "p023",
+   "used": [
+    "city_poor.daub"
+   ]
+  },
+  "dressed": {
+   "m": [
+    3.4,
+    3.09
+   ],
+   "lay": "course",
+   "cls": "stone",
+   "grade": "violet",
+   "seam": 1.13,
+   "patch": 0.031,
+   "value": 0.25,
+   "source": "BM_PV_021_keep_dressed_stone_A",
+   "used": [
+    "city_rich.wall"
+   ]
+  },
+  "dressed_b": {
+   "m": [
+    3.4,
+    3.6
+   ],
+   "lay": "course",
+   "cls": "stone",
+   "grade": "violet",
+   "seam": 1.47,
+   "patch": 0.019,
+   "value": 0.25,
+   "source": "BM_PV_022_keep_dressed_stone_B",
+   "used": [
+    "city_rich.wall_alt"
+   ]
+  },
+  "flags": {
+   "m": [
+    2.4,
+    2.09
+   ],
+   "lay": "course",
+   "cls": "stone",
+   "grade": "steel",
+   "seam": 1.07,
+   "patch": 0.043,
+   "value": 0.21,
+   "source": "BM_PV_034_hall_flagstones_B",
+   "used": [
+    "marches.in_floor",
+    "castle.floor"
+   ]
+  },
+  "gothic_rug": {
+   "m": [
+    1.6,
+    1.55
+   ],
+   "lay": "course",
+   "cls": "cloth",
+   "grade": "rug",
+   "seam": 1.42,
+   "patch": 0.009,
+   "value": 0.15,
+   "source": "BM_PV_075_red_gothic",
+   "used": [
+    "city_rich.in_floor"
+   ]
+  },
+  "granite": {
+   "m": [
+    3.0,
+    2.18
+   ],
+   "lay": "course",
+   "cls": "stone",
+   "grade": "steel",
+   "seam": 1.16,
+   "patch": 0.018,
+   "value": 0.21,
+   "source": "BM_PV_005_curtain_granite_A",
+   "used": [
+    "castle.wall"
+   ]
+  },
+  "granite_b": {
+   "m": [
+    3.0,
+    2.89
+   ],
+   "lay": "course",
+   "cls": "stone",
+   "grade": "steel",
+   "seam": 1.46,
+   "patch": 0.022,
+   "value": 0.21,
+   "source": "BM_PV_007_curtain_granite_C",
+   "used": [
+    "castle.wall_alt"
+   ]
+  },
+  "grave_gravel": {
+   "m": [
+    2.5,
+    2.39
+   ],
+   "lay": "random",
+   "cls": "stone",
+   "grade": "bone",
+   "seam": 1.08,
+   "patch": 0.007,
+   "value": 0.36,
+   "source": "p070",
+   "used": [
+    "city_bones.path"
+   ]
+  },
+  "gravel": {
+   "m": [
+    2.5,
+    2.39
+   ],
+   "lay": "random",
+   "cls": "stone",
+   "grade": "poor",
+   "seam": 1.08,
+   "patch": 0.007,
+   "value": 0.27,
+   "source": "p070",
+   "used": [
+    "city_poor.street"
+   ]
+  },
+  "grey_plaster": {
+   "m": [
+    3.0,
+    2.09
+   ],
+   "lay": "random",
+   "cls": "plaster",
+   "grade": "poor",
+   "seam": 1.39,
+   "patch": 0.036,
+   "value": 0.27,
+   "source": "BM_PV_053_warm_grey_plaster",
+   "used": [
+    "city_poor.in_wall",
+    "city_market.in_wall"
+   ]
+  },
+  "inlay": {
+   "m": [
+    3.0,
+    2.17
+   ],
+   "lay": "course",
+   "cls": "stone",
+   "grade": "keep",
+   "seam": 1.13,
+   "patch": 0.058,
+   "value": 0.14,
+   "source": "BM_PV_039_velscour_inlay_C",
+   "used": [
+    "keep.floor"
+   ]
+  },
+  "iron": {
+   "m": [
+    2.0,
+    1.48
+   ],
+   "lay": "random",
+   "cls": "metal",
+   "grade": "iron",
+   "seam": 1.25,
+   "patch": 0.023,
+   "value": 0.14,
+   "source": "p094",
+   "placeholder": true,
+   "used": [
+    "wall.iron",
+    "castle.iron",
+    "keep.iron"
+   ]
+  },
+  "keep_plinth": {
+   "m": [
+    3.0,
+    2.3
+   ],
+   "lay": "course",
+   "cls": "stone",
+   "grade": "keep",
+   "seam": 1.27,
+   "patch": 0.046,
+   "value": 0.158,
+   "source": "BM_PV_026_rusticated_plinth_B",
+   "used": [
+    "keep.base"
+   ]
+  },
+  "keep_smooth": {
+   "m": [
+    3.0,
+    2.22
+   ],
+   "lay": "random",
+   "cls": "stone",
+   "grade": "keep",
+   "seam": 1.25,
+   "patch": 0.023,
+   "value": 0.14,
+   "source": "p094",
+   "used": [
+    "keep.smooth"
+   ]
+  },
+  "keep_wall": {
+   "m": [
+    2.6,
+    2.18
+   ],
+   "lay": "course",
+   "cls": "stone",
+   "grade": "keep",
+   "seam": 1.18,
+   "patch": 0.024,
+   "value": 0.159,
+   "source": "BM_PV_003_bastion_basalt_C",
+   "used": [
+    "keep.wall"
+   ]
+  },
+  "keep_wall_b": {
+   "m": [
+    2.6,
+    2.91
+   ],
+   "lay": "course",
+   "cls": "stone",
+   "grade": "keep",
+   "seam": 1.16,
+   "patch": 0.032,
+   "value": 0.161,
+   "source": "BM_PV_004_bastion_basalt_D",
+   "used": [
+    "keep.wall_alt"
+   ]
+  },
+  "leather": {
+   "m": [
+    1.2,
+    1.2
+   ],
+   "lay": "random",
+   "cls": "cloth",
+   "grade": "darkwood",
+   "seam": 1.43,
+   "patch": 0.024,
+   "value": 0.13,
+   "source": "BM_PV_069_embossed_leather",
+   "used": [
+    "city_rich.in_leather"
+   ]
+  },
+  "march_gravel": {
+   "m": [
+    2.5,
+    2.39
+   ],
+   "lay": "random",
+   "cls": "stone",
+   "grade": "march",
+   "seam": 1.08,
+   "patch": 0.007,
+   "value": 0.3,
+   "source": "p070",
+   "used": [
+    "marches.yard"
+   ]
+  },
+  "march_wall": {
+   "m": [
+    3.0,
+    3.61
+   ],
+   "lay": "course",
+   "cls": "stone",
+   "grade": "march",
+   "seam": 1.25,
+   "patch": 0.018,
+   "value": 0.3,
+   "source": "BM_PV_006_curtain_granite_B",
+   "used": [
+    "marches.wall"
+   ]
+  },
+  "march_wall_b": {
+   "m": [
+    3.0,
+    3.31
+   ],
+   "lay": "course",
+   "cls": "stone",
+   "grade": "march",
+   "seam": 1.29,
+   "patch": 0.027,
+   "value": 0.3,
+   "source": "BM_PV_008_curtain_granite_D",
+   "used": [
+    "marches.wall_alt"
+   ]
+  },
+  "market_flags": {
+   "m": [
+    2.4,
+    2.09
+   ],
+   "lay": "course",
+   "cls": "stone",
+   "grade": "market",
+   "seam": 1.07,
+   "patch": 0.043,
+   "value": 0.27,
+   "source": "BM_PV_034_hall_flagstones_B",
+   "used": [
+    "city_market.square"
+   ]
+  },
+  "market_wall": {
+   "m": [
+    3.0,
+    1.98
+   ],
+   "lay": "course",
+   "cls": "stone",
+   "grade": "market",
+   "seam": 1.15,
+   "patch": 0.033,
+   "value": 0.27,
+   "source": "p125",
+   "used": [
+    "city_market.wall"
+   ]
+  },
+  "ossuary_wall": {
+   "m": [
+    2.2,
+    1.48
+   ],
+   "lay": "random",
+   "cls": "stone",
+   "grade": "ivory",
+   "seam": 1.47,
+   "patch": 0.073,
+   "value": 0.36,
+   "source": "p099",
+   "placeholder": true,
+   "used": [
+    "city_bones.ossuary"
+   ]
+  },
+  "panelling": {
+   "m": [
+    2.0,
+    2.15
+   ],
+   "lay": "course",
+   "cls": "wood",
+   "grade": "darkwood",
+   "seam": 1.38,
+   "patch": 0.049,
+   "value": 0.13,
+   "source": "BM_PV_047_wood_panelling",
+   "used": [
+    "city_rich.in_panel",
+    "castle.panel"
+   ]
+  },
+  "plinth": {
+   "m": [
+    3.0,
+    2.3
+   ],
+   "lay": "course",
+   "cls": "stone",
+   "grade": "steel",
+   "seam": 1.27,
+   "patch": 0.046,
+   "value": 0.21,
+   "source": "BM_PV_026_rusticated_plinth_B",
+   "used": [
+    "marches.base",
+    "wall.base",
+    "castle.base"
+   ]
+  },
+  "plum_damask": {
+   "m": [
+    1.2,
+    1.2
+   ],
+   "lay": "course",
+   "cls": "cloth",
+   "grade": "plum",
+   "seam": 1.48,
+   "patch": 0.005,
+   "value": 0.14,
+   "source": "BM_PV_064_red_damask",
+   "used": [
+    "keep.cloth"
+   ]
+  },
+  "poor_brick": {
+   "m": [
+    3.2,
+    2.74
+   ],
+   "lay": "course",
+   "cls": "brick",
+   "grade": "poor",
+   "seam": 1.53,
+   "patch": 0.011,
+   "value": 0.27,
+   "source": "BM_PV_044_smoky_rose_brick",
+   "used": [
+    "city_poor.wall"
+   ]
+  },
+  "red_damask": {
+   "m": [
+    1.2,
+    1.2
+   ],
+   "lay": "course",
+   "cls": "cloth",
+   "grade": "wine",
+   "seam": 1.48,
+   "patch": 0.005,
+   "value": 0.17,
+   "source": "BM_PV_064_red_damask",
+   "used": [
+    "city_rich.in_wall",
+    "castle.cloth"
+   ]
+  },
+  "rich_brick": {
+   "m": [
+    0.9,
+    0.77
+   ],
+   "lay": "course",
+   "cls": "brick",
+   "grade": "violet",
+   "seam": 1.33,
+   "patch": 0.035,
+   "value": 0.25,
+   "source": "BM_PV_011_city_clay_brick_C",
+   "used": [
+    "city_rich.brick"
+   ]
+  },
+  "rich_flags": {
+   "m": [
+    2.4,
+    2.09
+   ],
+   "lay": "course",
+   "cls": "stone",
+   "grade": "violet",
+   "seam": 1.07,
+   "patch": 0.043,
+   "value": 0.25,
+   "source": "BM_PV_034_hall_flagstones_B",
+   "used": [
+    "city_rich.street"
+   ]
+  },
+  "rust_iron": {
+   "m": [
+    3.0,
+    1.84
+   ],
+   "lay": "random",
+   "cls": "metal",
+   "grade": "rust",
+   "seam": 1.22,
+   "patch": 0.075,
+   "value": 0.18,
+   "source": "p123",
+   "placeholder": true,
+   "used": [
+    "city_market.chains",
+    "sewers.grates"
+   ]
+  },
+  "setts": {
+   "m": [
+    2.0,
+    2.23
+   ],
+   "lay": "course",
+   "cls": "stone",
+   "grade": "market",
+   "seam": 1.14,
+   "patch": 0.027,
+   "value": 0.27,
+   "source": "BM_PV_031_courtyard_setts_C",
+   "used": [
+    "city_market.street"
+   ]
+  },
+  "sewer_brick": {
+   "m": [
+    3.2,
+    2.74
+   ],
+   "lay": "course",
+   "cls": "wet",
+   "grade": "sewer",
+   "seam": 1.53,
+   "patch": 0.011,
+   "value": 0.17,
+   "source": "BM_PV_044_smoky_rose_brick",
+   "used": [
+    "sewers.brick"
+   ]
+  },
+  "sewer_floor": {
+   "m": [
+    2.6,
+    3.26
+   ],
+   "lay": "random",
+   "cls": "wet",
+   "grade": "sewer",
+   "seam": 1.09,
+   "patch": 0.016,
+   "value": 0.17,
+   "source": "p082",
+   "used": [
+    "sewers.floor"
+   ]
+  },
+  "slime": {
+   "m": [
+    2.6,
+    3.26
+   ],
+   "lay": "random",
+   "cls": "wet",
+   "grade": "slime",
+   "seam": 1.09,
+   "patch": 0.016,
+   "value": 0.15,
+   "source": "p082",
+   "used": [
+    "sewers.slime"
+   ]
+  },
+  "soot_brick": {
+   "m": [
+    0.9,
+    1.1
+   ],
+   "lay": "course",
+   "cls": "brick",
+   "grade": "soot",
+   "seam": 1.4,
+   "patch": 0.025,
+   "value": 0.145,
+   "source": "BM_PV_009_city_clay_brick_A",
+   "used": [
+    "city_burnt.wall_alt"
+   ]
+  },
+  "soot_plaster": {
+   "m": [
+    3.0,
+    1.29
+   ],
+   "lay": "random",
+   "cls": "plaster",
+   "grade": "soot",
+   "seam": 1.39,
+   "patch": 0.137,
+   "value": 0.148,
+   "source": "p042",
+   "used": [
+    "city_burnt.in_wall"
+   ]
+  },
+  "undercroft": {
+   "m": [
+    2.6,
+    1.75
+   ],
+   "lay": "course",
+   "cls": "wet",
+   "grade": "sewer",
+   "seam": 1.17,
+   "patch": 0.054,
+   "value": 0.17,
+   "source": "BM_PV_013_undercroft_blocks_A",
+   "used": [
+    "sewers.wall"
+   ]
+  },
+  "undercroft_b": {
+   "m": [
+    2.6,
+    2.29
+   ],
+   "lay": "course",
+   "cls": "wet",
+   "grade": "sewer",
+   "seam": 1.38,
+   "patch": 0.033,
+   "value": 0.17,
+   "source": "BM_PV_015_undercroft_blocks_C",
+   "used": [
+    "sewers.wall_alt",
+    "castle.undercroft"
+   ]
+  },
+  "wall_setts": {
+   "m": [
+    2.0,
+    2.23
+   ],
+   "lay": "course",
+   "cls": "stone",
+   "grade": "wall",
+   "seam": 1.14,
+   "patch": 0.027,
+   "value": 0.16,
+   "source": "BM_PV_031_courtyard_setts_C",
+   "used": [
+    "wall.walk"
+   ]
+  },
+  "wet_grit": {
+   "m": [
+    2.5,
+    2.39
+   ],
+   "lay": "random",
+   "cls": "wet",
+   "grade": "sewer",
+   "seam": 1.08,
+   "patch": 0.007,
+   "value": 0.17,
+   "source": "p070",
+   "used": [
+    "sewers.grit"
+   ]
+  },
+  "wine_rug": {
+   "m": [
+    1.6,
+    1.79
+   ],
+   "lay": "random",
+   "cls": "cloth",
+   "grade": "wine",
+   "seam": 1.16,
+   "patch": 0.02,
+   "value": 0.17,
+   "source": "BM_PV_072_wine_wool",
+   "used": [
+    "castle.rug"
+   ]
+  }
+ },
+ "sets": {
+  "marches": {
+   "where": "The Marches' keeps and towers",
+   "accent": "weathered lichen grey",
+   "parts": {
+    "wall": "march_wall",
+    "wall_alt": "march_wall_b",
+    "base": "plinth",
+    "yard": "march_gravel",
+    "in_wall": "castle_stone",
+    "in_floor": "flags"
+   }
+  },
+  "wall": {
+   "where": "The city wall, the Barbican, the forts",
+   "accent": "blue-black, bone joints on the upper courses",
+   "parts": {
+    "wall": "basalt",
+    "upper": "basalt_bone",
+    "base": "plinth",
+    "walk": "wall_setts",
+    "iron": "iron"
+   }
+  },
+  "city_poor": {
+   "where": "The Rookeries, the Tanners' Steps, the Wharf",
+   "accent": "tannery ochre daub",
+   "parts": {
+    "wall": "poor_brick",
+    "daub": "daub",
+    "street": "gravel",
+    "in_wall": "grey_plaster",
+    "in_floor": "boards"
+   }
+  },
+  "city_burnt": {
+   "where": "The Cinder Quarter",
+   "accent": "ash grey",
+   "parts": {
+    "wall": "burnt_wall",
+    "wall_alt": "soot_brick",
+    "in_wall": "soot_plaster",
+    "timber": "char_timber",
+    "street": "ash_ground"
+   }
+  },
+  "city_market": {
+   "where": "Chainmarket, the Barracks Ward, the King's Mile",
+   "accent": "clay-brick red, warm brown-grey stone",
+   "parts": {
+    "wall": "market_wall",
+    "brick": "clay_brick",
+    "street": "setts",
+    "square": "market_flags",
+    "in_wall": "grey_plaster",
+    "in_floor": "boards",
+    "chains": "rust_iron"
+   }
+  },
+  "city_bones": {
+   "where": "The Bone Yards, the Ossuary",
+   "accent": "ivory",
+   "parts": {
+    "wall": "bone_ashlar",
+    "wall_alt": "bone_stone",
+    "ossuary": "ossuary_wall",
+    "path": "grave_gravel"
+   }
+  },
+  "city_rich": {
+   "where": "The Mages' Rise, Dukes' Row, the Castle Approach",
+   "accent": "wine on cold violet-grey stone",
+   "parts": {
+    "wall": "dressed",
+    "wall_alt": "dressed_b",
+    "brick": "rich_brick",
+    "street": "rich_flags",
+    "in_wall": "red_damask",
+    "in_panel": "panelling",
+    "in_floor": "gothic_rug",
+    "in_leather": "leather"
+   }
+  },
+  "sewers": {
+   "where": "The Sewers' four sectors",
+   "accent": "rust on wet green-black",
+   "parts": {
+    "wall": "undercroft",
+    "wall_alt": "undercroft_b",
+    "brick": "sewer_brick",
+    "floor": "sewer_floor",
+    "slime": "slime",
+    "grit": "wet_grit",
+    "grates": "rust_iron"
+   }
+  },
+  "castle": {
+   "where": "Castle Velscour's three wards",
+   "accent": "cold steel-blue granite",
+   "parts": {
+    "wall": "granite",
+    "wall_alt": "granite_b",
+    "base": "plinth",
+    "in_wall": "castle_stone",
+    "floor": "flags",
+    "panel": "panelling",
+    "cloth": "red_damask",
+    "rug": "wine_rug",
+    "undercroft": "undercroft_b",
+    "iron": "iron"
+   }
+  },
+  "keep": {
+   "where": "Velscour's Keep, on top of the castle",
+   "accent": "bone-pale joints on oxblood-black basalt; plum cloth",
+   "parts": {
+    "wall": "keep_wall",
+    "wall_alt": "keep_wall_b",
+    "smooth": "keep_smooth",
+    "base": "keep_plinth",
+    "floor": "inlay",
+    "cloth": "plum_damask",
+    "iron": "iron"
+   }
+  }
+ }
+}

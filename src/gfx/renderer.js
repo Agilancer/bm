@@ -8,9 +8,10 @@ import { HeroLooks } from './herolook.js';
 import { TOWN_KNIGHTS } from '../core/knights.js';
 import { LISANDRA_FORMS, LISANDRA_SCALE, SKIRT_PALETTE_JOINTS } from '../core/lisandra.js';
 import { FOREST_REACH } from '../core/forest.js';
-import { WORLD_EDGE } from '../core/lands.js';
+import { WORLD_EAST, WORLD_EDGE } from '../core/lands.js';
 import { roadSegments } from '../core/roads.js';
 import { PORTAL_MODELS, buildSites, buildUnder, dropSiteGeometry } from '../core/sites.js';
+import { PhobosNear } from './phobos-near.js';
 import { DELVES, PORTAL_SPOTS, braziers, caveFloorY, delveAt, inDungeon, torches } from '../core/dungeon.js';
 import { DOOR, HALL, hallLights, inHall } from '../core/testhall.js';
 import { SlimeBodies } from './slimes.js';
@@ -96,7 +97,10 @@ const KITE_TURN = -2 * Math.PI / 180, KITE_TILT = -9.5 * Math.PI / 180, KITE_SCA
 const SHIELD_SOCKET = [0.99692, -0.01765, 0.07643, 0.00000, 0.00000, 0.97437, 0.22495, 0.00000, -0.07844, -0.22426, 0.97137, 0.00000, 0.05418, -0.29743, -0.51052, 1.00000];
 // A shield on the socket, as the owner's outline has it: this wide and its top this high, its inner face to the eye and on the back of the arm. SHIELD_FACE: which way its inner face looks in its own model.
 const SHIELD_WIDTH = 0.675, SHIELD_TOP = 0.4932, SHIELD_FACE = 1, SHIELD_PLANE = -0.018, SHIELD_ARM_Y = 0.107;
-const FAR_HALF = WORLD_EDGE + 32;   // What the coarse map of the land covers, either way: all of it (src/core/lands.js).
+const FAR_HALF = WORLD_EDGE + 32;   // What the coarse map of the land covers, north, south and west: all of it (src/core/lands.js).
+const FAR_WIDE = WORLD_EAST + 32 + FAR_HALF;   // And how far it runs from its west edge to its east: the land's longer that way.
+// (As the shaders take them: where the map starts, and its size, in metres.)
+const FAR_ORG_WGSL = `vec2f(${(-FAR_HALF).toFixed(1)}, ${(-FAR_HALF).toFixed(1)})`, FAR_SPAN_WGSL = `vec2f(${FAR_WIDE.toFixed(1)}, ${(2 * FAR_HALF).toFixed(1)})`;
 // Out past this from where the land's grid and the pines were last laid, they're laid again round you (followLand).
 const FOLLOW_AT = 420;
 const GROUND_SIZE = 1024, GROUND_HALF = 128, BLOOD_HALF = 64;
@@ -204,7 +208,8 @@ export class Renderer {
     this.flash = 0;
     // Mid-afternoon going gold, over the shoulder as you come up the road, so plate and faces read.
     this.hour = DAWN_HOUR;
-    this.farSize = gpu.tier.lean ? 1024 : 2048;
+    this.farSize = gpu.tier.lean ? 1024 : 2048;   // (rows; farWide texels along each, at much the same metres a texel)
+    this.farWide = this.farSize * 1.5;
     this.sunDir = norm3(-0.78, 0.5, 0.38);
     this.splits = gpu.tier.splits || [12, 38, 130];
     this.shadowFrame = 0;
@@ -325,7 +330,7 @@ export class Renderer {
     this.landAt = [0, 0]; this.landHere = null; this.landBusy = false;
     const terrainJob = land('terrain', this.terrainArgs), forestJob = land('forest', { opening: this.openingEnabled, reach: FOREST_REACH });
     for (let r = 0; r < GROUND_SIZE; r += BAND) groundJobs.push(land('ground', { opening: this.openingEnabled, size: GROUND_SIZE, half: GROUND_HALF, colliders: groundColliders, rowStart: r, rowEnd: Math.min(GROUND_SIZE, r + BAND) }));
-    for (let r = 0; r < this.farSize; r += BAND) farJobs.push(land('farground', { opening: this.openingEnabled, size: this.farSize, half: FAR_HALF, rowStart: r, rowEnd: Math.min(this.farSize, r + BAND) }));
+    for (let r = 0; r < this.farSize; r += BAND) farJobs.push(land('farground', { opening: this.openingEnabled, size: this.farSize, wide: this.farWide, half: FAR_HALF, span: FAR_WIDE, rowStart: r, rowEnd: Math.min(this.farSize, r + BAND) }));
     const landJobs = timed('the land worked out', Promise.all([terrainJob, forestJob, Promise.all(farJobs), Promise.all(groundJobs)]));
     landJobs.catch(() => {});
 
@@ -402,9 +407,9 @@ export class Renderer {
     // ---- putting it together ----
     [this.colorArr, this.detailArr, this.groundColor, this.groundDetail] = await worldPictures;
     const [terrain, forest, farRows, rows] = await landJobs;
-    this.farMap = device.createTexture({ size: [this.farSize, this.farSize], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
-    this.farTint = device.createTexture({ size: [this.farSize, this.farSize], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
-    this.farKind = device.createTexture({ size: [this.farSize, this.farSize], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
+    this.farMap = device.createTexture({ size: [this.farWide, this.farSize], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
+    this.farTint = device.createTexture({ size: [this.farWide, this.farSize], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
+    this.farKind = device.createTexture({ size: [this.farWide, this.farSize], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
     // Every road and path in the land, for the ground's shader to draw sharp at any distance: the stretches, and which lie in each
     // 64 m square (src/core/roads.js roadSegments).
     {
@@ -414,10 +419,10 @@ export class Renderer {
       this.roadSeg = makeBuffer(device, rs.seg.length ? rs.seg : new Float32Array(8), GPUBufferUsage.STORAGE);
     }
     for (const row of farRows) {
-      const rowsN = row.data.length / 4 / this.farSize;
-      device.queue.writeTexture({ texture: this.farMap, origin: [0, row.rowStart] }, row.data, { bytesPerRow: this.farSize * 4 }, [this.farSize, rowsN]);
-      device.queue.writeTexture({ texture: this.farTint, origin: [0, row.rowStart] }, row.tint, { bytesPerRow: this.farSize * 4 }, [this.farSize, rowsN]);
-      device.queue.writeTexture({ texture: this.farKind, origin: [0, row.rowStart] }, row.kind, { bytesPerRow: this.farSize * 4 }, [this.farSize, rowsN]);
+      const rowsN = row.data.length / 4 / this.farWide;
+      device.queue.writeTexture({ texture: this.farMap, origin: [0, row.rowStart] }, row.data, { bytesPerRow: this.farWide * 4 }, [this.farWide, rowsN]);
+      device.queue.writeTexture({ texture: this.farTint, origin: [0, row.rowStart] }, row.tint, { bytesPerRow: this.farWide * 4 }, [this.farWide, rowsN]);
+      device.queue.writeTexture({ texture: this.farKind, origin: [0, row.rowStart] }, row.kind, { bytesPerRow: this.farWide * 4 }, [this.farWide, rowsN]);
     }
     this.groundMap = device.createTexture({ size: [GROUND_SIZE, GROUND_SIZE], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
     this.heightTex = device.createTexture({ size: [GROUND_SIZE, GROUND_SIZE], format: 'r32float', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
@@ -433,7 +438,7 @@ export class Renderer {
 
     this.buildStatics(await villageGlb, layerNames, manifest.layers, village.trees);
     this.pines = new Pines(this, forest.trees, layerNames);
-    this.farSpan = 2 * FAR_HALF;
+    this.farSpan = FAR_SPAN_WGSL; this.farOrg = FAR_ORG_WGSL;
     this.rocks = new Rocks(this);
     this.slimeBodies = new SlimeBodies(this);
     tick();
@@ -748,6 +753,49 @@ export class Renderer {
     if (old) setTimeout(() => { old.VB.destroy(); old.IB.destroy(); }, 500);
   }
 
+  // A group of the land's scenery folded to a point (gone) or put back as it was built. (landScenery: buildStatics.)
+  foldLand(key, gone) {
+    const g = this.landScenery?.get(key);
+    if (!g || g.gone === gone) return;
+    g.gone = gone;
+    for (const r of g.runs) {
+      let data = r.shown;
+      if (gone) { data = r.shown.slice(); for (let i = 0; i < data.length; i += 9) { data[i] = r.shown[0]; data[i + 1] = r.shown[1]; data[i + 2] = r.shown[2]; } }
+      this.device.queue.writeBuffer(this.staticVB, r.at, data);
+    }
+  }
+
+  // Parts as a kit builds them (Map layer -> {pos, nrm, uv, idx}) into a vertex and an index buffer of their own, the
+  // opaque first: { VB, IB, opaque, cut }. (As buildUnderSet packs a delve's.)
+  packParts(parts) {
+    const { layerNames, layers } = this.staticLayers, prims = [];
+    for (const [name, part] of parts) {
+      const m = /^(dark|pale|frost|mire|spore|void):(.*)$/.exec(name), base = m ? m[2] : name;
+      let layer = layerNames.indexOf(base);
+      if (layer < 0) layer = FLAT[base] ?? 100;
+      prims.push({ layer: layer + (m ? TINTS[m[1]] * 1000 : 0), cutout: layer < 100 && layers[layer].cutout ? 1 : 0, ...part });
+    }
+    prims.sort((a, b) => a.cutout - b.cutout);
+    let nv = 0, ni = 0;
+    for (const p of prims) { nv += p.pos.length / 3; ni += p.idx.length; }
+    const verts = new ArrayBuffer(Math.max(1, nv) * 36), f = new Float32Array(verts), u = new Uint32Array(verts), indices = new Uint32Array(Math.max(1, ni)), runs = [0, 0];
+    let vo = 0, io = 0;
+    for (const p of prims) {
+      runs[p.cutout] += p.idx.length;
+      const base = vo, n = p.pos.length / 3;
+      for (let i = 0; i < n; i++) {
+        const o = vo * 9;
+        f[o] = p.pos[i * 3]; f[o + 1] = p.pos[i * 3 + 1]; f[o + 2] = p.pos[i * 3 + 2];
+        f[o + 3] = p.nrm[i * 3]; f[o + 4] = p.nrm[i * 3 + 1]; f[o + 5] = p.nrm[i * 3 + 2];
+        f[o + 6] = p.uv[i * 2]; f[o + 7] = p.uv[i * 2 + 1];
+        u[o + 8] = p.layer;
+        vo++;
+      }
+      for (let i = 0; i < p.idx.length; i++) indices[io++] = p.idx[i] + base;
+    }
+    return { opaque: runs[0], cut: runs[1], VB: makeBuffer(this.device, new Float32Array(verts), GPUBufferUsage.VERTEX), IB: makeBuffer(this.device, indices, GPUBufferUsage.INDEX) };
+  }
+
   buildUnderSet(key) {
     const { layerNames, layers } = this.staticLayers;
     const { parts, groups } = buildUnder(key);
@@ -815,12 +863,13 @@ export class Renderer {
     // And everything out in the countries. (Not the delves or the Test Dungeon: a buffer of their own, one at a time, when
     // you're down one. useUnder.)
     this.staticLayers = { layerNames, layers };
-    for (const [name, part] of buildSites(true, !!this.tier.lean).parts) {
+    const sites = buildSites(true, !!this.tier.lean);
+    for (const [name, part] of sites.parts) {
       const m = /^(dark|pale|frost|mire|spore|void):(.*)$/.exec(name), base = m ? m[2] : name;
       let layer = layerNames.indexOf(base);
       if (layer < 0) layer = FLAT[base] ?? 100;
       const cutout = layer < 100 && layers[layer].cutout;
-      prims.push({ layer: layer + (m ? TINTS[m[1]] * 1000 : 0), cutout, pos: part.pos, nrm: part.nrm, uv: part.uv, idx: part.idx });
+      prims.push({ name, layer: layer + (m ? TINTS[m[1]] * 1000 : 0), cutout, pos: part.pos, nrm: part.nrm, uv: part.uv, idx: part.idx });
     }
     // The opaque, then the cutouts.
     const rank = (p) => (p.cutout ? 1 : 0);
@@ -842,9 +891,11 @@ export class Renderer {
     const indices = new Uint32Array(ni);
     let vo = 0, io = 0;
     const runs = [0, 0];
+    const baseOf = new Map();
     for (const p of prims) {
       runs[rank(p)] += p.idx.length;
       const base = vo;
+      if (p.name) baseOf.set(p.name, base);
       const n = p.pos.length / 3;
       for (let i = 0; i < n; i++) {
         const o = vo * 9;
@@ -855,6 +906,18 @@ export class Renderer {
         vo++;
       }
       for (let i = 0; i < p.idx.length; i++) indices[io++] = p.idx[i] + base;
+    }
+    // The land's scenery that comes and goes: Phobos's houses, a group to each 100 m cell (src/core/phobos-build.js), which
+    // are folded to a point while the near view of that cell is up (src/gfx/phobos-near.js, foldLand). Each group's corners
+    // as built, and where they are in the buffer.
+    this.landScenery = new Map();
+    for (const [k, g] of sites.groups) {
+      if (!k.startsWith('ph:')) continue;
+      const made = g.ranges.filter((q) => !q.under && baseOf.has(q.layer)).map(({ layer, v0, v1 }) => {
+        const at = (baseOf.get(layer) + v0) * 36, n = (v1 - v0) * 9;
+        return { at, shown: f.slice(at / 4, at / 4 + n) };
+      });
+      this.landScenery.set(k, { gone: false, runs: made });
     }
     this.staticVB = makeBuffer(device, new Float32Array(verts), GPUBufferUsage.VERTEX);
     this.staticIB = makeBuffer(device, indices, GPUBufferUsage.INDEX);
@@ -1817,7 +1880,7 @@ export class Renderer {
     const layout = (...g) => device.createPipelineLayout({ bindGroupLayouts: g });
     const module = (code) => this.shader(code);
 
-    const terrainMod = module(TERRAIN.replaceAll('FAR_SPAN', (2 * FAR_HALF).toFixed(1)));
+    const terrainMod = module(TERRAIN.replaceAll('FAR_SPAN', FAR_SPAN_WGSL).replaceAll('FAR_ORG', FAR_ORG_WGSL));
     this.pTerrain = device.createRenderPipeline({
       layout: layout(this.bgl0, this.bglArr2),
       vertex: { module: terrainMod, entryPoint: 'vs', buffers: [{ arrayStride: 24, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }, { shaderLocation: 1, offset: 12, format: 'float32x3' }] }] },
@@ -2373,6 +2436,8 @@ export class Renderer {
     const tan = Math.tan(fov / 2);
     const sun = this.sunDir;
     this.followLand(cam);
+    // (Phobos's houses near the eye, as they are from near: src/gfx/phobos-near.js.)
+    (this.phobosNear ||= new PhobosNear(this)).update(cam);
     this.slimeBodies?.update(snap, snap[H.TIME], cam);
     this.pines.update(cam, aspect, tan);
     this.rocks.update(cam, aspect, tan);
@@ -2632,6 +2697,7 @@ export class Renderer {
     }
     sp.setPipeline(this.pShStatic);
     this.drawUnderShadow(sp);
+    this.phobosNear?.draw(sp);
     sp.setVertexBuffer(0, this.staticVB);
     sp.setIndexBuffer(this.staticIB, 'uint32');
     sp.drawIndexed(this.staticRuns.land[1]);
@@ -2659,6 +2725,7 @@ export class Renderer {
       }
       sp.setPipeline(this.pShStatic);
       this.drawUnderShadow(sp);
+      this.phobosNear?.draw(sp);
       sp.setVertexBuffer(0, this.staticVB);
       sp.setIndexBuffer(this.staticIB, 'uint32');
       sp.drawIndexed(this.staticRuns.land[1]);
@@ -3306,6 +3373,7 @@ export class Renderer {
       mp.setPipeline(this.pStaticCut);
       mp.drawIndexed(sc[1], 1, sc[0]);
     }
+    if (!U && this.phobosNear?.count) { mp.setPipeline(this.pStatic); this.phobosNear.draw(mp); }
     if (this.slimeBodies?.count) { mp.setPipeline(this.pStatic); this.slimeBodies.draw(mp); }
     // (Down the Warrens nothing of the land above can be seen: its rock is all there is.)
     if (!vis.warrens) {

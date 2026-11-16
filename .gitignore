@@ -11,3 +11,6 @@ files.json
 
 # The dragons' baked clips (tools/dragons/clips.py): install.py copies them into assets/monsters/tripo.
 art/dragons/anim/
+
+# Phobos character models mid-pipeline (Meshy downloads, stage 1 and 2): the finished ones are in assets/game/folk.
+art/phobos/models/

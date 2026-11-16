@@ -53,6 +53,8 @@ export class TownClient {
     inb[FIN.HOUR] = hour; inb[FIN.DAY] = this.day;
     inb[FIN.PX] = snap[H.PX]; inb[FIN.PY] = snap[H.PY]; inb[FIN.PZ] = snap[H.PZ];
     inb[FIN.CAMX] = cam.x; inb[FIN.CAMY] = cam.y; inb[FIN.CAMZ] = cam.z;
+    // (Which way the player's heading, when they are: where Phobos's street crowd turns up ahead of them, src/folk/brain.js setDown.)
+    if (Math.hypot(snap[H.VX], snap[H.VZ]) > 0.5) inb[FIN.YAW] = Math.atan2(snap[H.VX], snap[H.VZ]);
     inb[FIN.PAUSED] = paused ? 1 : 0;
     inb[FIN.CAST] = this.cast;
     // Anything hostile and alive in reach of town, which the town runs indoors from.

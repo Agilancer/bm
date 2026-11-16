@@ -8,6 +8,7 @@ import { CHURCH_FOOTPRINT, CHURCH_WING } from '../core/church.js';
 import { WAY_BOX, caveCuts, wayDip } from '../core/opening.js';
 import { roadEdge, rocksAround } from '../core/rocks.js';
 import { COUNTRIES, COUNTRY_KEYS, MOUNT, SITES, SITE_KEYS, countryWeights, groundCover, routeDist } from '../core/lands.js';
+import { cityIn } from '../core/east.js';
 
 async function decode(url, flags) {
   const r = await fetch(url);
@@ -159,18 +160,19 @@ function buildForest({ reach, cx = 0, cz = 0 }) {
 // And a third, what kind of stone and ground: r the Ashen Waste (ash and basalt), g the Rustwood (rust-red stone), b the Downs and
 // the Barrow Moor (pale limestone), a the Sorrowhorn's flanks (black stone). None of them: grey granite, as round the town.
 // (Snow, rock and the tint change slowly, so they're worked out once to a block of four texels by four.)
-const KIND_OF = { ashen: [1, 0, 0, 0], rustwood: [0, 1, 0, 0], downs: [0, 0, 1, 0], barrow: [0, 0, 0.8, 0] };
-function buildFarRows({ size, half, rowStart, rowEnd }) {
-  const data = new Uint8Array((rowEnd - rowStart) * size * 4);
-  const tint = new Uint8Array((rowEnd - rowStart) * size * 4);
-  const kind = new Uint8Array((rowEnd - rowStart) * size * 4);
+const KIND_OF = { ashen: [1, 0, 0, 0], rustwood: [0, 1, 0, 0], downs: [0, 0, 1, 0], barrow: [0, 0, 0.8, 0], marches: [0.3, 0, 0, 0], phobos: [0.85, 0, 0, 0.5] };
+// (size rows over 2 * half metres north to south; wide texels a row over span metres, from the west edge east.)
+function buildFarRows({ size, wide = size, half, span = 2 * half, rowStart, rowEnd }) {
+  const data = new Uint8Array((rowEnd - rowStart) * wide * 4);
+  const tint = new Uint8Array((rowEnd - rowStart) * wide * 4);
+  const kind = new Uint8Array((rowEnd - rowStart) * wide * 4);
   const cw = new Float32Array(COUNTRY_KEYS.length);
   const blocks = new Map();
   const block = (bi, bj) => {
     const key = bi * 65536 + bj;
     let b = blocks.get(key);
     if (b) return b;
-    const x = (bi * 4 + 2) / size * 2 * half - half, z = (bj * 4 + 2) / size * 2 * half - half;
+    const x = (bi * 4 + 2) / wide * span - half, z = (bj * 4 + 2) / size * 2 * half - half;
     b = [0, 0, 170, 170, 170, 0, 0, 0, 0, 0];
     if (Math.hypot(x, z) > 1000) {
       const g = 4, h = terrainHeight(x, z);
@@ -185,7 +187,7 @@ function buildFarRows({ size, half, rowStart, rowEnd }) {
       const kd = [0, 0, 0, 0];
       COUNTRY_KEYS.forEach((key, c) => { const f = KIND_OF[key]; if (f) for (let q = 0; q < 4; q++) kd[q] += cw[c] * f[q]; });
       const md = Math.hypot(x - MOUNT.x, z - MOUNT.z);
-      kd[3] = md < MOUNT.R ? sstep(0.15, 0.55, 1 - md / MOUNT.R) : 0;
+      if (md < MOUNT.R) kd[3] = sstep(0.15, 0.55, 1 - md / MOUNT.R);   // (else Phobos's black stone, from its country)
       b = [snow, rock, (1 + (r - 1) * k) / 1.5 * 255, (1 + (gg - 1) * k) / 1.5 * 255, (1 + (bb - 1) * k) / 1.5 * 255, wet * k * 255, ...kd.map((v) => v * k * 255)];
     }
     blocks.set(key, b);
@@ -193,8 +195,8 @@ function buildFarRows({ size, half, rowStart, rowEnd }) {
   };
   let o = 0;
   for (let j = rowStart; j < rowEnd; j++) {
-    for (let i = 0; i < size; i++) {
-      const x = (i + 0.5) / size * 2 * half - half, z = (j + 0.5) / size * 2 * half - half;
+    for (let i = 0; i < wide; i++) {
+      const x = (i + 0.5) / wide * span - half, z = (j + 0.5) / size * 2 * half - half;
       let dirt = 0;
       if (x < -20 && x > -640 && z > -60 && z < 360) {
         const wob = (fbm(x * 0.21, z * 0.21, 2) - 0.5) * 2.6;
@@ -219,6 +221,8 @@ function buildFarRows({ size, half, rowStart, rowEnd }) {
           if (d < s.pad) dirt = Math.max(dirt, (1 - sstep(s.pad * 0.35, s.pad * 0.9, d + wob * 2)) * 0.85);
         }
       }
+      // (Inside Phobos's wall it's all trodden: no grass in its streets, or through its houses' floors.)
+      if (x > 9300 && x < 10800 && cityIn(x, z) < 1.0) dirt = Math.max(dirt, 0.96);
       const b = block(i >> 2, j >> 2);
       tint[o] = b[2]; tint[o + 1] = b[3]; tint[o + 2] = b[4]; tint[o + 3] = b[5];
       kind[o] = b[6]; kind[o + 1] = b[7]; kind[o + 2] = b[8]; kind[o + 3] = b[9];
@@ -311,14 +315,14 @@ function rollout(tactic, obs, rng) {
 
 // The map's samples (src/ui/map.js rows), rows j0 to j1 of a paper `grid` samples across out to `edge`: the heights, and for
 // the whole land's paper its woods and its countries' tints too. The same sums in the same order as the map's own.
-function mapRows({ edge, grid, j0, j1, land }) {
-  const N = grid + 1, step = (2 * edge) / grid, n = (j1 - j0) * N;
+function mapRows({ edge, grid, east = edge, gridx = grid, j0, j1, land }) {
+  const N = gridx + 1, step = (2 * edge) / grid, n = (j1 - j0) * N;
   const h = new Float32Array(n), wood = land ? new Float32Array(n) : null, tint = land ? new Float32Array(n * 3) : null;
   const w = new Float32Array(COUNTRY_KEYS.length);
   for (let j = j0; j < j1; j++) {
     const z = edge - j * step;
     for (let i = 0; i < N; i++) {
-      const x = edge - i * step, k = (j - j0) * N + i;
+      const x = east - i * step, k = (j - j0) * N + i;
       h[k] = terrainHeight(x, z);
       if (!land) continue;
       wood[k] = forestAmount(x, z);

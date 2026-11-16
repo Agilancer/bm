@@ -4,7 +4,7 @@
 import { ARMOR_K } from '../items/items.js';
 import { floorAt } from '../core/interior.js';
 import { CHURCH_BOUNDS } from '../core/church.js';
-import { LAND_EDGE } from '../core/terrain.js';
+import { LAND_EAST, LAND_EDGE } from '../core/terrain.js';
 import { ABIL, EV, H, INPUT, VM_PALETTE, WEAPONS } from '../core/layout.js';
 import { clamp, damp, wrapAngle } from '../core/math.js';
 import { S } from './knight.js';
@@ -101,8 +101,8 @@ export class Player {
   // The unseen wall at the edge of the grass. Indoors there's no such edge.
   keepToLand() {
     // (The Hollowfang Warrens lie out past the edge, under it: src/core/dungeon.js. The Test Dungeon past the other: src/core/testhall.js.)
-    if ((Math.abs(this.x) > LAND_EDGE || Math.abs(this.z) > LAND_EDGE) && floorAt(this.x, this.z) === null && !inDungeon(this.x, this.z) && !inHall(this.x, this.z)) {
-      this.x = clamp(this.x, -LAND_EDGE, LAND_EDGE); this.z = clamp(this.z, -LAND_EDGE, LAND_EDGE);
+    if ((this.x < -LAND_EDGE || this.x > LAND_EAST || Math.abs(this.z) > LAND_EDGE) && floorAt(this.x, this.z) === null && !inDungeon(this.x, this.z) && !inHall(this.x, this.z)) {
+      this.x = clamp(this.x, -LAND_EDGE, LAND_EAST); this.z = clamp(this.z, -LAND_EDGE, LAND_EDGE);
     }
   }
 

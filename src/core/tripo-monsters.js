@@ -8,6 +8,7 @@
 
 import { WILD_VARIANTS, battleLairs, outpostLair } from './wilds.js';
 import { BATTLES, OUTPOSTS } from './wilds-data.js';
+import { HAUNTS } from './east.js';
 
 export const TRIPO_BASE = 'assets/monsters/tripo/';
 export const TRIPO_SLOTS = 12;
@@ -119,6 +120,9 @@ export const VARIANTS = {
   ed_echo_green: { src: 'dragon_green', height: 5.6, name: 'ECHO OF THYRRAXIS' },
   ed_echo_red: { src: 'dragon_red', height: 5.6, name: 'ECHO OF KALDURRA' },
   ed_echo_undead: { src: 'dragon_undead', height: 5.6, name: 'ECHO OF MORVEKH' },
+  // The Marches' (src/core/marches.js): the Old Marshal in his Hold's yard, and what keeps the toll at Widow's Notch now.
+  ma_brannoch: { src: 'possessed_knight_2', alt: 'velscour_knight_2', height: 3.3, name: 'OLD MARSHAL BRANNOCH' },
+  ma_tollgiant: { src: 'plague_giant_armored', height: 5.2, name: 'THE TOLL-GIANT' },
 };
 // And the land's new kinds (src/core/wilds.js): a palette, a size, a name and tricks of their own on the old bodies.
 Object.assign(VARIANTS, WILD_VARIANTS);
@@ -156,6 +160,7 @@ const VKNIGHTS = ['velscour_knight_1', 'velscour_knight_2', 'velscour_knight_3',
 const VLANCERS = ['velscour_lancer', 'velscour_lancer_2', 'velscour_lancer_3'];
 const VLORDS = ['possessed_knight_1', 'possessed_knight_2', 'possessed_knight_3'].concat(VLANCERS);
 
+const HAUNT = (key) => { const h = HAUNTS.find((q) => q.key === key); return { key, x: h.x, z: h.z, r: h.r }; };
 export const LAIRS = [
   // The Darkwood, round Bellmourn.
   { key: 'werewolf', x: 40, z: 160, r: 2, boss: ['werewolf_brown'], n: 0, pal: ['Base'] },
@@ -197,6 +202,25 @@ export const LAIRS = [
   { key: 'gallows_plague', x: 4020, z: 3080, r: 9, boss: ['plague_giant_armored'], pick: ['plague_knight_black', 'plague_knight_red', 'plague_giant_1', 'plague_giant_2'], n: 3, pal: ['Base', 'Blighted', 'Bloodsoaked'] },
   { key: 'grawl_bats', x: 4740, z: 1680, r: 6, boss: ['werebat'], pick: ['dragonling_black'], n: 1, pal: ['Base', 'Bloodsoaked'] },
   { key: 'grove_demons', x: 3140, z: 4440, r: 8, pick: DEMONS.concat(MANNEQUINS), n: 4, pal: ['Base', 'Abyssal', 'Corrupted'] },
+  // The Marches (src/core/marches.js): Velscour's garrisons, each keep's in a colour of its own (the owner: palette swaps, a
+  // different one at each); his necromancers at the tower lights; the Old Marshal, the Toll-Giant, what waits at the Span, and the
+  // carrion birds on the plain under the Sill. (lvl: what auto-play takes them for, src/ui/autobrain.js lairLevel.)
+  { key: 'greywarden_guard', lvl: 14, x: 5992, z: -1962, r: 9, boss: VLANCERS, pick: VKNIGHTS, n: 4, pal: ['Ashen'] },
+  { key: 'lantern_keepers', lvl: 15, x: 6884, z: -1046, r: 7, boss: ['necromancer_lord'], pick: NECROS, n: 2, pal: ['Abyssal'] },
+  { key: 'gatewatch_toll', lvl: 17, x: 6652, z: 46, r: 9, boss: VLORDS, pick: VKNIGHTS, n: 4, pal: ['Infernal'] },
+  { key: 'needle_watch', lvl: 18, x: 7104, z: 1292, r: 7, pick: VKNIGHTS.concat(NECROS), n: 3, pal: ['Bone-white'] },
+  { key: 'marshal_host', lvl: 20, x: 6100, z: 2092, r: 12, boss: ['ma_brannoch'], pick: VKNIGHTS.concat(VLANCERS), n: 5, pal: ['Bloodsoaked'], wake: 160 },
+  { key: 'notch_giant', lvl: 22, x: 7482, z: 28, r: 6, boss: ['ma_tollgiant'], pick: ['plague_knight_black', 'plague_knight_red'], n: 2, pal: ['Base', 'Blighted'], wake: 160 },
+  { key: 'span_ambush', lvl: 22, x: 8404, z: 138, r: 12, pick: VKNIGHTS.concat(NECROS), n: 5, pal: ['Bloodsoaked', 'Ashen'] },
+  { key: 'sill_carrion', lvl: 20, x: 9050, z: -160, r: 9, pick: ['harpy_undead_1', 'harpy_undead_2'], n: 3, pal: ['Base', 'Ashen'] },
+  // City State Phobos (src/core/east.js HAUNTS): where the dead, the Loyal and the other horrors keep inside the wall. The
+  // street crowd keeps away from these (src/folk/people.js CROWD). His own in blood red, as everywhere in his area.
+  { ...HAUNT('phobos_boneyards'), lvl: 24, boss: ['skeleton_knight_giant', 'bone_golem'], pick: CHILDREN.concat(['plague_knight_black']), n: 5, pal: ['Bone-white', 'Ashen'] },
+  { ...HAUNT('phobos_cinder'), lvl: 24, pick: POSSESSED.concat(MANNEQUINS), n: 4, pal: ['Ashen', 'Corrupted'] },
+  { ...HAUNT('phobos_barracks'), lvl: 26, boss: VLANCERS, pick: VKNIGHTS, n: 5, pal: ['Bloodsoaked'] },
+  { ...HAUNT('phobos_approach'), lvl: 28, boss: VLORDS, pick: VKNIGHTS.concat(VLANCERS), n: 6, pal: ['Bloodsoaked'] },
+  { ...HAUNT('phobos_wharf'), lvl: 25, boss: ['worm_2'], pick: SPIDERS, n: 3, pal: ['Blighted', 'Abyssal'] },
+  { ...HAUNT('phobos_mages'), lvl: 27, boss: ['necromancer_lord_2'], pick: NECROS, n: 3, pal: ['Abyssal', 'Bloodsoaked'] },
   // ---- The land filled in: something living at or near every place that isn't a safe town, and beside every road every
   // few hundred metres to a kilometre, off to one side where a traveller sees it (never on the road). Each country has its
   // own; they're fewer and weaker near Bellmourn, more and worse far out, and the far ones have their kinds' tricks.

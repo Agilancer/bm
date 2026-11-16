@@ -83,8 +83,42 @@ export const POSTED = [
   // Frostwatch, the old watch-fort in the Rimeholt Fells.
   posted({ id: 'garrick', name: 'Hew Garrick', title: 'Warden of Frostwatch', body: 'garrick', sex: 'm', age: 48, post: [690, 3899], face: 1.571, idles: ['fold_arms_ual', 'look_around', 'idle_ual'] }),
 ];
-// Everyone with a body on the town's thread: the town's people, then the posted (the folk buffer's order).
-export const FOLK = PEOPLE.concat(POSTED);
+// City State Phobos's street crowd: ruffians, riff-raff and adventurer folk, on the town's own thread with no house, bed or
+// day (job 'roam': src/folk/brain.js). They're only up while you're inside the city's wall, and then they're about the
+// streets near you, wherever the dead and Velscour's Loyal don't keep (src/core/east.js HAUNTS): walking, standing about,
+// stopping two together to talk; anyone left far behind you turns up again somewhere ahead. kind: their lines
+// (src/folk/lines/phobos.js). Bodies: the townsfolk's, recoloured (tools/phobos/crowd_swaps.py), and a few of the posted
+// people's. The first CROWD_LEAN of them are all a phone has.
+const roam = (p) => ({ job: 'roam', crowd: true, walk: 'walk', ...p });
+export const CROWD = [
+  roam({ id: 'ph_nib', name: 'Nib Scarrow', title: 'a cutpurse', kind: 'cutpurse', body: 'ph_cut', sex: 'm', age: 24, speed: 1.05, idles: ['look_around', 'wait', 'scratch'] }),
+  roam({ id: 'ph_brannick', name: 'Brannick of Nowhere', title: 'a sellsword', kind: 'sellsword', body: 'ph_sword', sex: 'm', age: 38, walk: 'swagger', idles: ['fold_arms', 'idle', 'look_around'] }),
+  roam({ id: 'ph_tolly', name: 'Old Tolly', title: 'a drunk', kind: 'drunk', body: 'ph_drunk', sex: 'm', age: 55, walk: 'walk_ual', speed: 0.6, idles: ['depressed', 'laugh', 'idle_ual'] }),
+  roam({ id: 'ph_mason', name: 'Grey Aldo', title: 'a beggar', kind: 'beggar', body: 'ph_beggar', sex: 'm', age: 71, walk: 'walk_ual', speed: 0.55, still: 0.8, idles: ['depressed', 'wait', 'idle_ual'] }),
+  roam({ id: 'ph_jask', name: 'Jask Two-Bones', title: 'a dicer', kind: 'dicer', body: 'ph_dicer', sex: 'm', age: 31, idles: ['laugh', 'complain', 'idle'] }),
+  roam({ id: 'ph_quill', name: 'Mother Quill', title: 'a fence', kind: 'fence', body: 'ph_fence', sex: 'm', age: 60, walk: 'walk_ual', speed: 0.8, still: 0.6, idles: ['fold_arms_ual', 'idle_ual', 'look_around'] }),
+  roam({ id: 'ph_rook', name: 'Rook Bastable', title: 'a delver', kind: 'delver', body: 'ph_delver', sex: 'm', age: 29, idles: ['look_around', 'fold_arms', 'warm_up'] }),
+  roam({ id: 'ph_vane', name: 'Ser Nobody Vane', title: 'a demon hunter', kind: 'hunter', body: 'ph_hunter', sex: 'm', age: 44, walk: 'walk_proud', idles: ['fold_arms_ual', 'look_around', 'idle_ual'] }),
+  roam({ id: 'ph_mag', name: 'Mag Ninefingers', title: 'a fortune-teller', kind: 'fortune', body: 'ph_crone', sex: 'f', age: 69, walk: 'walk_ual', speed: 0.7, still: 0.7, idles: ['idle_ual', 'talk', 'wait'] }),
+  roam({ id: 'ph_bess', name: 'Red Bess', title: 'of the Gutted Lamb', kind: 'tavern', body: 'ph_doxy', sex: 'f', age: 23, idles: ['relax', 'laugh', 'wave'] }),
+  roam({ id: 'ph_hettie', name: 'Hettie Drain', title: 'a rat-catcher', kind: 'ratcatcher', body: 'ph_rat', sex: 'f', age: 37, idles: ['scratch', 'idle', 'look_around'] }),
+  roam({ id: 'ph_pim', name: 'Pim', title: 'a street urchin', kind: 'urchin', body: 'ph_urchin', sex: 'm', age: 11, speed: 1.15, idles: ['look_around', 'scratch', 'idle'] }),
+  roam({ id: 'ph_corve', name: 'Corve Ashlock', title: 'a delver', kind: 'delver', body: 'colm', sex: 'm', age: 47, idles: ['fold_arms_ual', 'look_around', 'idle_ual'] }),
+  roam({ id: 'ph_wulf', name: 'Wulfram the Bent', title: 'a sellsword', kind: 'sellsword', body: 'garrick', sex: 'm', age: 50, walk: 'swagger', idles: ['fold_arms_ual', 'idle_ual', 'look_around'] }),
+  roam({ id: 'ph_sorrel', name: 'Sorrel Vey', title: 'a cutpurse', kind: 'cutpurse', body: 'ysolt', sex: 'f', age: 22, speed: 1.05, idles: ['look_around', 'wait', 'idle'] }),
+  roam({ id: 'ph_abel', name: 'Brother Abel', title: 'a defrocked priest', kind: 'drunk', body: 'wymond', sex: 'm', age: 64, walk: 'walk_ual', speed: 0.65, idles: ['depressed', 'idle_ual', 'scratch'] }),
+  roam({ id: 'ph_greta', name: 'Greta Hask', title: 'a demon hunter', kind: 'hunter', body: 'hasket', sex: 'f', age: 41, idles: ['fold_arms', 'look_around', 'wait'] }),
+  roam({ id: 'ph_osk', name: 'Osk the Tout', title: 'a dicer', kind: 'dicer', body: 'osric', sex: 'm', age: 35, idles: ['talk', 'laugh', 'look_around'] }),
+  roam({ id: 'ph_cob', name: 'Cob Mallet', title: 'a bravo', kind: 'ruffian', body: 'ph_bravo', sex: 'm', age: 33, walk: 'swagger', idles: ['fold_arms', 'look_around', 'angry'] }),
+  roam({ id: 'ph_merrin', name: 'Knuckles Merrin', title: 'a ruffian', kind: 'ruffian', body: 'ph_knuckle', sex: 'm', age: 26, walk: 'swagger', idles: ['fold_arms', 'laugh', 'look_around'] }),
+  roam({ id: 'ph_lark', name: 'Lark Tamsey', title: 'a delver', kind: 'delver', body: 'ph_lark', sex: 'f', age: 27, idles: ['look_around', 'fold_arms', 'warm_up'] }),
+  roam({ id: 'ph_harl', name: 'Big Harl', title: 'a hired brute', kind: 'sellsword', body: 'ph_brute', sex: 'm', age: 36, walk: 'walk_proud', speed: 0.9, idles: ['fold_arms', 'idle', 'scratch'] }),
+  roam({ id: 'ph_wenna', name: 'Wenna Glass', title: 'of the Gutted Lamb', kind: 'tavern', body: 'ph_glass', sex: 'f', age: 25, idles: ['relax', 'laugh', 'wait'] }),
+  roam({ id: 'ph_tib', name: 'Tib', title: 'a street girl', kind: 'urchin', body: 'ph_tib', sex: 'f', age: 10, speed: 1.15, idles: ['look_around', 'idle', 'scratch'] }),
+];
+export const CROWD_LEAN = 8;
+// Everyone with a body on the town's thread: the town's people, then the posted, then Phobos's crowd (the folk buffer's order).
+export const FOLK = PEOPLE.concat(POSTED, CROWD);
 
 export const BY_ID = Object.fromEntries(FOLK.map((p) => [p.id, p]));
 export const first = (p) => (p.id === 'homunculus' ? 'Homunculus' : p.id === 'aldric' ? 'Ser Aldric' : p.id === 'dusty' ? 'Dusty' : p.name.split(' ').slice(0, p.name.startsWith('Ser ') ? 2 : 1).join(' '));

@@ -36,6 +36,9 @@
     "old_man": { "file": "MALE VILLAGER - OLDER DUDE.glb", "height": 1.72, "tris": 9000 },
     "wes": { "file": "MALE VILLAGER - WORKER - WES KINDA.glb", "height": 1.81, "tris": 9000 },
     "worker_2": { "file": "MALE VILLAGER - WORKER 2.glb", "height": 1.77, "tris": 9000 },
-    "worker": { "file": "MALE VILLAGER - WORKER.glb", "height": 1.83, "tris": 9000, "donor": "worker_2" }
+    "worker": { "file": "MALE VILLAGER - WORKER.glb", "height": 1.83, "tris": 9000, "donor": "worker_2" },
+    "apricot": { "file": "art/phobos/models/apricot.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.008, "height": 1.57, "tris": 32000 },
+    "martleboro": { "file": "art/phobos/models/martleboro.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.014, "calm_floor": 0.3, "height": 1.63, "tris": 32000 },
+    "louis_g": { "file": "art/phobos/models/louis_g.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.008, "height": 1.88, "tris": 32000 }
   }
 }

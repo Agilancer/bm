@@ -315,7 +315,7 @@ struct V {
   o.low = pIn.y;
   o.lp = pIn; o.ln = nIn; o.mat = mat;
   // What stone, from the country it lies in: the same pick as the ground's (src/gfx/materials.js TERRAIN).
-  let fuv = at.xz / FAR_SPAN + 0.5;
+  let fuv = (at.xz - FAR_ORG) / FAR_SPAN;
   let fm = textureSampleLevel(farMap, clampSmp, fuv, 0.0);
   let fk = textureSampleLevel(farKind, clampSmp, fuv, 0.0);
   let ft = textureSampleLevel(farTint, clampSmp, fuv, 0.0);
@@ -655,8 +655,7 @@ export class Rocks {
   buildPipelines(layout, targets, depth, ms, shDepth, bglShadow) {
     const { r } = this;
     const { device } = r;
-    const FAR_SPAN = r.farSpan.toFixed(1);
-    const mod = r.shader(ROCK.replaceAll('FAR_SPAN', FAR_SPAN));
+    const mod = r.shader(ROCK.replaceAll('FAR_SPAN', r.farSpan).replaceAll('FAR_ORG', r.farOrg));
     this.pMain = device.createRenderPipeline({
       layout: layout(r.bgl0, r.bglArr2),
       vertex: { module: mod, entryPoint: 'vs', buffers: [MESH, INSTANCE] },

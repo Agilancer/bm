@@ -186,6 +186,9 @@ export const COUNTRY_FACTIONS = {
   rimeholt: ['rime', 'rimeherd', 'howlers', 'frostbrood', 'storm', 'icewyrm', 'rimecoven'],
   gallows: ['plague', 'night', 'effigy', 'dusk', 'grave', 'hedge', 'pack'],
   deepwood: ['brood', 'night', 'moss', 'effigy', 'dig', 'pack'],
+  // (The east, src/core/east.js: nobody of Velscour's own is met on the way here either; his keeps are places, src/core/sites.js.)
+  marches: ['night', 'plague', 'grave', 'pack', 'dusk', 'hedge'],
+  phobos: ['grave', 'night', 'plague', 'brood', 'dusk'],
 };
 // Sides that leave each other be when they meet (everyone else fights): the dead and the cults raise each other's.
 export const TRUCES = [['dead', 'cult'], ['goblin', 'kobold']];
@@ -203,7 +206,7 @@ export const TEARS_KINDS = [
   { key: 'storm', name: 'A TEAR OF STORM', elem: STORM, side: 'flock', waves: ['w_storm_harpy', 'w_cliff_harpy', 'w_dire_wolfkin'], elite: ['w_storm_caller', 'w_thunder_ram'], lord: 'w_tear_storm', colossus: 'w_colossus_ember', pal: ['Stormhide', 'Cobalt'] },
 ];
 // Which tears a country gets (two each, as it should be).
-export const COUNTRY_TEARS = { darkwood: [2, 4], downs: [5, 2], fen: [3, 4], rustwood: [0, 4], ashen: [0, 2], barrow: [2, 1], rimeholt: [1, 5], gallows: [3, 2], deepwood: [4, 3] };
+export const COUNTRY_TEARS = { darkwood: [2, 4], downs: [5, 2], fen: [3, 4], rustwood: [0, 4], ashen: [0, 2], barrow: [2, 1], rimeholt: [1, 5], gallows: [3, 2], deepwood: [4, 3], marches: [2, 3], phobos: [2, 0] };
 export const TEAR = {
   see: 170,        // metres off that an open tear is drawn and told of
   start: 13,       // metres off that walking up to it starts it

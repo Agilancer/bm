@@ -3,13 +3,14 @@
 // that come up as things happen; and the ! and ? over the heads of those with work. Lisandra, once she's walked you down,
 // stands where the Long Road comes in and is talked to here too (src/folk/lines/lisandra.js). What's said is src/folk/lines/;
 // quests' workings src/folk/quests.js; trade src/folk/shops.js.
-import { FOLK, PEOPLE, POSTED, first as firstName } from '../folk/people.js';
+import { CROWD, FOLK, PEOPLE, POSTED, first as firstName } from '../folk/people.js';
 import { LINES as LA } from '../folk/lines/town_a.js';
 import { LINES as LB } from '../folk/lines/town_b.js';
 import { LINES as LC } from '../folk/lines/town_c.js';
 import { QUESTS } from '../folk/lines/quests.js';
 import { BEYOND, LINES as LBEY } from '../folk/lines/beyond.js';
 import { LINES as LLAND } from '../folk/lines/land.js';
+import { LINES as LPHOBOS } from '../folk/lines/phobos.js';
 import { LISANDRA, LINES as LLIS } from '../folk/lines/lisandra.js';
 import { C, CHARS_START, C_PROPS, C_SIZE, H } from '../core/layout.js';
 import { LISANDRA_FORMS } from '../core/lisandra.js';
@@ -25,7 +26,7 @@ import { CLOSE_X } from './menu-x.js';
 import { art } from './skin.js';
 import { giverOf, hintOf, placeOf, questLevel, rewardOf, stepsOf } from './questlog.js';
 
-const LINES = { ...LA, ...LB, ...LC, ...LBEY, ...LLAND, ...LLIS };
+const LINES = { ...LA, ...LB, ...LC, ...LBEY, ...LLAND, ...LLIS, ...LPHOBOS };
 // Where the people out past the town keep (src/folk/lines/beyond.js): the middle of the beat they walk (core/knights.js).
 // (Or, with no knight flagged as theirs, where their entry says they stand: `at`.)
 const BEYOND_AT = Object.fromEntries(BEYOND.map((b) => {
@@ -222,7 +223,8 @@ export class TownUI {
     Object.assign(this, o);
     // The town's, then those posted out in the land (theirs is the town's thread too: people.js POSTED), then those out past it
     // with no body in the town's worker, then her.
-    this.people = PEOPLE.concat(POSTED, BEYOND, [LISANDRA]);
+    // (Phobos's street crowd after the posted: theirs is the town's thread too.)
+    this.people = PEOPLE.concat(POSTED, CROWD, BEYOND, [LISANDRA]);
     this.lisI = this.people.length - 1;
     this.marks = new Map();         // person -> { el, kind }: the ! and ? over the heads of those with work
     this.balloons = new Map();

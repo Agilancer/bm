@@ -42,6 +42,13 @@ SEAM_HOLD = float(os.environ.get("FOLK_SEAM_HOLD", 1000))
 SEAM_WEIGHT = float(os.environ.get("FOLK_SEAM_WEIGHT", 0.95))
 HEAD_WEIGHT = float(os.environ.get("FOLK_HEAD_WEIGHT", 0.99))
 HAND_WEIGHT = float(os.environ.get("FOLK_HAND_WEIGHT", 0.9))
+
+
+def src_of(m):
+    """A model's source glb: in models.json's "src", or in the repo when the model says "repo" (the Phobos folk, art/phobos/models)."""
+    return os.path.join(ROOT if m.get("repo") else CFG["src"], m["file"])
+
+
 ARM_CHAIN = ("Shoulder", "Arm", "ForeArm", "Hand", "HandThumb", "HandIndex", "HandMiddle", "HandRing", "HandPinky")
 
 
@@ -121,7 +128,7 @@ def span(mesh, z, band=0.05):
 def give_skeleton(mesh, donor_id):
     """Fit the donor's skeleton to this mesh and carry its skin weights over."""
     d = CFG["models"][donor_id]
-    arm, dmesh = import_glb(os.path.join(CFG["src"], d["file"]))
+    arm, dmesh = import_glb(src_of(d))
     # Same height, same feet.
     x0, x1, y0, y1, z0, z1 = bounds(mesh)
     dx0, dx1, dy0, dy1, dz0, dz1 = bounds(dmesh)
@@ -193,6 +200,56 @@ def weld(mesh):
         bpy.ops.mesh.customdata_custom_splitnormals_clear()
     mesh.data.shade_smooth()
     mesh.data.update()
+
+
+def calm_head(mesh, radius, floor=0.55):
+    """Meshy's faces are a little crumpled: facets a few millimetres across tilted off the surface, some in layers, and
+    lit by their own normals they show as flakes and dark blotches (Apricot's cheek). So each head vertex takes the
+    area-weighted average normal of every face within `radius` of it, as far as those faces agree with each other
+    (a calm patch: skin, a hood's cloth; hair's deep folds keep their own). Custom normals only: no vertex moves."""
+    import mathutils.kdtree
+    me = mesh.data
+    head = {mesh.vertex_groups[n].index for n in ("mixamorig:Head", "mixamorig:HeadTop_End", "mixamorig:Neck") if n in mesh.vertex_groups}
+    kd = mathutils.kdtree.KDTree(len(me.polygons))
+    for p in me.polygons:
+        kd.insert(p.center, p.index)
+    kd.balance()
+    # First, any head face wound against the calm surface round it is turned to agree (drawn one-sided, or lit by
+    # its normal, a backward face is a hole or a dark chip: the marks under Apricot's nose).
+    headw = [sum(x.weight for x in v.groups if x.group in head) for v in me.vertices]
+    flip = []
+    for p in me.polygons:
+        if min(headw[i] for i in p.vertices) < 0.5:
+            continue
+        s = mathutils.Vector((0, 0, 0)); a = 0.0
+        for _, k, _ in kd.find_range(p.center, radius):
+            f = me.polygons[k]
+            s += f.normal * f.area; a += f.area
+        if a > 0 and s.length / a > 0.5 and p.normal.dot(s.normalized()) < -0.3:
+            flip.append(p.index)
+    for i in flip:
+        me.polygons[i].flip()
+    me.update()
+    log("head faces turned to agree with their neighbours:", len(flip))
+    normals = [v.normal.copy() for v in me.vertices]
+    changed = 0
+    for v in me.vertices:
+        if sum(x.weight for x in v.groups if x.group in head) < 0.5:
+            continue
+        s = mathutils.Vector((0, 0, 0)); a = 0.0
+        for _, k, _ in kd.find_range(v.co, radius):
+            f = me.polygons[k]
+            s += f.normal * f.area; a += f.area
+        if a <= 0 or s.length < 1e-12:
+            continue
+        # (floor: how little the neighbours may agree and still be calmed. 0.55 keeps lips and nostrils crisp;
+        # Martleboro's crumpled eye sockets agree as little as 0.4 and need 0.3.)
+        w = min(1.0, max(0.0, (s.length / a - floor) / 0.25))
+        if w > 0:
+            normals[v.index] = (v.normal * (1 - w) + s.normalized() * w).normalized()
+            changed += 1
+    me.normals_split_custom_set_from_vertices(normals)
+    return changed
 
 
 def decimate(mesh, ratio):
@@ -346,7 +403,7 @@ def update_manifest(mid, entry):
 def build(mid):
     m = CFG["models"][mid]
     reset()
-    arm, mesh = import_glb(os.path.join(CFG["src"], m["file"]))
+    arm, mesh = import_glb(src_of(m))
     if arm is None:
         arm = give_skeleton(mesh, m["donor"])
     # Their own height, feet on the ground, centred over the feet.
@@ -362,8 +419,12 @@ def build(mid):
     weld(mesh)
     if tris > m["tris"]:
         decimate(mesh, m["tris"] / tris)
-    moved = src.repair(mesh)
+    # ("keep_uv": a body that is not cut down keeps its own UVs. The repair lays every face on the nearest island's
+    # surface, which on Meshy's overlapping layers can be a hidden dark one: specks on Apricot's cheek.)
+    moved = 0 if m.get("keep_uv") and tris <= m["tris"] else src.repair(mesh)
     mesh.vertex_groups.remove(mesh.vertex_groups["_seam"])
+    if m.get("calm_head"):
+        log(mid, "head normals calmed on", calm_head(mesh, m["calm_head"], m.get("calm_floor", 0.55)), "vertices")
     with override(mesh):
         bpy.ops.object.vertex_group_limit_total(group_select_mode="ALL", limit=4)
         bpy.ops.object.vertex_group_normalize_all(group_select_mode="ALL", lock_active=False)
@@ -372,6 +433,8 @@ def build(mid):
     head = bone_head(arm, "Head")
     entry = {"glb": mid + ".glb", "height": m["height"], "hips": round(hips.z, 3), "head": round(head.z, 3),
              "joints": len(arm.data.bones), "tris": out_tris}
+    if "fist" in m:
+        entry["fist"] = m["fist"]  # how far it closes its fists on the run (src/folk/rig.js)
     if m.get("skirt") or SKIRT_ALL:
         values, info, cover, hem, knee = skirt(arm, mesh, m["height"])
         attr = mesh.data.attributes.new("_SKIRT", "FLOAT", "POINT")

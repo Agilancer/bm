@@ -6,7 +6,8 @@ import { inDungeon } from '../core/dungeon.js';
 import { inHall } from '../core/testhall.js';
 import { F, F_PALETTE, FIN, FOLK_STRIDE, SLOT_HEAD, readFolk } from '../folk/layout.js';
 import { SKIRT_JOINTS } from '../folk/rig.js';
-import { FOLK as PEOPLE } from '../folk/people.js';   // (the town's people and those posted out in the land)
+import { CROWD_LEAN, FOLK as PEOPLE } from '../folk/people.js';
+import { CITY } from '../core/east.js';   // (the town's people and those posted out in the land)
 import { Blankets } from './blankets.js';
 import { FolkTools } from './folktools.js';
 import { bodyRadius, inCascade } from './shadowcull.js';
@@ -52,6 +53,12 @@ export class FolkBodies {
     };
     while (left.size) {
       const i = next();
+      // (Phobos's street crowd last of all, and not till you're on your way there: a phone has only the first of them.)
+      if (PEOPLE[i].crowd) {
+        this.loaded = true;
+        if (r.tier.lean && PEOPLE.filter((p) => p.crowd).indexOf(PEOPLE[i]) >= CROWD_LEAN) continue;
+        while (this.map.inbox[FIN.PX] < CITY.x - CITY.a - 1600) await new Promise((res) => setTimeout(res, 4000));
+      }
       try {
         const p = PEOPLE[i], swap = folk.models[p.body] ? null : folk.swaps?.[p.body];
         const mk = swap ? swap.base : folk.models[p.body] ? p.body : 'worker';

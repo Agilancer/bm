@@ -33,9 +33,16 @@ const GRID = 600;                     // terrain samples across: 4 m apart
 const WORLD = LAND_EDGE;
 const WPX = 1400;                     // the land's paper: 8 m to a pixel
 const WMPP = (2 * WORLD) / WPX;
+// East the land runs on to the Marches and Phobos (src/core/east.js), so its paper's wider than it's tall: out to EAST that way
+// (a little past the land's edge, to come out whole in pixels, samples and fog cells alike).
+const EAST = WORLD + 6160;
+const WPXW = (EAST + WORLD) / WMPP;
 const WGRID = 560;                    // its samples: 20 m apart
+const WGRIDX = (EAST + WORLD) / (2 * WORLD / WGRID);
 const FOG = 700;                      // seen-or-not cells across the whole land: 16 m
 const FOG_M = (2 * WORLD) / FOG;
+const FOGW = (EAST + WORLD) / FOG_M;  // and along each row of them
+const FOG_OLD = (EAST - WORLD) / FOG_M;   // (how far along a row a save from before the east starts)
 const SEE = 46;                       // how far round you the map fills in, metres
 const MINI_R = 90;                    // the corner map's reach, metres from you to its rim
 const MINI_IN = 26;                   // and under a roof
@@ -44,9 +51,9 @@ const IN_SPAN = 70;                   // and under a roof
 const SPAN_MIN = 60, IN_MIN = 14;     // as near as it comes
 
 const toPaper = (x, z) => [(EDGE - x) / MPP, (EDGE - z) / MPP];
-const toWorld = (x, z) => [(WORLD - x) / WMPP, (WORLD - z) / WMPP];
+const toWorld = (x, z) => [(EAST - x) / WMPP, (WORLD - z) / WMPP];
 // Where the town's paper lies on the land's.
-const TOWN_AT = (WORLD - EDGE) / WMPP, TOWN_SIZE = (2 * EDGE) / WMPP;
+const TOWN_AT = (WORLD - EDGE) / WMPP, TOWN_AT_X = (EAST - EDGE) / WMPP, TOWN_SIZE = (2 * EDGE) / WMPP;
 
 // The roads and paths, drawn over the papers as lines (sharp at any nearness, not a picture made bigger): by their class, a
 // dark edge and a pale middle, wider the bigger the way, never thinner than so many pixels; a footpath broken unless you're
@@ -67,7 +74,7 @@ export class WorldMap {
     this.open = false;
     this.ready = false;
     this.paper = document.createElement('canvas'); this.paper.width = this.paper.height = PX;
-    this.land = document.createElement('canvas'); this.land.width = this.land.height = WPX;
+    this.land = document.createElement('canvas'); this.land.width = WPXW; this.land.height = WPX;
     this.portals = [];                // the seals you've woken: [x, z] (src/ui/portals.js)
     // Every way as a line on the land's paper, with its box in the land (src/core/roads.js allWays), and each class's all in one.
     this.ways = []; this.wayAll = {};
@@ -80,9 +87,9 @@ export class WorldMap {
       this.ways.push({ cls, path, x0, x1, z0, z1 });
       this.wayAll[cls].addPath(path);
     }
-    this.fog = document.createElement('canvas'); this.fog.width = this.fog.height = FOG;
+    this.fog = document.createElement('canvas'); this.fog.width = FOGW; this.fog.height = FOG;
     this.fogCtx = this.fog.getContext('2d');
-    this.seen = new Uint8Array(FOG * FOG);
+    this.seen = new Uint8Array(FOGW * FOG);
     this.resetFog();
     this.mini = document.getElementById('mapMini');
     this.miniCtx = this.mini.getContext('2d');
@@ -296,14 +303,14 @@ export class WorldMap {
   // A paper's samples, made on a thread of the pool's (src/sim/job.worker.js mapRows), a few rows a job so the land
   // being laid round you isn't kept waiting behind them: three seconds of sums that were the render thread's, in the first
   // half minute of play. False with no pool to ask (or a job that fails): then they're made here, as they were.
-  async rows(edge, grid, into) {
+  async rows(edge, grid, into, east = edge, gridx = grid) {
     if (!this.pool) return false;
-    const N = grid + 1, each = 24;
+    const N = grid + 1, NX = gridx + 1, each = 24;
     try {
       for (let j0 = 0; j0 < N; j0 += each) {
-        const res = await this.pool.run('maprows', { opening: openingTerrain, edge, grid, j0, j1: Math.min(N, j0 + each), land: !!into.wood });
-        into.h.set(res.h, j0 * N);
-        if (into.wood) { into.wood.set(res.wood, j0 * N); into.tint.set(res.tint, j0 * N * 3); }
+        const res = await this.pool.run('maprows', { opening: openingTerrain, edge, grid, east, gridx, j0, j1: Math.min(N, j0 + each), land: !!into.wood });
+        into.h.set(res.h, j0 * NX);
+        if (into.wood) { into.wood.set(res.wood, j0 * NX); into.tint.set(res.tint, j0 * NX * 3); }
       }
       return true;
     } catch (e) { console.warn('map rows', e); return false; }
@@ -311,15 +318,15 @@ export class WorldMap {
 
   // The whole land: its countries' colours by height, the woods, the water, the roads, and every named place.
   async buildLand() {
-    const N = WGRID + 1, step = (2 * WORLD) / WGRID;
-    const h = new Float32Array(N * N), wood = new Float32Array(N * N), tint = new Float32Array(N * N * 3);
+    const N = WGRID + 1, NX = WGRIDX + 1, step = (2 * WORLD) / WGRID;
+    const h = new Float32Array(N * NX), wood = new Float32Array(N * NX), tint = new Float32Array(N * NX * 3);
     const w = new Float32Array(COUNTRY_KEYS.length);
-    for (let j = (await this.rows(WORLD, WGRID, { h, wood, tint })) ? N : 0; j < N;) {
+    for (let j = (await this.rows(WORLD, WGRID, { h, wood, tint }, EAST, WGRIDX)) ? N : 0; j < N;) {
       const until = performance.now() + 4;
       for (; j < N && performance.now() < until; j++) {
         const z = WORLD - j * step;
-        for (let i = 0; i < N; i++) {
-          const x = WORLD - i * step, k = j * N + i;
+        for (let i = 0; i < NX; i++) {
+          const x = EAST - i * step, k = j * NX + i;
           h[k] = terrainHeight(x, z);
           wood[k] = forestAmount(x, z);
           countryWeights(x, z, w);
@@ -330,23 +337,23 @@ export class WorldMap {
       }
       await new Promise((r) => setTimeout(r, 0));
     }
-    const img = new ImageData(WGRID, WGRID);
+    const img = new ImageData(WGRIDX, WGRID);
     for (let j = 0; j < WGRID; j++) {
-      for (let i = 0; i < WGRID; i++) {
-        const k = j * N + i, v = h[k], dx = h[k + 1] - v, dy = h[k + N] - v;
+      for (let i = 0; i < WGRIDX; i++) {
+        const k = j * NX + i, v = h[k], dx = h[k + 1] - v, dy = h[k + NX] - v;
         const t = Math.min(1, Math.max(0, v / 700)) ** 0.6, snow = Math.min(1, Math.max(0, (v - 520) / 140));
         const shade = Math.min(1.4, Math.max(0.5, 1 - (dx + dy) * 0.02));
-        const o = (j * WGRID + i) * 4, f = 1 - wood[k] * 0.45;
+        const o = (j * WGRIDX + i) * 4, f = 1 - wood[k] * 0.45;
         const c = [(46 + 80 * t) * tint[k * 3] * f, (52 + 58 * t) * tint[k * 3 + 1] * f, (30 + 40 * t) * tint[k * 3 + 2] * f];
         for (let q = 0; q < 3; q++) img.data[o + q] = (c[q] + (226 - c[q]) * snow) * shade;
         img.data[o + 3] = 255;
       }
     }
-    const small = document.createElement('canvas'); small.width = small.height = WGRID;
+    const small = document.createElement('canvas'); small.width = WGRIDX; small.height = WGRID;
     small.getContext('2d').putImageData(img, 0, 0);
     const g = this.land.getContext('2d');
     g.imageSmoothingEnabled = true;
-    g.drawImage(small, 0, 0, WPX, WPX);
+    g.drawImage(small, 0, 0, WPXW, WPX);
     g.fillStyle = 'rgba(70, 104, 128, 0.95)';
     for (const wt of WATERS) { const [px, py] = toWorld(wt.x, wt.z); g.beginPath(); g.arc(px, py, Math.max(2, wt.r / WMPP), 0, 6.2832); g.fill(); }
     // (The roads aren't on this paper: they're drawn over it as lines, drawWays.)
@@ -363,16 +370,16 @@ export class WorldMap {
       g.beginPath(); g.arc(px, py, 3.2, 0, 6.2832); g.fill(); g.stroke();
     }
     // The land's rim, where nobody goes past.
-    g.strokeStyle = 'rgba(0, 0, 0, 0.8)'; g.lineWidth = 3; g.strokeRect(1.5, 1.5, WPX - 3, WPX - 3);
+    g.strokeStyle = 'rgba(0, 0, 0, 0.8)'; g.lineWidth = 3; g.strokeRect(1.5, 1.5, WPXW - 3, WPX - 3);
   }
 
   // Both papers, the roads and the fog, drawn into g as it's set up for the land's paper. s: screen pixels to a paper pixel;
   // d: screen pixels to a CSS pixel; box: what of the land's in view ({ x0, x1, z0, z1 }), if not all of it.
   drawPapers(g, s = 1, d = 1, box = null) {
     g.drawImage(this.land, 0, 0);
-    g.drawImage(this.paper, TOWN_AT, TOWN_AT, TOWN_SIZE, TOWN_SIZE);
+    g.drawImage(this.paper, TOWN_AT_X, TOWN_AT, TOWN_SIZE, TOWN_SIZE);
     this.drawWays(g, s, d, box, false);
-    g.drawImage(this.fog, 0, 0, FOG, FOG, 0, 0, WPX, WPX);
+    g.drawImage(this.fog, 0, 0, FOGW, FOG, 0, 0, WPXW, WPX);
     // (And the bigger ways faintly through the dark, where you haven't been: you know there's a road, not what's on it.)
     this.drawWays(g, s, d, box, true);
   }
@@ -405,27 +412,27 @@ export class WorldMap {
   }
 
   isSeen(x, z) {
-    const i = Math.floor((WORLD - x) / FOG_M), j = Math.floor((WORLD - z) / FOG_M);
-    return i >= 0 && j >= 0 && i < FOG && j < FOG && this.seen[j * FOG + i] === 1;
+    const i = Math.floor((EAST - x) / FOG_M), j = Math.floor((WORLD - z) / FOG_M);
+    return i >= 0 && j >= 0 && i < FOGW && j < FOG && this.seen[j * FOGW + i] === 1;
   }
 
   resetFog() {
     this.seen.fill(0);
     const f = this.fogCtx;
     f.globalCompositeOperation = 'source-over';
-    f.clearRect(0, 0, FOG, FOG);
-    f.fillStyle = '#000'; f.fillRect(0, 0, FOG, FOG);
+    f.clearRect(0, 0, FOGW, FOG);
+    f.fillStyle = '#000'; f.fillRect(0, 0, FOGW, FOG);
     this.lastCell = -1;
   }
 
   // Fills in the map round (x, z).
   see(x, z, r = SEE) {
-    const ci = (WORLD - x) / FOG_M, cj = (WORLD - z) / FOG_M, cr = r / FOG_M;
+    const ci = (EAST - x) / FOG_M, cj = (WORLD - z) / FOG_M, cr = r / FOG_M;
     let any = false;
     for (let j = Math.max(0, Math.floor(cj - cr)); j <= Math.min(FOG - 1, Math.ceil(cj + cr)); j++) {
-      for (let i = Math.max(0, Math.floor(ci - cr)); i <= Math.min(FOG - 1, Math.ceil(ci + cr)); i++) {
-        if (this.seen[j * FOG + i] || Math.hypot(i + 0.5 - ci, j + 0.5 - cj) > cr) continue;
-        this.seen[j * FOG + i] = 1; any = true;
+      for (let i = Math.max(0, Math.floor(ci - cr)); i <= Math.min(FOGW - 1, Math.ceil(ci + cr)); i++) {
+        if (this.seen[j * FOGW + i] || Math.hypot(i + 0.5 - ci, j + 0.5 - cj) > cr) continue;
+        this.seen[j * FOGW + i] = 1; any = true;
       }
     }
     // (Cleared where you are, not the whole fog painted again: it's 700 cells across.)
@@ -439,20 +446,20 @@ export class WorldMap {
 
   paintFog() {
     const f = this.fogCtx;
-    const img = f.createImageData(FOG, FOG);
-    for (let k = 0; k < FOG * FOG; k++) img.data[k * 4 + 3] = this.seen[k] ? 0 : 255;
+    const img = f.createImageData(FOGW, FOG);
+    for (let k = 0; k < FOGW * FOG; k++) img.data[k * 4 + 3] = this.seen[k] ? 0 : 255;
     f.putImageData(img, 0, 0);
   }
 
   // As saved: the seen cells, eight to a byte, in base64.
   save() {
-    const bytes = new Uint8Array(Math.ceil((FOG * FOG) / 8));
-    for (let k = 0; k < FOG * FOG; k++) if (this.seen[k]) bytes[k >> 3] |= 1 << (k & 7);
+    const bytes = new Uint8Array(Math.ceil((FOGW * FOG) / 8));
+    for (let k = 0; k < FOGW * FOG; k++) if (this.seen[k]) bytes[k >> 3] |= 1 << (k & 7);
     let s = '';
     for (const b of bytes) s += String.fromCharCode(b);
     const under = {};
     for (const c of CHARTS) { const u = c.save(); if (u) under[c.key] = u; }
-    return { fog: btoa(s), n: FOG, under };
+    return { fog: btoa(s), n: FOG, w: FOGW, under };
   }
 
   load(d) {
@@ -461,7 +468,9 @@ export class WorldMap {
     if (d && d.n === FOG && typeof d.fog === 'string') {
       try {
         const s = atob(d.fog);
-        for (let k = 0; k < FOG * FOG; k++) if (s.charCodeAt(k >> 3) & (1 << (k & 7))) this.seen[k] = 1;
+        // (A save from before the east was a square of FOG cells: each of its rows sits FOG_OLD along the wider one.)
+        if (d.w === FOGW) { for (let k = 0; k < FOGW * FOG; k++) if (s.charCodeAt(k >> 3) & (1 << (k & 7))) this.seen[k] = 1; }
+        else if (d.w === undefined) for (let k = 0; k < FOG * FOG; k++) if (s.charCodeAt(k >> 3) & (1 << (k & 7))) this.seen[Math.floor(k / FOG) * FOGW + FOG_OLD + (k % FOG)] = 1;
       } catch { /* an unreadable map starts over */ }
     }
     // The town, which you know already.
@@ -488,7 +497,7 @@ export class WorldMap {
     if (place !== this.place) { this.place = place; if (!this.pin) this.follow = true; }
     if (place) place.see(x, z);
     else {
-      const cell = Math.floor((WORLD - z) / FOG_M) * FOG + Math.floor((WORLD - x) / FOG_M);
+      const cell = Math.floor((WORLD - z) / FOG_M) * FOGW + Math.floor((EAST - x) / FOG_M);
       if (cell !== this.lastCell) { this.lastCell = cell; this.see(x, z); }
     }
     this.mini.style.display = (this.ring ||= document.getElementById('mapRing') || this.mini).style.display = shown && !this.open ? 'block' : 'none';      // (the big map has its own north, where the corner one sits)
@@ -649,7 +658,7 @@ export class WorldMap {
     if (this.follow && snap) { this.cx = snap[H.PX]; this.cz = snap[H.PZ]; }
     // Never off the edge of the paper: a view wider than it sits on its middle.
     const hold = (v, lo, hi, half) => (hi - lo <= 2 * half ? (lo + hi) / 2 : Math.min(hi - half, Math.max(lo + half, v)));
-    const B = place ? { x0: place.x0 - 6, x1: place.x1 + 6, z0: place.z0 - 6, z1: place.z1 + 6 } : { x0: -WORLD, x1: WORLD, z0: -WORLD, z1: WORLD };
+    const B = place ? { x0: place.x0 - 6, x1: place.x1 + 6, z0: place.z0 - 6, z1: place.z1 + 6 } : { x0: -WORLD, x1: EAST, z0: -WORLD, z1: WORLD };
     const cx = hold(this.cx, B.x0, B.x1, hw), cz = hold(this.cz, B.z0, B.z1, hh);
     if (!this.follow) { this.cx = cx; this.cz = cz; }
     const toScreen = (x, z) => [W / 2 + (cx - x) * k, Hh / 2 + (cz - z) * k];
@@ -681,7 +690,7 @@ export class WorldMap {
       title = snap && place.title ? place.title(snap[H.PY]) : place.name;
     } else if (this.ready) {
       g.imageSmoothingEnabled = true;
-      g.save(); g.translate(W / 2 + (cx - WORLD) * k, Hh / 2 + (cz - WORLD) * k); g.scale(k * WMPP, k * WMPP); this.drawPapers(g, k * WMPP, dpr, { x0: cx - hw, x1: cx + hw, z0: cz - hh, z1: cz + hh }); g.restore();
+      g.save(); g.translate(W / 2 + (cx - EAST) * k, Hh / 2 + (cz - WORLD) * k); g.scale(k * WMPP, k * WMPP); this.drawPapers(g, k * WMPP, dpr, { x0: cx - hw, x1: cx + hw, z0: cz - hh, z1: cz + hh }); g.restore();
       const far = this.span > 2600, mid = this.span > 900;
       if (!far) {
         label('The Cathedral', ...churchAt(90, 0), 12, 26);

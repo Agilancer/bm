@@ -56,6 +56,7 @@ import { TownUI } from './ui/folk.js';
 import { BOSS_CHEST, LAST_CHEST, hands, matName, RARITIES } from './items/items.js';
 import { Lands } from './ui/lands.js';
 import { AutoPlay } from './ui/autoplay.js';
+import { FirstSight } from './ui/firstsight.js';
 import { FoeBars, isBoss } from './ui/foebars.js';
 import { Arrange } from './ui/arrange.js';
 import { groundAt, setHomes } from './ui/places.js';
@@ -1071,6 +1072,9 @@ async function boot(plan, poolSize) {
     base: BASE, opening: OPENING_ENABLED, game, shared, input, hud, audio, pack, inventory, townUI, lands, renderer, town,
     spellbar: () => game.spellbar, paused: () => state.paused, pause: (on) => input.onPauseChange(on), foeNames: FOE_NAMES, settings,
   });
+  // First sight of Phobos, from the Sill: auto-play stops and the camera goes to look (src/ui/firstsight.js).
+  game.firstSight = new FirstSight({ game, input, settings, renderer, tip: (t, s) => hud.tip(t, s), autoOn: () => !!game.autoplay?.on, paused: () => state.paused });
+  if (window.bm) window.bm.firstSight = (t = 0) => { const s = game.currentSnap(); if (s) { game.firstSight.begin(s); game.firstSight.t = t; } };   // (from t seconds in)
   // Playing as one of your party: the ▶ by their life bar (src/ui/heroplay.js, src/sim/heroplay.js).
   if (game.party) {
     game.heroPlay = new HeroPlayUI({ sim: simWorker, input, party: game.party, hud, chatLog: game.chatLog, viewSwitch: game.viewSwitch, autoplay: game.autoplay, renderer,
@@ -1629,6 +1633,7 @@ class GameView {
       this.updateTrail(dt, snap);
       this.updateDrops(dt, snap);
       this.autoplay?.frame(dt, snap);
+      this.firstSight?.frame(dt, snap);
       const c = this.overrideCam || this.cam;
       if (this.town) this.town.frame(snap, c, this.renderer.hour, !!this.shared.input[INPUT.PAUSE] || !!this.idle);
       this.questTrail?.frame(dt, snap);

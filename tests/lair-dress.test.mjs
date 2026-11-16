@@ -59,7 +59,7 @@ test('no one painting is most of a dungeon any more', () => {
   for (const [layer, p] of [...buildSites(true).parts, ...buildUnder().parts]) {
     for (let i = 0; i < p.idx.length; i += 3) {
       const [a, b, c] = [0, 1, 2].map((k) => { const v = p.idx[i + k] * 3; return [p.pos[v], p.pos[v + 1], p.pos[v + 2]]; });
-      if (Math.abs(a[0]) < 5600 && Math.abs(a[2]) < 5600) continue;
+      if (a[0] > -5600 && a[0] < 11700 && Math.abs(a[2]) < 5600) continue;
       if (a[0] < -5600 && Math.abs(a[2]) < 3000) continue;   // (the Test Dungeon's white hall is meant to be one thing)
       // (A dungeon to a square kilometre, but the Elder Gods' islands, which spread over three: one dungeon all the same.)
       const key = Math.hypot(a[0] - 6400, a[2] - 6500) < 900 ? 'elder' : `${Math.round(a[0] / 1000)},${Math.round(a[2] / 1000)}`;

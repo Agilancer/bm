@@ -1,0 +1,1584 @@
+[
+{
+"id": "p000",
+"source": "assets/citystatephobos/pexels-2160634325-38137354.jpg",
+"seam": 0.98,
+"patch": 0.099,
+"aspect": 1.587
+},
+{
+"id": "p001",
+"source": "assets/citystatephobos/pexels-adonyi-foto-2174387.jpg",
+"seam": 0.96,
+"patch": 0.084,
+"aspect": 0.564
+},
+{
+"id": "p002",
+"source": "assets/citystatephobos/pexels-alicia-calpe-470449314-34234154.jpg",
+"seam": 1.2,
+"patch": 0.015,
+"aspect": 0.631
+},
+{
+"id": "p003",
+"source": "assets/citystatephobos/pexels-anthony-s-images-407277901-15074006.jpg",
+"seam": 1.65,
+"patch": 0.038,
+"aspect": 1.048
+},
+{
+"id": "p004",
+"source": "assets/citystatephobos/pexels-anthony-s-images-407277901-35500700.jpg",
+"seam": 1.15,
+"patch": 0.106,
+"aspect": 1.58
+},
+{
+"id": "p005",
+"source": "assets/citystatephobos/pexels-anthony-s-images-407277901-36146010.jpg",
+"seam": 0.92,
+"patch": 0.068,
+"aspect": 1.962
+},
+{
+"id": "p006",
+"source": "assets/citystatephobos/pexels-aomata-14246568.jpg",
+"seam": 1.2,
+"patch": 0.071,
+"aspect": 1.231
+},
+{
+"id": "p007",
+"source": "assets/citystatephobos/pexels-bariserkin-11019342.jpg",
+"seam": 1.21,
+"patch": 0.056,
+"aspect": 0.936
+},
+{
+"id": "p008",
+"source": "assets/citystatephobos/pexels-bor-jinson-3583500-36753723.jpg",
+"seam": 1.17,
+"patch": 0.123,
+"aspect": 1.278
+},
+{
+"id": "p009",
+"source": "assets/citystatephobos/pexels-chris-f-38966-9018152.jpg",
+"seam": 1.32,
+"patch": 0.038,
+"aspect": 0.52
+},
+{
+"id": "p010",
+"source": "assets/citystatephobos/pexels-clarissa-schwarz-12501283.jpg",
+"seam": 1.25,
+"patch": 0.077,
+"aspect": 1.112
+},
+{
+"id": "p011",
+"source": "assets/citystatephobos/pexels-david9122-31672233.jpg",
+"seam": 1.17,
+"patch": 0.06,
+"aspect": 1.904
+},
+{
+"id": "p012",
+"source": "assets/citystatephobos/pexels-detlef-hansmann-414047842-15040810.jpg",
+"seam": 1.02,
+"patch": 0.038,
+"aspect": 1.694
+},
+{
+"id": "p013",
+"source": "assets/citystatephobos/pexels-eberhardgross-966927.jpg",
+"seam": 1.36,
+"patch": 0.085,
+"aspect": 1.656
+},
+{
+"id": "p014",
+"source": "assets/citystatephobos/pexels-eddie-hernandez-152149475-10560452.jpg",
+"seam": 1.13,
+"patch": 0.102,
+"aspect": 1.441
+},
+{
+"id": "p015",
+"source": "assets/citystatephobos/pexels-edgard-8454790.jpg",
+"seam": 1.12,
+"patch": 0.035,
+"aspect": 1.594
+},
+{
+"id": "p016",
+"source": "assets/citystatephobos/pexels-edgard-8454814.jpg",
+"seam": 1.24,
+"patch": 0.06,
+"aspect": 1.849
+},
+{
+"id": "p017",
+"source": "assets/citystatephobos/pexels-emmanuelcorreia-14535314.jpg",
+"seam": 1.1,
+"patch": 0.037,
+"aspect": 0.703
+},
+{
+"id": "p018",
+"source": "assets/citystatephobos/pexels-enginakyurt-11275509.jpg",
+"seam": 1.29,
+"patch": 0.063,
+"aspect": 1.07
+},
+{
+"id": "p019",
+"source": "assets/citystatephobos/pexels-enginakyurt-11499001.jpg",
+"seam": 1.39,
+"patch": 0.033,
+"aspect": 1.385
+},
+{
+"id": "p020",
+"source": "assets/citystatephobos/pexels-enginakyurt-11499083.jpg",
+"seam": 0.97,
+"patch": 0.063,
+"aspect": 1.239
+},
+{
+"id": "p021",
+"source": "assets/citystatephobos/pexels-enginakyurt-12106849.jpg",
+"seam": 1.14,
+"patch": 0.054,
+"aspect": 1.286
+},
+{
+"id": "p022",
+"source": "assets/citystatephobos/pexels-enginakyurt-16750027.jpg",
+"seam": 1.28,
+"patch": 0.057,
+"aspect": 1.61
+},
+{
+"id": "p023",
+"source": "assets/citystatephobos/pexels-enginakyurt-20291287.jpg",
+"seam": 0.92,
+"patch": 0.038,
+"aspect": 1.106
+},
+{
+"id": "p024",
+"source": "assets/citystatephobos/pexels-enginakyurt-34313593.jpg",
+"seam": 0.93,
+"patch": 0.072,
+"aspect": 0.555
+},
+{
+"id": "p025",
+"source": "assets/citystatephobos/pexels-enginakyurt-4612379.jpg",
+"seam": 1.05,
+"patch": 0.024,
+"aspect": 1.678
+},
+{
+"id": "p026",
+"source": "assets/citystatephobos/pexels-enginakyurt-9097404.jpg",
+"seam": 1.17,
+"patch": 0.022,
+"aspect": 0.667
+},
+{
+"id": "p027",
+"source": "assets/citystatephobos/pexels-filirovska-4913753.jpg",
+"seam": 1.06,
+"patch": 0.046,
+"aspect": 1.374
+},
+{
+"id": "p028",
+"source": "assets/citystatephobos/pexels-filirovska-4913771.jpg",
+"seam": 1.16,
+"patch": 0.068,
+"aspect": 1.612
+},
+{
+"id": "p029",
+"source": "assets/citystatephobos/pexels-filirovska-7140243.jpg",
+"seam": 1.09,
+"patch": 0.044,
+"aspect": 1.234
+},
+{
+"id": "p030",
+"source": "assets/citystatephobos/pexels-filirovska-7140399.jpg",
+"seam": 1.28,
+"patch": 0.037,
+"aspect": 1.936
+},
+{
+"id": "p031",
+"source": "assets/citystatephobos/pexels-goszton-33523399.jpg",
+"seam": 1.26,
+"patch": 0.056,
+"aspect": 1.472
+},
+{
+"id": "p032",
+"source": "assets/citystatephobos/pexels-gottapics-30498821.jpg",
+"seam": 1.52,
+"patch": 0.07,
+"aspect": 1.375
+},
+{
+"id": "p033",
+"source": "assets/citystatephobos/pexels-gottapics-30945191.jpg",
+"seam": 1.23,
+"patch": 0.04,
+"aspect": 1.777
+},
+{
+"id": "p034",
+"source": "assets/citystatephobos/pexels-goumbik-298723.jpg",
+"seam": 1.15,
+"patch": 0.118,
+"aspect": 1.596
+},
+{
+"id": "p035",
+"source": "assets/citystatephobos/pexels-haberdoedas-33384668.jpg",
+"seam": 1.03,
+"patch": 0.035,
+"aspect": 0.582
+},
+{
+"id": "p036",
+"source": "assets/citystatephobos/pexels-helmut-kaufmann-1140874-9497821.jpg",
+"seam": 1.34,
+"patch": 0.093,
+"aspect": 1.422
+},
+{
+"id": "p037",
+"source": "assets/citystatephobos/pexels-helmut-kaufmann-1140874-9497825.jpg",
+"seam": 1.18,
+"patch": 0.067,
+"aspect": 1.221
+},
+{
+"id": "p038",
+"source": "assets/citystatephobos/pexels-huys-photography-202304-6903172.jpg",
+"seam": 0.89,
+"patch": 0.058,
+"aspect": 1.272
+},
+{
+"id": "p039",
+"source": "assets/citystatephobos/pexels-irrabagon-35372377.jpg",
+"seam": 1.25,
+"patch": 0.074,
+"aspect": 1.481
+},
+{
+"id": "p040",
+"source": "assets/citystatephobos/pexels-jorgeural-5557046.jpg",
+"seam": 1.04,
+"patch": 0.053,
+"aspect": 1.424
+},
+{
+"id": "p041",
+"source": "assets/citystatephobos/pexels-krakograff-textures-124842124-14249937.jpg",
+"seam": 1.03,
+"patch": 0.107,
+"aspect": 1.561
+},
+{
+"id": "p042",
+"source": "assets/citystatephobos/pexels-krakograff-textures-124842124-9990277.jpg",
+"seam": 1.18,
+"patch": 0.157,
+"aspect": 2.283
+},
+{
+"id": "p043",
+"source": "assets/citystatephobos/pexels-laura-tancredi-7078050.jpg",
+"seam": 1.53,
+"patch": 0.021,
+"aspect": 0.726
+},
+{
+"id": "p044",
+"source": "assets/citystatephobos/pexels-lebele-17094817.jpg",
+"seam": 0.85,
+"patch": 0.048,
+"aspect": 0.987
+},
+{
+"id": "p045",
+"source": "assets/citystatephobos/pexels-magda-ehlers-pexels-13246806.jpg",
+"seam": 1.12,
+"patch": 0.102,
+"aspect": 2.169
+},
+{
+"id": "p046",
+"source": "assets/citystatephobos/pexels-magda-ehlers-pexels-33692884.jpg",
+"seam": 1.08,
+"patch": 0.044,
+"aspect": 1.293
+},
+{
+"id": "p047",
+"source": "assets/citystatephobos/pexels-magda-ehlers-pexels-38251360.jpg",
+"seam": 1.2,
+"patch": 0.062,
+"aspect": 1.288
+},
+{
+"id": "p048",
+"source": "assets/citystatephobos/pexels-magda-ehlers-pexels-6364055.jpg",
+"seam": 1.01,
+"patch": 0.069,
+"aspect": 1.018
+},
+{
+"id": "p049",
+"source": "assets/citystatephobos/pexels-magda-ehlers-pexels-6492328.jpg",
+"seam": 1.13,
+"patch": 0.087,
+"aspect": 1.551
+},
+{
+"id": "p050",
+"source": "assets/citystatephobos/pexels-magda-ehlers-pexels-9890854.jpg",
+"seam": 1.16,
+"patch": 0.06,
+"aspect": 1.507
+},
+{
+"id": "p051",
+"source": "assets/citystatephobos/pexels-maksims-mordanovs-641943936-18486074.jpg",
+"seam": 1.27,
+"patch": 0.048,
+"aspect": 0.578
+},
+{
+"id": "p052",
+"source": "assets/citystatephobos/pexels-memet-oz-296480690-36023243.jpg",
+"seam": 1.35,
+"patch": 0.071,
+"aspect": 0.805
+},
+{
+"id": "p053",
+"source": "assets/citystatephobos/pexels-mike-van-schoonderwalt-1884800-5483945.jpg",
+"seam": 1.56,
+"patch": 0.078,
+"aspect": 1.687
+},
+{
+"id": "p054",
+"source": "assets/citystatephobos/pexels-milivigerova-6031343.jpg",
+"seam": 0.98,
+"patch": 0.08,
+"aspect": 2.163
+},
+{
+"id": "p055",
+"source": "assets/citystatephobos/pexels-osvalduix-37655924.jpg",
+"seam": 1.09,
+"patch": 0.073,
+"aspect": 1.64
+},
+{
+"id": "p056",
+"source": "assets/citystatephobos/pexels-pixabay-161945.jpg",
+"seam": 0.85,
+"patch": 0.039,
+"aspect": 1.141
+},
+{
+"id": "p057",
+"source": "assets/citystatephobos/pexels-pixabay-36459.jpg",
+"seam": 1.2,
+"patch": 0.101,
+"aspect": 2.158
+},
+{
+"id": "p058",
+"source": "assets/citystatephobos/pexels-plato-terentev-3804555-9808873.jpg",
+"seam": 1.44,
+"patch": 0.078,
+"aspect": 1.702
+},
+{
+"id": "p059",
+"source": "assets/citystatephobos/pexels-remi-233480857-12144741.jpg",
+"seam": 1.09,
+"patch": 0.037,
+"aspect": 0.94
+},
+{
+"id": "p060",
+"source": "assets/citystatephobos/pexels-remi-233480857-12144743------.jpg",
+"seam": 1.05,
+"patch": 0.045,
+"aspect": 1.663
+},
+{
+"id": "p061",
+"source": "assets/citystatephobos/pexels-rods-14645903.jpg",
+"seam": 1.05,
+"patch": 0.03,
+"aspect": 1.706
+},
+{
+"id": "p062",
+"source": "assets/citystatephobos/pexels-seamlesstextures-100705448-11254954.jpg",
+"seam": 1.12,
+"patch": 0.014,
+"aspect": 0.796
+},
+{
+"id": "p063",
+"source": "assets/citystatephobos/pexels-seamlesstextures-100705448-11254956.jpg",
+"seam": 1.12,
+"patch": 0.019,
+"aspect": 1.355
+},
+{
+"id": "p064",
+"source": "assets/citystatephobos/pexels-seamlesstextures-100705448-11254961.jpg",
+"seam": 1.26,
+"patch": 0.034,
+"aspect": 0.836
+},
+{
+"id": "p065",
+"source": "assets/citystatephobos/pexels-seamlesstextures-100705448-11254972.jpg",
+"seam": 1.13,
+"patch": 0.023,
+"aspect": 1.013
+},
+{
+"id": "p066",
+"source": "assets/citystatephobos/pexels-seamlesstextures-100705448-11255146.jpg",
+"seam": 1.05,
+"patch": 0.008,
+"aspect": 0.826
+},
+{
+"id": "p067",
+"source": "assets/citystatephobos/pexels-seamlesstextures-100705448-11255175.jpg",
+"seam": 1.05,
+"patch": 0.016,
+"aspect": 0.865
+},
+{
+"id": "p068",
+"source": "assets/citystatephobos/pexels-seamlesstextures-100705448-11255177.jpg",
+"seam": 1.13,
+"patch": 0.025,
+"aspect": 1.258
+},
+{
+"id": "p069",
+"source": "assets/citystatephobos/pexels-seamlesstextures-100705448-11255187.jpg",
+"seam": 1.15,
+"patch": 0.021,
+"aspect": 0.833
+},
+{
+"id": "p070",
+"source": "assets/citystatephobos/pexels-seamlesstextures-100705448-11255344.jpg",
+"seam": 1.15,
+"patch": 0.008,
+"aspect": 1.048
+},
+{
+"id": "p071",
+"source": "assets/citystatephobos/pexels-seamlesstextures-100705448-11255346.jpg",
+"seam": 1.05,
+"patch": 0.008,
+"aspect": 0.725
+},
+{
+"id": "p072",
+"source": "assets/citystatephobos/pexels-seamlesstextures-100705448-11255401.jpg",
+"seam": 1.15,
+"patch": 0.02,
+"aspect": 1.047
+},
+{
+"id": "p073",
+"source": "assets/citystatephobos/pexels-seamlesstextures-100705448-11255407.jpg",
+"seam": 1.0,
+"patch": 0.016,
+"aspect": 1.168
+},
+{
+"id": "p074",
+"source": "assets/citystatephobos/pexels-seamlesstextures-100705448-11255408.jpg",
+"seam": 1.15,
+"patch": 0.013,
+"aspect": 1.203
+},
+{
+"id": "p075",
+"source": "assets/citystatephobos/pexels-seamlesstextures-100705448-11255409.jpg",
+"seam": 1.12,
+"patch": 0.023,
+"aspect": 0.764
+},
+{
+"id": "p076",
+"source": "assets/citystatephobos/pexels-seamlesstextures-100705448-11255411.jpg",
+"seam": 1.19,
+"patch": 0.029,
+"aspect": 0.811
+},
+{
+"id": "p077",
+"source": "assets/citystatephobos/pexels-seamlesstextures-100705448-11255412.jpg",
+"seam": 1.19,
+"patch": 0.034,
+"aspect": 0.86
+},
+{
+"id": "p078",
+"source": "assets/citystatephobos/pexels-seamlesstextures-100705448-11255413.jpg",
+"seam": 1.1,
+"patch": 0.011,
+"aspect": 0.97
+},
+{
+"id": "p079",
+"source": "assets/citystatephobos/pexels-seamlesstextures-100705448-11255417------.jpg",
+"seam": 1.26,
+"patch": 0.011,
+"aspect": 0.825
+},
+{
+"id": "p080",
+"source": "assets/citystatephobos/pexels-seamlesstextures-100705448-11255434-------.jpg",
+"seam": 1.14,
+"patch": 0.01,
+"aspect": 1.081
+},
+{
+"id": "p081",
+"source": "assets/citystatephobos/pexels-seamlesstextures-100705448-11255503.jpg",
+"seam": 1.05,
+"patch": 0.03,
+"aspect": 1.046
+},
+{
+"id": "p082",
+"source": "assets/citystatephobos/pexels-seamlesstextures-100705448-11255505.jpg",
+"seam": 1.08,
+"patch": 0.018,
+"aspect": 0.799
+},
+{
+"id": "p083",
+"source": "assets/citystatephobos/pexels-seamlesstextures-100705448-11255523.jpg",
+"seam": 1.13,
+"patch": 0.013,
+"aspect": 0.937
+},
+{
+"id": "p084",
+"source": "assets/citystatephobos/pexels-seamlesstextures-100705448-11255574.jpg",
+"seam": 1.15,
+"patch": 0.021,
+"aspect": 0.826
+},
+{
+"id": "p085",
+"source": "assets/citystatephobos/pexels-seamlesstextures-100705448-11255619.jpg",
+"seam": 1.12,
+"patch": 0.011,
+"aspect": 0.927
+},
+{
+"id": "p086",
+"source": "assets/citystatephobos/pexels-seamlesstextures-100705448-11255620.jpg",
+"seam": 1.03,
+"patch": 0.012,
+"aspect": 1.215
+},
+{
+"id": "p087",
+"source": "assets/citystatephobos/pexels-seamlesstextures-100705448-11255714.jpg",
+"seam": 1.03,
+"patch": 0.011,
+"aspect": 0.99
+},
+{
+"id": "p088",
+"source": "assets/citystatephobos/pexels-seamlesstextures-100705448-11255803.jpg",
+"seam": 1.29,
+"patch": 0.023,
+"aspect": 1.459
+},
+{
+"id": "p089",
+"source": "assets/citystatephobos/pexels-seby-augustine-1224626-37357839.jpg",
+"seam": 0.83,
+"patch": 0.079,
+"aspect": 1.154
+},
+{
+"id": "p090",
+"source": "assets/citystatephobos/pexels-sersh-marsh-100265359-9532087.jpg",
+"seam": 1.05,
+"patch": 0.067,
+"aspect": 1.179
+},
+{
+"id": "p091",
+"source": "assets/citystatephobos/pexels-share-textures-3167406-11285485.jpg",
+"seam": 1.12,
+"patch": 0.005,
+"aspect": 1.264
+},
+{
+"id": "p092",
+"source": "assets/citystatephobos/pexels-share-textures-3167406-11285515.jpg",
+"seam": 1.06,
+"patch": 0.1,
+"aspect": 0.752
+},
+{
+"id": "p093",
+"source": "assets/citystatephobos/pexels-simaomoreira-10875458.jpg",
+"seam": 1.49,
+"patch": 0.1,
+"aspect": 1.444
+},
+{
+"id": "p094",
+"source": "assets/citystatephobos/pexels-sora-noao-265549236-12998761.jpg",
+"seam": 1.26,
+"patch": 0.036,
+"aspect": 1.373
+},
+{
+"id": "p095",
+"source": "assets/citystatephobos/pexels-sora-noao-265549236-12998849.jpg",
+"seam": 1.39,
+"patch": 0.042,
+"aspect": 0.951
+},
+{
+"id": "p096",
+"source": "assets/citystatephobos/pexels-tahir-34309998.jpg",
+"seam": 0.74,
+"patch": 0.086,
+"aspect": 0.583
+},
+{
+"id": "p097",
+"source": "assets/citystatephobos/pexels-tahir-37064755.jpg",
+"seam": 1.15,
+"patch": 0.04,
+"aspect": 1.278
+},
+{
+"id": "p098",
+"source": "assets/citystatephobos/pexels-tcostachioiu-15400512.jpg",
+"seam": 1.31,
+"patch": 0.086,
+"aspect": 1.326
+},
+{
+"id": "p099",
+"source": "assets/citystatephobos/pexels-tim-dusenberry-2385423-35984033------.jpg",
+"seam": 1.29,
+"patch": 0.092,
+"aspect": 1.478
+},
+{
+"id": "p100",
+"source": "assets/citystatephobos/pexels-timothy-huliselan-205951426-20536223------.jpg",
+"seam": 0.99,
+"patch": 0.052,
+"aspect": 1.106
+},
+{
+"id": "p101",
+"source": "assets/citystatephobos/pexels-tom-van-dyck-423949093-15532214.jpg",
+"seam": 0.98,
+"patch": 0.036,
+"aspect": 1.412
+},
+{
+"id": "p102",
+"source": "assets/citystatephobos/pexels-txtr-1200295-17366742.jpg",
+"seam": 1.18,
+"patch": 0.07,
+"aspect": 0.545
+},
+{
+"id": "p103",
+"source": "assets/citystatephobos/pexels-txtr-1200295-17366748.jpg",
+"seam": 2.62,
+"patch": 0.051,
+"aspect": 0.727
+},
+{
+"id": "p104",
+"source": "assets/citystatephobos/pexels-txtr-1200295-17366752.jpg",
+"seam": 1.04,
+"patch": 0.02,
+"aspect": 0.832
+},
+{
+"id": "p105",
+"source": "assets/citystatephobos/pexels-txtr-1200295-17366756.jpg",
+"seam": 1.04,
+"patch": 0.039,
+"aspect": 1.003
+},
+{
+"id": "p106",
+"source": "assets/citystatephobos/pexels-udatommo-34253503.jpg",
+"seam": 1.24,
+"patch": 0.113,
+"aspect": 1.726
+},
+{
+"id": "p107",
+"source": "assets/citystatephobos/pexels-volkankaya-12447297.jpg",
+"seam": 1.13,
+"patch": 0.062,
+"aspect": 1.136
+},
+{
+"id": "p108",
+"source": "assets/citystatephobos/pexels-willbillurban-13403735.jpg",
+"seam": 1.1,
+"patch": 0.045,
+"aspect": 0.897
+},
+{
+"id": "p109",
+"source": "assets/citystatephobos/pexels-wolfgang-weiser-467045605-35296795.jpg",
+"seam": 1.27,
+"patch": 0.104,
+"aspect": 1.089
+},
+{
+"id": "p110",
+"source": "assets/citystatephobos/pexels-xxl92photo-170979005-10997021.jpg",
+"seam": 1.29,
+"patch": 0.075,
+"aspect": 0.522
+},
+{
+"id": "p111",
+"source": "assets/citystatephobos/pexels-zhmkhv-3373282-5511226.jpg",
+"seam": 1.06,
+"patch": 0.015,
+"aspect": 0.812
+},
+{
+"id": "p112",
+"source": "assets/citystatephobos/vecteezy_background-of-brick-wall-texture_11039290.jpg",
+"seam": 1.52,
+"patch": 0.116,
+"aspect": 1.528
+},
+{
+"id": "p113",
+"source": "assets/citystatephobos/vecteezy_beautifully-arranged-stone-walls-as-the-background_6893476.jpg",
+"seam": 1.41,
+"patch": 0.034,
+"aspect": 1.229
+},
+{
+"id": "p114",
+"source": "assets/citystatephobos/vecteezy_brown-stone-wall-background_6888573.jpg",
+"seam": 1.23,
+"patch": 0.045,
+"aspect": 1.838
+},
+{
+"id": "p115",
+"source": "assets/citystatephobos/vecteezy_brown-stone-wall_1313039.jpg",
+"seam": 1.24,
+"patch": 0.047,
+"aspect": 1.628
+},
+{
+"id": "p116",
+"source": "assets/citystatephobos/vecteezy_gray-old-stone-wall-decor_3397883.jpg",
+"seam": 1.51,
+"patch": 0.04,
+"aspect": 1.293
+},
+{
+"id": "p117",
+"source": "assets/citystatephobos/vecteezy_grunge-stone-brick-wall-background-texture_3198020.jpg",
+"seam": 1.14,
+"patch": 0.037,
+"aspect": 1.424
+},
+{
+"id": "p118",
+"source": "assets/citystatephobos/vecteezy_grunge-stone-brick-wall-background-texture_3198062.jpg",
+"seam": 1.3,
+"patch": 0.03,
+"aspect": 1.412
+},
+{
+"id": "p119",
+"source": "assets/citystatephobos/vecteezy_grunge-stone-brick-wall-background-texture_3198075-----.jpg",
+"seam": 1.34,
+"patch": 0.058,
+"aspect": 1.501
+},
+{
+"id": "p120",
+"source": "assets/citystatephobos/vecteezy_grunge-stone-brick-wall-background-texture_3201040-----.jpg",
+"seam": 1.08,
+"patch": 0.034,
+"aspect": 1.316
+},
+{
+"id": "p121",
+"source": "assets/citystatephobos/vecteezy_grunge-stone-brick-wall-background-texture_32010402.jpg",
+"seam": 1.08,
+"patch": 0.034,
+"aspect": 1.316
+},
+{
+"id": "p122",
+"source": "assets/citystatephobos/vecteezy_grunge-stone-brick-wall-background-texture_3201043.jpg",
+"seam": 1.08,
+"patch": 0.064,
+"aspect": 1.275
+},
+{
+"id": "p123",
+"source": "assets/citystatephobos/vecteezy_old-brick-wall-texture-background-grunge-stone-wall_33692552.jpg",
+"seam": 1.19,
+"patch": 0.076,
+"aspect": 1.633
+},
+{
+"id": "p124",
+"source": "assets/citystatephobos/vecteezy_red-grunge-old-big-brick-wall_16206588.jpg",
+"seam": 1.55,
+"patch": 0.144,
+"aspect": 2.01
+},
+{
+"id": "p125",
+"source": "assets/citystatephobos/vecteezy_seamless-stone-wall-texture-background_3313540.jpg",
+"seam": 1.07,
+"patch": 0.042,
+"aspect": 1.517
+},
+{
+"id": "BM_PV_051_cream_limewash",
+"source": "assets/citystatephobos/Bellmourn_Inner_Walls_20/textures/BM_PV_051_cream_limewash_Color.png",
+"seam": 1.28,
+"patch": 0.063,
+"aspect": 1.018
+},
+{
+"id": "BM_PV_052_aged_ochre_plaster",
+"source": "assets/citystatephobos/Bellmourn_Inner_Walls_20/textures/BM_PV_052_aged_ochre_plaster_Color.png",
+"seam": 1.06,
+"patch": 0.049,
+"aspect": 1.007
+},
+{
+"id": "BM_PV_053_warm_grey_plaster",
+"source": "assets/citystatephobos/Bellmourn_Inner_Walls_20/textures/BM_PV_053_warm_grey_plaster_Color.png",
+"seam": 0.93,
+"patch": 0.041,
+"aspect": 1.436
+},
+{
+"id": "BM_PV_054_rose_plaster",
+"source": "assets/citystatephobos/Bellmourn_Inner_Walls_20/textures/BM_PV_054_rose_plaster_Color.png",
+"seam": 1.08,
+"patch": 0.076,
+"aspect": 0.819
+},
+{
+"id": "BM_PV_055_sage_plaster",
+"source": "assets/citystatephobos/Bellmourn_Inner_Walls_20/textures/BM_PV_055_sage_plaster_Color.png",
+"seam": 1.23,
+"patch": 0.038,
+"aspect": 0.763
+},
+{
+"id": "BM_PV_056_linen_wallcloth",
+"source": "assets/citystatephobos/Bellmourn_Inner_Walls_20/textures/BM_PV_056_linen_wallcloth_Color.png",
+"seam": 0.99,
+"patch": 0.008,
+"aspect": 1.063
+},
+{
+"id": "BM_PV_057_brown_oak",
+"source": "assets/citystatephobos/Bellmourn_Inner_Walls_20/textures/BM_PV_057_brown_oak_Color.png",
+"seam": 1.47,
+"patch": 0.031,
+"aspect": 0.929
+},
+{
+"id": "BM_PV_058_dark_walnut",
+"source": "assets/citystatephobos/Bellmourn_Inner_Walls_20/textures/BM_PV_058_dark_walnut_Color.png",
+"seam": 1.83,
+"patch": 0.031,
+"aspect": 0.76
+},
+{
+"id": "BM_PV_059_honey_oak",
+"source": "assets/citystatephobos/Bellmourn_Inner_Walls_20/textures/BM_PV_059_honey_oak_Color.png",
+"seam": 1.53,
+"patch": 0.046,
+"aspect": 1.129
+},
+{
+"id": "BM_PV_060_painted_panelling",
+"source": "assets/citystatephobos/Bellmourn_Inner_Walls_20/textures/BM_PV_060_painted_panelling_Color.png",
+"seam": 1.02,
+"patch": 0.014,
+"aspect": 0.93
+},
+{
+"id": "BM_PV_061_carved_wood",
+"source": "assets/citystatephobos/Bellmourn_Inner_Walls_20/textures/BM_PV_061_carved_wood_Color.png",
+"seam": 2.37,
+"patch": 0.057,
+"aspect": 1.38
+},
+{
+"id": "BM_PV_062_linen_panels",
+"source": "assets/citystatephobos/Bellmourn_Inner_Walls_20/textures/BM_PV_062_linen_panels_Color.png",
+"seam": 1.38,
+"patch": 0.027,
+"aspect": 1.318
+},
+{
+"id": "BM_PV_063_ochre_panels",
+"source": "assets/citystatephobos/Bellmourn_Inner_Walls_20/textures/BM_PV_063_ochre_panels_Color.png",
+"seam": 1.18,
+"patch": 0.034,
+"aspect": 1.018
+},
+{
+"id": "BM_PV_064_red_damask",
+"source": "assets/citystatephobos/Bellmourn_Inner_Walls_20/textures/BM_PV_064_red_damask_Color.png",
+"seam": 1.15,
+"patch": 0.006,
+"aspect": 1.0
+},
+{
+"id": "BM_PV_065_green_damask",
+"source": "assets/citystatephobos/Bellmourn_Inner_Walls_20/textures/BM_PV_065_green_damask_Color.png",
+"seam": 1.07,
+"patch": 0.012,
+"aspect": 1.159
+},
+{
+"id": "BM_PV_066_gold_damask",
+"source": "assets/citystatephobos/Bellmourn_Inner_Walls_20/textures/BM_PV_066_gold_damask_Color.png",
+"seam": 1.17,
+"patch": 0.016,
+"aspect": 1.27
+},
+{
+"id": "BM_PV_067_blue_tapestry",
+"source": "assets/citystatephobos/Bellmourn_Inner_Walls_20/textures/BM_PV_067_blue_tapestry_Color.png",
+"seam": 1.23,
+"patch": 0.014,
+"aspect": 1.092
+},
+{
+"id": "BM_PV_068_plum_fabric",
+"source": "assets/citystatephobos/Bellmourn_Inner_Walls_20/textures/BM_PV_068_plum_fabric_Color.png",
+"seam": 1.13,
+"patch": 0.012,
+"aspect": 0.922
+},
+{
+"id": "BM_PV_069_embossed_leather",
+"source": "assets/citystatephobos/Bellmourn_Inner_Walls_20/textures/BM_PV_069_embossed_leather_Color.png",
+"seam": 1.24,
+"patch": 0.028,
+"aspect": 1.0
+},
+{
+"id": "BM_PV_070_textured_velvet",
+"source": "assets/citystatephobos/Bellmourn_Inner_Walls_20/textures/BM_PV_070_textured_velvet_Color.png",
+"seam": 1.14,
+"patch": 0.017,
+"aspect": 1.311
+},
+{
+"id": "BM_PV_041_ivory_lime_plaster",
+"source": "assets/citystatephobos/Bellmourn_Inner_Walls_Revised/textures/BM_PV_041_ivory_lime_plaster_Color.png",
+"seam": 1.06,
+"patch": 0.054,
+"aspect": 1.495
+},
+{
+"id": "BM_PV_042_taupe_limewash",
+"source": "assets/citystatephobos/Bellmourn_Inner_Walls_Revised/textures/BM_PV_042_taupe_limewash_Color.png",
+"seam": 1.11,
+"patch": 0.112,
+"aspect": 1.224
+},
+{
+"id": "BM_PV_043_smoke_plaster",
+"source": "assets/citystatephobos/Bellmourn_Inner_Walls_Revised/textures/BM_PV_043_smoke_plaster_Color.png",
+"seam": 1.21,
+"patch": 0.063,
+"aspect": 1.157
+},
+{
+"id": "BM_PV_044_linen_plaster",
+"source": "assets/citystatephobos/Bellmourn_Inner_Walls_Revised/textures/BM_PV_044_linen_plaster_Color.png",
+"seam": 1.04,
+"patch": 0.026,
+"aspect": 1.306
+},
+{
+"id": "BM_PV_045_walnut_panel",
+"source": "assets/citystatephobos/Bellmourn_Inner_Walls_Revised/textures/BM_PV_045_walnut_panel_Color.png",
+"seam": 1.84,
+"patch": 0.033,
+"aspect": 1.292
+},
+{
+"id": "BM_PV_046_oak_panel",
+"source": "assets/citystatephobos/Bellmourn_Inner_Walls_Revised/textures/BM_PV_046_oak_panel_Color.png",
+"seam": 1.41,
+"patch": 0.031,
+"aspect": 1.15
+},
+{
+"id": "BM_PV_047_carved_panels",
+"source": "assets/citystatephobos/Bellmourn_Inner_Walls_Revised/textures/BM_PV_047_carved_panels_Color.png",
+"seam": 1.58,
+"patch": 0.027,
+"aspect": 1.184
+},
+{
+"id": "BM_PV_048_damask_wall",
+"source": "assets/citystatephobos/Bellmourn_Inner_Walls_Revised/textures/BM_PV_048_damask_wall_Color.png",
+"seam": 1.09,
+"patch": 0.027,
+"aspect": 1.383
+},
+{
+"id": "BM_PV_049_tapestry_wall",
+"source": "assets/citystatephobos/Bellmourn_Inner_Walls_Revised/textures/BM_PV_049_tapestry_wall_Color.png",
+"seam": 1.07,
+"patch": 0.022,
+"aspect": 1.229
+},
+{
+"id": "BM_PV_050_timber_plaster",
+"source": "assets/citystatephobos/Bellmourn_Inner_Walls_Revised/textures/BM_PV_050_timber_plaster_Color.png",
+"seam": 1.31,
+"patch": 0.025,
+"aspect": 1.317
+},
+{
+"id": "BM_PV_041_warm_limestone",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Interior_Batch_02/textures/BM_PV_041_warm_limestone_Color.png",
+"seam": 1.17,
+"patch": 0.028,
+"aspect": 0.753
+},
+{
+"id": "BM_PV_042_hearth_sandstone",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Interior_Batch_02/textures/BM_PV_042_hearth_sandstone_Color.png",
+"seam": 1.03,
+"patch": 0.039,
+"aspect": 0.755
+},
+{
+"id": "BM_PV_043_aged_lime_plaster",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Interior_Batch_02/textures/BM_PV_043_aged_lime_plaster_Color.png",
+"seam": 1.09,
+"patch": 0.046,
+"aspect": 0.803
+},
+{
+"id": "BM_PV_044_smoky_rose_brick",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Interior_Batch_02/textures/BM_PV_044_smoky_rose_brick_Color.png",
+"seam": 1.4,
+"patch": 0.012,
+"aspect": 1.166
+},
+{
+"id": "BM_PV_045_cream_brick",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Interior_Batch_02/textures/BM_PV_045_cream_brick_Color.png",
+"seam": 1.08,
+"patch": 0.017,
+"aspect": 1.061
+},
+{
+"id": "BM_PV_046_carved_stone",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Interior_Batch_02/textures/BM_PV_046_carved_stone_Color.png",
+"seam": 1.11,
+"patch": 0.024,
+"aspect": 0.89
+},
+{
+"id": "BM_PV_047_wood_panelling",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Interior_Batch_02/textures/BM_PV_047_wood_panelling_Color.png",
+"seam": 1.13,
+"patch": 0.055,
+"aspect": 0.928
+},
+{
+"id": "BM_PV_048_wattle_plaster",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Interior_Batch_02/textures/BM_PV_048_wattle_plaster_Color.png",
+"seam": 1.3,
+"patch": 0.022,
+"aspect": 0.918
+},
+{
+"id": "BM_PV_049_chalk_ashlar",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Interior_Batch_02/textures/BM_PV_049_chalk_ashlar_Color.png",
+"seam": 1.15,
+"patch": 0.015,
+"aspect": 0.952
+},
+{
+"id": "BM_PV_050_hearth_brick",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Interior_Batch_02/textures/BM_PV_050_hearth_brick_Color.png",
+"seam": 1.03,
+"patch": 0.022,
+"aspect": 0.992
+},
+{
+"id": "BM_PV_001_bastion_basalt_A",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/01_bastion_basalt/BM_PV_001_bastion_basalt_A_Color.png",
+"seam": 1.17,
+"patch": 0.035,
+"aspect": 0.742
+},
+{
+"id": "BM_PV_002_bastion_basalt_B",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/01_bastion_basalt/BM_PV_002_bastion_basalt_B_Color.png",
+"seam": 1.34,
+"patch": 0.033,
+"aspect": 0.694
+},
+{
+"id": "BM_PV_003_bastion_basalt_C",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/01_bastion_basalt/BM_PV_003_bastion_basalt_C_Color.png",
+"seam": 1.11,
+"patch": 0.026,
+"aspect": 1.193
+},
+{
+"id": "BM_PV_004_bastion_basalt_D",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/01_bastion_basalt/BM_PV_004_bastion_basalt_D_Color.png",
+"seam": 1.24,
+"patch": 0.035,
+"aspect": 0.893
+},
+{
+"id": "BM_PV_005_curtain_granite_A",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/02_curtain_granite/BM_PV_005_curtain_granite_A_Color.png",
+"seam": 1.03,
+"patch": 0.019,
+"aspect": 1.375
+},
+{
+"id": "BM_PV_006_curtain_granite_B",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/02_curtain_granite/BM_PV_006_curtain_granite_B_Color.png",
+"seam": 1.09,
+"patch": 0.019,
+"aspect": 0.831
+},
+{
+"id": "BM_PV_007_curtain_granite_C",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/02_curtain_granite/BM_PV_007_curtain_granite_C_Color.png",
+"seam": 1.13,
+"patch": 0.023,
+"aspect": 1.037
+},
+{
+"id": "BM_PV_008_curtain_granite_D",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/02_curtain_granite/BM_PV_008_curtain_granite_D_Color.png",
+"seam": 1.15,
+"patch": 0.029,
+"aspect": 0.907
+},
+{
+"id": "BM_PV_009_city_clay_brick_A",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/03_city_clay_brick/BM_PV_009_city_clay_brick_A_Color.png",
+"seam": 1.27,
+"patch": 0.026,
+"aspect": 0.821
+},
+{
+"id": "BM_PV_010_city_clay_brick_B",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/03_city_clay_brick/BM_PV_010_city_clay_brick_B_Color.png",
+"seam": 1.15,
+"patch": 0.029,
+"aspect": 1.071
+},
+{
+"id": "BM_PV_011_city_clay_brick_C",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/03_city_clay_brick/BM_PV_011_city_clay_brick_C_Color.png",
+"seam": 1.18,
+"patch": 0.036,
+"aspect": 1.165
+},
+{
+"id": "BM_PV_012_city_clay_brick_D",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/03_city_clay_brick/BM_PV_012_city_clay_brick_D_Color.png",
+"seam": 1.04,
+"patch": 0.026,
+"aspect": 0.931
+},
+{
+"id": "BM_PV_013_undercroft_blocks_A",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/04_undercroft_blocks/BM_PV_013_undercroft_blocks_A_Color.png",
+"seam": 1.03,
+"patch": 0.058,
+"aspect": 1.488
+},
+{
+"id": "BM_PV_014_undercroft_blocks_B",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/04_undercroft_blocks/BM_PV_014_undercroft_blocks_B_Color.png",
+"seam": 1.13,
+"patch": 0.045,
+"aspect": 1.507
+},
+{
+"id": "BM_PV_015_undercroft_blocks_C",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/04_undercroft_blocks/BM_PV_015_undercroft_blocks_C_Color.png",
+"seam": 1.21,
+"patch": 0.036,
+"aspect": 1.134
+},
+{
+"id": "BM_PV_016_undercroft_blocks_D",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/04_undercroft_blocks/BM_PV_016_undercroft_blocks_D_Color.png",
+"seam": 1.17,
+"patch": 0.048,
+"aspect": 1.132
+},
+{
+"id": "BM_PV_017_limestone_interior_A",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/05_limestone_interior/BM_PV_017_limestone_interior_A_Color.png",
+"seam": 1.03,
+"patch": 0.039,
+"aspect": 0.875
+},
+{
+"id": "BM_PV_018_limestone_interior_B",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/05_limestone_interior/BM_PV_018_limestone_interior_B_Color.png",
+"seam": 1.17,
+"patch": 0.037,
+"aspect": 0.803
+},
+{
+"id": "BM_PV_019_limestone_interior_C",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/05_limestone_interior/BM_PV_019_limestone_interior_C_Color.png",
+"seam": 1.08,
+"patch": 0.019,
+"aspect": 0.923
+},
+{
+"id": "BM_PV_020_limestone_interior_D",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/05_limestone_interior/BM_PV_020_limestone_interior_D_Color.png",
+"seam": 1.04,
+"patch": 0.029,
+"aspect": 1.082
+},
+{
+"id": "BM_PV_021_keep_dressed_stone_A",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/06_keep_dressed_stone/BM_PV_021_keep_dressed_stone_A_Color.png",
+"seam": 1.15,
+"patch": 0.034,
+"aspect": 1.101
+},
+{
+"id": "BM_PV_022_keep_dressed_stone_B",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/06_keep_dressed_stone/BM_PV_022_keep_dressed_stone_B_Color.png",
+"seam": 1.32,
+"patch": 0.023,
+"aspect": 0.945
+},
+{
+"id": "BM_PV_023_keep_dressed_stone_C",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/06_keep_dressed_stone/BM_PV_023_keep_dressed_stone_C_Color.png",
+"seam": 1.39,
+"patch": 0.066,
+"aspect": 1.25
+},
+{
+"id": "BM_PV_024_keep_dressed_stone_D",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/06_keep_dressed_stone/BM_PV_024_keep_dressed_stone_D_Color.png",
+"seam": 1.72,
+"patch": 0.019,
+"aspect": 1.102
+},
+{
+"id": "BM_PV_025_rusticated_plinth_A",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/07_rusticated_plinth/BM_PV_025_rusticated_plinth_A_Color.png",
+"seam": 1.03,
+"patch": 0.038,
+"aspect": 1.329
+},
+{
+"id": "BM_PV_026_rusticated_plinth_B",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/07_rusticated_plinth/BM_PV_026_rusticated_plinth_B_Color.png",
+"seam": 1.07,
+"patch": 0.048,
+"aspect": 1.302
+},
+{
+"id": "BM_PV_027_rusticated_plinth_C",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/07_rusticated_plinth/BM_PV_027_rusticated_plinth_C_Color.png",
+"seam": 1.19,
+"patch": 0.053,
+"aspect": 1.296
+},
+{
+"id": "BM_PV_028_rusticated_plinth_D",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/07_rusticated_plinth/BM_PV_028_rusticated_plinth_D_Color.png",
+"seam": 1.09,
+"patch": 0.056,
+"aspect": 1.086
+},
+{
+"id": "BM_PV_029_courtyard_setts_A",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/08_courtyard_setts/BM_PV_029_courtyard_setts_A_Color.png",
+"seam": 1.11,
+"patch": 0.028,
+"aspect": 1.268
+},
+{
+"id": "BM_PV_030_courtyard_setts_B",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/08_courtyard_setts/BM_PV_030_courtyard_setts_B_Color.png",
+"seam": 2.44,
+"patch": 0.016,
+"aspect": 0.98
+},
+{
+"id": "BM_PV_031_courtyard_setts_C",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/08_courtyard_setts/BM_PV_031_courtyard_setts_C_Color.png",
+"seam": 1.05,
+"patch": 0.029,
+"aspect": 0.895
+},
+{
+"id": "BM_PV_032_courtyard_setts_D",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/08_courtyard_setts/BM_PV_032_courtyard_setts_D_Color.png",
+"seam": 1.08,
+"patch": 0.033,
+"aspect": 1.3
+},
+{
+"id": "BM_PV_033_hall_flagstones_A",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/09_hall_flagstones/BM_PV_033_hall_flagstones_A_Color.png",
+"seam": 1.25,
+"patch": 0.051,
+"aspect": 1.002
+},
+{
+"id": "BM_PV_034_hall_flagstones_B",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/09_hall_flagstones/BM_PV_034_hall_flagstones_B_Color.png",
+"seam": 0.99,
+"patch": 0.05,
+"aspect": 1.148
+},
+{
+"id": "BM_PV_035_hall_flagstones_C",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/09_hall_flagstones/BM_PV_035_hall_flagstones_C_Color.png",
+"seam": 1.3,
+"patch": 0.04,
+"aspect": 1.048
+},
+{
+"id": "BM_PV_036_hall_flagstones_D",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/09_hall_flagstones/BM_PV_036_hall_flagstones_D_Color.png",
+"seam": 2.27,
+"patch": 0.073,
+"aspect": 0.708
+},
+{
+"id": "BM_PV_037_velscour_inlay_A",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/10_velscour_inlay/BM_PV_037_velscour_inlay_A_Color.png",
+"seam": 1.18,
+"patch": 0.106,
+"aspect": 1.041
+},
+{
+"id": "BM_PV_038_velscour_inlay_B",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/10_velscour_inlay/BM_PV_038_velscour_inlay_B_Color.png",
+"seam": 1.17,
+"patch": 0.047,
+"aspect": 0.793
+},
+{
+"id": "BM_PV_039_velscour_inlay_C",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/10_velscour_inlay/BM_PV_039_velscour_inlay_C_Color.png",
+"seam": 1.0,
+"patch": 0.061,
+"aspect": 1.381
+},
+{
+"id": "BM_PV_040_velscour_inlay_D",
+"source": "assets/citystatephobos/Bellmourn_Phobos_Velscour_Batch_01/textures/10_velscour_inlay/BM_PV_040_velscour_inlay_D_Color.png",
+"seam": 1.27,
+"patch": 0.034,
+"aspect": 0.959
+},
+{
+"id": "BM_PV_071_red_wool",
+"source": "assets/citystatephobos/Bellmourn_Rugs_and_Carpets_20/textures/BM_PV_071_red_wool_Color.png",
+"seam": 1.17,
+"patch": 0.025,
+"aspect": 0.795
+},
+{
+"id": "BM_PV_072_wine_wool",
+"source": "assets/citystatephobos/Bellmourn_Rugs_and_Carpets_20/textures/BM_PV_072_wine_wool_Color.png",
+"seam": 1.15,
+"patch": 0.022,
+"aspect": 0.892
+},
+{
+"id": "BM_PV_073_red_floral",
+"source": "assets/citystatephobos/Bellmourn_Rugs_and_Carpets_20/textures/BM_PV_073_red_floral_Color.png",
+"seam": 1.1,
+"patch": 0.004,
+"aspect": 1.0
+},
+{
+"id": "BM_PV_074_red_diamond",
+"source": "assets/citystatephobos/Bellmourn_Rugs_and_Carpets_20/textures/BM_PV_074_red_diamond_Color.png",
+"seam": 0.99,
+"patch": 0.006,
+"aspect": 1.0
+},
+{
+"id": "BM_PV_075_red_gothic",
+"source": "assets/citystatephobos/Bellmourn_Rugs_and_Carpets_20/textures/BM_PV_075_red_gothic_Color.png",
+"seam": 1.28,
+"patch": 0.01,
+"aspect": 1.033
+},
+{
+"id": "BM_PV_076_rust_wool",
+"source": "assets/citystatephobos/Bellmourn_Rugs_and_Carpets_20/textures/BM_PV_076_rust_wool_Color.png",
+"seam": 1.0,
+"patch": 0.021,
+"aspect": 0.922
+},
+{
+"id": "BM_PV_077_forest_wool",
+"source": "assets/citystatephobos/Bellmourn_Rugs_and_Carpets_20/textures/BM_PV_077_forest_wool_Color.png",
+"seam": 1.12,
+"patch": 0.016,
+"aspect": 1.263
+},
+{
+"id": "BM_PV_078_green_floral",
+"source": "assets/citystatephobos/Bellmourn_Rugs_and_Carpets_20/textures/BM_PV_078_green_floral_Color.png",
+"seam": 1.01,
+"patch": 0.012,
+"aspect": 1.057
+},
+{
+"id": "BM_PV_079_blue_wool",
+"source": "assets/citystatephobos/Bellmourn_Rugs_and_Carpets_20/textures/BM_PV_079_blue_wool_Color.png",
+"seam": 1.15,
+"patch": 0.02,
+"aspect": 1.066
+},
+{
+"id": "BM_PV_080_blue_geometric",
+"source": "assets/citystatephobos/Bellmourn_Rugs_and_Carpets_20/textures/BM_PV_080_blue_geometric_Color.png",
+"seam": 0.92,
+"patch": 0.005,
+"aspect": 0.889
+},
+{
+"id": "BM_PV_081_plum_wool",
+"source": "assets/citystatephobos/Bellmourn_Rugs_and_Carpets_20/textures/BM_PV_081_plum_wool_Color.png",
+"seam": 1.05,
+"patch": 0.013,
+"aspect": 1.012
+},
+{
+"id": "BM_PV_082_gold_wool",
+"source": "assets/citystatephobos/Bellmourn_Rugs_and_Carpets_20/textures/BM_PV_082_gold_wool_Color.png",
+"seam": 1.16,
+"patch": 0.009,
+"aspect": 1.312
+},
+{
+"id": "BM_PV_083_brown_wool",
+"source": "assets/citystatephobos/Bellmourn_Rugs_and_Carpets_20/textures/BM_PV_083_brown_wool_Color.png",
+"seam": 1.1,
+"patch": 0.012,
+"aspect": 1.009
+},
+{
+"id": "BM_PV_084_charcoal_wool",
+"source": "assets/citystatephobos/Bellmourn_Rugs_and_Carpets_20/textures/BM_PV_084_charcoal_wool_Color.png",
+"seam": 1.19,
+"patch": 0.012,
+"aspect": 1.0
+},
+{
+"id": "BM_PV_085_ivory_wool",
+"source": "assets/citystatephobos/Bellmourn_Rugs_and_Carpets_20/textures/BM_PV_085_ivory_wool_Color.png",
+"seam": 1.1,
+"patch": 0.027,
+"aspect": 0.756
+},
+{
+"id": "BM_PV_086_tartan_brown",
+"source": "assets/citystatephobos/Bellmourn_Rugs_and_Carpets_20/textures/BM_PV_086_tartan_brown_Color.png",
+"seam": 1.53,
+"patch": 0.017,
+"aspect": 1.013
+},
+{
+"id": "BM_PV_087_tartan_red",
+"source": "assets/citystatephobos/Bellmourn_Rugs_and_Carpets_20/textures/BM_PV_087_tartan_red_Color.png",
+"seam": 1.65,
+"patch": 0.008,
+"aspect": 0.999
+},
+{
+"id": "BM_PV_088_heraldic",
+"source": "assets/citystatephobos/Bellmourn_Rugs_and_Carpets_20/textures/BM_PV_088_heraldic_Color.png",
+"seam": 1.14,
+"patch": 0.01,
+"aspect": 1.129
+},
+{
+"id": "BM_PV_089_woven_stripes",
+"source": "assets/citystatephobos/Bellmourn_Rugs_and_Carpets_20/textures/BM_PV_089_woven_stripes_Color.png",
+"seam": 1.01,
+"patch": 0.009,
+"aspect": 0.828
+},
+{
+"id": "BM_PV_090_geometric_rug",
+"source": "assets/citystatephobos/Bellmourn_Rugs_and_Carpets_20/textures/BM_PV_090_geometric_rug_Color.png",
+"seam": 1.01,
+"patch": 0.016,
+"aspect": 1.084
+}
+]

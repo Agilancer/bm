@@ -13,7 +13,7 @@ const hits = (c, x, z, r) => {
   return Math.hypot(Math.max(Math.abs(u) - c.hx, 0), Math.max(Math.abs(w) - c.hz, 0)) < r;
 };
 // (Only what's out in the land: the Warrens and the Test Dungeon lie past the world's edge.)
-const cols = B.colliders.filter((c) => Math.abs(c.x) < 5600 && Math.abs(c.z) < 5600 && c.t === undefined);
+const cols = B.colliders.filter((c) => c.x > -5600 && c.x < 11700 && Math.abs(c.z) < 5600 && c.t === undefined);
 const near = (x, z, r) => cols.filter((c) => Math.abs(c.x - x) < 80 && Math.abs(c.z - z) < 80 && hits(c, x, z, r));
 let bad = 0;
 const say = (what, x, z, c) => { bad++; if (bad < 60) console.log(`BLOCKED: ${what} at (${x.toFixed(1)}, ${z.toFixed(1)}) by a collider at (${c.x.toFixed(1)}, ${c.z.toFixed(1)}) ${c.hx.toFixed(1)} x ${c.hz.toFixed(1)}`); };
@@ -28,7 +28,7 @@ for (const r of ROUTES) for (let i = 0; i + 1 < r.pts.length; i++) {
 }
 for (const s of SEALS) for (const c of near(s.x, s.z, 3.7)) say(`the seal of ${s.name}`, s.x, s.z, c);
 for (const [k, p] of Object.entries(B.spots)) {
-  if (k.startsWith('seal_') || k.endsWith('_portal') || Math.abs(p[0]) > 5600 || Math.abs(p[2]) > 5600) continue;   // (seals, and the dungeons' own)
+  if (k.startsWith('seal_') || k.endsWith('_portal') || p[0] < -5600 || p[0] > 11700 || Math.abs(p[2]) > 5600) continue;   // (seals, and the dungeons' own)
   for (const c of near(p[0], p[2], 1.2)) say(`spot ${k}`, p[0], p[2], c);
   const g = terrainHeight(p[0], p[2]); let slope = 0;
   for (let a = 0; a < 8; a++) slope = Math.max(slope, Math.abs(terrainHeight(p[0] + Math.cos(a * 0.785) * 2, p[2] + Math.sin(a * 0.785) * 2) - g));

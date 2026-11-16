@@ -12,7 +12,7 @@ import { GROUP_KEYS, withVariants } from '../../src/core/tripo-monsters.js';
 import { FIELD_CREATURES } from '../../src/core/field-creatures.js';
 import { TOWN_KNIGHTS } from '../../src/core/knights.js';
 import { DUNGEON_BOX } from '../../src/core/dungeon.js';
-import { WORLD_EDGE } from '../../src/core/lands.js';
+import { LAND } from '../../src/core/lands.js';
 import { BODIES } from '../../src/sim/undead.js';
 import { SPECIES } from '../../src/sim/slimes.js';
 import { TUMBLER_KINDS } from '../../src/sim/tumblers.js';
@@ -45,7 +45,7 @@ setHallDoor(false);
 console.log(`  arena to the hall, door up: ${open.toFixed(0)} m`);
 for (const r of [LOBBY, ARENA]) if (HALL.y + r.roof > HALL_BOX.y1 || HALL.y + r.roof > -6) fail(`a ceiling at ${HALL.y + r.roof}, above the underground line`);
 if (hallRoofY(dx, dz) - HALL.y < 6) fail(`the doorway is only ${(hallRoofY(dx, dz) - HALL.y).toFixed(1)} m high`);
-if (Math.min(Math.abs(HALL_BOX.x0), Math.abs(HALL_BOX.x1)) < WORLD_EDGE && Math.min(Math.abs(HALL_BOX.z0), Math.abs(HALL_BOX.z1)) < WORLD_EDGE) fail('the hall is inside the world');
+if (!(HALL_BOX.x1 < LAND.x0 || HALL_BOX.x0 > LAND.x1 || HALL_BOX.z1 < LAND.z0 || HALL_BOX.z0 > LAND.z1)) fail('the hall is inside the world');
 if (HALL_BOX.x0 < DUNGEON_BOX.x1 && HALL_BOX.x1 > DUNGEON_BOX.x0 && HALL_BOX.z0 < DUNGEON_BOX.z1 && HALL_BOX.z1 > DUNGEON_BOX.z0) fail('the hall overlaps the Hollowfang Warrens');
 
 // ---- the bestiary

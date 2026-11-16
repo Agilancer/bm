@@ -10,6 +10,9 @@ import { PLACES, ROUND, T_CLEAR, wearsT } from './town.js';
 import { DAYS, WORK, WORK_OF, LEISURE } from './days.js';
 import { RACK, SMITH_CLIPS, STATIONS, inYard, newKitState, pumpAt } from './smithy.js';
 import { AXE_SAID } from './lines/smithy.js';
+import { CHATTER } from './lines/phobos.js';
+import { CITY, cityIn } from '../core/east.js';
+import { phobosLanes } from '../core/phobos-build.js';
 
 const TAU = Math.PI * 2;
 export const wrapAngle = (a) => a - TAU * Math.floor((a + Math.PI) / TAU);
@@ -47,6 +50,8 @@ export class Folk {
     this.p = p; this.i = i; this.id = p.id; this.life = life;
     this.child = isChild(p);
     this.posted = p.post || null;   // [x, z, y?]: stood out in the land, not one of the town's (people.js POSTED)
+    this.crowd = !!p.crowd;          // one of Phobos's street crowd (people.js CROWD): roam, below
+    this.parked = this.crowd;        // (the crowd's, while you're not in the city: not drawn, not posed, not moved)
     this.rig = null; this.pose = null;
     this.x = 0; this.y = 0; this.z = 0; this.yaw = 0; this.level = 0;
     this.posture = 'stand';
@@ -119,7 +124,11 @@ export class Life {
     this.games = new Map();      // play place -> the game under way
     this.inn = town.house('inn');
     this.stage = this.findStage(this.inn);
-    for (const me of this.folk) me.home = me.posted ? null : town.house(me.p.home);
+    for (const me of this.folk) me.home = me.posted || me.crowd ? null : town.house(me.p.home);
+    this.crowd = this.folk.filter((me) => me.crowd);
+    this.crowd.forEach((me, k) => { me.crowdK = k; });
+    this.crowdCap = this.crowd.length;   // (fewer on a phone: the worker's boot sets it)
+    this.inCity = false;
     this.markReach();
     this.assignBeds();
   }
@@ -227,6 +236,14 @@ export class Life {
     this.hour = world.hour; this.day = world.day;
     this.player = world.player;
     this.dangers = world.dangers || [];
+    // (In City State Phobos, inside its wall: the street crowd's up. The way you face, for where they turn up.)
+    this.inCity = cityIn(world.player[0], world.player[2]) < 1;
+    this.yaw = world.yaw ?? this.yaw ?? 0;
+    // (Most of the crowd to set down at once, as when you come into the city or are put down in it: a cut, so anywhere round
+    // you will do, in sight or not. One or two at a time, as you walk on: out of sight.)
+    let away = 0;
+    for (const me of this.crowd) if (me.parked ? this.inCity && me.crowdK < this.crowdCap : Math.hypot(me.x - world.player[0], me.z - world.player[2]) > RECALL) away++;
+    this.burst = away >= 6;
     this.clock += dt;
     if (first || this.jumped(world)) this.place();
     this.started = true;
@@ -236,6 +253,9 @@ export class Life {
       if (!me.cur || b.key !== me.key) { me.cur = b; me.key = b.key; me.keyAt = this.clock; }
       this.fright(me);
       if (me.posted) this.attend(me);
+      // (One of Phobos's crowd left far behind, or the player gone out of the city: what they were at is dropped, and roam
+      // starts again, setting them down near the player or parking them.)
+      if (me.crowd && !me.parked && (!this.inCity || Math.hypot(me.x - this.player[0], me.z - this.player[2]) > RECALL)) { me.task?.return(); me.task = null; me.taskDone = true; }
       // (A script that won't wind down when its hour's up is stopped.)
       if (!me.task || me.taskKey !== me.key && (me.taskDone || this.clock - me.keyAt > 45)) this.start(me);
       const r = me.task.next();
@@ -313,7 +333,7 @@ export class Life {
       me.cur = b; me.key = b.key;
       // Start where they live, then let the script put them where it would have got them to.
       // (Or, posted out in the land, at their post.)
-      [me.x, me.z] = me.posted || me.home.inside; me.level = 0; me.y = this.ground.heightFor(me.x, me.z, 0.5);
+      [me.x, me.z] = me.posted || (me.crowd ? [me.x || CITY.x, me.z || CITY.z] : me.home.inside); me.level = 0; me.y = this.ground.heightFor(me.x, me.z, 0.5);
       me.snap = true;
       this.start(me);
       for (let k = 0; k < 4 && me.snap; k++) me.task.next();
@@ -323,7 +343,7 @@ export class Life {
 
   // Anything hunting in reach of town sends them running indoors.
   fright(me) {
-    if (me.posted) return;
+    if (me.posted || me.crowd) return;
     let near = false;
     for (const [dx, dz] of this.dangers) if (Math.hypot(dx - me.x, dz - me.z) < 22) { near = true; break; }
     if (near && !me.alarm && me.house < 0) { me.alarm = true; me.calm = 0; me.task?.return(); me.taskDone = true; me.task = null; this.start(me); }
@@ -458,7 +478,7 @@ export class Life {
   assignBeds() {
     const byHouse = new Map();
     for (const me of this.folk) {
-      if (me.posted) continue;
+      if (me.posted || me.crowd) continue;
       if (!byHouse.has(me.home)) byHouse.set(me.home, []);
       byHouse.get(me.home).push(me);
     }
@@ -901,6 +921,7 @@ function* live(me, b) {
       case 'hunt': yield* hunt(me, key); break;
       case 'tithe': yield* tithe(me, key); break;
       case 'posted': yield* posted(me, key); break;
+      case 'roam': yield* roam(me, key); break;
       default: yield* atHome(me, key);
     }
   } finally {
@@ -917,6 +938,204 @@ function* posted(me, key) {
   me.x = x; me.z = z; me.level = 0; me.y = y ?? me.life.ground.landHeight(x, z);
   me.yaw = me.p.face ?? 0; me.posture = 'stand'; me.act = ACT.IDLE; me.snap = false;
   while (me.alive(key)) yield* idle(me, 30, key);
+}
+
+// ---- City State Phobos's street crowd (src/folk/people.js CROWD) ----
+//
+// While you're inside the city's wall, up to crowdCap of them are about the streets near you: on the sidewalk lanes
+// (src/core/phobos-build.js phobosLanes, clear of where the dead and the Loyal keep), walking a stretch, standing about,
+// crossing over, or stopping by another to talk. Anyone left more than RECALL metres behind is taken up and set down again
+// on a lane round you, SET_NEAR to SET_FAR off (out of sight for choice: far ahead, or near behind); and those far off mostly turn your way down their
+// street. So the streets you're in stay full with a score of people. Out of the city they're parked: not drawn, posed or moved (src/folk/folk.worker.js write).
+const RECALL = 60, SET_NEAR = 22, SET_FAR = 48, HEAR = 36;
+let LANE_HASH = null;
+const laneHash = () => {
+  if (LANE_HASH) return LANE_HASH;
+  LANE_HASH = new Map();
+  phobosLanes().forEach((l, li) => l.pts.forEach(([x, z], k) => {
+    const c = Math.floor(x / 10) * 4099 + Math.floor(z / 10);
+    if (!LANE_HASH.has(c)) LANE_HASH.set(c, []);
+    LANE_HASH.get(c).push([li, k]);
+  }));
+  return LANE_HASH;
+};
+
+function* roam(me, key) {
+  const life = me.life;
+  while (me.alive(key)) {
+    if (!life.inCity || me.crowdK >= life.crowdCap) { me.parked = true; me.moving = 0; me.pairWith = null; yield; continue; }
+    const [px, , pz] = life.player;
+    if (me.parked || Math.hypot(me.x - px, me.z - pz) > RECALL) {
+      if (!setDown(me, me.parked ? 18 : SET_NEAR)) { yield* wait(me, 1, key); continue; }
+    }
+    if (me.pairWith) { yield* hearOut(me, key); continue; }
+    // (Near the player, more of them stop to talk: what's overheard is what makes a street.)
+    // (And someone stood close by, a knot of them: most likely of all.)
+    const o0 = partnerFor(me), knot = o0 && Math.hypot(o0.x - me.x, o0.z - me.z) < 7;
+    const r = me.rng(), still = me.p.still ?? 0.3, talky = knot ? 0.65 : Math.hypot(me.x - px, me.z - pz) < 45 ? 0.4 : 0.15;
+    if (r < still) yield* loiter(me, key);
+    else if (r < still + talky) { if (o0) yield* chatWith(me, o0, key); else yield* loiter(me, key); }
+    else yield* amble(me, key);
+  }
+}
+
+// Set down on a lane round the player: of a few tries at random, the one best placed: in the band; ahead, in the street
+// they're looking down, if it's far enough off to be lost among the rest (else behind or to the side, out of sight); and
+// by one or two others stood about, to make a knot of them, but not into a crowd of their own.
+function setDown(me, near) {
+  const life = me.life, L = phobosLanes(), [px, , pz] = life.player, fx = Math.sin(life.yaw), fz = Math.cos(life.yaw);
+  // (Only the lanes' points within reach: the city's two thousand and more, by the 10 m cells they're kept in.)
+  const H = laneHash(), near_ = [], cx = Math.floor(px / 10), cz = Math.floor(pz / 10), R = Math.ceil(SET_FAR * 2 / 10);
+  for (let i = -R; i <= R; i++) for (let j = -R; j <= R; j++) { const c = H.get((cx + i) * 4099 + cz + j); if (c) near_.push(...c); }
+  if (!near_.length) return false;
+  // (The street the player's in, both its sides: the one they can see down, past the house fronts. Most of them go there.)
+  const mine = new Set();
+  for (const [li, k] of near_) { const [x, z] = L[li].pts[k]; if (Math.hypot(x - px, z - pz) < 16) mine.add(L[li].name); }
+  // (Where the streets near are few, out wider: half as far again, then twice.)
+  let best = null, bs = -Infinity;
+  for (let t = 0; t < 180; t++) {
+    const far = SET_FAR * [1, 1.4, 2][Math.floor(t / 60)];
+    if (best && t % 60 === 0) break;
+    const [li, k] = near_[Math.floor(me.rng() * near_.length)], [x, z] = L[li].pts[k];
+    const d = Math.hypot(x - px, z - pz);
+    // (Behind them it can be nearer: 10 m off, so the street round them isn't an empty ring.)
+    if (d > far || d < near && !(d >= 10 && !life.burst && ((x - px) * fx + (z - pz) * fz) / d < -0.3)) continue;
+    // (Ahead of them if it's far enough off to be lost among the houses; if it's near, behind them or to the side, out of sight.)
+    const ahead = ((x - px) * fx + (z - pz) * fz) / d;
+    let s = (life.burst ? 0 : d > 32 ? ahead * 1.5 : -ahead) + (mine.has(L[li].name) ? 1.6 : 0), by = 0;
+    for (const o of life.crowd) {
+      if (o === me || o.parked) continue;
+      const od = Math.hypot(o.x - x, o.z - z);
+      if (od < 2) s -= 2; else if (od < 7) { by++; if (!o.moving) s += 0.7; }
+    }
+    if (by > 3) s -= 2;
+    s += me.rng() * 0.6;
+    if (s > bs) { bs = s; best = [li, k]; }
+  }
+  if (!best) return false;
+  const [li, k] = best, [x, z] = L[li].pts[k];
+  me.lane = li; me.lk = k; me.dir = me.rng() < 0.5 ? 1 : -1;
+  me.x = x; me.z = z; me.level = 0; me.y = life.ground.landHeight(x, z); me.yaw = laneYaw(me);
+  me.parked = false; me.posedAt = -1; me.pairWith = null; me.hold = 0; me.look = null; me.face = null;
+  me.play('idle', { fade: 0 });
+  return true;
+}
+
+// Which way the lane runs at their point, the way they're going along it.
+function laneYaw(me) {
+  const P = phobosLanes()[me.lane].pts, a = P[Math.max(0, Math.min(P.length - 1, me.lk))], b = P[Math.max(0, Math.min(P.length - 1, me.lk + me.dir))];
+  return a === b ? me.yaw : Math.atan2(b[0] - a[0], b[1] - a[1]);
+}
+
+// Along their lane for a stretch, now and then over to another close by (across the street, round a corner); round at its end.
+function* amble(me, key) {
+  const L = phobosLanes(), n = 6 + Math.floor(me.rng() * 20), [px, , pz] = me.life.player;
+  // (Far from the player: down the lane their way, mostly; near, whichever way.)
+  { const P = L[me.lane].pts, a = P[me.lk], b = P[Math.max(0, Math.min(P.length - 1, me.lk + me.dir))];
+    if (Math.hypot(a[0] - px, a[1] - pz) > 45 && Math.hypot(b[0] - px, b[1] - pz) > Math.hypot(a[0] - px, a[1] - pz) && me.rng() < 0.75) me.dir = -me.dir; }
+  for (let s = 0; s < n && me.alive(key) && !me.parked; s++) {
+    let P = L[me.lane].pts;
+    if (me.lk + me.dir < 0 || me.lk + me.dir >= P.length) { me.dir = -me.dir; if (me.rng() < 0.5) break; }
+    // (Over to a point on another lane, near enough to step to.)
+    if (me.rng() < 0.07) {
+      const [x0, z0] = P[me.lk], H = laneHash(), opts = [];
+      for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (const [li, k] of H.get((Math.floor(x0 / 10) + i) * 4099 + Math.floor(z0 / 10) + j) || []) {
+        if (li === me.lane) continue;
+        const [x, z] = L[li].pts[k], d = Math.hypot(x - x0, z - z0);
+        if (d > 3 && d < 15) opts.push([li, k]);
+      }
+      if (opts.length) { const [li, k] = opts[Math.floor(me.rng() * opts.length)]; me.lane = li; me.lk = k; me.dir = me.rng() < 0.5 ? 1 : -1; P = L[li].pts; yield* walkLine(me, P[k][0], P[k][1], key); continue; }
+    }
+    me.lk += me.dir;
+    yield* walkLine(me, P[me.lk][0], P[me.lk][1], key);
+  }
+  if (me.alive(key)) me.play('idle', { fade: 0.4 });
+}
+
+// Straight to (tx, tz) over open street, at their own pace, round whoever's in the way. (No walking grid out here: the lanes
+// are clear of the houses, and what stands in the street is stepped round.)
+function* walkLine(me, tx, tz, key) {
+  const life = me.life, G = life.ground, gait = me.walkClip, v0 = me.stride[gait] || 1.2;
+  me.act = ACT.WALK;
+  let wait_ = 0;
+  try {
+    while (me.alive(key) && !me.parked) {
+      const dt = me.dt;
+      if (me.hold > 0) { if (me.moving) { me.play('idle', { fade: 0.4 }); me.moving = 0; } yield; continue; }
+      const dx = tx - me.x, dz = tz - me.z, d = Math.hypot(dx, dz);
+      if (d < 0.15) break;
+      const ux = dx / d, uz = dz / d, off = wrapAngle(Math.atan2(ux, uz) - me.yaw);
+      me.yaw += clamp(off, -4.5 * dt, 4.5 * dt);
+      let v = v0 * me.speed * (Math.abs(off) > 1.2 ? 0.3 : 1), sx = 0, sz = 0;
+      const a = life.ahead(me, Math.sin(me.yaw), Math.cos(me.yaw));
+      if (a && a.d < 0.95) {
+        // (Going the same way as them: fallen in behind at their pace. Else round them to the right.)
+        const fx = Math.sin(me.yaw), fz = Math.cos(me.yaw), w = a.o && a.o.moving > 0.05 ? Math.sin(a.o.yaw) * fx + Math.cos(a.o.yaw) * fz : 0;
+        if (w > 0.3) v = Math.min(v, a.o.moving * 0.9);
+        else { sx = uz; sz = -ux; v *= 0.55; }
+        wait_ += dt;
+      } else wait_ = 0;
+      const step = Math.min(v * dt, d);
+      me.x += ux * step + sx * v * dt * 0.7; me.z += uz * step + sz * v * dt * 0.7;
+      me.y = G.landHeight(me.x, me.z);
+      me.moving = v;
+      me.play(gait, { fade: 0.3, sync: true, speed: clamp(v / v0, 0.4, 1.4) });
+      yield;
+    }
+  } finally { me.moving = 0; if (me.act === ACT.WALK) me.act = ACT.IDLE; }
+  void wait_;
+}
+
+// Stood about at the side of the street, facing out across it, doing what they do.
+function* loiter(me, key) {
+  const L = phobosLanes()[me.lane], P = L.pts, a = P[Math.max(0, me.lk - 1)], b = P[Math.min(P.length - 1, me.lk + 1)];
+  // (Across the street from the lane: its middle is to the lane's one side, sd (phobosLanes).)
+  const ux = b[0] - a[0], uz = b[1] - a[1];
+  if (Math.hypot(ux, uz) > 0.01) yield* turnTo(me, Math.atan2(uz * L.sd, -ux * L.sd) + (me.rng() - 0.5) * 0.8);
+  me.act = ACT.IDLE;
+  yield* idle(me, 8 + me.rng() * 22, key);
+}
+
+// Someone of the crowd stood about not far off, and free to be talked to.
+function partnerFor(me) {
+  let best = null, bd = 28;
+  for (const o of me.life.crowd) {
+    if (o === me || o.parked || o.pairWith || o.moving || o.act !== ACT.IDLE || o.inScene || o.talking) continue;
+    const d = Math.hypot(o.x - me.x, o.z - me.z);
+    if (d < bd) { bd = d; best = o; }
+  }
+  return best;
+}
+
+// Up to them, and a few words each way (aloud, if the player's near enough to hear: src/folk/lines/phobos.js CHATTER).
+function* chatWith(me, o, key) {
+  const life = me.life;
+  o.pairWith = me; o.hold = 1;
+  try {
+    const a = Math.atan2(me.x - o.x, me.z - o.z);
+    yield* walkLine(me, o.x + Math.sin(a) * 1.15, o.z + Math.cos(a) * 1.15, key);
+    if (!me.alive(key) || o.parked || me.parked) return;
+    const toO = Math.atan2(o.x - me.x, o.z - me.z);
+    yield* turnTo(me, toO);
+    me.face = toO; o.face = toO + Math.PI;
+    me.look = [o.x, o.y + 1.55, o.z]; o.look = [me.x, me.y + 1.55, me.z];
+    const lines = CHATTER[Math.floor(me.rng() * CHATTER.length)], [px, , pz] = life.player;
+    for (let k = 0; k < lines.length && me.alive(key) && !o.parked; k++) {
+      const who = k % 2 ? o : me, text = lines[k], dur = Math.min(6.5, Math.max(2.2, 1.4 + text.length * 0.055));
+      who.gesture(k % 2 ? (me.rng() < 0.5 ? 'laugh' : 'talk') : 'talk');
+      if (Math.hypot(me.x - px, me.z - pz) < HEAR) life.emit({ type: 'say', i: who.i, text, dur, kind: 'small' });
+      yield* wait(me, dur + 0.4, key);
+    }
+  } finally {
+    o.pairWith = null; o.hold = 0; o.face = null; o.look = null;
+    me.face = null; me.look = null;
+  }
+}
+
+// Spoken to by one of the crowd: stood where they are till it's over.
+function* hearOut(me, key) {
+  me.act = ACT.IDLE;
+  while (me.pairWith && me.alive(key) && !me.parked) yield;
 }
 
 // Between a script's end and the next block: stand, or sit on.

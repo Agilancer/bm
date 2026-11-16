@@ -76,7 +76,8 @@ class Glb:
 
 
 def source(mid):
-    return os.path.join(CFG["src"], CFG["models"][mid]["file"])
+    m = CFG["models"][mid]
+    return os.path.join(ROOT if m.get("repo") else CFG["src"], m["file"])
 
 
 def save(img, name, **kw):

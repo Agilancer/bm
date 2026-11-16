@@ -14,11 +14,12 @@ import { Ground } from './ground.js';
 import { Town } from './town.js';
 import { Life, ACT } from './brain.js';
 import { Talk } from './talk.js';
-import { FOLK } from './people.js';
+import { CROWD_LEAN, FOLK } from './people.js';
 import { LINES as LA } from './lines/town_a.js';
 import { LINES as LB } from './lines/town_b.js';
 import { LINES as LC } from './lines/town_c.js';
 import { LINES as LLAND } from './lines/land.js';
+import { LINES as LPHOBOS } from './lines/phobos.js';
 import { SCENES, SMALLTALK } from './lines/scenes.js';
 import { F, F_PALETTE, FCTRL, FIN, FOLK_BYTES, FOLK_JOINTS, FOLK_MAX, FOLK_STRIDE, SH, SLOT_HEAD, freeSlot, mapFolk, publish } from './layout.js';
 import { carryFrame, carryPalette, carryPoint } from '../core/carry.js';
@@ -54,7 +55,9 @@ async function boot({ buffer, base, lean }) {
   const ground = new Ground(village, interior, BOUNDS);
   const town = new Town(village, interior, spots);
   life = new Life({ ground, town, clips, emit, people: FOLK });
-  talk = new Talk(life, { lines: { ...LA, ...LB, ...LC, ...LLAND }, scenes: SCENES, smalltalk: SMALLTALK }, emit);
+  talk = new Talk(life, { lines: { ...LA, ...LB, ...LC, ...LLAND, ...LPHOBOS }, scenes: SCENES, smalltalk: SMALLTALK }, emit);
+  // (Phobos's street crowd: fewer of them on a phone.)
+  if (lean) life.crowdCap = Math.min(life.crowdCap, CROWD_LEAN);
   // Each body's skeleton out of its model (the mesh is the renderer's), one fetch a model.
   const glbs = new Map();
   const glbOf = (m) => {
@@ -63,7 +66,7 @@ async function boot({ buffer, base, lean }) {
   };
   await Promise.all(life.folk.map(async (me) => {
     const m = modelOf(folk, me.p.body);
-    const rig = new FolkRig(await glbOf(m), clips, { armOut: me.p.armOut, skirt: folk.models[m].skirt || null });
+    const rig = new FolkRig(await glbOf(m), clips, { armOut: me.p.armOut, skirt: folk.models[m].skirt || null, fist: folk.models[m].fist });
     life.setRig(me.i, rig);
     me.joints = rig.count + (rig.skirt ? SKIRT_JOINTS : 0);
     me.pal = new Float32Array(me.joints * 8);
@@ -163,7 +166,7 @@ function frame(dt) {
   const dangers = [];
   for (let k = 0; k < Math.min(8, inb[FIN.DANGER_N] | 0); k++) dangers.push([inb[FIN.DANGER + k * 2], inb[FIN.DANGER + k * 2 + 1]]);
   const player = [inb[FIN.PX], inb[FIN.PY], inb[FIN.PZ]];
-  life.update(dt, { hour: inb[FIN.HOUR], day: inb[FIN.DAY] | 0, player, dangers });
+  life.update(dt, { hour: inb[FIN.HOUR], day: inb[FIN.DAY] | 0, player, dangers, yaw: inb[FIN.YAW] });
   talk.update(dt, { player, cast: inb[FIN.CAST] | 0 });
   blows(player);
   tick++; clock += dt; dtNow = dt;
@@ -197,6 +200,8 @@ function write(cx, cy, cz) {
   slot[SH.COUNT] = life.folk.length; slot[SH.TICK] = tick; slot[SH.HOUR] = map.inbox[FIN.HOUR];
   for (const me of life.folk) {
     const o = SLOT_HEAD + me.i * FOLK_STRIDE;
+    // (Phobos's crowd while you're not in the city: not there at all.)
+    if (me.parked) { slot[o + F.ACTIVE] = 0; bodies[me.i * 4 + 2] = 0; me.posedAt = -1; continue; }
     const d = Math.hypot(me.x - cx, me.y - cy, me.z - cz);
     const seen = map.inbox[FIN.SEEN + me.i] > 0.5, sighted = seen && !me.seen;
     me.seen = seen;

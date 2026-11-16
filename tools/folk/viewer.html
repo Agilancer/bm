@@ -72,7 +72,7 @@ async function addBody(id, x) {
   const glbId = folkJson?.swaps?.[id]?.base || id;
   const buf = await fetch(`${base}${glbId}.glb`).then((r) => { if (!r.ok) throw new Error(`${glbId}.glb ${r.status}`); return r.arrayBuffer(); });
   const glb = parseGLB(buf);
-  const rig = new FolkRig(glb, clips, { armOut: id === 'smith' ? PEOPLE.find((p) => p.id === 'homunculus').armOut : model?.armOut || 0, skirt: model?.skirt || null });
+  const rig = new FolkRig(glb, clips, { armOut: id === 'smith' ? PEOPLE.find((p) => p.id === 'homunculus').armOut : model?.armOut || 0, skirt: model?.skirt || null, fist: model?.fist });
   const pose = new FolkPose(rig);
   const pr = glb.json.meshes[0].primitives[0], a = pr.attributes;
   const pos = accessor(glb, a.POSITION), nrm = accessor(glb, a.NORMAL), uv = accessor(glb, a.TEXCOORD_0);
@@ -83,7 +83,7 @@ async function addBody(id, x) {
   g.setAttribute('normal', new THREE.BufferAttribute(N, 3));
   g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(uv), 2));
   g.setIndex(new THREE.BufferAttribute(new Uint32Array(idx), 1));
-  const mat = new THREE.MeshStandardMaterial({ color: 0xbbbbbb, roughness: 0.8, metalness: 0 });
+  const mat = new THREE.MeshStandardMaterial({ color: 0xbbbbbb, roughness: 0.8, metalness: 0, side: THREE.DoubleSide })  // two-sided, as the game draws its people (cullMode none);
   const c = folkJson?.swaps?.[id]?.c || model?.c;
   if (c) tex.load(base + c, (t) => { t.colorSpace = THREE.SRGBColorSpace; t.flipY = false; mat.map = t; mat.color.set(0xffffff); mat.needsUpdate = true; });
   const mesh = new THREE.Mesh(g, mat);
@@ -154,7 +154,11 @@ $('ids').addEventListener('change', load);
 $('clip').addEventListener('change', () => { play(); info(); });
 $('speed').addEventListener('input', () => { $('sp').textContent = $('speed').value; });
 let last = performance.now();
-window.folkView = { bodies, clips, camera, controls, view(x, y, z, tx = 0, ty = 0.9, tz = 0) { camera.position.set(x, y, z); controls.target.set(tx, ty, tz); controls.update(); }, set clip(n) { $('clip').value = n; play(); info(); }, frameAt(t) { for (const b of bodies) b.pose.a.t = t; } };
+window.folkView = { bodies, clips, camera, controls, view(x, y, z, tx = 0, ty = 0.9, tz = 0) { camera.position.set(x, y, z); controls.target.set(tx, ty, tz); controls.update(); }, set clip(n) { $('clip').value = n; play(); info(); }, frameAt(t) { for (const b of bodies) b.pose.a.t = t; },
+  // For review sheets: size the picture, freeze a clip at a share of its length, save the canvas to tools/build/shots/<name>.png.
+  size(w, h) { camera.aspect = w / h; camera.updateProjectionMatrix(); renderer.setSize(w, h); },
+  async freeze(clip, share) { if ($('clip').value !== clip) { $('clip').value = clip; play(); $('speed').value = 1; await new Promise((r) => setTimeout(r, 500)); } $('speed').value = 0; $('scrub').value = share; await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(r)))); },
+  shot(name) { renderer.render(scene, camera); return new Promise((r) => renderer.domElement.toBlob(async (b) => { await fetch('/shot?name=' + encodeURIComponent(name), { method: 'POST', body: b }); r(name); }, 'image/png')); } };
 function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
