@@ -1153,7 +1153,9 @@ struct V { @builtin(position) pos: vec4f, @location(0) p: vec3f, @location(1) n:
     // them, rings of light falling away inward, clouds carried round, sparks carried round and in, a white heart that
     // breathes, now and then a crackle of lightning across it, and a hot rim that flickers like a held flame.
     let t = F.camPos.w;
-    let lying = I.glow.a < -2.5;
+    // (a -4: the Warrens' way out while its last boss lives, gone out: a dark, still well, no blue in it.)
+    let dead = I.glow.a < -3.5;
+    let lying = I.glow.a < -2.5 && !dead;
     let d = (in.uv - I.glow.xy) / I.glow.z;
     let r = length(d);
     let a = atan2(d.y, d.x);
@@ -1194,6 +1196,7 @@ struct V { @builtin(position) pos: vec4f, @location(0) p: vec3f, @location(1) n:
     let flick = 0.75 + 0.25 * sin(a * 11.0 - t * 5.0) * sin(a * 23.0 + t * 7.3);
     c += exp(-abs(edge) * 14.0) * vec3f(0.5, 1.2, 3.0) * flick;
     c += exp(-max(-edge, 0.0) * 4.0) * vec3f(0.06, 0.18, 0.7);
+    if (dead) { c = vec3f(0.003, 0.003, 0.004) + vec3f(0.03, 0.031, 0.034) * smoothstep(0.0, 1.3, r); }
     let toCam = F.camPos.xyz - in.p;
     let dist = length(toCam);
     c = applyFog(c, in.p, -toCam / dist, dist);
@@ -1225,7 +1228,12 @@ struct V { @builtin(position) pos: vec4f, @location(0) p: vec3f, @location(1) n:
   let v = toCam / dist;
   var n0 = normalize(in.n);
   if (!front) { n0 = -n0; }
-  let albedo = textureSample(albedoTex, repeatSmp, in.uv).rgb;
+  var albedo = textureSample(albedoTex, repeatSmp, in.uv).rgb;
+  // (A portal's stone gone out, a 1.25: its runes and gems lose their blue, dull grey in the stone.)
+  if (I.glow.a > 1.1 && I.glow.a < 1.5) {
+    let lit = smoothstep(0.22, 0.5, albedo.b) * smoothstep(0.08, 0.3, albedo.b - max(albedo.r, albedo.g * 0.85));
+    albedo = mix(albedo, vec3f(dot(albedo, vec3f(0.3, 0.5, 0.2)) * 0.3), lit);
+  }
   let nm = textureSample(normalTex, repeatSmp, in.uv);
   let mr = textureSample(mrTex, repeatSmp, in.uv);
   let n = perturb(n0, in.p, in.uv, nm.rg, 1.0);
