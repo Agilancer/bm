@@ -511,6 +511,7 @@ export const MATS = {
 export const matName = (kind, n = 1) => (n === 1 ? MATS[kind].name : MATS[kind].plural);
 
 export function nameOf(item) {
+  if (item.named) return item.named;   // (one of a kind, given by a quest: src/folk/quests.js RULES named)
   if (item.type === 'beacon') return 'Beacon Stone';
   if (item.type === 'hgear') return item.name;   // (gear for your party: src/items/partygear.js)
   if (item.type === 'spell') return `Scroll of ${SPELLS[item.spell].name}`;

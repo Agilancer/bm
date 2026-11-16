@@ -559,7 +559,7 @@ export const QUESTS = {
     ],
     done: [
       "The green lamp's dark. I watched it go out from the yard. Every row in the Yards went still at once. I've never heard that quiet.",
-      "Take this. It was a warden's, before she fell. It knows what to do with things like him. So do you, now.",
+      "Take this. We call it the Warden's Ember. It was a warden's, before she fell. It knows what to do with things like him. So do you, now.",
     ],
     after: [
       "The Rise is dark on the north side. He'll send another lord. We'll be ready. You made us ready.",

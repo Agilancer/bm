@@ -17,7 +17,8 @@
 // monsters' groups that count (GROUPS' keys); at a lair only its own sort of monster counts.
 // bring takes at: where what's wanted is found, for the trail (a place as above).
 // wait: what's handed over is made overnight, and collected the next day.
-// item: a skull, staff or robe it pays, rare (src/ui/folk.js reward); rarity: exactly how fine, for a skull.
+// item: a skull, staff or robe it pays, rare (src/ui/folk.js reward); rarity: exactly how fine, for a skull. named: the
+// item is one thing, the same for everyone (made from seed) and called this.
 import { churchAt, inChurch } from '../core/church.js';
 import { inTown } from '../core/town.js';
 import { QUESTS } from './lines/quests.js';

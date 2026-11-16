@@ -730,7 +730,7 @@ export class TownUI {
     if (this.quests.state(qid)?.stage !== 'done') this.quests.finish(qid);
     if (R.gold) { this.pack.gold += R.gold; this.note(`${R.gold} gold`, 'mat'); }
     if (R.xp) this.act.xp(R.xp);
-    const rng = makeRng((Math.random() * 2 ** 32) >>> 0);
+    const rng = makeRng(R.named ? R.seed >>> 0 : (Math.random() * 2 ** 32) >>> 0);
     let item = null;
     if (R.item === 'skull') item = R.rarity === undefined ? CRAFTS.skull.make(rng, 2) : rollSkull(rng, { rarity: R.rarity });
     else if (R.item === 'staff') item = CRAFTS.staff.make(rng, 2);
@@ -741,6 +741,7 @@ export class TownUI {
       const barred = this.spellbar.noScroll?.() ?? this.spellbar.known, left = SPELLS.map((_, i) => i).filter((i) => !barred.has(i));
       if (left.length) { const sp = left[Math.floor(rng() * left.length)]; this.spellbar.learn(sp); this.note(`You learn ${SPELLS[sp].name}. B: your spellbook.`, 'quest'); } else { this.pack.gold += 120; this.note('120 gold', 'mat'); }
     }
+    if (item && R.named) item.named = R.named;
     if (item) { this.act.give(item); this.note(`Received: ${nameOf(item)}`, 'quest'); }
     this.act.saved();
   }

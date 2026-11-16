@@ -77,11 +77,12 @@ export function hubFar(K) {
 }
 
 // A fire: three tongues of flame, not one, turned and leaning a little each, and a glow in the coals under them.
+// (In tongues: a short wide heart and five narrower ones round it, each its own height.)
 function fire(K, x, y, z, s = 1) {
-  K.disc('glow', x, y + 0.02, z, 0.42 * s, 9);
-  K.cone('flame', x, y, z, 0.42 * s, 1.15 * s, 9, 0.3);
-  K.cone('flame', x + 0.16 * s, y, z - 0.1 * s, 0.26 * s, 0.8 * s, 7, 1.1);
-  K.cone('flame', x - 0.14 * s, y, z + 0.12 * s, 0.22 * s, 0.65 * s, 7, 2.0);
+  K.disc('glow', x, y + 0.02, z, 0.46 * s, 9);
+  K.cone('flame', x, y, z, 0.3 * s, 0.7 * s, 8, 0.3);
+  for (let k = 0; k < 5; k++) { const a = k * 1.257 + 0.4, r = (0.17 + 0.06 * (k % 2)) * s;
+    K.cone('flame', x + Math.cos(a) * r, y, z + Math.sin(a) * r, (0.11 + 0.04 * ((k * 3) % 2)) * s, (0.75 + 0.45 * (((k * 7) % 5) / 4)) * s, 6, a); }
 }
 // A brazier as the Ashwardens keep them: a squat stone post, a wide iron bowl, coals and a fire in it.
 function bowl(K, x, z, h = 1.0) {
@@ -143,11 +144,12 @@ export function hubNear(K, h) {
     let k = 0;
     for (const u of [-11, -8, -5]) for (const v of [3.5, 6.5]) {
       const [x, gy, z] = G(u, v);
-      K.drum('wood', x, gy - 0.1, z, 1.05, 1.0, 12, { collide: false, open: true });
-      K.disc(dyes[k++ % dyes.length], x, gy + 0.62, z, 1.0, 12);
-      K.drum('iron', x, gy + 0.78, z, 1.08, 0.08, 12, { collide: false, open: true });
+      K.drum('dark:stone', x, gy - 0.05, z, 1.32, 0.12, 12, { collide: false });
+      K.drum('wood', x, gy - 0.55, z, 1.05, 1.0, 12, { collide: false, open: true });
+      K.disc(dyes[k++ % dyes.length], x, gy + 0.22, z, 1.0, 12);
+      K.drum('iron', x, gy + 0.36, z, 1.08, 0.08, 12, { collide: false, open: true });
     }
-    { const [x, gy, z] = G(-5, 6.5); K.beam('wood', [x + along[0] * 0.5, gy + 0.6, z + along[1] * 0.5], [x + along[0] * 1.6, gy + 2.3, z + along[1] * 1.6], 0.04); }
+    { const [x, gy, z] = G(-5, 6.5); K.beam('wood', [x + along[0] * 0.5, gy + 0.2, z + along[1] * 0.5], [x + along[0] * 1.6, gy + 1.9, z + along[1] * 1.6], 0.04); }
     const H = 4.2;
     for (const v of [-3, -0.5]) {
       const a = G(-13.5, v), b = G(-2, v);

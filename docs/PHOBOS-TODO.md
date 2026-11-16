@@ -344,11 +344,24 @@ Known and not done in the block-out:
 - Critics on the hubs, the moat and drawbridge and the 14 quests: round 1 veteran 7 REJECT, young 6.5 REJECT; round 2
   veteran 8 APPROVE, young 7.5 APPROVE. Done after round 2: ragged chandlery tops with a soot band, ash drifts round the
   pyre, a higher bone heap, taller smoke and steam, no grass on the moat's lip, a hand-out line in each place for Loaves,
-  the levels in chain order; the Throne Road's line now meets the drawbridge head-on (src/core/east.js WAY). Leftovers:
-  a fixed, named staff for Lamps on the Rise (now a random staff); a marker for the Approach by Night; the pyre flame in
-  smaller tilted tongues; the dye vats sunk halfway; the moat's water darker, with a wet band on the banks and pier; the
-  bone heap warmer (ivory); the Watch found by invitation only; quest marks and auto-play not yet run through the quests
-  in the game.
+  the levels in chain order; the Throne Road's line now meets the drawbridge head-on (src/core/east.js WAY). Then: Lamps
+  on the Rise pays a named staff, the Warden's Ember (RULES `named` + `seed`: the same staff for everyone, its name in
+  items.js nameOf); the fire in tongues; the dye vats sunk in stone collars. (The Approach by Night already has its way
+  shown: the quest trail leads to every 'ph:' place.) Leftovers: the moat's water darker, with a wet band on the banks
+  and pier; the bone heap warmer (ivory); the Watch found by invitation only; quest marks and auto-play not yet run
+  through the quests in the game.
+
+### Textures asked of ChatGPT (2026-11-16)
+
+100 more textures in five zips of twenty, `art/phobos/texture-requests/PH2_BATCH_01..05_*.zip`, built by
+`tools/phobos/texture_requests/build_zips.py` from `request_list.py` (what, where, metres, palette, the game tile to
+match, the prompt). Each zip carries README_FOR_CHATGPT.md, STYLE_GUIDE.md, REQUEST.json/.md, refs, shape guides and
+three scripts ChatGPT runs itself (check_textures.py: seams, even light, brightness, mask rules; make_tileable.py: roll
+by half and mask the band for a masked repaint; pack_return.py: RETURN_PH2_BATCH_<nn>.zip with CATALOG.json and a
+contact sheet). The owner feeds them in (HOW_TO_USE.md). When they come back: through tools/phobos/textures
+(seamless.py, grading into sets), then onto the city: iron, bone wall, copings and arch stones, Phobos's own roofs,
+doors, windows lit at night, Velscour's liveries and banners, interiors, the castle's and Keep's walls, cliffs, and the
+world-space grime layer (soot, damp, moss, rust, cracks) that chunk 2 asked for.
 - [ ] Portals (seals) through the city.
 - [ ] Drip quests from elsewhere in the world by level band; the endgame arc after all other quests.
 - [ ] Auto-play taught all of it.

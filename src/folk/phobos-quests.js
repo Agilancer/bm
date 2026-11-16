@@ -21,7 +21,7 @@ export const PHOBOS_RULES = {
   // ---- the Ashwardens, in the charnel yard at the Bone Yards' north end ----
   still_the_rows: { steps: [{ kill: 'lair:phobos_boneyards', n: 5 }, { back: true, say: "The rows by the north wall are still. The big ones too." }], gold: 440, xp: 3600 },
   bone_tithe: { needs: 'still_the_rows', steps: [{ bring: 'bone', n: 12, at: 'lair:phobos_boneyards' }], gold: 380, xp: 2800 },
-  lamps_on_the_rise: { needs: 'still_the_rows', steps: [{ kill: 'lair:phobos_mages', n: 3 }, { back: true, say: 'The lord on the Mages\' Rise is put out, and his two lamps with him.' }], gold: 600, xp: 5200, item: 'staff' },
+  lamps_on_the_rise: { needs: 'still_the_rows', steps: [{ kill: 'lair:phobos_mages', n: 3 }, { back: true, say: 'The lord on the Mages\' Rise is put out, and his two lamps with him.' }], gold: 600, xp: 5200, item: 'staff', named: "The Warden's Ember", seed: 0x51a7e },
 };
 // The level each wants (src/ui/autobrain.js PLAN): you come to Phobos at about twenty.
 export const PHOBOS_LEVELS = [
