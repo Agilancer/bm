@@ -61,7 +61,7 @@ export function roadEdge(x, z) {
 
 // Nowhere a stone may lie: the town, the church's ground, the houses' plots, the cave, the places, the water, the cliff's face.
 function barred(x, z) {
-  if (x > 9300 && x < 10800 && cityIn(x, z) < 1.0) return true;   // (nothing lies about in Phobos's streets: src/core/phobos-build.js dresses them)
+  if (x > 9200 && x < 10900 && cityIn(x, z) < 1.105) return true;   // (nothing lies about in Phobos's streets: src/core/phobos-build.js dresses them; nor in its moat, under the water, nor on its lip)
   if (Math.hypot(x, z) < TOWN) return true;
   // (And the town's east end, built since on the ground the church stood on: the manor, the bakehouse and the herbalist's. A boulder
   // lay against the herbalist's wall, and stones in the manor's forecourt.)

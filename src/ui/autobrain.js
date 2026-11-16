@@ -57,6 +57,7 @@ import { thirdLead } from './autocam.js';
 import { LET_OUT, ONE_MORE, PACK_MAKER } from './folk.js';
 import { MAX_EXTRA, slotPrice } from '../items/pack.js';
 import { CHANNEL } from '../items/beacon.js';
+import { PHOBOS_LEVELS } from '../folk/phobos-quests.js';
 
 // The beacon stone (src/ui/beacon.js): used when the work's in Bellmourn and further off than BEACON_FAR, with nothing
 // within BEACON_CLEAR to break it off; while it's at work, it stands still for it unless something's within BEACON_HOLD.
@@ -178,6 +179,8 @@ const PLAN = [
   ['sung_open', 17], ['king_under_the_moor', 18],
   // The Elder Dragon Gods: a party of the hundredth winter.
   ['storm_over_the_horn', 100], ['the_hollow_star', 102],
+  // City State Phobos's first (src/folk/phobos-quests.js): you come to it at about twenty.
+  ...PHOBOS_LEVELS,
 ];
 // (Taken on in the order of the levels they want.)
 PLAN.sort((a, b) => a[1] - b[1]);

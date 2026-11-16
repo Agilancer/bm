@@ -72,6 +72,9 @@
     "ph_lark": {"base": "young_1", "c": "ph_lark_c.webp", "note": "Phobos's crowd: a delver: dusk-blue jerkin"},
     "ph_brute": {"base": "worker", "c": "ph_brute_c.webp", "note": "Phobos's crowd: a hired brute: dun leather"},
     "ph_glass": {"base": "young_3", "c": "ph_glass_c.webp", "note": "Phobos's crowd: a tavern girl: madder skirt"},
-    "ph_tib": {"base": "girl_3", "c": "ph_tib_c.webp", "note": "Phobos's crowd: a street girl: faded teal rags"}
+    "ph_tib": {"base": "girl_3", "c": "ph_tib_c.webp", "note": "Phobos's crowd: a street girl: faded teal rags"},
+    "ph_penny": {"base": "dude", "c": "ph_penny_c.webp", "note": "Phobos's crowd: the Pennyless' purse: a good coat gone soot-green"},
+    "ph_watch": {"base": "young_3", "c": "ph_watch_c.webp", "note": "Phobos's crowd: the Quiet Watch's captain: a dyer's plain oat and umber"},
+    "ph_ash": {"base": "worker_f", "c": "ph_ash_c.webp", "note": "Phobos's crowd: the Ashwardens' warden: ash-grey, nothing bright"}
   }
 }

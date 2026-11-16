@@ -35,6 +35,10 @@ S = {
     "ph_brute": ("worker", 0.1, 0.65, 0.5, "a hired brute: dun leather"),
     "ph_glass": ("young_3", 0.95, 0.6, 0.7, "a tavern girl: madder skirt"),
     "ph_tib": ("girl_3", 0.55, 0.4, 0.6, "a street girl: faded teal rags"),
+    # The three hubs' givers (src/folk/people.js HUBFOLK).
+    "ph_penny": ("dude", 0.3, 0.4, 0.55, "the Pennyless' purse: a good coat gone soot-green"),
+    "ph_watch": ("young_3", 0.1, 0.35, 0.72, "the Quiet Watch's captain: a dyer's plain oat and umber"),
+    "ph_ash": ("worker_f", 0.0, 0.12, 0.45, "the Ashwardens' warden: ash-grey, nothing bright"),
 }
 
 

@@ -82,6 +82,11 @@ export const POSTED = [
   posted({ id: 'ysolt', name: 'Ysolt Marrow', title: 'Out of Khel', body: 'ysolt', sex: 'f', age: 27, post: [-2067, -180], face: 3.142, idles: ['idle', 'look_around', 'wait'] }),
   // Frostwatch, the old watch-fort in the Rimeholt Fells.
   posted({ id: 'garrick', name: 'Hew Garrick', title: 'Warden of Frostwatch', body: 'garrick', sex: 'm', age: 48, post: [690, 3899], face: 1.571, idles: ['fold_arms_ual', 'look_around', 'idle_ual'] }),
+  // City State Phobos's three hubs (src/core/phobos-hubs.js): in each yard, a few steps in from the gate (hubPost), whoever
+  // has work for you there. Their quests: src/folk/phobos-quests.js; their words: src/folk/lines/phobos-hubs.js.
+  posted({ id: 'ph_penny', hub: 'pennyless', name: 'Fennick Lowe', title: "the Pennyless' Purse", body: 'ph_penny', sex: 'm', age: 46, post: [9613.8, -288.9], face: -2.415, idles: ['fold_arms', 'look_around', 'idle'] }),
+  posted({ id: 'ph_watch', hub: 'watch', name: 'Maud Treller', title: 'Captain of the Quiet Watch', body: 'ph_watch', sex: 'f', age: 41, post: [10005.9, 631.2], face: -2.406, idles: ['fold_arms', 'wait', 'look_around'] }),
+  posted({ id: 'ph_ash', hub: 'ash', name: 'Edda Grail', title: 'Warden of the Ashwardens', body: 'ph_ash', sex: 'f', age: 52, post: [10059.7, -551.4], face: -3.11, idles: ['fold_arms_ual', 'idle_ual', 'look_around'] }),
 ];
 // City State Phobos's street crowd: ruffians, riff-raff and adventurer folk, on the town's own thread with no house, bed or
 // day (job 'roam': src/folk/brain.js). They're only up while you're inside the city's wall, and then they're about the

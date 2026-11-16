@@ -191,7 +191,8 @@ test('the people posted in the land: room for them, somewhere sound to stand, an
   assert.ok(FOLK.length <= FOLK_MAX, `${FOLK.length} bodies for ${FOLK_MAX} places`);
   assert.equal(new Set(FOLK.map((p) => p.id)).size, FOLK.length);
   assert.ok(DAYS.posted);
-  for (const p of POSTED) {
+  // (Phobos's hub givers stand in their yards, not in the land's places: tests/phobos-quests.test.mjs.)
+  for (const p of POSTED.filter((q) => !q.hub)) {
     assert.equal(p.job, 'posted', p.id);
     assert.ok(LINES[p.id], `${p.id} has nothing to say`);
     const [x, z] = p.post, near = Object.values(SITES).find((s) => Math.hypot(x - s.x, z - s.z) < s.r);
@@ -203,7 +204,7 @@ test('the people posted in the land: room for them, somewhere sound to stand, an
     for (const l of LAIRS) assert.ok(Math.hypot(l.x - x, l.z - z) > 150, `${p.id} is ${Math.hypot(l.x - x, l.z - z) | 0} m from ${l.key}`);
   }
   // Every one of them gives work.
-  for (const p of [...POSTED, BEYOND.find((b) => b.id === 'hale')]) assert.ok(IDS.some((id) => QUESTS[id].giver === p.id), `${p.id} gives nothing`);
+  for (const p of [...POSTED.filter((q) => !q.hub), BEYOND.find((b) => b.id === 'hale')]) assert.ok(IDS.some((id) => QUESTS[id].giver === p.id), `${p.id} gives nothing`);
 });
 
 test('the lairs: none in a place, on a road or in water, and no more near any one than the slots can stand up', () => {

@@ -20,6 +20,7 @@ import { LINES as LB } from './lines/town_b.js';
 import { LINES as LC } from './lines/town_c.js';
 import { LINES as LLAND } from './lines/land.js';
 import { LINES as LPHOBOS } from './lines/phobos.js';
+import { LINES as LHUBS } from './lines/phobos-hubs.js';
 import { SCENES, SMALLTALK } from './lines/scenes.js';
 import { F, F_PALETTE, FCTRL, FIN, FOLK_BYTES, FOLK_JOINTS, FOLK_MAX, FOLK_STRIDE, SH, SLOT_HEAD, freeSlot, mapFolk, publish } from './layout.js';
 import { carryFrame, carryPalette, carryPoint } from '../core/carry.js';
@@ -55,7 +56,7 @@ async function boot({ buffer, base, lean }) {
   const ground = new Ground(village, interior, BOUNDS);
   const town = new Town(village, interior, spots);
   life = new Life({ ground, town, clips, emit, people: FOLK });
-  talk = new Talk(life, { lines: { ...LA, ...LB, ...LC, ...LLAND, ...LPHOBOS }, scenes: SCENES, smalltalk: SMALLTALK }, emit);
+  talk = new Talk(life, { lines: { ...LA, ...LB, ...LC, ...LLAND, ...LPHOBOS, ...LHUBS }, scenes: SCENES, smalltalk: SMALLTALK }, emit);
   // (Phobos's street crowd: fewer of them on a phone.)
   if (lean) life.crowdCap = Math.min(life.crowdCap, CROWD_LEAN);
   // Each body's skeleton out of its model (the mesh is the renderer's), one fetch a model.

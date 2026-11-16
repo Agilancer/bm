@@ -11,6 +11,7 @@ import { QUESTS } from '../folk/lines/quests.js';
 import { BEYOND, LINES as LBEY } from '../folk/lines/beyond.js';
 import { LINES as LLAND } from '../folk/lines/land.js';
 import { LINES as LPHOBOS } from '../folk/lines/phobos.js';
+import { LINES as LHUBS } from '../folk/lines/phobos-hubs.js';
 import { LISANDRA, LINES as LLIS } from '../folk/lines/lisandra.js';
 import { C, CHARS_START, C_PROPS, C_SIZE, H } from '../core/layout.js';
 import { LISANDRA_FORMS } from '../core/lisandra.js';
@@ -26,7 +27,7 @@ import { CLOSE_X } from './menu-x.js';
 import { art } from './skin.js';
 import { giverOf, hintOf, placeOf, questLevel, rewardOf, stepsOf } from './questlog.js';
 
-const LINES = { ...LA, ...LB, ...LC, ...LBEY, ...LLAND, ...LLIS, ...LPHOBOS };
+const LINES = { ...LA, ...LB, ...LC, ...LBEY, ...LLAND, ...LLIS, ...LPHOBOS, ...LHUBS };
 // Where the people out past the town keep (src/folk/lines/beyond.js): the middle of the beat they walk (core/knights.js).
 // (Or, with no knight flagged as theirs, where their entry says they stand: `at`.)
 const BEYOND_AT = Object.fromEntries(BEYOND.map((b) => {
@@ -729,7 +730,7 @@ export class TownUI {
     if (this.quests.state(qid)?.stage !== 'done') this.quests.finish(qid);
     if (R.gold) { this.pack.gold += R.gold; this.note(`${R.gold} gold`, 'mat'); }
     if (R.xp) this.act.xp(R.xp);
-    const rng = makeRng((Math.random() * 2 ** 32) >>> 0);
+    const rng = makeRng(R.named ? R.seed >>> 0 : (Math.random() * 2 ** 32) >>> 0);
     let item = null;
     if (R.item === 'skull') item = R.rarity === undefined ? CRAFTS.skull.make(rng, 2) : rollSkull(rng, { rarity: R.rarity });
     else if (R.item === 'staff') item = CRAFTS.staff.make(rng, 2);
@@ -740,6 +741,7 @@ export class TownUI {
       const barred = this.spellbar.noScroll?.() ?? this.spellbar.known, left = SPELLS.map((_, i) => i).filter((i) => !barred.has(i));
       if (left.length) { const sp = left[Math.floor(rng() * left.length)]; this.spellbar.learn(sp); this.note(`You learn ${SPELLS[sp].name}. B: your spellbook.`, 'quest'); } else { this.pack.gold += 120; this.note('120 gold', 'mat'); }
     }
+    if (item && R.named) item.named = R.named;
     if (item) { this.act.give(item); this.note(`Received: ${nameOf(item)}`, 'quest'); }
     this.act.saved();
   }

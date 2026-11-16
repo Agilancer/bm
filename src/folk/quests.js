@@ -17,7 +17,8 @@
 // monsters' groups that count (GROUPS' keys); at a lair only its own sort of monster counts.
 // bring takes at: where what's wanted is found, for the trail (a place as above).
 // wait: what's handed over is made overnight, and collected the next day.
-// item: a skull, staff or robe it pays, rare (src/ui/folk.js reward); rarity: exactly how fine, for a skull.
+// item: a skull, staff or robe it pays, rare (src/ui/folk.js reward); rarity: exactly how fine, for a skull. named: the
+// item is one thing, the same for everyone (made from seed) and called this.
 import { churchAt, inChurch } from '../core/church.js';
 import { inTown } from '../core/town.js';
 import { QUESTS } from './lines/quests.js';
@@ -27,6 +28,9 @@ import { GIVERS } from './lines/lisandra.js';
 import * as DELVE from '../core/dungeon.js';
 import { LAIRS } from '../core/tripo-monsters.js';
 import { LAND_RULES } from './land-quests.js';
+import { PHOBOS_RULES } from './phobos-quests.js';
+import { CITY, cityIn } from '../core/east.js';
+import { PHOBOS } from '../core/phobos-data.js';
 
 export const RULES = {
   // Lisandra's, at the edge of town once she's walked you down: go round everyone with work and start each of their quests.
@@ -50,6 +54,8 @@ export const RULES = {
   barrow_lights: { steps: [{ enter: 'barrows', night: true }, { kill: 'barrows', n: 6, of: 9 }, { back: true, say: 'The lights were jellies. Full of bones.' }], gold: 140, xp: 700 },
   // The small towns, the land's monsters and the party dungeons (src/folk/land-quests.js; words in src/folk/lines/land.js).
   ...LAND_RULES,
+  // City State Phobos's (src/folk/phobos-quests.js; words in src/folk/lines/phobos-hubs.js).
+  ...PHOBOS_RULES,
 };
 
 // The Bell Crypt: the octagon where the stair down lets out (tools/interior/build_interior.py, Stage I), in the world.
@@ -74,6 +80,9 @@ for (const k of Object.keys(SITES)) AREAS[k] ??= near(k, 1.2);
 for (const d of DELVE.DELVES || []) AREAS[d.key] = (x, y, z) => DELVE.delveAt?.(x, z) === d.key;
 export const LAIR_REACH = 70;
 for (const l of LAIRS) AREAS[`lair:${l.key}`] = (x, y, z) => Math.hypot(x - l.x, z - l.z) < l.r + LAIR_REACH;
+// City State Phobos: anywhere inside its wall ('phobos'), and each of its districts ('ph:<key>', src/core/phobos-data.js).
+AREAS.phobos = (x, y, z) => y > -30 && cityIn(x, z) < 1;
+for (const d of PHOBOS.districts) AREAS[`ph:${d.key}`] = (x, y, z) => y > -30 && Math.hypot(x - d.x, z - d.z) < d.r * 0.8;
 export const areaAt = (k, x, y, z) => !!AREAS[k]?.(x, y, z);
 export const hasArea = (k) => !!AREAS[k];
 
@@ -89,6 +98,8 @@ export function delvePortal(key) {
 // Where a step's place is, to be led to: { x, z, near }, or null (the town's own, which src/ui/trail.js knows its ways to).
 export function placeSpot(k) {
   if (k.startsWith('lair:')) { const l = LAIRS.find((q) => q.key === k.slice(5)); return l ? { x: l.x, z: l.z, near: l.r + 12 } : null; }
+  if (k === 'phobos') return { x: CITY.x - CITY.a + 40, z: 0, near: 30 };
+  if (k.startsWith('ph:')) { const d = PHOBOS.districts.find((q) => q.key === k.slice(3)); return d ? { x: d.x, z: d.z, near: d.r * 0.5 } : null; }
   const p = delvePortal(k);
   if (p) return { x: p.x, z: p.z, near: 3, delve: k };
   return SITES[k] ? { x: SITES[k].x, z: SITES[k].z, near: SITES[k].r * 0.8 } : null;
@@ -285,6 +296,8 @@ export class QuestBook {
         (s.seen = s.seen || []).push(k);
         if (s.seen.length >= st.visit.length) this.advance(id);
         else { this.on.toast(`${QUESTS[id].title}: ${s.seen.length} of ${st.visit.length}`, 'count'); this.on.change(); }
+        // (What's heard there, if the quest's words have something: src/folk/lines/phobos-hubs.js asking_around.)
+        if (QUESTS[id].heard?.[k]) this.on.toast(QUESTS[id].heard[k], 'hint');
         continue;
       }
       if (!st?.enter || !AREAS[st.enter](x, y, z)) continue;

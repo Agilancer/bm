@@ -63,6 +63,7 @@ import { groundAt, setHomes } from './ui/places.js';
 import { HallUI } from './ui/testhall.js';
 import { HALL, SPAWN, hallAt } from './core/testhall.js';
 import { beginRun, deathWords, noteRun } from './core/lastrun.js';
+import { HUB_SMOKE } from './core/phobos-hubs.js';
 import { Beacon } from './ui/beacon.js';
 
 const BASE = new URL('..', import.meta.url).href;
@@ -1848,6 +1849,14 @@ class GameView {
     if (this.smokeT > 0.09) {
       this.smokeT = 0;
       for (const s of r.village.smoke) r.emit(4, 1, s.p[0], s.p[1], s.p[2], 0.1, 1, 0.08, 0.22, 0.45, 0.8, 0.09, 0.17, 7, 12);
+      // (City State Phobos's hub yards: the Ashwardens' pyre, the Pennyless' cookfire, steam off the dye works' madder vat;
+      // only near enough to see: src/core/phobos-hubs.js HUB_SMOKE.)
+      const cm = this.cam;
+      if (cm && cm.x > 9200) for (const s of HUB_SMOKE) {
+        if (Math.abs(s.x - cm.x) > 450 || Math.abs(s.z - cm.z) > 450) continue;
+        if (s.steam) r.emit(1, 2, s.x + (Math.random() - 0.5) * 1.2, s.y, s.z + (Math.random() - 0.5) * 1.2, 0, 1, 0, 0.3, 0.9, 1.7, 0.25, 0.7, 2.2, 3.6);
+        else r.emit(4, s.big > 0.8 ? 2 : 1, s.x, s.y, s.z, 0.08, 1, 0.05, 0.25 * s.big + 0.1, 0.6 + 1.2 * s.big, 1.3 + 1.6 * s.big, 0.2 * s.big + 0.08, 0.45 * s.big + 0.12, 8, 14);
+      }
     }
     this.sparkT = (this.sparkT || 0) + dt;
     if (this.sparkT > 0.11) { this.sparkT = 0; r.fireSparks(this.cam); }
