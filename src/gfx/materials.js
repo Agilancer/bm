@@ -854,7 +854,21 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
       // (Each diamond puffed up between its lines of stitching.)
       let puff = smoothstep(0.0, 0.22, min(s1, s2));
       mailH = puff * 0.0016 * qFade;
-      albedo = vec3f(0.07, 0.05, 0.035) * mix(0.93, 0.85 + 0.15 * puff, qFade);
+      // (A dyed party member's padded coat is in their coat's colour and about its light, or a brown linen under a navy coat
+      // is a stain at the hips. Its colour rides in info.z's fraction, a code: hue in 32, colour in 2, light in 4. herolook.js
+      // coverCode. None: the brown linen.)
+      var linen = vec3f(0.07, 0.05, 0.035);
+      let zf = -C.info.z - floor(-C.info.z);
+      if (zf > 0.005) {
+        let code = round((zf - 0.01) / 0.0015);
+        let hh = floor(code / 8.0) / 32.0;
+        let sk = select(0.15, 0.4, (floor(code / 4.0) % 2.0) > 0.5);
+        let li = code % 4.0;
+        let lk = select(select(select(0.035, 0.06, li > 0.5), 0.1, li > 1.5), 0.16, li > 2.5);
+        let tint = mix(vec3f(1.0), clamp(abs(fract(hh + vec3f(1.0, 2.0 / 3.0, 1.0 / 3.0)) * 6.0 - 3.0) - 1.0, vec3f(0.0), vec3f(1.0)), sk);
+        linen = tint * (lk / max(dot(tint, vec3f(0.2126, 0.7152, 0.0722)), 0.05));
+      }
+      albedo = linen * mix(0.93, 0.85 + 0.15 * puff, qFade);
       rough = 0.8;
       metal = 0.0;
     }
@@ -1239,8 +1253,11 @@ struct V { @builtin(position) pos: vec4f, @location(0) p: vec3f, @location(1) n:
   let n = perturb(n0, in.p, in.uv, nm.rg, 1.0);
   let shadow = shadowAt(in.p, n0, in.viewZ, ign(in.pos.xy));
   // A dropped thing's rarity: a little all over, and strongest where it turns from the eye. (A gem's glow is flat: a = 0.)
-  let rim = pow(1.0 - clamp(dot(n0, v), 0.0, 1.0), 2.2);
-  var c = shadePBR(in.p, n, v, albedo, matteRough(mr.g, mr.b), mr.b, 1.0, shadow) + I.glow.rgb * mix(1.0, 0.05 + 1.5 * rim * rim, I.glow.a);
+  // (Further off, a few pixels across, its rim is a hairline and its rarity can't be told: the rim's widened and a little
+  // more of it is in its body with distance, so it reads about as wide on the screen near and far. Drops only, a <= 1.)
+  let far = select(0.0, smoothstep(5.0, 22.0, dist), I.glow.a <= 1.0);
+  let rim = pow(1.0 - clamp(dot(n0, v), 0.0, 1.0), mix(2.2, 0.9, far));
+  var c = shadePBR(in.p, n, v, albedo, matteRough(mr.g, mr.b), mr.b, 1.0, shadow) + I.glow.rgb * mix(1.0, 0.05 + 0.3 * far + 1.5 * rim * rim, I.glow.a);
   // A portal's stone (src/gfx/renderer.js portalModels): its runes and gems, painted the whirl's blue, glow of themselves.
   if (I.glow.a > 1.5) {
     let lit = smoothstep(0.22, 0.5, albedo.b) * smoothstep(0.08, 0.3, albedo.b - max(albedo.r, albedo.g * 0.85));

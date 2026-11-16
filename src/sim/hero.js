@@ -278,6 +278,10 @@ export class Hero extends Knight {
       } else if (M && M.kind === 'boomerang') {
         // (A boomerang's as wide as his hips: flat to the thigh, its elbow up and forward, not across his belly.)
         this.stowMain = hold(pj, [0.1, -0.9, -0.42], [0.25, 0.3, 1], [0.22 * u, hipY - 0.08 * u, -0.02 * u]);
+      } else if (M && M.kind === 'mace') {
+        // (A mace hangs by the haft at his left side, its head down by the thigh, a little forward: hung back, as a sword is,
+        // its head goes through a paladin's cape.)
+        this.stowMain = hold(pj, [0.2, -0.97, 0.12], [1, 0.2, 0], [0.24 * u, hipY + 0.02 * u, 0.04 * u]);
       } else if (M) this.stowMain = hold(pj, [0.12, -0.86, -0.5], [1, 0.1, 0], [0.2 * u, hipY, 0.03 * u]);
       if (this.shieldStyle) this.stowOff = hold(sj, this.boardRest.y, this.boardRest.z, this.boardRest.at);
       else if (this.offP && this.offP.kind === 'boomerang') this.stowOff = hold(pj, [-0.1, -0.9, -0.42], [-0.25, 0.3, 1], [-0.22 * u, hipY - 0.08 * u, -0.02 * u]);
