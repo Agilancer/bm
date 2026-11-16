@@ -898,6 +898,7 @@ export class HeroTalk {
       if (!h.shown || h.dead || h.below || Math.abs(h.y - py) > 1.6) continue;
       const dx = h.x - px, dz = h.z - pz, d = Math.hypot(dx, dz);
       if (d > TALK_REACH) continue;
+      if (d < 0.5 && document.body.classList.contains('hero-play')) continue;   // (the one you're playing as: src/ui/heroplay.js)
       const ahead = d < 0.01 ? 1 : (dx * fx + dz * fz) / d;
       if (ahead < 0.45 && d > 1.1) continue;
       const s = d * (1.6 - ahead);

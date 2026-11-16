@@ -47,6 +47,7 @@ import { SpellSound } from './spellsound.js';
 import { HERO_SLOTS, makeCast, withBrokers } from './core/heroes.js';
 import { HeroTalk } from './ui/heroes.js';
 import { PartyUI } from './ui/party.js';
+import { HeroPlayUI } from './ui/heroplay.js';
 import { PartyBook } from './ui/partybook.js';
 import { fits, partyDrops, useKit } from './items/partygear.js';
 import { TownClient } from './folk/client.js';
@@ -406,6 +407,7 @@ async function boot(plan, poolSize) {
       else if (m.type === 'file') fileNoted(m);
       else if (m.type === 'snap') { latestSnap = m.snap; if (m.events) pendingEvents.push(m.events); }
       else if (m.type === 'look') { input.yaw = m.yaw; input.pitch = m.pitch; }
+      else if (m.type === 'heroPlay') game?.heroPlay?.onMessage(m);
       else if (m.type === 'heroState') { const c = calls.get(m.id); calls.delete(m.id); c?.resolve(m.heroes); }
       else if (m.type === 'warrens') { game?.party?.onWarrens(m); renderer?.setScenery?.(m.flipped); }
       // (What monsters have marked on the ground and thrown, near you: src/sim/perils.js. Auto-play steps out of it.)
@@ -1067,6 +1069,13 @@ async function boot(plan, poolSize) {
     base: BASE, opening: OPENING_ENABLED, game, shared, input, hud, audio, pack, inventory, townUI, lands, renderer, town,
     spellbar: () => game.spellbar, paused: () => state.paused, pause: (on) => input.onPauseChange(on), foeNames: FOE_NAMES, settings,
   });
+  // Playing as one of your party: the ▶ by their life bar (src/ui/heroplay.js, src/sim/heroplay.js).
+  if (game.party) {
+    game.heroPlay = new HeroPlayUI({ sim: simWorker, input, party: game.party, hud, chatLog: game.chatLog, viewSwitch: game.viewSwitch, autoplay: game.autoplay, renderer,
+      playerName: () => { try { return openingHUD?.name || 'Tessariel'; } catch { return 'Tessariel'; } },
+      foeName: (i, snap) => { const co = CHARS_START + i * C_SIZE; return renderer.tripo?.wildName?.(snap[co + C.MODEL]) || FOE_NAMES[snap[co + C.KIND]] || 'Foe'; } });
+    game.party.buildFrames();
+  }
   // Move Buttons, on the pause screen: every button, bar and the map where the player wants them, kept for every game after
   // (src/ui/arrange.js). The game stays paused under it; the pause screen comes back when it's done.
   game.arrange = new Arrange({
@@ -1676,6 +1685,7 @@ class GameView {
         // (Names and bubbles stay up while a hero is talking to you: the panel is theirs.)
         this.heroTalk.update(dt, snap, r.hour, !this.idle && (!this.input.menu || !!this.heroTalk.open));
         this.party?.update(dt, snap);
+        this.heroPlay?.update(dt, snap);
         // The sim keeps the heroes' day by this clock.
         if ((this.hourT = (this.hourT ?? 0) - dt) <= 0) { this.hourT = 2; this.sim.postMessage({ type: 'hour', hour: r.hour }); }
       }

@@ -584,6 +584,9 @@ export class Player {
     // (A dodge is a dodge whatever swung at it: the beasts, the jellies and the stones as much as the knights.)
     if (sim.gameState !== 0 || this.iframes) return false;
     if (sim.input && ((sim.input[INPUT.ABIL] | 0) & (ABIL.NO_DAMAGE | ABIL.GOD | ABIL.FLY))) return false;
+    // (Playing as one of your party, you're where they are and out of sight: what was meant for you lands on them.
+    // src/sim/heroplay.js.)
+    if (sim.heroPlay?.on) return sim.heroPlay.hurt(amount, fromX, fromZ, knock, unblockable);
     // Aegis: this one never lands, whatever it was.
     if (this.shPower === 1 && !this.aegisT) {
       this.aegisT = this.shValue;

@@ -35,6 +35,7 @@ import { Player } from './player.js';
 import { MAX_MANA } from './spells.js';
 import { World } from './world.js';
 import { Hero, HeroWorld, mobKind } from './hero.js';
+import { HeroPlay } from './heroplay.js';
 import { MOB_KEYS, TRIG } from '../core/heroes.js';
 import { Slimes } from './slimes.js';
 import { Tumblers } from './tumblers.js';
@@ -156,7 +157,9 @@ class Sim {
 
   stepBody(dt) {
     const body = this.body, snap = this.scratch, p = this.player, c = this.casting, input = this.input;
-    this.third = !!body && input[INPUT.THIRD] > 0.5 && thirdAllowed(this.opening ? this.opening.stage : OPENING.OFF);
+    // (Playing as one of your party it's always from behind them, and your own body isn't there to see.)
+    const playing = !!this.heroPlay?.on;
+    this.third = !!body && (playing || (input[INPUT.THIRD] > 0.5 && thirdAllowed(this.opening ? this.opening.stage : OPENING.OFF)));
     snap[H.TP] = this.third ? 1 : 0;
     if (!body) return;
     const off = this.charOffset(this.knights.length + this.heroes.length + this.villagers.length);
@@ -199,13 +202,16 @@ class Sim {
       k.w = out ? 1 - sm(((t - info.hit) / (info.dur - info.hit) - 0.12) / 0.88) : c.gathered || c.state === 'gather' || c.state === 'hold' ? 1 : sm(t / (wind * 0.6));
       s.cast = k;
     }
-    if (!this.bodyShown) { body.reset(); this.bodyShown = true; }
-    body.update(dt, s);
-    body.write(snap, off, true);
+    if (playing) { if (this.bodyShown) { body.reset(); this.bodyShown = false; } body.write(snap, off, false); }
+    else {
+      if (!this.bodyShown) { body.reset(); this.bodyShown = true; }
+      body.update(dt, s);
+      body.write(snap, off, true);
+    }
     // The camera: from the point beside the eye, back along where you look until something's in the way.
     const sy = Math.sin(p.yaw), cy = Math.cos(p.yaw), sp = Math.sin(p.pitch), cp = Math.cos(p.pitch);
     const fx = sy * cp, fy = sp, fz = cy * cp, rx = -cy, rz = sy;
-    const drop = (p.surfLow || 0) * 0.75 + (p.landKick || 0) * 0.5 + (p.dead ? Math.min(p.deadT * 0.5, 0.7) : 0);
+    const drop = playing ? -0.25 : (p.surfLow || 0) * 0.75 + (p.landKick || 0) * 0.5 + (p.dead ? Math.min(p.deadT * 0.5, 0.7) : 0);
     const ex = p.x, ey = p.y + 1.62 - drop, ez = p.z, w = this.world;
     // (The step to the side first: against a wall on your right there's no room for it.)
     const reach = THIRD.side + THIRD.skin, hitSide = w.rayBoxes(ex, ey, ez, rx, 0, rz, reach);
@@ -333,7 +339,9 @@ class Sim {
     this.casting.power = input[INPUT.POWER] || 1; this.casting.maxMana = MAX_MANA + input[INPUT.MANA_MAX]; this.casting.regen = input[INPUT.REGEN] || 1; this.casting.thrift = input[INPUT.THRIFT];
     if (input[INPUT.HEAL] !== this.healSeen) { const g = input[INPUT.HEAL] - this.healSeen; this.healSeen = input[INPUT.HEAL]; if (g > 0 && !player.dead) player.hp = Math.min(player.maxHp, player.hp + g); }
     if (input[INPUT.MANA_UP] !== this.manaSeen) { const g = input[INPUT.MANA_UP] - this.manaSeen; this.manaSeen = input[INPUT.MANA_UP]; if (g > 0) this.casting.mana = Math.min(this.casting.maxMana, this.casting.mana + g); }
-    if (!this.opening?.frozen()) player.update(dt * (this.slow || 1), tdt, input, this);
+    // (Playing as one of your party, your hands are theirs and you go where they go: src/sim/heroplay.js.)
+    const playing = this.heroPlay?.on && this.heroPlay.carry(dt);
+    if (!playing && !this.opening?.frozen()) player.update(dt * (this.slow || 1), tdt, input, this);
     for (let i = 0; i < this.heroes.length; i++) this.heroes[i].lodSlot = this.knights.length + i;
     for (let i = 0; i < this.knights.length; i++) {
       const k = this.knights[i], ox = k.x, oz = k.z;
@@ -382,6 +390,7 @@ class Sim {
     if (this.opening) this.opening.update(tdt);
     else for (const v of this.villagers) v.update(this.frozen ? 0 : tdt, this.world);
     if (this.heroWorld && !this.frozen && tdt > 0) this.heroWorld.step(tdt);
+    if (this.heroPlay) { this.heroPlay.step(tdt); this.heroPlay.glue(); }
     if (!this.frozen && tdt > 0) this.warrens?.step(tdt);
     if (!this.frozen && tdt > 0) this.perils.step(tdt);
     // (In real seconds: its door and its count after a fall don't slow with a slow-motion death.)
@@ -412,6 +421,7 @@ class Sim {
     this.heroes.forEach((h, i) => h.write(snap, this.charOffset(nk + i), this));
     this.villagers.forEach((v, i) => { v.mouth = input[INPUT.MOUTH]; v.write(snap, this.charOffset(nk + nh + i)); });
     this.writeAfter(snap, nk);
+    if (this.heroPlay) this.heroPlay.write(snap); else snap[H.PLAY] = 0;
     if (this.opening) this.opening.write(snap, H);
     else snap[H.OPENING] = OPENING.OFF;
     player.sweep(snap, this);
@@ -461,7 +471,7 @@ class Sim {
     for (const k of list) {
       const P = k.bodyRadius || 0.82;
       const dx = p.x - k.x, dz = p.z - k.z, d = Math.hypot(dx, dz);
-      if (d < P && d > 1e-3 && !k.iframes && Math.abs(p.y - k.y) < 4) {
+      if (d < P && d > 1e-3 && !k.iframes && !k.driven && Math.abs(p.y - k.y) < 4) {
         const push = (P - d) / d;
         this.nudgeBody(p, dx * push * 0.8, dz * push * 0.8, 0.36);
         this.nudgeBody(k, -dx * push * 0.2, -dz * push * 0.2, 0.4);
@@ -724,6 +734,7 @@ async function boot(msg) {
     const bufs = await Promise.all(msg.heroes.map((p) => fetchBuf(`${base}assets/game/heroes/${p.body}.glb`)));
     msg.heroes.forEach((person, i) => sim.heroes.push(new Hero(i, new Rig(parseGLB(bufs[i]), heroBank), heroBank, person, kit.props)));
     sim.heroWorld = new HeroWorld(sim, sim.heroes);
+    sim.heroPlay = new HeroPlay(sim);
     if (msg.hour !== undefined) sim.heroWorld.setHour(msg.hour);
   }
   // The Hollowfang Warrens (src/sim/dungeon.js): after the Tripo lairs and the heroes, which it uses.
@@ -758,6 +769,8 @@ async function boot(msg) {
     if (m.type === 'heroWalk') sim.heroWorld?.walkFor(m.slot, m.seconds, m.mode);
     if (m.type === 'heroTalk') sim.heroWorld?.talkTo(m.slot, m.on);
     if (m.type === 'heroDebug') sim.heroWorld?.debug(m);
+    // Playing as one of your party: taken, given back, the bar's keys, the button held, the calls (src/ui/heroplay.js).
+    if (m.type === 'heroPlay') sim.heroPlay?.message(m);
     // Your party, of the Free Company (src/ui/party.js): hired, let go, a level for each.
     if (m.type === 'hire') { const ok = sim.heroWorld?.hire(m.slot, m) || false; self.postMessage({ type: 'hired', slot: m.slot, ok, id: m.id }); }
     if (m.type === 'dismiss') sim.heroWorld?.dismiss(m.slot);
