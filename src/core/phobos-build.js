@@ -13,7 +13,7 @@ import { hash2 } from './terrain-noise.js';
 import { CITY, CITY_WALL, CRAG, HAUNTS, KEEP, PLAIN, SLOUGH, WARDS, cityIn } from './east.js';
 import { PHOBOS } from './phobos-data.js';
 import { HUBS, hubHouses, hubFar, hubNear, inHub } from './phobos-hubs.js';
-import { PHOBOS_SEALS, SEAL_SQUARE, inSealSquare } from './phobos-seals.js';
+import { MOUTH_SQUARE, PHOBOS_SEALS, SEAL_SQUARE, SEWER_MOUTHS, inSealSquare } from './phobos-seals.js';
 
 const TAU = Math.PI * 2;
 const Y = (x, z) => terrainHeight(x, z);
@@ -566,6 +566,8 @@ export function phobosHouses() {
   for (const o of hubHouses()) { o.cell = cellOf(o.x, o.z); out.push(o); }
   // (And the seals' squares: src/core/phobos-seals.js.)
   for (const s of PHOBOS_SEALS) (grid.get(gk(s.x, s.z)) || grid.set(gk(s.x, s.z), []).get(gk(s.x, s.z))).push({ x: s.x, z: s.z, yaw: s.yaw, hx: SEAL_SQUARE + 0.5, hz: SEAL_SQUARE + 0.5, yard: true });
+  // (And the sewers' mouths: src/core/delve-sewers.js.)
+  for (const s of SEWER_MOUTHS) (grid.get(gk(s.x, s.z)) || grid.set(gk(s.x, s.z), []).get(gk(s.x, s.z))).push({ x: s.x, z: s.z, yaw: s.yaw, hx: MOUTH_SQUARE, hz: MOUTH_SQUARE, yard: true });
   const zones = [...PHOBOS.districts.map((d, i) => ({ key: d.key, x: d.x, z: d.z, r: d.r * 1.35, turn: (hash2(i, 77) - 0.5) * 1.5 })), { key: 'other', x: CITY.x, z: CITY.z, r: 900, turn: 0.31 }];
   for (const zn of zones) {
     const S = LOOK[zn.key], [uw, ud] = S.lot, n = S.row || 4, ALLEY = S.alley || 3, YARD = 2;

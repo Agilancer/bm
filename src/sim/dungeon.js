@@ -135,22 +135,44 @@ export class Warrens {
 
   anyCleared(d) { return BOSSES.some((b) => b.delve === d.key && this.down.has(b.key)) || this.sim.tripo?.lairs.some((l) => l.delve === d.key && l.state === 'cleared'); }
 
-  // In by a delve's portal out on the land (a full party only), out by the two inside it.
+  // In by a delve's portal out on the land (a full party only), out by the two inside it. (A sewer of Phobos's, src/core/
+  // delve-sewers.js: anyone, alone or not; in by either of its mouths, out by the ladder-head under the one you came in
+  // by or by its way in; and through a gate at its end into the next sector.)
   portals() {
     const sim = this.sim, p = sim.player;
     if (this.portalCd > 0) return;
     const near = (x, z, r) => Math.hypot(p.x - x, p.z - z) < r && Math.abs(p.y - sim.world.height(x, z)) < 3;
     if (!this.inside) {
-      const d = DELVES.find((q) => near(q.portal.x, q.portal.z, q.portal.r));
+      let way = null;
+      const d = DELVES.find((q) => near(q.portal.x, q.portal.z, q.portal.r) || (way = (q.ways || []).find((w) => near(w.x, w.z, q.portal.r))));
       if (!d) return;
       const r = this.ready();
       this.portalCd = 3;
-      if (!r.ok) { sim.event(EV.DELVE, DELVE.NEED, r.n, r.tanks, r.heals); return; }
-      this.enter(d);
+      if (!r.ok && d.party !== false) { sim.event(EV.DELVE, DELVE.NEED, r.n, r.tanks, r.heals); return; }
+      this.enter(d, way);
       return;
     }
     const d = this.delve, [ix, iz] = toWorld(d.exitIn.x, d.exitIn.z, d), [ox, oz] = toWorld(d.exitOut.x, d.exitOut.z, d);
     const cleared = this.down.has(d.last);
+    // (A sewer's gate into the next sector: you're stood in front of that one's gate back, with your party.)
+    const link = !this.fight && (d.links || []).find((l) => near(...toWorld(l.x, l.z, d), 1.6));
+    if (link) {
+      const o = delveByKey(link.to), back = o.links[link.n], [bx, bz] = toWorld(back.x, back.z, o);
+      this.portalCd = 3; this.leftAt[d.key] = sim.time;
+      this.carry(bx + Math.sin(back.yaw) * 4, bz + Math.cos(back.yaw) * 4, back.yaw);
+      this.delve = o;
+      sim.event(EV.DELVE, DELVE.ENTER, this.downIn(o), DELVES.indexOf(o));
+      return;
+    }
+    // (Up the ladder under a second mouth: out at that mouth.)
+    const up = !this.fight && (d.ways || []).find((w) => near(...toWorld(w.in.x, w.in.z, d), 1.6));
+    if (up) {
+      this.portalCd = 3;
+      this.carry(up.x + Math.sin(up.yaw) * 4, up.z + Math.cos(up.yaw) * 4, up.yaw);
+      this.inside = false; this.leftAt[d.key] = sim.time;
+      sim.event(EV.DELVE, DELVE.LEAVE, this.downIn(d), DELVES.indexOf(d));
+      return;
+    }
     const out = near(ix, iz, 1.6) || (cleared && near(ox, oz, 1.8));
     if (out && !this.fight) {
       this.portalCd = 3;
@@ -193,10 +215,10 @@ export class Warrens {
     this.carry(x, z, yaw);
   }
 
-  // Stood at a delve's way in, with your party.
-  enter(d) {
-    const [x, z] = toWorld(d.entry.x, d.entry.z, d);
-    this.carry(x, z, d.entry.yaw);
+  // Stood at a delve's way in, with your party. (Or, come down a sewer's second mouth, in front of its ladder-head.)
+  enter(d, way = null) {
+    const [x, z] = way ? toWorld(way.in.x + Math.sin(way.in.yaw) * 4, way.in.z + Math.cos(way.in.yaw) * 4, d) : toWorld(d.entry.x, d.entry.z, d);
+    this.carry(x, z, way ? way.in.yaw : d.entry.yaw);
     this.inside = true; this.delve = d;
     this.sim.event(EV.DELVE, DELVE.ENTER, this.downIn(d), DELVES.indexOf(d));
   }

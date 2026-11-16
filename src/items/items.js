@@ -507,6 +507,7 @@ export const MATS = {
   silk: { name: 'Shroud Silk', plural: 'Shroud Silk', color: '#cdbf9f', note: "A length of Reed silk the dead went down in. Tamsin Reed sews robes from it." },
   wax: { name: 'Grave Wax', plural: 'Grave Wax', color: '#e2cf8e', note: 'Candle-ends off the crypt shelves. Elspeth Tallow makes grave candles from it.' },
   ember: { name: 'Soul Ember', plural: 'Soul Embers', color: '#ff6a2a', note: 'What was left burning in one of the strong dead. Worked into a piece, it makes it finer.' },
+  cap: { name: 'Drain Cap', plural: 'Drain Caps', color: '#c4b680', note: "A pale mushroom that grows on whatever dies in the sewers of Phobos. Martleboro and Louis G, the sewer-keepers, buy every one they're brought." },
 };
 export const matName = (kind, n = 1) => (n === 1 ? MATS[kind].name : MATS[kind].plural);
 

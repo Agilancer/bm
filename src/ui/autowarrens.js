@@ -33,6 +33,11 @@ export const WAYS = {
   // (Their islets are reached in the fights, by a leap or a god's blow: not walked to, so not on the way.)
   elder: ['ed_threshold', 'ed_span', 'ed_shards', 'ed_altar', 'ed_galegate', 'ed_galeward', 'ed_galegate', 'ed_altar', 'ed_cindergate', 'ed_cinderwell', 'ed_cindergate', 'ed_altar',
     'ed_rimegate', 'ed_rime0', 'ed_rime1', 'ed_rime2', 'ed_rime3', 'ed_summit', 'ed_rime3', 'ed_rime2', 'ed_rime1', 'ed_rime0', 'ed_rimegate', 'ed_altar', 'ed_mawgate', 'ed_maw'],
+  // Phobos's sewers (src/core/delve-sewers.js): each sector from its outfall, a look through its gate, and its great hall last.
+  westdrains: ['pw_out', 'pw_main', 'pw_grate', 'pw_office', 'pw_grate', 'pw_over', 'pw_basin', 'pw_gate', 'pw_basin', 'pw_over', 'pw_grate', 'pw_cinder', 'pw_soot', 'pw_rook', 'pw_well', 'pw_larder'],
+  sloughmains: ['ps_out', 'ps_main', 'ps_weir', 'ps_gate', 'ps_weir', 'ps_chain', 'ps_market', 'ps_chain', 'ps_weir', 'ps_tanmain', 'ps_dye', 'ps_silt', 'ps_bed', 'ps_east'],
+  charnelruns: ['pc_out', 'pc_main', 'pc_cistern', 'pc_gate', 'pc_cistern', 'pc_stair', 'pc_cata', 'pc_mages', 'pc_rise', 'pc_mages', 'pc_chapter', 'pc_gate2'],
+  highconduits: ['pa_out', 'pa_main', 'pa_fall', 'pa_gate', 'pa_fall', 'pa_dukes', 'pa_lamps', 'pa_long', 'pa_lamp', 'pa_approach', 'pa_garden'],
 };
 export const WAY = WAYS.warrens;
 // The level it wants before it goes down each the first time (its own, from the delve: the Warrens 7, the Deeps 10,
@@ -55,6 +60,11 @@ export const KNOWN = new Set([
   'kb_dromos', 'kb_seal', 'kb_cups', 'kb_east', 'kb_queens', 'kb_cross', 'kb_hounds', 'kb_west', 'kb_shields', 'gravewarden', 'golem', 'wyrm',
   // (The Elder Gods' four likewise: where to stand is all in their orders, a gust stone's way to it among them.)
   'ed_span', 'ed_shards_west', 'ed_shards_east', 'ed_shards_drake', 'ed_galegate', 'ed_cindergate', 'ed_rimegate', 'ed_mawgate', 'thyrraxis', 'kaldurra', 'morvekh', 'nihvaroth',
+  // (Phobos's sewers: plain packs, and four plain fights, every call in them a mark, a shot, a ring or adds.)
+  'pw_main', 'pw_main2', 'pw_cinder', 'pw_soot', 'pw_rook', 'pw_well', 'pw_basin', 'pw_over', 'spiderqueen',
+  'ps_main', 'ps_main2', 'ps_tanmain', 'ps_dye', 'ps_silt', 'ps_chain', 'ps_market', 'ps_weir', 'greatworm',
+  'pc_main', 'pc_main2', 'pc_cistern', 'pc_cata', 'pc_cata2', 'pc_mages', 'pc_rise', 'drownedabbot',
+  'pa_main', 'pa_main2', 'pa_fall', 'pa_dukes', 'pa_lamps', 'pa_long', 'pa_approach', 'lamplighter',
 ]);
 export function warrensCoverage() {
   const out = [];

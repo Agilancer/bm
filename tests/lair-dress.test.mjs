@@ -8,6 +8,7 @@ import { Kit, buildSites, buildUnder, tileOf } from '../src/core/sites.js';
 import { dressLairs, lairKind } from '../src/core/lair-dress.js';
 import { LAIRS } from '../src/core/tripo-monsters.js';
 import { routeDist } from '../src/core/lands.js';
+import { delveOf } from '../src/core/dungeon.js';
 
 const KINDS = ['camp', 'webs', 'plot', 'ring', 'bed', 'roost', 'den', 'picket'];
 const manifest = JSON.parse(fs.readFileSync(new URL('../assets/game/tex/manifest.json', import.meta.url)));
@@ -62,14 +63,15 @@ test('no one painting is most of a dungeon any more', () => {
       if (a[0] > -5600 && a[0] < 11700 && Math.abs(a[2]) < 5600) continue;
       if (a[0] < -5600 && Math.abs(a[2]) < 3000) continue;   // (the Test Dungeon's white hall is meant to be one thing)
       // (A dungeon to a square kilometre, but the Elder Gods' islands, which spread over three: one dungeon all the same.)
-      const key = Math.hypot(a[0] - 6400, a[2] - 6500) < 900 ? 'elder' : `${Math.round(a[0] / 1000)},${Math.round(a[2] / 1000)}`;
+      // (And Phobos's sewers, side by side north of the city: each sector one.)
+      const key = Math.hypot(a[0] - 6400, a[2] - 6500) < 900 ? 'elder' : delveOf(a[0], a[2])?.sewer ? delveOf(a[0], a[2]).key : `${Math.round(a[0] / 1000)},${Math.round(a[2] / 1000)}`;
       const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
       const ar = 0.5 * Math.hypot(u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]);
       const m = area.get(key) || area.set(key, new Map()).get(key);
       m.set(layer, (m.get(layer) || 0) + ar);
     }
   }
-  assert.equal(area.size, 8);
+  assert.equal(area.size, 12);
   for (const [key, m] of area) {
     const all = [...m.values()].reduce((s, v) => s + v, 0), [top, most] = [...m].sort((p, q) => q[1] - p[1])[0];
     assert.ok(most / all < 0.56, `${top} is ${Math.round(most / all * 100)}% of the dungeon at ${key}`);

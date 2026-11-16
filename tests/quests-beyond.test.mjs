@@ -40,11 +40,11 @@ test('there are plenty of them, and three or more go into each party dungeon', (
   for (const id of IDS) assert.equal(RULES[id], LAND_RULES[id], id);
   const into = (key) => IDS.filter((id) => LAND_RULES[id].steps.some((s) => s.enter === key || s.kill === key || BOSSES.find((b) => b.key === s.boss)?.delve === key));
   for (const d of ['warrens', 'blackvigil', 'deeps']) assert.ok(into(d).length >= 3, `${d}: ${into(d)}`);
-  // (And two or more into each of the four made after them.)
-  for (const d of DELVES) assert.ok(into(d.key).length >= 2, `${d.key}: ${into(d.key)}`);
+  // (And two or more into each of the four made after them. Phobos's sewers' are the city's: tests/sewers.test.mjs.)
+  for (const d of DELVES.filter((q) => !q.sewer)) assert.ok(into(d.key).length >= 2, `${d.key}: ${into(d.key)}`);
   assert.ok(IDS.filter((id) => LAND_RULES[id].steps.some((s) => s.kill === 'catacombs' || (s.bring && !s.at))).length >= 2, 'the catacombs');
   // Each dungeon's first boss and its last have a quest.
-  for (const d of DELVES) {
+  for (const d of DELVES.filter((q) => !q.sewer)) {
     const mine = BOSSES.filter((b) => b.delve === d.key).map((b) => b.key);
     if (!mine.length) continue;
     for (const key of [mine[0], mine[mine.length - 1]]) assert.ok(IDS.some((id) => LAND_RULES[id].steps.some((s) => s.boss === key)), `no quest for ${key}`);
@@ -192,7 +192,7 @@ test('the people posted in the land: room for them, somewhere sound to stand, an
   assert.equal(new Set(FOLK.map((p) => p.id)).size, FOLK.length);
   assert.ok(DAYS.posted);
   // (Phobos's hub givers stand in their yards, not in the land's places: tests/phobos-quests.test.mjs.)
-  for (const p of POSTED.filter((q) => !q.hub)) {
+  for (const p of POSTED.filter((q) => !q.hub && !q.sewer)) {
     assert.equal(p.job, 'posted', p.id);
     assert.ok(LINES[p.id], `${p.id} has nothing to say`);
     const [x, z] = p.post, near = Object.values(SITES).find((s) => Math.hypot(x - s.x, z - s.z) < s.r);
@@ -204,7 +204,7 @@ test('the people posted in the land: room for them, somewhere sound to stand, an
     for (const l of LAIRS) assert.ok(Math.hypot(l.x - x, l.z - z) > 150, `${p.id} is ${Math.hypot(l.x - x, l.z - z) | 0} m from ${l.key}`);
   }
   // Every one of them gives work.
-  for (const p of [...POSTED.filter((q) => !q.hub), BEYOND.find((b) => b.id === 'hale')]) assert.ok(IDS.some((id) => QUESTS[id].giver === p.id), `${p.id} gives nothing`);
+  for (const p of [...POSTED.filter((q) => !q.hub && !q.sewer), BEYOND.find((b) => b.id === 'hale')]) assert.ok(IDS.some((id) => QUESTS[id].giver === p.id), `${p.id} gives nothing`);
 });
 
 test('the lairs: none in a place, on a road or in water, and no more near any one than the slots can stand up', () => {
@@ -270,7 +270,7 @@ test('a day and a night at their posts: they stand where they were put, turn to 
     for (const me of posted) {
       const [x, z] = me.p.post;
       assert.ok(Math.hypot(me.x - x, me.z - z) < 0.01, `${me.id} has left their post at ${hour}`);
-      assert.ok(Math.abs(me.y - terrainHeight(x, z)) < 0.01, `${me.id} isn't on the ground`);
+      assert.ok(Math.abs(me.y - (me.p.post[2] ?? terrainHeight(x, z))) < 0.01, `${me.id} isn't on the ground`);
       assert.equal(me.posture, 'stand'); assert.equal(me.act, ACT.IDLE); assert.equal(me.alarm, false);
       assert.ok(me.pose.clip, `${me.id} has no pose`);
     }

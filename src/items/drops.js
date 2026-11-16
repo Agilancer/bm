@@ -3,7 +3,7 @@
 import { groundAt as terrainHeight } from '../core/interior.js';
 import { GEMS, MATS, RARITIES, hands, makeRng, rollLoot, setFind } from './items.js';
 import { inChurch } from '../core/church.js';
-import { caveFloorY, inDungeon } from '../core/dungeon.js';
+import { caveFloorY, delveOf, inDungeon } from '../core/dungeon.js';
 import { groundModelOf, partyDrops } from './partygear.js';
 // The floor under a point: down a party dungeon its own (the land's height there is the hills a long way over it, and what
 // fell there used to come to rest up in the air, out of reach), else the land's, a house's or the cathedral's.
@@ -53,6 +53,9 @@ const MAT_ODDS = {
     20: [['iron', 1, 2, 4], ['bone', 1, 2, 3], ['ember', 1, 1, 2]], 21: [['iron', 1, 4, 6], ['silk', 1, 2, 3], ['ember', 1, 3, 4]],
     0: [['iron', 1, 2, 3], ['ember', 1, 1, 1]], 3: [['bone', 1, 3, 4], ['ember', 1, 2, 2]], 4: [['bone', 1, 3, 4], ['ember', 1, 1, 2]] },
 };
+// (And down Phobos's sewers, src/core/delve-sewers.js: drain caps grow on everything that dies there. The keepers want them.)
+const CAP_ODDS = { 5: [0.55, 1, 2], 6: [0.8, 1, 2], 7: [0.8, 1, 2], 8: [1, 2, 3], 20: [1, 4, 6], 21: [1, 6, 8] };
+export function capsOf(rng, kind) { const o = CAP_ODDS[kind]; return o && rng() < o[0] ? [{ type: 'mat', kind: 'cap', n: o[1] + Math.floor(rng() * (o[2] - o[1] + 1)), rarity: 0 }] : []; }
 export function matsOf(rng, kind, deep) {
   const out = [];
   for (const [k, p, lo, hi] of (deep ? MAT_ODDS.deep[kind] : null) || MAT_ODDS.out[kind] || []) if (rng() < p) out.push({ type: 'mat', kind: k, n: lo + Math.floor(rng() * (hi - lo + 1)), rarity: 0 });
@@ -105,7 +108,7 @@ export class Drops {
     // (And now and then something for your party, if you've one: src/items/partygear.js. party: main.js.)
     // (Never in Velscour's church: their gear is Tessariel's own. CLAUDE.md.)
     const theirs = inChurch(x, y + 1, z) ? [] : partyDrops(this.rng, kind | 0, this.party?.() || [], y < -2 ? 1.6 : 1);
-    for (const item of [...rollLoot(this.rng, kind | 0), ...orbs, ...matsOf(this.rng, kind | 0, y < -6 && inChurch(x, y + 1, z)), ...theirs]) {
+    for (const item of [...rollLoot(this.rng, kind | 0), ...orbs, ...matsOf(this.rng, kind | 0, y < -6 && inChurch(x, y + 1, z)), ...(delveOf(x, z)?.sewer ? capsOf(this.rng, kind | 0) : []), ...theirs]) {
       // (A boss's hoard is a heap: it's thrown wider, so each thing in it can be seen and taken.)
       const a = Math.random() * 6.28, r = (kind | 0) >= 20 ? 1 + Math.random() * 2.6 : 0.7 + Math.random() * 0.8;
       this.spawn(item, x + Math.cos(a) * r, z + Math.sin(a) * r, [x, y + 1.1, z]);

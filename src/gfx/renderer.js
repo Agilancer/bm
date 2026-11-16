@@ -560,10 +560,14 @@ export class Renderer {
     // (A delve's way out, past its last boss, is dark till that boss is dead: portalOpen. Its light goes with it.)
     const portalSpots = buildSites().spots;
     this.portalOutLights = [];
+    // (A gate from one of Phobos's sewers into the next is lit the colour of where it goes: green to the West Drains, blue to
+    // the Slough Mains, violet to the Charnel Runs, amber to the High Conduits. src/core/delve-sewers.js links.)
+    const gateTint = {};
+    for (const d of DELVES) (d.links || []).forEach((l, i) => { gateTint[`${d.tag}_l${i}`] = DELVES.find((q) => q.key === l.to)?.look.light; });
     for (const key of PORTAL_SPOTS) {
       if (!portalSpots[key]) continue;
       const [x, y, z, yaw] = portalSpots[key];
-      const L = { p: [x - Math.sin(yaw) * 0.3, y + 2.2, z - Math.cos(yaw) * 0.3], c: [0.4, 0.62, 1], r: 14, i: 4.2, flicker: 0.3 };
+      const L = { p: [x - Math.sin(yaw) * 0.3, y + 2.2, z - Math.cos(yaw) * 0.3], c: gateTint[key] || [0.4, 0.62, 1], r: 14, i: gateTint[key] ? 5 : 4.2, flicker: 0.3 };
       warrens.push(L);
       const out = DELVES.find((d) => key === `${d.tag}_out`);
       if (out) this.portalOutLights.push({ L, d: out });
@@ -1534,6 +1538,14 @@ export class Renderer {
       for (let i = 0; i < 4; i++) box([(rnd() - 0.5) * 0.012, 0.008 + i * 0.014, (rnd() - 0.5) * 0.012], 0.085 - i * 0.004, 0.0065, 0.06 - i * 0.003, (rnd() - 0.5) * 0.12);
       box([0.03, 0.066, 0.0], 0.05, 0.004, 0.058, 0.05);
       color = [205, 191, 159]; mr = [255, 235, 0, 255];
+    } else if (kind === 'cap') {
+      // Drain caps: three pale mushrooms off something dead in the sewers, pulled with their stems, a fleck of light under each.
+      for (let i = 0; i < 3; i++) {
+        const a = i * 2.1 + rnd(), r = i ? 0.04 : 0, x = Math.cos(a) * r, z = Math.sin(a) * r, h = 0.035 + rnd() * 0.03, w = 0.035 + rnd() * 0.012;
+        prism([x, 0, z], [x + (rnd() - 0.5) * 0.01, h, z + (rnd() - 0.5) * 0.01], 0.008, 0.007, 6);
+        prism([x, h - 0.006, z], [x, h + 0.018, z], w, w * 0.25, 9, rnd());
+      }
+      color = [196, 182, 128]; mr = [255, 225, 0, 255]; glow = [0.03, 0.05, 0.02, 0];
     } else {
       // Candle-ends of every height, burnt down crooked, each with its wick.
       for (let i = 0; i < 4; i++) {

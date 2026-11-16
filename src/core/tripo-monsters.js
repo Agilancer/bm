@@ -123,6 +123,12 @@ export const VARIANTS = {
   // The Marches' (src/core/marches.js): the Old Marshal in his Hold's yard, and what keeps the toll at Widow's Notch now.
   ma_brannoch: { src: 'possessed_knight_2', alt: 'velscour_knight_2', height: 3.3, name: 'OLD MARSHAL BRANNOCH' },
   ma_tollgiant: { src: 'plague_giant_armored', height: 5.2, name: 'THE TOLL-GIANT' },
+  // Phobos's sewers' (src/core/delve-sewers.js): the four great things down there, and the Great Worm's young.
+  pw_queen: { src: 'spider_black', height: 4.8, name: 'THE SPIDER QUEEN' },
+  ps_worm: { src: 'worm_2', height: 7, name: 'THE GREAT WORM' },
+  ps_mainworm: { src: 'worm_1', height: 1.9, name: 'MAIN-WORM' },
+  pc_abbot: { src: 'necromancer_lord', height: 3.2, name: 'THE DROWNED ABBOT' },
+  pa_lamplighter: { src: 'night_demon_red', height: 3.8, name: 'THE LAMPLIGHTER' },
 };
 // And the land's new kinds (src/core/wilds.js): a palette, a size, a name and tricks of their own on the old bodies.
 Object.assign(VARIANTS, WILD_VARIANTS);

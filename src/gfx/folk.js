@@ -2,7 +2,7 @@
 // GPU from the pose the town's thread wrote (src/folk/folk.worker.js), lit and shadowed as the knights are. Bodies load in
 // the background once the village is up; anyone not loaded yet just isn't drawn.
 import { accessor, parseGLB } from '../core/glb.js';
-import { inDungeon } from '../core/dungeon.js';
+import { delveAt } from '../core/dungeon.js';
 import { inHall } from '../core/testhall.js';
 import { F, F_PALETTE, FIN, FOLK_STRIDE, SLOT_HEAD, readFolk } from '../folk/layout.js';
 import { SKIRT_JOINTS } from '../folk/rig.js';
@@ -103,14 +103,17 @@ export class FolkBodies {
     const s = this.slot = readFolk(this.map);
     // Down in the Warrens or the Test Dungeon nobody in town can be seen, or throw a shadow there: without this the view's
     // sides, which have no far end, took in whoever stood that way, and they were posed, skinned and drawn every frame.
-    const shut = inDungeon(cam.x, cam.z) || inHall(cam.x, cam.z);
+    // (But whoever stands down a delve themselves, Phobos's sewer-keepers and their princess, src/folk/people.js, is seen from
+    // down that delve, and from nowhere else.)
+    const down = delveAt(cam.x, cam.z), shut = !!down || inHall(cam.x, cam.z);
     this.blankets.update(s, cam);
     this.tools.cull(s, this.bodies[this.tools.owner]?.jointCount, cam, planes);
     for (let i = 0; i < this.bodies.length; i++) {
       const b = this.bodies[i];
       if (!b) continue;
       const o = SLOT_HEAD + i * FOLK_STRIDE;
-      if (!s || shut || s[o + F.ACTIVE] < 0.5) { b.seen = b.casts = b.skin = b.wasCast = false; this.map.inbox[FIN.SEEN + i] = 0; continue; }
+      const there = s ? delveAt(s[o + F.X], s[o + F.Z]) : null;
+      if (!s || (shut ? !down || there !== down : there) || s[o + F.ACTIVE] < 0.5) { b.seen = b.casts = b.skin = b.wasCast = false; this.map.inbox[FIN.SEEN + i] = 0; continue; }
       const x = s[o + F.X], y = s[o + F.Y] + 0.9, z = s[o + F.Z];
       b.bx = x; b.by = y; b.bz = z; b.br = bodyRadius(1.4, b.bindR);
       let inside = 1e9;

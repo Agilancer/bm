@@ -32,6 +32,7 @@ import { SPOREHOLD } from './delve-sporehold.js';
 import { PLAYHOUSE } from './delve-playhouse.js';
 import { KINGSBARROW } from './delve-kingsbarrow.js';
 import { ELDER } from './delve-elder.js';
+import { SEWERS } from './delve-sewers.js';
 import { WARRENS_PROPS, WARRENS_NICHES } from './delve-warrens.js';
 
 // Where it lies: its entrance, in the world, and the height its rooms are measured from.
@@ -203,7 +204,9 @@ const WARRENS = {
   words: { enter: 'The Hollowfang Warrens. Kobolds dug it; goblins took it; something old sleeps at the bottom.', clear: 'The Hollowfang Warrens are cleared. Venomaw is dead!', wipe: "Your party falls... and wakes at the Warrens' mouth." },
 };
 // (In the order they were made: a delve's place in this list is sent with EV.DELVE and kept, so new ones go on the end.)
-export const DELVES = [WARRENS, BLACKVIGIL, DEEPS, VAULTS, SPOREHOLD, PLAYHOUSE, KINGSBARROW, ELDER];
+// (And the four sectors of Phobos's sewers, src/core/delve-sewers.js: no party needed, a second way down into each, a gate
+// at each end into the next.)
+export const DELVES = [WARRENS, BLACKVIGIL, DEEPS, VAULTS, SPOREHOLD, PLAYHOUSE, KINGSBARROW, ELDER, ...SEWERS];
 // The Free Company's posts at the later delves' portals: a quartermaster of its own on each terrace that has one (a delve's
 // post: who, and what they say of the place), to hire a party from where it's wanted. (src/core/heroes.js BROKERS has them
 // after the town's and the Warrens'; their posts go by the delve's key.)
@@ -231,7 +234,9 @@ BOSS_KEYS.push(...BOSSES.slice(BOSS_KEYS.length).map((b) => b.key));
 export const ALL_PACKS = DELVES.flatMap((d) => d.packs);
 export const delveByKey = (key) => DELVES.find((d) => d.key === key) || null;
 // Every portal's spot (src/core/sites.js portalWall names them; src/gfx/renderer.js stands the models on them).
-export const PORTAL_SPOTS = DELVES.flatMap((d) => [`${d.tag}_portal`, `${d.tag}_in`, `${d.tag}_out`]);
+// (A sewer's second mouths: out on the land, _w<n>, and their ladder-heads inside, _u<n>; its gates into the next, _l<n>.)
+export const PORTAL_SPOTS = DELVES.flatMap((d) => [`${d.tag}_portal`, `${d.tag}_in`, `${d.tag}_out`,
+  ...(d.ways || []).flatMap((w, i) => [`${d.tag}_w${i}`, `${d.tag}_u${i}`]), ...(d.links || []).map((l, i) => `${d.tag}_l${i}`)]);
 
 // ---- the field ---------------------------------------------------------------------------------------------------------
 
@@ -568,7 +573,7 @@ export function torches(d = WARRENS) {
 }
 
 // The things in a room that burn (props, by kind), and how high over the floor each one's light is (a chandelier's is its own).
-const LIT = { brazier: 1.9, chandelier: null, hearth: 1.2, spit: 1, footlight: 0.5, greatcap: null, heartroot: 3, musicbox: 1.4 };
+const LIT = { brazier: 1.9, chandelier: null, hearth: 1.2, spit: 1, footlight: 0.5, greatcap: null, heartroot: 3, musicbox: 1.4, daylight: null };
 // Braziers standing round the bigger rooms, a couple of strides out from the wall between its torches: fires on posts
 // that light the floor where the fighting is (src/core/delve-build.js builds them, src/gfx/renderer.js lights them). Clear
 // of the portals and the way in. And the ones a room's own things ask for (a prop of kind 'brazier'). [x, floor y, z]

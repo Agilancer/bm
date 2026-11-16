@@ -423,7 +423,8 @@ const HALL_COUNTERS = { gear: 'left to the tester: it fights in what it was give
 // The blocks of the snapshot it reads (foes() and the rest); a new one is something in the world it can't see yet.
 const BLOCKS = new Set(['FX_START', 'CHARS_START', 'SLIMES_START', 'TUMBLERS_START']);
 const CASTS = ['firebolt', 'mend', 'wisp', 'blink', ...PANIC, ...SKY];
-const FARMS = new Set(['bone', 'iron', 'silk', 'wax']);
+// (Drain caps grow on what dies down Phobos's sewers: a bring at a delve is that delve's work, delveWants.)
+const FARMS = new Set(['bone', 'iron', 'silk', 'wax', 'cap']);
 const STOCKS = new Set(['staffs', 'robes', 'skulls', 'curios', 'scrolls']);
 export function coverage(foeNames = null) {
   const out = [], people = new Set([...PEOPLE, ...POSTED, ...BEYOND, LISANDRA].map((p) => p.id));
@@ -2105,7 +2106,8 @@ export class Brain {
     for (const [id, lvl] of PLAN_ALL) {
       const st = Q.step(id);
       if (!st || m.lvl < lvl + (this.bump[`q:${id}`] || 0)) continue;
-      const k = st.boss ? BOSSES.find((b) => b.key === st.boss)?.delve : DELVE_KEYS.includes(st.enter) ? st.enter : DELVE_KEYS.includes(st.kill) ? st.kill : null;
+      const farm = st.bring && DELVE_KEYS.includes(st.at) && (this.o.pack.mats[st.bring] || 0) < st.n;
+      const k = st.boss ? BOSSES.find((b) => b.key === st.boss)?.delve : DELVE_KEYS.includes(st.enter) ? st.enter : DELVE_KEYS.includes(st.kill) ? st.kill : farm ? st.at : null;
       if (k && !out.includes(k)) out.push(k);
     }
     return out;
@@ -2170,6 +2172,8 @@ export class Brain {
     }
     if (st.bring) {
       if ((this.o.pack.mats[st.bring] || 0) >= st.n) return this.talkJob(giver, 'quest', `${title}: ${st.n} ${matName(st.bring, st.n)} to hand over.`);
+      // (Down a delve, for what grows on its dead: the delve's own work, delveWants.)
+      if (DELVE_KEYS.includes(st.at)) return null;
       // Bone the woods' dead give up; iron and silk come from those buried down in the catacombs.
       const deep = st.bring !== 'bone' || (this.o.pack.mats.bone || 0) < 2;
       if (deep && Q.state('dead_cant_wait') && m.lvl >= 3) return this.grindJob(m, 'catacombs', `farm:${id}`, `${title}: ${matName(st.bring, 2).toLowerCase()} from the catacombs (${this.o.pack.mats[st.bring] || 0} of ${st.n}).`);

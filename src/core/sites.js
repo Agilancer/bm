@@ -602,6 +602,8 @@ function portalWall(K, x, z, yaw, key, ground = terrainHeight) {
 // on the Vigil Road, the Deeps' at the Howling Mouth. (Their spots: hf_portal, bv_portal, hd_portal.)
 function warrensMouth(K) {
   for (const d of DELVES) portalWall(K, d.portal.x, d.portal.z, d.portal.yaw, `${d.tag}_portal`);
+  // (A sewer's second mouth in the streets of Phobos: src/core/delve-sewers.js ways.)
+  for (const d of DELVES) (d.ways || []).forEach((w, i) => portalWall(K, w.x, w.z, w.yaw, `${d.tag}_w${i}`));
 }
 
 // ---------------------------------------------------------------- the places

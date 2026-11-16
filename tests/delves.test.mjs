@@ -15,10 +15,18 @@ import { ELEM } from '../src/sim/spells.js';
 import { KNOWN, WAYS } from '../src/ui/autowarrens.js';
 
 const LATER = ['vaults', 'sporehold', 'playhouse', 'kingsbarrow', 'elder'];
+// (And Phobos's sewers after them, src/core/delve-sewers.js: four sectors, one great thing in each.)
+const SEWERS = ['westdrains', 'sloughmains', 'charnelruns', 'highconduits'];
 const json = (p) => JSON.parse(readFileSync(new URL(p, import.meta.url), 'utf8'));
 
 test('there are eight delves, the first three where they were, the later four each with three bosses, and the Elder Gods with four', () => {
-  assert.deepEqual(DELVES.map((d) => d.key), ['warrens', 'blackvigil', 'deeps', ...LATER]);
+  assert.deepEqual(DELVES.map((d) => d.key), ['warrens', 'blackvigil', 'deeps', ...LATER, ...SEWERS]);
+  for (const k of SEWERS) {
+    const d = delveByKey(k), mine = BOSSES.filter((b) => b.delve === k);
+    assert.ok(d.sewer && d.party === false && mine.length === 1 && mine[0].key === d.last, k);
+    assert.ok(d.ways.length >= 1 && d.links.every((l) => delveByKey(l.to).links[l.n].to === k), `${k}: its gates go both ways`);
+    assert.ok(d.names && d.level >= 28 && d.pay.xp > 0 && d.words.enter && d.words.clear && d.words.wipe, k);
+  }
   // (A boss's number is sent from the sim and kept: the old ten keep theirs.)
   assert.deepEqual(BOSSES.slice(0, 10).map((b) => b.key), ['grubnash', 'twins', 'venomaw', 'maldrec', 'sorvane', 'brothers', 'castellan', 'hrymgar', 'broodmother', 'sleeper']);
   assert.equal(WARNINGS[32], 'Venomaw stamps! Step in behind each ring as it lands.');
@@ -153,7 +161,8 @@ test('each later delve has a quartermaster of its own, standing on open ground b
   const { BROKER_SPOTS, POSTS } = await import('../src/core/dungeon.js');
   const { BROKERS } = await import('../src/core/heroes.js');
   const { MAX_CHARS } = await import('../src/core/layout.js');
-  assert.deepEqual(POSTS.map((q) => q.broker), DELVES.slice(3).map((d) => d.key));
+  // (Not the sewers: anyone goes down them, and nobody hires a party at a drain.)
+  assert.deepEqual(POSTS.map((q) => q.broker), DELVES.slice(3).filter((d) => !d.sewer).map((d) => d.key));
   const names = new Set();
   for (const q of POSTS) {
     const d = delveByKey(q.broker), [x, z, face] = BROKER_SPOTS[q.broker], b = BROKERS.find((k) => k.broker === q.broker);

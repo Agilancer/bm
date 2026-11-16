@@ -4,6 +4,8 @@
 //   Maud Treller, Captain of the Quiet Watch: knights in hiding at a dye works. Nothing of theirs shows: no mark, no oath
 //     said aloud, no name of whom they serve (the V and T rule). They're dyers, and they'd like you to say so too.
 //   Edda Grail, Warden of the Ashwardens: demon hunters in a charnel yard at the Bone Yards' north end.
+// (And the people down the sewers, and their quests: src/folk/lines/phobos-sewers.js, taken in at the end.)
+import { LINES as SEWER_LINES, QUESTS as SEWER_QUESTS } from './phobos-sewers.js';
 
 export const LINES = {
   ph_penny: {
@@ -566,3 +568,6 @@ export const QUESTS = {
     ],
   },
 };
+
+Object.assign(LINES, SEWER_LINES);
+Object.assign(QUESTS, SEWER_QUESTS);
