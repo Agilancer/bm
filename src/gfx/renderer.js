@@ -108,7 +108,7 @@ const LINEAR_DEPTH = 'r16float';
 const DEPTH = 'depth32float';
 const FLAT = { iron: 100, flame: 101, water: 102, fruit: 103, fruit2: 104, white: 106, tile: 107, glow: 108, lake: 110, falls: 111, ice: 112, seal: 113, obsidian: 114, gold: 115, voidglass: 116, magma: 117, rune: 118, storm: 119 };
 // A painting in another light (src/core/sites.js): its layer plus a thousand times which (materials.js STATIC).
-const TINTS = { dark: 1, pale: 2, frost: 3, mire: 4, spore: 5, void: 6, slate: 7, blood: 8, moss: 9, umber: 10, soot: 11, eve: 12 };
+const TINTS = { dark: 1, pale: 2, frost: 3, mire: 4, spore: 5, void: 6, slate: 7, blood: 8, moss: 9, umber: 10, soot: 11, eve: 12, char: 13 };
 const MAX_GROUND = 160;
 // The portals (portalModel): the Warrens' three in their walls, at these spots (src/core/sites.js portalWall), and a seal's at
 // every seal (seal_*). How big each is drawn is PORTAL_MODELS's. SWIRL: each one's whirl for the shader (src/gfx/materials.js
@@ -774,7 +774,7 @@ export class Renderer {
   packParts(parts) {
     const { layerNames, layers } = this.staticLayers, prims = [];
     for (const [name, part] of parts) {
-      const m = /^(dark|pale|frost|mire|spore|void|slate|blood|moss|umber|soot|eve):(.*)$/.exec(name), base = m ? m[2] : name;
+      const m = /^(dark|pale|frost|mire|spore|void|slate|blood|moss|umber|soot|eve|char):(.*)$/.exec(name), base = m ? m[2] : name;
       let layer = layerNames.indexOf(base);
       if (layer < 0) layer = FLAT[base] ?? 100;
       prims.push({ layer: layer + (m ? TINTS[m[1]] * 1000 : 0), cutout: layer < 100 && layers[layer].cutout ? 1 : 0, ...part });
@@ -805,7 +805,7 @@ export class Renderer {
     const { parts, groups } = buildUnder(key);
     const prims = [];
     for (const [name, part] of parts) {
-      const m = /^(dark|pale|frost|mire|spore|void|slate|blood|moss|umber|soot|eve):(.*)$/.exec(name), base = m ? m[2] : name;
+      const m = /^(dark|pale|frost|mire|spore|void|slate|blood|moss|umber|soot|eve|char):(.*)$/.exec(name), base = m ? m[2] : name;
       let layer = layerNames.indexOf(base);
       if (layer < 0) layer = FLAT[base] ?? 100;
       prims.push({ name, layer: layer + (m ? TINTS[m[1]] * 1000 : 0), cutout: layer < 100 && layers[layer].cutout ? 1 : 0, ...part });
@@ -869,7 +869,7 @@ export class Renderer {
     this.staticLayers = { layerNames, layers };
     const sites = buildSites(true, !!this.tier.lean);
     for (const [name, part] of sites.parts) {
-      const m = /^(dark|pale|frost|mire|spore|void|slate|blood|moss|umber|soot|eve):(.*)$/.exec(name), base = m ? m[2] : name;
+      const m = /^(dark|pale|frost|mire|spore|void|slate|blood|moss|umber|soot|eve|char):(.*)$/.exec(name), base = m ? m[2] : name;
       let layer = layerNames.indexOf(base);
       if (layer < 0) layer = FLAT[base] ?? 100;
       const cutout = layer < 100 && layers[layer].cutout;

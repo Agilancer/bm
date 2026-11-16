@@ -335,7 +335,7 @@ function tower(K, layer, x, z, r, h, roof, o = {}) {
   K.drum(layer, x, y - (o.sink ?? 3), z, r, h + (o.sink ?? 3), o.sides || 12, { collide: o.pass === undefined ? o.collide : false });
   if (o.pass !== undefined) K.colliders.push({ x, z, hx: r * 0.8, hz: r * 0.8, yaw: 0, h: h, t: o.pass - 0.4 });
   if (r >= 8) K.drum(layer, x, y + h - 7, z, r, 2, o.sides || 12, { r2: r + 2, open: true, collide: false }), K.drum(layer, x, y + h - 5, z, r + 2, 5, o.sides || 12, { open: true, collide: false });
-  if (roof) { if (r < 9 && hash2(id, 11) < 0.2) K.cone(roof, x, y + h, z, r + 0.5, r * (o.steep ?? 2.4) * 1.8, sides); else K.cone(roof, x, y + h, z, r + (r >= 8 ? 2.4 : 0.8), r * (o.steep ?? 2.4), sides); }
+  if (roof) { if (r < 9 && hash2(id, 11) < 0.08) K.cone(roof, x, y + h, z, r + 0.5, r * (o.steep ?? 2.4) * 1.8, sides); else K.cone(roof, x, y + h, z, r + (r >= 8 ? 2.4 : 0.8), r * (o.steep ?? 2.4), sides); }
   else {
     for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; K.box(layer, x + Math.cos(a) * (r - 0.5), y + h, z + Math.sin(a) * (r - 0.5), 0.8, 1.6, 0.5, -a, { collide: false }); }
     if (hash2(id, 12) < 0.45) { K.drum('iron', x, y + h, z, r * 0.22, 1.2, 8, { r2: r * 0.34, open: true, collide: false }); K.cone('dark:flame', x, y + h + 0.6, z, r * 0.26, r * 0.55, 6); }
@@ -497,7 +497,7 @@ const LOOK = {
   tanners: { lot: [8, 10], h: [7, 11], fill: 0.94, wall: ['ph_daub', 'ph_poor_brick', 'ph_daub'], roof: ['umber:roof_3', 'umber:roof_4', 'roof_4', 'soot:roof_3'] },
   bones: { lot: [10, 13], h: [6, 10], fill: 0.3, wall: ['pale:stone', 'pale:rubble'], roof: ['dark:roof_2', 'slate:roof_2'], row: 3, alley: 7 },
   barracks: { lot: [22, 11], h: [9, 12], fill: 0.9, wall: ['block', 'course'], roof: ['slate:roof_2', 'blood:roof_2', 'slate:roof_1'], open: 62, row: 2, alley: 5 },
-  mages: { lot: [11, 12], h: [11, 16], fill: 0.9, wall: ['slate:ph_dressed', 'ph_rich_brick', 'frost:course'], roof: ['slate:roof_2', 'dark:roof_2', 'slate:roof_1'], spires: 0.12, row: 3 },
+  mages: { lot: [11, 12], h: [11, 16], fill: 0.9, spireWall: 'slate:course', wall: ['slate:ph_dressed', 'ph_rich_brick', 'frost:course'], roof: ['slate:roof_2', 'dark:roof_2', 'slate:roof_1'], spires: 0.06, row: 3 },
   dukes: { lot: [15, 15], h: [10, 14], fill: 0.85, wall: ['slate:ph_dressed', 'ph_rich_brick'], roof: ['blood:roof_1', 'slate:roof_2', 'dark:roof_2', 'blood:roof_2'], spires: 0.04, row: 2, alley: 5 },
   approach: { lot: [11, 12], h: [9, 14], fill: 0.85, wall: ['ph_granite', 'slate:ph_dressed'], roof: ['dark:roof_2', 'blood:roof_2', 'slate:roof_2'], row: 3 },
   other: { lot: [8, 10], h: [7, 12], fill: 0.93, wall: ['ph_market_wall', 'ph_poor_brick', 'ph_daub'], roof: ['soot:roof_3', 'umber:roof_4', 'slate:roof_1', 'slate:roof_3', 'umber:roof_1', 'dark:roof_2'] },
@@ -667,7 +667,7 @@ export function phobosHouses() {
         const pick = (a) => a[Math.floor(hash2(id + 5, k) * a.length) % a.length];
         // (One block in eight stands half as tall again.)
         const h = (S.h[0] + (S.h[1] - S.h[0]) * hsh) * (hash2(bi * 5 + 1, bj * 3 + row) < 0.1 ? 1.45 : 1);
-        if (S.spires && hash2(id, 3) < S.spires) { put({ spire: true, x, z, r: Math.min(uw, ud) * 0.42, h: 26 + hsh * 34, wall: pick(S.wall) }); continue; }
+        if (S.spires && hash2(id, 3) < S.spires) { put({ spire: true, x, z, r: Math.min(uw, ud) * 0.42, h: 26 + hsh * 34, wall: S.spireWall || pick(S.wall) }); continue; }
         // (Its door's in the long side that looks out on the alley, not the one on the yard.)
         put({ x, z, yaw: zn.turn, hx: uw * 0.5 + 0.02, hz: ud * 0.5, h, wall: pick(S.wall), roof: pick(S.roof), front: row ? 1 : -1 });
       }
@@ -701,7 +701,7 @@ const byCell = () => { const m = new Map(); for (const h of phobosHouses()) (m.g
 function districts(K) {
   // (A mage's spire from far without the tower kit: there are hundreds, and from far its slits and bands are a pixel. It
   // has them from near, phobosCell.)
-  for (const [cell, list] of byCell()) K.group('ph:' + cell, true, () => { for (const h of list) { if (h.spire) tower(K, h.wall, h.x, h.z, h.r, h.h, 'soot:roof_2', { steep: 3, plain: true }); else houseFar(K, h); } });
+  for (const [cell, list] of byCell()) K.group('ph:' + cell, true, () => { for (const h of list) { if (h.spire) tower(K, h.wall, h.x, h.z, h.r, h.h, 'soot:roof_2', { steep: 2.2, plain: true }); else houseFar(K, h); } });
 }
 // One cell's houses as they are from near (houseNear), and what lines its streets: built when you come within a street or
 // two of it, by the renderer. Nothing here stops a body: that's all in the far view's build.
@@ -780,7 +780,7 @@ export function phobosCell(K, cell) {
     if (l.iron) streetLamp(K, l.x, l.z, hh, l.yaw); else K.lantern(l.x, l.z, hh, l.yaw, 'wood');
     (K.lamps ||= []).push({ p: [l.x + Math.cos(l.yaw) * out, Y(l.x, l.z) + hh - 0.7, l.z - Math.sin(l.yaw) * out], c: [1, 0.66, 0.34], r: l.iron ? 32 : 36, i: l.iron ? 30 : 22, flicker: 0.3 });
   }
-  for (const h of byCell().get(cell) || []) { if (h.spire) tower(K, h.wall, h.x, h.z, h.r, h.h, 'soot:roof_2', { steep: 3 }); else houseNear(K, h); }
+  for (const h of byCell().get(cell) || []) { if (h.spire) tower(K, h.wall, h.x, h.z, h.r, h.h, 'soot:roof_2', { steep: 2.2 }); else houseNear(K, h); }
   for (const hb of HUBS) if (cellOf(hb.x, hb.z) === cell) hubNear(K, hb);
   if (CASTLE_CELLS.has(cell)) castleNear(K, cell);
   // A seal's square: dark flags laid round it, an iron lantern at each corner. (The seal itself: src/core/sites.js.)
@@ -966,7 +966,7 @@ export const SPIRES = [
   ['shadow', 11374, 84, 20, 420, 595], ['blood', 11262, 168, 20, 470, 640],
 ];
 export function phobosKeep(K) {
-  const S = 'dark:ph_keep_wall', C = 'dark:ph_keep_wall', R = 'soot:roof_2', G = 'dark:stone';
+  const S = 'char:ph_keep_wall', C = 'char:ph_keep_wall', R = 'soot:roof_2', G = 'soot:ph_keep_wall';
   const x = KEEP.x, z = KEEP.z, base = PLAIN + KEEP.base, P = (h) => PLAIN + h;
   // The Keep's own body: three great steps of masonry on the High Ward, each set back from the one under it, arcaded down
   // their faces and turreted at their corners. The trunk rises through them and the spires stand round them: without it
@@ -1023,6 +1023,7 @@ export function phobosKeep(K) {
   // His balcony, west, at the last stage's foot, looking down the whole of it to the Sill; and the fire in the crown.
   K.box(G, x - 38, P(578), z, 10, 2, 14, 0, { collide: false }); for (const s of [-1, 1]) K.spike(G, x - 43, P(578), z + s * 9, 2.6, -16, 4, 0);
   K.drum('blood:flame', x, P(604), z, 24.3, 9, 20, { open: true, collide: false });
+  for (let k = 0; k < 12; k++) { const t = (k + 0.5) / 12 * TAU; K.box(C, x + Math.cos(t) * 24.4, P(603.5), z + Math.sin(t) * 24.4, 1.7, 10, 1.7, -t, { collide: false }); }
   K.hanging('cloth_red', x - 54.4, P(396), z, [-1, 0], 14, 130, 12);
   // The way up the trunk's outside from the body's top step: a stair winding round its third stage, by a gallery at 560
   // where the Blood Spire's bridge lands, to the gallery at its head; then round the fourth to the crown's floor.
@@ -1055,6 +1056,7 @@ export function phobosKeep(K) {
     K.cone(R, sx, P(top) + 2, sz, r + 4.6, r * 4.4, 16);
     for (let k = 0; k < 6; k++) { const t = k / 6 * TAU; K.spike(R, sx + Math.cos(t) * (r + 3.4), P(top) + 2, sz + Math.sin(t) * (r + 3.4), 1.8, 20, 4, t); }
     K.drum('blood:flame', sx, P(top) - 14, sz, r + 0.3, 4, 16, { open: true, collide: false });
+    for (let k = 0; k < 8; k++) { const t = (k + 0.5) / 8 * TAU, w = Math.max(0.6, r * 0.2); K.box(C, sx + Math.cos(t) * (r + 0.35), P(top) - 14.4, sz + Math.sin(t) * (r + 0.35), w, 4.8, w, -t, { collide: false }); }
     tops.push([sx, sz, r, foot, top]);
     // The way up its outside: a stair winding round it from the highest of the body's steps it stands against, by a
     // gallery a third and two thirds of the way up, to the gallery under its crown, where its bridge leaves.
