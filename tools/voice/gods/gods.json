@@ -1,0 +1,41 @@
+{
+ "_": "The Elder Dragon Gods' voices (docs/VOICES.md, The gods). Each is one of the CustomVoice model's own speakers under one description, as the owner's approved samples were made (refs/). Change a word here and every line of that god must be recorded again. style: what style.py does to every take, the owner's approved treatment (no echo, no reverb, no drive, no growl).",
+ "model": "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice",
+ "_sampling": "Calm sampling, as Lisandra's (tools/voice/anchors.json): takes 10 and up. Takes 0-9 were made at the model's defaults, which wander in pitch from take to take.",
+ "temperature": 0.6,
+ "topK": 30,
+ "calmFrom": 10,
+ "_textOnly": "The critics' round-2 rewrites: a line here with no take passing every rule gets no recording and is shown, not said.",
+ "textOnly": ["thyrraxis_say_gale_0", "thyrraxis_say_rings_0", "morvekh_say_climb_0", "nihvaroth_say_spheres_0", "morvekh_say_kill_1", "nihvaroth_say_stunned_0"],
+ "gods": {
+  "thyrraxis": {
+   "speaker": "aiden",
+   "who": "An ancient dragon god of storms, male. A huge, deep, resonant voice with a cultivated southern English accent, received pronunciation. Proud, amused and contemptuous, speaking slowly and with relish, from deep in the chest. Each sentence falls at its end.",
+   "sample": "Small things, crossing my sky on a thread of stone. Do you know how far down the bottom is?"
+  },
+  "kaldurra": {
+   "speaker": "serena",
+   "who": "An ancient dragon goddess of fire, female. A deep, low, smouldering contralto with a cultivated southern English accent, received pronunciation. Regal, warm and terrible, speaking slowly, from deep in the chest. Each sentence falls at its end.",
+   "sample": "The fire walks. You will run out of island before it runs out of hunger."
+  },
+  "morvekh": {
+   "speaker": "eric",
+   "who": "A dead dragon god of ice, male, impossibly old. A hollow, dry, cold voice, very low and rasping, with a cultivated southern English accent, received pronunciation. Dead calm and patient, speaking slowly and quietly. Each sentence falls at its end.",
+   "sample": "Stand behind your friends. They are colder than you now."
+  },
+  "nihvaroth": {
+   "speaker": "ryan",
+   "who": "A god that is a black hole, male. A vast, very deep, empty bass voice with a cultivated southern English accent, received pronunciation. Without feeling, calm and unhurried, speaking very slowly. Each sentence falls at its end.",
+   "sample": "I am the hunger under the stars. The other three were only my teeth."
+  }
+ },
+ "style": {
+  "main": -4,
+  "layers": [[-16, 0.022, 0.85], [-11, 0.036, 0.5], [-4.4, 0.03, 0.55]],
+  "mainGain": 0.85,
+  "lowBoost": [170, 0.9],
+  "highPass": 45,
+  "speechDb": -15,
+  "ceiling": 0.89
+ }
+}

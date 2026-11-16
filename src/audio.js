@@ -183,6 +183,21 @@ export class Audio {
     }).catch(() => {});
   }
 
+  // A voice heard once, wherever you are, dry and at its own level: an Elder Dragon God's line (gods/<key>). Whatever
+  // voice was speaking is cut off, so two are never heard at once.
+  voice(name, gain = 1) {
+    if (!this.ready) return;
+    const n = (this.voiceN = (this.voiceN || 0) + 1);
+    this.fetchBuffer(name).then((buf) => {
+      if (n !== this.voiceN) return;
+      try { this.voiceSrc?.stop(); } catch { /* already ended */ }
+      const s = this.ctx.createBufferSource(), g = this.ctx.createGain();
+      g.gain.value = gain; s.buffer = buf; s.connect(g); g.connect(this.master); s.start();
+      this.voiceSrc = s;
+    }).catch(() => {});
+  }
+  hush() { this.voiceN = (this.voiceN || 0) + 1; try { this.voiceSrc?.stop(); } catch { /* already ended */ } this.voiceSrc = null; }
+
   fetchBuffer(name) {
     if (this.buffers[name]) { this.touched(name); return Promise.resolve(this.buffers[name]); }
     this.pending = this.pending || {};
