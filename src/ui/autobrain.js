@@ -226,13 +226,20 @@ export const GRINDS = {
   roam: { name: 'Roam the land', line: 'Every country and every seal, chests and fights wherever the road goes.' },
 };
 
-// What it can be set to (the menu under the Auto button, src/ui/autoplay.js): the quests, grinding where GRINDS says, or runs
-// through every dungeon the player has finished, one after another, round and round until it's stopped.
+// What it can be set to (the menu under the Auto button, src/ui/autoplay.js): the quests, grinding where GRINDS says, runs
+// through every dungeon the player has finished, one after another, round and round until it's stopped (begun down one, that
+// one first), or a plain fight: from monster to monster round where it was begun (fightJob).
 export const MODES = {
   quests: { name: 'Complete Quests', line: 'Every quest the town has, in an order that suits its level: taken, worked through and handed in.' },
   grind: { name: 'Grind monsters for XP', line: 'No quests: only levels, wherever you send it.' },
   dungeons: { name: 'Dungeon Runs', line: 'Through every dungeon whose portal you have found, easiest first, one after another and round again, until you stop it.' },
+  fight: { name: 'Auto Fight', line: 'Right here: runs at the nearest monster, then the next, and waits about for more when none are near. No quests, no town.' },
 };
+
+// Auto Fight (fightJob): how far off the next monster may be before it waits instead, and how far from where it was begun
+// it'll go after one (so a string of them doesn't lead it off across the land).
+export const FIGHT_SEEK = 45;
+export const FIGHT_AREA = 70;
 
 // The dungeons it runs: the party dungeons, each behind a portal out in the land (src/core/dungeon.js DELVES), easiest first,
 // and only those whose portal the player has found: seen on the map (its fog cleared there, src/ui/map.js isSeen), or been
@@ -246,7 +253,9 @@ const portalFound = (game, d) => {
   const M = game.worldMap, p = d.portal;
   return !!M?.isSeen && [[0, 0], [6, 0], [-6, 0], [0, 6], [0, -6]].some(([dx, dz]) => M.isSeen(p.x + dx, p.z + dz));
 };
-export const finishedDungeons = (townUI, game) => DUNGEONS.filter((d) => portalFound(game, d));
+// (here: the key of the delve the player's down now, which counts whether its portal's been found or not: come in by the
+// skull's Teleport to Dungeon, it may not have been. Dungeon Runs begun down one go through that one first: dungeonJob.)
+export const finishedDungeons = (townUI, game, here = null) => DUNGEONS.filter((d) => d.key === here || portalFound(game, d));
 const lower = (s) => s[0].toLowerCase() + s.slice(1);
 
 const SLOT_OF = (it) => (it.type === 'weapon' ? 'main' : it.type === 'shield' ? 'off' : it.type === 'skull' ? 'skull' : it.type === 'robe' ? ROBES[it.base]?.slot : null);
@@ -757,6 +766,7 @@ export class Brain {
     this.nearFoe = 1e9; this.scene0 = null;
     this.bump = this.bump || {};
     this.runState = null;
+    this.fightHere = null; this.seekOn = null;   // Auto Fight: where it was begun, and the one it's going after
   }
 
   start() { this.reset(); this.o.input.auto = this.auto; }
@@ -922,7 +932,11 @@ export class Brain {
       // Caught falling, and set down by the town: whatever it was at was too much for it yet. Two levels more first.
       // (Not the beacon stone setting it down by the seal: that's on purpose, however hurt it was.)
       const beaconed = performance.now() - (g.beacon?.arrivedAt ?? -1e9) < 4000;
-      if (this.lastHpf < 0.35 && townDist(m.x, m.z) < 40 && this.job && !beaconed) {
+      const fell = this.lastHpf < 0.35 && townDist(m.x, m.z) < 40 && !beaconed;
+      // (Auto Fight: set down somewhere else on purpose, a seal, the stone, the skull's teleport, it fights there now. Caught
+      // falling, it goes back to where it was.)
+      if (!fell) this.fightHere = null;
+      if (fell && this.job) {
         const why = this.job.why;
         this.o.log?.fell(m, m.own, this.job.say, why.startsWith('q:') ? why.slice(2) : null);
         this.bump[why] = (this.bump[why] || 0) + (this.bold ? 1 : 2);
@@ -1000,6 +1014,8 @@ export class Brain {
     // The opening has its own way to go.
     if (m.opening > 0 && m.opening < OPENING.ARRIVED) { this.opening(snap, m); return; }
     const foes = this.foes(snap, m);
+    // (Auto Fight: the ground it fights over is where it was when it began, before the first fight carries it off.)
+    if (this.mode === 'fight' && !this.fightHere) this.fightHere = { x: m.x, z: m.z, y: m.y };
     this.nearFoe = foes.reduce((a, f) => Math.min(a, f.d), 1e9);
     // The beacon stone at work: still for it, unless something's on it (then the fight comes first, and the stone goes quiet).
     if (g.beacon?.busy && this.nearFoe > BEACON_HOLD) {
@@ -1452,7 +1468,7 @@ export class Brain {
       this.say(`Running from ${[0, 3, 4, 9, 10].includes(f.kind) ? this.foeName(f) : 'something too strong'}.`);
       return true;
     }
-    const hunting = this.job?.kind === 'hunt' || this.job?.kind === 'grind';
+    const hunting = this.job?.kind === 'hunt' || this.job?.kind === 'grind' || this.job?.kind === 'fight';
     // On the way somewhere, only what's on it; hunting, whatever's about. (Once it's in a fight, it finishes it.)
     // (Down the Warrens, the whole room's fight is its fight: a boss across the cave is still its mark.)
     const reach = hunting || this.target || inDungeon(m.x, m.z) ? 30 : 14;
@@ -1947,6 +1963,8 @@ export class Brain {
 
   choose(m) {
     const { townUI, pack } = this.o, Q = townUI.quests;
+    // Set to fight: only that, wherever it is. (No seals, no town, no party to hire, no quests.)
+    if (this.mode === 'fight') return this.fightJob(m);
     const near = (x, z) => dist(m.x, m.z, x, z);
     // A seal near the way that hasn't woken: a step onto it, for the way back.
     const lands = this.o.lands;
@@ -2388,17 +2406,67 @@ export class Brain {
     if (j.kind === 'hire') { doHire(this, m, j); return; }
     if (j.kind === 'warrens') { this.warrensRun(m, foes); return; }
     if (j.kind === 'hunt') { this.hunt(m, j, foes); return; }
+    if (j.kind === 'fight') { this.seek(m, j, foes); return; }
     this.halt();
+  }
+
+  // ---- auto fight (the menu's Auto Fight: MODES)
+
+  // Where it was begun is the ground it fights over (fightHere, set afresh each time it's chosen), FIGHT_AREA round it.
+  fightJob(m) {
+    if (!this.fightHere) this.fightHere = { x: m.x, z: m.z, y: m.y };
+    return { kind: 'fight', why: 'fight', say: 'Auto fight: looking for the next one.' };
+  }
+
+  // What it'll go after: alive, something it can take (all of it, down a dungeon), on its own level of the ground, not in the
+  // town nor somewhere it keeps clear of, and within FIGHT_SEEK of it and FIGHT_AREA of where it began. The nearest.
+  fightMark(m, foes) {
+    const H0 = this.fightHere, lvl = m.lvl + (this.partyStrong(m) ? 2 : 0), below = inDungeon(m.x, m.z);
+    let best = null;
+    for (const f of foes) {
+      if (f.d > FIGHT_SEEK || (H0 && dist(f.x, f.z, H0.x, H0.z) > FIGHT_AREA)) continue;
+      if (this.skipping(`foe:${f.id}`) || this.skipping(`seek:${f.id}`)) continue;
+      if (!below && (!fightableAt(f.kind, f.kind === 0 || f.kind === 3 ? m.lvl : lvl, f.maxHp, f.slime) || inTown(f.x, f.z, 4) || this.kept(m, f.x, f.z))) continue;
+      if (!best || f.d < best.d) best = f;
+    }
+    return best;
+  }
+
+  // From one to the next: up to the nearest (the fight itself is combat()'s, which takes it on once it's in sight), and with
+  // none near enough, back to where it began and a look about till more come.
+  seek(m, j, foes) {
+    const f = this.fightMark(m, foes);
+    if (f) {
+      // (One it gets no nearer to in a while, round a wall or up a cliff: let be for a minute, and the next.)
+      const S = this.seekOn;
+      if (!S || S.id !== f.id) this.seekOn = { id: f.id, best: f.d, t: this.t };
+      else if (f.d < S.best - 1.5) { S.best = f.d; S.t = this.t; }
+      else if (this.t - S.t > 12 || this.noWay) { this.noWay = null; this.giveUp(`seek:${f.id}`, 60); this.seekOn = null; this.halt(); return; }
+      this.say(`Auto fight: after ${this.foeName(f)}.`);
+      this.goTo(f.x, f.z, 2, true);
+      return;
+    }
+    this.seekOn = null;
+    const H0 = this.fightHere;
+    if (H0 && dist(m.x, m.z, H0.x, H0.z) > 12) {
+      this.say('Auto fight: back to where it began, to wait for more.');
+      this.goTo(H0.x, H0.z, 4, dist(m.x, m.z, H0.x, H0.z) > 30);
+      return;
+    }
+    // Waiting about: a turn now and then, to look round.
+    this.halt();
+    if (this.t - (this.lookT ?? -99) > 3) { this.lookT = this.t; this.face = this.o.input.yaw + (Math.random() < 0.5 ? -1 : 1) * (0.6 + Math.random() * 0.9); }
+    this.say('Auto fight: nothing near. Waiting for more to come.');
   }
 
   // ---- dungeon runs (the menu's Dungeon Runs: MODES, DUNGEONS)
 
   // The job for the dungeon it's on, or the next it can run: null when there's none.
   dungeonJob(m) {
-    const list = finishedDungeons(this.o.townUI, this.o.game);
+    const here = delveOf(m.x, m.z);
+    const list = finishedDungeons(this.o.townUI, this.o.game, here?.key);
     if (!list.length) return null;
     // (Down one of them already, as it's set to runs: that one's the run, before any other.)
-    const here = delveOf(m.x, m.z);
     if (here && list.some((d) => d.key === here.key) && this.runKey !== here.key) { this.runKey = here.key; this.runState = null; }
     let at = list.findIndex((d) => d.key === this.runKey);
     if (at < 0) { at = 0; this.runKey = list[0].key; this.runState = null; }
