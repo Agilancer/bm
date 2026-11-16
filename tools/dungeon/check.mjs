@@ -28,11 +28,14 @@ for (const d of DELVES) {
   for (const r of d.rooms) {
     if (ids.has(r.id)) fail(`${r.id}: two rooms of that name`);
     ids.add(r.id);
-    const [x, z] = toWorld(r.x, r.z, d);
+    // (A room with a hole through its middle, the Elder Gods' Cinderwell, by a spot out from the hole.)
+    const [x, z] = toWorld(r.x + (r.hole ? r.hole + 6 : 0), r.z, d);
     if (delveAt(x, z) !== d.key) fail(`${r.id}: not in its own delve's box`);
     if (caveRoom(x, z) < 2) fail(`${r.id}: its middle is ${caveRoom(x, z).toFixed(1)} m from the rock`);
     const w = nav.walkDist(ex, ez, x, z, 0);
-    if (!Number.isFinite(w)) fail(`${r.id}: can't be walked to from the way in`);
+    // (An islet of the Elder Gods' void is reached by a leap, not a walk: src/sim/voidland.js.)
+    if (!Number.isFinite(w) && !r.leap) fail(`${r.id}: can't be walked to from the way in`);
+    if (r.leap && !(d.leaps || []).some((l) => [l.from, l.to].some((q) => Math.hypot(q[0] - r.x, q[1] - r.z) < r.r))) fail(`${r.id}: an islet no gust stone reaches`);
     const y = caveFloorY(x, z), top = caveRoofY(x, z);
     if (top - y < 4) fail(`${r.id}: roof only ${(top - y).toFixed(1)} m up`);
     if (top > -22) fail(`${r.id}: roof at ${top.toFixed(1)}, above the shaders' underground line (-20)`);
@@ -48,7 +51,7 @@ for (const d of DELVES) {
     if (!PROP_KINDS.includes(p.kind)) fail(`${d.key}: a prop of kind ${p.kind} has no builder (src/core/delve-build.js)`);
     const [x, z] = toWorld(p.x, p.z, d);
     const onProp = d.props.some((q) => q.solid && (q.hx !== undefined ? Math.abs(p.x - q.x) <= q.hx + 0.5 && Math.abs(p.z - q.z) <= q.hz + 0.5 : Math.hypot(p.x - q.x, p.z - q.z) <= q.r + 0.5));
-    if (!p.solid && !onProp && caveRoom(x, z) < -0.8 && !['portcullis', 'hearth', 'falls'].includes(p.kind)) fail(`${d.key}: a ${p.kind} at ${p.x}, ${p.z} is in the rock`);
+    if (!p.solid && !onProp && caveRoom(x, z) < -0.8 && !['portcullis', 'hearth', 'falls', 'vent'].includes(p.kind)) fail(`${d.key}: a ${p.kind} at ${p.x}, ${p.z} is in the rock`);
   }
   // Every walkable cell: floor never too steep for a walk (a castle's stairs and steps aside; and a drain, which is
   // barred at both ends and only looked down: it must be shut to the walk from the way in).
@@ -68,6 +71,8 @@ for (const d of DELVES) {
     const k = j * g.W + i;
     if (g.sdf[k] * GRID_UNIT < 0.5) continue;
     if (drains.length && inDrain(g.x0 + i * 0.5 - d.x, g.z0 + j * 0.5 - d.z)) continue;
+    // (Nor a step meant to be jumped up: the Cinderwell's basalt.)
+    if ((d.daises || []).some((s) => s.step && Math.abs(Math.hypot(g.x0 + i * 0.5 - d.x - s.x, g.z0 + j * 0.5 - d.z - s.z) - s.r) < 1.6)) continue;
     const s = Math.hypot(g.floor[k + 1] - g.floor[k - 1], g.floor[k + g.W] - g.floor[k - g.W]) * GRID_UNIT / (2 * 0.5);
     if (s > 0.6) steep++;
   }

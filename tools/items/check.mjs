@@ -129,7 +129,8 @@ const old = new Pack();
 old.load({ gold: 5, kite: true, slots: { main: { type: 'weapon', base: 'ringed_sword', rarity: 0, dmg: [1, 2], affixes: [], sockets: 0, gems: [] }, hands: { type: 'armor', base: 'knight_hands', rarity: 0, armor: 1, affixes: [] } }, entries: [{ item: { type: 'armor', base: 'knight_head', rarity: 0, armor: 1, affixes: [] }, x: 0, y: 0 }] });
 assert.equal(hands(old.slots.main.base), 3);
 assert.equal(old.slots.main.rarity, 0);   // (a common one, as a new game's)
-assert.equal(old.entries.length, 0);      // (and nothing put in the pack: no test kit)
+// (And nothing put in the pack, no test kit: only the beacon stone every pack has, src/items/beacon.js.)
+assert.deepEqual(old.entries.map((e) => e.item.type), ['beacon']);
 assert.equal(old.slots.hands, undefined);
 
 // Levels: each costs more than the last, and every perk goes up.

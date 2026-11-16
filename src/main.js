@@ -1,7 +1,7 @@
 // Boot: the permission gate, threads, GPU, assets, and the render thread's loop.
 import { setOpeningTerrain } from './core/terrain.js';
 import { GROUPS, GROUP_KEYS, TRIPO_KIND } from './core/tripo-monsters.js';
-import { BOSSES as DELVE_BOSSES, DELVE as DELVE_CODE, inDungeon as inDelve } from './core/dungeon.js';
+import { BOSSES as DELVE_BOSSES, DELVE as DELVE_CODE, delveOf, inDungeon as inDelve } from './core/dungeon.js';
 import { OPENING, OPENING_REVISION } from './core/opening.js';
 import { OpeningHUD } from './ui/opening.js';
 import { ChatLog } from './ui/chatlog.js';
@@ -47,6 +47,7 @@ import { SpellSound } from './spellsound.js';
 import { HERO_SLOTS, makeCast, withBrokers } from './core/heroes.js';
 import { HeroTalk } from './ui/heroes.js';
 import { PartyUI } from './ui/party.js';
+import { HeroPlayUI } from './ui/heroplay.js';
 import { PartyBook } from './ui/partybook.js';
 import { fits, partyDrops, useKit } from './items/partygear.js';
 import { TownClient } from './folk/client.js';
@@ -61,13 +62,15 @@ import { groundAt, setHomes } from './ui/places.js';
 import { HallUI } from './ui/testhall.js';
 import { HALL, SPAWN, hallAt } from './core/testhall.js';
 import { beginRun, deathWords, noteRun } from './core/lastrun.js';
+import { Beacon } from './ui/beacon.js';
 
 const BASE = new URL('..', import.meta.url).href;
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const AUTO = params.has('auto');
 // How the last run ended, and how light to load (src/core/lastrun.js). (Tests under ?auto are killed, not left: not judged.)
-const RUN = AUTO && !params.has('light') ? { died: null, light: 0 } : beginRun(params);
+// (On a PC the level steps Auto's graphics down, and only a run that went soon after it loaded counts: src/gfx/gpu.js lighterPC.)
+const RUN = AUTO && !params.has('light') ? { died: null, light: 0 } : beginRun(params, { pc: !isMobileDevice() });
 const renderDiagnostics = new RenderDiagnostics(params.has('diagnose'));
 // Every new game begins with the witch in the cave.
 const OPENING_ENABLED = !params.has('noopening');   // (?noopening starts in the town, for tests)
@@ -333,7 +336,9 @@ async function boot(plan, poolSize) {
   watchFiles(fileNoted);
   setProgress(0.02, 'Waking the GPU...');
   let gpu;
-  try { gpu = await initGPU(settings.gfx); } catch (e) { failOnTitle(''); showFail(e.message); return; }
+  // (A PC whose browser closed the game, or lost its GPU, soon after it loaded last time starts Auto a step lighter or two.)
+  try { gpu = await initGPU(settings.gfx, { light: RUN.light }); } catch (e) { failOnTitle(''); showFail(e.message); return; }
+  console.info(`graphics: ${gpu.tier.name} (${settings.gfx === 'auto' ? 'auto' : 'set'}) on ${gpu.name || gpu.info?.vendor || 'an unnamed GPU'}${gpu.shared ? ', which shares the computer\'s memory' : gpu.laptop ? ', a laptop\'s card' : ''}${gpu.mem ? `; ${gpu.mem} GB of RAM` : ''}${gpu.lightened ? '; lighter for the last run' : ''}`);
   // (A phone whose browser closed the game last time loads lighter: src/core/lastrun.js.)
   if (gpu.mobile && RUN.light) gpu.tier = lighten(gpu.tier, RUN.light);
   noteRun({ stage: 'loading' });
@@ -402,6 +407,7 @@ async function boot(plan, poolSize) {
       else if (m.type === 'file') fileNoted(m);
       else if (m.type === 'snap') { latestSnap = m.snap; if (m.events) pendingEvents.push(m.events); }
       else if (m.type === 'look') { input.yaw = m.yaw; input.pitch = m.pitch; }
+      else if (m.type === 'heroPlay') game?.heroPlay?.onMessage(m);
       else if (m.type === 'heroState') { const c = calls.get(m.id); calls.delete(m.id); c?.resolve(m.heroes); }
       else if (m.type === 'warrens') { game?.party?.onWarrens(m); renderer?.setScenery?.(m.flipped); }
       // (What monsters have marked on the ground and thrown, near you: src/sim/perils.js. Auto-play steps out of it.)
@@ -499,6 +505,7 @@ async function boot(plan, poolSize) {
   game.wearSkin = (id) => { forcedSkin = id || null; wearSkins(); };
   const arm = () => {
     writeWeapon(shared.input, pack.slots.main, gearTotals(pack.slots), levelPerks(pack.level));
+    shared.input[INPUT.LEVEL] = pack.level;
     // (GOD MODE, from the skull: everything dies at one blow.)
     if (game.lands?.cheats.god) for (const k of [INPUT.POWER, INPUT.W_MIN, INPUT.W_MAX]) shared.input[k] *= 1000;
     // (Bare hands: the gauntlet code is still in the renderer, nothing asks for it.)
@@ -565,6 +572,8 @@ async function boot(plan, poolSize) {
     change: arm,
     drop: (item) => { const snap = game.currentSnap(); game.drops.fromPlayer(item, snap[H.PX], snap[H.PY], snap[H.PZ], input.yaw); },
     sound: (k) => audio.play({ open: 'packOpen', close: 'packClose', socket: 'gemLand' }[k] || k, null, 0, 0, 0.55, 1, false),
+    // (The beacon stone, right-clicked or double-clicked: src/ui/beacon.js. It begins once the pack's shut.)
+    useBeacon: () => game.beacon?.use(),
   });
   Object.assign(game, { pack, inventory });
   // The chat log (src/ui/chatlog.js): the other Tessariels' words, and Lisandra's.
@@ -585,6 +594,7 @@ async function boot(plan, poolSize) {
       } });
     game.heroTalk.fetchScript();
     game.party = new PartyUI({ base: BASE, cast, sim: simWorker, pack, heroTalk: game.heroTalk, level: () => pack.level,
+      chatLog, viewProj: () => renderer.frameData,
       firstHero: () => renderer.firstHero, tip: (t, s) => hud.tip(t, s),
       opened: () => { input.menu = true; input.releaseControls(); if (document.pointerLockElement) document.exitPointerLock(); },
       closed: () => { input.menu = false; resume(); },
@@ -641,6 +651,10 @@ async function boot(plan, poolSize) {
       opened: () => { input.menu = true; input.releaseControls(); if (document.pointerLockElement) document.exitPointerLock(); },
       closed: () => { input.menu = false; resume(); },
       saved: () => autosave(),
+      // Lisandra's unbinding (src/ui/folk.js unbind): every point spent, back. game.respecs is each kind of point there is
+      // ({ spent(), reset() }): the spellbook's now, and the Pinnacle points' when they're made (docs/PHOBOS.md, chunk 15).
+      spentPoints: () => (game.respecs || []).reduce((n, r) => n + r.spent(), 0),
+      respec: () => { for (const r of game.respecs || []) if (r.spent() > 0) r.reset(); },
       canMenu: () => input.enabled && !input.menu && !state.paused && !naming,
       click: () => title.chime?.(),
       // A charm for a quest (src/ui/lands.js), into the pouch.
@@ -712,6 +726,9 @@ async function boot(plan, poolSize) {
   });
   if (game.party) game.party.freeHire = () => !!game.hallUI?.on;
   addPart('lands', { save: () => lands.save(), load: (d) => lands.load(d) });
+  // The beacon stone: H, fifteen seconds standing still, and you and your party are home at Bellmourn's seal (src/ui/beacon.js).
+  game.beacon = new Beacon({ pack, shared, input, hud, renderer, audio, cmd: (...a) => lands.o.cmd(...a), party: () => game.party,
+    firstHero: () => renderer.firstHero, gameState: () => game.gameState(), snap: () => game.currentSnap(), testing: () => testMode, saved: () => autosave() });
   window.bm = game.api(shared, simWorker, buffer, pool);
   // How long the start took, part by part (tools/load_time.mjs).
   window.bm.loadLaps = [['the simulation ready', Math.round(simMs)], ...renderer.loadLaps];
@@ -777,7 +794,7 @@ async function boot(plan, poolSize) {
   });
   addPart('pack', {
     save: () => pack.save(),
-    load: (d) => { pack.load(d); arm(); game.drops.clear(); },
+    load: (d) => { game.beacon?.stop(''); pack.load(d); arm(); game.drops.clear(); },
   });
   // (A save from before the party had bags of their own: the party gear in your pack goes to theirs, where it fits anyone.)
   addPart('partyBags', {
@@ -808,7 +825,7 @@ async function boot(plan, poolSize) {
         const active = input.enabled && !state.paused;
         openingHUD.draw(snap, active, dt);
         // While the story has the camera: its view, no hands, no HUD. (Paused, it holds the last view.)
-        if (active) game.overrideCam = openingHUD.direct(snap, dt, input);
+        if (active && !game.entryCam) game.overrideCam = openingHUD.direct(snap, dt, input);
         // (A camera set for a review picture, bm.setCam, holds through the story's.)
         if (game.reviewCam) game.overrideCam = game.reviewCam;
         renderer.hideVM = openingHUD.cinematic(snap) && !openingHUD.handsUp(snap);
@@ -851,6 +868,10 @@ async function boot(plan, poolSize) {
   const startFrom = async (data) => { if (await loadInto(data)) enter(false); };
   // Back after the GPU was lost (above): Continue, offered once, with a word on why. (A tap, which also lets the sound back
   // on in a browser that wants one first.)
+  // On a PC, what the graphics are doing about it: a step lighter on Auto (initGPU light), or, set by hand, a word on the setting.
+  const lighterWords = () => (gpu.mobile ? '' : gpu.lightened
+    ? ` This time the graphics are on ${gpu.tierName === 'mobile' ? 'Low' : gpu.tier.name}, which needs less memory. Settings, Graphics sets them back.`
+    : settings.gfx !== 'auto' && settings.gfx !== 'mobile' ? ' Graphics are set by hand in Settings: Auto, or a lower setting, needs less memory.' : '');
   // Back after the browser closed the game (src/core/lastrun.js): said, with Continue if there's a game kept.
   const diedOffer = async () => {
     if (!RUN.died || AUTO) return;
@@ -859,6 +880,7 @@ async function boot(plan, poolSize) {
     const kept = !!saves.newest();
     const text = `The browser closed the game last time, ${deathWords(RUN.died)}. It does that when a page wants more memory than the device has to give.`
       + `${gpu.mobile && RUN.light ? ` This time the game is using less: ${RUN.light > 1 ? 'only two' : 'fewer'} of the other heroes are about, and bodies are painted smaller.` : ''}`
+      + `${lighterWords()}`
       + `${kept ? ' Continue picks up from where the game was last kept.' : ''}`;
     if (await title.confirm({ title: 'The game was closed', text, yes: kept ? 'Continue' : 'Back', no: kept ? 'Main Menu' : false }) && kept) {
       const d = saves.newest();
@@ -870,7 +892,7 @@ async function boot(plan, poolSize) {
     try { ask = sessionStorage.getItem(GPU_LOST_OFFER) === '1'; note = sessionStorage.getItem(GPU_LOST_NOTE) || ''; sessionStorage.removeItem(GPU_LOST_OFFER); } catch { /* no storage */ }
     if (!ask || AUTO || !saves.newest()) return;
     await new Promise((r) => setTimeout(r, 700));
-    const text = `The game was kept as it was a moment before. Continue picks up from there.${note ? ` (${note})` : ''}`;
+    const text = `The game was kept as it was a moment before. Continue picks up from there.${lighterWords()}${note ? ` (${note})` : ''}`;
     if (await title.confirm({ title: 'The graphics reset', text, yes: 'Continue', no: 'Main Menu' })) {
       const d = saves.newest();
       if (d) startFrom(d);
@@ -878,7 +900,8 @@ async function boot(plan, poolSize) {
   };
   const slotOptions = () => ({ canSave: canSave(), snapshot, restore: (d) => (input.enabled ? loadInGame(d) : startFrom(d)) });
   const loadInGame = async (d) => { if (await loadInto(d)) resume(); };
-  const resume = () => { if (input.touch || AUTO || input.free) input.onPauseChange(false); else input.lock(); };
+  // (With the mouse free, Tab's or auto-play's, there's no lock to take again: straight back.)
+  const resume = () => { if (input.touch || AUTO || input.loose) input.onPauseChange(false); else input.lock(); };
   const toTitle = async () => {
     game.autoplay?.toggle(false);
     await autosave();
@@ -886,6 +909,7 @@ async function boot(plan, poolSize) {
     input.enabled = false;
     state.paused = false;
     shared.input[INPUT.PAUSE] = 1;
+    input.cursor = false;     // (the next game starts with the mouse looking)
     if (document.pointerLockElement) document.exitPointerLock();
     $('pause').style.display = 'none'; $('hud').style.display = 'none'; $('touch').style.display = 'none';
     document.body.classList.remove('playing', 'paused');
@@ -903,6 +927,7 @@ async function boot(plan, poolSize) {
       openingHUD?.reset();
       shared.input[INPUT.RESTART] += 1;   // (taken up on the first step after the world is let go)
       played = 0; playT = 0;
+      game.beacon?.stop('');
       pack.load(null);
       arm();
       game.drops.clear();
@@ -929,6 +954,7 @@ async function boot(plan, poolSize) {
     testMode = true;
     game.hallUI.setOn(true); hud.testHall = true; game.questTrail.off = true;
     played = 0; playT = 0;
+    game.beacon?.stop('');
     pack.load(null); arm(); game.drops.clear();
     game.chests.load(null); game.spellbar.load(null); game.doors.load(null);
     townUI.load(null); town.load(null);
@@ -988,6 +1014,8 @@ async function boot(plan, poolSize) {
     state.paused = paused;
     document.body.classList.toggle('paused', paused);
     $('pause').style.display = paused ? 'flex' : 'none';
+    // (Back in play, no button keeps the focus that Tab walked it to on the pause screen: Enter would press it.)
+    if (!paused && document.activeElement?.closest?.('button, #pause')) document.activeElement.blur();
     shared.input[INPUT.PAUSE] = paused ? 1 : 0;
   };
   input.onLockRefused = () => input.onPauseChange(true);
@@ -1015,13 +1043,15 @@ async function boot(plan, poolSize) {
     bookOpen = false;
     $('spellbook').classList.remove('open');
     input.menu = false;
-    if (viaEsc === true && !input.touch && !AUTO) input.onPauseChange(true); else resume();
+    if (viaEsc === true && !input.touch && !AUTO && !input.loose) input.onPauseChange(true); else resume();
   };
   let bookOpen = false;
   game.spellbar = new SpellBar(shared, input, { openBook, closeBook, tip: (t) => hud.tip(t, 2.5), level: () => pack.level,
     gold: { have: () => pack.gold, pay: (n) => { pack.gold -= n; } }, sound: (k) => audio.play(k, null, 0, 0, 0.6, 1, false) });
   // What's learned in the six trees goes to the sim, which casts the spells with it (Casting.setSkills).
   game.spellbar.onSkills = (ranks) => simWorker.postMessage({ type: 'skills', ranks });
+  // (What Lisandra can unbind: see townUI's act.respec. Free spells, the ones you start with and read from scrolls, aren't spent.)
+  game.respecs = [{ spent: () => game.spellbar.skills.spent, reset: () => game.spellbar.skills.unlearn() }];
   game.spellbar.refresh();
   addPart('spells', {
     save: () => game.spellbar.save(),
@@ -1039,6 +1069,13 @@ async function boot(plan, poolSize) {
     base: BASE, opening: OPENING_ENABLED, game, shared, input, hud, audio, pack, inventory, townUI, lands, renderer, town,
     spellbar: () => game.spellbar, paused: () => state.paused, pause: (on) => input.onPauseChange(on), foeNames: FOE_NAMES, settings,
   });
+  // Playing as one of your party: the ▶ by their life bar (src/ui/heroplay.js, src/sim/heroplay.js).
+  if (game.party) {
+    game.heroPlay = new HeroPlayUI({ sim: simWorker, input, party: game.party, hud, chatLog: game.chatLog, viewSwitch: game.viewSwitch, autoplay: game.autoplay, renderer,
+      playerName: () => { try { return openingHUD?.name || 'Tessariel'; } catch { return 'Tessariel'; } },
+      foeName: (i, snap) => { const co = CHARS_START + i * C_SIZE; return renderer.tripo?.wildName?.(snap[co + C.MODEL]) || FOE_NAMES[snap[co + C.KIND]] || 'Foe'; } });
+    game.party.buildFrames();
+  }
   // Move Buttons, on the pause screen: every button, bar and the map where the player wants them, kept for every game after
   // (src/ui/arrange.js). The game stays paused under it; the pause screen comes back when it's done.
   game.arrange = new Arrange({
@@ -1061,7 +1098,7 @@ async function boot(plan, poolSize) {
     inventory.hide();
     input.menu = false;
     autosave();
-    if (viaEsc && !input.touch && !AUTO) input.onPauseChange(true); else resume();
+    if (viaEsc && !input.touch && !AUTO && !input.loose) input.onPauseChange(true); else resume();
   };
   $('invClose').onclick = () => closePack(false);
   $('invX').onclick = () => closePack(false);
@@ -1110,6 +1147,52 @@ async function boot(plan, poolSize) {
     if (now !== was) audio.play(now ? 'mapOpen' : 'mapClose', null, 0, 0, 0.6, 1, false);
   };
   worldMap.onClose = toggleMap;
+  // With the mouse free (Tab, or auto-play's), a click on the corner map opens the big one, as M does. (On a phone, PMAP's
+  // over it: src/ui/thumbs.js.)
+  $('mapMini').addEventListener('mousedown', (e) => {
+    if (e.button !== 0 || input.touch || !input.enabled || input.menu || state.paused || naming || document.pointerLockElement) return;
+    e.preventDefault(); e.stopPropagation();
+    toggleMap();
+  });
+  // Tab: the mouse let go, to click what's on the screen (the corner map, the skull, Auto, the spell bar and the rest), the
+  // keys still walking you and the game going on. Tab again and the mouse looks about again. A browser's Tab walks its focus
+  // off the page, which takes the pointer lock with it, and that was the pause: now only Esc pauses (input.loose).
+  const freeTip = 'The mouse is free: click the map, the skull, Auto or a spell. Tab again to look about.';
+  const mouseFree = (on) => {
+    if (input.touch || AUTO || on === input.cursor) return;
+    input.cursor = on;
+    if (on) {
+      input.softOn(false);
+      if (document.pointerLockElement) document.exitPointerLock();
+      hud.tip(freeTip, 4);
+    } else if (input.free) hud.tip('Auto-play has the mouse while it plays. It looks about again once auto-play stops.', 4);
+    else {
+      if ($('tip').textContent === freeTip) hud.tip(freeTip, 0);     // (its word goes with it, not anyone else's)
+      // (A browser that won't take the mouse back this once: it stays free, and Tab tries again.)
+      input.lock(() => { input.cursor = true; hud.tip('The browser kept the mouse free that time. Tab again to look about.', 3.5); });
+    }
+  };
+  input.onLooseClick = () => { if (!input.menu && !state.paused) hud.tip(freeTip, 3); };
+  // (For tests: bm.mouseFree() says whether Tab's free mouse is on; bm.mouseFree(true or false) sets it as Tab would.)
+  if (window.bm) window.bm.mouseFree = (on) => { if (on !== undefined) mouseFree(!!on); return input.cursor; };
+  // A panel or a window that Esc shuts is up (its own keys see to it), or a name's being written.
+  const panelUp = () => input.menu || naming || inventory.open || bookOpen || townUI.open || townUI.book || !!game.heroTalk?.open
+    || !!game.party?.open || !!game.hallUI?.open || lands.isOpen || !!game.partyBook?.open || game.arrange.isOpen || !!title.top();
+  // (Caught before the panels' own keys, so it's the panels as they were before this key that count.)
+  window.addEventListener('keydown', (e) => {
+    if (e.repeat || e.defaultPrevented || !input.enabled || input.touch || AUTO) return;
+    // (Not while writing in a box on the screen: a word for the skull, a name. One that's gone but kept the focus doesn't count.)
+    const box = e.target?.closest?.('input, textarea, select');
+    if (box && (box.checkVisibility ? box.checkVisibility() : box.getClientRects().length > 0)) return;
+    if (e.code === 'Tab' && !state.paused) {
+      e.preventDefault();
+      if (!panelUp()) mouseFree(!input.cursor);
+    } else if (e.code === 'Escape' && input.cursor && !input.free && !panelUp()) {
+      // With the mouse free there's no lock for the browser to let go of: Esc is the pause, and Esc again is back.
+      e.preventDefault();
+      input.onPauseChange(!state.paused);
+    }
+  }, true);
   window.addEventListener('keydown', (e) => {
     if (e.code === 'KeyR' && input.enabled && !input.menu && shared.snaps && game.gameState() !== 0) shared.input[INPUT.RESTART] += 1;
     if (!input.enabled || e.repeat || naming) return;
@@ -1119,6 +1202,7 @@ async function boot(plan, poolSize) {
     if (e.code === 'Escape' && inventory.open) closePack(true);
     if (e.code === 'KeyE' && !input.menu && !state.paused) game.takeNearest();
     if (e.code === 'KeyM' && !input.menu && !state.paused) toggleMap();
+    if (e.code === 'KeyH' && !input.menu && !state.paused) game.beacon?.use();
     if (e.code === 'F3') { e.preventDefault(); hud.toggleDebug(); }
   });
   $('bPack').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); if (input.enabled && !state.paused && !naming) openPack(); }, { passive: false });
@@ -1141,7 +1225,7 @@ async function boot(plan, poolSize) {
   game.run();
   $('controls').innerHTML = input.touch
     ? 'Left thumb moves. Right thumb looks, on or off the buttons. The big button fires your <b>staff</b>; round it are <b>dodge</b>, <b>jump</b> and, with a shield on and no skull, <b>guard</b>. The six <b>spells</b> stand in a ring round those: tap one to cast it, hold to keep casting. Along the top: the <b>menu</b>, your <b>pack</b>, your <b>spellbook</b> and your <b>quest log</b>; tap the map in the corner to open the big one. <b>Auto</b>, beside the map, lets the game play itself.'
-    : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump, hold it to ride your shield &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>1</kbd>-<kbd>6</kbd> cast, hold to keep casting &nbsp; <kbd>F</kbd> cast the last again &nbsp; <kbd>Wheel</kbd> choose &nbsp; <kbd>B</kbd> spellbook: learn spells and set your bar &nbsp; <kbd>Alt</kbd> cursor, to click a spell &nbsp; <kbd>Left click</kbd> fire your staff &nbsp; <kbd>Right click</kbd> shield up with a shove, hold to keep it up (not with a skull in hand) &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>M</kbd> map &nbsp; <kbd>E</kbd> take, open, shut or talk &nbsp; <kbd>J</kbd> quest log: what each quest is, where on the map, what auto-play is on &nbsp; <kbd>P</kbd> auto-play: the game plays itself';
+    : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump, hold it to ride your shield &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>1</kbd>-<kbd>6</kbd> cast, hold to keep casting &nbsp; <kbd>F</kbd> cast the last again &nbsp; <kbd>Wheel</kbd> choose &nbsp; <kbd>B</kbd> spellbook: learn spells and set your bar &nbsp; <kbd>Alt</kbd> cursor, to click a spell &nbsp; <kbd>Tab</kbd> free the mouse to click the map, the skull or Auto, Tab again to look &nbsp; <kbd>Left click</kbd> fire your staff &nbsp; <kbd>Right click</kbd> shield up with a shove, hold to keep it up (not with a skull in hand) &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>M</kbd> map &nbsp; <kbd>E</kbd> take, open, shut or talk &nbsp; <kbd>J</kbd> quest log: what each quest is, where on the map, what auto-play is on &nbsp; <kbd>P</kbd> auto-play: the game plays itself';
   // Loaded: the title's menu comes up (once Bellmourn's logo is in).
   game.idle = !AUTO;
   watchFiles(null);
@@ -1242,7 +1326,10 @@ class Hud {
     const hpf = clamp(snap[co + C.HP] / snap[co + C.MAX_HP], 0, 1);
     $('foe').style.opacity = near < BOSS_FAR && !this.dungeonBoss?.() ? 1 : 0;
     // (One of the land's new kinds says its own name: src/core/wilds.js.)
-    const foeName = this.wildName?.(snap[co + C.MODEL]) || FOE_NAMES[snap[co + C.KIND]] || '';
+    let foeName = this.wildName?.(snap[co + C.MODEL]) || FOE_NAMES[snap[co + C.KIND]] || '';
+    // (Down a delve that has its own names for its kinds, by those: the Elder Gods' voidwhelps. src/core/dungeon.js names.)
+    const names = delveOf(snap[H.PX], snap[H.PZ])?.names;
+    if (names) for (const g in names) if (GROUPS[g]?.name === foeName) foeName = names[g];
     if (foeName !== this.foeNameShown) { this.foeNameShown = foeName; $('foeName').textContent = foeName; }
     this.setBar(this.foeHp, hpf);
     this.setBar(this.foeArm, clamp(snap[co + C.ARMOR], 0, 1));
@@ -1536,6 +1623,7 @@ class GameView {
       this.updateCamera(dt, snap);
       this.emitAmbient(dt, snap);
       this.emitBleeds(dt, snap);
+      this.beacon?.frame(dt, snap);
       this.updateTrail(dt, snap);
       this.updateDrops(dt, snap);
       this.autoplay?.frame(dt, snap);
@@ -1543,6 +1631,7 @@ class GameView {
       if (this.town) this.town.frame(snap, c, this.renderer.hour, !!this.shared.input[INPUT.PAUSE] || !!this.idle);
       this.questTrail?.frame(dt, snap);
       renderDiagnostics.stage = 'renderer';
+      this.renderer.delveState = this.party?.warrens;   // (which bosses are down: a delve's way out lights when its last is)
       this.renderer.frame(c, snap, this.sway, dt);
       // Who's drawn, body or shadow: the world poses them every tick (if near) and everyone else less often.
       { const seen = this.shared.input, rc = this.renderer.chars; for (let i = 0; i < MAX_CHARS; i++) seen[INPUT.SEEN + i] = rc[i]?.casts ? 1 : 0; }
@@ -1564,11 +1653,39 @@ class GameView {
       this.hud.update(dt, snap, hs);
       this.foeBars?.update(snap, !this.idle && !this.input.menu && this.input.enabled);
       this.clock.set(r.hour);
+      // (Down a delve there's no sun to tell the hour by, and nothing of the land's to track: the clock is put away.)
+      const deep = inDelve(snap[H.PX], snap[H.PZ]);
+      if (deep !== this.deepWas) { this.deepWas = deep; this.clock.el.style.display = deep ? 'none' : ''; }
+      // (The first time into the Elder Gods' void: the eye comes in from high over the whole of it, the islands and their
+      // beacons and the Maw, down to your own in six seconds. A step, a look or a key ends it.)
+      if (this.wantEntry && deep) {
+        this.wantEntry = false;
+        const D = delveOf(snap[H.PX], snap[H.PZ]);
+        if (D?.key === 'elder' && !this.entrySeen && !this.reviewCam) {
+          this.entrySeen = true;
+          const ex = D.x + 90, ey = D.y + 70, ez = D.z - 60, tx = D.x - ex, ty = D.y - 10 - ey, tz = D.z - 260 - ez, tl = Math.hypot(tx, ty, tz);
+          this.entryCam = { t: 0, x: ex, y: ey, z: ez, fx: tx / tl, fy: ty / tl, fz: tz / tl, px: snap[H.PX], pz: snap[H.PZ], yaw: this.input.yaw };
+        }
+      }
+      const ec = this.entryCam;
+      if (ec) {
+        ec.t += dt;
+        const moved = Math.hypot(snap[H.PX] - ec.px, snap[H.PZ] - ec.pz) > 0.4 || Math.abs(this.input.yaw - ec.yaw) > 0.05;
+        if (ec.t > 6 || moved || !deep || this.reviewCam) { this.entryCam = null; if (!this.reviewCam) this.overrideCam = null; }
+        else {
+          const u = ec.t / 6, s = u * u * u * (u * (u * 6 - 15) + 10), c = this.cam, mix = (a, b) => a + (b - a) * s;
+          let fx = mix(ec.fx, c.fx), fy = mix(ec.fy, c.fy), fz = mix(ec.fz, c.fz); const fl = Math.hypot(fx, fy, fz) || 1; fx /= fl; fy /= fl; fz /= fl;
+          let rx = -fz, rz = fx; const rl = Math.hypot(rx, rz) || 1; rx /= rl; rz /= rl;
+          const ux = -rz * fy, uy = rz * fx - rx * fz, uz = rx * fy, sg = Math.sign(uy) || 1;
+          this.overrideCam = { x: mix(ec.x, c.x), y: mix(ec.y, c.y), z: mix(ec.z, c.z), fx, fy, fz, ux: ux * sg, uy: uy * sg, uz: uz * sg };
+        }
+      }
       this.chatLog?.update(dt, !this.idle && (!this.input.menu || !!this.heroTalk?.open));
       if (this.heroTalk) {
         // (Names and bubbles stay up while a hero is talking to you: the panel is theirs.)
         this.heroTalk.update(dt, snap, r.hour, !this.idle && (!this.input.menu || !!this.heroTalk.open));
         this.party?.update(dt, snap);
+        this.heroPlay?.update(dt, snap);
         // The sim keeps the heroes' day by this clock.
         if ((this.hourT = (this.hourT ?? 0) - dt) <= 0) { this.hourT = 2; this.sim.postMessage({ type: 'hour', hour: r.hour }); }
       }
@@ -1819,7 +1936,9 @@ class GameView {
       case EV.HERO_FX: this.heroFx(a | 0, b, c, d, e, f, g); break;
       // (A boss down is told to the quests too: src/folk/quests.js QuestBook.boss.)
       case EV.WILD: this.wilds?.on(a, b, c, d, e, f, g); break;
-      case EV.DELVE: this.party?.onDelve(a, b, c, d); if ((a | 0) === DELVE_CODE.BOSS_DOWN) { this.townUI?.quests.boss(DELVE_BOSSES[b | 0]?.key); this.music?.stinger('triumph'); } break;
+      case EV.DELVE:
+        if ((a | 0) === DELVE_CODE.ENTER) this.wantEntry = true;
+        this.party?.onDelve(a, b, c, d); if ((a | 0) === DELVE_CODE.BOSS_DOWN) { this.townUI?.quests.boss(DELVE_BOSSES[b | 0]?.key); this.music?.stinger('triumph'); } break;
       case EV.HERO_LEVEL: case EV.HERO_DUEL: break;
       case EV.SPELL_CAST:
         this.heroTalk?.onSpell(b);
@@ -1956,7 +2075,7 @@ class GameView {
         break;
       case EV.GLINT:
         r.emit(2, 3, a, b, c, 0, 1, 0, 2, 0.1, 0.5, 0.004, 0.008, 0.1, 0.2);
-        this.hud.once('glint', this.input.touch ? 'A blade flashes before it falls. Dodge, or swing into it to parry.' : 'A blade flashes before it falls. Q to dodge, or swing into it to parry.');
+        if (!this.deepWas) this.hud.once('glint', this.input.touch ? 'A blade flashes before it falls. Dodge, or swing into it to parry.' : 'A blade flashes before it falls. Q to dodge, or swing into it to parry.');
         break;
       case EV.JUMP: au.play(`jump_${this.underfoot}`, null, 0, 0, 0.32, 1, false); break;
       case EV.DODGE: au.play(`run_${this.underfoot}`, null, 0, 0, 0.5, 1.15, false); break;
@@ -1996,7 +2115,7 @@ class GameView {
         au.play('armorLand', a, b, c, 0.5 + d * 0.9, 0.5);
         r.emit(3, Math.ceil(30 * d), a, b + 0.05, c, 0, 1, 0, 1.3, 0.4, 2.2, 0.08, 0.2, 0.5, 1.2);
         break;
-      case EV.BEAST_NOTICE: this.hud.once('gravehart', 'Something in the trees has noticed you. Leave its ground and it may let you go.', 5); break;
+      case EV.BEAST_NOTICE: if (!this.deepWas) this.hud.once('gravehart', 'Something in the trees has noticed you. Leave its ground and it may let you go.', 5); break;
       case EV.ROAR:
         // A stag's roar, far too big: a groan under a rasp, carrying a long way.
         au.gore(a, b, c, 1.6 * d, 1.7, 130); au.gore(a, b, c, 1.2 * d, 1.4, 240); au.gore(a, b, c, 0.5 * d, 1.1, 620);

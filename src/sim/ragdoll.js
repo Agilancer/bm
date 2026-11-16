@@ -366,7 +366,8 @@ export function fall(k, sim, rig, wq, wt) {
   const pit = k.opts?.pit, world = sim.world;
   return new Ragdoll(rig, wq, wt, {
     yaw: k.yaw, vx: k.vx || 0, vz: k.vz || 0, dirX: dx, dirZ: dz, kick, size: k.meta?.height || 0,
-    ground: pit ? () => pit.y : (x, z, y) => world.groundFor(x, z, y),
+    // (k.fallGround: a fight's say in what's ground under it, the Elder Gods' void under their islands: src/sim/elder-fights.js.)
+    ground: k.fallGround || (pit ? () => pit.y : (x, z, y) => world.groundFor(x, z, y)),
     walls: pit ? null : (v, r, feet) => world.resolve(v, r, feet),
   });
 }

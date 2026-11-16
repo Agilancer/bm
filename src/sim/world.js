@@ -7,7 +7,7 @@ import { LAND_EDGE, openingTerrain, terrainHeight } from '../core/terrain.js';
 import { caveFloor, caveKeep } from '../core/opening.js';
 import { CHURCH_BOUNDS, churchSite } from '../core/church.js';
 import { buildSites } from '../core/sites.js';
-import { CaveNav, caveFloorY, caveKeep as warrenKeep, caveRay, caveRoom, delveOf, inDungeon } from '../core/dungeon.js';
+import { CaveNav, caveFloorY, caveKeep as warrenKeep, caveRay, caveRoom, delveOf, inDungeon, isVoid, voidGround } from '../core/dungeon.js';
 import { HallNav, hallFloorY, hallKeep, hallRay, hallRoom, inHall } from '../core/testhall.js';
 
 // The places out in the countries (src/core/sites.js): their boxes kept by 64 m cell, so a body only looks at the ones near it.
@@ -291,6 +291,9 @@ export class World {
   // The ground at x, z for something that comes up beside p (the player): on the land if that's where p is.
   groundBy(x, z, p) { return this.groundFor(x, z, p.y > this.landAt(p.x, p.z) - 2.5 ? Infinity : -Infinity); }
 
+  // In the Elder Gods' void (src/core/delve-elder.js)?
+  voidAt(x, z) { return inDungeon(x, z) && isVoid(x, z); }
+
   // The land itself there, whatever lies under it or stands on it.
   landAt(x, z) {
     const u = x + 128, v = z + 128;
@@ -309,6 +312,8 @@ export class World {
   // a floor there used to be everyone's floor whatever height they were at, so walking over the hill on the way to the Hill
   // Road dropped you through the ground into the crypt. With your feet on the land, or over it, you stay on the land.)
   heightFor(x, z, y) {
+    // (Out past an island's edge in the Elder Gods' void there's nothing under the player: src/core/dungeon.js voidGround.)
+    if (inDungeon(x, z) && isVoid(x, z)) return voidGround(x, z);
     const home = homeFloor(x, z, y), h = home ?? this.height(x, z, y);
     // (The rift's bridge and landings are kept as a house's floors are, so they come by either way.)
     if (x > 140 && (home !== null || floorAt(x, z) === h)) { const land = this.landAt(x, z); if (land - h > 5 && y > land - 2.5) return land; }
@@ -350,8 +355,9 @@ export class World {
   }
 
   // Push a circle out of boxes. feet is the circle's height: low boxes can be jumped over.
-  resolve(out, r, feet) {
-    if (inDungeon(out[0], out[2])) return warrenKeep(out, r);
+  // (free: the player's own body, which in the void may go over an edge when it's off its feet: src/core/dungeon.js caveKeep.)
+  resolve(out, r, feet, free = false) {
+    if (inDungeon(out[0], out[2])) return warrenKeep(out, r, feet, free);
     if (inHall(out[0], out[2])) return hallKeep(out, r);
     let x = out[0], z = out[2];
     let hit = false, above;

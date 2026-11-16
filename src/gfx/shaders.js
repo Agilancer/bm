@@ -1,6 +1,7 @@
 // WGSL shared by the world's pipelines: the frame block, lighting, shadows, fog.
 import { CHURCH_X, CHURCH_Z, SEXTON } from '../core/church.js';
 import { DELVES } from '../core/dungeon.js';
+import { MAW_DIR, VOID_TINTS } from '../core/delve-elder.js';
 import { HALL_BOX } from '../core/testhall.js';
 import { INDOORS as BELL_INDOORS } from '../core/belltower.js';
 
@@ -189,8 +190,9 @@ fn indoorAt(p: vec3f) -> f32 {
   // The party dungeons, out past the world's edge and deep under it (src/core/dungeon.js DELVES): the Hollowfang Warrens,
   // Blackvigil Keep, the Howling Deeps. (A delve whose look is lit, the keep's great halls, has a warmer and brighter
   // ambient than a cave's: 2.25, read where the ambient's chosen; one that's dim, the Warrens' torchlit rooms, 2.12: enough
-  // to see what stands in a room between its fires.)
-${DELVES.map((d) => `  if (p.x > ${f32(d.box.x0)} && p.x < ${f32(d.box.x1)} && p.z > ${f32(d.box.z0)} && p.z < ${f32(d.box.z1)} && p.y < -20.0) { return ${d.look.lit === true ? '2.25' : d.look.lit ? '2.12' : '2.0'}; }`).join('\n')}
+  // to see what stands in a room between its fires. The Elder Gods' void, out in the open with no roof at all, is 4.0: its
+  // own light and its own sky, voidAmbient and voidKeys below.)
+${DELVES.map((d) => `  if (p.x > ${f32(d.box.x0)} && p.x < ${f32(d.box.x1)} && p.z > ${f32(d.box.z0)} && p.z < ${f32(d.box.z1)} && p.y < -20.0) { return ${d.style === 'void' ? '4.0' : d.look.lit === true ? '2.25' : d.look.lit ? '2.12' : '2.0'}; }`).join('\n')}
   // The Test Dungeon, out past the other edge and as deep (src/core/testhall.js).
   if (p.x > ${f32(HALL_BOX.x0)} && p.x < ${f32(HALL_BOX.x1)} && p.z > ${f32(HALL_BOX.z0)} && p.z < ${f32(HALL_BOX.z1)} && p.y < ${f32(HALL_BOX.y1)}) { return 3.0; }
   // The bell tower's well under its belfry and the Bellwright's room, out on Bell Knoll (src/core/belltower.js), lit as a house is.
@@ -250,17 +252,43 @@ fn underfoot(p: vec3f) -> f32 {
   return k;
 }
 
+// The Elder Gods' void (src/core/delve-elder.js, indoorAt 4.0): no sun and no sky's hemisphere. The nebula's light from
+// high in the south, the Maw's (the black hole's burning disc) from low in the north, and a little of the void's violet
+// in the shadows. VOID_MAW is the way to the Maw.
+const VOID_MAW = vec3f(${f32(MAW_DIR[0])}, ${f32(MAW_DIR[1])}, ${f32(MAW_DIR[2])});
+const VOID_NEB = vec3f(-0.27, 0.86, 0.43);
+fn voidAmbient(up: f32) -> vec3f { return mix(vec3f(0.05, 0.032, 0.075), vec3f(0.12, 0.092, 0.19), up); }
+fn voidKeys(n: vec3f, v: vec3f, albedo: vec3f, f0: vec3f, rough: f32, metal: f32) -> vec3f {
+  let neb = brdf(n, v, VOID_NEB, albedo, f0, rough, metal) * vec3f(0.85, 0.68, 1.25);
+  // (The Maw's light comes up level from the north: it lights the islands' faces and the dragons' undersides, not the tops.)
+  let maw = brdf(n, v, normalize(vec3f(VOID_MAW.x, 0.16, VOID_MAW.z)), albedo, f0, rough, metal) * vec3f(1.05, 0.48, 0.72);
+  return neb + maw;
+}
+// Over each god's island the void's light is its own (src/core/delve-elder.js VOID_TINTS): a tint on the keys (k 0) or the
+// ambient (k 1), full over the island and gone 30 m out.
+fn voidTint(p: vec3f, k: f32) -> vec3f {
+  var t = vec3f(1.0);
+${VOID_TINTS.map((v) => `  t = mix(t, mix(vec3f(${v.key.map(f32).join(', ')}), vec3f(${v.amb.map(f32).join(', ')}), k), 1.0 - smoothstep(${f32(v.r)}, ${f32(v.r + 30)}, distance(p.xz, vec2f(${f32(v.x)}, ${f32(v.z)}))));`).join('\n')}
+  return t;
+}
+// What a shiny thing sees of the void: its violet, the Maw's glow in the north.
+fn voidEnv(d: vec3f) -> vec3f {
+  return vec3f(0.045, 0.025, 0.08) + vec3f(0.08, 0.06, 0.14) * max(d.y, 0.0) + vec3f(0.9, 0.38, 0.6) * pow(max(dot(d, VOID_MAW), 0.0), 7.0);
+}
+
 fn shadePBR(p: vec3f, n: vec3f, v: vec3f, albedo: vec3f, rough: f32, metal: f32, ao: f32, shadow: f32) -> vec3f {
   let f0 = mix(vec3f(0.04), albedo, metal);
   let indoor = indoorAt(p);
   let cave = caveAt(p);
   var c = vec3f(0.0);
   if (indoor < 0.5 && cave < 0.99) { c = brdf(n, v, F.sunDir.xyz, albedo, f0, rough, metal) * F.sunColor.rgb * shadow * (1.0 - cave); }
+  if (indoor > 3.5) { c = voidKeys(n, v, albedo, f0, rough, metal) * voidTint(p, 0.0); }
   // Ambient: the sky's hemisphere for diffuse, its picture for reflections.
   let up = n.y * 0.5 + 0.5;
   var ambient = mix(F.groundAmb.rgb, F.skyAmb.rgb, up);
   // (The Test Dungeon is lit white from its ceilings: bright from above, the floor's light thrown back up.)
-  if (indoor > 2.5) { ambient = mix(vec3f(0.36, 0.36, 0.38), vec3f(0.82, 0.83, 0.86), up); }
+  if (indoor > 3.5) { ambient = voidAmbient(up) * voidTint(p, 1.0); }
+  else if (indoor > 2.5) { ambient = mix(vec3f(0.36, 0.36, 0.38), vec3f(0.82, 0.83, 0.86), up); }
   else if (indoor > 1.5) { ambient = select(select(vec3f(0.044, 0.044, 0.048), vec3f(0.095, 0.078, 0.064), indoor > 2.1), vec3f(0.15, 0.105, 0.085), indoor > 2.2); } else if (indoor > 0.5) { ambient = mix(vec3f(0.12, 0.095, 0.08), vec3f(0.2, 0.19, 0.22), up); }
   // (A house's rooms have only their windows: at night, about a fifth of the day's. F.sunColor.a is the day behind a window.)
   if (indoor > 1.1 && indoor < 1.5) { ambient *= mix(0.25, 1.0, clamp((F.sunColor.a - 0.1) / 0.9, 0.0, 1.0)); }
@@ -282,7 +310,8 @@ fn shadePBR(p: vec3f, n: vec3f, v: vec3f, albedo: vec3f, rough: f32, metal: f32,
   // The ground's reflection, when the mirror direction looks down, is dim and warm.
   let horizon = smoothstep(-0.25, 0.12, refl.y);
   var reflected = mix(F.groundAmb.rgb * 0.8, env, horizon);
-  if (indoor > 0.5) { reflected *= select(select(0.22, 0.05, indoor > 1.5), 0.5, indoor > 2.5); }
+  if (indoor > 3.5) { reflected = mix(vec3f(0.02, 0.012, 0.035), voidEnv(refl), horizon); }
+  else if (indoor > 0.5) { reflected *= select(select(0.22, 0.05, indoor > 1.5), 0.5, indoor > 2.5); }
   reflected *= mix(1.0, 0.06, cave);
   let sunOcc = mix(0.55, 1.0, shadow);
   let foot = underfoot(p);
@@ -310,6 +339,11 @@ fn applyFog(c: vec3f, p: vec3f, viewDir: vec3f, dist: f32) -> vec3f {
     // Deep in the hill the far end goes to murk, and seen from out on the ledge the tunnel is a dark throat.
     let murk = mix(c, F.caveAmb.rgb * 0.4, clamp(1.0 - exp(-dist * 0.035), 0.0, 1.0));
     return mix(c, murk, cave);
+  }
+  if (indoor > 3.5) {
+    // The void: a violet haze the far islands go into, lit toward the Maw.
+    let m = pow(max(dot(viewDir, VOID_MAW), 0.0), 4.0);
+    return mix(c, mix(vec3f(0.05, 0.028, 0.08) * voidTint(p, 1.0), vec3f(0.3, 0.12, 0.22), m), clamp(1.0 - exp(-dist * 0.0021), 0.0, 1.0));
   }
   if (indoor > 2.5) {
     // The Test Dungeon: a faint white haze down the length of the arena, no more.

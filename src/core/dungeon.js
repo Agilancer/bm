@@ -15,10 +15,10 @@
 // Then node tools/dungeon/check.mjs walks it: every room joined, every pack and boss on the floor, the portals clear.
 
 //
-// There are seven of them now, and this file is the engine for all of them: the Warrens here, Blackvigil Keep
-// (src/core/delve-blackvigil.js), the Howling Deeps (src/core/delve-deeps.js), and the four that came after: the Drowned
+// There are eight of them now, and this file is the engine for all of them: the Warrens here, Blackvigil Keep
+// (src/core/delve-blackvigil.js), the Howling Deeps (src/core/delve-deeps.js), the four that came after: the Drowned
 // Vaults, the Sporehold, the Hollow Playhouse and the Kingsbarrow (delve-vaults.js, delve-sporehold.js,
-// delve-playhouse.js, delve-kingsbarrow.js). Each is a delve: its own place out past
+// delve-playhouse.js, delve-kingsbarrow.js), and the Elder Dragon Gods' islands over the void (delve-elder.js). Each is a delve: its own place out past
 // the edge, its own field, box, rooms, packs, bosses and portals (DELVES). Whatever takes a world point (caveRoom,
 // caveFloorY, caveKeep, roomAt...) finds the delve by where the point is, so the sim and the renderer never ask which.
 // The names without a delve in them (ROOMS, PACKS, ENTRY, PORTAL, DUNGEON_BOX...) are the Warrens' own, as they always were.
@@ -31,6 +31,7 @@ import { VAULTS } from './delve-vaults.js';
 import { SPOREHOLD } from './delve-sporehold.js';
 import { PLAYHOUSE } from './delve-playhouse.js';
 import { KINGSBARROW } from './delve-kingsbarrow.js';
+import { ELDER } from './delve-elder.js';
 import { WARRENS_PROPS, WARRENS_NICHES } from './delve-warrens.js';
 
 // Where it lies: its entrance, in the world, and the height its rooms are measured from.
@@ -186,7 +187,8 @@ export const EXIT_OUT = { x: 0, z: -358 };        // out, behind Venomaw's hoard
 // One per dungeon. key: what the quests and the debug call it. tag: before its portals' spots (hf_portal, hf_in, hf_out).
 // x, z, y: where its entrance lies in the world, and the height its floors are measured from. level: who it's for. style:
 // 'cave' (round, lumpy rooms; winding tunnels; a roof that rises to each room's middle) or 'castle' (rooms with four straight
-// walls, level floors, flat roofs, straight passages). rooms, tunnels, pillars, packs: as the Warrens' above. nooks: more
+// walls, level floors, flat roofs, straight passages) or 'void' (the Elder Gods': rooms are islands, passages bridges, and
+// what's neither is the void, not rock: no roof; the edges hold whoever walks, and the player can jump over them). rooms, tunnels, pillars, packs: as the Warrens' above. nooks: more
 // floor joined to the rooms that isn't a room of its own (an alcove, a gallery). daises: floor raised a step. props: what
 // stands in the rooms (src/core/delve-build.js draws them); the solid ones are rock to the field. last: the boss whose death
 // opens the way out and clears it. tough: what its packs are to their cousins in the woods. pay: what clearing it is worth.
@@ -200,7 +202,7 @@ const WARRENS = {
   words: { enter: 'The Hollowfang Warrens. Kobolds dug it; goblins took it; something old sleeps at the bottom.', clear: 'The Hollowfang Warrens are cleared. Venomaw is dead!', wipe: "Your party falls... and wakes at the Warrens' mouth." },
 };
 // (In the order they were made: a delve's place in this list is sent with EV.DELVE and kept, so new ones go on the end.)
-export const DELVES = [WARRENS, BLACKVIGIL, DEEPS, VAULTS, SPOREHOLD, PLAYHOUSE, KINGSBARROW];
+export const DELVES = [WARRENS, BLACKVIGIL, DEEPS, VAULTS, SPOREHOLD, PLAYHOUSE, KINGSBARROW, ELDER];
 // The Free Company's posts at the later delves' portals: a quartermaster of its own on each terrace that has one (a delve's
 // post: who, and what they say of the place), to hire a party from where it's wanted. (src/core/heroes.js BROKERS has them
 // after the town's and the Warrens'; their posts go by the delve's key.)
@@ -215,9 +217,13 @@ for (const d of DELVES) {
 carryEnds(ROOMS, TUNNELS, true);
 // (The new delves' bosses after the Warrens', so a boss's number in BOSSES never changes; and their calls after its calls.)
 export const WARN = {};
+// Which calls are said, not shouted: a boss's opening words on how its fight goes, and a sealed door's word on which boss
+// comes first. Those stay as words on the screen; every other call runs along the emergency ticker (src/ui/ticker.js).
+const CALM = /_(open|shut)$|^ed_(under|sealed)$/;
+export const WARN_CALM = new Set([3, 7]);
 for (const d of DELVES.slice(1)) {
   for (const b of d.bosses) BOSSES.push({ ...b, delve: d.key });
-  for (const [k, text] of Object.entries(d.warnings || {})) { WARN[k] = WARNINGS.length; WARNINGS.push(text); }
+  for (const [k, text] of Object.entries(d.warnings || {})) { WARN[k] = WARNINGS.length; WARNINGS.push(text); if (CALM.test(k)) WARN_CALM.add(WARN[k]); }
   for (const [k, name] of Object.entries(d.turnWarn || {})) TURN_WARN[k] = WARN[name];
 }
 BOSS_KEYS.push(...BOSSES.slice(BOSS_KEYS.length).map((b) => b.key));
@@ -240,7 +246,9 @@ export const roomOf = room;
 // A room's edge isn't round: a few waves round it, the same every time.
 function roomR(r, a) {
   const s = (r.seed ??= hash2(Math.round(r.x * 7), Math.round(r.z * 3)) * 6.28);
-  return r.r * (1 + 0.11 * Math.sin(a * 3 + s) + 0.07 * Math.sin(a * 5 + s * 2.1) + 0.035 * Math.sin(a * 11 + s * 0.7));
+  // (An island's edge waves a third as much: the gaps between them are what they're laid out to be, a jump or not.)
+  const k = r.delve?.style === 'void' ? 0.35 : 1;
+  return r.r * (1 + k * (0.11 * Math.sin(a * 3 + s) + 0.07 * Math.sin(a * 5 + s * 2.1) + 0.035 * Math.sin(a * 11 + s * 0.7)));
 }
 // How far outside a room a point is (below zero inside it), by its plain shape: a circle, or four straight walls.
 function roomOut(r, dx, dz) {
@@ -340,11 +348,13 @@ function build(d) {
           const u = Math.max(0, Math.min(1, ((x - a[0]) * sx + (z - a[1]) * sz) / (sx * sx + sz * sz || 1)));
           const dd = Math.hypot(x - a[0] - sx * u, z - a[1] - sz * u);
           const along = (s[q - 1] + (s[q] - s[q - 1]) * u) / L;
-          const w0 = cave ? t.w * (1 + 0.18 * Math.sin(along * L * 0.35 + k * 1.7) + 0.08 * Math.sin(along * L * 0.9 + k)) : t.w;
+          // (A bridge's sides are straight, and its deck smooth.)
+          const w0 = cave && !t.bridge ? t.w * (1 + 0.18 * Math.sin(along * L * 0.35 + k * 1.7) + 0.08 * Math.sin(along * L * 0.9 + k)) : t.w;
           const v = w0 - dd;
           if (v > f) f = v;
           const w = Math.exp(Math.min(v, 8) * 0.9) * 0.7;
           wsum += w; ysum += w * (tunnelY[k][0] + (tunnelY[k][1] - tunnelY[k][0]) * along);
+          if (t.bridge) level += w;
         }
         for (let n = 0; n < ps.length; n++) {
           const q = ps[n], b = PILLARS[q], px = b[0], pz = b[1];
@@ -360,14 +370,16 @@ function build(d) {
       }
     }
   }
-  // Floor raised a step or two: a dais, a gallery's alcove.
-  for (const s of d.daises) {
+  // Floor raised a step or two: a dais, a gallery's alcove. (A `step` is raised after the smoothing, so it stays a step: the
+  // Cinderwell's pillars, which have to be jumped onto.)
+  const raise = (s) => {
     // (Round, where it says a radius: a rock standing out of water.)
     const hx = s.r ?? s.hx, hz = s.r ?? s.hz;
     const i0 = Math.max(0, Math.ceil((s.x - hx - x0) / CELL)), i1 = Math.min(W - 1, Math.floor((s.x + hx - x0) / CELL));
     const j0 = Math.max(0, Math.ceil((s.z - hz - z0) / CELL)), j1 = Math.min(H - 1, Math.floor((s.z + hz - z0) / CELL));
     for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) if (s.r === undefined || Math.hypot(x0 + i * CELL - s.x, z0 + j * CELL - s.z) <= s.r) floor[j * W + i] += s.dy;
-  }
+  };
+  for (const s of d.daises) if (!s.step) raise(s);
   // Smooth the floor a few times, so the slopes between levels are walked, not stepped.
   const tmp = new Float32Array(W * H);
   for (let pass = 0; pass < 3; pass++) {
@@ -377,6 +389,7 @@ function build(d) {
     }
     for (let j = 1; j < H - 1; j++) for (let i = 1; i < W - 1; i++) floor[j * W + i] = tmp[j * W + i];
   }
+  for (const s of d.daises) if (s.step) raise(s);
   // (Kept as whole numbers of UNIT, 4 mm: half the memory, on every thread that walks or draws it.)
   const pack = (a) => { const o = new Int16Array(a.length); for (let k = 0; k < a.length; k++) o[k] = Math.round(Math.max(-120, Math.min(120, a[k])) / UNIT); return o; };
   const G = { x0: d.x + x0, z0: d.z + z0, W, H, sdf: pack(sdf), floor: pack(floor) };
@@ -391,7 +404,7 @@ export const DUNGEON_CELL = CELL;
 // quick test. Kept generous.
 for (const d of DELVES) {
   const e = extent(d);
-  d.box = { x0: d.x + e.x0 - 4, z0: d.z + e.z0 - 4, x1: d.x + e.x1 + 4, z1: d.z + e.z1 + 4, y0: d.y - 40, y1: d.y + 50 };
+  d.box = { x0: d.x + e.x0 - 4, z0: d.z + e.z0 - 4, x1: d.x + e.x1 + 4, z1: d.z + e.z1 + 4, y0: d.y - 40, y1: d.y + (d.style === 'void' ? 140 : 50) };
 }
 export const DUNGEON_BOX = WARRENS.box;
 
@@ -418,6 +431,8 @@ export const caveFloorY = (x, z) => { const d = delveOf(x, z) || WARRENS; return
 // room's own, level from wall to wall, and a passage's (h, or five metres) between them.
 export function caveRoofY(x, z) {
   const d = delveOf(x, z) || WARRENS, lx = x - d.x, lz = z - d.z;
+  // (Over the void there's no roof: the sky, a long way up.)
+  if (d.style === 'void') return caveFloorY(x, z) + VOID_SKY;
   if (d.style === 'castle') {
     let top = 0;
     for (const r of d.rooms.concat(d.nooks)) if (roomOut(r, lx - r.x, lz - r.z) < 0.3) top = Math.max(top, r.roof);
@@ -441,8 +456,23 @@ export function caveRoofY(x, z) {
   return caveFloorY(x, z) + Math.min(top, 3.2 + dist * 0.9 + (vnoise(x * 0.17, z * 0.17) - 0.5) * 1.2);
 }
 
+// Over the void (a delve of style 'void'): how far the open sky is over its ground, how far out past an edge the ground
+// gives way under the player (below its edge by VOID_LIP), and how far down they fall before the Rift throws them back up.
+const VOID_SKY = 120;
+export const VOID = { lip: 0.75, drop: 30, catch: 1.6 };
+export const isVoid = (x, z) => delveOf(x, z)?.style === 'void';
+// The ground under the player's feet in the void: the island's, or nothing (the delve's height less VOID.drop) out past an edge.
+export const voidGround = (x, z) => { const d = delveOf(x, z); return caveRoom(x, z) < -VOID.lip ? d.y - VOID.drop : caveFloorY(x, z); };
+
 // Push a body of radius r out of the rock, along the way out. True if it was pushed.
-export function caveKeep(out, r) {
+// (free, feet: the player, whose feet are at that height. In the void its edges hold them only while they're on their feet
+// on its ground: up in the air, or fallen below it, they're free to go over; a jump that comes down short within a stride
+// and a half of an edge catches on it.)
+export function caveKeep(out, r, feet = null, free = false) {
+  if (free && feet !== null && isVoid(out[0], out[2])) {
+    const lip = caveFloorY(out[0], out[2]);
+    if (feet > lip + 0.5 || feet < lip - 0.3 || caveRoom(out[0], out[2]) < -VOID.catch) return false;
+  }
   let hit = false;
   for (let pass = 0; pass < 3; pass++) {
     const x = out[0], z = out[2], d = caveRoom(x, z);
@@ -586,7 +616,7 @@ export function braziers(d = WARRENS) {
     }
     // (And over the middle of the great caverns, where no fire at the wall reaches: fires hung from the roof, 'hang'.
     // [x, floor y, z, how high its light is, 'hang'])
-    if (r.r >= 18 && r.hang !== 0) {
+    if (r.r >= 18 && r.hang !== 0 && d.style !== 'void') {
       const m = r.r >= 25 ? 4 : 3;
       for (let i = 0; i < m; i++) {
         const a = (i + 0.6) / m * 6.28 + r.x, x = d.x + r.x + Math.cos(a) * r.r * 0.3, z = d.z + r.z + Math.sin(a) * r.r * 0.3;

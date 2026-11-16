@@ -12,7 +12,7 @@ import { routeDist } from '../src/core/lands.js';
 const KINDS = ['camp', 'webs', 'plot', 'ring', 'bed', 'roost', 'den', 'picket'];
 const manifest = JSON.parse(fs.readFileSync(new URL('../assets/game/tex/manifest.json', import.meta.url)));
 // (The flat materials and the tints: FLAT and TINTS in src/gfx/renderer.js.)
-const FLAT = new Set(['iron', 'flame', 'water', 'fruit', 'fruit2', 'white', 'tile', 'glow', 'lake', 'falls', 'ice', 'seal', 'obsidian', 'gold']);
+const FLAT = new Set(['iron', 'flame', 'water', 'fruit', 'fruit2', 'white', 'tile', 'glow', 'lake', 'falls', 'ice', 'seal', 'obsidian', 'gold', 'voidglass', 'magma', 'rune', 'storm']);
 
 test('every lair is dressed as one of the kinds, and every kind is used', () => {
   const seen = new Set(LAIRS.map(lairKind));
@@ -43,7 +43,7 @@ test('the dressing is for the eye: no collider, nothing on a road, no cloth', ()
 test('every painting a place or a dungeon asks for is in the game', () => {
   const have = new Set(manifest.layers.map((l) => l.name));
   for (const layer of [...buildSites(true).parts.keys(), ...buildUnder().parts.keys()]) {
-    const m = /^(dark|pale|frost|mire|spore):(.*)$/.exec(layer), base = m ? m[2] : layer;
+    const m = /^(dark|pale|frost|mire|spore|void):(.*)$/.exec(layer), base = m ? m[2] : layer;
     assert.ok(have.has(base) || FLAT.has(base), `no painting called ${base}`);
   }
   for (const n of ['block', 'flags', 'ashlar', 'course']) {
@@ -61,14 +61,15 @@ test('no one painting is most of a dungeon any more', () => {
       const [a, b, c] = [0, 1, 2].map((k) => { const v = p.idx[i + k] * 3; return [p.pos[v], p.pos[v + 1], p.pos[v + 2]]; });
       if (Math.abs(a[0]) < 5600 && Math.abs(a[2]) < 5600) continue;
       if (a[0] < -5600 && Math.abs(a[2]) < 3000) continue;   // (the Test Dungeon's white hall is meant to be one thing)
-      const key = `${Math.round(a[0] / 1000)},${Math.round(a[2] / 1000)}`;
+      // (A dungeon to a square kilometre, but the Elder Gods' islands, which spread over three: one dungeon all the same.)
+      const key = Math.hypot(a[0] - 6400, a[2] - 6500) < 900 ? 'elder' : `${Math.round(a[0] / 1000)},${Math.round(a[2] / 1000)}`;
       const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
       const ar = 0.5 * Math.hypot(u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]);
       const m = area.get(key) || area.set(key, new Map()).get(key);
       m.set(layer, (m.get(layer) || 0) + ar);
     }
   }
-  assert.equal(area.size, 7);
+  assert.equal(area.size, 8);
   for (const [key, m] of area) {
     const all = [...m.values()].reduce((s, v) => s + v, 0), [top, most] = [...m].sort((p, q) => q[1] - p[1])[0];
     assert.ok(most / all < 0.56, `${top} is ${Math.round(most / all * 100)}% of the dungeon at ${key}`);

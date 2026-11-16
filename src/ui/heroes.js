@@ -12,6 +12,7 @@ import { kindOfGroup } from '../core/tripo-monsters.js';
 import { CAUSES, CLASSES, GESTURES, MOBS, MOB_KEYS, MOVE_KEYS, PLACES, PLACE_IDS, TRIGGERS, WALK_ENDS, hourBand, rng } from '../core/heroes.js';
 import { LISANDRA_FORMS } from '../core/lisandra.js';
 import { townDist } from '../core/town.js';
+import { inDungeon } from '../core/dungeon.js';
 import { TOWN_KNIGHTS } from '../core/knights.js';
 import { DAWN_HOUR, DUSK_HOUR } from '../gfx/daylight.js';
 import { ELEM, SPELLS } from '../sim/spells.js';
@@ -196,6 +197,8 @@ export class HeroTalk {
     this.hour = hour;
     if (this.timers.length) { const due = this.timers.filter((x) => x.t <= this.t); this.timers = this.timers.filter((x) => x.t > this.t); for (const x of due) x.fn(); }
     this.snap = snap;
+    // (Down a delve: its fight's calls are what's heard. src/ui/heroes.js say QUIET.)
+    this.deep = inDungeon(snap[H.PX], snap[H.PZ]);
     const show = active && this.settings.tags !== 'off';
     css(this.layer, 'display', active ? '' : 'none');
     const nk = snap[H.NCHARS] - this.heroes.length - LISANDRA_FORMS.length;
@@ -268,7 +271,7 @@ export class HeroTalk {
     this.stepConvos(dt);
     if (this.open) this.stepTalk(dt);
     if ((this.scanT -= dt) <= 0) { this.scanT = 0.25; this.scan(snap); }
-    if ((this.chatterT -= dt) <= 0) { this.chatterT = 25 + Math.random() * 55; this.chatter(); }
+    if ((this.chatterT -= dt) <= 0) { this.chatterT = 25 + Math.random() * 55; if (!this.deep) this.chatter(); }
     if ((this.saveT -= dt) <= 0) { this.saveT = 30; this.save(); }
   }
 
@@ -476,7 +479,7 @@ export class HeroTalk {
 
   // Two heroes idle side by side: a conversation if one fits them, the bond's own words if not, else a greeting.
   meet(h, o) {
-    if (!o || h.busyT > 0 || o.busyT > 0) return;
+    if (!o || h.busyT > 0 || o.busyT > 0 || this.deep) return;
     const bond = this.bondOf(h, o), band = BANDS[hourBand(this.hour)];
     // Now and then a guildless hero is taken in by one who has a guild.
     if (!h.p.guild && o.p.guild && Math.random() < 0.06) {
@@ -686,6 +689,7 @@ export class HeroTalk {
   // A hero says something for a trigger: a conversation if one fits and there's company, else a line from the pools.
   say(h, name, o = null, ctx = {}) {
     if (!this.script) return false;
+    if (this.deep && QUIET.test(name)) return false;
     const tr = this.trig(name);
     if (tr.time && !tr.time.includes(BANDS[hourBand(this.hour)])) return false;
     // (Lisandra's own lines wait out the turning of the light.)
@@ -757,12 +761,13 @@ export class HeroTalk {
     const near = h.dist < EARSHOT && h.shown;
     if (channel === 'say' || channel === 'party') {
       if (!h.shown) return;
+      if (this.deep) { if (near) this.logLine(channel, h.p.name, text); return; }
       h.bub.textContent = text;
       h.bub.className = 'bub' + (channel === 'party' ? ' party' : '');
       h.bubW = h.bub.offsetWidth; h.bubH = h.bub.offsetHeight;   // (Measured once per line, for the stacking in update.)
       h.bubbleT = Math.min(8, 2.4 + text.length * 0.055);
       if (near) this.logLine(channel, h.p.name, text);
-    } else this.logLine(channel, h.p.name, text);
+    } else if (!this.deep) this.logLine(channel, h.p.name, text);   // (Trade and Shout: not down a delve.)
     if (emote) this.emote(h, emote);
     if (anim) this.act(h, anim);
   }
@@ -893,6 +898,7 @@ export class HeroTalk {
       if (!h.shown || h.dead || h.below || Math.abs(h.y - py) > 1.6) continue;
       const dx = h.x - px, dz = h.z - pz, d = Math.hypot(dx, dz);
       if (d > TALK_REACH) continue;
+      if (d < 0.5 && document.body.classList.contains('hero-play')) continue;   // (the one you're playing as: src/ui/heroplay.js)
       const ahead = d < 0.01 ? 1 : (dx * fx + dz * fz) / d;
       if (ahead < 0.45 && d > 1.1) continue;
       const s = d * (1.6 - ahead);
@@ -1043,6 +1049,9 @@ export class HeroTalk {
     this.logLine(ch, nm, line.text);
   }
 }
+
+// What isn't said down a delve: greetings, gossip, idle talk and the like, that would cover a fight's calls.
+const QUIET = /greet|gossip|convo|chat|idle|lisandra_|knight_|first_sight|absent_return|player_surf|player_skull|magic_seen|guild_|bond_|trade|show_off|walk_|weather|town|bard_perform|duel_|hunt_|night_falls|road_climb|summit_view|surf_|cathedral_|catacombs_|sight_black/;
 
 // A style set only when it changes: a frame's worth of writes to the page is otherwise a frame's worth of style work.
 const css = (el, k, v) => { const c = el._css || (el._css = {}); v = String(v); if (c[k] !== v) { c[k] = v; el.style[k] = v; } };

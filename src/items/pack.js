@@ -3,11 +3,18 @@
 import { WEAPONS } from '../core/layout.js';
 import { settleSkull } from './skins.js';
 import { sizeOfHG } from './partygear.js';
+import { COOLDOWN, beaconStone, isBeacon } from './beacon.js';
 import { GEMS, MAX_SOCKETS, ROBES, SKULLS, makeRng, robeSize, rollGem, rollRobe, rollShield, rollSkull, rollStarterStaff, rollWeapon } from './items.js';
 
 const freshRng = () => makeRng((Math.random() * 2 ** 32) >>> 0);
 
 export const PACK_W = 12, PACK_H = 8;
+// Room bought from Wes Harrow the tanner (src/ui/folk.js letOut): a cell at a time, laid on below the pack's eight rows a row
+// at a time, the dearer the more there is. (Pinnacle points' bag space can add to `extra` the same way.)
+export const MAX_EXTRA = 48;
+// What the next cell costs, in gold, with n bought already: 30 gold, then a tenth more each, to about 2,600 for the last.
+// (To the gold: each step's at least 3, so each cell is dearer than the one before.)
+export const slotPrice = (n) => Math.round(30 * 1.1 ** n);
 export const SLOTS = ['head', 'neck', 'main', 'chest', 'off', 'shoulders', 'skull', 'ring1', 'legs', 'feet', 'ring2'];
 
 // A bit of everything and a pouch of gems, to try it all out. The game proper starts with a common staff and shield and nothing else: leave this false.
@@ -27,12 +34,24 @@ export class Pack {
     this.mats = {};      // what's in the satchel, by kind (items.js MATS)
     this.xp = 0; this.level = 1;
     this.charms = [];    // the charm pouch: charm ids (src/ui/lands.js CHARMS)
+    this.extra = 0;      // cells bought past the first PACK_W x PACK_H
+    this.beaconCd = 0;   // seconds of play till the beacon stone can be used again (src/ui/beacon.js)
   }
+
+  // The rows there are, the last of them only partly open while the room bought doesn't fill it; and the cells, in all.
+  get rows() { return PACK_H + Math.ceil(this.extra / PACK_W); }
+  get cells() { return PACK_W * PACK_H + this.extra; }
+  // Whether a cell is the pack's: the first eight rows, and of the rows past them, the cells bought, across from the left.
+  isOpen(x, y) { return x >= 0 && x < PACK_W && y >= 0 && (y < PACK_H || (y - PACK_H) * PACK_W + x < this.extra); }
+  // Where the beacon stone is in the pack, if it is.
+  beacon() { return this.entries.find((e) => isBeacon(e.item)) || null; }
 
   // The entries an item would land on, at (x, y). Null if it would stick out of the grid.
   under(item, x, y) {
     const { w, h } = sizeOf(item);
-    if (x < 0 || y < 0 || x + w > PACK_W || y + h > PACK_H) return null;
+    if (x < 0 || y < 0 || x + w > PACK_W || y + h > this.rows) return null;
+    // (Over a cell not bought yet, at the end of the last row: no.)
+    if (y + h > PACK_H && !this.isOpen(x + w - 1, y + h - 1)) return null;
     return this.entries.filter((e) => {
       const o = sizeOf(e.item);
       return x < e.x + o.w && e.x < x + w && y < e.y + o.h && e.y < y + h;
@@ -56,7 +75,7 @@ export class Pack {
   // Into the first room there is, top left first. False if there's none.
   add(item) {
     for (let x = 0; x < PACK_W; x++) {
-      for (let y = 0; y < PACK_H; y++) {
+      for (let y = 0; y < this.rows; y++) {
         const hit = this.under(item, x, y);
         if (hit && !hit.length) { this.entries.push({ item, x, y }); return true; }
       }
@@ -66,7 +85,7 @@ export class Pack {
 
   // Into the first room there is reading across, top row first: what sort() lays out by.
   addRowwise(item) {
-    for (let y = 0; y < PACK_H; y++) {
+    for (let y = 0; y < this.rows; y++) {
       for (let x = 0; x < PACK_W; x++) {
         const hit = this.under(item, x, y);
         if (hit && !hit.length) { this.entries.push({ item, x, y }); return true; }
@@ -77,11 +96,11 @@ export class Pack {
 
   remove(entry) { this.entries.splice(this.entries.indexOf(entry), 1); }
 
-  // Tidies the pack: staffs, then skulls, shields, what's worn head to foot, and gems last, the rarest of each first. If it
+  // Tidies the pack: the beacon stone in the corner, staffs, then skulls, shields, what's worn head to foot, and gems last, the rarest of each first. If it
   // won't all fit that way, biggest first; if not even that, it stays as it was. False then.
   sort() {
     const was = this.entries, items = was.map((e) => e.item);
-    const KIND = { weapon: 0, skull: 1, shield: 2, robe: 3, hgear: 4, gem: 5 };
+    const KIND = { beacon: -1, weapon: 0, skull: 1, shield: 2, robe: 3, hgear: 4, gem: 5 };
     const ROBE_ORDER = ['head', 'shoulders', 'chest', 'legs', 'feet'];
     const HG = ['weapon', 'off', 'helm', 'shoulders', 'chest', 'arms', 'legs', 'boots'];
     const rank = (it) => (KIND[it.type] ?? 4.5) * 10 + (it.type === 'robe' ? ROBE_ORDER.indexOf(ROBES[it.base]?.slot) : it.type === 'hgear' ? HG.indexOf(it.slot) : 0);
@@ -119,7 +138,7 @@ export class Pack {
   }
 
   // What goes in a save. Items are plain data.
-  save() { return structuredClone({ slots: this.slots, entries: this.entries, gold: this.gold, copper: this.copper, mats: this.mats, kite: true, xp: this.xp, level: this.level, charms: this.charms }); }
+  save() { return structuredClone({ slots: this.slots, entries: this.entries, gold: this.gold, copper: this.copper, mats: this.mats, kite: true, xp: this.xp, level: this.level, charms: this.charms, extra: this.extra, beaconCd: this.beaconCd }); }
 
   // A saved pack back in hand, or with null, what a new game starts with.
   load(d) {
@@ -129,9 +148,16 @@ export class Pack {
     this.mats = { ...(d?.mats || {}) };
     this.xp = d?.xp || 0; this.level = d?.level || 1;
     this.charms = [...(d?.charms || [])];
+    this.extra = Math.max(0, Math.min(MAX_EXTRA, d?.extra | 0));
+    this.beaconCd = Math.max(0, Math.min(COOLDOWN, +d?.beaconCd || 0));
+    this.owesBeacon = false;
     if (!d) { this.startingKit(); return; }
     Object.assign(this.slots, d.slots);
     this.entries = d.entries;
+    // (A save from before the beacon stone, or a pack with a second one in it somehow: one, kept.)
+    let seen = false;
+    this.entries = this.entries.filter((e) => !isBeacon(e.item) || (!seen && (seen = true)));
+    for (const k of Object.keys(this.slots)) if (isBeacon(this.slots[k])) this.slots[k] = null;
     // A save from before the kite shields: everyone starts with one.
     if (!d.kite && !this.slots.off) this.slots.off = rollShield(makeRng(1793), { base: 'kite_cross' });
     // A save from before shields had stats: roll them, keeping the gems and sockets it already has.
@@ -151,14 +177,27 @@ export class Pack {
       const staff = this.entries.find((e) => e.item.type === 'weapon');
       if (staff) { this.slots.main = staff.item; this.remove(staff); } else this.slots.main = rollStarterStaff(freshRng());
     }
+    // Everyone carries a beacon stone: a save from before it was made is given one, tidied in if there's no room as it lies,
+    // and with no room at all, owed till there is (giveBeacon).
+    if (!seen) this.giveBeacon();
   }
 
-  // A new game: a common staff, of a different kind most games, and a plain kite shield. No skull and no gems: the first
+  // The beacon stone into the pack, if it isn't there yet: true once it is.
+  giveBeacon() {
+    if (this.beacon()) { this.owesBeacon = false; return true; }
+    const ok = this.add(beaconStone()) || (this.sort() && this.add(beaconStone()));
+    this.owesBeacon = !ok;
+    return ok;
+  }
+
+  // A new game: a common staff, of a different kind most games, a plain kite shield, and the beacon stone. No skull and no gems: the first
   // skull is the reward for Bram Kettle's errand (src/folk/quests.js bed_and_bell), and gems are found.
   startingKit() {
     const rng = freshRng();
     this.slots.main = rollStarterStaff(rng);
     this.slots.off = rollShield(rng, { base: 'kite_cross' });
+    // And the beacon stone, in the pack's corner: home to Bellmourn's seal (src/items/beacon.js).
+    this.entries.push({ item: beaconStone(), x: 0, y: 0 });
     if (!TEST_KIT) return;
     for (const base of ['crystal_staff', 'greenwood_staff', 'gnarled_crook']) this.add(rollWeapon(rng, { base, rarity: 2, sockets: 3 }));
     for (const base of Object.keys(SKULLS).slice(0, 3)) this.add(rollSkull(rng, { base, rarity: 3, sockets: 3 }));

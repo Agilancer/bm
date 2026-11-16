@@ -18,6 +18,9 @@ export class Input {
     // is the bot's hands and feet, { mx, mz, run, jumpHeld, cast, block }, read here in place of the keys'.
     this.free = false;
     this.auto = null;
+    // Tab (src/main.js mouseFree): the mouse let go to click what's on the screen, the keys still walking him and the game
+    // going on, until Tab again. Neither this nor auto-play's free mouse is a pause: only Esc is.
+    this.cursor = false;
     this.sens = 1;   // the Look speed setting
     this.onPauseChange = null;
     this.touch = /Android|iPhone|iPad/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 0 && matchMedia('(pointer: coarse)').matches);
@@ -26,6 +29,12 @@ export class Input {
     this.stickId = null; this.lookId = null;
     this.stickRight = false;
   }
+
+  // The mouse left free on purpose (Tab's, or auto-play's): no pointer lock wanted, and none lost is a pause.
+  get loose() { return this.free || this.cursor; }
+  // The wheel's the camera's (src/ui/view.js) and Shift with it the spell bar's (src/ui/spellbar.js): with the mouse held by
+  // the game, or with Tab's free mouse over the world itself (not over a button or the map).
+  wheelOk(e) { return document.pointerLockElement === this.canvas || (this.cursor && !this.free && e.target === this.canvas); }
 
   get menu() { return this._menu; }
   set menu(on) { this._menu = !!on; document.body.classList.toggle('menu-up', this._menu); }
@@ -68,7 +77,9 @@ export class Input {
       this.look(e.movementX * SENS * this.sens, e.movementY * SENS * this.sens);
     });
     this.canvas.addEventListener('mousedown', (e) => {
-      if (!this.enabled || this.menu || this.free) return;
+      if (!this.enabled || this.menu) return;
+      // (A click on the world with the mouse free is nothing: Tab gives the mouse back to the looking. src/main.js says so.)
+      if (this.loose) { if (this.cursor && !this.free && e.button === 0) this.onLooseClick?.(); return; }
       if (document.pointerLockElement !== this.canvas && !this.touch) { this.lock(); return; }
       if (this.soft) { if (e.button === 0) this.softPress?.(this.softX, this.softY); return; }
       if (e.button === 0 && this.mapUp) return;      // (the left button moves the big map while it's up)
@@ -80,7 +91,8 @@ export class Input {
     this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     document.addEventListener('pointerlockchange', () => {
       const locked = document.pointerLockElement === this.canvas;
-      if (this.onPauseChange && !this.touch && !this.free) this.onPauseChange(!locked);
+      // (Lost while held, it's Esc, or the window left: the pause. Let go for Tab or auto-play, it's nothing.)
+      if (this.onPauseChange && !this.touch && !this.loose) this.onPauseChange(!locked);
     });
   }
 
@@ -93,10 +105,11 @@ export class Input {
     this.softShow?.(on);
   }
 
-  lock() {
-    if (this.touch || this.free) return;
+  // refused: what's done if the browser won't (by default the pause screen, whose Resume is a click it will take).
+  lock(refused = this.onLockRefused) {
+    if (this.touch || this.loose) return;
     const p = this.canvas.requestPointerLock({ unadjustedMovement: true });
-    if (p && p.catch) p.catch(() => { const q = this.canvas.requestPointerLock(); if (q && q.catch) q.catch(() => { if (this.onLockRefused) this.onLockRefused(); }); });
+    if (p && p.catch) p.catch(() => { const q = this.canvas.requestPointerLock(); if (q && q.catch) q.catch(() => { if (refused) refused(); }); });
   }
 
   look(dx, dy) {

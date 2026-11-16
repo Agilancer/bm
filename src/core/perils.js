@@ -91,5 +91,34 @@ export function wayOut(marks, x, z, pad = 0.8, open = null) {
   return [tx, tz];
 }
 
+/**
+ * A turning cross (a fire wheel) as a player rides it: round with it, in the middle of a gap between two arms, so the arms
+ * never come; as near the hub as the gap is wide enough to stand in, and no further out than a walk keeps pace with it there
+ * (o.pace, metres a second); at o.want from its middle if that's between. Where no ring of it holds (too quick, too
+ * narrow), out past its ends instead. [x, z] to make for, or null if (x, z) is nowhere near it.
+ * late: seconds since the mark was as told (it has turned on since). A point a moment along the way it turns (lead).
+ */
+export function wheelSpot(h, x, z, late = 0, o = {}) {
+  const n = h.arms || 4, w = h.w ?? 1, step = Math.PI * 2 / n, spin = h.live ? h.spin || 0 : 0;
+  const dx = x - h.x, dz = z - h.z, rho = Math.hypot(dx, dz);
+  if (h.shape !== 'cross' || rho > h.r + w + 1.5) return null;
+  const yaw = (h.yaw || 0) + spin * late, phi = Math.atan2(dx, dz);
+  // (Its angle from the nearest arm, -half a gap to +half.)
+  let rel = (phi - yaw) % step;
+  if (rel < 0) rel += step;
+  if (rel > step / 2) rel -= step;
+  const arm = phi - rel, sg = spin > 0 ? 1 : spin < 0 ? -1 : 0, pace = o.pace ?? 4.3;
+  // (Just ahead of an arm that's coming, and too far out to outwalk it: through it to the gap behind, which is soonest done.)
+  const swept = sg && rel * sg > 0 && Math.max(rho, 1) * Math.abs(rel) < w + 0.9 && Math.abs(spin) * rho >= pace;
+  const gap = arm + (swept ? -sg : rel >= 0 ? 1 : -1) * step / 2;
+  const hub = Math.max(o.hub ?? 3.5, (2 * w + 2.6) / step);
+  const outer = Math.min(Math.abs(spin) > 0.01 ? pace / Math.abs(spin) : Infinity, h.r - 0.5);
+  const ring = hub <= outer ? Math.min(outer, Math.max(hub, o.want ?? rho)) : h.r + w + 1.3;
+  const a = gap + spin * (o.lead ?? 0.35);
+  const p = [h.x + Math.sin(a) * ring, h.z + Math.cos(a) * ring];
+  p.out = hub > outer;
+  return p;
+}
+
 /** A mark as the page needs it (auto-play reads these): its shape and where, whether it's biting yet, and whether it's one to stand in (soak). */
-export const markOut = (h) => ({ shape: h.shape, x: h.x, z: h.z, r: h.r, r0: h.r0 || 0, yaw: h.yaw || 0, half: h.half ?? 0.5, w: h.w ?? 1, arms: h.arms || 4, seed: h.seed || 0, live: h.t >= h.fuse, jump: !!h.jump, soak: !!h.soak });
+export const markOut = (h) => ({ shape: h.shape, x: h.x, z: h.z, r: h.r, r0: h.r0 || 0, yaw: h.yaw || 0, half: h.half ?? 0.5, w: h.w ?? 1, arms: h.arms || 4, seed: h.seed || 0, live: h.t >= h.fuse, jump: !!h.jump, soak: !!h.soak, burn: (h.dps || 0) > 0, spin: h.spin || 0 });

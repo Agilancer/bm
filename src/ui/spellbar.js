@@ -109,7 +109,7 @@ export class SpellBar {
     // Shift and the wheel turn the bar. (The wheel on its own stands the camera back or brings it in: src/ui/view.js. With
     // Shift held a browser may send the turn as a sideways one, deltaX.)
     window.addEventListener('wheel', (e) => {
-      if (!e.shiftKey || !input.enabled || input.menu || !document.pointerLockElement) return;
+      if (!e.shiftKey || !input.enabled || input.menu || !(input.wheelOk?.(e) ?? document.pointerLockElement)) return;
       const d = e.deltaY || e.deltaX;
       if (d) this.turn(d > 0 ? 1 : -1);
     }, { passive: true });

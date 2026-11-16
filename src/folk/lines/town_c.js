@@ -633,6 +633,26 @@ export const LINES = {
 
   // Wes Harrow, tanner. Few words. Knows he smells. Reads a man by his boots. Doesn't talk about her.
   wes: {
+    // Letting a pack out (src/ui/folk.js letOut): {price} is the next pocket's, in gold.
+    pack: {
+      offer: [
+        "Leather. I've hide enough. A pocket sewn on, {price} gold. Every one after costs more: more hide, and it all has to hang right.",
+        "Let it out? ...Hand it here. {price} gold the next one. Don't watch me sew.",
+        "Pack's tighter than it looks. I can give it room. {price} gold. Dearer each time.",
+      ],
+      done: [
+        "There. Don't fill it with rubbish.",
+        "Done. Moth sniffed it. She approves.",
+        "Stitched. It'll outlast you.",
+      ],
+      poor: [
+        "Short. Leather's not free.",
+        "Come back with the coin.",
+      ],
+      full: [
+        "That's as big as a pack gets and stays on a back. No more.",
+      ],
+    },
     first: [
       "You walked here. ...Feet show it. The others didn't.",
       { met: 'corran', say: "Corran said you'd walked in. ...He's right. Feet show it. Stay there, I'll move. Wind's wrong." },
