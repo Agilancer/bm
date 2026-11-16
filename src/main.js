@@ -1665,7 +1665,7 @@ class GameView {
     const eyeX = snap[H.PX] + snap[H.VX] * age + rx * bobX;
     const eyeY = snap[H.PY] + 1.62 + bobY - snap[H.CAM_DROP] - Math.min(snap[H.DODGE], 0.2) * 0.45;
     const eyeZ = snap[H.PZ] + snap[H.VZ] * age + rz * bobX;
-    this.audio.surf(snap[H.SURF] > 0.5 && inp.enabled ? Math.hypot(snap[H.VX], snap[H.VZ]) : 0, snap[H.ON_GROUND] > 0.5);
+    this.audio.surf(snap[H.SURF] > 0.5 && inp.enabled ? Math.hypot(snap[H.VX], snap[H.VZ]) : 0, snap[H.ON_GROUND] > 0.5, this.renderer.boardMarks?.ground || 'dirt');
     // What's under your own feet, for their sound (onEvent STEP), looked up a few times a second.
     if (!(this.groundT-- > 0)) { this.groundT = 8; this.underfoot = groundAt(snap[H.PX], snap[H.PY], snap[H.PZ]); }
     // Third person (src/core/third.js): from a step to the right of the eye and a little over it, back along the same line

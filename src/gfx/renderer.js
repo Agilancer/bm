@@ -27,6 +27,7 @@ import { C, C_BLEEDS, C_MASKS, C_GASH, C_PALETTE, C_PROPS, C_SIZE, CHARS_START, 
 import { addStumps } from './stumps.js';
 import { GEAR, ROBES, SKULLS } from '../items/items.js';
 import { SkullEyes } from './skulleyes.js';
+import { BoardMarks } from './boardmarks.js';
 import { ShadowCache } from './shadowcache.js';
 import { GEM_CUTS, SKULL_ANCHORS } from './skullgemdata.js';
 import { PATTERNS, SKINS } from '../items/skins.js';
@@ -408,6 +409,7 @@ export class Renderer {
     // 64 m square (src/core/roads.js roadSegments).
     {
       const rs = roadSegments(this.openingEnabled);
+      this.ways = rs;   // (and for what the shield rides over: src/ui/places.js boardGround)
       this.roadIdx = makeBuffer(device, rs.idx, GPUBufferUsage.STORAGE);
       this.roadSeg = makeBuffer(device, rs.seg.length ? rs.seg : new Float32Array(8), GPUBufferUsage.STORAGE);
     }
@@ -1872,6 +1874,8 @@ export class Renderer {
       depthStencil: depth(), multisample: ms,
     });
     this.skullEyes = new SkullEyes(device, this.bgl0, targets, DEPTH, this.msaa, module);
+    // The shield's track on the ground, where it's ridden (src/gfx/boardmarks.js): what's been laid is kept through a rebuild.
+    (this.boardMarks ||= new BoardMarks(device)).build(this.bgl0, targets, DEPTH, this.msaa, module);
     const vmSkullMod = module(VIEWMODEL_SKULL);
     this.pVMSkull = device.createRenderPipeline({
       layout: layout(this.bgl0, this.bglArmor),
@@ -2699,6 +2703,7 @@ export class Renderer {
     skinSteps[1] = Math.max(1, Math.min(6, Math.floor(1 / SKIN_FAR_HZ / this.frameDt + 0.2)));
     this.cullBodies(cam, snap);
     const time = this.frameData[O.CAM + 3];
+    this.boardMarks?.update(dt, snap, time, this.ways, this);
 
     this.stage = 'character uploads';
     // Characters: palettes, wounds, weapons.
@@ -3300,6 +3305,7 @@ export class Renderer {
     mp.setVertexBuffer(0, this.terrainVB);
     mp.setIndexBuffer(this.terrainIB, 'uint32');
     mp.drawIndexed(this.terrainCount);
+    this.boardMarks?.draw(mp);
     }
     }
     if (!vis.warrens) { mp.setPipeline(this.pSky); mp.draw(3); }

@@ -2,7 +2,10 @@
 // src/ui/lands.js sounds). Read on the main thread, off the same floors and houses the sim walks on.
 import { floorAt } from '../core/interior.js';
 import { CHURCH_BOUNDS, inChurch } from '../core/church.js';
-import { waterAt } from '../core/lands.js';
+import { groundCover, waterAt } from '../core/lands.js';
+import { SURFACE, wayAt } from '../core/roads.js';
+import { terrainHeight } from '../core/terrain.js';
+import { inDungeon } from '../core/dungeon.js';
 import { inHall } from '../core/testhall.js';
 
 // The houses' boxes (src/core/interior.js homes; the first of them is the Rift's pit, not a house). setHomes once the interior's in.
@@ -31,4 +34,29 @@ export function groundAt(x, y, z) {
   if (inHouse(x, y, z)) return 'wood';
   // (High on the Sorrowhorn it's all rock and ice.)
   return y > 520 ? 'stone' : 'dirt';
+}
+
+// What a shield ridden on the ground is scraping over (src/gfx/boardmarks.js): 'snow' and 'dirt' take its track, 'stone' throws
+// sparks and rings under it, 'wood' and 'water' do neither. Snow and bare rock as the ground's shader paints them
+// (src/gfx/materials.js TERRAIN: the far map's snow on the level, its rock and anything steep), and a way by what it's laid
+// with. ways: roadSegments' lists, as the renderer keeps them (null before the land's in).
+const PAVED = new Set([SURFACE.OLD, SURFACE.FLAG, SURFACE.SETT, SURFACE.GRAVEL, SURFACE.STONES]);
+export function boardGround(x, y, z, ways) {
+  if (inHall(x, z) || inDungeon(x, z)) return 'stone';
+  const w = waterAt(x, z);
+  if (w !== null && y < w + 0.1) return 'water';
+  if (inHouse(x, y, z)) return 'wood';
+  // The church and the catacombs, the Rift's bridge and the portals' platforms: laid stone, all of it.
+  if (floorAt(x, z) !== null || inChurch(x, y + 0.5, z)) return 'stone';
+  const h = terrainHeight(x, z);
+  if (y > h + 0.3) return 'stone';
+  const way = ways ? wayAt(ways, x, z) : null;
+  if (way && way.e < -0.15) return PAVED.has(way.kind) ? 'stone' : way.kind === SURFACE.PLANK ? 'wood' : 'dirt';
+  const g = 2, dx = (terrainHeight(x + g, z) - terrainHeight(x - g, z)) / (2 * g), dz = (terrainHeight(x, z + g) - terrainHeight(x, z - g)) / (2 * g);
+  const ny = 1 / Math.hypot(dx, 1, dz);
+  // (The far map is only worked out past a kilometre out: nearer, the land has neither snow nor bare rock but where it's steep.)
+  const [snow, rock] = Math.hypot(x, z) > 1000 ? groundCover(x, z, h, (1 - ny) * 3) : [0, 0];
+  if (snow > 0.42 && ny > 0.68) return 'snow';
+  if (Math.max(rock, Math.min(1, Math.max(0, (1 - ny - 0.2) / 0.22))) > 0.55) return 'stone';
+  return 'dirt';
 }

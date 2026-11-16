@@ -231,24 +231,38 @@ export class Audio {
   }
 
   // The shield's scrape, its rumble, and the wind when you're fast. Bellmourn's board loop. speed 0 is silence; in the air only the wind's left.
-  surf(speed, grounded) {
+  // ground: what it's on (src/ui/places.js boardGround). Over stone its steel rings and grinds as it's dragged; through snow the
+  // scrape goes to a hiss, and the rumble's soft.
+  surf(speed, grounded, ground = 'dirt') {
     if (!this.ready) return;
     const c = this.ctx;
     if (!this.slide) {
       if (speed <= 0) return;
-      const mk = (type, f, q) => {
+      const mk = (type, f, q, to = this.master) => {
         const src = c.createBufferSource(); src.buffer = this.noise; src.loop = true;
         const fl = c.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = q;
         const g = c.createGain(); g.gain.value = 0;
-        src.connect(fl); fl.connect(g); g.connect(this.master); src.start(c.currentTime, Math.random() * 0.5);
+        src.connect(fl); fl.connect(g); g.connect(to); src.start(c.currentTime, Math.random() * 0.5);
         return { fl, g };
       };
-      this.slide = { scrape: mk('bandpass', 900, 0.8), rumble: mk('lowpass', 160, 0.7), wind: mk('bandpass', 700, 0.6) };
+      // The steel on stone: the noise through the plate's own ringing (a few narrow bands, not in tune with each other, as a struck
+      // plate's aren't) and a hard grit over it, all of it shaken by a judder, the shield catching and skipping on the stone.
+      const metal = c.createGain(); metal.gain.value = 0; metal.connect(this.master);
+      const judder = c.createGain(); judder.gain.value = 0.55; judder.connect(metal);
+      const shake = mk('lowpass', 34, 0.9, judder.gain); shake.g.gain.value = 14;
+      const rings = [[1180, 22, 0.9], [2310, 28, 0.75], [3720, 34, 0.55], [5480, 40, 0.4]].map(([f, q, v]) => { const r = mk('bandpass', f, q, judder); r.g.gain.value = v * 3.2; return r; });
+      const grit = mk('highpass', 3200, 0.7, judder); grit.g.gain.value = 0.2;
+      this.slide = { scrape: mk('bandpass', 900, 0.8), rumble: mk('lowpass', 160, 0.7), wind: mk('bandpass', 700, 0.6), metal, rings, grit };
     }
-    const n = c.currentTime, k = Math.min(1, speed / 18), on = speed > 0 && grounded, { scrape, rumble, wind } = this.slide;
-    scrape.g.gain.setTargetAtTime(on ? 0.16 + 0.4 * Math.sqrt(k) : 0, n, 0.06);
-    scrape.fl.frequency.setTargetAtTime(900 * (0.7 + 0.6 * k), n, 0.1);
-    rumble.g.gain.setTargetAtTime(on ? 0.1 + 0.35 * k : 0, n, 0.08);
+    const n = c.currentTime, k = Math.min(1, speed / 18), on = speed > 0 && grounded, { scrape, rumble, wind, metal, rings } = this.slide;
+    const stone = on && ground === 'stone', snow = on && ground === 'snow';
+    scrape.g.gain.setTargetAtTime(on ? (snow ? 0.6 : stone ? 0.5 : 1) * (0.16 + 0.4 * Math.sqrt(k)) : 0, n, 0.06);
+    scrape.fl.frequency.setTargetAtTime((snow ? 2600 : 900) * (0.7 + 0.6 * k), n, 0.1);
+    scrape.fl.Q.setTargetAtTime(snow ? 0.5 : 0.8, n, 0.1);
+    rumble.g.gain.setTargetAtTime(on ? (snow ? 0.4 : 1) * (0.1 + 0.35 * k) : 0, n, 0.08);
+    metal.gain.setTargetAtTime(stone ? 0.08 + 0.4 * Math.sqrt(k) : 0, n, stone ? 0.03 : 0.09);
+    // (Faster, the plate's driven harder and rings a little higher.)
+    rings.forEach((r, i) => r.fl.frequency.setTargetAtTime([1180, 2310, 3720, 5480][i] * (0.94 + 0.12 * k), n, 0.2));
     wind.g.gain.setTargetAtTime(0.24 * Math.max(0, (speed - 7) / 22) ** 1.5, n, 0.15);
     wind.fl.frequency.setTargetAtTime(500 + speed * 40, n, 0.2);
   }
