@@ -157,6 +157,8 @@ const pair = (a, b, o = {}) => { const A = byId(a), B = byId(b); return { from: 
 export const LEAPS = [
   // (The Galeward's islets up onto the disc: its updrafts. Only up: Storm Nova is the way down. And between them.)
   ...GALE_ISLES.map((s) => ({ ...pair(s.id, 'ed_galeward'), one: true, gust: true, at: 'thyrraxis' })),
+  // (Back from a god's island to the altar, once that god is dead: its bridge isn't walked a second time. after: who.)
+  ...[['ed_galeward', 'thyrraxis'], ['ed_cinderwell', 'kaldurra'], ['ed_summit', 'morvekh']].map(([id, god]) => ({ ...pair(id, 'ed_altar', { one: true, after: god }) })),
   pair('ed_gale_isle1', 'ed_gale_isle2', { at: 'thyrraxis' }), pair('ed_gale_isle2', 'ed_gale_isle3', { at: 'thyrraxis' }),
   // (The Rimespire's summit out to each claw, and claw to claw.)
   ...RIME_ISLES.map((s) => pair('ed_summit', s.id, { at: 'morvekh' })),
@@ -218,10 +220,10 @@ const packs = [
 const bosses = [
   // (arena: how far from its room's middle the fight goes on, its islets with it. pull: how near you come before it wakes.
   // Morvekh is met perched on the ramp's first shelf: the fight's a climb from there to the summit.)
-  { key: 'thyrraxis', room: 'ed_galeward', name: 'Thyrraxis, the Gale Eternal', models: ['ed_thyrraxis'], pal: ['Base'], hp: 185000, damage: 385, reach: 11, loot: 8, at: [0, -6], arena: 95 },
-  { key: 'kaldurra', room: 'ed_cinderwell', name: 'Kaldurra, the Hearth of the World', models: ['ed_kaldurra'], pal: ['Base'], hp: 145000, damage: 350, reach: 11.5, loot: 8, needs: ['thyrraxis'], shut: 'kal_shut', at: [12, 0], arena: 52 },
-  { key: 'morvekh', room: 'ed_rime1', name: 'Morvekh, Who Remembers the Cold', models: ['ed_morvekh'], pal: ['Base'], hp: 150000, damage: 380, reach: 11, loot: 8, needs: ['kaldurra'], shut: 'mor_shut', at: [0, 0], arena: 72, pull: 24 },
-  { key: 'nihvaroth', room: 'ed_maw', name: 'Nihvaroth, the Hollow Star', models: ['ed_nihvaroth'], pal: ['Base'], hp: 126000, damage: 340, reach: 13.5, loot: 0, needs: ['morvekh'], shut: 'nih_shut', at: [0, -14], arena: 84 },
+  { key: 'thyrraxis', room: 'ed_galeward', name: 'Thyrraxis, the Gale Eternal', models: ['ed_thyrraxis'], pal: ['Base'], hp: 165000, damage: 385, reach: 11, loot: 8, at: [0, -6], arena: 95 },
+  { key: 'kaldurra', room: 'ed_cinderwell', name: 'Kaldurra, the Hearth of the World', models: ['ed_kaldurra'], pal: ['Base'], hp: 136000, damage: 350, reach: 11.5, loot: 8, needs: ['thyrraxis'], shut: 'kal_shut', at: [12, 0], arena: 52 },
+  { key: 'morvekh', room: 'ed_rime1', name: 'Morvekh, Who Remembers the Cold', models: ['ed_morvekh'], pal: ['Base'], hp: 172000, damage: 380, reach: 11, loot: 8, needs: ['kaldurra'], shut: 'mor_shut', at: [0, 0], arena: 72, pull: 24 },
+  { key: 'nihvaroth', room: 'ed_maw', name: 'Nihvaroth, the Hollow Star', models: ['ed_nihvaroth'], pal: ['Base'], hp: 100000, damage: 340, reach: 13.5, loot: 0, needs: ['morvekh'], shut: 'nih_shut', at: [0, -14], arena: 84 },
 ];
 // What the fights call out (src/sim/elder-fights.js). A god's own words are its lines, said as subtitles: LINES below.
 const warnings = {
@@ -278,6 +280,8 @@ const warnings = {
   mor_grip: 'A claw lets go!',
   mor_fall: 'His last grip breaks: Morvekh falls onto the summit. Burn him.',
   mor_zero_fail: 'Too slow: the cold takes everyone. Morvekh comes down onto the summit whole.',
+  nih_left_seven: 'Seven stars left.', nih_left_six: 'Six stars left.', nih_left_five: 'Five stars left.', nih_left_four: 'Four stars left.',
+  nih_left_three: 'Three stars left.', nih_left_two: 'Two stars left. The wells are closing.',
   nih_star: 'A star gutters: its well goes with it in a moment. Move to another.',
   mor_shards: 'Ice comes down off the spire beside the grips! Step round the ring.',
   kal_sink: 'Her breath melts a pillar and the two beside it: their tops are molten for the rest of the fight.',

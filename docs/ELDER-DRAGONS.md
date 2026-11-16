@@ -37,6 +37,12 @@ were its teeth.
    drags you to the edge unless you hold to the rime crystal there, and the black one pulls you toward the Maw unless
    you stand in its well of light. As you come onto a god's stair it says its first words.
 
+## Back to the altar, and the way in
+
+Once a god is dead, a gust stone on its island (the Galeward, the Cinderwell, the Rimespire's summit) throws you back to
+the Scale Altar: no bridge is walked twice. The first time you come into the void, the eye comes in from high over the
+whole of it and down to your own in six seconds; a step or a look ends it (src/main.js entryCam).
+
 ## Falling
 
 The void doesn't kill. Fall off an island and the Rift throws you back up onto the nearest safe ground with a heavy
@@ -48,7 +54,7 @@ land instead: the Galeward's islets, the shelf Morvekh's beside, the Maw's hand 
 ## 1. Thyrraxis, the Gale Eternal (green)
 
 The Galeward: a stone disc 60 m across with four storm pylons at its quarters, 19 m from the middle; three islets 18-21 m
-below its western rim, 48 m out; a gust stone on each islet (an updraft back up) and between the islets. 185,000 life.
+below its western rim, 48 m out; a gust stone on each islet (an updraft back up) and between the islets. 165,000 life.
 
 **Phase 1 (100-70%).** Deck: breath, claw rake, squall, gale, spark, conduit.
 - *Gale* (Raszageth's Hurricane Wing): wing_buffet twice, and while the wings beat, everyone in the open is driven away
@@ -79,7 +85,7 @@ A fall comes down on the nearest islet. Enrage at 9 minutes.
 ## 2. Kaldurra, the Hearth of the World (red)
 
 The Cinderwell: a ring of black rock 80 m across round a magma vent 7 m wide; 32 basalt pillars a step and a half high
-in three rings, 8.5-10 m between their middles. 145,000 life.
+in three rings, 8.5-10 m between their middles. 136,000 life.
 
 **Throughout.** Deck: Claw Smash, wildfire, living meteor, breath (leaves fire 5 s), claw rake, Flamefall run, and below
 a third, tail spin.
@@ -109,7 +115,7 @@ Enrage at 9 m 20 s.
 
 The Rimespire: a spire of ice, a ramp round its south and west sides at 27 m past four shelves (the Foot, the First, the
 Second, the Last), to a summit 30 m up; rime crystals on every shelf and round the summit; three claw islets out east of
-the summit, reached by gust stones. 150,000 life.
+the summit, reached by gust stones. 172,000 life.
 
 **The climb (100-40%)** (Sennarth). He hangs off the spire beside the First Shelf, 8.5 m out from its middle and low,
 his chest over its edge: a blade can reach him from the shelf. At 80% and 60% he climbs to the next shelf, and 12 s
@@ -137,12 +143,12 @@ A fall comes down on the shelf he's beside, or the summit. Enrage at 10 minutes.
 
 The Lip of the Maw: the biggest island, 92 m across, on the black hole's rim; eight stars go round over it 30 m from its
 middle (their sockets show dimly on the ground at all times); an accretion belt of rock going round outside its edge;
-violet cracks across its flags running north to the Maw; its two hands, islets out over the Maw. 126,000 life.
+violet cracks across its flags running north to the Maw; its two hands, islets out over the Maw. 100,000 life.
 
 **Phase 1 (100-60%).** Deck: Devour, Reverse Gravity, void spheres, breath, claw rake, tail.
 - *Devour* (Dimensius): it inhales for 1.6 s and then for 7 s everything is pulled north toward the Maw at 3.1 m/s, and
   over the edge. A star's well (a ring under each star, moving with it) holds you.
-- *Reverse Gravity* (Dimensius): one of you floats. Someone else under them within 6.5 s pulls them down (a little hurt to
+- *Reverse Gravity* (Dimensius): one of you floats, three and a half metres up off the Lip. Someone else under them within 6.5 s pulls them down (a little hurt to
   each); nobody, and they take two of its blows and are thrown toward the Maw.
 - *Void spheres* (Dimensius's Shattered Space): two land (three later), a few strides from one of you, 7.5 s each, never
   during a Devour. Stand in one to drain it: its blow (about two of its blows) is split among whoever's in it; whoever's
@@ -163,7 +169,8 @@ and the stars are drawn in ahead of it (their wells never in its fire); every 26
 puts out a star, eight down to three; each well stays under its own star. Devour comes round more often. At 8%, the last
 Devour: it doesn't end, its wells close from 3.4 m to nothing over 55 s, a star goes out every 6 s (it gutters red for 2 s first), he takes
 half again as much from every blow, his breath and claws go on, and a fall is into the Maw. Kill him before the wells are gone. When he dies the Maw drags him back across the
-Lip and over its north edge. (Thyrraxis, dying, staggers back off his disc.)
+Lip and over its north edge. (Each god has its own end: Thyrraxis staggers back off his disc, Kaldurra goes back into
+her vent, Morvekh goes off the spire's top.) As each star goes out in the last Devour, the count of those left is called.
 
 A fall comes down on the hand you're on, during the Swallow; else on the Lip's south half. Enrage at 11 minutes.
 
@@ -179,19 +186,19 @@ the cosmos.
 
 ## Tuning
 
-Played by the sim itself (tools/dungeon/fight.mjs: a level-101 player with no gear, Firebolt only, and a hired party of
-lancer, paladin, archer, rogue at 101), three tries a god on the numbers in src/core/delve-elder.js:
+Played by the sim itself (tools/dungeon/fight.mjs: a level-101 player, Firebolt only, fighting inside the 9-pace spell
+reach and aiming at what of a god is in reach, with a hired party of lancer, paladin, archer, rogue at 101). Plain: no
+gear, three tries. Geared (GEAR=1, a stand-in: half again the power, two fifths more life, a quarter off what's taken):
+two tries.
 
-| God | Life | Blow | Won | Notes |
+| God | Life | Blow | Plain | Geared |
 |---|---|---|---|---|
-| Thyrraxis | 185,000 | 385 | 1 of 3 (430 s) | losses at 58 s and 94 s |
-| Kaldurra | 145,000 | 350 | 1 of 3 (437 s) | losses with 31% and 3% left |
-| Morvekh | 150,000 | 380 | 1 of 3 (496 s) | losses with 78% and 24% left |
-| Nihvaroth | 126,000 | 340 | 1 of 3 (466 s) | one loss with 4% left, one out of time at 9% |
+| Thyrraxis | 165,000 | 385 | 0 of 3 (best 33% left) | 1 of 2 |
+| Kaldurra | 136,000 | 350 | 0 of 3 (13% and 17% left) | 1 of 2 |
+| Morvekh | 172,000 | 380 | 1 of 3 | 1 of 2 |
+| Nihvaroth | 100,000 | 340 | 2 of 3 | 0 of 2 (8% and 13% left) |
 
-The sim's player is a poor dodger of breath cones: most of its deaths are from standing in one. Under level 100 none is
-meant to be won: Morvekh at 92 (on weaker numbers) lost both tries with over half his life left. No run with a geared
-player and a full spell bar has been made yet; the numbers want one before they're called final.
+Three tries is a small sample and the results swing a good deal from run to run. Under level 100 none is meant to be won.
 
 ## Lines
 
