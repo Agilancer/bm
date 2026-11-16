@@ -3615,7 +3615,7 @@ export class HeroWorld {
     if (out || told?.to) this.endBit(h);
     if (out) { h.goal = { x: out[0], z: out[1], speed: 7.5, stop: 0.2 }; h.dodgeT = 0.35; if (h.role === 'heal') this.mend(h, true); return; }
     if (told?.to) {
-      h.foe = this.pickFoe(h, fight.filter((m) => !m.flying));
+      h.foe = this.pickFoe(h, fight.filter((m) => !m.flying || m.perched));
       const dt2 = Math.hypot(told.to[0] - h.x, told.to[1] - h.z);
       if (dt2 > 0.7 || !h.foe) { h.goal = { x: told.to[0], z: told.to[1], speed: 8, stop: 0.3 }; h.dodgeT = 0.25; if (h.role === 'heal') this.mend(h, true); return; }
       // (There: fighting on from it, if what they're on can be reached from it.)
@@ -3630,7 +3630,7 @@ export class HeroWorld {
       const hide = W.hideFrom(h.x, h.z);
       if (hide) {
         this.endBit(h);
-        h.foe = this.pickFoe(h, fight.filter((m) => !m.flying));
+        h.foe = this.pickFoe(h, fight.filter((m) => !m.flying || m.perched));
         const dh = Math.hypot(hide[0] - h.x, hide[1] - h.z);
         if (dh > 0.6 || !h.foe) { h.goal = { x: hide[0], z: hide[1], speed: 8, stop: 0.3 }; h.dodgeT = 0.25; }
         else h.post = hide;
@@ -3665,7 +3665,7 @@ export class HeroWorld {
     const near = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
     const by = (list, from) => { let best = null, bd = Infinity; for (const m of list) { const d = near(m, from); if (d < bd) { bd = d; best = m; } } return best; };
     if (h.role === 'tank') {
-      const loose = fight.filter((m) => foeOf(m, sim) !== h && !m.flying);
+      const loose = fight.filter((m) => foeOf(m, sim) !== h && (!m.flying || m.perched));
       // (A taunt for what's loose near him: everything within eleven metres turns on him.)
       if (loose.length && h.tauntCd <= 0 && !h.dead) {
         const close = loose.filter((m) => near(m, h) < 11);
@@ -3680,7 +3680,7 @@ export class HeroWorld {
       const healer = [...this.company.members].find((o) => o.role === 'heal' && !o.dead) || p;
       if (loose.length) return by(loose, healer);
       if (h.foe && fight.includes(h.foe)) return h.foe;
-      return by(fight.filter((m) => !m.flying), h) || by(fight, h);
+      return by(fight.filter((m) => !m.flying || m.perched), h) || by(fight, h);
     }
     const adds = fight.filter((m) => m.lair?.add);
     if (adds.length) return by(adds, h);
@@ -3688,7 +3688,8 @@ export class HeroWorld {
     const want = sim.warrens?.focus();
     if (want && fight.includes(want)) return want;
     const tank = [...this.company.members].find((o) => o.role === 'tank' && !o.dead);
-    if (tank?.foe && fight.includes(tank.foe) && !tank.foe.flying) return tank.foe;
+    // (perched: on the wing but hung within reach, to be struck as if it stood: Morvekh off the Rimespire's shelves.)
+    if (tank?.foe && fight.includes(tank.foe) && (!tank.foe.flying || tank.foe.perched)) return tank.foe;
     const mine = fight.filter((m) => sim.time - (m.playerHitT ?? -1e9) < 4);
     if (mine.length) return by(mine, p);
     if (h.foe && fight.includes(h.foe)) return h.foe;

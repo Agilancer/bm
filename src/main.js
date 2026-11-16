@@ -822,7 +822,7 @@ async function boot(plan, poolSize) {
         const active = input.enabled && !state.paused;
         openingHUD.draw(snap, active, dt);
         // While the story has the camera: its view, no hands, no HUD. (Paused, it holds the last view.)
-        if (active) game.overrideCam = openingHUD.direct(snap, dt, input);
+        if (active && !game.entryCam) game.overrideCam = openingHUD.direct(snap, dt, input);
         // (A camera set for a review picture, bm.setCam, holds through the story's.)
         if (game.reviewCam) game.overrideCam = game.reviewCam;
         renderer.hideVM = openingHUD.cinematic(snap) && !openingHUD.handsUp(snap);
@@ -1621,6 +1621,7 @@ class GameView {
       if (this.town) this.town.frame(snap, c, this.renderer.hour, !!this.shared.input[INPUT.PAUSE] || !!this.idle);
       this.questTrail?.frame(dt, snap);
       renderDiagnostics.stage = 'renderer';
+      this.renderer.delveState = this.party?.warrens;   // (which bosses are down: a delve's way out lights when its last is)
       this.renderer.frame(c, snap, this.sway, dt);
       // Who's drawn, body or shadow: the world poses them every tick (if near) and everyone else less often.
       { const seen = this.shared.input, rc = this.renderer.chars; for (let i = 0; i < MAX_CHARS; i++) seen[INPUT.SEEN + i] = rc[i]?.casts ? 1 : 0; }
@@ -1645,6 +1646,30 @@ class GameView {
       // (Down a delve there's no sun to tell the hour by, and nothing of the land's to track: the clock is put away.)
       const deep = inDelve(snap[H.PX], snap[H.PZ]);
       if (deep !== this.deepWas) { this.deepWas = deep; this.clock.el.style.display = deep ? 'none' : ''; }
+      // (The first time into the Elder Gods' void: the eye comes in from high over the whole of it, the islands and their
+      // beacons and the Maw, down to your own in six seconds. A step, a look or a key ends it.)
+      if (this.wantEntry && deep) {
+        this.wantEntry = false;
+        const D = delveOf(snap[H.PX], snap[H.PZ]);
+        if (D?.key === 'elder' && !this.entrySeen && !this.reviewCam) {
+          this.entrySeen = true;
+          const ex = D.x + 90, ey = D.y + 70, ez = D.z - 60, tx = D.x - ex, ty = D.y - 10 - ey, tz = D.z - 260 - ez, tl = Math.hypot(tx, ty, tz);
+          this.entryCam = { t: 0, x: ex, y: ey, z: ez, fx: tx / tl, fy: ty / tl, fz: tz / tl, px: snap[H.PX], pz: snap[H.PZ], yaw: this.input.yaw };
+        }
+      }
+      const ec = this.entryCam;
+      if (ec) {
+        ec.t += dt;
+        const moved = Math.hypot(snap[H.PX] - ec.px, snap[H.PZ] - ec.pz) > 0.4 || Math.abs(this.input.yaw - ec.yaw) > 0.05;
+        if (ec.t > 6 || moved || !deep || this.reviewCam) { this.entryCam = null; if (!this.reviewCam) this.overrideCam = null; }
+        else {
+          const u = ec.t / 6, s = u * u * u * (u * (u * 6 - 15) + 10), c = this.cam, mix = (a, b) => a + (b - a) * s;
+          let fx = mix(ec.fx, c.fx), fy = mix(ec.fy, c.fy), fz = mix(ec.fz, c.fz); const fl = Math.hypot(fx, fy, fz) || 1; fx /= fl; fy /= fl; fz /= fl;
+          let rx = -fz, rz = fx; const rl = Math.hypot(rx, rz) || 1; rx /= rl; rz /= rl;
+          const ux = -rz * fy, uy = rz * fx - rx * fz, uz = rx * fy, sg = Math.sign(uy) || 1;
+          this.overrideCam = { x: mix(ec.x, c.x), y: mix(ec.y, c.y), z: mix(ec.z, c.z), fx, fy, fz, ux: ux * sg, uy: uy * sg, uz: uz * sg };
+        }
+      }
       this.chatLog?.update(dt, !this.idle && (!this.input.menu || !!this.heroTalk?.open));
       if (this.heroTalk) {
         // (Names and bubbles stay up while a hero is talking to you: the panel is theirs.)
@@ -1900,7 +1925,9 @@ class GameView {
       case EV.HERO_FX: this.heroFx(a | 0, b, c, d, e, f, g); break;
       // (A boss down is told to the quests too: src/folk/quests.js QuestBook.boss.)
       case EV.WILD: this.wilds?.on(a, b, c, d, e, f, g); break;
-      case EV.DELVE: this.party?.onDelve(a, b, c, d); if ((a | 0) === DELVE_CODE.BOSS_DOWN) { this.townUI?.quests.boss(DELVE_BOSSES[b | 0]?.key); this.music?.stinger('triumph'); } break;
+      case EV.DELVE:
+        if ((a | 0) === DELVE_CODE.ENTER) this.wantEntry = true;
+        this.party?.onDelve(a, b, c, d); if ((a | 0) === DELVE_CODE.BOSS_DOWN) { this.townUI?.quests.boss(DELVE_BOSSES[b | 0]?.key); this.music?.stinger('triumph'); } break;
       case EV.HERO_LEVEL: case EV.HERO_DUEL: break;
       case EV.SPELL_CAST:
         this.heroTalk?.onSpell(b);

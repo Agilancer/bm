@@ -234,10 +234,10 @@ function stepTimers(m, dt) {
   for (const q of due) q.fn();
 }
 // Fly, keeping the flight's state on the body (airMove reads it).
-const fly = (W, m, o) => { m.flightA = flight(W, m, o); return m.flightA; };
+const fly = (W, m, o) => { m.flightA = flight(W, m, o); m.perched = !!o.perched; return m.flightA; };
 // Down to the ground at once, wherever it is, as a fight ends.
 function ground(m) {
-  m.flying = false; m.free = false; m.aloft = false; m.liftExtra = 0; m.script = null; m.rig.poseModifier = null; m.noTurn = false; m.flightA = null; m.timers = []; m.airDeck = false;
+  m.flying = false; m.free = false; m.aloft = false; m.liftExtra = 0; m.script = null; m.rig.poseModifier = null; m.noTurn = false; m.flightA = null; m.timers = []; m.airDeck = false; m.perched = false;
 }
 // A move made at once, whatever the body was at (a landing's last moments, a held breath).
 function force(m, a) { m.script = null; m.state = 0; m.act = null; m.breathing = false; m.breathHeld = false; return m.perform(a); }
@@ -532,7 +532,7 @@ export const ELDER_FIGHTS = {
         say(W, f, 'meteor');
       } },
       // She runs the length of the ring, breathing: up and across the vent and down the far side, a line of fire behind her.
-      run: { who: 'none', clip: null, warn: 'kal_run', gap: 20, when: (W, f, m) => !f.flooding && !m.flying, go(W, f, m) {
+      run: { who: 'none', clip: null, warn: 'kal_run', gap: 45, when: (W, f, m) => !f.flooding && !m.flying, go(W, f, m) {
         const [cx, cz] = W2(W, CINDER.x, CINDER.z), a = Math.atan2(m.x - cx, m.z - cz), R = CINDER.r - 6;
         const bx = cx - Math.sin(a + rnd(-0.5, 0.5)) * R, bz = cz - Math.cos(a + rnd(-0.5, 0.5)) * R;
         const P = W.sim.perils, yaw = Math.atan2(bx - m.x, bz - m.z), len = Math.hypot(bx - m.x, bz - m.z);
@@ -541,9 +541,16 @@ export const ELDER_FIGHTS = {
         fly(W, m, { x: m.x, z: m.z, h: 4, hold: 0.9, face: [bx, bz], then: () => fly(W, m, { x: bx, z: bz, h: 4, speed: 26, glide: true, face: () => W.sim.player, land: true, each: (k) => { if ((W.sim.tick & 7) === 0) W.sim.casting.burst(FX.FLAME, FIRE, k.x, W.sim.world.height(k.x, k.z) + 0.3, k.z, 1.4, 3.4, 0.7, { alpha: 0.8, len: 2, light: 6, lightR: 9 }); } }) });
       } },
     },
-    begin(W, f, live) { underHundred(W, f, live); f.phase = 0; f.meteors = []; },
+    begin(W, f, live) {
+      underHundred(W, f, live); f.phase = 0; f.meteors = [];
+      // (Her end: back into the vent she came out of, the fire going up after her.)
+      overTheEdge(W, f, live[0], { dir: (k) => { const [vx, vz] = W2(W, CINDER.x, CINDER.z); return [vx - k.x, vz - k.z]; }, secs: 3.4, clip: 'stagger_loop', fx: (k) => {
+        const a = rnd(0, TAU), r = rnd(1, k.meta.height * 0.4);
+        W.sim.casting.burst(FX.FLAME, FIRE, k.x + Math.sin(a) * r, k.y + rnd(0.3, 2), k.z + Math.cos(a) * r, 1.2, 3.4, 0.7, { alpha: 0.8, len: 2.4, light: 8, lightR: 12 });
+      } });
+    },
     step(W, f, [m], dt) {
-      if (!m) return;
+      if (!m || f.dying) return;
       const sim = W.sim, P = sim.perils, now = sim.time, [cx, cz] = W2(W, CINDER.x, CINDER.z), floor = W.delve.y + CINDER.y;
       stepTimers(m, dt);
       talk(W, f, m);
@@ -739,9 +746,17 @@ export const ELDER_FIGHTS = {
     },
     // Stages: 0..2 he hangs off the spire beside the First, Second and Last Shelf, the mist on the shelves below; 3 he's
     // down on the summit; 4 Absolute Zero; 5 fallen, to the end.
-    begin(W, f, live) { underHundred(W, f, live); const [m] = live; f.stage = 0; f.mists = []; if (m) perch(W, f, m, 1); },
+    begin(W, f, live) {
+      underHundred(W, f, live); const [m] = live; f.stage = 0; f.mists = [];
+      // (His end: off the spire's top, away from its middle, and down past every shelf he climbed.)
+      overTheEdge(W, f, m, { dir: (k) => { const [sx, sz] = W2(W, RIME.x, RIME.z); return [k.x - sx, k.z - sz]; }, secs: 3, clip: 'stagger_loop', fx: (k) => {
+        const a = rnd(0, TAU), r = rnd(1, k.meta.height * 0.4);
+        W.sim.casting.burst(FX.PUFF, FROST, k.x + Math.sin(a) * r, k.y + rnd(0.3, 2.5), k.z + Math.cos(a) * r, 0.6, 3, 0.8, { alpha: 0.7, len: 3 });
+      } });
+      if (m) perch(W, f, m, 1);
+    },
     step(W, f, [m], dt) {
-      if (!m) return;
+      if (!m || f.dying) return;
       const sim = W.sim, P = sim.perils, now = sim.time;
       stepTimers(m, dt);
       talk(W, f, m);
@@ -861,7 +876,8 @@ export const ELDER_FIGHTS = {
       // The climb: up to the shelf he's beside (or the summit), ahead of the mist, by way of the ramp.
       if (f.stage < 3) {
         const k = Math.min(3, f.stage + 1), l = RIME_LEDGES[k], [x, z] = W2(W, l.at[0], l.at[1]);
-        if (dist(b, x, z) > 6) return { to: climbTo(W, b, k), urgent: f.stage > 0 };
+        // (Anywhere on his shelf will do: its rim nearest him is where a blade reaches him from.)
+        if (dist(b, x, z) > 8) return { to: climbTo(W, b, k), urgent: f.stage > 0 };
       } else {
         const [x, z] = W2(W, RIME.x, RIME.z);
         if (dist(b, x, z) > 11) return { to: climbTo(W, b, 4), urgent: true };
@@ -971,6 +987,14 @@ export const ELDER_FIGHTS = {
             if ((sim.tick & 15) === 0) sim.casting.burst(FX.PUFF, VOID, b.x, b.y + 0.6, b.z, 0.4, 2, 0.5, { alpha: 0.6 });
           }
         }
+      }
+      // (Reverse Gravity: whoever floats goes up off the Lip, three and a half metres, till they're pulled down or taken.)
+      const fl = f.floater;
+      if (fl && !fl.mk.landed && !fl.mk.dead && !fl.b.dead && !fl.b.leaping) {
+        const b = fl.b, u = clamp(fl.mk.t / 1.6, 0, 1), up = 3.5 * u * u * (3 - 2 * u) + 0.25 * Math.sin(now * 2.4);
+        b.y = caveFloorY(b.x, b.z) + Math.max(0, up); b.vx = 0; b.vz = 0;
+        if (b === sim.player) { b.vy = 0; b.onGround = false; }
+        if ((sim.tick & 7) === 0) sim.casting.burst(FX.PUFF, VOID, b.x + rnd(-0.6, 0.6), b.y - 0.2, b.z + rnd(-0.6, 0.6), 0.2, 1, 0.6, { alpha: 0.6, ay: -1, len: 2 });
       }
       // The Swallow at sixty: the Lip goes dark, you're thrown out onto its two hands, an echo of a god on each.
       if (f.phase === 0 && m.hp < m.maxHp * 0.6 && !busy(m) && !f.devour) {
@@ -1101,7 +1125,7 @@ function perch(W, f, m, n) {
   // (Close in off the shelf's edge and low, his chest over it: what has a blade can reach him from the shelf.)
   const dx = lx - cx, dz = lz - cz, L = Math.hypot(dx, dz) || 1, x = lx + dx / L * 8.5, z = lz + dz / L * 8.5;
   f.hold = true;
-  fly(W, m, { x, z, h: 2.2, hold: 1.2, face: () => [lx, lz], then: () => { f.hold = false; fly(W, m, { x, z, h: 2.2, hold: Infinity, deck: true, face: () => W.sim.player }); } });
+  fly(W, m, { x, z, h: 2.2, hold: 1.2, face: () => [lx, lz], then: () => { f.hold = false; fly(W, m, { x, z, h: 2.2, hold: Infinity, deck: true, perched: true, face: () => W.sim.player }); } });
 }
 // Up (or down) the Rimespire's ramp toward shelf k (4: the summit), a stride of the ramp at a time: straight at it would
 // walk into the spire. For the summit, round to the Last Shelf and then in over its bridge. (On the summit, a claw islet or
@@ -1157,6 +1181,7 @@ function putOut(W, f, m, which) {
   const sim = W.sim, [cx, cz] = W2(W, MAW.x, MAW.z), at = which !== undefined ? f.starA.indexOf(which) : -1, i = at >= 0 ? at : (Math.random() * f.starA.length) | 0, sa = f.starA.splice(i, 1)[0], a = (f.spin || 0) + sa;
   const x = cx + Math.sin(a) * starR(f), z = cz + Math.cos(a) * starR(f);
   sim.casting.burst(FX.SHOCK, LIGHT, x, sim.world.height(x, z) + 16, z, 1, 9, 0.8, { light: 14, lightR: 20 });
+  if (f.last) { const left = [0, 0, WARN.nih_left_two, WARN.nih_left_three, WARN.nih_left_four, WARN.nih_left_five, WARN.nih_left_six, WARN.nih_left_seven][f.starA.length]; if (left) W.warn(left); }
   if (f.devour) { for (const mk of f.devour.wells) if (mk.starA === sa) { mk.life = 0; mk.dead = true; } f.devour.wells = f.devour.wells.filter((mk) => mk.starA !== sa); }
   void m;
 }
