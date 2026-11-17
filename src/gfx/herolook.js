@@ -15,7 +15,7 @@
 import { accessor, imageBytes, parseGLB } from '../core/glb.js';
 import { mipCountFor } from './gpu.js';
 import { IVORY, PROP_PALS, bareHead, bodyClass, lookOf, outfitRamps, paleLift, paled, rampFor, shapeShows } from '../items/partygear.js';
-import { fillFrom, goldOf, hsvOf, fromHsv, linesOf, lumOf, lumRange, matchLum, paintProp, rampMap, trimOf, wideOf } from './recolour.js';
+import { fillFrom, goldOf, growInto, hsvOf, fromHsv, linesOf, lumOf, lumRange, matchLum, paintProp, polishGold, propMetal, rampMap, trimOf, wideOf } from './recolour.js';
 
 const GROUPS = ['helm', 'chest', 'shoulders', 'arms', 'legs', 'boots'];
 const MAX_DONORS = 3;          // bodies borrowed from at once, beside the wearer's own: a picture of 2 x 2 cells at most
@@ -302,6 +302,8 @@ export class HeroLooks {
       const mimg = mr.ctx.getImageData(0, 0, mr.W, mr.H), metal = mimg.data, mw = mr.W, sx = mr.W / alb.W;
       const metalAt = (i) => { const x = i % alb.W, y = (i / alb.W) | 0; return metal[((y * sx | 0) * mw + (x * sx | 0)) * 4 + 2] / 255; };
       const dyed = (i) => mask[i] >= 1 && mask[i] <= GROUPS.length;
+      // (A pale outfit's texels: 1 its old gold, made plain; 2 its gold trim, kept.)
+      let old = null;
       if (rec.lift) {
         // (A pale outfit's gold is its trim, not its plate: a suit whose plates are brass under the trim, weathered, came out
         // gold and silver in flecks, the brighter brass kept and the darker dyed. Gold wider than a trim line, plate, is made
@@ -316,13 +318,18 @@ export class HeroLooks {
         // (Its old gold, all of it but the trim kept, made as light as the rest of its piece first: a dull ochre, too dark
         // to be called gold, was dyed by its own light, and a suit drawn half in gold scrollwork came out pale swirls on a
         // darker ivory, a marbling, its thick gold white blocks. Its scrollwork now is in its relief alone.)
-        const old = new Uint8Array(n), at = (j) => Math.min(n - 1, ((j / mw | 0) / sx | 0) * alb.W + ((j % mw) / sx | 0));
+        old = new Uint8Array(n);
+        const at = (j) => Math.min(n - 1, ((j / mw | 0) / sx | 0) * alb.W + ((j % mw) / sx | 0));
+        const brass = (k) => { const [h, s] = hsvOf([px[k], px[k + 1], px[k + 2]]); return h > 0.04 && h < 0.2 && s > 0.2; };
         for (let i = 0, k = 0; i < n; i++, k += 4) {
           if (!dyed(i)) continue;
           if (lines[i] && goldOf(px[k], px[k + 1], px[k + 2]) > 0.3) { old[i] = 2; continue; }
-          const [h, s] = hsvOf([px[k], px[k + 1], px[k + 2]]);
-          old[i] = wide[i] || (h > 0.04 && h < 0.2 && s > 0.2) ? 1 : 0;
+          old[i] = wide[i] || brass(k) ? 1 : 0;
         }
+        // (Its trim grown over its own darker gold, a texel a side in a picture of 512: the shading in a line, too dull to be
+        // called gold, was dyed ivory, and his pauldrons' and chest's trim came out in broken flecks.)
+        const trimmed = growInto(Uint8Array.from(old, (o) => (o === 2 ? 1 : 0)), alb.W, alb.H, (i) => dyed(i) && !wide[i] && brass(i * 4), Math.max(1, Math.round(S / 512)));
+        for (let i = 0; i < n; i++) if (trimmed[i]) old[i] = 2;
         for (const gn of want) matchLum(px, (i) => old[i] === 1 && mask[i] === groupNo[gn], (i) => !old[i] && mask[i] === groupNo[gn]);
         // (And its metal and roughness made its piece's: left as they were, the old gold still shone as gold and took the
         // sky's and the ground's light, and below it was dyed as steel, greyer than the cream round it. A paladin's
@@ -335,31 +342,37 @@ export class HeroLooks {
           if (M.length) mid[no] = [med(M), med(R)];
         }
         for (let j = 0; j < metal.length / 4; j++) { const i = at(j), m = mid[mask[i]]; if (old[i] === 1 && m) { metal[j * 4 + 2] = m[0]; metal[j * 4 + 1] = m[1]; } }
+        // (Its trim kept a polished metal, all of it: its own went from matte to metal along a line, and a trim made a clean
+        // gold below was a yellow paint in places.)
+        for (let j = 0; j < metal.length / 4; j++) if (old[at(j)] === 2) { metal[j * 4 + 2] = 217; metal[j * 4 + 1] = 110; }
         // (Gold in a field, wide: plate, its colour taken off and its own relief kept. Gold in short bits, a fleck: painted
         // out with the plate or cloth round it, or, its colour taken off, it was darker than the plate, a rust freckle.)
         const gild = new Uint8Array(n);
         for (let i = 0, k = 0; i < n; i++, k += 4) gild[i] = dyed(i) && goldOf(px[k], px[k + 1], px[k + 2]) > 0.08 ? 1 : 0;
-        const short = (i) => gild[i] && !wide[i] && !lines[i];
+        const short = (i) => gild[i] && !wide[i] && !lines[i] && old[i] !== 2;
         fillFrom(px, alb.W, alb.H, short, (j) => dyed(j) && !gild[j], Math.max(2, Math.min(7, Math.round(6 * S / 1024))));
         for (let i = 0, k = 0; i < n; i++, k += 4) {
           if (!wide[i] && !short(i)) continue;
           const [h, s, v] = hsvOf([px[k], px[k + 1], px[k + 2]]), c = fromHsv(h, s * 0.35, v);
           px[k] = c[0]; px[k + 1] = c[1]; px[k + 2] = c[2];
         }
+        // (And the trim kept is a clean gold, not the old brass's weathered ochre: left as it was, it was as light as the
+        // ivory round it, and in its shading brown, a rust. Not dyed below.)
+        polishGold(px, (i) => old[i] === 2);
       }
       // (Its gilt, as it was: kept gold by the dye, and left gold below. And a weak gold on metal, a trim, kept whole: not
       // on a pale outfit, whose trim is sorted out above.)
       const gilt = new Uint8Array(px.length / 4), trim = rec.lift ? null : new Float32Array(px.length / 4);
       for (let i = 0, k = 0; k < px.length; i++, k += 4) {
         if (!dyed(i)) continue;
-        if (goldOf(px[k], px[k + 1], px[k + 2]) > 0.3) gilt[i] = 1;
+        if (goldOf(px[k], px[k + 1], px[k + 2]) > 0.3 || (old && old[i] === 2)) gilt[i] = 1;
         if (trim) trim[i] = trimOf(px[k], px[k + 1], px[k + 2], metalAt(i));
       }
       for (const g of want) {
         const n = groupNo[g];
         const range = lumRange(px, (i) => mask[i] === n);
         // (Cloth and leather take the set's colours whole; steel most of them, so it's still steel, coloured.)
-        rampMap(px, rec.colours[g], range, (i) => (mask[i] !== n ? 0 : (0.92 - 0.3 * metalAt(i)) * (trim ? 1 - trim[i] : 1)), rec.lift);
+        rampMap(px, rec.colours[g], range, (i) => (mask[i] !== n || (old && old[i] === 2) ? 0 : (0.92 - 0.3 * metalAt(i)) * (trim ? 1 - trim[i] : 1)), rec.lift);
       }
       // (Dyed steel is steel with a colour to it, not a gilt or a bronze: in a tan set, a paladin's plate was gold under its
       // gold trim, gold on gold. On metal, the dye's colour half as strong, and a little lighter than the cloth it's over,
@@ -419,14 +432,22 @@ export class HeroLooks {
   // ---- what's in their hands -------------------------------------------------------------------------------------------
 
   // A kit prop's picture, in a palette: its colour picture as a canvas.
-  async propPicture(glb, pal) {
+  async propPicture(glb, pal, withMetal = false) {
     const mat = glb.json.materials[glb.json.meshes[0].primitives[0].material];
     const img = glb.json.textures[mat.pbrMetallicRoughness.baseColorTexture.index].source;
     const bmp = await createImageBitmap(imageBytes(glb, img), { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
     const k = this.r.tier.texScale || 1, W = Math.max(64, Math.round(bmp.width * k)), H = Math.max(64, Math.round(bmp.height * k));
     const cv = new OffscreenCanvas(W, H), ctx = cv.getContext('2d', { willReadFrequently: true });
     ctx.drawImage(bmp, 0, 0, W, H); bmp.close();
-    if (pal && pal !== 'own' && PROP_PALS[pal]) { const d = ctx.getImageData(0, 0, W, H); paintProp(d.data, PROP_PALS[pal]); ctx.putImageData(d, 0, 0); }
+    if (pal && pal !== 'own' && PROP_PALS[pal]) {
+      const d = ctx.getImageData(0, 0, W, H), metal = withMetal ? propMetal(d.data) : null;
+      paintProp(d.data, PROP_PALS[pal]); ctx.putImageData(d, 0, 0);
+      if (!metal) return { cv, W, H };
+      // (withMetal, px: its painted picture with its own metal in the alpha, for the prop shader (prop below). Not through
+      // the canvas, which keeps its colours premultiplied, and would lose them where the alpha's low.)
+      for (let i = 0; i < metal.length; i++) d.data[i * 4 + 3] = metal[i];
+      return { cv, W, H, px: d.data };
+    }
     return { cv, W, H };
   }
 
@@ -478,7 +499,8 @@ export class HeroLooks {
   canvasTexture(pic, format) {
     const { device } = this.r, mips = mipCountFor(pic.W, pic.H);
     const t = device.createTexture({ size: [pic.W, pic.H], format, mipLevelCount: mips, usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT });
-    device.queue.copyExternalImageToTexture({ source: pic.cv }, { texture: t, premultipliedAlpha: false }, [pic.W, pic.H]);
+    if (pic.px) device.queue.writeTexture({ texture: t }, pic.px, { bytesPerRow: pic.W * 4 }, [pic.W, pic.H]);
+    else device.queue.copyExternalImageToTexture({ source: pic.cv }, { texture: t, premultipliedAlpha: false }, [pic.W, pic.H]);
     const enc = device.createCommandEncoder();
     this.r.mip.generate(t, format, 1, mips, enc);
     device.queue.submit([enc.finish()]);
@@ -496,8 +518,10 @@ export class HeroLooks {
         const glb = await this.kitGlb(id);
         if (!pal || pal === 'own') return this.r.buildProp(glb);
         const made = await this.r.buildProp(glb);
-        const t = this.canvasTexture(await this.propPicture(glb, pal), 'rgba8unorm-srgb');
+        const t = this.canvasTexture(await this.propPicture(glb, pal, true), 'rgba8unorm-srgb');
         made.bg = this.r.device.createBindGroup({ layout: this.r.bglProp, entries: [{ binding: 0, resource: t.createView() }, { binding: 1, resource: { buffer: made.ubo } }] });
+        // (Its glint's y: 1, its metal is in its picture's alpha, its own steel's before it was painted.)
+        this.r.device.queue.writeBuffer(made.ubo, 0, new Float32Array([0, 1, 0, 0]));
         return made;
       })();
       p.catch(() => this.props.delete(key));

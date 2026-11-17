@@ -143,6 +143,51 @@ export function fillFrom(px, W, H, bad, good, r) {
   }
 }
 
+// keep (0 or 1 a texel, W x H) grown a texel at a time, steps times, into the texels that can(i) be: a line grown over
+// its own edge.
+export function growInto(keep, W, H, can, steps) {
+  for (let s = 0; s < steps; s++) {
+    const add = [];
+    for (let y = 0, i = 0; y < H; y++) for (let x = 0; x < W; x++, i++) {
+      if (keep[i] || !can(i)) continue;
+      if ((x > 0 && keep[i - 1]) || (x < W - 1 && keep[i + 1]) || (y > 0 && keep[i - W]) || (y < H - 1 && keep[i + W])) add.push(i);
+    }
+    if (!add.length) break;
+    for (const i of add) keep[i] = 1;
+  }
+  return keep;
+}
+
+// The texels of px (RGBA) that are sel(i) made a polished gold, each as light in it as it was among them: a weathered
+// brass's trim, kept as it was on an ivory outfit, was a dull ochre as light as the plate and its shading brown, a rust.
+export function polishGold(px, sel) {
+  const L = [];
+  for (let i = 0, k = 0; k < px.length; i++, k += 4) if (sel(i)) L.push(lumOf(px[k], px[k + 1], px[k + 2]));
+  if (!L.length) return;
+  L.sort((a, b) => a - b);
+  const lo = L[Math.floor(0.05 * (L.length - 1))], span = Math.max(0.02, L[Math.floor(0.95 * (L.length - 1))] - lo);
+  for (let i = 0, k = 0; k < px.length; i++, k += 4) {
+    if (!sel(i)) continue;
+    const t = Math.min(1, Math.max(0, (lumOf(px[k], px[k + 1], px[k + 2]) - lo) / span));
+    const c = fromHsv(Math.min(0.125, Math.max(0.105, hsvOf([px[k], px[k + 1], px[k + 2]])[0])), 0.7 - 0.2 * t, 0.55 + 0.4 * t);
+    px[k] = c[0]; px[k + 1] = c[1]; px[k + 2] = c[2];
+  }
+}
+
+// How metal a prop's texel is, 0 to 255, as renderer.js's prop shader (materials.js PROP) guesses it from its colour, in
+// linear light: a grey steel is, a coloured paint or a dark one isn't. For a painted prop, guessed from its own picture
+// before it's painted and carried in the alpha: a bleached board, all white and pale grey, is all steel by its paint, and
+// mirrored the ground in every facet of it, a brown stain.
+const LIN = Float32Array.from({ length: 256 }, (_, c) => (c / 255 <= 0.04045 ? c / 255 / 12.92 : ((c / 255 + 0.055) / 1.055) ** 2.4));
+export function propMetal(px) {
+  const out = new Uint8Array(px.length / 4);
+  for (let i = 0, k = 0; k < px.length; i++, k += 4) {
+    const r = LIN[px[k]], g = LIN[px[k + 1]], b = LIN[px[k + 2]], mx = Math.max(r, g, b), sat = (mx - Math.min(r, g, b)) / Math.max(mx, 0.001);
+    out[i] = Math.round(255 * (1 - smooth(0.15, 0.4, sat)) * smooth(0.1, 0.26, mx));
+  }
+  return out;
+}
+
 // One colour off a ramp of stops ([[r, g, b], ...], darkest first), at t from 0 to 1.
 export function rampAt(ramp, t, out) {
   const n = ramp.length - 1, x = Math.min(n, Math.max(0, t * n)), i = Math.min(n - 1, Math.floor(x)), f = x - i;

@@ -1181,7 +1181,9 @@ struct V { @builtin(position) pos: vec4f, @location(0) p: vec3f, @location(1) n:
   var albedo = tex.rgb;
   let mx = max(max(albedo.r, albedo.g), albedo.b);
   let sat = (mx - min(min(albedo.r, albedo.g), albedo.b)) / max(mx, 0.001);
-  let metal = (1.0 - smoothstep(0.15, 0.4, sat)) * smoothstep(0.1, 0.26, mx);
+  // (A painted prop's metal is its own steel's, guessed before it was painted (herolook.js prop): by its paint, a
+  // bleached board, all white and pale grey, was all steel, a mirror of the ground in every facet, a brown stain.)
+  let metal = select((1.0 - smoothstep(0.15, 0.4, sat)) * smoothstep(0.1, 0.26, mx), tex.a, P.glint.y > 0.5);
   let rough = mix(0.72, 0.45, metal);
   albedo = mix(albedo, albedo * 1.15 + 0.05, metal);
   let shadow = shadowAt(in.p, n, in.viewZ, ign(in.pos.xy));

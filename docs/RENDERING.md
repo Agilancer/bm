@@ -72,6 +72,14 @@ ring per pixel (was 0.3 to 0.7), their edges are widened by half a pixel, and th
 tube's whole `v` away below 100: every tube's rings sat at nought along it, and close up the mail was the 0.015 between
 the rings. It's a step now (`v > 50`).
 
+A hero's weapon or shield (the `PROP` shader) has no metal map: its metal is guessed from its colour, a grey steel is
+and a coloured or a dark paint isn't. A party member's painted one is guessed from its picture before it was painted
+(`propMetal` in `src/gfx/recolour.js`), carried in the alpha of its painted picture, and the shader reads that when the
+prop's `glint.y` is 1 (set once by `herolook.js` `prop`; the knight's glint write sets `glint.x` alone). Until
+2026-11-16 a Bleached shield, all white and pale grey, was called steel from rim to rim, and each facet mirrored the
+ground and the sky, brown and mauve shards on a paladin's back. Its painted board is a matte enamel now; only what
+was steel before it was painted shines.
+
 ## The witch's gown: no cloth bones, no ripple
 
 On the owner's word ("so her cloth doesn't dance at the beginning when she talks to you"):

@@ -2855,7 +2855,8 @@ export class Renderer {
       if (i < 2) {
         this.glintData = this.glintData || new Float32Array(4);
         this.glintData[0] = snap[co + C.GLINT];
-        q.writeBuffer(this.props[i * 2].ubo, 0, this.glintData);
+        // (Its x alone: a painted prop's y is its own, set once, herolook.js prop.)
+        q.writeBuffer(this.props[i * 2].ubo, 0, this.glintData, 0, 1);
       }
     }
     q.writeBuffer(this.propInstances, 0, this.propData);
