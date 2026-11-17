@@ -495,6 +495,32 @@ spires and they have decor and purpose!"
   outside blows out. Door 3286 is grazed by a street post. The street braziers unseen at night; the doors' swing and
   sound and the moving flames unjudged (stills only); the phone unmeasured.
 
+## The city's once-over (owner, 2026-11-17) — under way
+
+The owner: "do a once over of the entire city adding detail, fixing things, making sure there's enough room to walk up
+stairs in the houses, make sure the clipping plane is correct, fixing the water, etc. then start working on the Castle.
+It really needs work."
+
+- [x] **The water.** The moat's and the Slough's sheets followed the ground: the moat's climbed 130 m up the crag and
+  the Slough's ran over a 20 m rise. Each is now level reaches with a weir of dark stone at every step (`reaches`,
+  `weir`, `waters` in src/core/phobos-build.js); the moat is dry where no ditch holds water (the crag's side, about a
+  third of the ring is wet: the west, and up the north and south as far as there's a ditch). The Slough's ditch is cut
+  from the lower of its two banks (src/core/east.js), so it holds water end to end; none under the streets' causeways.
+- [x] **House stairs**: 1.25 m wide (0.95), treads 0.36 deep (0.27), a landing of 1.1 m at the head; all 9,348 keep
+  their upstairs.
+- [x] **The camera indoors**: the third-person camera is kept low and close inside Phobos's houses and towers
+  (`World.indoors`), as in Bellmourn's: it lifted through their ceilings and upper floors.
+- [ ] **The clipping plane**: the near plane is 0.08 m and the far is infinite (src/core/math.js); nothing wrong found
+  there. If the owner means something else (things cut off at a distance, near cells popping at 150 m, the camera in
+  walls somewhere), it wants a word from him or a picture.
+- [ ] **Detail**: not begun. Seen in pictures: far houses are plain boxes beside the near ones; the basin's cliffs are
+  streaked; bare ground between houses and the Slough's banks (a quay wall, mooring posts, steps down); weirs want a
+  sluice or a footbridge; the dry moat round the crag wants a bed of stones or stakes.
+- [ ] **The castle on the land**: not begun. Seen from the Approach: the gate's drums and the wall towers read pale
+  grey beside near-black curtains; the curtains are flat black slabs; the east wall stair's blank wedge left of the gate.
+- Pictures: `node tools/phobos/city_shots.mjs [names]` (give it WAIT=30000: on a software GPU the ground comes late and
+  shows white till it does).
+
 ## Chunk 7: the city's six dungeons — not started
 
 The Cistern Maze, the Undercroft, the Tower of the Ninefold Eye, Ironmercy Gaol, the Rotting Hospice, the Gilded Vault
