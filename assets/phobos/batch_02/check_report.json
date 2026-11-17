@@ -1,0 +1,315 @@
+[
+ {
+  "id": "ph2_02_01_slate_roof",
+  "name": "Dark slate roof",
+  "size": [
+   1254,
+   1254
+  ],
+  "value": 0.232,
+  "sat": 0.096,
+  "seam_x": 1.73,
+  "seam_y": 1.25,
+  "light": 0.22,
+  "warnings": [
+   "seam on x is 1.73 (want <= 1.6): run make_tileable.py and repaint the band"
+  ],
+  "status": "WARN"
+ },
+ {
+  "id": "ph2_02_02_lead_roof",
+  "name": "Lead sheet roof",
+  "size": [
+   1254,
+   1254
+  ],
+  "value": 0.458,
+  "sat": 0.053,
+  "seam_x": 2.71,
+  "seam_y": 1.52,
+  "light": 0.04,
+  "warnings": [
+   "seam on x is 2.71 (want <= 1.6): run make_tileable.py and repaint the band"
+  ],
+  "status": "WARN"
+ },
+ {
+  "id": "ph2_02_03_blood_tiles",
+  "name": "Blood-red clay roof tiles",
+  "size": [
+   1254,
+   1254
+  ],
+  "value": 0.298,
+  "sat": 0.44,
+  "seam_x": 1.46,
+  "seam_y": 1.2,
+  "light": 0.08,
+  "warnings": [],
+  "status": "PASS"
+ },
+ {
+  "id": "ph2_02_04_burnt_roof",
+  "name": "Burnt broken roof tiles",
+  "size": [
+   1254,
+   1254
+  ],
+  "value": 0.199,
+  "sat": 0.213,
+  "seam_x": 1.34,
+  "seam_y": 1.16,
+  "light": 0.19,
+  "warnings": [],
+  "status": "PASS"
+ },
+ {
+  "id": "ph2_02_05_shingle_roof",
+  "name": "Weathered wood shingles",
+  "size": [
+   1254,
+   1254
+  ],
+  "value": 0.294,
+  "sat": 0.255,
+  "seam_x": 1.49,
+  "seam_y": 1.89,
+  "light": 0.2,
+  "warnings": [
+   "seam on y is 1.89 (want <= 1.6): run make_tileable.py and repaint the band"
+  ],
+  "status": "WARN"
+ },
+ {
+  "id": "ph2_02_06_verdigris_roof",
+  "name": "Copper roof gone green",
+  "size": [
+   1254,
+   1254
+  ],
+  "value": 0.318,
+  "sat": 0.272,
+  "seam_x": 1.77,
+  "seam_y": 1.71,
+  "light": 0.15,
+  "warnings": [
+   "seam on x is 1.77 (want <= 1.6): run make_tileable.py and repaint the band",
+   "seam on y is 1.71 (want <= 1.6): run make_tileable.py and repaint the band"
+  ],
+  "status": "WARN"
+ },
+ {
+  "id": "ph2_02_07_ridge_strip",
+  "name": "Ridge tiles (strip)",
+  "size": [
+   1536,
+   1024
+  ],
+  "value": 0.288,
+  "sat": 0.074,
+  "seam_x": 1.65,
+  "light": 0.37,
+  "warnings": [
+   "seam on x is 1.65 (want <= 1.6): run make_tileable.py and repaint the band"
+  ],
+  "status": "WARN"
+ },
+ {
+  "id": "ph2_02_08_oak_planks",
+  "name": "Weathered oak planks",
+  "size": [
+   1254,
+   1254
+  ],
+  "value": 0.255,
+  "sat": 0.409,
+  "seam_x": 1.04,
+  "seam_y": 2.03,
+  "light": 0.26,
+  "warnings": [
+   "seam on y is 2.03 (want <= 1.6): run make_tileable.py and repaint the band"
+  ],
+  "status": "WARN"
+ },
+ {
+  "id": "ph2_02_09_char_planks",
+  "name": "Charred timber",
+  "size": [
+   1254,
+   1254
+  ],
+  "value": 0.255,
+  "sat": 0.035,
+  "seam_x": 1.02,
+  "seam_y": 1.34,
+  "light": 0.09,
+  "warnings": [],
+  "status": "PASS"
+ },
+ {
+  "id": "ph2_02_10_tar_boards",
+  "name": "Tarred black boards",
+  "size": [
+   1254,
+   1254
+  ],
+  "value": 0.304,
+  "sat": 0.028,
+  "seam_x": 1.82,
+  "seam_y": 1.0,
+  "light": 0.16,
+  "warnings": [
+   "seam on x is 1.82 (want <= 1.6): run make_tileable.py and repaint the band"
+  ],
+  "status": "WARN"
+ },
+ {
+  "id": "ph2_02_11_adzed_beam",
+  "name": "Adzed oak beam",
+  "size": [
+   1536,
+   1024
+  ],
+  "value": 0.292,
+  "sat": 0.445,
+  "seam_x": 2.56,
+  "seam_y": 0.95,
+  "light": 0.08,
+  "warnings": [
+   "seam on x is 2.56 (want <= 1.6): run make_tileable.py and repaint the band"
+  ],
+  "status": "WARN"
+ },
+ {
+  "id": "ph2_02_12_door_iron",
+  "name": "Iron-banded oak door",
+  "size": [
+   1024,
+   1536
+  ],
+  "value": 0.203,
+  "sat": 0.337,
+  "light": 0.35,
+  "warnings": [],
+  "status": "PASS"
+ },
+ {
+  "id": "ph2_02_13_door_poor",
+  "name": "Patched plank door",
+  "size": [
+   1024,
+   1536
+  ],
+  "value": 0.286,
+  "sat": 0.339,
+  "light": 0.36,
+  "warnings": [],
+  "status": "PASS"
+ },
+ {
+  "id": "ph2_02_14_door_rich",
+  "name": "Carved dark door",
+  "size": [
+   1024,
+   1536
+  ],
+  "value": 0.207,
+  "sat": 0.361,
+  "light": 0.13,
+  "warnings": [],
+  "status": "PASS"
+ },
+ {
+  "id": "ph2_02_15_shutters",
+  "name": "Closed plank shutters",
+  "size": [
+   1024,
+   1536
+  ],
+  "value": 0.22,
+  "sat": 0.503,
+  "light": 0.2,
+  "warnings": [],
+  "status": "PASS"
+ },
+ {
+  "id": "ph2_02_16_leaded_glass",
+  "name": "Leaded diamond-pane glass",
+  "size": [
+   1254,
+   1254
+  ],
+  "value": 0.227,
+  "sat": 0.116,
+  "seam_x": 1.22,
+  "seam_y": 1.63,
+  "light": 0.12,
+  "warnings": [
+   "seam on y is 1.63 (want <= 1.6): run make_tileable.py and repaint the band"
+  ],
+  "status": "WARN"
+ },
+ {
+  "id": "ph2_02_17_leaded_lit",
+  "name": "Lit window glass at night",
+  "size": [
+   1254,
+   1254
+  ],
+  "value": 0.149,
+  "sat": 0.656,
+  "seam_x": 1.1,
+  "seam_y": 2.12,
+  "light": 0.21,
+  "warnings": [
+   "seam on y is 2.12 (want <= 1.6): run make_tileable.py and repaint the band",
+   "too dark (0.149): want mean 0.18 to 0.55",
+   "too saturated (0.656)"
+  ],
+  "status": "WARN"
+ },
+ {
+  "id": "ph2_02_18_railing_mask",
+  "name": "Wrought-iron railing (mask)",
+  "size": [
+   1536,
+   1024
+  ],
+  "value": 0.227,
+  "sat": 0.099,
+  "seam_x": 0.05,
+  "ground": 0.24,
+  "warnings": [],
+  "status": "PASS"
+ },
+ {
+  "id": "ph2_02_19_awning_canvas",
+  "name": "Market awning canvas",
+  "size": [
+   1254,
+   1254
+  ],
+  "value": 0.372,
+  "sat": 0.354,
+  "seam_x": 1.16,
+  "seam_y": 0.68,
+  "light": 0.4,
+  "warnings": [],
+  "status": "PASS"
+ },
+ {
+  "id": "ph2_02_20_hessian",
+  "name": "Patched sackcloth",
+  "size": [
+   1254,
+   1254
+  ],
+  "value": 0.36,
+  "sat": 0.318,
+  "seam_x": 1.32,
+  "seam_y": 1.16,
+  "light": 0.11,
+  "warnings": [],
+  "status": "PASS"
+ }
+]

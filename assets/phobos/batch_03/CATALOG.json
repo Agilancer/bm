@@ -1,0 +1,589 @@
+[
+ {
+  "id": "ph2_03_01_banner_blood",
+  "name": "Blood-red banner",
+  "kind": "single",
+  "wrap": "",
+  "aspect": "tall",
+  "check": {
+   "id": "ph2_03_01_banner_blood",
+   "name": "Blood-red banner",
+   "size": [
+    1024,
+    1536
+   ],
+   "value": 0.122,
+   "sat": 0.598,
+   "light": 0.96,
+   "warnings": [
+    "uneven light 0.96 (want <= 0.45): no vignette, sun patch or dark corner",
+    "too dark (0.122): want mean 0.18 to 0.55",
+    "too saturated (0.598)"
+   ],
+   "status": "WARN"
+  },
+  "prompt_used": "ONE videogame texture of a single object, 1024x1536. One hanging cloth banner filling the whole frame, deep blood red wool, a black horned skull wearing a crown of thorns in the middle, a black border band, a fringed bottom edge cut in a point; no letters, numbers, crosses or holy signs. Straight-on and orthographic, the object fills the frame edge to edge, about 1.4 m wide in the world. Palette: dark red, near-black grey, pale warm grey. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs.",
+  "file": "textures/ph2_03_01_banner_blood.png",
+  "size": [
+   1024,
+   1536
+  ]
+ },
+ {
+  "id": "ph2_03_02_banner_blue",
+  "name": "Royal blue banner",
+  "kind": "single",
+  "wrap": "",
+  "aspect": "tall",
+  "check": {
+   "id": "ph2_03_02_banner_blue",
+   "name": "Royal blue banner",
+   "size": [
+    1024,
+    1536
+   ],
+   "value": 0.211,
+   "sat": 0.485,
+   "light": 1.06,
+   "warnings": [
+    "uneven light 1.06 (want <= 0.45): no vignette, sun patch or dark corner"
+   ],
+   "status": "WARN"
+  },
+  "prompt_used": "ONE videogame texture of a single object, 1024x1536. One hanging cloth banner filling the whole frame, deep royal blue wool, a silver horned skull with a crown of thorns, a silver border band, a fringed pointed bottom edge; no letters, numbers, crosses or holy signs. Straight-on and orthographic, the object fills the frame edge to edge, about 1.4 m wide in the world. Palette: dark blue, pale grey, near-black blue-grey. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs.",
+  "file": "textures/ph2_03_02_banner_blue.png",
+  "size": [
+   1024,
+   1536
+  ]
+ },
+ {
+  "id": "ph2_03_03_banner_white",
+  "name": "White banner with skulls",
+  "kind": "single",
+  "wrap": "",
+  "aspect": "tall",
+  "check": {
+   "id": "ph2_03_03_banner_white",
+   "name": "White banner with skulls",
+   "size": [
+    1024,
+    1536
+   ],
+   "value": 0.5,
+   "sat": 0.192,
+   "light": 1.08,
+   "warnings": [
+    "uneven light 1.08 (want <= 0.45): no vignette, sun patch or dark corner"
+   ],
+   "status": "WARN"
+  },
+  "prompt_used": "ONE videogame texture of a single object, 1024x1536. One hanging cloth banner filling the whole frame, off-white wool stained with age, a grid of small black skulls across it and a large black horned skull in the middle, a black border; no letters, numbers, crosses or holy signs. Straight-on and orthographic, the object fills the frame edge to edge, about 1.4 m wide in the world. Palette: pale warm grey, near-black grey, dark red. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs.",
+  "file": "textures/ph2_03_03_banner_white.png",
+  "size": [
+   1024,
+   1536
+  ]
+ },
+ {
+  "id": "ph2_03_04_banner_green",
+  "name": "Forest green banner",
+  "kind": "single",
+  "wrap": "",
+  "aspect": "tall",
+  "check": {
+   "id": "ph2_03_04_banner_green",
+   "name": "Forest green banner",
+   "size": [
+    1024,
+    1536
+   ],
+   "value": 0.239,
+   "sat": 0.399,
+   "light": 0.88,
+   "warnings": [
+    "uneven light 0.88 (want <= 0.45): no vignette, sun patch or dark corner"
+   ],
+   "status": "WARN"
+  },
+  "prompt_used": "ONE videogame texture of a single object, 1024x1536. One hanging cloth banner filling the whole frame, dark forest green wool, a bone-white horned skull with antler-like thorns, a bone-white border, a fringed pointed bottom edge; no letters, numbers, crosses or holy signs. Straight-on and orthographic, the object fills the frame edge to edge, about 1.4 m wide in the world. Palette: dark green, pale warm grey, near-black grey. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs.",
+  "file": "textures/ph2_03_04_banner_green.png",
+  "size": [
+   1024,
+   1536
+  ]
+ },
+ {
+  "id": "ph2_03_05_banner_greygold",
+  "name": "Grey and gold banner",
+  "kind": "single",
+  "wrap": "",
+  "aspect": "tall",
+  "check": {
+   "id": "ph2_03_05_banner_greygold",
+   "name": "Grey and gold banner",
+   "size": [
+    1024,
+    1536
+   ],
+   "value": 0.257,
+   "sat": 0.164,
+   "light": 0.31,
+   "warnings": [],
+   "status": "PASS"
+  },
+  "prompt_used": "ONE videogame texture of a single object, 1024x1536. One hanging cloth banner filling the whole frame, charcoal grey wool, a tarnished gold horned skull with a crown of thorns, a gold border band, a fringed pointed bottom edge; no letters, numbers, crosses or holy signs. Straight-on and orthographic, the object fills the frame edge to edge, about 1.4 m wide in the world. Palette: mid grey, mid brown, dark grey. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs.",
+  "file": "textures/ph2_03_05_banner_greygold.png",
+  "size": [
+   1024,
+   1536
+  ]
+ },
+ {
+  "id": "ph2_03_06_war_banner",
+  "name": "Velscour's great war banner",
+  "kind": "single",
+  "wrap": "",
+  "aspect": "tall",
+  "check": {
+   "id": "ph2_03_06_war_banner",
+   "name": "Velscour's great war banner",
+   "size": [
+    1024,
+    1536
+   ],
+   "value": 0.15,
+   "sat": 0.306,
+   "light": 0.47,
+   "warnings": [
+    "uneven light 0.47 (want <= 0.45): no vignette, sun patch or dark corner",
+    "too dark (0.15): want mean 0.18 to 0.55"
+   ],
+   "status": "WARN"
+  },
+  "prompt_used": "ONE videogame texture of a single object, 1024x1536. One enormous hanging banner filling the whole frame, black cloth, a blood-red crown of thorns over a pair of great curling horns and spread bat wings, red border, frayed and battle-torn edges; no letters, numbers, crosses or holy signs. Straight-on and orthographic, the object fills the frame edge to edge, about 3.0 m wide in the world. Palette: near-black grey, dark red, pale warm grey. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs.",
+  "file": "textures/ph2_03_06_war_banner.png",
+  "size": [
+   1024,
+   1536
+  ]
+ },
+ {
+  "id": "ph2_03_07_tapestry_war",
+  "name": "Tapestry of demons at war",
+  "kind": "single",
+  "wrap": "",
+  "aspect": "wide",
+  "check": {
+   "id": "ph2_03_07_tapestry_war",
+   "name": "Tapestry of demons at war",
+   "size": [
+    1536,
+    1024
+   ],
+   "value": 0.22,
+   "sat": 0.438,
+   "light": 0.2,
+   "warnings": [],
+   "status": "PASS"
+  },
+  "prompt_used": "ONE videogame texture of a single object, 1536x1024. One woven medieval tapestry filling the whole frame, dark faded wool: horned armoured figures and winged demons riding over a burning city, flat medieval tapestry style with a woven border of thorns; no letters, crosses, saints or holy signs. Straight-on and orthographic, the object fills the frame edge to edge, about 3.0 m wide in the world. Palette: dark warm grey, dark red, dark brown, mid brown. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs.",
+  "file": "textures/ph2_03_07_tapestry_war.png",
+  "size": [
+   1536,
+   1024
+  ]
+ },
+ {
+  "id": "ph2_03_08_tapestry_hunt",
+  "name": "Tapestry of a night hunt",
+  "kind": "single",
+  "wrap": "",
+  "aspect": "wide",
+  "check": {
+   "id": "ph2_03_08_tapestry_hunt",
+   "name": "Tapestry of a night hunt",
+   "size": [
+    1536,
+    1024
+   ],
+   "value": 0.189,
+   "sat": 0.447,
+   "light": 0.29,
+   "warnings": [],
+   "status": "PASS"
+  },
+  "prompt_used": "ONE videogame texture of a single object, 1536x1024. One woven medieval tapestry filling the whole frame, dark green and brown wool: riders with black hounds hunting a white stag through a dark forest under a moon, woven border of leaves; no letters, crosses or holy signs. Straight-on and orthographic, the object fills the frame edge to edge, about 3.0 m wide in the world. Palette: dark grey, dark brown, mid brown. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs.",
+  "file": "textures/ph2_03_08_tapestry_hunt.png",
+  "size": [
+   1536,
+   1024
+  ]
+ },
+ {
+  "id": "ph2_03_09_thorn_brocade",
+  "name": "Blood-red thorn brocade",
+  "kind": "tile",
+  "wrap": "xy",
+  "aspect": "square",
+  "check": {
+   "id": "ph2_03_09_thorn_brocade",
+   "name": "Blood-red thorn brocade",
+   "size": [
+    1254,
+    1254
+   ],
+   "value": 0.238,
+   "sat": 0.557,
+   "seam_x": 1.25,
+   "seam_y": 1.41,
+   "light": 0.07,
+   "warnings": [
+    "too saturated (0.557)"
+   ],
+   "status": "WARN"
+  },
+  "prompt_used": "ONE seamless tiling base-color (albedo) texture for a videogame, 1024x1024. Blood-red silk brocade woven with a repeating pattern of thorny briar stems and small skulls in a slightly darker sheen, faded and worn in places. The picture shows about 1.0 m of the real surface across. Orthographic, straight-on, the whole image is the material, no perspective, no scene, no border. Seamless: everything continues across opposite edges, left-right and top-bottom. Palette: dark red, near-black red. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs.",
+  "file": "textures/ph2_03_09_thorn_brocade.png",
+  "size": [
+   1254,
+   1254
+  ]
+ },
+ {
+  "id": "ph2_03_10_black_panelling",
+  "name": "Black lacquer panelling",
+  "kind": "tile",
+  "wrap": "xy",
+  "aspect": "square",
+  "check": {
+   "id": "ph2_03_10_black_panelling",
+   "name": "Black lacquer panelling",
+   "size": [
+    1254,
+    1254
+   ],
+   "value": 0.161,
+   "sat": 0.407,
+   "seam_x": 0.58,
+   "seam_y": 2.05,
+   "light": 0.05,
+   "warnings": [
+    "seam on y is 2.05 (want <= 1.6): run make_tileable.py and repaint the band",
+    "too dark (0.161): want mean 0.18 to 0.55"
+   ],
+   "status": "WARN"
+  },
+  "prompt_used": "ONE seamless tiling base-color (albedo) texture for a videogame, 1024x1024. Tall rectangular wall panels of black lacquered wood, thin dull-gold beading round each panel, rails between, scratched and dulled, slight wood grain under the lacquer. The picture shows about 2.0 m of the real surface across. Orthographic, straight-on, the whole image is the material, no perspective, no scene, no border. Seamless: everything continues across opposite edges, left-right and top-bottom. Palette: near-black grey, dark grey, mid brown. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs.",
+  "file": "textures/ph2_03_10_black_panelling.png",
+  "size": [
+   1254,
+   1254
+  ]
+ },
+ {
+  "id": "ph2_03_11_oxblood_marble",
+  "name": "Oxblood marble floor",
+  "kind": "tile",
+  "wrap": "xy",
+  "aspect": "square",
+  "check": {
+   "id": "ph2_03_11_oxblood_marble",
+   "name": "Oxblood marble floor",
+   "size": [
+    1254,
+    1254
+   ],
+   "value": 0.175,
+   "sat": 0.451,
+   "seam_x": 1.85,
+   "seam_y": 2.24,
+   "light": 0.36,
+   "warnings": [
+    "seam on x is 1.85 (want <= 1.6): run make_tileable.py and repaint the band",
+    "seam on y is 2.24 (want <= 1.6): run make_tileable.py and repaint the band",
+    "too dark (0.175): want mean 0.18 to 0.55"
+   ],
+   "status": "WARN"
+  },
+  "prompt_used": "ONE seamless tiling base-color (albedo) texture for a videogame, 1024x1024. Polished dark oxblood marble slabs in large squares, wandering ivory-white veins through them, thin joints, worn duller along a walking line. The picture shows about 3.0 m of the real surface across. Orthographic, straight-on, the whole image is the material, no perspective, no scene, no border. Seamless: everything continues across opposite edges, left-right and top-bottom. Palette: near-black red, dark red, pale warm grey, near-black grey. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs.",
+  "file": "textures/ph2_03_11_oxblood_marble.png",
+  "size": [
+   1254,
+   1254
+  ]
+ },
+ {
+  "id": "ph2_03_12_bone_checker",
+  "name": "Black and bone checker floor",
+  "kind": "tile",
+  "wrap": "xy",
+  "aspect": "square",
+  "check": {
+   "id": "ph2_03_12_bone_checker",
+   "name": "Black and bone checker floor",
+   "size": [
+    1254,
+    1254
+   ],
+   "value": 0.334,
+   "sat": 0.196,
+   "seam_x": 1.39,
+   "seam_y": 1.67,
+   "light": 1.16,
+   "warnings": [
+    "seam on y is 1.67 (want <= 1.6): run make_tileable.py and repaint the band",
+    "uneven light 1.16 (want <= 0.45): no vignette, sun patch or dark corner"
+   ],
+   "status": "WARN"
+  },
+  "prompt_used": "ONE seamless tiling base-color (albedo) texture for a videogame, 1024x1024. A worn floor of big square tiles alternating black stone and bone-white stone in a checker, chipped corners, scratches, grime in the joints; the checker continues across the edges. The picture shows about 3.0 m of the real surface across. Orthographic, straight-on, the whole image is the material, no perspective, no scene, no border. Seamless: everything continues across opposite edges, left-right and top-bottom. Palette: near-black grey, dark grey, pale warm grey. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs.",
+  "file": "textures/ph2_03_12_bone_checker.png",
+  "size": [
+   1254,
+   1254
+  ]
+ },
+ {
+  "id": "ph2_03_13_sooty_plaster",
+  "name": "Sooty damp plaster",
+  "kind": "tile",
+  "wrap": "xy",
+  "aspect": "square",
+  "check": {
+   "id": "ph2_03_13_sooty_plaster",
+   "name": "Sooty damp plaster",
+   "size": [
+    1254,
+    1254
+   ],
+   "value": 0.305,
+   "sat": 0.233,
+   "seam_x": 1.12,
+   "seam_y": 0.77,
+   "light": 0.57,
+   "warnings": [
+    "uneven light 0.57 (want <= 0.45): no vignette, sun patch or dark corner"
+   ],
+   "status": "WARN"
+  },
+  "prompt_used": "ONE seamless tiling base-color (albedo) texture for a videogame, 1024x1024. Old lime plaster wall, smoke-blackened toward the top, damp-stained and mouldy toward the bottom, cracked, a few patches fallen away showing rubble. The picture shows about 3.0 m of the real surface across. Orthographic, straight-on, the whole image is the material, no perspective, no scene, no border. Seamless: everything continues across opposite edges, left-right and top-bottom. Palette: mid warm grey, dark grey, mid grey. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs.",
+  "file": "textures/ph2_03_13_sooty_plaster.png",
+  "size": [
+   1254,
+   1254
+  ]
+ },
+ {
+  "id": "ph2_03_14_frieze_strip",
+  "name": "Painted thorn frieze (strip)",
+  "kind": "strip",
+  "wrap": "x",
+  "aspect": "wide",
+  "check": {
+   "id": "ph2_03_14_frieze_strip",
+   "name": "Painted thorn frieze (strip)",
+   "size": [
+    1536,
+    1024
+   ],
+   "value": 0.252,
+   "sat": 0.611,
+   "seam_x": 1.12,
+   "light": 0.19,
+   "warnings": [
+    "too saturated (0.611)"
+   ],
+   "status": "WARN"
+  },
+  "prompt_used": "ONE horizontal architectural band texture for a videogame, 1536x1024. A painted plaster frieze band: a running scroll of black thorny vines with small blood-red roses and tiny horned skulls between them, on dark ochre, faded and cracked; no letters or holy signs; seamless left-right. The band fills the whole frame from top edge to bottom edge, straight-on, no perspective, and repeats seamlessly left-right (the left and right edges continue into each other). About 2.5 m of band shown across. Palette: dark red, mid brown, dark grey. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs.",
+  "file": "textures/ph2_03_14_frieze_strip.png",
+  "size": [
+   1536,
+   1024
+  ]
+ },
+ {
+  "id": "ph2_03_15_worn_floorboards",
+  "name": "Worn floorboards",
+  "kind": "tile",
+  "wrap": "xy",
+  "aspect": "square",
+  "check": {
+   "id": "ph2_03_15_worn_floorboards",
+   "name": "Worn floorboards",
+   "size": [
+    1254,
+    1254
+   ],
+   "value": 0.173,
+   "sat": 0.565,
+   "seam_x": 1.46,
+   "seam_y": 0.56,
+   "light": 0.68,
+   "warnings": [
+    "uneven light 0.68 (want <= 0.45): no vignette, sun patch or dark corner",
+    "too dark (0.173): want mean 0.18 to 0.55",
+    "too saturated (0.565)"
+   ],
+   "status": "WARN"
+  },
+  "prompt_used": "ONE seamless tiling base-color (albedo) texture for a videogame, 1024x1024. Wide old floorboards running left to right, worn pale along a path, dark between the boards, square nail heads, a few stains. The picture shows about 2.5 m of the real surface across. Orthographic, straight-on, the whole image is the material, no perspective, no scene, no border. Seamless: everything continues across opposite edges, left-right and top-bottom. Palette: dark brown, mid brown. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs.",
+  "file": "textures/ph2_03_15_worn_floorboards.png",
+  "size": [
+   1254,
+   1254
+  ]
+ },
+ {
+  "id": "ph2_03_16_fireback",
+  "name": "Soot-black fireplace brick",
+  "kind": "tile",
+  "wrap": "xy",
+  "aspect": "square",
+  "check": {
+   "id": "ph2_03_16_fireback",
+   "name": "Soot-black fireplace brick",
+   "size": [
+    1254,
+    1254
+   ],
+   "value": 0.135,
+   "sat": 0.218,
+   "seam_x": 1.24,
+   "seam_y": 0.85,
+   "light": 0.26,
+   "warnings": [
+    "too dark (0.135): want mean 0.18 to 0.55"
+   ],
+   "status": "WARN"
+  },
+  "prompt_used": "ONE seamless tiling base-color (albedo) texture for a videogame, 1024x1024. The inside of an old fireplace: small bricks thick with black soot and glossy creosote, a few bricks burnt orange-red, cracks, ash dust. The picture shows about 1.5 m of the real surface across. Orthographic, straight-on, the whole image is the material, no perspective, no scene, no border. Seamless: everything continues across opposite edges, left-right and top-bottom. Palette: near-black grey, dark grey, dark red. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs.",
+  "file": "textures/ph2_03_16_fireback.png",
+  "size": [
+   1254,
+   1254
+  ]
+ },
+ {
+  "id": "ph2_03_17_book_spines",
+  "name": "Shelves of old books",
+  "kind": "tile",
+  "wrap": "xy",
+  "aspect": "square",
+  "check": {
+   "id": "ph2_03_17_book_spines",
+   "name": "Shelves of old books",
+   "size": [
+    1254,
+    1254
+   ],
+   "value": 0.151,
+   "sat": 0.542,
+   "seam_x": 1.73,
+   "seam_y": 1.69,
+   "light": 0.2,
+   "warnings": [
+    "seam on x is 1.73 (want <= 1.6): run make_tileable.py and repaint the band",
+    "seam on y is 1.69 (want <= 1.6): run make_tileable.py and repaint the band",
+    "too dark (0.151): want mean 0.18 to 0.55"
+   ],
+   "status": "WARN"
+  },
+  "prompt_used": "ONE seamless tiling base-color (albedo) texture for a videogame, 1024x1024. Rows of old leather-bound books on dark wooden shelves seen straight on, spines in dark browns, oxblood and green, raised bands and dull gilt lines on the spines but NO letters or writing, some leaning; shelves continue across the edges. The picture shows about 1.5 m of the real surface across. Orthographic, straight-on, the whole image is the material, no perspective, no scene, no border. Seamless: everything continues across opposite edges, left-right and top-bottom. Palette: dark brown, dark grey, mid brown. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs.",
+  "file": "textures/ph2_03_17_book_spines.png",
+  "size": [
+   1254,
+   1254
+  ]
+ },
+ {
+  "id": "ph2_03_18_jar_shelves",
+  "name": "Alchemist's jar shelves",
+  "kind": "tile",
+  "wrap": "xy",
+  "aspect": "square",
+  "check": {
+   "id": "ph2_03_18_jar_shelves",
+   "name": "Alchemist's jar shelves",
+   "size": [
+    1254,
+    1254
+   ],
+   "value": 0.18,
+   "sat": 0.451,
+   "seam_x": 1.95,
+   "seam_y": 2.71,
+   "light": 0.3,
+   "warnings": [
+    "seam on x is 1.95 (want <= 1.6): run make_tileable.py and repaint the band",
+    "seam on y is 2.71 (want <= 1.6): run make_tileable.py and repaint the band"
+   ],
+   "status": "WARN"
+  },
+  "prompt_used": "ONE seamless tiling base-color (albedo) texture for a videogame, 1024x1024. Dark wooden shelves seen straight on crowded with stoppered glass jars and clay pots of murky liquids, dried herbs, small bones, no labels or writing; shelves continue across the edges. The picture shows about 1.5 m of the real surface across. Orthographic, straight-on, the whole image is the material, no perspective, no scene, no border. Seamless: everything continues across opposite edges, left-right and top-bottom. Palette: dark brown, dark grey, mid brown. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs.",
+  "file": "textures/ph2_03_18_jar_shelves.png",
+  "size": [
+   1254,
+   1254
+  ]
+ },
+ {
+  "id": "ph2_03_19_dyed_cloth",
+  "name": "Dyed cloth lengths",
+  "kind": "tile",
+  "wrap": "xy",
+  "aspect": "square",
+  "check": {
+   "id": "ph2_03_19_dyed_cloth",
+   "name": "Dyed cloth lengths",
+   "size": [
+    1254,
+    1254
+   ],
+   "value": 0.239,
+   "sat": 0.468,
+   "seam_x": 1.17,
+   "seam_y": 1.12,
+   "light": 0.57,
+   "warnings": [
+    "uneven light 0.57 (want <= 0.45): no vignette, sun patch or dark corner"
+   ],
+   "status": "WARN"
+  },
+  "prompt_used": "ONE seamless tiling base-color (albedo) texture for a videogame, 1024x1024. Hand-woven wool cloth in long vertical lengths side by side, dyed madder red, weld yellow and faded woad blue, uneven dye, creases, slightly damp. The picture shows about 1.5 m of the real surface across. Orthographic, straight-on, the whole image is the material, no perspective, no scene, no border. Seamless: everything continues across opposite edges, left-right and top-bottom. Palette: mid red, mid brown, mid blue-grey, dark brown. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs.",
+  "file": "textures/ph2_03_19_dyed_cloth.png",
+  "size": [
+   1254,
+   1254
+  ]
+ },
+ {
+  "id": "ph2_03_20_wool_blanket",
+  "name": "Rough wool blanket",
+  "kind": "tile",
+  "wrap": "xy",
+  "aspect": "square",
+  "check": {
+   "id": "ph2_03_20_wool_blanket",
+   "name": "Rough wool blanket",
+   "size": [
+    1254,
+    1254
+   ],
+   "value": 0.198,
+   "sat": 0.42,
+   "seam_x": 1.3,
+   "seam_y": 1.13,
+   "light": 0.38,
+   "warnings": [],
+   "status": "PASS"
+  },
+  "prompt_used": "ONE seamless tiling base-color (albedo) texture for a videogame, 1024x1024. Coarse undyed brown and grey wool blanket weave with a plain dull-red stripe, pilled and worn, a darned patch. The picture shows about 1.5 m of the real surface across. Orthographic, straight-on, the whole image is the material, no perspective, no scene, no border. Seamless: everything continues across opposite edges, left-right and top-bottom. Palette: dark warm grey, mid warm grey, dark red. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs.",
+  "file": "textures/ph2_03_20_wool_blanket.png",
+  "size": [
+   1254,
+   1254
+  ]
+ }
+]
