@@ -1,0 +1,567 @@
+[
+ {
+  "id": "ph2_01_01_wrought_bars",
+  "name": "Wrought-iron bars and grille",
+  "kind": "tile",
+  "wrap": "xy",
+  "aspect": "square",
+  "check": {
+   "id": "ph2_01_01_wrought_bars",
+   "name": "Wrought-iron bars and grille",
+   "size": [
+    1254,
+    1254
+   ],
+   "value": 0.243,
+   "sat": 0.148,
+   "seam_x": 1.0,
+   "seam_y": 1.15,
+   "light": 0.13,
+   "warnings": [],
+   "status": "PASS"
+  },
+  "prompt_used": "ONE seamless tiling base-color (albedo) texture for a videogame, 1024x1024. Square-section wrought-iron bars in a close grid, hand-forged, riveted where they cross, black iron with thin rust at the joints and pitting, the gaps between the bars a flat dark charcoal (not a background scene). The picture shows about 1.5 m of the real surface across. Orthographic, straight-on, the whole image is the material, no perspective, no scene, no border. Seamless: everything continues across opposite edges, left-right and top-bottom. Palette: dark grey, dark brown, mid brown. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs. References are material mood and palette only. Generate the grille, not the reference's solid surface. Save image for packaging.",
+  "file": "textures/ph2_01_01_wrought_bars.png",
+  "size": [
+   1254,
+   1254
+  ]
+ },
+ {
+  "id": "ph2_01_02_riveted_plate",
+  "name": "Riveted iron plate",
+  "kind": "tile",
+  "wrap": "xy",
+  "aspect": "square",
+  "check": {
+   "id": "ph2_01_02_riveted_plate",
+   "name": "Riveted iron plate",
+   "size": [
+    1254,
+    1254
+   ],
+   "value": 0.215,
+   "sat": 0.078,
+   "seam_x": 1.48,
+   "seam_y": 0.81,
+   "light": 0.11,
+   "warnings": [],
+   "status": "PASS"
+  },
+  "prompt_used": "ONE seamless tiling base-color (albedo) texture for a videogame, 1024x1024. Heavy black iron plates overlapping in rows, a line of round domed rivets along every seam, hammer marks, worn bright at the edges, rust bleeding from under the rivet heads. The picture shows about 2.0 m of the real surface across. Orthographic, straight-on, the whole image is the material, no perspective, no scene, no border. Seamless: everything continues across opposite edges, left-right and top-bottom. Palette: dark grey, mid grey, mid brown. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs. Reference images provide mood and palette only, not content. Keep exposure around 30 percent grey. Exact repeat alignment at all four edges.",
+  "file": "textures/ph2_01_02_riveted_plate.png",
+  "size": [
+   1254,
+   1254
+  ]
+ },
+ {
+  "id": "ph2_01_03_heavy_rust",
+  "name": "Heavy rust iron",
+  "kind": "tile",
+  "wrap": "xy",
+  "aspect": "square",
+  "check": {
+   "id": "ph2_01_03_heavy_rust",
+   "name": "Heavy rust iron",
+   "size": [
+    1254,
+    1254
+   ],
+   "value": 0.207,
+   "sat": 0.202,
+   "seam_x": 1.28,
+   "seam_y": 1.0,
+   "light": 0.15,
+   "warnings": [],
+   "status": "PASS"
+  },
+  "prompt_used": "ONE seamless tiling base-color (albedo) texture for a videogame, 1024x1024. Iron sheet eaten by deep flaking rust, orange-brown scale lifting in layers over dark pitted metal, a few patches of black iron showing through, no holes through it. The picture shows about 1.5 m of the real surface across. Orthographic, straight-on, the whole image is the material, no perspective, no scene, no border. Seamless: everything continues across opposite edges, left-right and top-bottom. Palette: dark brown, mid red, mid brown, dark grey. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs. Reference images provide mood and palette only, not content. Keep exposure around 30 percent grey. Exact repeat alignment at all four edges.",
+  "file": "textures/ph2_01_03_heavy_rust.png",
+  "size": [
+   1254,
+   1254
+  ]
+ },
+ {
+  "id": "ph2_01_04_studded_oak",
+  "name": "Iron-studded oak gate",
+  "kind": "tile",
+  "wrap": "xy",
+  "aspect": "square",
+  "check": {
+   "id": "ph2_01_04_studded_oak",
+   "name": "Iron-studded oak gate",
+   "size": [
+    1254,
+    1254
+   ],
+   "value": 0.269,
+   "sat": 0.485,
+   "seam_x": 1.01,
+   "seam_y": 1.81,
+   "light": 0.14,
+   "warnings": [
+    "seam on y is 1.81 (want <= 1.6): run make_tileable.py and repaint the band"
+   ],
+   "status": "WARN"
+  },
+  "prompt_used": "ONE seamless tiling base-color (albedo) texture for a videogame, 1024x1024. Vertical planks of thick dark oak, weathered and split, held by wide horizontal iron straps with square nail-heads in rows, studs every hand-width, scorch and tar stains low down. The picture shows about 2.4 m of the real surface across. Orthographic, straight-on, the whole image is the material, no perspective, no scene, no border. Seamless: everything continues across opposite edges, left-right and top-bottom. Palette: dark brown, mid brown, dark grey. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs. Reference images provide mood and palette only, not content. Keep exposure around 30 percent grey. Exact repeat alignment at all four edges.",
+  "file": "textures/ph2_01_04_studded_oak.png",
+  "size": [
+   1254,
+   1254
+  ]
+ },
+ {
+  "id": "ph2_01_05_bone_wall",
+  "name": "Ossuary bone wall",
+  "kind": "tile",
+  "wrap": "xy",
+  "aspect": "square",
+  "check": {
+   "id": "ph2_01_05_bone_wall",
+   "name": "Ossuary bone wall",
+   "size": [
+    1254,
+    1254
+   ],
+   "value": 0.334,
+   "sat": 0.291,
+   "seam_x": 1.41,
+   "seam_y": 1.06,
+   "light": 0.19,
+   "warnings": [],
+   "status": "PASS"
+  },
+  "prompt_used": "ONE seamless tiling base-color (albedo) texture for a videogame, 1024x1024. A wall built of human bones stacked like a woodpile: rows of long-bone ends (round knuckles) packed tight, every third course a row of skulls facing out, darker gaps between, old ivory and brown, dust in the cracks, real and grim but not gory. The picture shows about 2.0 m of the real surface across. Orthographic, straight-on, the whole image is the material, no perspective, no scene, no border. Seamless: everything continues across opposite edges, left-right and top-bottom. Palette: pale warm grey, mid warm grey, dark grey. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs. Reference images provide mood and palette only, not content. Keep exposure around 40 percent grey. Exact repeat alignment at all four edges.",
+  "file": "textures/ph2_01_05_bone_wall.png",
+  "size": [
+   1254,
+   1254
+  ]
+ },
+ {
+  "id": "ph2_01_06_bone_rubble",
+  "name": "Rubble with bones in the mortar",
+  "kind": "tile",
+  "wrap": "xy",
+  "aspect": "square",
+  "check": {
+   "id": "ph2_01_06_bone_rubble",
+   "name": "Rubble with bones in the mortar",
+   "size": [
+    1254,
+    1254
+   ],
+   "value": 0.392,
+   "sat": 0.187,
+   "seam_x": 1.41,
+   "seam_y": 1.38,
+   "light": 0.16,
+   "warnings": [],
+   "status": "PASS"
+  },
+  "prompt_used": "ONE seamless tiling base-color (albedo) texture for a videogame, 1024x1024. Rough grey rubble stone wall, thick pale lime mortar, broken bones and teeth pressed into the mortar between the stones here and there, lichen spots. The picture shows about 2.5 m of the real surface across. Orthographic, straight-on, the whole image is the material, no perspective, no scene, no border. Seamless: everything continues across opposite edges, left-right and top-bottom. Palette: mid grey, pale warm grey, dark grey. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs. Correction to earlier attempt: stones must be IRREGULAR UNCOURSED RUBBLE, varied polygonal broken fieldstones in thick mortar, absolutely no rectangular ashlar, no horizontal brick courses. Tiny scattered bone fragments embedded in mortar. References are color and realism ONLY. Seamless opposite edges. 1024 square.",
+  "file": "textures/ph2_01_06_bone_rubble.png",
+  "size": [
+   1254,
+   1254
+  ]
+ },
+ {
+  "id": "ph2_01_07_coping",
+  "name": "Coping stones (strip)",
+  "kind": "strip",
+  "wrap": "x",
+  "aspect": "wide",
+  "check": {
+   "id": "ph2_01_07_coping",
+   "name": "Coping stones (strip)",
+   "size": [
+    1536,
+    1024
+   ],
+   "value": 0.29,
+   "sat": 0.018,
+   "seam_x": 1.35,
+   "light": 0.38,
+   "warnings": [],
+   "status": "PASS"
+  },
+  "prompt_used": "ONE horizontal architectural band texture for a videogame, 1536x1024. A band of long dressed coping stones seen from the front: a sloped weathered top face across the upper half, a sharp drip-edge lip and its shadow line across the middle, the joints between stones vertical every 70 cm, rain streaks below the lip. The band fills the whole frame from top edge to bottom edge, straight-on, no perspective, and repeats seamlessly left-right (the left and right edges continue into each other). About 3.0 m of band shown across. Palette: mid grey, dark grey. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs. References: match image is mood and material ONLY; do not copy its masonry layout. Palette is colors only. Grey template means entire canvas occupied by the architectural strip. Output wide 1536x1024.",
+  "file": "textures/ph2_01_07_coping.png",
+  "size": [
+   1536,
+   1024
+  ]
+ },
+ {
+  "id": "ph2_01_08_voussoirs",
+  "name": "Arch stones (strip)",
+  "kind": "strip",
+  "wrap": "x",
+  "aspect": "wide",
+  "check": {
+   "id": "ph2_01_08_voussoirs",
+   "name": "Arch stones (strip)",
+   "size": [
+    1536,
+    1024
+   ],
+   "value": 0.298,
+   "sat": 0.024,
+   "seam_x": 1.3,
+   "light": 0.2,
+   "warnings": [],
+   "status": "PASS"
+  },
+  "prompt_used": "ONE horizontal architectural band texture for a videogame, 1536x1024. A band of wedge-shaped arch stones (voussoirs) side by side, each one tall and tapering, deep mortar joints between, worn arrises, every fifth stone slightly paler. The band fills the whole frame from top edge to bottom edge, straight-on, no perspective, and repeats seamlessly left-right (the left and right edges continue into each other). About 3.0 m of band shown across. Palette: mid grey, dark grey, pale warm grey. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs. References: match image is mood and material ONLY; do not copy its masonry layout. Palette is colors only. Grey template means entire canvas occupied by the architectural strip. Output wide 1536x1024.",
+  "file": "textures/ph2_01_08_voussoirs.png",
+  "size": [
+   1536,
+   1024
+  ]
+ },
+ {
+  "id": "ph2_01_09_quoins",
+  "name": "Corner quoin blocks",
+  "kind": "tile",
+  "wrap": "xy",
+  "aspect": "square",
+  "check": {
+   "id": "ph2_01_09_quoins",
+   "name": "Corner quoin blocks",
+   "size": [
+    1254,
+    1254
+   ],
+   "value": 0.439,
+   "sat": 0.044,
+   "seam_x": 1.46,
+   "seam_y": 1.46,
+   "light": 0.04,
+   "warnings": [],
+   "status": "PASS"
+  },
+  "prompt_used": "ONE seamless tiling base-color (albedo) texture for a videogame, 1024x1024. Big dressed ashlar blocks alternating long and short courses, tooled margins round each face, tight thin joints, slightly paler than common wall stone. The picture shows about 2.4 m of the real surface across. Orthographic, straight-on, the whole image is the material, no perspective, no scene, no border. Seamless: everything continues across opposite edges, left-right and top-bottom. Palette: mid grey, pale grey. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs. Reference images provide mood and palette only, not content. Keep exposure around 40 percent grey. Exact repeat alignment at all four edges.",
+  "file": "textures/ph2_01_09_quoins.png",
+  "size": [
+   1254,
+   1254
+  ]
+ },
+ {
+  "id": "ph2_01_10_string_course",
+  "name": "Cornice moulding (strip)",
+  "kind": "strip",
+  "wrap": "x",
+  "aspect": "wide",
+  "check": {
+   "id": "ph2_01_10_string_course",
+   "name": "Cornice moulding (strip)",
+   "size": [
+    1536,
+    1024
+   ],
+   "value": 0.36,
+   "sat": 0.04,
+   "seam_x": 1.27,
+   "light": 0.18,
+   "warnings": [],
+   "status": "PASS"
+  },
+  "prompt_used": "ONE horizontal architectural band texture for a videogame, 1536x1024. A carved stone cornice band: a row of plain square dentils across the bottom third, a deep cove moulding through the middle, a flat fillet along the top, weathered and soot-darkened in the hollows. The band fills the whole frame from top edge to bottom edge, straight-on, no perspective, and repeats seamlessly left-right (the left and right edges continue into each other). About 2.5 m of band shown across. Palette: mid grey, dark grey. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs. References: match image is mood and material ONLY; do not copy its masonry layout. Palette is colors only. Grey template means entire canvas occupied by the architectural strip. Output wide 1536x1024.",
+  "file": "textures/ph2_01_10_string_course.png",
+  "size": [
+   1536,
+   1024
+  ]
+ },
+ {
+  "id": "ph2_01_11_bone_joint_flags",
+  "name": "Basalt flags with bone joints",
+  "kind": "tile",
+  "wrap": "xy",
+  "aspect": "square",
+  "check": {
+   "id": "ph2_01_11_bone_joint_flags",
+   "name": "Basalt flags with bone joints",
+   "size": [
+    1254,
+    1254
+   ],
+   "value": 0.191,
+   "sat": 0.079,
+   "seam_x": 1.13,
+   "seam_y": 1.04,
+   "light": 0.3,
+   "warnings": [],
+   "status": "PASS"
+  },
+  "prompt_used": "ONE seamless tiling base-color (albedo) texture for a videogame, 1024x1024. Large near-black basalt paving slabs of uneven rectangles, the joints between them filled with pale ivory bone-grout, worn smooth along a walking line, fine cracks also filled ivory. The picture shows about 3.0 m of the real surface across. Orthographic, straight-on, the whole image is the material, no perspective, no scene, no border. Seamless: everything continues across opposite edges, left-right and top-bottom. Palette: dark grey, pale warm grey, near-black grey. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs. Reference images provide mood and palette only, not content. Keep exposure around 30 percent grey. Exact repeat alignment at all four edges.",
+  "file": "textures/ph2_01_11_bone_joint_flags.png",
+  "size": [
+   1254,
+   1254
+  ]
+ },
+ {
+  "id": "ph2_01_12_rutted_setts",
+  "name": "Cart-rutted granite setts",
+  "kind": "tile",
+  "wrap": "xy",
+  "aspect": "square",
+  "check": {
+   "id": "ph2_01_12_rutted_setts",
+   "name": "Cart-rutted granite setts",
+   "size": [
+    1254,
+    1254
+   ],
+   "value": 0.25,
+   "sat": 0.213,
+   "seam_x": 1.58,
+   "seam_y": 1.19,
+   "light": 0.08,
+   "warnings": [],
+   "status": "PASS"
+  },
+  "prompt_used": "ONE seamless tiling base-color (albedo) texture for a videogame, 1024x1024. Grey granite setts in straight rows, worn domed tops, two smooth cart ruts running through, dark grit and mud in the joints, a little straw. The picture shows about 3.0 m of the real surface across. Orthographic, straight-on, the whole image is the material, no perspective, no scene, no border. Seamless: everything continues across opposite edges, left-right and top-bottom. Palette: mid grey, dark grey. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs. Reference images provide mood and palette only, not content. Keep exposure around 35 percent grey. Exact repeat alignment at all four edges. Two subtle parallel cart wheel wear lanes through the top-down paving.",
+  "file": "textures/ph2_01_12_rutted_setts.png",
+  "size": [
+   1254,
+   1254
+  ]
+ },
+ {
+  "id": "ph2_01_13_slum_cobbles",
+  "name": "Slum cobbles with filth",
+  "kind": "tile",
+  "wrap": "xy",
+  "aspect": "square",
+  "check": {
+   "id": "ph2_01_13_slum_cobbles",
+   "name": "Slum cobbles with filth",
+   "size": [
+    1254,
+    1254
+   ],
+   "value": 0.2,
+   "sat": 0.434,
+   "seam_x": 1.04,
+   "seam_y": 1.14,
+   "light": 0.1,
+   "warnings": [],
+   "status": "PASS"
+  },
+  "prompt_used": "ONE seamless tiling base-color (albedo) texture for a videogame, 1024x1024. Uneven river cobbles half sunk in brown mud, puddle-dark patches, trodden straw, broken pottery shards, nothing recognisable lying on top. The picture shows about 2.5 m of the real surface across. Orthographic, straight-on, the whole image is the material, no perspective, no scene, no border. Seamless: everything continues across opposite edges, left-right and top-bottom. Palette: dark brown, mid warm grey, mid brown. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs. Reference images provide mood and palette only, not content. Keep exposure around 35 percent grey. Exact repeat alignment at all four edges.",
+  "file": "textures/ph2_01_13_slum_cobbles.png",
+  "size": [
+   1254,
+   1254
+  ]
+ },
+ {
+  "id": "ph2_01_14_ash_street",
+  "name": "Ash and cinder street",
+  "kind": "tile",
+  "wrap": "xy",
+  "aspect": "square",
+  "check": {
+   "id": "ph2_01_14_ash_street",
+   "name": "Ash and cinder street",
+   "size": [
+    1254,
+    1254
+   ],
+   "value": 0.262,
+   "sat": 0.056,
+   "seam_x": 1.34,
+   "seam_y": 1.19,
+   "light": 0.11,
+   "warnings": [],
+   "status": "PASS"
+  },
+  "prompt_used": "ONE seamless tiling base-color (albedo) texture for a videogame, 1024x1024. A street of grey ash and black cinders over old paving, charred timber splinters, a few half-buried scorched cobbles showing through, soft drifts. The picture shows about 3.0 m of the real surface across. Orthographic, straight-on, the whole image is the material, no perspective, no scene, no border. Seamless: everything continues across opposite edges, left-right and top-bottom. Palette: dark grey, mid grey, mid warm grey. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs. Reference images provide mood and palette only, not content. Keep exposure around 35 percent grey. Exact repeat alignment at all four edges.",
+  "file": "textures/ph2_01_14_ash_street.png",
+  "size": [
+   1254,
+   1254
+  ]
+ },
+ {
+  "id": "ph2_01_15_wharf_deck",
+  "name": "Wet tarred wharf decking",
+  "kind": "tile",
+  "wrap": "xy",
+  "aspect": "square",
+  "check": {
+   "id": "ph2_01_15_wharf_deck",
+   "name": "Wet tarred wharf decking",
+   "size": [
+    1254,
+    1254
+   ],
+   "value": 0.204,
+   "sat": 0.298,
+   "seam_x": 1.61,
+   "seam_y": 1.35,
+   "light": 0.06,
+   "warnings": [
+    "seam on x is 1.61 (want <= 1.6): run make_tileable.py and repaint the band"
+   ],
+   "status": "WARN"
+  },
+  "prompt_used": "ONE seamless tiling base-color (albedo) texture for a videogame, 1024x1024. Wide wet timber deck planks running left to right, black with tar and wet, iron spikes in rows, green slime at the plank edges, rope-worn grooves. The picture shows about 3.0 m of the real surface across. Orthographic, straight-on, the whole image is the material, no perspective, no scene, no border. Seamless: everything continues across opposite edges, left-right and top-bottom. Palette: dark grey, dark brown. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs. Reference images provide mood and palette only, not content. Keep exposure around 30 percent grey. Exact repeat alignment at all four edges. Planks must run HORIZONTALLY unlike the reference.",
+  "file": "textures/ph2_01_15_wharf_deck.png",
+  "size": [
+   1254,
+   1254
+  ]
+ },
+ {
+  "id": "ph2_01_16_gutter_strip",
+  "name": "Street gutter channel (strip)",
+  "kind": "strip",
+  "wrap": "x",
+  "aspect": "wide",
+  "check": {
+   "id": "ph2_01_16_gutter_strip",
+   "name": "Street gutter channel (strip)",
+   "size": [
+    1536,
+    1024
+   ],
+   "value": 0.23,
+   "sat": 0.203,
+   "seam_x": 1.13,
+   "light": 0.54,
+   "warnings": [
+    "uneven light 0.54 (want <= 0.45): no vignette, sun patch or dark corner"
+   ],
+   "status": "WARN"
+  },
+  "prompt_used": "ONE horizontal architectural band texture for a videogame, 1536x1024. A shallow stone gutter channel running left to right: dished granite kerb stones either side, dark wet grime and a thin trickle line along the bottom, moss in the joints. The band fills the whole frame from top edge to bottom edge, straight-on, no perspective, and repeats seamlessly left-right (the left and right edges continue into each other). About 2.5 m of band shown across. Palette: dark grey, mid grey. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs. References: match image is mood and material ONLY; do not copy its masonry layout. Palette is colors only. Grey template means entire canvas occupied by the architectural strip. Output wide 1536x1024.",
+  "file": "textures/ph2_01_16_gutter_strip.png",
+  "size": [
+   1536,
+   1024
+  ]
+ },
+ {
+  "id": "ph2_01_17_drain_cover",
+  "name": "Drain grate in stone",
+  "kind": "single",
+  "wrap": "",
+  "aspect": "square",
+  "check": {
+   "id": "ph2_01_17_drain_cover",
+   "name": "Drain grate in stone",
+   "size": [
+    1254,
+    1254
+   ],
+   "value": 0.272,
+   "sat": 0.132,
+   "light": 0.91,
+   "warnings": [
+    "uneven light 0.91 (want <= 0.45): no vignette, sun patch or dark corner"
+   ],
+   "status": "WARN"
+  },
+  "prompt_used": "ONE videogame texture of a single object, 1024x1024. One square iron drain grate set into a square stone frame, seen straight down, heavy bars with rust, blackness below the bars, the stone frame filling the edges of the picture. Straight-on and orthographic, the object fills the frame edge to edge, about 1.2 m wide in the world. Palette: dark grey, mid grey, dark brown, near-black grey. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs. References supply mood, palette and full-frame occupancy only. A single square drain centered square-on, no surrounding scenery.",
+  "file": "textures/ph2_01_17_drain_cover.png",
+  "size": [
+   1254,
+   1254
+  ]
+ },
+ {
+  "id": "ph2_01_18_moat_water",
+  "name": "Moat water with scum",
+  "kind": "tile",
+  "wrap": "xy",
+  "aspect": "square",
+  "check": {
+   "id": "ph2_01_18_moat_water",
+   "name": "Moat water with scum",
+   "size": [
+    1254,
+    1254
+   ],
+   "value": 0.253,
+   "sat": 0.26,
+   "seam_x": 0.99,
+   "seam_y": 1.0,
+   "light": 0.09,
+   "warnings": [],
+   "status": "PASS"
+  },
+  "prompt_used": "ONE seamless tiling base-color (albedo) texture for a videogame, 1024x1024. Still dark green-black stagnant water seen from above, a patchy film of yellow-green scum and floating leaf rot in drifts, faint ripples, no reflections of sky or objects. The picture shows about 6.0 m of the real surface across. Orthographic, straight-on, the whole image is the material, no perspective, no scene, no border. Seamless: everything continues across opposite edges, left-right and top-bottom. Palette: near-black grey, dark grey, dark green, mid olive. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs. Palette reference only. Keep exposure around 25 percent grey. Fine evenly distributed scum, no standout blobs.",
+  "file": "textures/ph2_01_18_moat_water.png",
+  "size": [
+   1254,
+   1254
+  ]
+ },
+ {
+  "id": "ph2_01_19_waterline_wall",
+  "name": "Canal wall with water line",
+  "kind": "tile",
+  "wrap": "xy",
+  "aspect": "square",
+  "check": {
+   "id": "ph2_01_19_waterline_wall",
+   "name": "Canal wall with water line",
+   "size": [
+    1254,
+    1254
+   ],
+   "value": 0.223,
+   "sat": 0.205,
+   "seam_x": 1.3,
+   "seam_y": 2.31,
+   "light": 0.49,
+   "warnings": [
+    "seam on y is 2.31 (want <= 1.6): run make_tileable.py and repaint the band",
+    "uneven light 0.49 (want <= 0.45): no vignette, sun patch or dark corner"
+   ],
+   "status": "WARN"
+  },
+  "prompt_used": "ONE seamless tiling base-color (albedo) texture for a videogame, 1024x1024. Old stone canal wall, the lower third stained dark green-black and slimy up to a ragged water line, white salt tide marks just above it, plain grey wet stone above; seamless left-right, the band stays level. The picture shows about 2.5 m of the real surface across. Orthographic, straight-on, the whole image is the material, no perspective, no scene, no border. Seamless: everything continues across opposite edges, left-right and top-bottom. Palette: dark grey, mid olive. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs. References provide mood and palette ONLY, not content. Use STONE blocks, not brick. Keep midtone exposure 30 percent grey. Prioritize the specified lower-third waterline; horizontal repeat is essential.",
+  "file": "textures/ph2_01_19_waterline_wall.png",
+  "size": [
+   1254,
+   1254
+  ]
+ },
+ {
+  "id": "ph2_01_20_dye_flags",
+  "name": "Dye-stained flagstones",
+  "kind": "tile",
+  "wrap": "xy",
+  "aspect": "square",
+  "check": {
+   "id": "ph2_01_20_dye_flags",
+   "name": "Dye-stained flagstones",
+   "size": [
+    1254,
+    1254
+   ],
+   "value": 0.359,
+   "sat": 0.213,
+   "seam_x": 1.11,
+   "seam_y": 0.8,
+   "light": 0.09,
+   "warnings": [],
+   "status": "PASS"
+  },
+  "prompt_used": "ONE seamless tiling base-color (albedo) texture for a videogame, 1024x1024. Worn sandstone flags with old splashes and spreading stains of madder red, weld yellow and woad blue soaked into the stone, faded and overlapping, not fresh paint. The picture shows about 3.0 m of the real surface across. Orthographic, straight-on, the whole image is the material, no perspective, no scene, no border. Seamless: everything continues across opposite edges, left-right and top-bottom. Palette: mid warm grey, mid red, pale brown, mid blue-grey. Flat even diffuse light: no sun, no cast shadows, no highlights, no vignette, no darker corners. Midtone exposure, detail kept in the darks. Photoreal, weathered, dark fantasy, muted palette. No text, letters, numbers, runes, monograms, watermark, crosses, sunbursts, bells, haloes or holy signs. References provide mood and palette ONLY, not content. Midtone exposure 35 percent grey; dyes faded and desaturated, small widely distributed stains, no standout patch.",
+  "file": "textures/ph2_01_20_dye_flags.png",
+  "size": [
+   1254,
+   1254
+  ]
+ }
+]
