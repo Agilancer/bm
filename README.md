@@ -1337,12 +1337,14 @@ where they began (`keepPace`): they used to stay the level they were made at.
   and its blackest drawn up to a dark steel, all of it drawn toward its middle so its painted shading isn't a mottle,
   only long gold kept gold: flecks and curls painted out with the plate round them, the rest of its old gold, a dull
   ochre, made as light as its piece first (`matchLum`) and given its piece's metal and roughness, rust not spared as
-  skin), on them, on the ground and in the pictures: a cream cloth (on them, lifted and warmed
+  skin; its trim lines grown over their own darker shading and made a polished gold, `growInto` and `polishGold`), on them, on the ground and in the pictures: a cream cloth (on them, lifted and warmed
   toward ivory, cloth to plate by how metal it is rather than a switch), silver plate, gold trim. Anyone else's dyed metal is a little lighter than their dyed cloth, so the plate
   reads over it (its darker steel lifted most, its lightest drawn down, so a pale plate isn't a white), and their cloth a
   little greyer than the dye. Their weapon and shield are whatever they've been given of their own
   kinds; a painted weapon more often than not goes with their coat, a shield nearly always (a paladin's is Bleached
-  steel); one that doesn't is plain steel, Bleached (faded: its darks lifted, near its picture's light) or Blackened. A mace, put away, hangs at
+  steel); one that doesn't is plain steel, Bleached (faded: its darks lifted, near its picture's light) or Blackened.
+  A painted one's metal is guessed from its picture before it was painted (`propMetal`, carried in its alpha): by its
+  paint a bleached board was all steel, a mirror of the ground. A mace, put away, hangs at
   their side, clear of a cape.
 - **The pictures** in the pack and the book are drawn in Blender by `tools/heroes/icons.py` (into
   `assets/game/heroes/icons`, from the GLBs' own arrays: no glTF import) and dyed in the page as the bodies are

@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { fillFrom, goldOf, harmonize, hsvOf, linesOf, lumOf, lumRange, matchLum, paintProp, plainRamp, rampMap, richer, trimOf, wideOf } from '../src/gfx/recolour.js';
+import { fillFrom, goldOf, growInto, harmonize, hsvOf, linesOf, lumOf, lumRange, matchLum, paintProp, plainRamp, polishGold, propMetal, rampMap, richer, trimOf, wideOf } from '../src/gfx/recolour.js';
 import { coverCode } from '../src/gfx/herolook.js';
 import { useKit, outfitRamps, setsWorn, toneWeight, pieceRamp, shapeClass, paleLift, palNear, rampFor, lookOf, bareHead, rollPartyGear, partyDrops, catchUp, fits, score, bestOf, gearStats, groundModelOf, sizeOfHG, hgLines, hgWorth, kindsOf, shapeShows, HG_SLOTS, HG_ARMOUR, SHIELD_KINDS, PROP_PALS } from '../src/items/partygear.js';
 import { makeRng } from '../src/items/items.js';
@@ -343,4 +343,40 @@ test("a pale outfit's gold: a trim line stays gold, a brass field is plate", () 
     for (let x = 5; x < 11; x++) assert.equal(wide[y * W + x], 1, 'the field is plate, to its edges');
     assert.equal(wide[y * W + 3], 0);
   }
+});
+
+test("a pale outfit's gold trim grows over its own darker gold, a texel a side, and no further", () => {
+  const W = 9, H = 3, keep = new Uint8Array(W * H);
+  for (let y = 0; y < H; y++) keep[y * W + 4] = 1;                      // the line
+  const brass = (i) => (i % W) >= 2 && (i % W) <= 6;                     // its darker shading, either side
+  growInto(keep, W, H, brass, 1);
+  for (let y = 0; y < H; y++) assert.deepEqual([...keep.slice(y * W, y * W + W)], [0, 0, 0, 1, 1, 1, 0, 0, 0], 'one texel a side');
+  growInto(keep, W, H, brass, 5);
+  for (let y = 0; y < H; y++) assert.deepEqual([...keep.slice(y * W, y * W + W)], [0, 0, 1, 1, 1, 1, 1, 0, 0], 'never past its own gold');
+});
+
+test("the trim a pale outfit keeps is a polished gold, its brown shading too, not a weathered ochre", () => {
+  const N = 20, px = new Uint8ClampedArray((N + 1) * 4);
+  for (let i = 0; i < N; i++) px.set([70 + 8 * i, 50 + 7 * i, 20 + 4 * i, 255], i * 4);   // brown shading up to a lit brass
+  px.set([200, 200, 195, 255], N * 4);
+  polishGold(px, (i) => i < N);
+  const v = Array.from({ length: N }, (_, i) => hsvOf([px[i * 4], px[i * 4 + 1], px[i * 4 + 2]]));
+  for (const [h, s, val] of v) {
+    assert.ok(h > 0.1 && h < 0.13, `a gold's hue (${h.toFixed(3)})`);
+    assert.ok(val >= 0.54 && s >= 0.5, 'never a brown');
+  }
+  for (let i = 1; i < N; i++) assert.ok(v[i][2] >= v[i - 1][2], 'its shading kept, in order');
+  assert.ok(v[N - 1][2] - v[0][2] > 0.35, 'a polished gold has its lights and darks');
+  for (let i = 0; i < N; i++) assert.ok(goldOf(px[i * 4], px[i * 4 + 1], px[i * 4 + 2]) > 0.8, 'gold, by goldOf');
+  assert.deepEqual([...px.slice(N * 4, N * 4 + 3)], [200, 200, 195], 'the plate left alone');
+});
+
+test("a painted prop's metal is its own steel's: a blue board bleached white isn't a mirror", () => {
+  const px = new Uint8ClampedArray([40, 60, 140, 255, 180, 180, 185, 255, 50, 50, 50, 255]);
+  const m = propMetal(px);
+  assert.ok(m[0] < 30, 'blue paint is no steel');
+  assert.ok(m[1] > 200, 'light grey steel is');
+  assert.ok(m[2] < 30, 'a dark grey is no polished steel');
+  paintProp(px, PROP_PALS.bleached);
+  assert.ok(propMetal(px)[0] > 200, 'by its bleached paint the board would be steel: so it is guessed before');
 });
