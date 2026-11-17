@@ -50,6 +50,10 @@ export function footing(h) {
   return { lo, hi, c, s };
 }
 const DOOR = 0.8, WALL = 0.45;   // half a doorway's width; a house wall's thickness
+// A house's door by its walls: carved panels in dressed stone and fine brick, iron-bound in a house of stone, planks else.
+// (Iron-bound for a house of stone or a rich one, planks for the rest. Never the pack's carved door_rich: its four panels
+// are a cross with the knocker at the crossing. The V/T rule.)
+const doorOf = (h) => (/dressed|rich_brick|basalt|granite|block|course/.test(h.wall) ? 'p2_door_iron' : 'p2_door_poor');
 // A house's upstairs, if it has one: two storeys or more, and room inside for a stair up its left wall (local x -) from by
 // the door to the back, with floor beside it and beyond it. (Its floors, with the ground floor's: houseWalls.) { ix, iz, fy, uy, uc, sw, steps: [[lx, lz, y]], hole: [z0, z1],
 // rects } (rects: the floor and the treads, as K.deck takes them). RISE a step, TREAD its depth, SW the stair's width.
@@ -127,6 +131,16 @@ function onFloor(K, x, z, y, fn) {
 // The same house from near: a shell you walk into. Outside: its walls with the doorway cut, windows (most of them lit),
 // a lamp by the door of one in three, its roof with a chimney and now and then a dormer. Inside: plastered walls, a board
 // floor, a ceiling, and a little of somebody's life. A ruin has no roof or ceiling, and rubble for furniture.
+// His banner: the pack's skull field dyed oxblood, the horned skull on it (tools/phobos/textures/wire_ph2.py
+// banner_skull). Not banner_blood or war_banner: both have a crown of thorns on the skull. The V/T rule.)
+export const BANNER = 'p2_banner_skull';
+// His banner at the head of one of his long red hangings (the gates', the Keep's): the painting over its top, the plain
+// cloth on down to its point. (K.hanging: src/core/places.js.)
+function hangBanner(K, x, y, z, face, w, len, rep) {
+  const [nx, nz] = face, rx = nz, rz = -nx, h = w * 1.5, P = (u, v) => [x + rx * u + nx * 0.16, y + v, z + rz * u + nz * 0.16];
+  K.quad(BANNER, P(-w / 2, 0), P(w / 2, 0), P(w / 2, -h), P(-w / 2, -h), [nx, 0, nz], [[0, 0], [1, 0], [1, 1], [0, 1]]);
+  K.hanging('cloth_red', x, y - h * 0.8, z, face, w, len - h * 0.8, rep);
+}
 function houseNear(K, h) {
   const F = footing(h), { lo, hi, c, s } = F, f = h.front, top = hi + h.h, fy = hi + 0.1, ceil = Math.min(top - 0.3, fy + 3.1);
   const P = (lx, ly, lz) => [h.x + lx * c + lz * s, ly, h.z - lx * s + lz * c];
@@ -138,14 +152,14 @@ function houseNear(K, h) {
   else { out(-h.hx, fz, -DOOR, fz, lo - 0.5, top); out(DOOR, fz, h.hx, fz, lo - 0.5, top); out(-DOOR, fz, DOOR, fz, dh, top); out(h.hx, -fz, -h.hx, -fz, lo - 0.5, top); }
   out(h.hx, -h.hz, h.hx, h.hz, lo - 0.5, top); out(-h.hx, h.hz, -h.hx, -h.hz, lo - 0.5, top);
   // Inside: the same four the other way round, a hand's breadth in; the doorway's cheeks and head; floor and ceiling.
-  const ix = h.hx - WALL, iz = h.hz - WALL, IN = 'pale:ph_grey_plaster', inn = (ax, az, bx, bz, y0, y1) => K.quad(IN, P(ax, y0, az), P(bx, y0, bz), P(bx, y1, bz), P(ax, y1, az));
+  const ix = h.hx - WALL, iz = h.hz - WALL, IN = /poor|daub|soot|burnt|char/.test(h.wall) ? 'p2_sooty_plaster' : 'pale:ph_grey_plaster', inn = (ax, az, bx, bz, y0, y1) => K.quad(IN, P(ax, y0, az), P(bx, y0, bz), P(bx, y1, bz), P(ax, y1, az));
   const up = upstairs(h, F), gz = f * iz, roofY = ruin ? top : up ? up.uc : ceil;
   if (f > 0) { inn(DOOR, gz, ix, gz, fy, roofY); inn(-ix, gz, -DOOR, gz, fy, roofY); inn(-DOOR, gz, DOOR, gz, dh, roofY); inn(ix, -gz, -ix, -gz, fy, roofY); }
   else { inn(-DOOR, gz, -ix, gz, fy, roofY); inn(ix, gz, DOOR, gz, fy, roofY); inn(DOOR, gz, -DOOR, gz, dh, roofY); inn(-ix, -gz, ix, -gz, fy, roofY); }
   inn(ix, iz, ix, -iz, fy, roofY); inn(-ix, -iz, -ix, iz, fy, roofY);
   for (const sd of [-1, 1]) K.quad('wood', P(sd * DOOR, fy - 0.2, fz), P(sd * DOOR, fy - 0.2, gz), P(sd * DOOR, dh, gz), P(sd * DOOR, dh, fz));
   K.quad('wood', P(-DOOR, dh, fz), P(DOOR, dh, fz), P(DOOR, dh, gz), P(-DOOR, dh, gz), [0, -1, 0]);
-  K.quad('ph_boards', P(-ix, fy, -iz), P(-ix, fy, iz), P(ix, fy, iz), P(ix, fy, -iz), [0, 1, 0]);
+  K.quad('p2_worn_floorboards', P(-ix, fy, -iz), P(-ix, fy, iz), P(ix, fy, iz), P(ix, fy, -iz), [0, 1, 0]);
   // (A step at the door where the street's lower than the floor.)
   K.quad('stone', P(-DOOR - 0.3, fy, fz), P(-DOOR - 0.3, fy, fz + f * 0.9), P(DOOR + 0.3, fy, fz + f * 0.9), P(DOOR + 0.3, fy, fz), [0, 1, 0]);
   if (!ruin && !up) K.quad('wood', P(-ix, ceil, -iz), P(ix, ceil, -iz), P(ix, ceil, iz), P(-ix, ceil, iz), [0, -1, 0]);
@@ -155,8 +169,11 @@ function houseNear(K, h) {
     const shut = barred(h), th = shut ? 0 : (1.3 + r(26) * 0.5), hx0 = DOOR - 0.04, hz0 = f * (iz - 0.02), L = 2 * DOOR - 0.08;
     const dx = -Math.cos(th), dz = -f * Math.sin(th), [wx, , wz] = P(hx0 + dx * L / 2, 0, hz0 + dz * L / 2);
     const [ex, , ez] = P(hx0 + dx, 0, hz0 + dz), [ox, , oz] = P(hx0, 0, hz0), yawL = Math.atan2(-(ez - oz), ex - ox);
-    K.box('wood', wx, fy, wz, L / 2, 2.3, 0.035, yawL, { collide: false });
-    for (const sy of [0.45, 1.75]) K.box('iron', wx, fy + sy, wz, L / 2 - 0.05, 0.07, 0.045, yawL, { collide: false });
+    // (Its two faces painted, the PH2 pack's: a poor house's planks, a rich one's carved panels, the iron-bound door of a
+    // house of stone; the leaf's edges plain dark wood.)
+    K.box('dark:wood', wx, fy, wz, L / 2, 2.3, 0.035, yawL, { collide: false });
+    const dl = doorOf(h), cy = Math.cos(yawL), sy = Math.sin(yawL);
+    for (const e of [1, -1]) { const Q = (u, yy) => [wx + u * cy + 0.04 * e * sy, yy, wz - u * sy + 0.04 * e * cy]; K.quad(dl, Q(-L / 2 * e, fy + 2.3), Q(L / 2 * e, fy + 2.3), Q(L / 2 * e, fy), Q(-L / 2 * e, fy), [e * sy, 0, e * cy], [[0, 0], [1, 0], [1, 1], [0, 1]]); }
   }
   // The roof: ridged, a chimney on most, a dormer on some of the bigger.
   if (!ruin) {
@@ -184,7 +201,8 @@ function houseNear(K, h) {
     // (Two bars down the lit ones, so it's a window and not a hole: never one across, which would make a cross of it, and
     // the cross is hers. A shutter hung open by some.)
     if (lit && (st === 0 || big)) for (const bu of [-ww / 3, ww / 3]) K.quad('wood', P(wx + bu + d * 0.025, wy, wz + q * 0.1), P(wx + bu - d * 0.025, wy, wz + q * 0.1), P(wx + bu - d * 0.025, wy + wh, wz + q * 0.1), P(wx + bu + d * 0.025, wy + wh, wz + q * 0.1), N);
-    if (sd !== 0 && (st === 0 || r(16 + st) < 0.5)) K.quad('wood', P(wx - d * fw, wy, wz + q * 0.03), P(wx - d * (fw + 0.34), wy, wz + q * 0.03), P(wx - d * (fw + 0.34), wy + wh, wz + q * 0.03), P(wx - d * fw, wy + wh, wz + q * 0.03), N);
+    // (One leaf of a painted pair, the PH2 pack's, hinged at the frame.)
+    if (sd !== 0 && (st === 0 || r(16 + st) < 0.5)) K.quad('p2_shutters', P(wx - d * fw, wy, wz + q * 0.03), P(wx - d * (fw + 0.34), wy, wz + q * 0.03), P(wx - d * (fw + 0.34), wy + wh, wz + q * 0.03), P(wx - d * fw, wy + wh, wz + q * 0.03), N, [[0.5, 1], [0, 1], [0, 0], [0.5, 0]]);
     // (And from inside, on the floors you can stand on: the frame and the pane on the plaster, facing in; the pane dark glass,
     // the night or the next house's wall beyond it, whatever the lamp in it shows the street.)
     if (!ruin && st <= (upstairs(h, F) ? 1 : 0)) {
@@ -198,7 +216,8 @@ function houseNear(K, h) {
     const NF = [f * s, 0, f * c], band = (y, t, o) => { K.quad('dark:stone', P(-h.hx, y, fz + f * o), P(h.hx, y, fz + f * o), P(h.hx, y + t, fz + f * o), P(-h.hx, y + t, fz + f * o), NF); K.quad('dark:stone', P(-h.hx, y + t, fz), P(h.hx, y + t, fz), P(h.hx, y + t, fz + f * o), P(-h.hx, y + t, fz + f * o), [0, 1, 0]); };
     for (let st = 1; st < storeys; st++) if (fy + st * 3.3 < top - 1) band(fy + st * 3.3 - 0.32, 0.24, 0.12);
     band(top - 0.42, 0.42, 0.24);
-    if (flag) { const by = top - 0.9, len = Math.min(7, by - fy - 3.4), [bx, , bz] = P(0, 0, fz); if (len > 2.5) { K.hanging('cloth_red', bx, by, bz, [f * s, f * c], 1.7, len, 3); K.beam('iron', P(-0.88, by + 0.04, fz + f * 0.1), P(0.88, by + 0.04, fz + f * 0.1), 0.045); } }
+    // (His banner, the PH2 pack's: blood red, his horned skull on it.)
+    if (flag) { const by = top - 0.9, len = Math.min(7, by - fy - 3.4); if (len > 2.5) { const bh = Math.min(len, 2.7), bw = bh / 3; K.quad(BANNER, P(-bw * f, by, fz + f * 0.06), P(bw * f, by, fz + f * 0.06), P(bw * f, by - bh, fz + f * 0.06), P(-bw * f, by - bh, fz + f * 0.06), NF, [[0, 0], [1, 0], [1, 1], [0, 1]]); K.beam('iron', P(-bw - 0.08, by + 0.04, fz + f * 0.1), P(bw + 0.08, by + 0.04, fz + f * 0.1), 0.045); } }
   }
   // A jettied front on some along the named streets: the first floor's beam carried out over the street on brackets; and
   // where there's no shop's awning under it, a pent roof of the house's tiles along the ground floor.
@@ -341,7 +360,7 @@ function curtain(K, layer, ax, az, bx, bz, t, h, o = {}) {
   K.wall(layer, ax, az, bx, bz, t, h, o);
   if (K.lean) return;
   const len = Math.hypot(bx - ax, bz - az), yaw = Math.atan2(bx - ax, bz - az) - Math.PI / 2, ux = (bx - ax) / len, uz = (bz - az) / len;
-  const lite = layer.startsWith('soot:') ? layer.slice(5) : layer.startsWith('char:') ? 'soot:' + layer.slice(5) : 'soot:' + layer.replace(/^\w+:/, '');
+  const lite = o.lite || (layer.startsWith('soot:') ? layer.slice(5) : layer.startsWith('char:') ? 'soot:' + layer.slice(5) : 'soot:' + layer.replace(/^\w+:/, ''));
   const n = Math.max(1, Math.round(len / 18));
   for (let k = 0; k <= n; k++) { const x = ax + (bx - ax) * k / n, z = az + (bz - az) * k / n; K.box(lite, x, Y(x, z) - 0.5, z, 0.9, h * 0.94, t / 2 + 0.7, yaw, { collide: false }); }
   for (let k = 0; k < n; k++) {
@@ -524,18 +543,18 @@ const sloughD = (x, z) => { let d = 1e9; for (let i = 0; i + 1 < SLOUGH.length; 
 // umber, soot), so from the castle the city's quarters are told apart: the burnt one soot-black, the rich slate and his
 // ox-blood, the market and the tanners old clay, the poor old tile gone black. No sage or pink: a toy town's.)
 const LOOK = {
-  barbican: { lot: [14, 12], h: [9, 14], fill: 0.5, wall: ['ph_basalt', 'dark:block'], roof: ['dark:roof_2', 'slate:roof_2'], row: 3, alley: 6 },
-  cinder: { lot: [9, 10], h: [4, 10], fill: 0.86, wall: ['ph_burnt_wall', 'ph_soot_brick', 'ph_burnt_wall'], roof: [null, null, 'soot:roof_3', 'dark:roof_2', 'soot:roof_2'] },
-  rookeries: { lot: [7, 9], h: [9, 17], fill: 0.97, wall: ['ph_poor_brick', 'ph_poor_brick', 'ph_soot_brick', 'ph_daub'], roof: ['soot:roof_3', 'umber:roof_4', 'dark:roof_2', 'roof_4', 'slate:roof_3', 'soot:roof_4'], row: 5, alley: 2.4 },
-  market: { lot: [8, 11], h: [8, 13], fill: 0.95, wall: ['ph_market_wall', 'ph_market_wall', 'ph_daub'], roof: ['umber:roof_1', 'roof_1', 'blood:roof_2', 'umber:roof_2', 'slate:roof_2'], open: 48 },
-  wharf: { lot: [16, 13], h: [8, 11], fill: 0.9, wall: ['ph_poor_brick', 'rubble'], roof: ['slate:roof_4', 'soot:roof_4', 'umber:roof_4'], row: 2 },
-  tanners: { lot: [8, 10], h: [7, 11], fill: 0.94, wall: ['ph_daub', 'ph_poor_brick', 'ph_daub'], roof: ['umber:roof_3', 'umber:roof_4', 'roof_4', 'soot:roof_3'] },
-  bones: { lot: [10, 13], h: [6, 10], fill: 0.3, wall: ['pale:stone', 'pale:rubble'], roof: ['dark:roof_2', 'slate:roof_2'], row: 3, alley: 7 },
-  barracks: { lot: [22, 11], h: [9, 12], fill: 0.9, wall: ['soot:block', 'slate:course'], roof: ['slate:roof_2', 'blood:roof_2', 'slate:roof_1'], open: 62, row: 2, alley: 5 },
-  mages: { lot: [11, 12], h: [11, 16], fill: 0.9, spireWall: 'slate:course', wall: ['slate:ph_dressed', 'ph_rich_brick', 'frost:course'], roof: ['slate:roof_2', 'dark:roof_2', 'slate:roof_1'], spires: 0.06, row: 3 },
-  dukes: { lot: [15, 15], h: [10, 14], fill: 0.85, wall: ['slate:ph_dressed', 'ph_rich_brick'], roof: ['blood:roof_1', 'slate:roof_2', 'dark:roof_2', 'blood:roof_2'], spires: 0.04, row: 2, alley: 5 },
-  approach: { lot: [11, 12], h: [9, 14], fill: 0.85, wall: ['ph_granite', 'slate:ph_dressed'], roof: ['dark:roof_2', 'blood:roof_2', 'slate:roof_2'], row: 3 },
-  other: { lot: [8, 10], h: [7, 12], fill: 0.93, wall: ['ph_market_wall', 'ph_poor_brick', 'ph_daub'], roof: ['soot:roof_3', 'umber:roof_4', 'slate:roof_1', 'slate:roof_3', 'umber:roof_1', 'dark:roof_2'] },
+  barbican: { lot: [14, 12], h: [9, 14], fill: 0.5, wall: ['ph_basalt', 'dark:block'], roof: ['dark:roof_2', 'p2_slate_roof'], row: 3, alley: 6 },
+  cinder: { lot: [9, 10], h: [4, 10], fill: 0.86, wall: ['ph_burnt_wall', 'ph_soot_brick', 'ph_burnt_wall', 'p2_char_planks'], roof: [null, null, 'p2_burnt_roof', 'dark:roof_2', 'p2_burnt_roof'] },
+  rookeries: { lot: [7, 9], h: [9, 17], fill: 0.97, wall: ['ph_poor_brick', 'ph_poor_brick', 'ph_soot_brick', 'ph_daub'], roof: ['p2_shingle_roof', 'umber:roof_4', 'p2_slate_roof', 'roof_4', 'soot:p2_shingle_roof', 'soot:roof_4'], row: 5, alley: 2.4 },
+  market: { lot: [8, 11], h: [8, 13], fill: 0.95, wall: ['ph_market_wall', 'ph_market_wall', 'ph_daub'], roof: ['umber:roof_1', 'p2_shingle_roof', 'p2_slate_roof', 'umber:roof_2', 'slate:roof_2'], open: 48 },
+  wharf: { lot: [16, 13], h: [8, 11], fill: 0.9, wall: ['ph_poor_brick', 'rubble', 'p2_tar_boards'], roof: ['p2_slate_roof', 'soot:roof_4', 'p2_shingle_roof'], row: 2 },
+  tanners: { lot: [8, 10], h: [7, 11], fill: 0.94, wall: ['ph_daub', 'ph_poor_brick', 'ph_daub'], roof: ['umber:roof_3', 'p2_shingle_roof', 'roof_4', 'soot:p2_shingle_roof'] },
+  bones: { lot: [10, 13], h: [6, 10], fill: 0.3, wall: ['p2_bone_rubble', 'pale:stone', 'p2_bone_rubble'], roof: ['p2_slate_roof', 'dark:roof_2'], row: 3, alley: 7 },
+  barracks: { lot: [22, 11], h: [9, 12], fill: 0.9, wall: ['soot:block', 'slate:course'], roof: ['p2_slate_roof', 'blood:p2_blood_tiles', 'slate:roof_1'], open: 62, row: 2, alley: 5 },
+  mages: { lot: [11, 12], h: [11, 16], fill: 0.9, spireWall: 'slate:course', wall: ['slate:ph_dressed', 'ph_rich_brick', 'frost:course'], roof: ['p2_verdigris_roof', 'p2_slate_roof', 'dark:roof_2', 'p2_lead_roof'], spires: 0.06, row: 3 },
+  dukes: { lot: [15, 15], h: [10, 14], fill: 0.85, wall: ['slate:ph_dressed', 'ph_rich_brick'], roof: ['p2_lead_roof', 'blood:p2_blood_tiles', 'p2_slate_roof', 'blood:roof_2'], spires: 0.04, row: 2, alley: 5 },
+  approach: { lot: [11, 12], h: [9, 14], fill: 0.85, wall: ['ph_granite', 'slate:ph_dressed'], roof: ['blood:p2_blood_tiles', 'dark:roof_2', 'p2_slate_roof'], row: 3 },
+  other: { lot: [8, 10], h: [7, 12], fill: 0.93, wall: ['ph_market_wall', 'ph_poor_brick', 'ph_daub'], roof: ['p2_shingle_roof', 'umber:roof_4', 'p2_slate_roof', 'slate:roof_3', 'umber:roof_1', 'dark:roof_2'] },
 };
 function districtAt(x, z) {
   let best = 'other', q = 1.3, at = null;
@@ -574,7 +593,7 @@ function wall(K) {
       // (Over the way in: the gate's head, and his red down it.)
       K.box(L, gx, gy + 16, gz, 11, 62, 10, Math.atan2(-uz, ux), { collide: false });
       walk(K, [[gx, gz, 12, T / 2, Math.atan2(-uz, ux), top]]);
-      K.hanging('cloth_red', gx - uz * 10.3, gy + 74, gz + ux * 10.3, [-uz, ux], 9, 50, 6); K.hanging('cloth_red', gx + uz * 10.3, gy + 74, gz - ux * 10.3, [uz, -ux], 9, 50, 6);
+      hangBanner(K, gx - uz * 10.3, gy + 74, gz + ux * 10.3, [-uz, ux], 9, 50, 6); hangBanner(K, gx + uz * 10.3, gy + 74, gz - ux * 10.3, [uz, -ux], 9, 50, 6);
       // (The portcullis, wound up into the head all but its teeth, on the outer face; iron.)
       { const o = (uz * (gx - CITY.x) - ux * (gz - CITY.z)) > 0 ? 1 : -1, nx = uz * o, nz = -ux * o, px = gx + nx * 9.4, pz = gz + nz * 9.4, yw = Math.atan2(-uz, ux);
         for (let b = -7.6; b <= 7.61; b += 0.95) K.box('iron', px + ux * b, gy + 12.6, pz + uz * b, 0.09, 3.6, 0.09, yw, { collide: false });
@@ -736,7 +755,7 @@ const byCell = () => { const m = new Map(); for (const h of phobosHouses()) (m.g
 function districts(K) {
   // (A mage's spire from far without the tower kit: there are hundreds, and from far its slits and bands are a pixel. It
   // has them from near, phobosCell.)
-  for (const [cell, list] of byCell()) K.group('ph:' + cell, true, () => { for (const h of list) { if (h.spire) tower(K, h.wall, h.x, h.z, h.r, h.h, 'soot:roof_2', { steep: 2.2, plain: true }); else houseFar(K, h); } });
+  for (const [cell, list] of byCell()) K.group('ph:' + cell, true, () => { for (const h of list) { if (h.spire) tower(K, h.wall, h.x, h.z, h.r, h.h, 'p2_verdigris_roof', { steep: 2.2, plain: true }); else houseFar(K, h); } });
 }
 // One cell's houses as they are from near (houseNear), and what lines its streets: built when you come within a street or
 // two of it, by the renderer. Nothing here stops a body: that's all in the far view's build.
@@ -852,7 +871,7 @@ export function phobosCell(K, cell) {
     if (l.iron) streetLamp(K, l.x, l.z, hh, l.yaw); else K.lantern(l.x, l.z, hh, l.yaw, 'wood');
     (K.lamps ||= []).push({ p: [l.x + Math.cos(l.yaw) * out, Y(l.x, l.z) + hh - 0.7, l.z - Math.sin(l.yaw) * out], c: [1, 0.66, 0.34], r: l.iron ? 32 : 36, i: l.iron ? 30 : 22, flicker: 0.3 });
   }
-  for (const h of byCell().get(cell) || []) { if (h.spire) tower(K, h.wall, h.x, h.z, h.r, h.h, 'soot:roof_2', { steep: 2.2 }); else houseNear(K, h); }
+  for (const h of byCell().get(cell) || []) { if (h.spire) tower(K, h.wall, h.x, h.z, h.r, h.h, 'p2_verdigris_roof', { steep: 2.2 }); else houseNear(K, h); }
   for (const hb of HUBS) if (cellOf(hb.x, hb.z) === cell) hubNear(K, hb);
   if (CASTLE_CELLS.has(cell)) castleNear(K, cell);
   wallNear(K, cell);
@@ -898,16 +917,30 @@ function landmarks(K) {
 
 // What the streets have that's seen from far: the King's Mile's two sidewalks, flagged and a hand higher than the roadway,
 // under its house fronts; and Chainmarket's ring of stalls round the gibbet tower, with carts among them.
+// (Its roadway, between the walks: setts down the King's Mile and the better streets, cobbles in the slums, ash in the Cinder
+// Quarter, dyers' flags on the Tanners' Steps. The PH2 pack's.)
+const roadOf = (spine, x, z) => {
+  if (spine) return 'p2_rutted_setts';
+  const k = districtAt(x, z).key;
+  return k === 'cinder' ? 'p2_ash_street' : k === 'tanners' ? 'p2_dye_flags' : k === 'rookeries' || k === 'wharf' || k === 'other' ? 'p2_slum_cobbles' : k === 'bones' ? 'pale:p2_rutted_setts' : 'p2_rutted_setts';
+};
 function streets(K) {
   for (const st of STREETS) {
     const spine = st.w > 5, wide = spine ? 1.6 : 0.8;
     for (let i = 0; i + 1 < st.pts.length; i++) {
       const a = st.pts[i], b = st.pts[i + 1], L = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / L, uz = (b[1] - a[1]) / L, yaw = Math.atan2(-uz, ux), n = Math.ceil(L / 8);
+      // (In big cells, a piece's whole length: the land's corners are near their budget. Not on a phone, whose ground shows the
+      // road already.)
+      if (!K.lean) for (let k = 0; k < n; k++) {
+        const t = (k + 0.5) * L / n, x = a[0] + ux * t, z = a[1] + uz * t;
+        if (cityIn(x, z) > 0.97 || (x > 10430 && Math.abs(z) < 48) || sloughD(x, z) < 6) continue;
+        K.paving(roadOf(spine, x, z), x, z, L / n / 2 + 0.05, st.w - 2 * wide + 0.12, yaw, 0.09, 4.2);
+      }
       for (let k = 0; k < n; k++) for (const sd of [-1, 1]) {
         const t = (k + 0.5) * L / n, off = st.w - wide + 0.1, x = a[0] + ux * t - uz * off * sd, z = a[1] + uz * t + ux * off * sd;
         if (cityIn(x, z) > 0.97 || (x > 10430 && Math.abs(z) < 48) || sloughD(x, z) < 6) continue;
         // (The walk a hand higher than the roadway, and a kerb of stone along its edge.)
-        K.paving('flags', x, z, L / n / 2 + 0.05, wide, yaw, 0.16);
+        K.paving('soot:p2_walk_paving', x, z, L / n / 2 + 0.05, wide, yaw, 0.16);
         if (K.lean) continue;
         const kx = x + uz * (wide + 0.12) * sd, kz = z - ux * (wide + 0.12) * sd;
         // (Its top and its face to the road: two quads, not a box.)
@@ -940,24 +973,31 @@ function castleNear(K, cell) {}
 // The ground's height on the crag by ward, and a spot's own.
 const wardY = (i) => PLAIN + WARDS[i][1];
 export function phobosCastle(K) {
-  const S = 'soot:ph_granite', C = 'soot:ph_granite', B = 'soot:ph_granite', R = 'soot:roof_2';
+  // (The PH2 pack's: the wards' granite; his blood-red tiles on the halls, fish-scale slate on the towers' and spires' cones.)
+  // (In soot, as the old granite was: his castle is dark from the city.)
+  // (The curtains in the bridge ashlar: the granite's drips, a block at a time, lined up into a palisade's boards along
+  // a wall seen from the city. The critics, round 2.)
+  // (Its foot course and pilasters a step lighter, in the towers' granite: the ashlar's own lighter step is near white,
+  // and a pale course across a dark face read as a cross from the gate. The V/T rule.)
+  const BL = { crenel: true, lite: 'p2_curtain_granite' };
+  const S = 'soot:p2_curtain_granite', C = 'soot:p2_curtain_granite', B = 'soot:p2_bridge_ashlar', R = 'blood:p2_blood_tiles', RT = 'p2_fishscale_slate';
   // The outer curtain round the crag's edge, a tower every third stretch; the ward walls across it at each step up.
   const ring = [];
   for (let i = 0; i < 44; i++) { const a = i / 44 * TAU; ring.push([CRAG.x + Math.cos(a) * CRAG.a * 0.86, CRAG.z + Math.sin(a) * CRAG.b * 0.86]); }
   ring.forEach((p, i) => {
     const q = ring[(i + 1) % ring.length];
     if (Math.abs(p[1]) < 22 && p[0] < CRAG.x) return;   // (the gate, at the west end)
-    curtain(K, B, p[0], p[1], q[0], q[1], 5, 24, { crenel: true });
-    if (i % 3 === 0) tower(K, C, p[0], p[1], 8, 48 + 14 * hash2(i, 4), i % 2 ? R : null, { steep: 2.6 });
+    curtain(K, B, p[0], p[1], q[0], q[1], 5, 24, BL);
+    if (i % 3 === 0) tower(K, C, p[0], p[1], 8, 48 + 14 * hash2(i, 4), i % 2 ? RT : null, { steep: 2.6 });
   });
   // (Only the Middle Ward's: where the High Ward's wall would run the Keep's body stands.)
   for (const [i, x0] of [[1, WARDS[1][0]]]) {
-    for (const s of [-1, 1]) { curtain(K, B, x0 - s * 46 * 0.22 - 0, s * 24, x0 - s * 250 * 0.22, s * 250, 8, 48, { crenel: true }); tower(K, C, x0, s * 24, 13, 96, R, { steep: 2.4, sides: 16 }); for (const zz of [90, 170]) tower(K, C, x0 - s * zz * 0.22, s * zz, 9, 70, zz > 100 ? R : null); }
+    for (const s of [-1, 1]) { curtain(K, B, x0 - s * 46 * 0.22 - 0, s * 24, x0 - s * 250 * 0.22, s * 250, 8, 48, BL); tower(K, C, x0, s * 24, 13, 96, RT, { steep: 2.4, sides: 16 }); for (const zz of [90, 170]) tower(K, C, x0 - s * zz * 0.22, s * zz, 9, 70, zz > 100 ? R : null); }
     K.box(S, x0, Y(x0, 0) + 14, 0, 9, 44, 16, 0, { collide: false });
   }
   // The gatehouse at the head of the Approach: two great drums and the gate's head between.
   const gx = CRAG.x - CRAG.a * 0.86, gy = Y(gx, 0);
-  for (const s of [-1, 1]) tower(K, S, gx, s * 22, 13, 74, R, { steep: 2.2, lit: 0.65 });
+  for (const s of [-1, 1]) tower(K, S, gx, s * 22, 13, 74, RT, { steep: 2.2, lit: 0.65 });
   K.box(S, gx, gy + 13, 0, 9, 40, 10, 0, { collide: false });
   { // (The passage under its head: dark walls and a dark vault, its mouths pointed both ends: the spandrels filled in.)
     for (const s of [-1, 1]) K.box('dark:stone', gx, gy - 0.5, s * 9.3, 9, 13.5, 0.3, 0, { collide: false, top: false });
@@ -971,7 +1011,8 @@ export function phobosCastle(K) {
     K.box(S, gx, gy + 53, 0, 11.2, 3.4, 11.6, 0, { collide: false });
     for (let b = -10.4; b <= 10.41; b += 1.6) for (const e of [-1, 1]) K.box('dark:stone', gx + e * 10.3, gy + 51.2, b, 1.0, 1.8, 0.28, 0, { collide: false });
     for (let b = -10; b <= 10.01; b += 2.5) K.box(S, gx - 10.6, gy + 56.4, b, 0.6, 1.6, 0.6, 0, { collide: false });
-    K.hanging('cloth_red', gx - 11.3, gy + 52.5, -5, [-1, 0], 4.5, 30, 5); K.hanging('cloth_red', gx - 11.3, gy + 52.5, 5, [-1, 0], 4.5, 30, 5);
+    // (His war banners down it, the PH2 pack's: his horned skull, the wings.)
+    for (const zc of [-5.4, 5.4]) K.quad(BANNER, [gx - 11.3, gy + 52.5, zc - 2.5], [gx - 11.3, gy + 52.5, zc + 2.5], [gx - 11.3, gy + 45, zc + 2.5], [gx - 11.3, gy + 45, zc - 2.5], [-1, 0, 0], [[0, 0], [1, 0], [1, 1], [0, 1]]);
   }
   // A brazier: an iron bowl of his fire on a dark stone pillar, tapering.
   const brazier = (bx, bz, h = 2.4) => { const by = Y(bx, bz); K.drum('dark:stone', bx, by - 0.3, bz, 0.75, h + 0.3, 4, { r2: 0.5, turn: Math.PI / 4 }); K.drum('iron', bx, by + h, bz, 0.45, 0.7, 8, { r2: 1.0, open: true, collide: false }); fire(K, bx, by + h + 0.3, bz, 0.62, 2.1); (K.lamps ||= []).push({ p: [bx, by + h + 1.6, bz], c: [1, 0.42, 0.18], r: h > 3 ? 36 : 26, i: h > 3 ? 70 : 44, flicker: 0.35 }); };
@@ -992,7 +1033,7 @@ export function phobosCastle(K) {
   // The Approach: flagged down its crown, a low parapet along both edges (broken every so often, so what's on the slopes
   // can come up), and pillars of fire in pairs up its top half: from where the King's Mile, slanting up onto it, has come
   // into its middle (src/core/lands.js ROUTES), so nothing stands in the road.
-  for (let x = 10452; x < gx - 12; x += 8) K.paving('dark:flags', x + 4, 0, 4.05, 9.5, 0, 0.08);
+  for (let x = 10452; x < gx - 12; x += 8) K.paving('p2_bone_joint_flags', x + 4, 0, 4.05, 9.5, 0, 0.08);
   for (let x = 10632; x < gx - 22; x += 48) for (const s of [-1, 1]) K.wall('dark:stone', x, s * 12.6, Math.min(x + 40, gx - 22), s * 12.6, 0.8, 1.15);
   for (let x = 10640; x < gx - 24; x += 24) for (const s of [-1, 1]) brazier(x, s * 10.8, 2.6);
 
@@ -1011,7 +1052,7 @@ export function phobosCastle(K) {
   hall(K, S, R, 11040, y1 - 2, 0, 52, 52, 19, 0, { pitch: 1 });               // the Great Hall
   // The Ancient Library: the biggest room in the castle, a great nave with a glazed end and a stair tower at each corner.
   hall(K, S, R, 11050, y1 - 2, -150, 62, 96, 34, 0.12, { pitch: 0.9, ends: [5, 0], lit: 0.8 });
-  for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) tower(K, C, 11050 + sx * 64, -150 + sz * 36, 7, 124, R, { y: y1, steep: 3.4, collide: false });
+  for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) tower(K, C, 11050 + sx * 64, -150 + sz * 36, 7, 124, RT, { y: y1, steep: 3.4, collide: false });
   hall(K, S, R, 10985, y1 - 2, -70, 12, 28, 40, 0, { pitch: 0.5, buttress: false });   // the Portrait Gallery, a long wing
   K.box(S, 11110, y1 - 2, -70, 22, 34, 18, 0); K.drum('dark:stone', 11110, y1 + 32, -70, 12, 4, 12, { collide: false });   // the Map Room
   hall(K, S, R, 11030, y1 - 2, 120, 40, 36, 15, -0.1);                        // the Alchemists' Wing
@@ -1021,8 +1062,8 @@ export function phobosCastle(K) {
   // bells: the bell is Tessariel's.)
   for (const [x, z, half, h, name] of [[11105, 75, 11, 190, 'clock'], [11140, 135, 8, 220, 'horns']]) {
     K.box(S, x, y1 - 2, z, half, h, half, 0);
-    for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) K.spike(R, x + sx * half, y1 + h - 2, z + sz * half, 2.4, 22, 4, Math.PI / 4);
-    K.cone(R, x, y1 + h - 2, z, half * 1.25, half * 4.5, 4, Math.PI / 4);
+    for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) K.spike(RT, x + sx * half, y1 + h - 2, z + sz * half, 2.4, 22, 4, Math.PI / 4);
+    K.cone(RT, x, y1 + h - 2, z, half * 1.25, half * 4.5, 4, Math.PI / 4);
     if (name === 'clock') for (const [nx, nz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) K.drum('eve:flame', x + nx * (half + 0.2), y1 + h - 24, z + nz * (half + 0.2), 6, 0.4, 16, { collide: false });
     else K.box('dark:stone', x, y1 + h - 34, z, half + 1.5, 3, half + 1.5, 0, { collide: false });
   }
@@ -1030,12 +1071,12 @@ export function phobosCastle(K) {
   // ---- the High Ward: his own. Its halls stand on the Keep's body's first two steps (STEPS), round the trunk's foot.
   const t1 = PLAIN + 300, t2 = PLAIN + 372, kx = KEEP.x + 40;
   hall(K, S, R, kx - 20, t1, -148, 84, 62, 17, 0, { pitch: 1.2, collide: false });        // the Sanctuaries: the black nave, along the north terrace
-  for (const s of [-1, 1]) tower(K, C, kx - 106, -148 + s * 13, 7, 128, R, { y: t1, steep: 4.4, collide: false });
+  for (const s of [-1, 1]) tower(K, C, kx - 106, -148 + s * 13, 7, 128, RT, { y: t1, steep: 4.4, collide: false });
   hall(K, S, R, kx - 10, t1, 148, 80, 50, 17, 0, { pitch: 0.9, collide: false });         // the Hall of Mirrors, along the south
   hall(K, S, R, kx + 136, t1, -70, 12, 44, 40, 0, { pitch: 0.6, collide: false });        // the Ossuary Chapel, on the east terrace
   K.box(B, kx + 136, t1, 70, 12, 36, 34, 0, { collide: false });                          // the Generals' Crypt's house
-  K.box(B, kx + 70, t2, 108, 24, 40, 12, 0, { collide: false }); for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) K.spike(R, kx + 70 + sx * 24, t2 + 40, 108 + sz * 12, 3, 22, 4, Math.PI / 4);   // the Treasury
-  { const ox = kx + 96, oz = -100; K.drum(C, ox, t2, oz, 20, 56, 16, { collide: false }); K.drum('dark:stone', ox, t2 + 56, oz, 20, 5, 16, { r2: 16, collide: false }); K.cone(R, ox, t2 + 61, oz, 16, 16, 16); }   // the Observatory's drum and dome
+  K.box(B, kx + 70, t2, 108, 24, 40, 12, 0, { collide: false }); for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) K.spike(RT, kx + 70 + sx * 24, t2 + 40, 108 + sz * 12, 3, 22, 4, Math.PI / 4);   // the Treasury
+  { const ox = kx + 96, oz = -100; K.drum(C, ox, t2, oz, 20, 56, 16, { collide: false }); K.drum('dark:stone', ox, t2 + 56, oz, 20, 5, 16, { r2: 16, collide: false }); K.cone(RT, ox, t2 + 61, oz, 16, 16, 16); }   // the Observatory's drum and dome
   K.box(S, KEEP.x - 76, y2 - 2, 0, 22, t1 - y2 + 30, 34, 0, { collide: false });            // the Throne Antechambers, at the trunk's foot, with the stair up through the body
 }
 
@@ -1052,7 +1093,12 @@ export const SPIRES = [
   ['shadow', 11374, 84, 20, 420, 595], ['blood', 11262, 168, 20, 470, 640],
 ];
 export function phobosKeep(K) {
-  const S = 'char:ph_keep_wall', C = 'char:ph_keep_wall', R = 'soot:roof_2', G = 'soot:ph_keep_wall';
+  // (The PH2 pack's: the Keep's basalt, near black ('char'), its fins, bands and galleries the same in soot, fish-scale slate
+  // on its cones. The bone-inlaid stone made its fins a tan palisade from the city: not here.)
+  // (Soot, not char: charred, the basalt went flat black. Its bridges and stairs in the ashlar charred, as dark as the
+  // walls they cross: a paler bridge over a face in shadow read as a cross from the gate. The critics, round 3; the V/T rule.
+  // Dark, not char: a deck's top catches the sky, and charred it still showed pale on the black.)
+  const S = 'soot:p2_keep_basalt', C = 'soot:p2_keep_basalt', R = 'p2_fishscale_slate', G = 'soot:p2_keep_basalt', KB = 'dark:p2_bridge_ashlar';
   const x = KEEP.x, z = KEEP.z, base = PLAIN + KEEP.base, P = (h) => PLAIN + h;
   // The Keep's own body: three great steps of masonry on the High Ward, each set back from the one under it, arcaded down
   // their faces and turreted at their corners. The trunk rises through them and the spires stand round them: without it
@@ -1098,7 +1144,8 @@ export function phobosKeep(K) {
   // spires' own ways, and the stair inside the body, come with the Keep's section.
   STEPS.forEach(([hx, , , b], i) => {
     const face = x + 40 - i * 8 - hx, from = i === 0 ? Y(face - 8, STAIR_Z[i]) : P(STEPS[i - 1][3]);
-    stairs(K, G, face, STAIR_Z[i], from, P(b));
+    // (In the charred ashlar: the basalt's cream mortar on every tread made a pale zigzag across his dark face.)
+    stairs(K, KB, face, STAIR_Z[i], from, P(b));
   });
   // The Throne Tower: a trunk in four stages, each narrower, a gallery where each begins, and a crown of eight pinnacles
   // round the last with the spire in the middle of them.
@@ -1114,12 +1161,12 @@ export function phobosKeep(K) {
     }
   });
   for (let k = 0; k < 8; k++) { const t = k / 8 * TAU; K.drum(C, x + Math.cos(t) * 21, P(630), z + Math.sin(t) * 21, 2.8, 16, 8, { collide: false }); K.cone(R, x + Math.cos(t) * 21, P(646), z + Math.sin(t) * 21, 3.4, 18, 8); }
-  K.cone(R, x, P(630), z, 17, KEEP.top - 630, 16);
+  K.cone('p2_bronze_plates', x, P(630), z, 17, KEEP.top - 630, 16);
   // His balcony, west, at the last stage's foot, looking down the whole of it to the Sill; and the fire in the crown.
   K.box(G, x - 38, P(578), z, 10, 2, 14, 0, { collide: false }); for (const s of [-1, 1]) K.spike(G, x - 43, P(578), z + s * 9, 2.6, -16, 4, 0);
   K.drum('blood:flame', x, P(604), z, 24.3, 9, 20, { open: true, collide: false });
   for (let k = 0; k < 12; k++) { const t = (k + 0.5) / 12 * TAU; K.box(C, x + Math.cos(t) * 24.4, P(603.5), z + Math.sin(t) * 24.4, 1.7, 10, 1.7, -t, { collide: false }); }
-  K.hanging('cloth_red', x - 54.4, P(396), z, [-1, 0], 14, 130, 12);
+  hangBanner(K, x - 54.4, P(396), z, [-1, 0], 14, 130, 12);
   // The way up the trunk's outside from the body's top step: a stair winding round its third stage, by a gallery at 560
   // where the Blood Spire's bridge lands, to the gallery at its head; then round the fourth to the crown's floor.
   { let a = Math.PI + 0.9;
@@ -1165,10 +1212,10 @@ export function phobosKeep(K) {
   tops.forEach(([ax, az, ar, , atop], i) => {
     const nx = tops[i + 1] || [x, z, 33, 0, 590], [bx, bz, br] = nx, bfoot = i < 4 ? tops[i + 1][3] + (tops[i + 1][4] - tops[i + 1][3]) * 0.34 : 560;
     const d = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / d, uz = (bz - az) / d;
-    bridge(K, C, [ax + ux * ar, P(atop) - 20, az + uz * ar], [bx - ux * br, P(bfoot), bz - uz * br], 5.5, { arch: 6, piers: true, walk: true });
+    bridge(K, KB, [ax + ux * ar, P(atop) - 20, az + uz * ar], [bx - ux * br, P(bfoot), bz - uz * br], 5.5, { arch: 6, piers: true, walk: true });
     // (And each spire tied back to the trunk lower down, a flying bridge to its nearest gallery.)
     const dt = Math.hypot(x - ax, z - az), tx = (x - ax) / dt, tz = (z - az) / dt, ty = tops[i][3] + (atop - tops[i][3]) * 0.34;
-    bridge(K, C, [ax + tx * ar, P(ty), az + tz * ar], [x - tx * (ty < 400 ? 54 : ty < 500 ? 43 : 33), P(ty) + 12, z - tz * (ty < 400 ? 54 : ty < 500 ? 43 : 33)], 4.5, { arch: 4, piers: true });
+    bridge(K, KB, [ax + tx * ar, P(ty), az + tz * ar], [x - tx * (ty < 400 ? 54 : ty < 500 ? 43 : 33), P(ty) + 12, z - tz * (ty < 400 ? 54 : ty < 500 ? 43 : 33)], 4.5, { arch: 4, piers: true });
   });
   // The satellites: lesser towers out on the crag's rim and between the spires, no two the same height, every one joined
   // to a neighbour by a bridge high up. [x, z, radius, top over the plain]
@@ -1185,7 +1232,7 @@ export function phobosKeep(K) {
     K.cone(R, sx, P(top) + 1, sz, r + 2.6, r * (4 + 2 * hash2(i, 9)), 12);
     return [sx, sz, r, top];
   });
-  const link = (a, b, drop = 26) => { const d = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / d, uz = (b[1] - a[1]) / d, h = Math.min(a[3], b[3]) - drop; bridge(K, C, [a[0] + ux * a[2], P(h), a[1] + uz * a[2]], [b[0] - ux * b[2], P(h), b[1] - uz * b[2]], 4, { arch: 2.5 }); };
+  const link = (a, b, drop = 26) => { const d = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / d, uz = (b[1] - a[1]) / d, h = Math.min(a[3], b[3]) - drop; bridge(K, KB, [a[0] + ux * a[2], P(h), a[1] + uz * a[2]], [b[0] - ux * b[2], P(h), b[1] - uz * b[2]], 4, { arch: 2.5 }); };
   for (let i = 0; i < 9; i++) link(sat[i], sat[(i + 1) % 9]);                // the rim's ring of towers, all the way round
   for (const [i, j] of [[9, 0], [10, 8], [12, 13], [12, 14], [15, 10]]) link(sat[i], sat[j], 34);
   // The lesser towers: turrets out on the curtain and a few on the wards below, some two dozen, each tied by a light bridge to the

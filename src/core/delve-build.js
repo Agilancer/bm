@@ -331,7 +331,7 @@ function castleShell(K, d) {
     for (let i = 0; i < n; i++) for (const side of [-1, 1]) {
       const t = ((i + 0.5) / n * 2 - 1) * (len - 2.5);
       const lx = r.x + (along ? side * off : t), lz = r.z + (along ? t : side * off);
-      banner(K, d, lx, lz, along ? -side : 0, along ? 0 : -side, 0.9, r.roof - 1.2, Math.max(3.2, r.roof * 0.42), r, L.banner || 'cloth_red');
+      banner(K, d, lx, lz, along ? -side : 0, along ? 0 : -side, 0.9, r.roof - 1.2, Math.max(3.2, r.roof * 0.42), r, r.cloth || L.banner || 'cloth_red');
     }
   }
   // The stairs: steps laid on the slope, a metre deep.
@@ -351,6 +351,13 @@ function banner(K, d, lx, lz, nx, nz, w, top, foot, r, cloth = 'cloth_red') {
   if (caveRoom(x - nx * 1.2, z - nz * 1.2) > -0.3 || caveRoom(x + nx, z + nz) < 0.5) return;
   const y = d.y + r.y + (r.tz || 0) * (lz - r.z), o = 0.08, tx = -nz, tz = nx;
   const P = (u, h) => [x + nx * o + tx * u, y + h, z + nz * o + tz * u];
+  // (A painted one, the PH2 pack's: laid once, two wide to three long, its own shape cut out; as big as the wall allows.)
+  if (/(^|:)p2_/.test(cloth)) {
+    const hh = Math.min(top - foot + 0.7, 9), hw = hh / 3;
+    K.quad(cloth, P(-hw, top), P(hw, top), P(hw, top - hh), P(-hw, top - hh), [nx, 0, nz], [[0, 0], [1, 0], [1, 1], [0, 1]]);
+    K.box('iron', x + nx * 0.1, y + top, z + nz * 0.1, nx ? 0.05 : hw + 0.2, 0.08, nx ? hw + 0.2 : 0.05, 0, NO);
+    return;
+  }
   K.quad(cloth, P(-w, top), P(w, top), P(w, foot + 0.7), P(-w, foot + 0.7), [nx, 0, nz], [[0, 0], [1, 0], [1, (top - foot) / 2], [0, (top - foot) / 2]]);
   K.tri(cloth, P(-w, foot + 0.7), P(0, foot + 0.7), P(-w, foot)); K.tri(cloth, P(0, foot + 0.7), P(w, foot + 0.7), P(w, foot));
   K.box('iron', x + nx * 0.1, y + top, z + nz * 0.1, nx ? 0.05 : w + 0.2, 0.08, nx ? w + 0.2 : 0.05, 0, NO);
@@ -876,6 +883,18 @@ export const PROPS = {
     const h = y + p.up;
     K.drum('iron', x, h, z, 0.22, 0.3, 7, { r2: 0.4, open: true, collide: false });
     fire(K, d, x, h + 0.25, z, 0.35, 0.9, { ember: true, glow: 1.6 });
+  },
+  // A painting of the PH2 pack laid once (tools/phobos/textures/wire_ph2.py), cut out: flat on a wall at up (its foot), w
+  // across and h up, facing yaw (0: +z); or flat on the floor (flat). Cobwebs, old blood, scorch, a prisoner's tallies.
+  decal(K, d, p, x, y, z) {
+    const w = p.w || 1, h = p.h || w, c = Math.cos(p.yaw || 0), s = Math.sin(p.yaw || 0), uv = [[0, 0], [1, 0], [1, 1], [0, 1]];
+    if (p.flat) {
+      const P = (u, v) => [x + u * c + v * s, y + 0.03, z - u * s + v * c];
+      K.quad(p.layer, P(-w / 2, -h / 2), P(w / 2, -h / 2), P(w / 2, h / 2), P(-w / 2, h / 2), [0, 1, 0], uv);
+      return;
+    }
+    const top = y + (p.up ?? 1) + h, P = (u, yy) => [x + u * c, yy, z - u * s];
+    K.quad(p.layer, P(-w / 2, top), P(w / 2, top), P(w / 2, top - h), P(-w / 2, top - h), [s, 0, c], uv);
   },
   // An iron sill across a floor: where something comes down (the gate's teeth, in their slots overhead).
   sill(K, d, p, x, y, z) { K.box('iron', x, y, z, p.hx, 0.05, p.hz || 0.3, 0, NO); },

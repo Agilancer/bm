@@ -99,6 +99,11 @@ Everything is in [PHOBOS-TEXTURES.md](PHOBOS-TEXTURES.md).
 - [ ] Owner to look at `sets_overview.jpg`, `ramp.jpg` and the ten set sheets.
 - [ ] Not wired into the game (chunk 4): loading by set, half size on Low, scattered tiling, course offsets, the
   grime layer.
+- [x] **The PH2 pack** (`assets/phobos/textures`, 100 tiles plus `banner_skull`, dyed oxblood from the skull field) is
+  wired in as a second texture array: `tools/phobos/textures/wire_ph2.py` writes `assets/game/tex/p2/` and the
+  manifest's `ph2` block; layers `p2_<id>` from 200 (src/core/phobos-p2.js, src/gfx/materials.js). On the city's walls,
+  roofs, walks and doors, the castle's curtains and towers, the Keep, the Lower Ward and the banners. Both critics
+  passed round 3 (8.5 each).
 
 ## Chunk 3: the east — waiting on owner
 
@@ -553,6 +558,19 @@ Chunk 2 (textures), left open after both critics approved round 3 (2026-11-15):
 - **Reuse and repeats**: gravel in five sets, flagstones and plinth in four; the burnt wall's lump and the market
   wall's zigzag; per-district dirt and scattered tiling in chunk 4.
 - **Unjudged**: the detail maps, anything lit or at distance, phones, scale against a door.
+
+The PH2 pack, left open after both critics passed round 3 (2026-11-16):
+- **A pale bar by the gate's right tower** (seen from the gate, camAt 10650,150,0 to 10760,205,0): a raycast says it's
+  a Keep bridge's parapet (11057, 338, 181), drawn `dark:p2_bridge_ashlar`, yet in the game it still shows pale,
+  crenellated, across the Keep's black face, a little like a cross. Soot, char and dark all left it the same: find
+  what really draws it (a far draw? its shading?) before tinting anything else. The V/T rule.
+- **Distance**: the castle reads flat a long way off (no grime or AO layer yet); the towers' cones plain grey far off;
+  the Keep's crown has a lit band with a beam in front of it.
+- **The Mile**: a pale patch and strips on the road props; the kerbs' ends; the districts not told apart by their
+  stone.
+- **Up close**: the granite's "fur" only checked at mid range; the Lower Ward not reshot since the banner.
+- **Unused**: the soft masks (wired, nothing asks for them); leaded_glass, leaded_lit, wrought_bars and railing_mask
+  (crossbars, the V/T rule), door_rich (a cross), banner_blood and war_banner (a crown of thorns on the skull).
 
 ## Untested
 

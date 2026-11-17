@@ -8,6 +8,7 @@ import { getFile, watched } from '../core/files.js';
 import { setFloors } from '../core/interior.js';
 import { makeBuffer, loadTextureArray } from './gpu.js';
 import { COMMON } from './shaders.js';
+import { STATIC_SLOTS } from './materials.js';
 
 const FLAT = { iron: 100, flame: 101, gold: 105 };
 const POM = { stone: 0.018, wood: 0.004 };
@@ -174,9 +175,12 @@ export async function loadInterior(r, base, pool, tier, pictures, steps) {
 
   const glb = parseGLB(glbBuf);
   const nodes = glb.json.nodes.filter((n) => n.mesh !== undefined && n.name.includes('|'));
-  const uniform = (fill) => { const p = new Float32Array(64 * 4); fill(p); return makeBuffer(r.device, p, GPUBufferUsage.UNIFORM); };
+  const uniform = (fill) => { const p = new Float32Array(STATIC_SLOTS * 4); fill(p); return makeBuffer(r.device, p, GPUBufferUsage.UNIFORM); };
+  // (STATIC's PH2 pack is never in a house: a one-pixel stand-in for its two arrays. materials.js)
+  const none = r.device.createTexture({ size: [1, 1, 1], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING }).createView({ dimension: '2d-array' });
   const bindGroup = (c, d, ubo) => r.device.createBindGroup({ layout: r.bglStatic, entries: [
-    { binding: 0, resource: c.createView({ dimension: '2d-array' }) }, { binding: 1, resource: d.createView({ dimension: '2d-array' }) }, { binding: 2, resource: { buffer: ubo } }] });
+    { binding: 0, resource: c.createView({ dimension: '2d-array' }) }, { binding: 1, resource: d.createView({ dimension: '2d-array' }) }, { binding: 2, resource: { buffer: ubo } },
+    { binding: 3, resource: none }, { binding: 4, resource: none }] });
   const pom = tier.pom > 0 ? 1 : 0;
   const tiles = makeSet(r, glb, nodes, tileNames);
   tiles.bg = bindGroup(tc, td, uniform((p) => man.layers.forEach((l, i) => { p[i * 4 + 1] = pom * (l.pom || POM[l.kind] || 0); p[i * 4 + 2] = -(l.deep || 0); })));

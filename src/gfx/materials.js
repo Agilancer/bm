@@ -277,10 +277,26 @@ fn rot(p: vec2f, a: f32) -> vec2f { let c = cos(a); let s = sin(a); return vec2f
 }
 `;
 
+// How many entries STATIC's per-layer table holds: the first array's 64, then the PH2 pack's (renderer.js; interior.js
+// fills its own).
+export const STATIC_SLOTS = 192;
 export const STATIC = COMMON + /* wgsl */ `
 @group(1) @binding(0) var colorArr: texture_2d_array<f32>;
 @group(1) @binding(1) var detailArr: texture_2d_array<f32>;
-@group(1) @binding(2) var<uniform> layers: array<vec4f, 64>;
+@group(1) @binding(2) var<uniform> layers: array<vec4f, ${STATIC_SLOTS}>;
+// The PH2 pack (tools/phobos/textures/wire_ph2.py): a second array, smaller and square, its layers numbered from 200 and
+// their entries in the table above from 64. (The first array's table was full.) slotOf: a layer's entry in the table.
+@group(1) @binding(3) var p2Color: texture_2d_array<f32>;
+@group(1) @binding(4) var p2Detail: texture_2d_array<f32>;
+fn slotOf(lay: u32) -> u32 { return select(min(lay, 63u), min(lay - 136u, ${STATIC_SLOTS - 1}u), lay >= 200u); }
+fn colAt(uv: vec2f, l: i32, dx: vec2f, dy: vec2f) -> vec4f {
+  if (l >= 200) { return textureSampleGrad(p2Color, repeatSmp, uv, l - 200, dx, dy); }
+  return textureSampleGrad(colorArr, repeatSmp, uv, l, dx, dy);
+}
+fn detAt(uv: vec2f, l: i32, dx: vec2f, dy: vec2f) -> vec4f {
+  if (l >= 200) { return textureSampleGrad(p2Detail, repeatSmp, uv, l - 200, dx, dy); }
+  return textureSampleGrad(detailArr, repeatSmp, uv, l, dx, dy);
+}
 
 struct V {
   @builtin(position) pos: vec4f, @location(0) p: vec3f, @location(1) n: vec3f, @location(2) uv: vec2f,
@@ -290,7 +306,7 @@ struct V {
 @vertex fn vs(@location(0) pIn: vec3f, @location(1) n: vec3f, @location(2) uv: vec2f, @location(3) layer: u32) -> V {
   var o: V;
   var p = pIn;
-  let params = layers[min(layer % 1000u, 63u)];
+  let params = layers[slotOf(layer % 1000u)];
   if (params.w > 0.0) {
     // Leaves stir, in gusts that travel across the trees.
     let t = F.camPos.w;
@@ -369,9 +385,9 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
   // (A thousand times which other light it's in, over the layer: dark, pale, frost. src/core/sites.js)
   let lay = in.layer % 1000u;
   let tintK = in.layer / 1000u;
-  let flat_ = lay >= 100u;
-  let params = layers[min(lay, 63u)];
-  let layerI = i32(min(lay, 63u));
+  let flat_ = lay >= 100u && lay < 200u;
+  let params = layers[slotOf(lay)];
+  let layerI = i32(select(min(lay, 63u), min(lay, ${200 + STATIC_SLOTS - 65}u), lay >= 200u));
   if (!front && params.x == 0.0) { n0 = -n0; }
   var albedo: vec3f; var rough = 0.8; var metal = 0.0; var emissive = vec3f(0.0); var ao = 1.0;
   let dx = dpdx(uv); let dy = dpdy(uv);
@@ -389,7 +405,7 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
     let steps = 10.0 * F.counts.z + 2.0;
     let delta = vt.xy / vt.z * params.y * fade / steps;
     var cur = uv;
-    var h = textureSampleGrad(detailArr, repeatSmp, cur, layerI, dx, dy).a;
+    var h = detAt(cur, layerI, dx, dy).a;
     var ray = 1.0;
     var hPrev = h;
     for (var i = 0; i < i32(steps); i++) {
@@ -397,7 +413,7 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
       ray -= 1.0 / steps;
       cur -= delta;
       hPrev = h;
-      h = textureSampleGrad(detailArr, repeatSmp, cur, layerI, dx, dy).a;
+      h = detAt(cur, layerI, dx, dy).a;
     }
     uv = cur;
     if (params.z < 0.0) {
@@ -409,18 +425,18 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
     ao = mix(1.0, 0.45 + 0.55 * smoothstep(0.2, 0.62, h), fade);
   }
 
-  var tex = textureSampleGrad(colorArr, repeatSmp, uv, layerI, dx, dy);
-  var det = textureSampleGrad(detailArr, repeatSmp, uv, layerI, dx, dy);
+  var tex = colAt(uv, layerI, dx, dy);
+  var det = detAt(uv, layerI, dx, dy);
   if (!LEAN && params.z < -1.5) {
     // Never the same stone twice: a slow noise picks between two copies of the tile, each shifted its own way, and they
     // meet along the height of the stone, so the seam runs in the mortar. The tile's repeat goes.
     let l = textureSampleLevel(noiseTex, repeatSmp, uv * 0.11 + 0.37, 0.0).r * 12.0;
     let ia = floor(l);
     let oa = sin(vec2f(3.0, 7.0) * ia); let ob = sin(vec2f(3.0, 7.0) * (ia + 1.0));
-    let da = textureSampleGrad(detailArr, repeatSmp, uv + oa, layerI, dx, dy);
-    let db = textureSampleGrad(detailArr, repeatSmp, uv + ob, layerI, dx, dy);
+    let da = detAt(uv + oa, layerI, dx, dy);
+    let db = detAt(uv + ob, layerI, dx, dy);
     let w = smoothstep(0.3, 0.7, l - ia + (db.a - da.a) * 1.1);
-    tex = mix(textureSampleGrad(colorArr, repeatSmp, uv + oa, layerI, dx, dy), textureSampleGrad(colorArr, repeatSmp, uv + ob, layerI, dx, dy), w);
+    tex = mix(colAt(uv + oa, layerI, dx, dy), colAt(uv + ob, layerI, dx, dy), w);
     det = mix(da, db, w);
   }
   if (flat_) {
@@ -546,7 +562,7 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
     }
     // Phobos's walls weathered: rain-streaks down every face from whatever's over it, and a broad blotching, so a drum a
     // hundred metres high isn't one even tone. (Only there, in the box of the city and the crag: src/core/phobos-build.js.)
-    if (p.x > 9300.0 && p.x < 11500.0 && abs(p.z) < 900.0 && abs(n0.y) < 0.45 && params.z >= 0.0) {
+    if (p.x > 9300.0 && p.x < 11500.0 && abs(p.z) < 900.0 && abs(n0.y) < 0.45 && params.z >= 0.0 && params.x == 0.0) {
       let along = select(p.z, p.x, abs(n0.z) > abs(n0.x));
       let sk = textureSampleLevel(noiseTex, repeatSmp, vec2f(along * 0.21, p.y * 0.006), 0.0).r;
       let blot = textureSampleLevel(noiseTex, repeatSmp, vec2f(along * 0.0045 + 0.3, p.y * 0.0045 + 0.7), 0.0).g;
@@ -592,6 +608,11 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
       // Stained glass with the day behind it.
       emissive = pow(albedo, vec3f(1.5)) * params.z * 1.6 * F.sunColor.a;
       albedo *= 0.05;
+    } else if (params.z > 1.1) {
+      // (The PH2 pack's lit leaded glass: a lamp behind it, warm, coming up as the light goes; by day a little of it.)
+      let night = 1.0 - smoothstep(0.3, 0.9, F.sunColor.a);
+      emissive = pow(albedo, vec3f(1.3)) * (0.35 + 2.6 * night);
+      metal = 0.2; rough = 0.3;
     } else if (params.z > 0.0) {
       // Leaded glass reads as dark and glossy, and a fire is lit behind some of it.
       let glass = 1.0 - smoothstep(0.1, 0.26, det.b);
@@ -638,7 +659,14 @@ struct VC { @builtin(position) pos: vec4f, @location(0) uv: vec2f, @location(1) 
 }
 @group(1) @binding(0) var colorArr: texture_2d_array<f32>;
 @group(1) @binding(1) var smp: sampler;
-@fragment fn fsCut(in: VC) { if (textureSampleLevel(colorArr, smp, in.uv, i32(in.layer), 1.0).a < 0.5) { discard; } }
+@group(1) @binding(2) var p2Color: texture_2d_array<f32>;
+@fragment fn fsCut(in: VC) {
+  // (The PH2 pack's from its own array: STATIC's layers 200 on.)
+  let l = in.layer % 1000u;
+  var a: f32;
+  if (l >= 200u) { a = textureSampleLevel(p2Color, smp, in.uv, i32(l - 200u), 1.0).a; } else { a = textureSampleLevel(colorArr, smp, in.uv, i32(l), 1.0).a; }
+  if (a < 0.5) { discard; }
+}
 `;
 
 // Plate armour: painted atlas, wounds evaluated in bind space so they ride the plate exactly.
@@ -1418,8 +1446,8 @@ export function staticSoftCut(samples) {
     ['@fragment fn fs(in: V, @builtin(front_facing) front: bool) -> Out {', '@fragment fn fs(in: V, @builtin(front_facing) front: bool) -> OutCut {'],
     ['var o: Out;\n  o.depth = in.viewZ;', 'var o: OutCut;\n  o.mask = 0xFFFFFFFFu;\n  o.depth = in.viewZ;'],
     [STATIC_HARD_CUT, `if (params.x > 0.0) {
-      let ax = textureSampleGrad(colorArr, repeatSmp, uv + dx * 0.5, layerI, dx, dy).a;
-      let ay = textureSampleGrad(colorArr, repeatSmp, uv + dy * 0.5, layerI, dx, dy).a;
+      let ax = colAt(uv + dx * 0.5, layerI, dx, dy).a;
+      let ay = colAt(uv + dy * 0.5, layerI, dx, dy).a;
       o.mask = cutMask(tex.a, 0.5, (abs(ax - tex.a) + abs(ay - tex.a)) * 2.0);
       if (o.mask == 0u) { discard; }
     }`],

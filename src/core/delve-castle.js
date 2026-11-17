@@ -28,32 +28,32 @@ const channel = (add, a, b, w = 1.3) => add('channel', a[0], a[1], { to: b, w })
 // the gate's line; the Gate Passage's two servants' doors far apart along it.)
 const rooms = [
   // The Gatehouse.
-  R('cl_gate', 'the Gate Passage', 0, -12, 5, 20, 0, 11, { rock: 'ashlar', foot: 'dark:block', ground: 'dark:flags', fires: 16 }),
-  R('cl_yard', "the Captain's Yard", 0, -50, 22, 22, 0, 22, { rock: 'ashlar', foot: 'dark:block', ground: 'ashlar', banners: 11, hang: 0, fires: 14 }),
-  R('cl_wrange', 'the West Range', -48, -40, 30, 4, 0, 8, { rock: 'ashlar', foot: 'dark:block' }),
-  R('cl_erange', 'the East Range', 49, -62, 31, 4, 0, 8, { rock: 'ashlar', foot: 'dark:block' }),
+  R('cl_gate', 'the Gate Passage', 0, -12, 5, 20, 0, 11, { rock: 'p2_curtain_granite', foot: 'dark:block', ground: 'p2_bone_joint_flags', fires: 16 }),
+  R('cl_yard', "the Captain's Yard", 0, -50, 22, 22, 0, 22, { rock: 'p2_curtain_granite', foot: 'dark:block', ground: 'p2_ward_paving', banners: 22, cloth: 'p2_banner_skull', hang: 0, fires: 14 }),
+  R('cl_wrange', 'the West Range', -48, -40, 30, 4, 0, 8, { rock: 'p2_curtain_granite', foot: 'dark:block', ground: 'p2_walk_paving' }),
+  R('cl_erange', 'the East Range', 49, -62, 31, 4, 0, 8, { rock: 'p2_curtain_granite', foot: 'dark:block', ground: 'p2_walk_paving' }),
   // The Kitchens, and their cellars.
-  R('cl_kitchen', 'the Kitchens', -96, -50, 22, 18, 0, 14, { rock: 'soot:course', foot: 'soot:block', ground: 'flags' }),
+  R('cl_kitchen', 'the Kitchens', -96, -50, 22, 18, 0, 14, { rock: 'p2_sooty_plaster', foot: 'soot:block', ground: 'flags' }),
   R('cl_cellar', 'the Cellars', -96, -21, 14, 15, 0, 6, { rock: 'course', foot: 'block', ground: 'flags', banners: 0 }),
   // The Barracks.
-  R('cl_drill', 'the Drill Floor', 106, -50, 30, 22, 0, 16, { rock: 'block', foot: 'dark:course', ground: 'ashlar' }),
-  R('cl_bunks', 'the Bunk Rooms', 106, -15, 22, 17, 0, 6, { rock: 'block', foot: 'course', ground: 'wood', banners: 0 }),
+  R('cl_drill', 'the Drill Floor', 106, -50, 30, 22, 0, 16, { rock: 'p2_curtain_granite', foot: 'dark:course', ground: 'p2_ward_paving' }),
+  R('cl_bunks', 'the Bunk Rooms', 106, -15, 22, 17, 0, 6, { rock: 'p2_sooty_plaster', foot: 'course', ground: 'p2_worn_floorboards', banners: 0 }),
   // The Armoury, and the Coal Way to the Forge.
   R('cl_armstair', 'the Armoury Stair', 106, -82, 3, 16, 0, 7, { rock: 'dark:block' }),
-  R('cl_armoury', 'the Armoury', 106, -114, 18, 20, 0, 12, { rock: 'slate:ashlar', foot: 'dark:block', ground: 'dark:flags' }),
-  R('cl_coal', 'the Coal Way', 137, -114, 17, 3, 0, 7, { rock: 'soot:block', foot: 'dark:rubble', ground: 'dark:rubble' }),
-  R('cl_forge', 'the Forge', 166, -114, 16, 14, 0, 12, { rock: 'soot:ashlar', foot: 'soot:block', ground: 'flags', banners: 0, fires: 18 }),
+  R('cl_armoury', 'the Armoury', 106, -114, 18, 20, 0, 12, { rock: 'slate:ashlar', foot: 'dark:block', ground: 'p2_walk_paving' }),
+  R('cl_coal', 'the Coal Way', 137, -114, 17, 3, 0, 7, { rock: 'soot:block', foot: 'dark:rubble', ground: 'p2_ash_street' }),
+  R('cl_forge', 'the Forge', 166, -114, 16, 14, 0, 12, { rock: 'p2_fireback', foot: 'soot:block', ground: 'p2_ash_street', banners: 0, fires: 18 }),
   // The Oubliettes.
   R('cl_pit', 'the Pit Stair', -8, -94, 4, 26, -5, 9, { tz: 10 / 52, fires: 10, rock: 'dark:course' }),
-  R('cl_oub', 'the Oubliettes', 0, -140, 20, 24, -10, 9, { rock: 'mire:course', foot: 'mire:block', ground: 'mire:flags', banners: 0, fires: 28 }),
+  R('cl_oub', 'the Oubliettes', 0, -140, 20, 24, -10, 9, { rock: 'p2_waterline_wall', foot: 'mire:block', ground: 'p2_bones_ground', banners: 0, fires: 28 }),
   // The Aqueduct.
   R('cl_aq', 'the Aqueduct', -100, -108, 4, 44, -3, 9, { tz: 3 / 44, fires: 12, rock: 'slate:course', foot: 'slate:block' }),
   R('cl_aqhead', 'the Aqueduct Head', -100, -170, 14, 22, -6, 14, { rock: 'slate:ashlar', foot: 'slate:block', ground: 'slate:flags', banners: 0 }),
   // The Servants' Warren's one great room.
-  R('cl_hall', "the Servants' Hall", -48, -104, 14, 12, -2, 7, { rock: 'course', foot: 'block', ground: 'wood', banners: 0, fires: 18 }),
+  R('cl_hall', "the Servants' Hall", -48, -104, 14, 12, -2, 7, { rock: 'p2_sooty_plaster', foot: 'block', ground: 'p2_worn_floorboards', banners: 0, fires: 18 }),
   // Up to the Middle Ward.
-  R('cl_mstair', 'the Middle Ward Stair', 49, -96, 5, 35, 6, 12, { tz: -12 / 70, fires: 12, rock: 'ashlar', foot: 'dark:block' }),
-  R('cl_mgate', 'the Middle Ward Gate', 49, -141, 8, 14, 12, 12, { rock: 'soot:ashlar', foot: 'dark:block', ground: 'dark:flags' }),
+  R('cl_mstair', 'the Middle Ward Stair', 49, -96, 5, 35, 6, 12, { tz: -12 / 70, fires: 12, rock: 'p2_curtain_granite', foot: 'dark:block' }),
+  R('cl_mgate', 'the Middle Ward Gate', 49, -141, 8, 14, 12, 12, { rock: 'p2_curtain_granite', foot: 'dark:block', ground: 'p2_bone_joint_flags' }),
 ];
 
 // (fires: how many metres apart a room's wall torches stand; 10 if not said.)
@@ -109,6 +109,8 @@ const props = [];
   add('stand', 20.6, -34); add('stand', 20.6, -46); add('rack', 20.8, -40, { yaw: -PI / 2 });
   add('cart', 15, -50, { yaw: 0.4 }); add('crates', 17.5, -54); add('barrels', 8, -31);
   add('pool', -8, -58, { r: 1.6, up: 0.04 }); add('heap', 12.5, -68, { r: 1, layer: 'dark:rubble' });
+  // (Old blood on the flags, where men have been put down before you. The PH2 pack's decals: src/core/delve-build.js decal.)
+  add('decal', -6, -44, { layer: 'p2_blood_splashes', w: 2, flat: true }); add('decal', 10, -61, { layer: 'p2_blood_splashes', w: 1.5, flat: true, yaw: 1.2 });
   // ---- the ranges: armour along them, a bench, the odd crate; a fire at the servants' door in the West Range.
   add('stand', -30, -36.6); add('stand', -62, -36.6); add('crates', -40, -43); add('barrels', -70, -43); add('brazier', -45.4, -42.4);
   add('stand', 32, -58.6); add('stand', 64, -58.6); add('crates', 68, -65.2); add('rack', 40, -58.4, { yaw: PI });
@@ -119,10 +121,14 @@ const props = [];
   add('vat', -84, -62, { r: 1.1 }); add('barrels', -116, -34); add('barrels', -78, -35); add('crates', -114, -66);
   add('counter', -78, -50, { hx: 0.5, hz: 3 }); add('chain', -102, -50, { up: 4 });
   add('chandelier', -96, -50, { up: 8 }); add('brazier', -76.6, -66);
+  // (The Great Hearth's soot up the wall over it.)
+  add('decal', -117.95, -50, { layer: 'p2_soot_streaks', w: 6, h: 5, up: 8.8, yaw: PI / 2 });
   // ---- the Cellars: casks in rows, posts holding the yard up.
   for (const [x, z] of [[-106, -10], [-100, -10], [-94, -10], [-88, -10], [-106, -30], [-88, -30]]) add('barrels', x, z);
   add('crates', -108, -20); add('crates', -100, -33);
   add('column', -96, -15, { r: 0.5, wood: true, solid: true }); add('column', -96, -27, { r: 0.5, wood: true, solid: true });
+  // (Webs in the top corners: each painting's web is in its top right, so each sits with that end in a corner.)
+  add('decal', -83.05, -35.95, { layer: 'p2_cobweb', w: 2, up: 3.95 }); add('decal', -108.95, -6.05, { layer: 'p2_cobweb', w: 2, up: 3.95, yaw: PI });
   // ---- the Drill Floor: the floor kept clear, armour on stands for the drill, racks and shields round the walls.
   for (const x of [88, 100, 112, 124]) { add('stand', x, -36); add('stand', x, -64); }
   add('rack', 76.8, -40, { yaw: PI / 2 }); add('rack', 76.8, -60, { yaw: PI / 2 }); add('rack', 135.2, -50, { yaw: -PI / 2 });
@@ -150,11 +156,16 @@ const props = [];
   add('barrels', 166, -102); add('barrels', 166, -126.5); add('tools', 175, -110.5, { yaw: PI }); add('tools', 175, -118, { yaw: PI });
   add('heap', 153.5, -104, { r: 1.4, layer: 'dark:rubble' }); add('heap', 153.5, -124, { r: 1.2, layer: 'dark:rubble' });
   add('brazier', 156, -109); add('brazier', 156, -119);
+  add('decal', 167, -108.5, { layer: 'p2_scorch_mark', w: 2.4, flat: true }); add('decal', 168, -120, { layer: 'p2_scorch_mark', w: 1.8, flat: true, yaw: 2 });
   // ---- the Pit Stair and the Oubliettes: cages hung over the pits, the pits themselves, what's left of who was put down
   // them; the gaolers' cots and their table.
   for (const [x, z] of [[-10, -128], [10, -128], [-10, -148], [10, -148]]) { add('pit', x, z, { r: 2 }); add('cage', x, z, { up: 2.2 }); }
   add('bones', 0, -138, { r: 1.6 }); add('bones', -15, -158, { r: 1.2 }); add('chain', 0, -152, { up: 3 });
   add('cot', 16, -156); add('cot', 16, -122); add('table', 15, -139, { hx: 0.7, hz: 2 }); add('candles', 15, -139.6, { up: 0.85 });
+  // (The days they counted, scratched in the wall; and blood.)
+  add('decal', -19.95, -131, { layer: 'p2_gouges', w: 2.4, up: 0.6, yaw: PI / 2 }); add('decal', -19.95, -151, { layer: 'p2_gouges', w: 2.4, up: 0.6, yaw: PI / 2 });
+  add('decal', 5, -136, { layer: 'p2_blood_splashes', w: 2, flat: true }); add('decal', -6, -156, { layer: 'p2_blood_splashes', w: 1.6, flat: true, yaw: 0.7 });
+  add('decal', -35.05, -115.95, { layer: 'p2_cobweb', w: 1.8, up: 5.1 });
   // ---- the Aqueduct: the water down its middle, from its head to the Kitchens' cistern.
   channel(add, [-100, -150], [-100, -68]);
   // ---- the Aqueduct Head: where the castle's water comes in, its sluices, its piers.
@@ -231,7 +242,7 @@ export const LOWER_WARD = {
   links: [{ x: -100, z: -187.4, yaw: 0, to: 'highconduits', n: 1 }],
   last: 'gatecaptain', tough: { hp: 22, damage: 2.5 }, pay: { xp: 36000, gold: 5200 },
   names: { "Velscour's Knights": 'GARRISON KNIGHT', 'Plague Knights': 'GATE WARDEN', 'The Possessed': 'SCULLION', Kobolds: 'TURNSPIT', 'Haunted Mannequins': 'EMPTY HARNESS', 'Night Paralysis Demons': 'FORGE-WRAITH', 'Dead Children': 'THE FORGOTTEN', 'Plague Giants': 'GAOLER' },
-  look: { wall: 'ashlar', foot: 'dark:block', floor: 'flags', roof: 'dark:stone', flame: 'dark:flame', light: [1, 0.4, 0.16], fire: [1, 0.44, 0.18], every: 8, high: 3, glow: 2.5, lit: true, beam: 'dark:stone', bays: 'chains' },
+  look: { wall: 'ashlar', foot: 'dark:block', floor: 'flags', banner: 'p2_banner_skull', roof: 'dark:stone', flame: 'dark:flame', light: [1, 0.4, 0.16], fire: [1, 0.44, 0.18], every: 8, high: 3, glow: 2.5, lit: true, beam: 'dark:stone', bays: 'chains' },
   words: { enter: "Castle Velscour: the Lower Ward. His garrison holds the gate; the servants' ways run behind the walls.", clear: 'The Gate Captain is dead! The gate is yours.', wipe: 'You fall... and wake in the Gate Passage.' },
 };
 

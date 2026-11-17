@@ -355,5 +355,523 @@
   "road_dirt",
   "road_ash",
   "road_plank"
- ]
+ ],
+ "ph2": {
+  "size": [
+   768,
+   768
+  ],
+  "detail": [
+   384,
+   384
+  ],
+  "dir": "p2/",
+  "layers": [
+   {
+    "name": "p2_wrought_bars",
+    "kind": "metal",
+    "cutout": false
+   },
+   {
+    "name": "p2_riveted_plate",
+    "kind": "metal",
+    "cutout": false
+   },
+   {
+    "name": "p2_heavy_rust",
+    "kind": "metal",
+    "cutout": false
+   },
+   {
+    "name": "p2_studded_oak",
+    "kind": "wood",
+    "cutout": false
+   },
+   {
+    "name": "p2_bone_wall",
+    "kind": "stone",
+    "cutout": false
+   },
+   {
+    "name": "p2_bone_rubble",
+    "kind": "stone",
+    "cutout": false
+   },
+   {
+    "name": "p2_coping",
+    "kind": "stone",
+    "cutout": false
+   },
+   {
+    "name": "p2_voussoirs",
+    "kind": "stone",
+    "cutout": false
+   },
+   {
+    "name": "p2_quoins",
+    "kind": "stone",
+    "cutout": false
+   },
+   {
+    "name": "p2_string_course",
+    "kind": "stone",
+    "cutout": false
+   },
+   {
+    "name": "p2_bone_joint_flags",
+    "kind": "stone",
+    "cutout": false
+   },
+   {
+    "name": "p2_rutted_setts",
+    "kind": "stone",
+    "cutout": false
+   },
+   {
+    "name": "p2_slum_cobbles",
+    "kind": "stone",
+    "cutout": false
+   },
+   {
+    "name": "p2_ash_street",
+    "kind": "stone",
+    "cutout": false
+   },
+   {
+    "name": "p2_wharf_deck",
+    "kind": "wood",
+    "cutout": false
+   },
+   {
+    "name": "p2_gutter_strip",
+    "kind": "stone",
+    "cutout": false
+   },
+   {
+    "name": "p2_drain_cover",
+    "kind": "metal",
+    "cutout": false
+   },
+   {
+    "name": "p2_moat_water",
+    "kind": "wet",
+    "cutout": false
+   },
+   {
+    "name": "p2_waterline_wall",
+    "kind": "brick",
+    "cutout": false
+   },
+   {
+    "name": "p2_dye_flags",
+    "kind": "stone",
+    "cutout": false
+   },
+   {
+    "name": "p2_slate_roof",
+    "kind": "roof",
+    "cutout": false
+   },
+   {
+    "name": "p2_lead_roof",
+    "kind": "metal",
+    "cutout": false
+   },
+   {
+    "name": "p2_blood_tiles",
+    "kind": "roof",
+    "cutout": false
+   },
+   {
+    "name": "p2_burnt_roof",
+    "kind": "roof",
+    "cutout": false
+   },
+   {
+    "name": "p2_shingle_roof",
+    "kind": "roof",
+    "cutout": false
+   },
+   {
+    "name": "p2_verdigris_roof",
+    "kind": "metal",
+    "cutout": false
+   },
+   {
+    "name": "p2_ridge_strip",
+    "kind": "roof",
+    "cutout": false
+   },
+   {
+    "name": "p2_oak_planks",
+    "kind": "wood",
+    "cutout": false
+   },
+   {
+    "name": "p2_char_planks",
+    "kind": "wood",
+    "cutout": false
+   },
+   {
+    "name": "p2_tar_boards",
+    "kind": "wood",
+    "cutout": false
+   },
+   {
+    "name": "p2_adzed_beam",
+    "kind": "wood",
+    "cutout": false
+   },
+   {
+    "name": "p2_door_iron",
+    "kind": "wood",
+    "cutout": false
+   },
+   {
+    "name": "p2_door_poor",
+    "kind": "wood",
+    "cutout": false
+   },
+   {
+    "name": "p2_door_rich",
+    "kind": "wood",
+    "cutout": false
+   },
+   {
+    "name": "p2_shutters",
+    "kind": "wood",
+    "cutout": false
+   },
+   {
+    "name": "p2_leaded_glass",
+    "kind": "glass",
+    "cutout": false
+   },
+   {
+    "name": "p2_leaded_lit",
+    "kind": "lit",
+    "cutout": false
+   },
+   {
+    "name": "p2_railing_mask",
+    "kind": "metal",
+    "cutout": true
+   },
+   {
+    "name": "p2_awning_canvas",
+    "kind": "cloth",
+    "cutout": false
+   },
+   {
+    "name": "p2_hessian",
+    "kind": "cloth",
+    "cutout": false
+   },
+   {
+    "name": "p2_banner_blood",
+    "kind": "cloth",
+    "cutout": true
+   },
+   {
+    "name": "p2_banner_blue",
+    "kind": "cloth",
+    "cutout": true
+   },
+   {
+    "name": "p2_banner_white",
+    "kind": "cloth",
+    "cutout": true
+   },
+   {
+    "name": "p2_banner_green",
+    "kind": "cloth",
+    "cutout": true
+   },
+   {
+    "name": "p2_banner_greygold",
+    "kind": "cloth",
+    "cutout": true
+   },
+   {
+    "name": "p2_war_banner",
+    "kind": "cloth",
+    "cutout": true
+   },
+   {
+    "name": "p2_tapestry_war",
+    "kind": "cloth",
+    "cutout": false
+   },
+   {
+    "name": "p2_tapestry_hunt",
+    "kind": "cloth",
+    "cutout": false
+   },
+   {
+    "name": "p2_thorn_brocade",
+    "kind": "cloth",
+    "cutout": false
+   },
+   {
+    "name": "p2_black_panelling",
+    "kind": "wood",
+    "cutout": false
+   },
+   {
+    "name": "p2_oxblood_marble",
+    "kind": "stone",
+    "cutout": false
+   },
+   {
+    "name": "p2_bone_checker",
+    "kind": "stone",
+    "cutout": false
+   },
+   {
+    "name": "p2_sooty_plaster",
+    "kind": "plaster",
+    "cutout": false
+   },
+   {
+    "name": "p2_frieze_strip",
+    "kind": "cloth",
+    "cutout": false
+   },
+   {
+    "name": "p2_worn_floorboards",
+    "kind": "wood",
+    "cutout": false
+   },
+   {
+    "name": "p2_fireback",
+    "kind": "brick",
+    "cutout": false
+   },
+   {
+    "name": "p2_book_spines",
+    "kind": "wood",
+    "cutout": false
+   },
+   {
+    "name": "p2_jar_shelves",
+    "kind": "wood",
+    "cutout": false
+   },
+   {
+    "name": "p2_dyed_cloth",
+    "kind": "cloth",
+    "cutout": false
+   },
+   {
+    "name": "p2_wool_blanket",
+    "kind": "cloth",
+    "cutout": false
+   },
+   {
+    "name": "p2_curtain_granite",
+    "kind": "stone",
+    "cutout": false
+   },
+   {
+    "name": "p2_keep_basalt",
+    "kind": "stone",
+    "cutout": false
+   },
+   {
+    "name": "p2_bone_inlay_stone",
+    "kind": "stone",
+    "cutout": false
+   },
+   {
+    "name": "p2_demon_frieze",
+    "kind": "stone",
+    "cutout": false
+   },
+   {
+    "name": "p2_corbel_strip",
+    "kind": "stone",
+    "cutout": false
+   },
+   {
+    "name": "p2_ward_paving",
+    "kind": "stone",
+    "cutout": false
+   },
+   {
+    "name": "p2_walk_paving",
+    "kind": "stone",
+    "cutout": false
+   },
+   {
+    "name": "p2_basalt_columns",
+    "kind": "stone",
+    "cutout": false
+   },
+   {
+    "name": "p2_granite_cliff",
+    "kind": "stone",
+    "cutout": false
+   },
+   {
+    "name": "p2_scree",
+    "kind": "stone",
+    "cutout": false
+   },
+   {
+    "name": "p2_ash_clay_ground",
+    "kind": "stone",
+    "cutout": false
+   },
+   {
+    "name": "p2_dead_grass",
+    "kind": "stone",
+    "cutout": false
+   },
+   {
+    "name": "p2_bridge_ashlar",
+    "kind": "stone",
+    "cutout": false
+   },
+   {
+    "name": "p2_fishscale_slate",
+    "kind": "roof",
+    "cutout": false
+   },
+   {
+    "name": "p2_bronze_plates",
+    "kind": "metal",
+    "cutout": false
+   },
+   {
+    "name": "p2_bloodstone",
+    "kind": "stone",
+    "cutout": false
+   },
+   {
+    "name": "p2_obsidian",
+    "kind": "stone",
+    "cutout": false
+   },
+   {
+    "name": "p2_bone_plaster",
+    "kind": "stone",
+    "cutout": false
+   },
+   {
+    "name": "p2_mausoleum_marble",
+    "kind": "stone",
+    "cutout": false
+   },
+   {
+    "name": "p2_demon_glass",
+    "kind": "stained",
+    "cutout": true
+   },
+   {
+    "name": "p2_soot_streaks",
+    "kind": "decal",
+    "cutout": true
+   },
+   {
+    "name": "p2_damp_rise",
+    "kind": "decal",
+    "cutout": true
+   },
+   {
+    "name": "p2_moss_patches",
+    "kind": "cloth",
+    "cutout": false
+   },
+   {
+    "name": "p2_blood_splashes",
+    "kind": "decal",
+    "cutout": true
+   },
+   {
+    "name": "p2_rust_streaks",
+    "kind": "decal",
+    "cutout": true
+   },
+   {
+    "name": "p2_cracks",
+    "kind": "decal",
+    "cutout": true
+   },
+   {
+    "name": "p2_lichen_spots",
+    "kind": "stone",
+    "cutout": false
+   },
+   {
+    "name": "p2_grime_noise",
+    "kind": "decal",
+    "cutout": true
+   },
+   {
+    "name": "p2_ash_dust",
+    "kind": "decal",
+    "cutout": true
+   },
+   {
+    "name": "p2_cobweb",
+    "kind": "decal",
+    "cutout": true
+   },
+   {
+    "name": "p2_gouges",
+    "kind": "decal",
+    "cutout": true
+   },
+   {
+    "name": "p2_scorch_mark",
+    "kind": "decal",
+    "cutout": true
+   },
+   {
+    "name": "p2_puddles",
+    "kind": "decal",
+    "cutout": true
+   },
+   {
+    "name": "p2_dead_ivy",
+    "kind": "decal",
+    "cutout": true
+   },
+   {
+    "name": "p2_torn_rags",
+    "kind": "decal",
+    "cutout": true
+   },
+   {
+    "name": "p2_straw_ground",
+    "kind": "cloth",
+    "cutout": false
+   },
+   {
+    "name": "p2_bones_ground",
+    "kind": "stone",
+    "cutout": false
+   },
+   {
+    "name": "p2_street_litter",
+    "kind": "stone",
+    "cutout": false
+   },
+   {
+    "name": "p2_wax_drips",
+    "kind": "decal",
+    "cutout": true
+   },
+   {
+    "name": "p2_chain_strip",
+    "kind": "metal",
+    "cutout": true
+   },
+   {
+    "name": "p2_banner_skull",
+    "kind": "cloth",
+    "cutout": true
+   }
+  ]
+ }
 }

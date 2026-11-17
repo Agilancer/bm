@@ -24,6 +24,7 @@ import { marches } from './marches.js';
 import { phobos, phobosCell } from './phobos-build.js';
 import { PHOBOS_SEALS } from './phobos-seals.js';
 import { PH_TILE } from './phobos-tiles.js';
+import { P2_TILE } from './phobos-p2.js';
 import { buildHouse, buildTower } from './belltower.js';
 
 const TAU = Math.PI * 2;
@@ -35,6 +36,7 @@ const TILE = { wall: [7, 4.2], roof: [4, 2.3], stone: [3, 1.7], rubble: [3, 1.7]
 export const tileOf = (layer) => {
   const n = layer.replace(/^(dark|pale|frost|mire|spore|void|slate|blood|moss|umber|soot|eve|char):/, '');
   if (n.startsWith('ph_')) return PH_TILE[n] || TILE.stone;   // (Phobos's own: tools/phobos/textures/wire_layers.py)
+  if (n.startsWith('p2_')) return P2_TILE[n] || TILE.stone;   // (and the PH2 pack: tools/phobos/textures/wire_ph2.py)
   return n.startsWith('wall') || n === 'door_wall' ? TILE.wall : n.startsWith('roof') ? TILE.roof : n.startsWith('door') ? TILE.door : TILE[n] || TILE.cloth;
 };
 
