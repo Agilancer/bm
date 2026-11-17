@@ -716,9 +716,11 @@ function reaches(run, from) {
   for (const dir of [1, -1]) {
     let L = null;
     for (let i = from; i >= 0 && i < run.length; i += dir) {
-      const { bed, bank } = run[i];
+      const { bed, bank, skip } = run[i];
+      if (skip) { lv[i] = null; continue; }                         // (filled in under a street that crosses: no water, the reach goes on past)
       if (L === null || bed > L - SHALLOW) L = bed + DEPTH;          // (climbed out of the reach below: a weir, and a new reach)
-      if (bank < L + 0.25) { if (bank - bed < SHALLOW + 0.4) break; L = bank - 0.25; }   // (kept under its banks; no ditch, no water, and none beyond)
+      // (Kept under its banks. Where there's no ditch, no water: and whatever's beyond starts a reach of its own.)
+      if (bank < L + 0.25) { if (bank - bed < SHALLOW + 0.4) { L = null; continue; } L = bank - 0.25; }
       lv[i] = L;
     }
   }
@@ -776,11 +778,13 @@ function waters(K) {
   }
   // The Slough, down the city from its rise: reaches the same way, a weir at each step, running on under its bridges.
   const w = 10.5, run = [];
+  const over = STREETS.filter((st) => st.name !== 'The Corpse Quay');
+  const bridge = (x, z) => over.some((st) => st.pts.some((q, j) => j + 1 < st.pts.length && segD(x, z, q, st.pts[j + 1]) < st.w + 8));
   for (let i = 0; i + 1 < SLOUGH.length; i++) {
     const A = SLOUGH[i], B = SLOUGH[i + 1], L = Math.hypot(B[0] - A[0], B[1] - A[1]), ux = (B[0] - A[0]) / L, uz = (B[1] - A[1]) / L, n = Math.ceil(L / 8);
     for (let k = 0; k < n; k++) {
       const t = (k + 0.5) / n * L, x = A[0] + ux * t, z = A[1] + uz * t, t0 = k / n * L, t1 = (k + 1) / n * L;
-      run.push({ p: [A[0] + ux * t0, A[1] + uz * t0], q: [A[0] + ux * t1, A[1] + uz * t1], ux, uz, bed: Y(x, z), bank: Math.min(Y(x - uz * (w + 3), z + ux * (w + 3)), Y(x + uz * (w + 3), z - ux * (w + 3))), out: cityIn(x, z) > 1.012 });
+      run.push({ p: [A[0] + ux * t0, A[1] + uz * t0], q: [A[0] + ux * t1, A[1] + uz * t1], ux, uz, bed: Y(x, z), bank: Math.min(Y(x - uz * 15, z + ux * 15), Y(x + uz * 15, z - ux * 15)), out: cityIn(x, z) > 1.012, skip: bridge(A[0] + ux * t0, A[1] + uz * t0) || bridge(A[0] + ux * t1, A[1] + uz * t1) });
     }
   }
   let top = 0; for (let i = 1; i < run.length; i++) if (run[i].bed > run[top].bed) top = i;
