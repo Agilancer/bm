@@ -4,8 +4,11 @@ The biggest zone in the game, and its ending. The owner asked for it on 2026-11-
 goes, the order it's built in, and the rules. What's left to do, and what didn't pass the critics, is in
 [PHOBOS-TODO.md](PHOBOS-TODO.md). Read both before starting any chunk, and update both when you finish one.
 
-Work lives in the worktree `work/bm-phobos` on branch `phobos` (cut from origin/main b6aa9e5, which has the owner's textures).
-Each chunk gets its own branch and PR off main when it's ready; nothing is merged without the owner.
+**Picking this up from another account or session? Start with [PHOBOS-HANDOFF.md](PHOBOS-HANDOFF.md):** where everything
+stands, the owner's rules, the code map, how to test and shoot, and the traps.
+
+Each chunk gets its own branch and PR off main when it's ready; the owner merges unless they say otherwise. (The work began
+in the worktree `work/bm-phobos` on branch `phobos`; everything through PR 216 is on main.)
 
 ## The four parts
 

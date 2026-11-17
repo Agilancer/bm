@@ -429,7 +429,7 @@ world-space grime layer (soot, damp, moss, rust, cracks) that chunk 2 asked for.
   gate is carved; the Keep's body reads as slats at 300 m (a few deep dark arcades per step); the brazier bowl wants a
   thick rim and three legs; the castle's cones all one witch hat (vary them per wing); weathering unjudged at 20-60 m.
 
-## Doors and towers (owner, 2026-11-16) — branch phobos-doors
+## Doors and towers (owner, 2026-11-16) — PR 216, both critics approved
 
 The owner: "Make sure all the doors on all the houses open and close. Also make sure you can go in all the towers and
 spires and they have decor and purpose!"
