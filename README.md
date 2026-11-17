@@ -1334,13 +1334,17 @@ where they began (`keepPace`): they used to stay the level they were made at.
   texel's own light and dark against the rest of the piece (measured without its gold), keeps gold trim gold (a weak gold
   on metal too, `trimOf`) and skin skin (`src/gfx/recolour.js`), and the padded coat under their clothes takes their coat's colour (`coverCode`). A paladin's
   is pale whatever its set (`PALE`: a breath of the set's colour, leaning to ivory, its darks lifted more than its lights
-  and its blackest drawn up to a dark steel, only long gold kept gold: flecks and curls painted out with the plate round
-  them, rust not spared as skin), on them, on the ground and in the pictures: a cream cloth (on them, lifted and warmed
-  toward ivory), silver plate, gold trim. Anyone else's dyed metal is a little lighter than their dyed cloth, so the plate
+  and its blackest drawn up to a dark steel, all of it drawn toward its middle so its painted shading isn't a mottle,
+  only long gold kept gold: flecks and curls painted out with the plate round them, the rest of its old gold, a dull
+  ochre, made as light as its piece first (`matchLum`) and given its piece's metal and roughness, rust not spared as
+  skin; its trim lines grown over their own darker shading and made a polished gold, `growInto` and `polishGold`), on them, on the ground and in the pictures: a cream cloth (on them, lifted and warmed
+  toward ivory, cloth to plate by how metal it is rather than a switch), silver plate, gold trim. Anyone else's dyed metal is a little lighter than their dyed cloth, so the plate
   reads over it (its darker steel lifted most, its lightest drawn down, so a pale plate isn't a white), and their cloth a
   little greyer than the dye. Their weapon and shield are whatever they've been given of their own
   kinds; a painted weapon more often than not goes with their coat, a shield nearly always (a paladin's is Bleached
-  steel); one that doesn't is plain steel, Bleached (faded: its darks lifted, near its picture's light) or Blackened. A mace, put away, hangs at
+  steel); one that doesn't is plain steel, Bleached (faded: its darks lifted, near its picture's light) or Blackened.
+  A painted one's metal is guessed from its picture before it was painted (`propMetal`, carried in its alpha): by its
+  paint a bleached board was all steel, a mirror of the ground. A mace, put away, hangs at
   their side, clear of a cape.
 - **The pictures** in the pack and the book are drawn in Blender by `tools/heroes/icons.py` (into
   `assets/game/heroes/icons`, from the GLBs' own arrays: no glTF import) and dyed in the page as the bodies are
@@ -1520,9 +1524,11 @@ each arm and leg, a coif, armpit gussets and a skirt, every end closed. On lance
 knights it's drawn as ring mail, bright on a bright suit and blackened on a dark one (and bright on a pale outfit, a
 paladin's, whatever body it was cut from: the coat's code in `info.z` says so); on archers, bards, rogues and ninjas as a
 dark quilted coat; inside a helm as shadow. The inside of a plate is dark iron, not its outer paint (a pale lining with a
-little light of its own on a pale outfit) (`heroLook` in `src/gfx/materials.js`; `docs/RENDERING.md`). The rings are laid
-along each tube from its own `uv.y` (less 100 on the deep ones): taken in proportion rather than as a step, it came out
-at nought, and close up the mail was the black between its rings.
+little light of its own on a pale outfit, and its cloth's inside a little light too) (`heroLook` in
+`src/gfx/materials.js`; `docs/RENDERING.md`). The rings are laid along each tube from its own `uv.y` (less 100 on the
+deep ones): taken in proportion rather than as a step, it came out at nought, and close up the mail was the black
+between its rings. They're drawn only while each is some pixels across, edges as soft as a pixel, the dark between them
+not a black, so they don't swim as the hero moves.
 
 - **A chest put back on the body.** On six bodies (lancer_f2, archer_f2, archer_f4, archer_f5, rogue_m1, rogue_m4) the
   armour tool had cut the chest onto the limbs: the two halves of the breastplate rode the upper arms, the belly and
