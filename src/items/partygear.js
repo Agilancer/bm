@@ -38,7 +38,7 @@ export const PROP_PALS = {
   sea: { name: 'Sea-Green', hue: 172, sat: 0.72, val: 0.92, metal: 0.06 }, azure: { name: 'Azure', hue: 208, sat: 0.95, val: 1, metal: 0.1 },
   royal: { name: 'Royal', hue: 232, sat: 1, val: 0.9, metal: 0.1 }, violet: { name: 'Violet', hue: 276, sat: 0.9, val: 0.95, metal: 0.08 },
   rose: { name: 'Rose', hue: 330, sat: 0.85, val: 1.02, metal: 0.08 }, blackened: { name: 'Blackened', hue: null, sat: 0.3, val: 0.55 },
-  bleached: { name: 'Bleached', hue: null, sat: 0.12, val: 1.25, floor: 0.5 },
+  bleached: { name: 'Bleached', hue: null, sat: 0.12, val: 1.35, floor: 0.58 },
 };
 const PAL_KEYS = Object.keys(PROP_PALS).filter((k) => k !== 'own');
 
@@ -194,7 +194,7 @@ export function rampFor(set, slot, rarity) {
 // pale plate came out slate and the plate's highs went white in flecks. And it leans to ivory, so its cloth is cream; its
 // metal, its colour mostly taken off (herolook.js), is silver.)
 const PALE = { paladin: [0.3, 0.38, 3.2, 0.6] };   // colour kept, light lifted toward white by, the most lift, how ivory
-const IVORY = [0.115, 0.17];   // an ivory's hue and colourfulness
+export const IVORY = [0.115, 0.17];   // an ivory's hue and colourfulness
 export const shapeClass = (shape) => /^([a-z]+)_[fm]\d+$/.exec(shape || '')?.[1] || null;
 export function paled(ramp, cls) {
   const p = PALE[cls];
