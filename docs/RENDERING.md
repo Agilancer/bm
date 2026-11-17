@@ -63,9 +63,12 @@ marked in the piece number, `CLOTH_BIT`) is dark iron on `-2` and `-3` and a dar
 covers were short flat near-black tubes, which read as grey rubber, and plate insides wore their outer paint.
 
 A party member's outfit puts its coat's code in the fraction of `info.z` (`coverCode` in `src/gfx/herolook.js`). A pale
-one (plain and light: a paladin's) wears bright mail whatever body it was cut from, and its plates' insides are a pale
-lining (0.36, 0.35, 0.33) with a little ambient light of its own, since a piece borrowed from another body can leave a
-hole into the hollow suit. Until 2026-11-16 "up inside a helm" was read in proportion (`clamp(v / 100)`), which took a
+one (plain and light: a paladin's) wears bright mail (crowns 0.48, 0.09 between) whatever body it was cut from, and its
+plates' insides are a pale lining (0.46, 0.45, 0.43) with a little ambient light of its own, since a piece borrowed from
+another body can leave a hole into the hollow suit; its cloth's back faces get half that light, or the inside of an
+ivory tabard, its normal turned toward the ground's light, was a grey hole. Mail rings fade out between 0.2 and 0.5 of a
+ring per pixel (was 0.3 to 0.7), their edges are widened by half a pixel, and the dark between them on a bright suit is
+0.05 (was 0.015): at a pixel and a half a ring, crowns on black were a dot pattern that swam. Until 2026-11-16 "up inside a helm" was read in proportion (`clamp(v / 100)`), which took a
 tube's whole `v` away below 100: every tube's rings sat at nought along it, and close up the mail was the 0.015 between
 the rings. It's a step now (`v > 50`).
 
