@@ -7,6 +7,7 @@
 // next load. (No box for the sim: you walk through one, as you would a heap of coin.)
 import { groundAt } from '../core/interior.js';
 import { makeRng, rollChest } from './items.js';
+import { towerChests } from '../core/phobos-towers.js';
 
 // Out in the woods, for finding: further out, better. (After the house and crypt chests, so a save's list still lines up.)
 function woodsChests() {
@@ -32,7 +33,9 @@ export class Chests {
     this.audio = audio;
     this.drops = drops;
     this.rng = makeRng((Math.random() * 4294967296) >>> 0);
-    this.list = things.filter((t) => t.type === 'chest').concat(woodsChests()).map((t) => this.make(t));
+    // (And one at the top of each of Phobos's towers, after the woods', so a save's list still lines up:
+    // src/core/phobos-towers.js towerChests.)
+    this.list = things.filter((t) => t.type === 'chest').concat(woodsChests(), towerChests()).map((t) => this.make(t));
     this.fixed = this.list.length;
     this.near = [];
     renderer.chests = this.near;

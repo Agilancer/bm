@@ -69,7 +69,9 @@ export class World {
     // Marked, so whoever has their feet on the land goes over them (onLand below, heightFor's own rule).
     for (const c of this.colliders.slice(data.colliders.length)) if (c.x > CHURCH_BOUNDS.x0 && churchSite(c.x, c.z) > 2) c.under = true;
     this.siteBoxes = new Map();
-    for (const c0 of buildSites().colliders) this.addSiteBox({ ...c0, s: Math.sin(c0.yaw), co: Math.cos(c0.yaw) });
+    // (Phobos's doors among them, each by its number: setPhobosDoor.)
+    this.phDoors = new Map();
+    for (const c0 of buildSites().colliders) { const o = { ...c0, s: Math.sin(c0.yaw), co: Math.cos(c0.yaw) }; this.addSiteBox(o); if (o.phDoor !== undefined) this.phDoors.set(o.phDoor, o); }
     this.lightsData = data.lights;
     this.grid = new Uint8Array(NAV_W * NAV_H);
     this.slots = new Map();
@@ -246,6 +248,12 @@ export class World {
     this.caveSealed = sealed;
     for (const c of this.caveRubble) c.b = sealed ? 0 : OUT_OF_THE_WAY;
   }
+
+  // City State Phobos's doors, ten thousand (src/items/phobos-doors.js): one opened is out of the way, one shut is in its
+  // doorway. They start shut. open: a set of their numbers, for all of them at once.
+  // (Shut, from any height: the city's ground isn't all over nought.)
+  setPhobosDoor(id, open) { const c = this.phDoors.get(id); if (c) c.b = open ? OUT_OF_THE_WAY : -OUT_OF_THE_WAY; }
+  setPhobosDoors(open) { for (const [id, c] of this.phDoors) c.b = open.has(id) ? OUT_OF_THE_WAY : -OUT_OF_THE_WAY; }
 
   // mask: a bit for each door that stands open. -1: all of them.
   setDoors(mask) {

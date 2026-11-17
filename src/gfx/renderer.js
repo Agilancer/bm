@@ -778,22 +778,26 @@ export class Renderer {
   }
 
   // Parts as a kit builds them (Map layer -> {pos, nrm, uv, idx}) into a vertex and an index buffer of their own, the
-  // opaque first: { VB, IB, opaque, cut }. (As buildUnderSet packs a delve's.)
-  packParts(parts) {
+  // opaque first: { VB, IB, opaque, cut }. (As buildUnderSet packs a delve's.) groups (a kit's, Kit.group): for those whose
+  // key starts so (keep), slices: Map(key -> [{ at: its byte offset in VB, shown: its corners as built }]), to fold away
+  // and put back (src/gfx/phobos-near.js hideDoor).
+  packParts(parts, groups = null, keep = 'door:') {
     const prims = [];
     for (const [name, part] of parts) {
       const m = /^(dark|pale|frost|mire|spore|void|slate|blood|moss|umber|soot|eve|char):(.*)$/.exec(name), base = m ? m[2] : name;
       const layer = this.layerOf(base);
-      prims.push({ layer: layer + (m ? TINTS[m[1]] * 1000 : 0), cutout: this.cutOf(layer) ? 1 : 0, ...part });
+      prims.push({ name, layer: layer + (m ? TINTS[m[1]] * 1000 : 0), cutout: this.cutOf(layer) ? 1 : 0, ...part });
     }
     prims.sort((a, b) => a.cutout - b.cutout);
     let nv = 0, ni = 0;
     for (const p of prims) { nv += p.pos.length / 3; ni += p.idx.length; }
     const verts = new ArrayBuffer(Math.max(1, nv) * 36), f = new Float32Array(verts), u = new Uint32Array(verts), indices = new Uint32Array(Math.max(1, ni)), runs = [0, 0];
     let vo = 0, io = 0;
+    const bases = new Map();
     for (const p of prims) {
       runs[p.cutout] += p.idx.length;
       const base = vo, n = p.pos.length / 3;
+      bases.set(p.name, base);
       for (let i = 0; i < n; i++) {
         const o = vo * 9;
         f[o] = p.pos[i * 3]; f[o + 1] = p.pos[i * 3 + 1]; f[o + 2] = p.pos[i * 3 + 2];
@@ -804,7 +808,26 @@ export class Renderer {
       }
       for (let i = 0; i < p.idx.length; i++) indices[io++] = p.idx[i] + base;
     }
-    return { opaque: runs[0], cut: runs[1], VB: makeBuffer(this.device, new Float32Array(verts), GPUBufferUsage.VERTEX), IB: makeBuffer(this.device, indices, GPUBufferUsage.INDEX) };
+    const slices = new Map();
+    if (groups) for (const [k, g] of groups) {
+      if (!k.startsWith(keep)) continue;
+      slices.set(k, g.ranges.map((r) => { const b = bases.get(r.layer); return { at: (b + r.v0) * 36, shown: f.slice((b + r.v0) * 9, (b + r.v1) * 9) }; }));
+    }
+    return { opaque: runs[0], cut: runs[1], slices, VB: makeBuffer(this.device, new Float32Array(verts), GPUBufferUsage.VERTEX), IB: makeBuffer(this.device, indices, GPUBufferUsage.INDEX) };
+  }
+
+  // A door of Phobos's as a thing of its own, swung (src/items/phobos-doors.js): its leaf (mesh(), the first time) in the
+  // PH2 pack's painting of that kind of door. Null till its painting's in.
+  phLeaf(kind, mesh) {
+    const m = (this.phLeaves ||= {});
+    if (kind in m) return m[kind];
+    m[kind] = null;
+    const flat = this.flatNormal || (this.flatNormal = this.pixel('rgba8unorm', [128, 128, 255, 255]));
+    fetch(`${this.base}assets/game/tex/p2/${kind}_c.webp`).then((r) => { if (!r.ok) throw new Error(r.status); return r.blob(); })
+      .then((b) => this.bitmapTexture(b, 'rgba8unorm-srgb', 1, true))
+      .then((alb) => { m[kind] = this.lyingModel(mesh(kind), alb, flat, this.pixel('rgba8unorm', [255, 217, 0, 255]), [0, 0, 0, 0]); })
+      .catch((e) => console.warn('door leaf', kind, e));
+    return null;
   }
 
   buildUnderSet(key) {

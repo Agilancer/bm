@@ -28,6 +28,7 @@ import { Pack } from './items/pack.js';
 import { addPart, capture, restore, saves } from './saves.js';
 import { Chests } from './items/chests.js';
 import { Doors } from './items/doors.js';
+import { PhobosDoors } from './items/phobos-doors.js';
 import { Bells } from './items/bells.js';
 import { buildSites } from './core/sites.js';
 import { saveSettings, settings, Title } from './title.js';
@@ -810,6 +811,7 @@ async function boot(plan, poolSize) {
   });
   addPart('chests', { save: () => game.chests.save(), load: (d) => game.chests.load(d) });
   addPart('doors', { save: () => game.doors.save(), load: (d) => game.doors.load(d) });
+  addPart('phdoors', { save: () => game.phDoors.save(), load: (d) => game.phDoors.load(d) });
   addPart('clock', { save: () => ({ hour: renderer.hour }), load: (d) => renderer.setHour(d?.hour ?? 6) });
   // Not while you lie fallen.
   // (Nor in the Test Dungeon: nothing of it is kept, and Continue stays the game you were playing.)
@@ -937,6 +939,7 @@ async function boot(plan, poolSize) {
       game.chests.load(null);
       game.spellbar.load(null);
       game.doors.load(null);
+      game.phDoors.load(null);
       worldMap.load(null);
       townUI.load(null);
       town.load(null);
@@ -959,7 +962,7 @@ async function boot(plan, poolSize) {
     played = 0; playT = 0;
     game.beacon?.stop('');
     pack.load(null); arm(); game.drops.clear();
-    game.chests.load(null); game.spellbar.load(null); game.doors.load(null);
+    game.chests.load(null); game.spellbar.load(null); game.doors.load(null); game.phDoors.load(null);
     townUI.load(null); town.load(null);
     game.party?.load(null);
     renderer.setHour(12);
@@ -1382,6 +1385,8 @@ class GameView {
     this.nearChest = null;
     // (The town's doors, and the land's: the bell tower's and the Bellwright's, src/core/belltower.js.)
     this.doors = new Doors(renderer, audio, renderer.things.concat(buildSites().doors), { set value(m) { shared.input[INPUT.DOORS] = m; } });
+    // (And City State Phobos's, every house's and tower's: src/items/phobos-doors.js.)
+    this.phDoors = new PhobosDoors(renderer, audio, (m) => this.sim?.postMessage(m));
     this.nearDoor = null;
     // (The bell tower's bells, that you ring from its belfry floor.)
     this.bells = new Bells(renderer, audio);
@@ -1504,6 +1509,7 @@ class GameView {
       else if (this.nearHero) { if (!this.nearHero.busy) { this.heroTalk.talkTo(this.nearHero.h); this.takeShown = undefined; } }
       else if (this.nearRope) this.bells.pull(this.nearRope);
       else if (this.nearDoor) {
+        if (this.nearDoor.ph) { this.phDoors.toggle(this.nearDoor); this.takeShown = undefined; return; }
         if (this.locked(this.nearDoor)) { this.hud.tip('Locked, and solid. Silas Crane at the coffin yard keeps the key.', 3); return; }
         this.doors.toggle(this.nearDoor); this.takeShown = undefined;
       }
@@ -1539,7 +1545,9 @@ class GameView {
     const ch = this.chests.update(dt, snap[H.PX], snap[H.PY], snap[H.PZ], this.input.yaw);
     this.nearChest = this.input.enabled && !this.input.menu ? ch : null;
     const door = this.doors.update(dt, snap[H.PX], snap[H.PY], snap[H.PZ], this.input.yaw);
-    this.nearDoor = this.input.enabled && !this.input.menu ? door : null;
+    // (Phobos's after Bellmourn's: their swung leaves join the drawn doors that that's just started afresh.)
+    const phDoor = this.phDoors.update(dt, snap[H.PX], snap[H.PY], snap[H.PZ], this.input.yaw);
+    this.nearDoor = this.input.enabled && !this.input.menu ? door || phDoor : null;
     const rope = this.bells.update(dt, snap[H.PX], snap[H.PY], snap[H.PZ], this.input.yaw);
     // Someone to talk to, if there's nothing to take or open first.
     const free = this.input.enabled && !this.input.menu && !d && !this.nearChest;

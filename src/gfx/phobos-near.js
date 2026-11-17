@@ -6,8 +6,12 @@
 //
 // What stops a body is none of this: every house's walls are colliders from the start, the doorway left open.
 
+// Its doors: each shut one's leaf is drawn with its house; opened, that's folded away (hideDoor) and the leaf's swung as a
+// thing of its own (src/items/phobos-doors.js).
+
 import { buildPhobosCell } from '../core/sites.js';
 import { CASTLE_CELLS, CELL, cellOf, phobosHouses, wallCells } from '../core/phobos-build.js';
+import { cityTowers } from '../core/phobos-towers.js';
 import { CITY, CRAG } from '../core/east.js';
 
 const NEAR = 150, FAR = 230, KEEP = 30;   // metres to build a cell at, and to let it go at; how many are kept at most
@@ -16,9 +20,24 @@ export class PhobosNear {
   constructor(renderer) {
     this.r = renderer;
     this.cells = new Map();       // cell -> { VB, IB, opaque, cut, x, z }
-    // (The cells with houses in, and the crag's: src/core/phobos-build.js castleNear.)
-    this.have = new Set([...phobosHouses().map((h) => h.cell), ...CASTLE_CELLS, ...wallCells()]);
+    // (The cells with houses in, and the crag's: src/core/phobos-build.js castleNear; and the towers', gone into.)
+    this.have = new Set([...phobosHouses().map((h) => h.cell), ...CASTLE_CELLS, ...wallCells(), ...cityTowers().map((t) => t.cell)]);
     this.count = 0;
+    this.doors = new Map();       // door id -> { cell, VB, runs, hidden }
+  }
+
+  // A door's leaf as its house has it, folded away (hide) or put back. (Nothing if its cell isn't up: when it is, it's
+  // built as phDoorSwung says.)
+  hideDoor(id, hide) {
+    const d = this.doors.get(id);
+    if (!d || d.hidden === hide) return;
+    d.hidden = hide;
+    for (const r of d.runs) {
+      let data = r.shown;
+      if (hide) { data = r.shown.slice(); for (let i = 0; i < data.length; i += 9) { data[i] = r.shown[0]; data[i + 1] = r.shown[1]; data[i + 2] = r.shown[2]; } }
+      this.r.device.queue.writeBuffer(d.VB, r.at, data);
+    }
+    this.r.shadowEpoch = (this.r.shadowEpoch || 0) + 1;
   }
 
   // Each frame: the nearest cell that wants building is built (one a frame: a few milliseconds), and any gone far is let go.
@@ -35,7 +54,12 @@ export class PhobosNear {
     }
     let changed = false;
     if (want) {
-      const built = buildPhobosCell(want[0]), set = r.packParts(built.parts);
+      const built = buildPhobosCell(want[0]), set = r.packParts(built.parts, built.groups);
+      for (const [k, runs] of set.slices) {
+        const id = Number(k.slice(5));
+        this.doors.set(id, { cell: want[0], VB: set.VB, runs, hidden: false });
+        if (r.phDoorSwung?.(id)) this.hideDoor(id, true);
+      }
       // (Its hearths, door lamps and street lanterns light what's round them, as the land's own lamps do, while it's up.)
       for (const l of built.lamps) { l.phobos = want[0]; r.lights.push(l); }
       if (built.lamps.length) r.litOrder = null;   // (the renderer's own list of them by nearness is made again)
@@ -55,6 +79,7 @@ export class PhobosNear {
 
   drop(key, c) {
     this.cells.delete(key);
+    for (const [id, d] of this.doors) if (d.cell === key) this.doors.delete(id);
     this.r.foldLand('ph:' + key, false);
     if (c.lamps) { const L = this.r.lights; let n = 0; for (let i = 0; i < L.length; i++) if (L[i].phobos !== key) L[n++] = L[i]; L.length = n; this.r.litOrder = null; }
     // (Gone once this frame's work that drew it is done.)

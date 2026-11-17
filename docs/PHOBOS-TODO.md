@@ -429,6 +429,72 @@ world-space grime layer (soot, damp, moss, rust, cracks) that chunk 2 asked for.
   gate is carved; the Keep's body reads as slats at 300 m (a few deep dark arcades per step); the brazier bowl wants a
   thick rim and three legs; the castle's cones all one witch hat (vary them per wing); weathering unjudged at 20-60 m.
 
+## Doors and towers (owner, 2026-11-16) — branch phobos-doors
+
+The owner: "Make sure all the doors on all the houses open and close. Also make sure you can go in all the towers and
+spires and they have decor and purpose!"
+
+- [x] **Doors**: every roofed house and every free-standing tower has a real door, 9,593 in all (house `door` = its
+  index in phobosHouses; towers 20000+). E opens and shuts (src/items/phobos-doors.js, the render thread's, as
+  Bellmourn's doors are); the sim gets `phDoor`/`phDoors` and World.setPhobosDoor moves that door's collider out of the
+  way. The shut leaf is drawn with its house in the near cell (doorLeaf in phobos-build.js, group `door:<id>`); opened,
+  the near view folds that group away (PhobosNear.hideDoor) and the leaf is drawn swung on its hinge as a thing of its
+  own (renderer.phLeaf, its own p2 texture). Iron doors on dressed stone, plank doors on the rest. Open doors go in the
+  save. The `barred` houses are gone: every door opens.
+- [x] **Every door walked**: a scratch test opens each one in the physics world and walks straight in and back: 9,592 of
+  9,593 pass (door 3286: a 0.9 m post in the street grazes its path; you get in at a slant). Houses now keep the step
+  before their door clear (phobosHouses: a door apron, so no house opens on to a neighbour's wall), and the sewer mouths
+  keep a lane out the way they face (a row of houses stood 20 m before the Slough Mains and the Charnel Runs, and with
+  the doors shut the portal test's start was shut in a house).
+- [x] **Towers** (src/core/phobos-towers.js): 116 towers. The 65 free-standing ones (40 mage spires counting the
+  Eye's two, the Ninefold Eye, gaol ×5, guard ×9 incl. the barbican and the Marshal's, counting houses ×4, ossuaries ×2, the gibbet,
+  the sluice, the burnt minster, the hospice) have an iron door at the foot, a floor every 4.6 m up a stair round the
+  inside of the wall, rooms furnished by kind and floor (study / stillroom / scrying pool; guardroom / bunks; cells;
+  bone shelves; ledgers; cots; ...), a lamp and candles per floor, beamed ceilings (beams side by side, never crossed),
+  and a chest on the top floor (79 tower chests, tier by kind, src/items/chests.js towerChests). The 51 wall towers are
+  guard posts at the wall-walk's height (spears, brazier, barrels, bunk, crates, table), walked through by the walk;
+  the corners have a stair between their two walk heights and a gallery out. Houses, the parade tower in the gaol and a
+  gate tower in a corner drum that overlapped them were moved out (towerYards, the minster's nave kept clear).
+- [x] **Tests**: tests/phobos-towers.test.mjs (ids, shut stops / open passes, every free tower climbed door to chest,
+  wall towers walked, near cells sound). Suite 480, 479 pass, 1 skipped. Land 1,582,157 corners of 1,600,000 (towers'
+  insides are all near-cell; the far keeps tower() as it was).
+- [x] **Critics round 1**: veteran REJECT 5.5, young REJECT 6.5. Fixed: T shapes (the candle stand's flat dish on a pole
+  → three prickets; the pedestal table → three splayed legs; the plank door's painted hinge plates, an upright plate
+  with the strap out of it, cut off the painting: `leafU0`); the barbican's ground floor stood under the moat's water
+  sheet (the "roofless" room): towers on the moat's bank now floor over it (`moatLevel`); rooms filled (two or three
+  things to a long wall, liveries, bunks, strongboxes), guard and wall towers plastered inside, a candle ring on three
+  chains hung in each room and the lamp lifted to light ceilings; bookcases given sides, top and plinth; the braziers'
+  and cauldron's flames are the game's moving fires (far build only: `towerFires` furnishes the rooms again with
+  nothing drawn); the towers' stairs are wedge steps (`spiral` o.wedge, o.thick) in the rooms' plaster; the chest on a
+  dais with prickets and a light; doors swing to 93°; grey sills. Pictures art/phobos/east/doors_towers_progress.jpg
+  (round 1) and doors_towers_r2.jpg.
+- [x] **Critics round 2**: veteran REJECT 7, young REJECT 7.5, both on one rule break: seen from under it, the candle
+  ring's far chain crossed its near rim, a cross in a ring. Fixed: the ring is gone; each room has one deep iron fire
+  bowl, shut under, on a single chain, its flame the moving fire, its light a metre and more below it (hung close, the
+  light lit the iron pale as a paper shade whatever way its faces looked); the wall towers have no hanging fixture,
+  their fire on the floor (braziers on the walls and in the middle). A lit brazier by every free tower's door outside
+  (`doorFire`; not where the moat is), so a tower that opens is known from the street. The tower's outer faces were
+  wound the wrong way (ringFaces), so Kit.quad turned them round and their stone ran in diagonal smears; the battered
+  foot's ends by a doorway were tris (a tri's painting runs by x + z: nothing along a face at 45°), now quads. Stairs:
+  one sloped soffit under each flight (spiral o.wedge), drawn out to the wall (o.reach). The PH2 sooty plaster (stain
+  bands a metre apart, a hard seam each) is off the guard, wall, sluice and hospice rooms: ph_grey_plaster. Beds on
+  legs with a headboard; the cauldron rust, lit warm, no green light. Picture art/phobos/east/doors_towers_r3.jpg.
+- [x] **Critics round 3: both APPROVE 8/10**, no rule break. Their leftovers, in their order:
+  1. A corner tower's stair is near black, and its upper walls too. Light the stair's foot and its top landing (a
+     brazier or a pricket at each).
+  2. The fire bowl reads as a modern pendant shade: pale grey, a white puck under it. It wants near-black rough iron,
+     a rolled lip, and a dark knob or short spike under it.
+  3. The cauldron still reads beige, not rusted iron.
+  4. Rooms' middles are bare, the corner tower's and the hospice's most: a weapon rack, a table with stools, a table of
+     basins.
+  5. The bookcases are flat cases against round walls: give them depth.
+  6. The scrying pool's water is a matte disc.
+- [ ] **Not done**: nobody lives in the towers yet (no keepers or monsters inside); the Castle's and the Keep's towers
+  wait for their wards' chunks; doors elsewhere in the world (Bellmourn's own, the lands' places) are as they were.
+  E on a door loses to a party hero or a person standing next to you (takeNearest's order). Light through a doorway to
+  outside blows out. Door 3286 is grazed by a street post. The street braziers unseen at night; the doors' swing and
+  sound and the moving flames unjudged (stills only); the phone unmeasured.
+
 ## Chunk 7: the city's six dungeons — not started
 
 The Cistern Maze, the Undercroft, the Tower of the Ninefold Eye, Ironmercy Gaol, the Rotting Hospice, the Gilded Vault
