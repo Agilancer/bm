@@ -17,8 +17,8 @@ import { KNOWN, WAYS } from '../src/ui/autowarrens.js';
 const LATER = ['vaults', 'sporehold', 'playhouse', 'kingsbarrow', 'elder'];
 // (And Phobos's sewers after them, src/core/delve-sewers.js: four sectors, one great thing in each.)
 const SEWERS = ['westdrains', 'sloughmains', 'charnelruns', 'highconduits'];
-// (And Castle Velscour's wards after them, src/core/delve-castle.js: the Lower Ward so far.)
-const CASTLE = ['lowerward'];
+// (And Castle Velscour's wards after them, src/core/delve-castle.js: the Lower Ward and the Middle Ward so far.)
+const CASTLE = ['lowerward', 'middleward'];
 const json = (p) => JSON.parse(readFileSync(new URL(p, import.meta.url), 'utf8'));
 
 test('there are eight delves, the first three where they were, the later four each with three bosses, and the Elder Gods with four', () => {

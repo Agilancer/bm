@@ -574,7 +574,7 @@ export function torches(d = WARRENS) {
 }
 
 // The things in a room that burn (props, by kind), and how high over the floor each one's light is (a chandelier's is its own).
-const LIT = { brazier: 1.9, chandelier: null, hearth: 1.2, spit: 1, footlight: 0.5, greatcap: null, heartroot: 3, musicbox: 1.4, daylight: null, castpit: 1, basket: null };
+const LIT = { brazier: 1.9, chandelier: null, hearth: 1.2, spit: 1, footlight: 0.5, greatcap: null, heartroot: 3, musicbox: 1.4, daylight: null, castpit: 1, basket: null, alembic: 0.6 };
 // Braziers standing round the bigger rooms, a couple of strides out from the wall between its torches: fires on posts
 // that light the floor where the fighting is (src/core/delve-build.js builds them, src/gfx/renderer.js lights them). Clear
 // of the portals and the way in. And the ones a room's own things ask for (a prop of kind 'brazier'). [x, floor y, z]
@@ -583,7 +583,8 @@ export function braziers(d = WARRENS) {
   const BRAZIERS = d.braziers = [];
   const keep = [d.entry, d.exitIn, d.exitOut].map((q) => [d.x + q.x, d.z + q.z]);
   // (A brazier as any other; the rest build their own fires, and say how high over the floor their light is.)
-  for (const p of d.props) if (p.kind in LIT) BRAZIERS.push(p.kind === 'brazier' ? [d.x + p.x, caveFloorY(d.x + p.x, d.z + p.z), d.z + p.z] : [d.x + p.x, caveFloorY(d.x + p.x, d.z + p.z), d.z + p.z, LIT[p.kind] ?? p.up]);
+  // (A chandelier that says hang lights the floor under it as a hall's hung fire does: a reading room's, a hall's.)
+  for (const p of d.props) if (p.kind in LIT) BRAZIERS.push(p.kind === 'brazier' ? [d.x + p.x, caveFloorY(d.x + p.x, d.z + p.z), d.z + p.z] : p.hang ? [d.x + p.x, caveFloorY(d.x + p.x, d.z + p.z), d.z + p.z, p.up + 0.6, 'hang'] : [d.x + p.x, caveFloorY(d.x + p.x, d.z + p.z), d.z + p.z, LIT[p.kind] ?? p.up]);
   for (const r of d.rooms) {
     if (r.fires === 0) continue;
     if (r.hx !== undefined) {

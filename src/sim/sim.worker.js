@@ -781,6 +781,8 @@ async function boot(msg) {
     // (Your own level: the other Tessariels out in the world keep pace with it.)
     if (m.type === 'playerLevel') sim.heroWorld?.keepPace(m.level);
     if (m.type === 'warrensDebug') sim.warrens?.debug?.(m);
+    // (Every boss that's ever died, from the render thread's quests: the castle's gates that open on a death. src/sim/dungeon.js open.)
+    if (m.type === 'bossesDown') { if (sim.warrens) sim.warrens.ever = new Set(m.keys); }
     if (m.type === 'hall') sim.testHall?.message(m);
     // What's been bought in the six trees (src/items/skillbook.js): the spells are cast with it from now on.
     if (m.type === 'skills') { sim.casting.setSkills(m.ranks); return; }

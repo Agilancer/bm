@@ -761,10 +761,12 @@ export const PROPS = {
     K.box('wood', x, y, z, 0.6, 0.9, 0.6, 0.2, NO); K.box('wood', x + 1.25, y, z + 0.1, 0.5, 0.7, 0.5, -0.3, NO); K.box('wood', x + 0.3, y + 0.9, z, 0.4, 0.55, 0.4, 0.6, NO);
   },
   // Bars of iron across a way: down to the floor, or drawn up over a door (raised: how far its foot hangs over the floor).
+  // (plain: bars down from a beam, none across: a door of his that nothing of hers can be read in. The V and T rule.)
   portcullis(K, d, p, x, y, z) {
     const y0 = y + (p.raised || 0), y1 = y + p.h;
-    for (let u = -p.w; u <= p.w + 0.01; u += 0.5) { K.box('iron', x + u, y0, z, 0.045, y1 - y0, 0.045, 0, NO); if (p.raised) K.cone('iron', x + u, y0, z, 0.06, -0.3, 4); }
-    for (let h = y0 + 0.4; h < y1; h += 0.9) K.box('iron', x, h, z, p.w, 0.07, 0.03, 0, NO);
+    for (let u = -p.w; u <= p.w + 0.01; u += 0.5) { K.box('iron', x + u, y0, z, 0.045, y1 - y0, 0.045, 0, NO); if (p.raised || p.plain) K.cone('iron', x + u, y0, z, 0.06, -0.3, 4); }
+    if (p.plain) K.box('iron', x, y1 - 0.3, z, p.w + 0.1, 0.3, 0.1, 0, NO);
+    else for (let h = y0 + 0.4; h < y1; h += 0.9) K.box('iron', x, h, z, p.w, 0.07, 0.03, 0, NO);
     if (!p.raised) K.quad('door_5', [x - p.w, y, z - 0.3], [x + p.w, y, z - 0.3], [x + p.w, y1, z - 0.3], [x - p.w, y1, z - 0.3], [0, 0, 1], [[0, 1], [1, 1], [1, 0], [0, 0]]);
   },
   // His red on the floor: a runner, laid along the floor's own slope.
@@ -846,12 +848,83 @@ export const PROPS = {
     K.box('wood', x, y + p.up, z, p.hx, 0.5, 0.25, 0, NO);
     for (const s of [-1, 1]) K.box('wood', x + s * (p.hx - 1.2), y + p.up - 1.1, z, 0.9, 0.22, 0.2, s * 0.0, NO);
   },
-  // (Its back to the south, facing north; flip: its back to the north, facing south.)
+  // (Its back to the south, facing north; flip: its back to the north, facing south; yaw: facing that way, its back behind.)
   seat(K, d, p, x, y, z) {
-    const b = p.flip ? -1 : 1;
-    K.box(p.stone || 'dark:stone', x, y, z, p.hx, 0.7, p.hz, 0, NO);
-    K.box(p.stone || 'dark:stone', x, y + 0.7, z + b * (p.hz - 0.25), p.hx, 2.6, 0.25, 0, NO);
-    K.box(p.cloth || 'cloth_red', x, y + 0.7, z - b * 0.1, p.hx - 0.25, 0.05, p.hz - 0.4, 0, NO);
+    const yw = p.yaw ?? (p.flip ? 0 : Math.PI), fx = Math.sin(yw), fz = Math.cos(yw), rot = p.yaw ?? 0;
+    K.box(p.stone || 'dark:stone', x, y, z, p.hx, 0.7, p.hz, rot, NO);
+    K.box(p.stone || 'dark:stone', x - fx * (p.hz - 0.25), y + 0.7, z - fz * (p.hz - 0.25), p.hx, 2.6, 0.25, rot, NO);
+    K.box(p.cloth || 'cloth_red', x + fx * 0.1, y + 0.7, z + fz * 0.1, p.hx - 0.25, 0.05, p.hz - 0.4, rot, NO);
+  },
+  // A bookcase: a dark frame (plinth, cornice, ends, a back between) and its books on both long faces, the PH2 pack's
+  // painted spines; or on one face only (one: +1 or -1, which way it faces), stood against a wall. Long along x or z, the
+  // longer; h tall.
+  bookcase(K, d, p, x, y, z) {
+    const long = p.hz >= p.hx, a = long ? p.hz : p.hx, t = long ? p.hx : p.hz, h = p.h || 4;
+    K.box('dark:wood', x, y, z, p.hx, 0.25, p.hz, 0, NO);
+    K.box('dark:wood', x, y + h - 0.22, z, p.hx + 0.08, 0.3, p.hz + 0.08, 0, NO);
+    K.box('dark:wood', x, y + 0.25, z, long ? t * 0.35 : a - 0.1, h - 0.47, long ? a - 0.1 : t * 0.35, 0, NO);
+    for (const e of [-1, 1]) K.box('dark:wood', x + (long ? 0 : e * (a - 0.06)), y, z + (long ? e * (a - 0.06) : 0), long ? t + 0.04 : 0.07, h, long ? 0.07 : t + 0.04, 0, NO);
+    const y0 = y + 0.25, y1 = y + h - 0.22, w = a - 0.13;
+    for (const s of p.one ? [p.one] : [-1, 1]) {
+      if (long) { const xb = x + s * (t - 0.03); K.quad('p2_book_spines', [xb, y0, z + s * w], [xb, y0, z - s * w], [xb, y1, z - s * w], [xb, y1, z + s * w], [s, 0, 0]); }
+      else { const zb = z + s * (t - 0.03); K.quad('p2_book_spines', [x - s * w, y0, zb], [x + s * w, y0, zb], [x + s * w, y1, zb], [x - s * w, y1, zb], [0, 0, s]); }
+    }
+  },
+  // A bench: a plank on two trestles, along x (or z, the longer way).
+  bench(K, d, p, x, y, z) {
+    const long = p.hz > p.hx, a = long ? p.hz : p.hx, yaw = long ? Math.PI / 2 : 0;
+    K.box('wood', x, y + 0.4, z, a, 0.07, 0.2, yaw, NO);
+    for (const s of [-1, 1]) K.box('wood', x + (long ? 0 : s * (a - 0.4)), y, z + (long ? s * (a - 0.4) : 0), 0.06, 0.4, 0.18, yaw, NO);
+  },
+  // A great horn of some beast on a bracket high on a wall, facing yaw out from it: up out of an iron collar, curving out and
+  // up to its bell; iron bands round it. (The Horn Galleries': sounded, they turn the castle's patrols.)
+  horn(K, d, p, x, y, z) {
+    const fx = Math.sin(p.yaw), fz = Math.cos(p.yaw), h0 = y + (p.up ?? 5), s = p.s || 1, N = 7;
+    const at = (t) => { const a = t * Math.PI * 0.5; return [x + fx * (0.25 + Math.sin(a) * 1.5 * s), h0 + (1 - Math.cos(a)) * 2.1 * s - 0.6 * s * (1 - t), z + fz * (0.25 + Math.sin(a) * 1.5 * s)]; };
+    K.box('iron', x + fx * 0.15, h0 - 0.9 * s, z + fz * 0.15, 0.25 * s, 0.9 * s, 0.25 * s, p.yaw, NO);
+    for (let k = 0; k < N; k++) {
+      const a = at(k / N), b = at((k + 1) / N), r0 = (0.07 + 0.32 * (k / N) ** 2) * s, r1 = (0.07 + 0.32 * ((k + 1) / N) ** 2) * s;
+      bar(K, 'pale:stone', a, b, r0, r1);
+      if (k % 2) K.drum('iron', b[0], b[1] - 0.04, b[2], r1 * 1.2, 0.08, 8, { open: true, collide: false });
+    }
+    const e = at(1);
+    K.drum('pale:stone', e[0], e[1], e[2], 0.42 * s, 0.35 * s, 10, { r2: 0.62 * s, open: true, collide: false });
+    K.drum('iron', e[0], e[1] + 0.3 * s, e[2], 0.64 * s, 0.08, 10, { open: true, collide: false });
+  },
+  // An alchemist's still: a pot of iron on three legs over its coals, its head, an arm out to a flask of glass.
+  alembic(K, d, p, x, y, z) {
+    for (let k = 0; k < 3; k++) { const a = k * TAU / 3 + x; K.box('iron', x + Math.cos(a) * 0.45, y, z + Math.sin(a) * 0.45, 0.05, 0.5, 0.05, a, NO); }
+    K.drum('iron', x, y + 0.5, z, 0.5, 0.8, 10, { r2: 0.42, collide: false });
+    K.cone('iron', x, y + 1.3, z, 0.42, 0.55, 10);
+    const yaw = p.yaw || 0, fx = Math.sin(yaw), fz = Math.cos(yaw);
+    rod(K, 'iron', x, y + 1.75, z, x + fx * 1.3, y + 1.0, z + fz * 1.3, 0.035);
+    K.drum('ice', x + fx * 1.45, y + 0.55, z + fz * 1.45, 0.24, 0.4, 8, { r2: 0.1, collide: false });
+    K.box('wood', x + fx * 1.45, y, z + fz * 1.45, 0.3, 0.55, 0.3, yaw, NO);
+    coals(K, d, x, y + 0.05, z, 0.35, 'flame');
+    fire(K, d, x, y + 0.08, z, 0.25, 0.4, { hue: 'flame', glow: 0.9 });
+  },
+  // The map table: a long table with the castle's map on it in canvas (no letters: lines and blocks), pins of iron stuck in it,
+  // candles at the corners.
+  maptable(K, d, p, x, y, z) {
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) K.box('wood', x + sx * (p.hx - 0.3), y, z + sz * (p.hz - 0.3), 0.12, 0.85, 0.12, 0, NO);
+    K.box('wood', x, y + 0.85, z, p.hx, 0.1, p.hz, 0, NO);
+    K.quad('p2_hessian', [x - p.hx + 0.2, y + 0.96, z + p.hz - 0.2], [x + p.hx - 0.2, y + 0.96, z + p.hz - 0.2], [x + p.hx - 0.2, y + 0.96, z - p.hz + 0.2], [x - p.hx + 0.2, y + 0.96, z - p.hz + 0.2], [0, 1, 0]);
+    for (let k = 0; k < 9; k++) { const u = (hash2(k, x) - 0.5) * (p.hx - 0.6) * 2, w = (hash2(z, k) - 0.5) * (p.hz - 0.6) * 2; K.drum(k % 3 ? 'iron' : 'cloth_red', x + u, y + 0.96, z + w, 0.04, 0.22, 5, { r2: 0.02, collide: false }); }
+    for (const sx of [-1, 1]) { const cx = x + sx * (p.hx - 0.35), cz = z - p.hz + 0.35; K.drum('pale:stone', cx, y + 0.96, cz, 0.05, 0.3, 5, NO); fire(K, d, cx, y + 1.26, cz, 0.05, 0.16, { glow: 0.5 }); }
+  },
+  // A dead tree in a planter of dark stone: a trunk and its bare limbs, up out of grey earth.
+  deadtree(K, d, p, x, y, z) {
+    const h = p.h || 6, r = p.r || 1.6, turn = x * 1.3 + z;
+    for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; K.box('dark:block', x + Math.cos(a) * r, y, z + Math.sin(a) * r, 0.62 * r * 0.78, 0.55, 0.22, Math.PI / 2 - a, NO); }
+    K.disc('dark:rubble', x, y + 0.45, z, r, 12);
+    const top = [x, y + h * 0.55, z];
+    bar(K, 'dark:wood', [x, y + 0.3, z], top, 0.28, 0.2);
+    for (let k = 0; k < 5; k++) {
+      const a = turn + k * 1.37, up = h * (0.4 + 0.12 * (k % 3)), o = h * (0.18 + 0.06 * (k % 2));
+      const b = [x + Math.cos(a) * o * 0.35, y + up, z + Math.sin(a) * o * 0.35], c = [x + Math.cos(a) * o, y + up + h * 0.32, z + Math.sin(a) * o];
+      bar(K, 'dark:wood', k ? b : top, c, 0.13, 0.04);
+      if (k % 2 === 0) bar(K, 'dark:wood', c, [c[0] + Math.cos(a + 0.9) * 0.8, c[1] + 0.7, c[2] + Math.sin(a + 0.9) * 0.8], 0.04, 0.015);
+    }
   },
   // A casting pit in a forge's floor: a ring of dark stone round a round of metal run molten, glowing. (What his idol is
   // cast in, at the end.)
@@ -1355,8 +1428,9 @@ export const PROPS = {
     K.quad('spore:cloth_oat', q(-0.5, 1.9, 0.05), q(0.5, 1.9, 0.05), q(0.5, 2.8, 0.05), q(-0.5, 2.8, 0.05), [s, 0, c]);
   },
   // A portrait in a frame, facing yaw out from the wall: a face that's gone dark.
+  // (up: hung so much higher; a gallery's second row.)
   portrait(K, d, p, x, y, z) {
-    const c = Math.cos(p.yaw), s = Math.sin(p.yaw), q = (u, h, o) => [x + u * c + o * s, y + h, z - u * s + o * c];
+    const c = Math.cos(p.yaw), s = Math.sin(p.yaw), q = (u, h, o) => [x + u * c + o * s, y + h + (p.up || 0), z - u * s + o * c];
     K.quad('wood', q(-0.8, 1.5, 0.03), q(0.8, 1.5, 0.03), q(0.8, 3.7, 0.03), q(-0.8, 3.7, 0.03), [s, 0, c]);
     K.quad('dark:cloth_oat', q(-0.62, 1.68, 0.06), q(0.62, 1.68, 0.06), q(0.62, 3.52, 0.06), q(-0.62, 3.52, 0.06), [s, 0, c]);
   },

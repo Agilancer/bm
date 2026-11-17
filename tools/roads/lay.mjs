@@ -56,7 +56,7 @@ const boxHit = (c, x, z, m) => {
 };
 // (And the delves' terraces and the flights up them, which are walked on (their walls stop you only below their tops, so
 // they're not among the boxes taken here): a way comes to the foot of a portal's steps, never over its terrace.)
-const STAIRS = DELVES.filter((d) => d.portal && Math.abs(d.portal.x) < HALF && Math.abs(d.portal.z) < HALF).map(portalStair);
+const STAIRS = DELVES.filter((d) => d.portal && !d.within && Math.abs(d.portal.x) < HALF && Math.abs(d.portal.z) < HALF).map(portalStair);
 const solid = [...B.colliders.filter((c) => Math.abs(c.x) < HALF && Math.abs(c.z) < HALF && c.t === undefined), CHURCH_FOOTPRINT, CHURCH_WING, ...STAIRS.flatMap((s) => s.boxes)];
 for (const c of solid) {
   const m = c === CHURCH_FOOTPRINT || c === CHURCH_WING ? 5 : 2.6, r = Math.hypot(c.hx, c.hz) + m;
@@ -224,7 +224,7 @@ const node = (x, z, o) => { nodes.push({ x, z, ...o }); return nodes.length - 1;
 for (const [k, s] of Object.entries(SITES)) node(s.x, s.z, { key: k, name: shortName(s.name), kind: TOWNS.has(k) ? 'town' : 'site', r: s.r });
 // (A delve's portal stands on its terrace: its way ends out in front of the foot of its steps, whose square is kept open.)
 for (const d of DELVES) {
-  if (!d.portal || Math.abs(d.portal.x) >= HALF || Math.abs(d.portal.z) >= HALF || nodes.some((n) => Math.hypot(n.x - d.portal.x, n.z - d.portal.z) < 120)) continue;
+  if (!d.portal || d.within || Math.abs(d.portal.x) >= HALF || Math.abs(d.portal.z) >= HALF || nodes.some((n) => Math.hypot(n.x - d.portal.x, n.z - d.portal.z) < 120)) continue;
   const [x, z] = STAIRS.find((s) => s.key === d.key).out;
   C[ci(z) * N + ci(x)] = 1;
   node(x, z, { key: d.key, name: shortName(d.name), kind: 'site', r: 0, own: true });

@@ -24,15 +24,17 @@ Written 2026-11-17.
 | Castle: the Lower Ward delve, the Gate Captain, Apricot's 2 quests | PR 209 | `src/core/delve-castle.js`, `src/sim/castle-fights.js` |
 | PH2 texture pack (100 ChatGPT tiles) wired in | PR 214 | `src/core/phobos-p2.js`, `tools/phobos/textures/wire_ph2.py` |
 | Every door opens; 116 towers can be entered and are furnished | PR 216 | `src/items/phobos-doors.js`, `src/core/phobos-towers.js` |
+| Castle: the Middle Ward delve, the Feast That Walks, the Librarian's household and 7 quests; auto-play through the castle's gates and to people down delves | branch `claude/sharp-cori-de0kwb` | `src/core/delve-castle.js` (MIDDLE_WARD), `src/folk/lines/phobos-castle.js` |
 
 PRs 209, 214 and 216 are stacked. 214 is built on 209, and 216 on 214. They were merged in that order on 2026-11-17, at the
 owner's word.
 
 **Next**, in the plan's order:
 
-1. The castle's Middle Ward and High Ward, built as delves next to the Lower Ward. They complete the 24 wings, the stair
-   graph and the key-gated wings.
-2. The Librarian's home in the ancient library, and the castle quests.
+1. The castle's High Ward, as a delve next to the Middle Ward (`within`, like it). Both its ways in are keyed by chunk 9's
+   dungeons (the Sanctuaries Stair in the Long Stacks; the Crypt door off the Oubliettes): build it shut behind them, or
+   ask the owner for a third way in meanwhile. Then the Clock Tower and the Menagerie wings behind their shut doors.
+2. More castle quests (the household has seven; dozens are planned), the Librarian's deception magic, the horns.
 3. Chunk 7, the city's six dungeons.
 4. Chunk 9 onwards: the castle's eight dungeons, the Keep, world bosses, Velscour, the ending, Hard/Mythic, Pinnacle.
 
@@ -114,8 +116,15 @@ The first-sight scene is to be done **last** (owner).
 
 **Delves**
 - `src/core/delve-sewers.js`: four solo delves (westdrains, sloughmains, charnelruns, highconduits).
-- `src/core/delve-castle.js` (`CASTLE`): the castle's wards as delves in the sewers' row, at x 10760, z -5700, y -60.
-  Roofs must stay under y -20 for `tools/dungeon/check.mjs`. `src/sim/castle-fights.js`: the Gate Captain.
+- `src/core/delve-castle.js` (`CASTLE`): the castle's wards as delves in the sewers' row: the Lower Ward at x 10760 and
+  the Middle Ward at x 11180, z -5700, y -60. Roofs must stay under y -20 for `tools/dungeon/check.mjs`.
+  `src/sim/castle-fights.js`: the Gate Captain and the Feast That Walks.
+  - A ward gone into only from another has `within` (no arch on the land; its `portal` is the other's). A link with
+    `shut: '<boss>'` stays shut till that boss has ever died (`Warrens.open`; main.js sends `bossesDown`; the renderer's
+    `gateOpen` darkens the arch). Auto-play routes through them with `delveWay` (src/ui/autowarrens.js).
+  - Quest places can be a delve's room, `room:<id>` (src/folk/quests.js AREAS).
+  - People stood down a delve have `delve` (or the sewers' `sewer`) and, in the castle, `late` (loaded on the way to
+    Phobos, as the crowd is). Auto-play reaches them by `delveTalk` (src/ui/autobrain.js).
 - `src/ui/firstsight.js`: the first-sight scene (to be finished last).
 
 **Tests**
@@ -123,13 +132,13 @@ The first-sight scene is to be done **last** (owner).
 - `tests/phobos-crowd.test.mjs`
 - `tests/phobos-quests.test.mjs`
 - `tests/sewers.test.mjs`
-- `tests/castle.test.mjs`
+- `tests/castle.test.mjs` (both wards, the shut gate, the Feast, the household, auto-play's way up)
 - `tests/phobos-towers.test.mjs`: doors and towers.
 
 ## Running and testing
 
 - Tests: `node --test "tests/*.test.mjs"`. Quote the glob; a bare folder runs nothing, and `npm test` doesn't work. On
-  2026-11-17 the suite was 480 tests: 479 pass, 1 skipped. The ninja test in tests/hero-skills is flaky and passes on a
+  2026-11-17 the suite was 488 tests: 487 pass, 1 skipped (after the Middle Ward). The ninja test in tests/hero-skills is flaky and passes on a
   rerun.
 - The game is served at `http://localhost:8720/?noopening`. To start it:
   1. Click once to skip the credits card.
@@ -165,6 +174,8 @@ The first-sight scene is to be done **last** (owner).
   | A house door | 9542.8, 334.9 | `2_11` | |
 
   To open a door from a script: `bm.view.phDoors.toggle({ ph: true, id })`.
+- Castle pictures without a person at the pane: `node tools/phobos/castle_shots.mjs [names]` (server on 8481, headless
+  Chromium; the no-damage cheat, noon, a held camera per room) saves `tools/build/shots/<name>.png`.
 - Other checks:
   - `node tools/lands/check-vt.mjs`: the V and T rule. `tools/lands/check.mjs` does not exist.
   - `node tools/dungeon/check.mjs`: delves.

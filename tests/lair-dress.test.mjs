@@ -76,7 +76,7 @@ test('no one painting is most of a dungeon any more', () => {
       m.set(layer, (m.get(layer) || 0) + ar);
     }
   }
-  assert.equal(area.size, 13);
+  assert.equal(area.size, 14);
   for (const [key, m] of area) {
     const all = [...m.values()].reduce((s, v) => s + v, 0), [top, most] = [...m].sort((p, q) => q[1] - p[1])[0];
     assert.ok(most / all < 0.56, `${top} is ${Math.round(most / all * 100)}% of the dungeon at ${key}`);

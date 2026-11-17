@@ -39,6 +39,15 @@ export const PHOBOS_RULES = {
   // ---- up into the castle (src/core/delve-castle.js): the princess's, by the gate off her Garden ----
   up_the_aqueduct: { needs: 'lamps_out_in_the_conduits', steps: [{ enter: 'lowerward' }, { back: true, say: "I went up the Aqueduct. At the top of it are his kitchens." }], gold: 2800, xp: 40000 },
   the_gate_captain: { needs: 'up_the_aqueduct', steps: [{ boss: 'gatecaptain' }, { back: true, say: 'The Gate Captain is dead, and his gate with him.' }], gold: 3600, xp: 52000, item: 'staff', named: 'The Portcullis Rod', seed: 0xc1a72 },
+  // ---- the Middle Ward (words in src/folk/lines/phobos-castle.js): a bottle down the princess's Aqueduct, and the Librarian's
+  // household in his rooms off the Ancient Library. Places: the ward ('middleward') and its rooms ('room:<id>'). ----
+  the_librarians_letters: { needs: 'the_gate_captain', steps: [{ enter: 'middleward' }, { talk: 'ph_librarian', say: 'Princess Apricot had your letter. She sent me up.', end: true }], gold: 3000, xp: 44000 },
+  the_household: { needs: 'the_librarians_letters', steps: [{ talk: 'ph_wynn', say: 'Master Pell said to come and find you.' }, { talk: 'ph_jory', say: 'Master Pell said you keep the keys.' }, { talk: 'ph_ondine', say: 'Master Pell said to say good evening.' }, { talk: 'ph_pip', say: "Master Pell said you'd be at your horns." }, { back: true, say: "I've met all four." }], gold: 1400, xp: 22000 },
+  dust_in_the_stacks: { needs: 'the_librarians_letters', steps: [{ kill: 'middleward', n: 10 }, { back: true, say: 'Ten of them. The ward will notice.' }], gold: 3200, xp: 48000 },
+  wynns_map: { needs: 'the_household', steps: [{ visit: ['room:cm_gallery', 'room:cm_horns', 'room:cm_still', 'room:cm_conserv'] }, { back: true, say: "I've walked all four. The Conservatory's longer than it looks." }], gold: 3200, xp: 50000, item: 'scroll' },
+  the_quiet_watchs_steel: { needs: 'the_household', steps: [{ visit: ['room:cl_armoury', 'room:cl_forge'] }, { talk: 'ph_watch', say: 'Jory Tallis says the third rack on the left is yours.', end: true }], gold: 3400, xp: 52000 },
+  the_hornwings: { needs: 'the_household', steps: [{ kill: 'room:cm_horns', n: 4 }, { back: true, say: 'Your horns are clear, Pip.' }], gold: 3400, xp: 54000, item: 'skull', named: "The Horn-Blower's Skull", seed: 0xc4a11 },
+  the_feast_that_walks: { needs: 'dust_in_the_stacks', steps: [{ boss: 'feast' }, { back: true, say: 'The Feast That Walks is dead.' }], gold: 5200, xp: 76000, item: 'robe', named: "The Sister's Grey", seed: 0xc4fea },
 };
 // The level each wants (src/ui/autobrain.js PLAN): you come to Phobos at about twenty.
 export const PHOBOS_LEVELS = [
@@ -50,4 +59,6 @@ export const PHOBOS_LEVELS = [
   ['the_great_worm', 40], ['letters_for_the_princess', 43], ['the_drowned_abbot', 47], ['lamps_out_in_the_conduits', 54],
   // (Castle Velscour's Lower Ward, 58-75: up the Aqueduct at 58, the Gate Captain at 66.)
   ['up_the_aqueduct', 58], ['the_gate_captain', 66],
+  // (The Middle Ward, 75-95: up through its gate at 75, the household's work 76 to 82, the Feast That Walks at 88.)
+  ['the_librarians_letters', 75], ['the_household', 75], ['dust_in_the_stacks', 76], ['wynns_map', 78], ['the_quiet_watchs_steel', 80], ['the_hornwings', 82], ['the_feast_that_walks', 88],
 ];

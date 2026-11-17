@@ -135,8 +135,10 @@ export const MOVES = {
     P.rain(t.x, t.z, o.R || 7, o.n || 6, 1.2, { r: 2.2, fuse: 1.3, dmg: k * 1.3, life: 4, dps: k * 0.8, elem: o.elem ?? POISON, from: m, tag: 'spitRain' });
   },
   /** A cross of plague from its feet. */
+  // (Three arms, the line to whoever it's at clear between two of them: four made a cross on the floor of his castle, where
+  // they stand. The V and T rule.)
   plagueCross(P, m, t, k) {
-    P.mark({ shape: 'cross', x: m.x, z: m.z, yaw: yawTo(m, t) + Math.PI / 4, arms: 4, r: 9, w: 1, fuse: 1.2, dmg: k * 1.6, life: 3, dps: k * 0.8, elem: POISON, from: m, tag: 'plagueCross' });
+    P.mark({ shape: 'cross', x: m.x, z: m.z, yaw: yawTo(m, t) + Math.PI / 3, arms: 3, r: 9, w: 1, fuse: 1.2, dmg: k * 1.6, life: 3, dps: k * 0.8, elem: POISON, from: m, tag: 'plagueCross' });
   },
 
   // ---- the dead and the uncanny ----

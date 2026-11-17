@@ -38,6 +38,10 @@ export const WAYS = {
   sloughmains: ['ps_out', 'ps_main', 'ps_weir', 'ps_gate', 'ps_weir', 'ps_chain', 'ps_market', 'ps_chain', 'ps_weir', 'ps_tanmain', 'ps_dye', 'ps_silt', 'ps_bed', 'ps_east'],
   charnelruns: ['pc_out', 'pc_main', 'pc_cistern', 'pc_gate', 'pc_cistern', 'pc_stair', 'pc_cata', 'pc_mages', 'pc_rise', 'pc_mages', 'pc_chapter', 'pc_gate2'],
   highconduits: ['pa_out', 'pa_main', 'pa_fall', 'pa_gate', 'pa_fall', 'pa_dukes', 'pa_lamps', 'pa_long', 'pa_lamp', 'pa_approach', 'pa_garden', 'pa_aqfoot'],
+  // The Middle Ward (gone into from the Lower Ward's Middle Ward Gate: delveWay): the Gallery and the east wings, the
+  // Library and its Stacks, the west wings by the Reading Walk, back down the Gallery, and the Feast in his hall last.
+  middleward: ['cm_gate', 'cm_court', 'cm_gallery', 'cm_maps', 'cm_horns', 'cm_maps', 'cm_gallery', 'cm_library', 'cm_stacks', 'cm_library', 'cm_rooms', 'cm_library',
+    'cm_still', 'cm_conserv', 'cm_still', 'cm_library', 'cm_gallery', 'cm_court', 'cm_screens', 'cm_hall'],
   // Castle Velscour's Lower Ward (src/core/delve-castle.js): the west wings, the Oubliettes, the east wings, the stair up, and
   // the Gate Captain in his yard last.
   lowerward: ['cl_gate', 'cl_yard', 'cl_wrange', 'cl_kitchen', 'cl_cellar', 'cl_kitchen', 'cl_aq', 'cl_aqhead', 'cl_aq', 'cl_kitchen', 'cl_wrange', 'cl_hall', 'cl_wrange', 'cl_yard',
@@ -72,6 +76,9 @@ export const KNOWN = new Set([
   'pa_main', 'pa_main2', 'pa_fall', 'pa_dukes', 'pa_lamps', 'pa_long', 'pa_approach', 'lamplighter',
   // (Castle Velscour's Lower Ward: plain packs, and the Gate Captain, whose garrison it kills first as it would any adds.)
   'cl_wrange', 'cl_kitchen', 'cl_cellar', 'cl_erange', 'cl_drill', 'cl_bunks', 'cl_armoury', 'cl_forge', 'cl_pit', 'cl_oub', 'cl_hall', 'cl_aq', 'cl_aqhead', 'cl_mstair', 'cl_wway', 'cl_eway', 'gatecaptain',
+  // (And the Middle Ward's: plain packs, and the Feast, whose servers it kills first as it would any adds; and the long
+  // tables and the aisle are lines on the floor like any others, perilStep's.)
+  'cm_court', 'cm_screens', 'cm_gallery', 'cm_maps', 'cm_horns', 'cm_stacks', 'cm_still', 'cm_conserv', 'cm_hway', 'feast',
 ]);
 export function warrensCoverage() {
   const out = [];
@@ -94,6 +101,19 @@ export function warrensCoverage() {
 }
 
 const dist = (ax, az, bx, bz) => Math.hypot(ax - bx, az - bz);
+
+// Where to walk to get down delve d from where it is (here: the delve it's down now, or null), as a point in the world: its
+// portal out on the land (a ward gone into from another, within, has that one's: in there, then on through its gate); from
+// inside another, the gate straight to it, or the gate to the ward it's within, or the gate back to the ward this one's
+// within; else out by the way in. null if the gate it wants is shut (open: the bosses that have ever died, 'boss:<key>').
+export function delveWay(here, d, open = () => true) {
+  if (!d || here?.key === d.key) return null;
+  if (!here) return [d.portal.x, d.portal.z];
+  const links = here.links || [];
+  const l = links.find((q) => q.to === d.key) || (d.within && links.find((q) => q.to === d.within)) || (here.within && links.find((q) => q.to === here.within));
+  if (l) return !l.shut || open(l.shut) ? toWorld(l.x, l.z, here) : null;
+  return toWorld(here.exitIn.x, here.exitIn.z, here);
+}
 // (A flow field for each dungeon, made when it first walks there.)
 const navs = new Map();
 const caveNav = (x, z) => { const d = delveOf(x, z) || DELVES[0]; let n = navs.get(d.key); if (!n) navs.set(d.key, n = new CaveNav(d)); return n; };
@@ -168,6 +188,13 @@ export function warrensJob(b, m, want = null, owed = null) {
   const P = b.o.game.party;
   if (!P) return null;
   const here = delveOf(m.x, m.z);
+  // (On its way through one to a ward gone into from it, the Middle Ward by the Lower: still that. doWarrens, delveWay.)
+  const j = b.job, to = j?.kind === 'warrens' && j.delve !== here?.key ? delveByKey(j.delve) : null;
+  if (here && to?.within && delveWay(here, to, b.gateOpen)) return j;
+  // (And a quest that wants another, through a gate from this one or out and in by its portal: that one. The princess's
+  // letter, read in her Garden, is for the Middle Ward.)
+  const other = here && want?.length && !want.includes(here.key) ? want.map(delveByKey).find((q) => q && WAYS[q.key] && m.lvl >= q.level && delveWay(here, q, b.gateOpen)) : null;
+  if (other) return { kind: 'warrens', why: whyOf(other.key), delve: other.key, say: `On to ${other.name}.` };
   if (here) return { kind: 'warrens', why: whyOf(here.key), delve: here.key, say: `Down ${here.name}.` };
   if (!P.fit()) return null;
   const fit = (d) => WAYS[d.key] && m.lvl >= d.level + (b.bump[whyOf(d.key)] || 0) && !b.skipping(whyOf(d.key));
@@ -182,6 +209,11 @@ export function warrensJob(b, m, want = null, owed = null) {
 export function doWarrens(b, m, foes) {
   const P = b.o.game.party, W = P?.warrens;
   const here = delveOf(m.x, m.z);
+  // Down one on its way to another gone into from it (the Middle Ward, up from the Lower): to the gate, and through.
+  if (here && b.job?.delve && b.job.delve !== here.key) {
+    const to = delveByKey(b.job.delve), at = delveWay(here, to, b.gateOpen);
+    if (at) { b.say(`Through ${here.name}, to ${to.name}.`); b.goTo(at[0], at[1], 0.4, true); return; }
+  }
   if (!here) {
     const d = delveByKey(b.job?.delve) || DELVES[0];
     // (Out again with it done: no more till it's had a rest from it.)

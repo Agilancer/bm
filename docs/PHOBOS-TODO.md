@@ -521,9 +521,49 @@ world's north edge, east of them. Gone in alone (party: false), as the sewers ar
     and a count; a seat can face south; a lintel can be dressed stone.
   - Not done: chests in the wings (the chest list is fixed for saves: room chests need a new kind of chest kept by
     place); a cold or blue light per room (the engine has none).
-- [ ] The Middle Ward and the High Ward: the rest of the twenty-four wings, the stair graph up and down, key-gated wings.
-- [ ] The Librarian's home in the ancient library; the Librarian and his four; their quests; his deception magic.
-- [ ] Dozens of castle quests.
+- [x] **The Middle Ward** (`middleward`, level 75, 12 rooms; 2026-11-17): the Middle Gate, the Middle Court (a wall-walk on
+  two sides, a dead tree in a planter), the Screens Passage and the Great Hall (two long tables and their benches, the
+  high table on its dais, his chair and mark, two great hearths, the hunt in tapestry), the Portrait Gallery (his house's
+  faces in two rows, a painting that's a door: a way on no map to the Alchemists' Wing), the Map Room (the map table,
+  cases, charts with no letters), the Horn Galleries (great horns on brackets at two heights, a wall-walk), the Ancient
+  Library (book-spine walls to its 16 m roof, bays of bookcases, reading tables, lecterns, hung chandeliers), the Long
+  Stacks, the Librarian's Rooms, the Alchemists' Wing (jar-shelf walls, two stills, a working circle), the Conservatory
+  (glass over it, dead trees in planters, roots, a black basin). 8 packs and a patrol on the Horn Walk; liveries as the
+  layout bible says (Abyssal for royal blue, Mossback for forest green, his red, the Hall mixed red and white).
+  - **Gone into only from the Lower Ward** (`within: 'lowerward'`): no arch of its own on the land (the land's budget),
+    its portal the Lower Ward's (the castle gate), where its Postern and the Hall's north door let you out. The Lower
+    Ward's Middle Ward Gate is an arch up to it, **shut till the Gate Captain has died**, now or ever (a link's `shut`;
+    the render thread's quests tell the sim every boss that's ever died, `bossesDown`; the arch is dark till then).
+  - **The Feast That Walks** (88, src/sim/castle-fights.js): his servers bring courses through the doors by the screens,
+    and each that reaches him feeds him (life back, harder blows); he heaves the long tables down their rows (the aisle
+    is clear) or sweeps the aisle (the benches are clear); his maw, his belly, the plate, the bile. Headless: a hired
+    party wins in about three minutes; `--slow` wins at 7%; `--still` dies.
+  - **The keyed doors, shut for now**: the Clock Tower's (end of the Horn Galleries; the Gallery of a Thousand Portraits'
+    key), the Menagerie's (the Conservatory's far wall; the Iron Barracks' key), the Sanctuaries Stair (the Long Stacks'
+    far wall; the Drowned Archive's key, up to the High Ward). Plain portcullises (bars from a beam, none across), his
+    mark over each. They open with chunk 9's dungeons.
+  - New props: bookcase (book-spine faces, a frame), bench, horn, alembic, map table, dead tree in a planter; a portcullis
+    can be plain, a portrait hung higher, a seat face any way, and a chandelier can light the floor as a hung fire (`hang`).
+- [x] **The Librarian's household** in his rooms off the Library (src/folk/people.js, delve 'middleward'): Master Aldric
+  Pell, the Librarian; Wynn Pell, his ward, the map-maker; Ondine, once a sister of his Sanctuaries; Jory Tallis, once
+  quartermaster of the Armoury; Pip Carrow, the horn-blower. All loyal to Tessariel and showing nothing of it: recoloured
+  townsfolk bodies (tools/phobos/crowd_swaps.py: ink-black, umber, ash-grey, buff, his red), no name of hers, no oath,
+  no bells. Loaded late, as the crowd is (`late`), so a phone carries them only once it's on its way to Phobos. FOLK_MAX 84.
+- [x] **Seven quests** (src/folk/phobos-quests.js, words in src/folk/lines/phobos-castle.js): A Letter Down the
+  Aqueduct (Apricot, 75), The Household (75), Dust in the Stacks (76), Wynn's Map (78, walk four wings), The Quiet
+  Watch's Steel (80, the Armoury and Forge, then the dye works), The Hornwings (82), The Feast That Walks (88). Quest
+  places can now be a delve's room (`room:<id>`).
+- [x] **Auto-play** goes up to the Middle Ward through the Lower Ward's gate (`delveWay`), walks it (WAYS: the Feast last),
+  and now talks to anyone standing down a delve (`delveTalk`): the sewer-keepers, the princess and the household, by
+  the delve's portal or the gates between delves. (Before this it couldn't reach the people down the sewers at all.)
+- [ ] **Not done in the Middle Ward**: the Clock Tower and the Menagerie wings themselves (chunk 9, with their keys);
+  the Librarian's deception magic; the horns sounded to change the patrols; Wynn's two other painted doors; a word when
+  you walk up to a shut keyed door; the Great Hall as a rest point once the Feast is dead (it respawns with the ward).
+- [ ] **The High Ward** (+115 m, 95–112): the Sanctuaries, the Ossuary Chapel, the Generals' Crypt, the Hall of Mirrors,
+  the Treasury, the Observatory, the Throne Antechambers; the Sexton of the High Ward (105). Its two ways in are both
+  keyed (the Sanctuaries Stair, the Drowned Archive's key; the Crypt door from the Oubliettes, the Alchemists'
+  Undercroft's), so it waits for chunk 9's first dungeons, or a third way in for now (the owner's call).
+- [ ] Dozens more castle quests.
 
 ## Chunk 9: the castle's eight dungeons and the idol — not started
 

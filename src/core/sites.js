@@ -607,7 +607,8 @@ function portalWall(K, x, z, yaw, key, ground = terrainHeight) {
 // The ways in, out on the land: the Warrens' in its wall on the hillside near the kobolds' den, the keep's before its gate
 // on the Vigil Road, the Deeps' at the Howling Mouth. (Their spots: hf_portal, bv_portal, hd_portal.)
 function warrensMouth(K) {
-  for (const d of DELVES) portalWall(K, d.portal.x, d.portal.z, d.portal.yaw, `${d.tag}_portal`);
+  // (Not a ward gone into only from another: its portal is that one's. src/core/delve-castle.js within.)
+  for (const d of DELVES) if (!d.within) portalWall(K, d.portal.x, d.portal.z, d.portal.yaw, `${d.tag}_portal`);
   // (A sewer's second mouth in the streets of Phobos: src/core/delve-sewers.js ways.)
   for (const d of DELVES) (d.ways || []).forEach((w, i) => portalWall(K, w.x, w.z, w.yaw, `${d.tag}_w${i}`));
 }

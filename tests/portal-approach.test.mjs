@@ -14,7 +14,7 @@ const interior = read('assets/game/interior/interior.json');
 const world = new World(read('assets/game/village.json'), interior);
 const nav = navFor(world, interior);
 
-for (const d of DELVES) {
+for (const d of DELVES.filter((q) => !q.within)) {
   const p = d.portal;
   if (Math.abs(p.x) < 240 && Math.abs(p.z) < 240) continue;   // (the Warrens' is on the town's own grid)
   test(`a path across country ends before ${d.name}'s portal, from in front of it`, () => {

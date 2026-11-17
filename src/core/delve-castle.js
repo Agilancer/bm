@@ -11,7 +11,8 @@
 //   The Oubliettes, down the Pit Stair from the yard.
 //   The Aqueduct, down from the Kitchens to its Head: the back way in from the Sunk Garden, the princess's court at the
 //     far end of the High Conduits (its gate's other side: src/core/delve-sewers.js HIGH_CONDUITS links).
-// And up the Middle Ward Stair off the East Range, the Middle Ward Gate: shut, for now.
+// And up the Middle Ward Stair off the East Range, the Middle Ward Gate: up into the Middle Ward, once the Gate Captain's
+// dead (his yard holds the gate's winch: links' shut, src/sim/dungeon.js open).
 //
 // Gone in alone or not (party: false), as the sewers are. Where it really is: past the world's north edge in the sewers'
 // row, east of them; everything here is local to it: x east, z south of the way in, y over its height.
@@ -179,9 +180,10 @@ const props = [];
   for (const z of [-96, -102, -108, -114]) add('bunk', -60, z, { hx: 1.1, hz: 0.5, cloth: z % 12 ? 'cloth_oat' : 'cloth_red' });
   add('coatrail', -36, -100, { hx: 2, yaw: PI / 2 }); add('barrels', -38, -113); add('crates', -60, -93.5);
   add('candles', -48, -100, { up: 0.85 }); add('candles', -48, -108, { up: 0.85 });
-  // ---- the Middle Ward Gate: shut, its portcullis down, his mark over it; two stands of his plate either side.
-  add('portcullis', 49, -153.4, { w: 4.6, h: 9 }); add('mark', 49, -154.6, { up: 9.2, r: 0.7, back: -1 });
-  add('stand', 42.6, -147); add('stand', 55.4, -147);
+  // ---- the Middle Ward Gate: its arch up to the Middle Ward (shut till the Gate Captain's dead: his winch), his mark over
+  // it, its portcullis wound up into the head; two stands of his plate either side.
+  add('portcullis', 49, -153.4, { w: 4.6, h: 12, raised: 9.2, plain: true }); add('mark', 49, -154.6, { up: 9.2, r: 0.7, back: -1 });
+  add('stand', 41.6, -146); add('stand', 56.4, -146);
 }
 
 const KNIGHTS = ['velscour_knight_3', 'velscour_knight_4', 'velscour_knight_5', 'velscour_knight_6'];
@@ -228,6 +230,7 @@ const warnings = {
   gcp_bare: 'The garrison is down: the Captain stands alone!',
   gcp_turn: 'The Gate Captain turns on you! Out of his reach.',
   gcp_enrage: 'The Gate Captain is enraged!',
+  cl_mgate_shut: "The Middle Ward Gate is down. Its winch is in the Gate Captain's yard, and nobody turns it while he holds his yard.",
 };
 export const LOWER_WARD = {
   key: 'lowerward', tag: 'cl', name: 'Castle Velscour: the Lower Ward', short: 'the Lower Ward', x: 10760, z: -5700, y: -60, level: 58, style: 'castle',
@@ -239,11 +242,227 @@ export const LOWER_WARD = {
   // east up the yard (src/core/phobos-build.js phobosCastle: the drum's at the gate's x, 22 north, 13 round).
   portal: { x: 10805, z: 22, yaw: PI / 2, r: 2.2 },
   // The Aqueduct Head's gate: down to the Sunk Garden in the High Conduits (and the Aqueduct Foot off it, its other side).
-  links: [{ x: -100, z: -187.4, yaw: 0, to: 'highconduits', n: 1 }],
+  // And the Middle Ward Gate's arch, up into the Middle Ward: shut till the Gate Captain has died, now or ever.
+  links: [{ x: -100, z: -187.4, yaw: 0, to: 'highconduits', n: 1 }, { x: 49, z: -150.4, yaw: 0, to: 'middleward', n: 0, shut: 'gatecaptain', word: 'cl_mgate_shut' }],
   last: 'gatecaptain', tough: { hp: 22, damage: 2.5 }, pay: { xp: 36000, gold: 5200 },
   names: { "Velscour's Knights": 'GARRISON KNIGHT', 'Plague Knights': 'GATE WARDEN', 'The Possessed': 'SCULLION', Kobolds: 'TURNSPIT', 'Haunted Mannequins': 'EMPTY HARNESS', 'Night Paralysis Demons': 'FORGE-WRAITH', 'Dead Children': 'THE FORGOTTEN', 'Plague Giants': 'GAOLER' },
   look: { wall: 'ashlar', foot: 'dark:block', floor: 'flags', banner: 'p2_banner_skull', roof: 'dark:stone', flame: 'dark:flame', light: [1, 0.4, 0.16], fire: [1, 0.44, 0.18], every: 8, high: 3, glow: 2.5, lit: true, beam: 'dark:stone', bays: 'chains' },
   words: { enter: "Castle Velscour: the Lower Ward. His garrison holds the gate; the servants' ways run behind the walls.", clear: 'The Gate Captain is dead! The gate is yours.', wipe: 'You fall... and wake in the Gate Passage.' },
 };
 
-export const CASTLE = [LOWER_WARD];
+// ======== the Middle Ward ====================================================================================================
+// Up the Middle Ward Stair from the Lower Ward and through its gate, once the Gate Captain's dead: the castle where his court
+// lives (docs/PHOBOS-LAYOUT.md, 75 to 95). Its own delve, gone into only from the Lower Ward (within: it has no arch of its own
+// out on the land; its portal is the Lower Ward's, the castle's gate, where its Postern lets you out).
+//   The Middle Gate, the arch back down to the Lower Ward at its foot, and the Postern in its east wall: out to the castle's gate.
+//   The Middle Court: his court's yard, a wall-walk round two sides, a dead tree in the middle of it.
+//   The Great Hall, through the Screens Passage off the court's west side: the long tables, the high table on its dais at the
+//     far end, and the Feast That Walks at it (88). Its north door, behind the high table, lets you out once he's dead.
+//   The Portrait Gallery, north off the court: his house's faces down both walls, and a painting that's a door (on no map:
+//     to the Alchemists' Wing). The Map Room off it, east; the Horn Galleries up from that, and at their far end the Clock
+//     Tower's door: shut (the Gallery of a Thousand Portraits' key, chunk 9).
+//   The Ancient Library at the Gallery's head: the Librarian's home, his rooms off its east side (a rest point: nothing of his
+//     comes in here), the Long Stacks past it, and in the Stacks' far wall the Sanctuaries Stair: shut (the Drowned Archive's
+//     key: up to the High Ward). The Horn Walk from it east to the Horn Galleries.
+//   The Alchemists' Wing, down the Reading Walk west of the Library: the still room. The Conservatory past it, glass over it
+//     and nothing alive under it, and in its far wall the Menagerie's door: shut (the Iron Barracks' key).
+// Liveries (docs/PHOBOS-LAYOUT.md): royal blue (Abyssal) in the Gallery, the Library's Stacks and the Map Room; forest green
+// (Mossback) in the Alchemists' Wing and the Conservatory; his red elsewhere; the Great Hall mixed, red and white. Never blue
+// beside grey with gold.
+// (No two ways off a room straight across it from each other: the corner map draws no cross of his rooms.)
+const mRooms = [
+  R('cm_gate', 'the Middle Gate', 0, -12, 8, 20, 0, 11, { rock: 'p2_curtain_granite', foot: 'dark:block', ground: 'p2_bone_joint_flags', fires: 16 }),
+  R('cm_court', 'the Middle Court', 0, -50, 24, 22, 0, 24, { rock: 'p2_curtain_granite', foot: 'dark:block', ground: 'p2_ward_paving', banners: 24, cloth: 'p2_banner_skull', hang: 0, fires: 14 }),
+  R('cm_screens', 'the Screens Passage', -37, -58, 17, 3, 0, 8, { rock: 'p2_sooty_plaster', foot: 'dark:block', ground: 'p2_worn_floorboards', banners: 0 }),
+  R('cm_hall', 'the Great Hall', -76, -58, 26, 14, 0, 18, { rock: 'p2_curtain_granite', foot: 'dark:block', ground: 'p2_oxblood_marble', banners: 13, cloth: 'p2_banner_skull', fires: 13 }),
+  R('cm_gallery', 'the Portrait Gallery', 12, -101, 4.5, 33, 0, 10, { rock: 'p2_thorn_brocade', foot: 'dark:block', ground: 'p2_worn_floorboards', banners: 0, fires: 9 }),
+  R('cm_maps', 'the Map Room', 54, -96, 11, 9, 0, 9, { rock: 'p2_sooty_plaster', foot: 'dark:block', ground: 'p2_worn_floorboards', banners: 0 }),
+  R('cm_horns', 'the Horn Galleries', 64, -142, 6, 28, 0, 18, { rock: 'p2_curtain_granite', foot: 'dark:block', ground: 'p2_walk_paving', banners: 0, fires: 10 }),
+  R('cm_library', 'the Ancient Library', 6, -154, 22, 24, 0, 16, { rock: 'p2_book_spines', foot: 'dark:block', ground: 'p2_worn_floorboards', banners: 0, fires: 20 }),
+  R('cm_stacks', 'the Long Stacks', 6, -184, 18, 10, 0, 9, { rock: 'p2_book_spines', foot: 'dark:block', ground: 'p2_worn_floorboards', banners: 0 }),
+  R('cm_rooms', "the Librarian's Rooms", 44, -162, 9, 8, 0, 6.5, { rock: 'p2_sooty_plaster', foot: 'block', ground: 'p2_worn_floorboards', banners: 0, fires: 14 }),
+  R('cm_still', "the Alchemists' Wing", -44, -120, 12, 10, 0, 9, { rock: 'p2_jar_shelves', foot: 'soot:block', ground: 'flags', banners: 0 }),
+  R('cm_conserv', 'the Conservatory', -58, -168, 14, 14, 0, 14, { rock: 'slate:ashlar', foot: 'dark:block', ground: 'p2_ash_clay_ground', banners: 0 }),
+];
+const mTunnels = [
+  // The Map Room's door off the Gallery, and the way on up from it to the Horn Galleries.
+  { pts: [[15, -92], [45, -92]], w: 2.2, h: 5 },
+  { pts: [[60, -103], [60, -116]], w: 2.2, h: 5 },
+  // The Horn Walk: from the Library's east side to the Horn Galleries, the household's way round.
+  { pts: [[26, -144], [60, -144]], w: 2, h: 4.5 },
+  // The Librarian's own door, off the Library's east side.
+  { pts: [[26, -166], [37, -166]], w: 1.5, h: 3.4 },
+  // The Reading Walk, from the Library's west side round to the Alchemists' Wing; and on from that to the Conservatory.
+  { pts: [[-14, -138], [-36, -138], [-36, -128]], w: 2, h: 4.5 },
+  { pts: [[-50, -128], [-50, -156]], w: 2.2, h: 5 },
+  // The painting door: behind a portrait in the Gallery's west wall, a servant's way through to the Alchemists' Wing. On no map.
+  { pts: [[9, -116], [-34, -116]], w: 1.3, h: 3 },
+  // The doors his servers come through into the Great Hall: either side of the screens, in its east wall.
+  { pts: [[-52, -48], [-46, -48]], w: 1.6, h: 3.4, dead: true, door: 'cm_hall' },
+  { pts: [[-52, -68], [-46, -68]], w: 1.6, h: 3.4, dead: true, door: 'cm_hall' },
+];
+// The high table's dais, at the Great Hall's far end.
+const mDaises = [{ x: -93, z: -56, hx: 6, hz: 9, dy: 0.5 }];
+// The two long tables down the Great Hall, and the aisle between: the Feast heaves the tables down their rows, or sweeps the
+// aisle (src/sim/castle-fights.js). [z of the north row, of the aisle, of the south row]
+export const HALL_ROWS = [-65, -58, -51];
+
+const mProps = [];
+{
+  const add = (kind, x, z, o = {}) => mProps.push({ kind, x, z, ...o });
+  // ---- the Middle Gate: his mark over the arch down, the inner portcullis wound up at the court's end, racks, a fire.
+  add('mark', 0, 7.6, { up: 7.4, r: 0.8, back: 1 });
+  add('portcullis', 0, -30, { w: 7.6, h: 10.5, raised: 7.4, plain: true });
+  add('rack', -7.2, -10, { yaw: PI / 2 }); add('rack', -7.2, -20, { yaw: PI / 2 }); add('barrels', -6, -26);
+  add('brazier', -5.4, -4); add('brazier', 2, -25.4);
+  add('decal', 7.95, -4, { layer: 'p2_rust_streaks', w: 2.4, h: 4, up: 4, yaw: -PI / 2 });
+  // ---- the Middle Court: a wall-walk up its east and north walls, fire baskets on them, piers in the corners; a dead tree
+  // in a planter in its middle; his plate on stands, a cart of the hall's stores by the screens.
+  add('walk', 22.75, -50, { hx: 1.25, hz: 22, up: 10.5, side: -1 }); add('walk', 0, -70.75, { hx: 24, hz: 1.25, up: 10.5, side: 1 });
+  for (let u = -18; u <= 18; u += 9) add('basket', 21.5, -50 + u, { up: 11.6 });
+  for (const x of [-16, -2, 22]) add('basket', x, -69.5, { up: 11.6 });
+  for (const [x, z] of [[-20, -32], [20, -32], [-20, -68], [20, -68]]) add('column', x, z, { r: 1.4, solid: true });
+  add('deadtree', -6, -48, { h: 8, r: 2.2, solid: true });
+  add('stand', 22.6, -36); add('stand', 22.6, -64); add('rack', 22.8, -50, { yaw: -PI / 2 });
+  add('cart', -16, -44, { yaw: 0.6 }); add('crates', -19, -38); add('barrels', 14, -34);
+  add('brazier', 10, -44); add('brazier', -10, -62);
+  add('decal', 8, -58, { layer: 'p2_blood_splashes', w: 2, flat: true, yaw: 0.4 });
+  // ---- the Screens Passage: the buttery hatch, the hall's stores, the screen's posts at the hall end.
+  add('counter', -34, -60.3, { hx: 2.4, hz: 0.4 }); add('barrels', -26, -56.8); add('crates', -44, -56.4); add('barrels', -40, -57);
+  add('lintel', -51, -58, { hz: 3, stone: 'wood' });
+  // ---- the Great Hall: the high table on its dais, his chair behind it facing down the hall, his mark on the wall over it;
+  // two long tables and their benches, what's left of the feast on them; a great hearth in each long wall; chandeliers; the
+  // hunt in tapestry. (The north door, behind the high table, opens once he's dead: exitOut.)
+  add('table', -90, -56, { hx: 0.7, hz: 5 }); add('seat', -94, -56, { hx: 1.1, hz: 0.9, yaw: PI / 2, stone: 'dark:stone' });
+  add('candles', -89.8, -59.5, { up: 0.85 }); add('candles', -90.2, -52.5, { up: 0.85 });
+  add('mark', -101.5, -56, { up: 6.4, r: 1.6, yaw: PI / 2, back: -1 });
+  for (const z of [HALL_ROWS[0], HALL_ROWS[2]]) {
+    add('table', -70, z, { hx: 11, hz: 0.7 });
+    add('bench', -70, z - 1.3, { hx: 10, hz: 0.2 }); add('bench', -70, z + 1.3, { hx: 10, hz: 0.2 });
+    add('bones', -76, z, { r: 0.7 }); add('candles', -64, z, { up: 0.85 }); add('candles', -78, z + 0.2, { up: 0.85 });
+  }
+  add('hearth', -76, -44.6, { yaw: PI, great: 1.2 }); add('hearth', -62, -71.4, { yaw: 0, great: 1.2 });
+  add('chandelier', -78, -58, { up: 9, hang: true }); add('chandelier', -62, -58, { up: 9, hang: true });
+  add('decal', -92, -44.05, { layer: 'p2_tapestry_hunt', w: 6, h: 4, up: 5.5, yaw: PI }); add('decal', -86, -71.95, { layer: 'p2_tapestry_hunt', w: 6, h: 4, up: 5.5, yaw: 0 });
+  add('spit', -56, -62); add('barrels', -56, -50.5); add('heap', -98, -66, { r: 1, layer: 'dark:rubble' });
+  add('decal', -70, -58, { layer: 'p2_blood_splashes', w: 2.6, flat: true, yaw: 1.1 });
+  // ---- the Portrait Gallery: his house's faces down both walls, two rows; a runner; his plate between; and the painting
+  // that's a door, swung open from the wall.
+  for (let z = -74; z >= -128; z -= 4.5) {
+    if (Math.abs(z - -92) > 3) add('portrait', 16.45, z, { yaw: -PI / 2 });
+    if (Math.abs(z - -116) > 3) add('portrait', 7.55, z, { yaw: PI / 2 });
+    if ((z | 0) % 2 === 0) { add('portrait', 16.45, z - 2.2, { yaw: -PI / 2, up: 3 }); add('portrait', 7.55, z - 2.2, { yaw: PI / 2, up: 3 }); }
+  }
+  add('portrait', 8.6, -114.2, { yaw: PI / 2 + 1.1 });
+  add('carpet', 12, -101, { hx: 1.3, hz: 30, layer: 'cloth_red' });
+  add('stand', 8.6, -80); add('stand', 15.4, -104); add('stand', 8.6, -126);
+  add('decal', 16.4, -69.05, { layer: 'p2_cobweb', w: 1.6, up: 8.3 });
+  // ---- the Map Room: the great table, the castle on it; chests of maps against the walls; a lectern; two of the charts
+  // pinned up (no letters).
+  add('maptable', 54, -96, { hx: 4.2, hz: 2.6 });
+  add('bookcase', 64.5, -96, { hx: 0.4, hz: 3, h: 3.2, one: -1 }); add('bookcase', 43.5, -101, { hx: 0.4, hz: 2.4, h: 3.2, one: 1 });
+  add('lectern', 48, -88.6); add('chandelier', 54, -96, { up: 5.4, hang: true });
+  add('decal', 54, -104.95, { layer: 'p2_hessian', w: 3.2, h: 2.2, up: 2, yaw: 0 }); add('decal', 62, -87.05, { layer: 'p2_hessian', w: 2.4, h: 1.8, up: 2.2, yaw: PI });
+  // ---- the Horn Galleries: great horns on their brackets down both walls at two heights; a wall-walk up the east side; at the
+  // far end, the Clock Tower's door, shut.
+  for (let z = -120; z >= -162; z -= 7) {
+    const hi = ((-z / 7) | 0) % 2 ? 9 : 5;
+    add('horn', 58.3, z, { yaw: PI / 2, up: hi, s: 1.2 }); add('horn', 69.7, z - 3.5, { yaw: -PI / 2, up: 14 - hi, s: 1.2 });
+  }
+  add('walk', 68.75, -142, { hx: 1.25, hz: 26, up: 8, side: -1 });
+  add('portcullis', 64, -169.4, { w: 2.6, h: 6.4, plain: true }); add('lintel', 64, -168.6, { hx: 3.6, stone: 'dark:ashlar' });
+  add('mark', 64, -169.7, { up: 7.2, r: 0.7, back: -1 });
+  add('brazier', 60, -124); add('brazier', 67, -160);
+  // ---- the Ancient Library: his books up every wall to the roof; cases standing out from the walls; reading tables and
+  // lecterns down the middle; light from an oculus high over it. (No packs in here: the household's.)
+  // (Bays: cases out from the west wall and the east, a way down the middle from the Gallery to the Stacks.)
+  for (const z of [-146, -154, -162, -170]) add('bookcase', -9.5, z, { hx: 5.5, hz: 0.45, h: 5 });
+  for (const z of [-150, -158]) add('bookcase', 24.6, z, { hx: 3.4, hz: 0.45, h: 5 });
+  add('table', 12, -146, { hx: 0.7, hz: 3 }); add('candles', 12, -147, { up: 0.85 }); add('candles', 12, -144.6, { up: 0.85 });
+  add('table', 12, -170, { hx: 0.7, hz: 3 }); add('candles', 12, -169, { up: 0.85 }); add('candles', 12, -171.4, { up: 0.85 });
+  add('bench', 10.6, -146, { hx: 0.2, hz: 2.6 }); add('bench', 13.4, -170, { hx: 0.2, hz: 2.6 });
+  add('lectern', 5, -158); add('lectern', 19, -158);
+  for (const z of [-146, -158, -170]) add('chandelier', 12, z, { up: 6, hang: true });
+  add('decal', 27.95, -133.05, { layer: 'p2_cobweb', w: 2, up: 13.9, yaw: PI });
+  // ---- the Long Stacks: cases in rows, a way down the middle to the Sanctuaries Stair's door in the far wall, shut.
+  for (const x of [-8, -3, 2, 21]) add('bookcase', x, -185, { hx: 0.45, hz: 4.5, h: 4.5 });
+  add('chandelier', 12, -184, { up: 5, hang: true });
+  add('portcullis', 12, -193.4, { w: 2.4, h: 6, plain: true }); add('lintel', 12, -192.6, { hx: 3.4, stone: 'dark:ashlar' });
+  add('mark', 12, -193.7, { up: 6.8, r: 0.6, back: -1 });
+  add('decal', -11.95, -193.95, { layer: 'p2_cobweb', w: 1.8, up: 6.9, yaw: PI / 2 }); add('decal', 23.95, -174.05, { layer: 'p2_cobweb', w: 1.8, up: 6.9, yaw: PI });
+  // ---- the Librarian's Rooms: his desk, five beds (his, and his four's), a hearth, their coats, their stores; books.
+  add('table', 40, -159, { hx: 2.2, hz: 0.8 }); add('candles', 39, -159, { up: 0.85 }); add('bench', 40, -157.4, { hx: 1.4, hz: 0.2 });
+  for (const x of [37, 40, 43, 46, 49]) add('bunk', x, -168.3, { hx: 0.55, hz: 1.1, cloth: x === 43 ? 'cloth_red' : 'cloth_oat' });
+  add('hearth', 52.4, -160, { yaw: -PI / 2 });
+  add('coatrail', 48, -155.2, { hx: 2 }); add('barrels', 51, -166); add('crates', 36.5, -155.5);
+  add('bookcase', 35.5, -162, { hx: 0.4, hz: 2.2, h: 3, one: 1 });
+  add('carpet', 44, -162, { hx: 3.5, hz: 2.5, layer: 'cloth_oat' });
+  // ---- the Alchemists' Wing: two stills, a working circle in the floor, the bench of their glass, a vat; their shelves of jars
+  // up every wall.
+  add('alembic', -50, -114, { yaw: PI / 2 }); add('alembic', -38, -126, { yaw: -PI / 2 });
+  add('circle', -44, -120, { r: 3 }); add('table', -54, -124, { hx: 0.7, hz: 3 }); add('candles', -54, -123, { up: 0.85 });
+  add('vat', -36, -113, { r: 1 }); add('barrels', -55, -111); add('crates', -33.5, -128);
+  add('decal', -45, -117, { layer: 'p2_scorch_mark', w: 1.6, flat: true });
+  // ---- the Conservatory: glass over it, dead trees in planters, roots down the walls, black water in a basin; and in its far
+  // wall the Menagerie's door, shut.
+  for (const [x, z, h] of [[-66, -160, 7], [-50, -160, 6], [-66, -176, 6.5], [-50, -177, 7.5]]) add('deadtree', x, z, { h, r: 1.6, solid: true });
+  add('pit', -58, -168, { r: 2 }); add('brazier', -58, -158); add('brazier', -58, -178);
+  add('roots', -70, -158, { r: 2 }); add('roots', -46, -180, { r: 1.8 });
+  add('heap', -70, -180, { r: 1.2, layer: 'dark:rubble' }); add('heap', -45, -157, { r: 0.9, layer: 'dark:rubble' });
+  add('portcullis', -62, -181.4, { w: 2.6, h: 6.2, plain: true }); add('lintel', -62, -180.6, { hx: 3.6, stone: 'dark:ashlar' });
+  add('mark', -62, -181.7, { up: 7, r: 0.7, back: -1 });
+}
+
+const SITTERS = ['possessed_man_1', 'possessed_man_2', 'possessed_woman_1', 'possessed_woman_2'];
+const ARCHIVISTS = ['necromancer_f1', 'necromancer_f2', 'necromancer_2', 'necromancer_3'];
+const HORNWINGS = ['harpy_warrior', 'harpy_undead_1', 'harpy_undead_2'];
+const LIVERY = ['mannequin_1', 'mannequin_2', 'mannequin_3'];
+// (None in the Middle Gate, where you wake if you fall; none in the Library or the Librarian's Rooms, the household's; and
+// the Great Hall is the Feast's.)
+const mPacks = [
+  { key: 'cm_court', room: 'cm_court', pick: KNIGHTS.concat(LANCERS), n: 4, elite: ['possessed_knight_3'], pal: ['Oxblood'], at: [8, -6], r: 6 },
+  { key: 'cm_screens', room: 'cm_screens', pick: LIVERY, n: 3, pal: ['Oxblood', 'Sable'], at: [4, 0], r: 2.5 },
+  { key: 'cm_gallery', room: 'cm_gallery', pick: SITTERS, n: 4, pal: ['Abyssal'], at: [0, 8], r: 2.5 },
+  { key: 'cm_maps', room: 'cm_maps', pick: ['night_demon_blue', 'night_demon_black'], n: 2, pal: ['Abyssal'], at: [-4, 4], r: 3 },
+  { key: 'cm_horns', room: 'cm_horns', pick: HORNWINGS, n: 4, pal: ['Oxblood'], at: [0, 4], r: 3 },
+  { key: 'cm_stacks', room: 'cm_stacks', pick: ARCHIVISTS, n: 4, elite: ['necromancer_lord'], pal: ['Abyssal'], at: [6, 0], r: 5 },
+  { key: 'cm_still', room: 'cm_still', pick: WARDENS, n: 3, pal: ['Mossback'], at: [4, 0], r: 4 },
+  { key: 'cm_conserv', room: 'cm_conserv', pick: ['spider_black', 'spider_red'], n: 5, elite: ['flesh_spider_demon'], pal: ['Mossback'], at: [0, 4], r: 6 },
+  // The household's way round, the Horn Walk, walked by two of his knights in blue.
+  { key: 'cm_hway', room: 'cm_horns', pick: KNIGHTS, n: 2, pal: ['Abyssal'], at: [-2, 2], r: 1, walk: [[56, -144], [40, -144], [28, -144]] },
+];
+const mBosses = [
+  { key: 'feast', room: 'cm_hall', name: 'The Feast That Walks', models: ['cm_feast'], pal: ['Oxblood'], hp: 96000, damage: 300, reach: 4.2, loot: 8 },
+];
+const mWarnings = {
+  fea_open: 'The Feast That Walks. His servers bring him his courses through the doors by the screens: every one that reaches him feeds him. Cut them down on the way. When he heaves the tables, get into the aisle; when he sweeps the aisle, get in among the benches.',
+  fea_courses: 'The servers come in with the courses! Down them before they reach him.',
+  fea_fed: 'A course reaches him: he eats, and grows.',
+  fea_tables: 'He heaves the long tables down the hall! Into the aisle.',
+  fea_aisle: 'He sweeps the aisle with the high table! In among the benches.',
+  fea_gorge: 'He gapes! Out of the arc.',
+  fea_belly: 'He drops his belly on the flags! Jump the ring as it reaches you.',
+  fea_plates: 'He throws the plate! Out of the circles.',
+  fea_bile: 'He brings it back up! Out of the pools.',
+  fea_turn: 'The Feast That Walks turns on you! Out of his reach.',
+  fea_enrage: 'The Feast That Walks is enraged!',
+};
+export const MIDDLE_WARD = {
+  key: 'middleward', tag: 'cm', name: 'Castle Velscour: the Middle Ward', short: 'the Middle Ward', x: 11180, z: -5700, y: -60, level: 75, style: 'castle',
+  party: false, castle: true,
+  // (Gone into only from the Lower Ward, by the Middle Ward Gate: no arch of its own out on the land. Its portal is the
+  // Lower Ward's, the castle's gate: where its Postern and its north door let you out, and where the map points.)
+  within: 'lowerward',
+  rooms: mRooms, tunnels: mTunnels, daises: mDaises, props: mProps, packs: mPacks, bosses: mBosses, warnings: mWarnings,
+  turnWarn: { feast: 'fea_turn' },
+  entry: { x: 0, z: -1.5, yaw: PI }, exitIn: { x: 5.4, z: -14, yaw: -PI / 2 }, exitOut: { x: -88, z: -67.4, yaw: 0 },
+  portal: LOWER_WARD.portal,
+  // The arch at the Middle Gate's foot: back down to the Lower Ward's Middle Ward Gate.
+  links: [{ x: 0, z: 3.4, yaw: PI, to: 'lowerward', n: 1 }],
+  last: 'feast', tough: { hp: 27, damage: 2.9 }, pay: { xp: 54000, gold: 7400 },
+  names: { "Velscour's Knights": 'COURT KNIGHT', 'Haunted Mannequins': 'EMPTY LIVERY', 'The Possessed': 'SITTER', 'Night Paralysis Demons': 'INKSHADE', Harpies: 'HORNWING', Necromancers: 'ARCHIVIST', 'Plague Knights': 'STILLWARDEN', 'Giant Spiders': 'THORN SPIDER' },
+  look: { wall: 'ashlar', foot: 'dark:block', floor: 'flags', banner: 'p2_banner_skull', roof: 'dark:stone', flame: 'dark:flame', light: [1, 0.46, 0.2], fire: [1, 0.5, 0.22], every: 8, high: 3, glow: 2.5, lit: true, beam: 'dark:stone', bays: 'chains' },
+  words: { enter: "Castle Velscour: the Middle Ward. His court's: the Great Hall, the Gallery, the Library.", clear: 'The Feast That Walks is dead! His hall is quiet.', wipe: 'You fall... and wake in the Middle Gate.' },
+};
+
+export const CASTLE = [LOWER_WARD, MIDDLE_WARD];

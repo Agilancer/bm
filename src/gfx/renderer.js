@@ -568,8 +568,9 @@ export class Renderer {
     this.portalOutLights = [];
     // (A gate from one of Phobos's sewers into the next is lit the colour of where it goes: green to the West Drains, blue to
     // the Slough Mains, violet to the Charnel Runs, amber to the High Conduits. src/core/delve-sewers.js links.)
-    const gateTint = {};
-    for (const d of DELVES) (d.links || []).forEach((l, i) => { gateTint[`${d.tag}_l${i}`] = DELVES.find((q) => q.key === l.to)?.look.light; });
+    // (And one shut till a boss has died, src/core/delve-castle.js shut, is dark till it's open: gateOpen.)
+    const gateTint = {}, gateShut = {};
+    for (const d of DELVES) (d.links || []).forEach((l, i) => { gateTint[`${d.tag}_l${i}`] = DELVES.find((q) => q.key === l.to)?.look.light; if (l.shut) gateShut[`${d.tag}_l${i}`] = l.shut; });
     for (const key of PORTAL_SPOTS) {
       if (!portalSpots[key]) continue;
       const [x, y, z, yaw] = portalSpots[key];
@@ -577,6 +578,7 @@ export class Renderer {
       warrens.push(L);
       const out = DELVES.find((d) => key === `${d.tag}_out`);
       if (out) this.portalOutLights.push({ L, d: out });
+      if (gateShut[key]) this.portalOutLights.push({ L, shut: gateShut[key] });
     }
     for (const key in portalSpots) {
       if (!key.startsWith('seal_')) continue;
@@ -1808,16 +1810,22 @@ export class Renderer {
   // A delve's way out is open once its last boss is down (the sim's word, by src/main.js: delveState; src/sim/dungeon.js lets
   // you through it by the same rule). Till then it's drawn gone out: no glow, no whirl, no motes, no light.
   portalOpen(d) { const W = this.delveState; return !!W && W.delve === d.key && !!W.down?.includes(d.last); }
+  // A gate between delves shut till a boss has died: open once it has, now (the sim's word) or ever (the quests': bossFlags,
+  // from src/main.js). As src/sim/dungeon.js open.
+  gateOpen(key) { return !!this.bossFlags?.has(`boss:${key}`) || !!this.delveState?.down?.includes(key); }
 
   makePortals() {
     const { spots } = buildSites(), out = [];
-    const put = (kind, [x, y, z, yaw], way = null) => {
+    // (shut: the boss whose death opens a gate between delves: dark till then, gateOpen.)
+    const shuts = {};
+    for (const d of DELVES) (d.links || []).forEach((l, i) => { if (l.shut) shuts[`${d.tag}_l${i}`] = l.shut; });
+    const put = (kind, [x, y, z, yaw], way = null, shut = null) => {
       const { scale: S, sink } = PORTAL_MODELS[kind], c = Math.cos(yaw), s = Math.sin(yaw);
       const mat = new Float32Array([S * c, 0, -S * s, 0, 0, S, 0, 0, S * s, 0, S * c, 0, x, y - sink, z, 1]);
-      const at = { kind, x, y: y - sink, z, c, s, S, out: way };   // (out: the delve whose way out this is. Not named `out` here: that's the list.)
+      const at = { kind, x, y: y - sink, z, c, s, S, out: way, shut };   // (out: the delve whose way out this is. Not named `out` here: that's the list.)
       out.push({ portal: `${kind}_stone`, mat, at }, { portal: `${kind}_swirl`, mat, at });
     };
-    for (const key of PORTAL_SPOTS) if (spots[key]) put('dungeon', spots[key], DELVES.find((d) => key === `${d.tag}_out`));
+    for (const key of PORTAL_SPOTS) if (spots[key]) put('dungeon', spots[key], DELVES.find((d) => key === `${d.tag}_out`), shuts[key]);
     for (const key in spots) if (key.startsWith('seal_')) put('ground', spots[key]);
     return out;
   }
@@ -3104,8 +3112,8 @@ export class Renderer {
     for (const g of this.bellItems) drawn.push(g);
     this.portalItems ||= this.makePortals();
     if (this.portalItems.length && !this.portalModels) this.portalModel();
-    for (const o of this.portalOutLights || []) o.L.dim = this.portalOpen(o.d) ? 1 : 0;
-    for (const g of this.portalItems) { g.off = !!g.at.out && !this.portalOpen(g.at.out); if ((g.at.x - cam.x) ** 2 + (g.at.z - cam.z) ** 2 < 600 ** 2) drawn.push(g); }
+    for (const o of this.portalOutLights || []) o.L.dim = (o.shut ? this.gateOpen(o.shut) : this.portalOpen(o.d)) ? 1 : 0;
+    for (const g of this.portalItems) { g.off = g.at.shut ? !this.gateOpen(g.at.shut) : !!g.at.out && !this.portalOpen(g.at.out); if ((g.at.x - cam.x) ** 2 + (g.at.z - cam.z) ** 2 < 600 ** 2) drawn.push(g); }
     // The Test Dungeon's door, sliding up into its wall and down again (src/core/testhall.js), from wherever in the hall you are.
     if (inHall(cam.x, cam.z)) drawn.push(this.hallDoorItem(dt));
     this.stallItems ||= this.makeStalls();

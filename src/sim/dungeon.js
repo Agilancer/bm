@@ -40,6 +40,7 @@ export class Warrens {
     this.inside = false;
     this.delve = null;             // the delve you're in (src/core/dungeon.js DELVES), or the last you were
     this.down = new Set();         // bosses dead
+    this.ever = new Set();         // bosses that have ever died, in this game or a saved one (the render thread's quests know: bossesDown)
     this.flipped = new Set();      // scenery the other way from how it was built (flip, below)
     this.fight = null;             // the boss fight on, if there is one
     this.portalCd = 0;
@@ -144,7 +145,8 @@ export class Warrens {
     const near = (x, z, r) => Math.hypot(p.x - x, p.z - z) < r && Math.abs(p.y - sim.world.height(x, z)) < 3;
     if (!this.inside) {
       let way = null;
-      const d = DELVES.find((q) => near(q.portal.x, q.portal.z, q.portal.r) || (way = (q.ways || []).find((w) => near(w.x, w.z, q.portal.r))));
+      // (Not a ward gone into only from another: its portal is that one's, src/core/delve-castle.js within.)
+      const d = DELVES.find((q) => !q.within && (near(q.portal.x, q.portal.z, q.portal.r) || (way = (q.ways || []).find((w) => near(w.x, w.z, q.portal.r)))));
       if (!d) return;
       const r = this.ready();
       this.portalCd = 3;
@@ -156,6 +158,8 @@ export class Warrens {
     const cleared = this.down.has(d.last);
     // (A sewer's gate into the next sector: you're stood in front of that one's gate back, with your party.)
     const link = !this.fight && (d.links || []).find((l) => near(...toWorld(l.x, l.z, d), 1.6));
+    // (A gate shut till a boss has died: its word, now and then, and you stay where you are. src/core/delve-castle.js shut.)
+    if (link && !this.open(link)) { this.warn(WARN[link.word], 12); return; }
     if (link) {
       const o = delveByKey(link.to), back = o.links[link.n], [bx, bz] = toWorld(back.x, back.z, o);
       this.portalCd = 3; this.leftAt[d.key] = sim.time;
@@ -226,6 +230,10 @@ export class Warrens {
   // Scenery that comes and goes (src/core/sites.js Kit.group), turned the other way from how it was built, or back: a
   // standing stone broken, its rubble lying. Sent with the party's post; put back when the fight's lost or the delve stands again.
   flip(key, on = true) { if (on) this.flipped.add(key); else this.flipped.delete(key); }
+
+  // Whether a gate between delves will let you through: one shut till a boss has died (shut: its key) opens once it has, now
+  // or ever. And a ward's gate back down to the one it opens from is always open (only its far side is shut).
+  open(l) { return !l.shut || this.ever.has(l.shut) || this.down.has(l.shut); }
 
   // How many of a delve's bosses are down.
   downIn(d) { return BOSSES.filter((b) => b.delve === d.key && this.down.has(b.key)).length; }

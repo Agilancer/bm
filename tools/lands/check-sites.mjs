@@ -40,7 +40,7 @@ for (const [what, x, z, r] of [['the Howling Mouth', SITES.deepsmouth.x, SITES.d
 }
 // And where each of the later delves' portals stands (src/core/dungeon.js DELVES): nothing of the place it's at within
 // eight metres of it, and the ground under its terrace near enough level.
-for (const d of DELVES.slice(3)) {
+for (const d of DELVES.slice(3).filter((q) => !q.within)) {
   for (const c of near(d.portal.x, d.portal.z, 8)) say(`the portal's ground for ${d.name}`, d.portal.x, d.portal.z, c);
   const g = terrainHeight(d.portal.x, d.portal.z); let slope = 0;
   for (let i = -6; i <= 6; i += 3) for (let j = -6; j <= 6; j += 3) slope = Math.max(slope, Math.abs(terrainHeight(d.portal.x + i, d.portal.z + j) - g));
