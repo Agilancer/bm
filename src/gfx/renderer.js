@@ -12,7 +12,7 @@ import { WORLD_EAST, WORLD_EDGE } from '../core/lands.js';
 import { roadSegments } from '../core/roads.js';
 import { PORTAL_MODELS, buildSites, buildUnder, dropSiteGeometry } from '../core/sites.js';
 import { PhobosNear } from './phobos-near.js';
-import { DELVES, PORTAL_SPOTS, braziers, caveFloorY, delveAt, inDungeon, torches } from '../core/dungeon.js';
+import { DELVES, PORTAL_SPOTS, braziers, caveFloorY, caveRoofY, delveAt, inDungeon, torches } from '../core/dungeon.js';
 import { DOOR, HALL, hallLights, inHall } from '../core/testhall.js';
 import { SlimeBodies } from './slimes.js';
 import { DUST_AT, OPENING, SWAP_AT, prettyShown } from '../core/opening.js';
@@ -108,7 +108,7 @@ const LINEAR_DEPTH = 'r16float';
 const DEPTH = 'depth32float';
 const FLAT = { iron: 100, flame: 101, water: 102, fruit: 103, fruit2: 104, white: 106, tile: 107, glow: 108, lake: 110, falls: 111, ice: 112, seal: 113, obsidian: 114, gold: 115, voidglass: 116, magma: 117, rune: 118, storm: 119 };
 // A painting in another light (src/core/sites.js): its layer plus a thousand times which (materials.js STATIC).
-const TINTS = { dark: 1, pale: 2, frost: 3, mire: 4, spore: 5, void: 6, slate: 7, blood: 8, moss: 9, umber: 10, soot: 11, eve: 12, char: 13 };
+const TINTS = { dark: 1, pale: 2, frost: 3, mire: 4, spore: 5, void: 6, slate: 7, blood: 8, moss: 9, umber: 10, soot: 11, eve: 12, char: 13, royal: 14, forest: 15 };
 const MAX_GROUND = 160;
 // The portals (portalModel): the Warrens' three in their walls, at these spots (src/core/sites.js portalWall), and a seal's at
 // every seal (seal_*). How big each is drawn is PORTAL_MODELS's. SWIRL: each one's whirl for the shader (src/gfx/materials.js
@@ -553,6 +553,9 @@ export class Renderer {
       for (const [x, y, z, lift, how] of braziers(d)) warrens.push(how === 'hang'
         ? { p: [x, y + lift - 1.6, z], c: L.fire, r: 17 * Math.min(g, 1.4), i: 30 * g, flicker: 0.5 * cold }
         : { p: [x, y + (lift ?? 1.9), z], c: L.fire, r: (lift > 4 ? 22 : 15) * g, i: (lift > 4 ? 6.5 : 5.2) * g, flicker: 0.9 * cold });
+      // (Daylight down a shaft or through glass, src/core/delve-build.js daylight: cold and steady, from just under the roof, and
+      // kept among the frame's lights before the torches round it: the Sunk Garden's, the Library's oculus, the Conservatory.)
+      for (const p of d.props) if (p.kind === 'daylight') { const x = d.x + p.x, z = d.z + p.z, fy = caveFloorY(x, z); warrens.push({ p: [x, Math.min(caveRoofY(x, z) - 2.2, fy + 6.5), z], c: [0.7, 0.78, 0.95], r: 20 + p.r * 2.5, i: 70 + p.r * 8, flicker: 0, prio: 14 }); }
       // (The Elder Gods' islands: the Galeward's pylons, the Cinderwell's vent, the altar, the Rimespire's claws. src/core/delve-build.js)
       if (d.style === 'void') for (const p of d.props) {
         const x = d.x + p.x, z = d.z + p.z, y = caveFloorY(x, z);
@@ -786,7 +789,7 @@ export class Renderer {
   packParts(parts, groups = null, keep = 'door:') {
     const prims = [];
     for (const [name, part] of parts) {
-      const m = /^(dark|pale|frost|mire|spore|void|slate|blood|moss|umber|soot|eve|char):(.*)$/.exec(name), base = m ? m[2] : name;
+      const m = /^(dark|pale|frost|mire|spore|void|slate|blood|moss|umber|soot|eve|char|royal|forest):(.*)$/.exec(name), base = m ? m[2] : name;
       const layer = this.layerOf(base);
       prims.push({ name, layer: layer + (m ? TINTS[m[1]] * 1000 : 0), cutout: this.cutOf(layer) ? 1 : 0, ...part });
     }
@@ -836,7 +839,7 @@ export class Renderer {
     const { parts, groups } = buildUnder(key);
     const prims = [];
     for (const [name, part] of parts) {
-      const m = /^(dark|pale|frost|mire|spore|void|slate|blood|moss|umber|soot|eve|char):(.*)$/.exec(name), base = m ? m[2] : name;
+      const m = /^(dark|pale|frost|mire|spore|void|slate|blood|moss|umber|soot|eve|char|royal|forest):(.*)$/.exec(name), base = m ? m[2] : name;
       const layer = this.layerOf(base);
       prims.push({ name, layer: layer + (m ? TINTS[m[1]] * 1000 : 0), cutout: this.cutOf(layer) ? 1 : 0, ...part });
     }
@@ -908,7 +911,7 @@ export class Renderer {
     this.staticLayers = { layerNames, layers };
     const sites = buildSites(true, !!this.tier.lean);
     for (const [name, part] of sites.parts) {
-      const m = /^(dark|pale|frost|mire|spore|void|slate|blood|moss|umber|soot|eve|char):(.*)$/.exec(name), base = m ? m[2] : name;
+      const m = /^(dark|pale|frost|mire|spore|void|slate|blood|moss|umber|soot|eve|char|royal|forest):(.*)$/.exec(name), base = m ? m[2] : name;
       const layer = this.layerOf(base);
       const cutout = this.cutOf(layer);
       prims.push({ name, layer: layer + (m ? TINTS[m[1]] * 1000 : 0), cutout, pos: part.pos, nrm: part.nrm, uv: part.uv, idx: part.idx });

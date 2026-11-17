@@ -134,11 +134,11 @@ export const MOVES = {
   spitRain(P, m, t, k, o = {}) {
     P.rain(t.x, t.z, o.R || 7, o.n || 6, 1.2, { r: 2.2, fuse: 1.3, dmg: k * 1.3, life: 4, dps: k * 0.8, elem: o.elem ?? POISON, from: m, tag: 'spitRain' });
   },
-  /** A cross of plague from its feet. */
-  // (Three arms, the line to whoever it's at clear between two of them: four made a cross on the floor of his castle, where
-  // they stand. The V and T rule.)
-  plagueCross(P, m, t, k) {
-    P.mark({ shape: 'cross', x: m.x, z: m.z, yaw: yawTo(m, t) + Math.PI / 3, arms: 3, r: 9, w: 1, fuse: 1.2, dmg: k * 1.6, life: 3, dps: k * 0.8, elem: POISON, from: m, tag: 'plagueCross' });
+  // A plague ring: he drives his blade into the floor and the pestilence spreads round him in a ring, a still place close in
+  // against him, and lingers. (It was a cross on the floor, then three arms; two of them laid over each other still read as
+  // a cross in his castle, where they stand. A ring can't. The V and T rule.)
+  plagueRing(P, m, t, k) {
+    P.mark({ shape: 'ring', x: m.x, z: m.z, r: 8, r0: 2.2, fuse: 1.2, dmg: k * 1.6, life: 3, dps: k * 0.8, elem: POISON, from: m, tag: 'plagueRing' });
   },
 
   // ---- the dead and the uncanny ----
@@ -293,7 +293,7 @@ export const TRICKS = {
   Werewolf: [{ move: 'howlWave', cd: [8, 12], near: 0, far: 14 }, { move: 'ram', cd: [9, 13], near: 5, far: 14 }],
   Harpies: [{ move: 'bladeNova', cd: [7, 11], near: 0, far: 12 }, { move: 'knifeFan', cd: [8, 12], near: 4, far: 18 }],
   Dragonlings: [{ move: 'spitFan', cd: [6, 10], near: 3, far: 16 }, { move: 'tailWhip', cd: [10, 15], near: 0, far: 5 }],
-  'Plague Knights': [{ move: 'plagueCross', cd: [9, 13], near: 0, far: 9, clip: 'bash' }, { move: 'spitRain', cd: [11, 16], near: 4, far: 18 }],
+  'Plague Knights': [{ move: 'plagueRing', cd: [9, 13], near: 0, far: 9, clip: 'bash' }, { move: 'spitRain', cd: [11, 16], near: 4, far: 18 }],
   // (Sword, shield and lance as well as his sorcery: a sweep of the blade, the shield shoved forward, the lance lowered and run home.)
   "Velscour's Knights": [{ move: 'bloodLance', cd: [8, 12], near: 3, far: 15, clip: 'atk1' }, { move: 'boltWall', cd: [12, 17], near: 5, far: 16, clip: 'bash', o: { elem: DRAIN, width: 10, n: 7 } },
     { move: 'sweep', cd: [9, 13], near: 0, far: 4.5, clip: 'atk2' }, { move: 'shieldWall', cd: [11, 16], near: 0, far: 5, clip: 'bash' }, { move: 'ram', cd: [12, 17], near: 6, far: 14, o: { elem: DRAIN, w: 1.1 } }],

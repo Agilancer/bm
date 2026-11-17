@@ -272,17 +272,17 @@ export const LOWER_WARD = {
 // (No two ways off a room straight across it from each other: the corner map draws no cross of his rooms.)
 const mRooms = [
   R('cm_gate', 'the Middle Gate', 0, -12, 8, 20, 0, 11, { rock: 'p2_curtain_granite', foot: 'dark:block', ground: 'p2_bone_joint_flags', fires: 16 }),
-  R('cm_court', 'the Middle Court', 0, -50, 24, 22, 0, 24, { rock: 'p2_curtain_granite', foot: 'dark:block', ground: 'p2_ward_paving', banners: 24, cloth: 'p2_banner_skull', hang: 0, fires: 14 }),
+  R('cm_court', 'the Middle Court', 0, -50, 24, 22, 0, 24, { rock: 'p2_curtain_granite', foot: 'dark:block', ground: 'p2_ward_paving', banners: 0, hang: 0, fires: 11 }),
   R('cm_screens', 'the Screens Passage', -37, -58, 17, 3, 0, 8, { rock: 'p2_sooty_plaster', foot: 'dark:block', ground: 'p2_worn_floorboards', banners: 0 }),
   R('cm_hall', 'the Great Hall', -76, -58, 26, 14, 0, 18, { rock: 'p2_curtain_granite', foot: 'dark:block', ground: 'p2_oxblood_marble', banners: 13, cloth: 'p2_banner_skull', fires: 13 }),
-  R('cm_gallery', 'the Portrait Gallery', 12, -101, 4.5, 33, 0, 10, { rock: 'p2_thorn_brocade', foot: 'dark:block', ground: 'p2_worn_floorboards', banners: 0, fires: 9 }),
-  R('cm_maps', 'the Map Room', 54, -96, 11, 9, 0, 9, { rock: 'p2_sooty_plaster', foot: 'dark:block', ground: 'p2_worn_floorboards', banners: 0 }),
+  R('cm_gallery', 'the Portrait Gallery', 12, -101, 4.5, 33, 0, 10, { rock: 'royal:p2_thorn_brocade', foot: 'dark:block', ground: 'p2_worn_floorboards', banners: 0, fires: 9 }),
+  R('cm_maps', 'the Map Room', 54, -96, 11, 9, 0, 9, { rock: 'p2_curtain_granite', foot: 'dark:block', ground: 'p2_worn_floorboards', banners: 8, cloth: 'royal:cloth_red' }),
   R('cm_horns', 'the Horn Galleries', 64, -142, 6, 28, 0, 18, { rock: 'p2_curtain_granite', foot: 'dark:block', ground: 'p2_walk_paving', banners: 0, fires: 10 }),
-  R('cm_library', 'the Ancient Library', 6, -154, 22, 24, 0, 16, { rock: 'p2_book_spines', foot: 'dark:block', ground: 'p2_worn_floorboards', banners: 0, fires: 20 }),
-  R('cm_stacks', 'the Long Stacks', 6, -184, 18, 10, 0, 9, { rock: 'p2_book_spines', foot: 'dark:block', ground: 'p2_worn_floorboards', banners: 0 }),
+  R('cm_library', 'the Ancient Library', 6, -154, 22, 24, 0, 16, { rock: 'p2_book_spines', foot: 'dark:block', ground: 'p2_worn_floorboards', banners: 14, cloth: 'royal:cloth_red', fires: 20 }),
+  R('cm_stacks', 'the Long Stacks', 6, -184, 18, 10, 0, 9, { rock: 'p2_book_spines', foot: 'dark:block', ground: 'p2_worn_floorboards', banners: 11, cloth: 'royal:cloth_red' }),
   R('cm_rooms', "the Librarian's Rooms", 44, -162, 9, 8, 0, 6.5, { rock: 'p2_sooty_plaster', foot: 'block', ground: 'p2_worn_floorboards', banners: 0, fires: 14 }),
-  R('cm_still', "the Alchemists' Wing", -44, -120, 12, 10, 0, 9, { rock: 'p2_jar_shelves', foot: 'soot:block', ground: 'flags', banners: 0 }),
-  R('cm_conserv', 'the Conservatory', -58, -168, 14, 14, 0, 14, { rock: 'slate:ashlar', foot: 'dark:block', ground: 'p2_ash_clay_ground', banners: 0 }),
+  R('cm_still', "the Alchemists' Wing", -44, -120, 12, 10, 0, 9, { rock: 'p2_jar_shelves', foot: 'soot:block', ground: 'flags', banners: 10, cloth: 'forest:cloth_red' }),
+  R('cm_conserv', 'the Conservatory', -58, -168, 14, 14, 0, 14, { rock: 'slate:ashlar', foot: 'dark:block', ground: 'p2_ash_clay_ground', banners: 12, cloth: 'forest:cloth_red' }),
 ];
 const mTunnels = [
   // The Map Room's door off the Gallery, and the way on up from it to the Horn Galleries.
@@ -321,11 +321,16 @@ const mProps = [];
   add('walk', 22.75, -50, { hx: 1.25, hz: 22, up: 10.5, side: -1 }); add('walk', 0, -70.75, { hx: 24, hz: 1.25, up: 10.5, side: 1 });
   for (let u = -18; u <= 18; u += 9) add('basket', 21.5, -50 + u, { up: 11.6 });
   for (const x of [-16, -2, 22]) add('basket', x, -69.5, { up: 11.6 });
-  for (const [x, z] of [[-20, -32], [20, -32], [-20, -68], [20, -68]]) add('column', x, z, { r: 1.4, solid: true });
-  add('deadtree', -6, -48, { h: 8, r: 2.2, solid: true });
+  for (const [x, z] of [[-20, -32], [20, -32], [-20, -68], [20, -68]]) add('column', x, z, { r: 1.4, solid: true, shaft: 'p2_curtain_granite', square: true });
+  // (The tree twice a man's reach across, four fires round its planter so it stands black against them.)
+  add('deadtree', -6, -48, { h: 12, r: 2.8, solid: true });
+  for (const [x, z] of [[-6, -42.4], [-6, -53.6], [-11.6, -48], [-0.4, -48]]) add('brazier', x, z);
+  // (Open to the sky over its middle, the noon coming down into the yard: daylight.)
+  add('daylight', 4, -54, { r: 9, pool: false });
+  add('mark', 12, -71.6, { up: 10.6, r: 0.9, back: -1 });
   add('stand', 22.6, -36); add('stand', 22.6, -64); add('rack', 22.8, -50, { yaw: -PI / 2 });
   add('cart', -16, -44, { yaw: 0.6 }); add('crates', -19, -38); add('barrels', 14, -34);
-  add('brazier', 10, -44); add('brazier', -10, -62);
+  add('brazier', 10, -44); add('brazier', 8, -62);
   add('decal', 8, -58, { layer: 'p2_blood_splashes', w: 2, flat: true, yaw: 0.4 });
   // ---- the Screens Passage: the buttery hatch, the hall's stores, the screen's posts at the hall end.
   add('counter', -34, -60.3, { hx: 2.4, hz: 0.4 }); add('barrels', -26, -56.8); add('crates', -44, -56.4); add('barrels', -40, -57);
@@ -333,28 +338,39 @@ const mProps = [];
   // ---- the Great Hall: the high table on its dais, his chair behind it facing down the hall, his mark on the wall over it;
   // two long tables and their benches, what's left of the feast on them; a great hearth in each long wall; chandeliers; the
   // hunt in tapestry. (The north door, behind the high table, opens once he's dead: exitOut.)
-  add('table', -90, -56, { hx: 0.7, hz: 5 }); add('seat', -94, -56, { hx: 1.1, hz: 0.9, yaw: PI / 2, stone: 'dark:stone' });
+  add('table', -90, -56, { hx: 0.7, hz: 5, cloth: 'pale:cloth_oat' }); add('seat', -94, -56, { hx: 1.1, hz: 0.9, yaw: PI / 2, stone: 'dark:stone' });
+  // (The far end lit: a chandelier over the high table, a brazier either side of his chair, so the dais is the room's end.)
+  add('chandelier', -90, -56, { up: 6.5, hang: true }); add('brazier', -95.5, -50.5); add('brazier', -95.5, -61.5);
+  // (The aisle between the long tables, a runner of his red down it: where the tables' heave doesn't come.)
+  add('carpet', -70, HALL_ROWS[1], { hx: 17, hz: 1.2, layer: 'blood:cloth_red' });
   add('candles', -89.8, -59.5, { up: 0.85 }); add('candles', -90.2, -52.5, { up: 0.85 });
   add('mark', -101.5, -56, { up: 6.4, r: 1.6, yaw: PI / 2, back: -1 });
   for (const z of [HALL_ROWS[0], HALL_ROWS[2]]) {
-    add('table', -70, z, { hx: 11, hz: 0.7 });
+    add('table', -70, z, { hx: 11, hz: 0.7, cloth: 'pale:cloth_oat' });
     add('bench', -70, z - 1.3, { hx: 10, hz: 0.2 }); add('bench', -70, z + 1.3, { hx: 10, hz: 0.2 });
     add('bones', -76, z, { r: 0.7 }); add('candles', -64, z, { up: 0.85 }); add('candles', -78, z + 0.2, { up: 0.85 });
   }
-  add('hearth', -76, -44.6, { yaw: PI, great: 1.2 }); add('hearth', -62, -71.4, { yaw: 0, great: 1.2 });
+  add('hearth', -76, -44.6, { yaw: PI, great: 1.2, bed: false }); add('hearth', -62, -71.4, { yaw: 0, great: 1.2, bed: false });
   add('chandelier', -78, -58, { up: 9, hang: true }); add('chandelier', -62, -58, { up: 9, hang: true });
   add('decal', -92, -44.05, { layer: 'p2_tapestry_hunt', w: 6, h: 4, up: 5.5, yaw: PI }); add('decal', -86, -71.95, { layer: 'p2_tapestry_hunt', w: 6, h: 4, up: 5.5, yaw: 0 });
   add('spit', -56, -62); add('barrels', -56, -50.5); add('heap', -98, -66, { r: 1, layer: 'dark:rubble' });
   add('decal', -70, -58, { layer: 'p2_blood_splashes', w: 2.6, flat: true, yaw: 1.1 });
   // ---- the Portrait Gallery: his house's faces down both walls, two rows; a runner; his plate between; and the painting
   // that's a door, swung open from the wall.
+  // (Each sitter in a livery of his: his red, the wing's royal blue, black, the white with skulls; frames of dark iron.)
+  const SITS = ['cloth_red', 'royal:cloth_red', 'dark:cloth_oat', 'pale:cloth_oat', 'blood:cloth_red'];
+  let n = 0;
   for (let z = -74; z >= -128; z -= 4.5) {
-    if (Math.abs(z - -92) > 3) add('portrait', 16.45, z, { yaw: -PI / 2 });
-    if (Math.abs(z - -116) > 3) add('portrait', 7.55, z, { yaw: PI / 2 });
-    if ((z | 0) % 2 === 0) { add('portrait', 16.45, z - 2.2, { yaw: -PI / 2, up: 3 }); add('portrait', 7.55, z - 2.2, { yaw: PI / 2, up: 3 }); }
+    const sz = 0.85 + 0.35 * ((n * 7) % 3) / 2;
+    if (Math.abs(z - -92) > 3) add('portrait', 16.45, z, { yaw: -PI / 2, sitter: SITS[n % 5], sz });
+    if (Math.abs(z - -116) > 3) add('portrait', 7.55, z, { yaw: PI / 2, sitter: SITS[(n + 2) % 5], sz: 1.85 - sz });
+    if (n % 2 === 0) { add('portrait', 16.45, z - 2.2, { yaw: -PI / 2, up: 3.2, sitter: SITS[(n + 1) % 5], sz: 0.8 }); add('portrait', 7.55, z - 2.2, { yaw: PI / 2, up: 3.2, sitter: SITS[(n + 3) % 5], sz: 0.8 }); }
+    n++;
   }
-  add('portrait', 8.6, -114.2, { yaw: PI / 2 + 1.1 });
-  add('carpet', 12, -101, { hx: 1.3, hz: 30, layer: 'cloth_red' });
+  // The painting that's a door: bigger than its neighbours, swung out from the wall on its hinge, its swing scored in the boards.
+  add('portrait', 8.9, -114.5, { yaw: PI / 2 + 1.0, sitter: 'blood:cloth_red', sz: 1.3 });
+  add('decal', 8.6, -116, { layer: 'p2_gouges', w: 1.8, h: 1.2, flat: true, yaw: 0.6 });
+  add('carpet', 12, -101, { hx: 1.3, hz: 30, layer: 'royal:cloth_red' });
   add('stand', 8.6, -80); add('stand', 15.4, -104); add('stand', 8.6, -126);
   add('decal', 16.4, -69.05, { layer: 'p2_cobweb', w: 1.6, up: 8.3 });
   // ---- the Map Room: the great table, the castle on it; chests of maps against the walls; a lectern; two of the charts
@@ -367,7 +383,7 @@ const mProps = [];
   // far end, the Clock Tower's door, shut.
   for (let z = -120; z >= -162; z -= 7) {
     const hi = ((-z / 7) | 0) % 2 ? 9 : 5;
-    add('horn', 58.3, z, { yaw: PI / 2, up: hi, s: 1.2 }); add('horn', 69.7, z - 3.5, { yaw: -PI / 2, up: 14 - hi, s: 1.2 });
+    add('horn', 58.1, z, { yaw: PI / 2, up: hi, s: 0.85 }); add('horn', 69.9, z - 3.5, { yaw: -PI / 2, up: 14 - hi, s: 0.85 });
   }
   add('walk', 68.75, -142, { hx: 1.25, hz: 26, up: 8, side: -1 });
   add('portcullis', 64, -169.4, { w: 2.6, h: 6.4, plain: true }); add('lintel', 64, -168.6, { hx: 3.6, stone: 'dark:ashlar' });
@@ -378,11 +394,13 @@ const mProps = [];
   // (Bays: cases out from the west wall and the east, a way down the middle from the Gallery to the Stacks.)
   for (const z of [-146, -154, -162, -170]) add('bookcase', -9.5, z, { hx: 5.5, hz: 0.45, h: 5 });
   for (const z of [-150, -158]) add('bookcase', 24.6, z, { hx: 3.4, hz: 0.45, h: 5 });
-  add('table', 12, -146, { hx: 0.7, hz: 3 }); add('candles', 12, -147, { up: 0.85 }); add('candles', 12, -144.6, { up: 0.85 });
-  add('table', 12, -170, { hx: 0.7, hz: 3 }); add('candles', 12, -169, { up: 0.85 }); add('candles', 12, -171.4, { up: 0.85 });
+  add('table', 12, -146, { hx: 0.7, hz: 3, cloth: 'royal:cloth_oat' }); add('candles', 12, -147, { up: 0.85 }); add('candles', 12, -144.6, { up: 0.85 });
+  add('table', 12, -170, { hx: 0.7, hz: 3, cloth: 'royal:cloth_oat' }); add('candles', 12, -169, { up: 0.85 }); add('candles', 12, -171.4, { up: 0.85 });
+  // (The oculus high over the middle of it, its cold daylight down onto the reading tables: the room's landmark.)
+  add('daylight', 12, -158, { r: 2.4, pool: false });
   add('bench', 10.6, -146, { hx: 0.2, hz: 2.6 }); add('bench', 13.4, -170, { hx: 0.2, hz: 2.6 });
   add('lectern', 5, -158); add('lectern', 19, -158);
-  for (const z of [-146, -158, -170]) add('chandelier', 12, z, { up: 6, hang: true });
+  for (const z of [-146, -170]) add('chandelier', 12, z, { up: 6, hang: true });
   add('decal', 27.95, -133.05, { layer: 'p2_cobweb', w: 2, up: 13.9, yaw: PI });
   // ---- the Long Stacks: cases in rows, a way down the middle to the Sanctuaries Stair's door in the far wall, shut.
   for (const x of [-8, -3, 2, 21]) add('bookcase', x, -185, { hx: 0.45, hz: 4.5, h: 4.5 });
@@ -401,11 +419,13 @@ const mProps = [];
   // up every wall.
   add('alembic', -50, -114, { yaw: PI / 2 }); add('alembic', -38, -126, { yaw: -PI / 2 });
   add('circle', -44, -120, { r: 3 }); add('table', -54, -124, { hx: 0.7, hz: 3 }); add('candles', -54, -123, { up: 0.85 });
-  add('vat', -36, -113, { r: 1 }); add('barrels', -55, -111); add('crates', -33.5, -128);
+  add('barrels', -36, -112); add('barrels', -55, -111); add('crates', -33.5, -128);
+  add('jarshelf', -44, -110.3, { yaw: PI, w: 4 }); add('jarshelf', -55.7, -118, { yaw: PI / 2, w: 3 }); add('jarshelf', -32.3, -120, { yaw: -PI / 2, w: 3 });
   add('decal', -45, -117, { layer: 'p2_scorch_mark', w: 1.6, flat: true });
   // ---- the Conservatory: glass over it, dead trees in planters, roots down the walls, black water in a basin; and in its far
   // wall the Menagerie's door, shut.
-  for (const [x, z, h] of [[-66, -160, 7], [-50, -160, 6], [-66, -176, 6.5], [-50, -177, 7.5]]) add('deadtree', x, z, { h, r: 1.6, solid: true });
+  add('daylight', -58, -168, { r: 4.5, pool: false });
+  for (const [x, z, h] of [[-66, -160, 8], [-50, -160, 7], [-66, -176, 7.5], [-50, -177, 9]]) add('deadtree', x, z, { h, r: 1.8, solid: true });
   add('pit', -58, -168, { r: 2 }); add('brazier', -58, -158); add('brazier', -58, -178);
   add('roots', -70, -158, { r: 2 }); add('roots', -46, -180, { r: 1.8 });
   add('heap', -70, -180, { r: 1.2, layer: 'dark:rubble' }); add('heap', -45, -157, { r: 0.9, layer: 'dark:rubble' });

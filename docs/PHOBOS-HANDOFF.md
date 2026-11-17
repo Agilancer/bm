@@ -238,6 +238,8 @@ Nobody has played any of Phobos by hand:
 - the sewers
 - the Lower Ward and the Gate Captain's kill
 - the doors and towers
+- the Middle Ward, the Feast That Walks, the shut gate opening on the Captain's death, the household's quests, and
+  auto-play walking up to them (all checked headless and by tests only)
 
 The phone has never been run on a real phone, and the street braziers have not been seen at night. The full list is under
 "Untested" in PHOBOS-TODO.md.

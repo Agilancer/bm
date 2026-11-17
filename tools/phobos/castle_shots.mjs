@@ -15,15 +15,15 @@ const WAIT = +(process.env.WAIT || 7000);
 // [name, ward, room to stand in, eye [x, up, z], looking at [x, up, z]] (up: over the ward's own floor height).
 const SHOTS = [
   ['lw_mgate', 'lowerward', 'cl_mgate', [49, 14.2, -132], [49, 15.5, -152]],
-  ['mw_gate', 'middleward', 'cm_gate', [-5.5, 2, -4], [4, 4, -46]],
-  ['mw_court', 'middleward', 'cm_court', [19, 3.2, -33], [-10, 4, -60]],
+  ['mw_gate', 'middleward', 'cm_gate', [-3, 2, 0], [3, 4, -46]],
+  ['mw_court', 'middleward', 'cm_court', [15, 3.2, -36], [-10, 4, -60]],
   ['mw_hall', 'middleward', 'cm_screens', [-54, 4.2, -62], [-98, 2.6, -55]],
   ['mw_gallery', 'middleward', 'cm_gallery', [12, 1.9, -70], [12, 2.8, -132]],
   ['mw_maps', 'middleward', 'cm_maps', [44, 3, -88.5], [58, 0.6, -101]],
   ['mw_horns', 'middleward', 'cm_horns', [64, 2.2, -117], [64, 9, -168]],
   ['mw_library', 'middleward', 'cm_library', [24, 5.5, -134], [2, 2.5, -172]],
   ['mw_stacks', 'middleward', 'cm_stacks', [-10, 2.2, -176], [14, 2.4, -194]],
-  ['mw_still', 'middleward', 'cm_still', [-34, 2.4, -111.5], [-52, 0.8, -126]],
+  ['mw_still', 'middleward', 'cm_still', [-34.5, 2.6, -128.5], [-53, 1, -112]],
   ['mw_conserv', 'middleward', 'cm_conserv', [-46, 2.6, -156], [-66, 3, -181]],
   // (Last: the household are loaded late, as the crowd is, once you're on your way to Phobos.)
   ['mw_rooms', 'middleward', 'cm_rooms', [36.4, 2.3, -155.5], [47, 0.9, -165]],
@@ -42,7 +42,7 @@ const page = await b.newPage({ viewport: { width: 1280, height: 720 } });
 page.on('pageerror', (e) => console.log('PAGE ERROR', String(e).slice(0, 600)));
 await page.goto(`http://localhost:${process.env.PORT || 8481}/?auto&noopening&timer`, { waitUntil: 'load' });
 await page.waitForFunction(() => window.bm && bm.snap && bm.snap(), null, { timeout: 900000, polling: 1000 });
-await page.evaluate('bm.fixScale(1); bm.renderer.hideVM = true; bm.view.lands.cheats.noDamage = true; bm.skills("level", 80);');
+await page.evaluate('bm.fixScale(1); bm.renderer.hideVM = true; bm.view.lands.cheats.noDamage = true; bm.skills("level", 80); if (bm.view.questTrail) bm.view.questTrail.off = true;');
 for (const [name, ward, room, eye, at] of which) {
   const d = delveByKey(ward), Y = d.y;
   const c = cam(d.x + eye[0], Y + eye[1], d.z + eye[2], d.x + at[0], Y + at[1], d.z + at[2]);

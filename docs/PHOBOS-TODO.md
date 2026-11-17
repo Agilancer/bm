@@ -556,6 +556,20 @@ world's north edge, east of them. Gone in alone (party: false), as the sewers ar
 - [x] **Auto-play** goes up to the Middle Ward through the Lower Ward's gate (`delveWay`), walks it (WAYS: the Feast last),
   and now talks to anyone standing down a delve (`delveTalk`): the sewer-keepers, the princess and the household, by
   the delve's portal or the gates between delves. (Before this it couldn't reach the people down the sewers at all.)
+- [x] **Critics, round 1** (2026-11-17, `art/phobos/east/middleward_r1.jpg`): veteran REJECT 5.5, young REJECT 5.5. Both:
+  the spear racks' rails crossed the shafts (crosses), the chandeliers' four chains (a cross in a ring from below), the
+  stills read as bells; no royal blue or forest green but on the monsters; the Court, Hall, Library and Gallery dark or
+  blank; portraits empty; the book spines a grille; the Hall's tables lost in the floor and its hearths' ember beds read
+  as lava; the oculus and the Conservatory's glass missing. Fixed: racks have no rails anywhere (a backboard and a
+  trough, the Lower Ward's too), chandeliers hang on three chains everywhere, the still is a brick furnace with a pot and
+  a swan neck; `royal` and `forest` tints (src/gfx/materials.js) for blue brocade, runners, hangings and table cloths in
+  the Gallery, Map Room, Library and Stacks, green hangings and glass in the Alchemists' Wing and Conservatory; painted
+  sitters in dark iron frames, three sizes, two rows, the secret door bigger, ajar, its swing scored in the boards;
+  spines at twice the size with shelf lips; cloths and plates on the Hall's tables, his red runner down the safe aisle, the
+  dais lit; hearths without the ember bed; the oculus and the glass as cold daylight (daylight props now give a light of
+  their own); the castle carved on the map table; jar shelves of green glass; horns smaller and strapped to a plate.
+  And the Plague Knights' cross on the floor (src/sim/moves.js, everywhere they stand: the Lower Ward's gate wardens, the
+  High Conduits' wardens, the Alchemists' Wing) is a ring now: three arms still read as a cross where two overlapped.
 - [ ] **Not done in the Middle Ward**: the Clock Tower and the Menagerie wings themselves (chunk 9, with their keys);
   the Librarian's deception magic; the horns sounded to change the patrols; Wynn's two other painted doors; a word when
   you walk up to a shut keyed door; the Great Hall as a rest point once the Feast is dead (it respawns with the ward).
