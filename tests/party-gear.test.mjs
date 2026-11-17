@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { fillFrom, goldOf, harmonize, hsvOf, linesOf, lumOf, lumRange, paintProp, plainRamp, rampMap, richer, wideOf } from '../src/gfx/recolour.js';
+import { fillFrom, goldOf, harmonize, hsvOf, linesOf, lumOf, lumRange, paintProp, plainRamp, rampMap, richer, trimOf, wideOf } from '../src/gfx/recolour.js';
 import { coverCode } from '../src/gfx/herolook.js';
 import { useKit, outfitRamps, setsWorn, toneWeight, pieceRamp, shapeClass, paleLift, palNear, rampFor, lookOf, bareHead, rollPartyGear, partyDrops, catchUp, fits, score, bestOf, gearStats, groundModelOf, sizeOfHG, hgLines, hgWorth, kindsOf, shapeShows, HG_SLOTS, HG_ARMOUR, SHIELD_KINDS, PROP_PALS } from '../src/items/partygear.js';
 import { makeRng } from '../src/items/items.js';
@@ -271,6 +271,18 @@ test("a pale outfit is lifted by a curve: a dark cloth comes up further than a l
   assert.ok(capeP > capeS * 1.4, 'a pale cape comes out much lighter than a plain one');
   assert.ok(plateP < 245, 'its plate not driven to white');
   assert.equal(paleLift('lancer'), undefined);
+  // (Its black, a glove's, comes up to a dark steel, not left near black under silver.)
+  const px = new Uint8ClampedArray([4, 4, 4, 255]);
+  rampMap(px, ramp, [0.04, 0.5], () => 1, paleLift('paladin'));
+  assert.ok(px[0] > 90, `a pale outfit's black a dark steel (${px[0]})`);
+});
+
+test('a weak gold on metal is trim, kept; on leather it is dyed', () => {
+  const dull = [130, 115, 80];                        // a dull gold, goldOf in part only
+  assert.ok(goldOf(...dull) > 0.15 && goldOf(...dull) < 0.9, `a weak gold (${goldOf(...dull).toFixed(2)})`);
+  assert.ok(trimOf(...dull, 0.8) > 0.6, 'on metal: trim');
+  assert.equal(trimOf(...dull, 0.1), 0, 'on leather: not trim');
+  assert.equal(trimOf(90, 110, 90, 0.9), 0, 'a green steel: not trim');
 });
 
 test("a pale outfit keeps only long gold: a trim band stays, a fleck and a curl of embroidery go", () => {

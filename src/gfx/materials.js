@@ -828,9 +828,18 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
   // and a half apart; a padded coat's diamonds thirty. Worked out here, where derivatives may be taken.
   let isCover = in.uv.x > 1.5 && heroLook;
   let cu = in.uv.x - 2.0;
-  let darkSuit = cu >= 2.0;
-  let deepK = clamp(in.uv.y / 100.0, 0.0, 1.0);
-  let tubeUV = vec2f(cu - select(0.0, 2.0, darkSuit), in.uv.y - 100.0 * deepK);
+  // (A dyed hero's coat rides in info.z's fraction, herolook.js coverCode: plain and light is a pale suit, a paladin's
+  // ivory. Its mail is bright and the insides of its plates a pale steel, whatever the body it was cut from was: in the
+  // gaps of a blackened body's legs, and through the torn hem of an ivory cape, blackened iron was holes.)
+  let zc = -C.info.z - floor(-C.info.z);
+  let cc = round((zc - 0.01) / 0.0015);
+  let paleCoat = heroLook && zc > 0.005 && cc % 4.0 > 1.5 && (floor(cc / 4.0) % 2.0) < 0.5;
+  let darkBake = cu >= 2.0;
+  let darkSuit = darkBake && !paleCoat;
+  // (Deep or not: a step. As clamp(v / 100), a tube's own way along below came out at nought, less the very thing it's
+  // measured by, and its rows of rings with it: close up, mail was all the dark between its rings, a black hole.)
+  let deepK = select(0.0, 1.0, in.uv.y > 50.0);
+  let tubeUV = vec2f(cu - select(0.0, 2.0, darkBake), in.uv.y - 100.0 * deepK);
   // (Rings fifteen millimetres across, larger than life, so they hold as rings a few strides off; past that their rows
   // still show as bands, rowFade, and past that it's an even dull iron.)
   let tg = tubeUV * vec2f(67.0, 134.0) * select(1.0, 0.6, LEAN);
@@ -854,6 +863,7 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
   var rimK = 1.0;
   var backAO = 1.0;
   var coverEnv = 1.0;
+  var paleIn = 0.0;
   if (isCover) {
     // A hero's gap covers (tools/heroes/mail.py): what shows where the plates part, and where a suit has no plate at
     // all. Laid out round each tube (cu: metres round it, uv.y: metres along it). On those in armour (info.z -2, -3)
@@ -917,7 +927,11 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
   } else if (heroLook && !front && !isCloth) {
     // The inside of a plate, seen where it's parted from the next: raw dark iron on those in armour, a dark lining on the
     // rest, and in its own shadow. (Painted as its outside, a plate read paper-thin, bright where the eye wants shadow.)
-    if (C.info.z < -1.5) { albedo = vec3f(0.10, 0.098, 0.095); metal = 1.0; rough = 0.6; }
+    // (A pale suit's, paleCoat, is a pale lining: as steel, in its own shadow it took no light but its reflection's.)
+    // (And it has a little light of its own: where a piece cut from another body leaves a hole into the hollow suit, its
+    // far inside, wholly in shadow, was a black void in ivory.)
+    if (C.info.z < -1.5 && paleCoat) { albedo = vec3f(0.36, 0.35, 0.33); metal = 0.0; rough = 0.85; paleIn = 1.0; }
+    else if (C.info.z < -1.5) { albedo = vec3f(0.10, 0.098, 0.095); metal = 1.0; rough = 0.6; }
     else { albedo = albedo * 0.35; metal = 0.0; rough = 0.85; }
     backAO = 0.45;
     rimK = 0.3;
@@ -991,6 +1005,7 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
   // dark: a black shape with no plates in it. A share of the sky's and the ground's light on its paint, as a worn, rough
   // surface scatters it.)
   if (heroLook) { c += albedo * mix(F.groundAmb.rgb, F.skyAmb.rgb, 0.5 + 0.5 * n.y) * (0.42 * metal) * ao; }
+  c += albedo * mix(F.groundAmb.rgb, F.skyAmb.rgb, 0.5) * 0.8 * paleIn;
   c = applyFog(c, p, -v, dist);
   var o: Out;
   o.color = vec4f(c, 1.0);
@@ -1282,10 +1297,11 @@ struct V { @builtin(position) pos: vec4f, @location(0) p: vec3f, @location(1) n:
   let shadow = shadowAt(in.p, n0, in.viewZ, ign(in.pos.xy));
   // A dropped thing's rarity: a little all over, and strongest where it turns from the eye. (A gem's glow is flat: a = 0.)
   // (Further off, a few pixels across, its rim is a hairline and its rarity can't be told: the rim's widened and a little
-  // more of it is in its body with distance, so it reads about as wide on the screen near and far. Drops only, a <= 1.)
+  // more of it is in its body with distance, so it reads about as wide on the screen near and far. Drops only, a <= 1.
+  // Close up its rim is the softer: at the full strength it's had far off, a drop at the feet wore a neon outline.)
   let far = select(0.0, smoothstep(5.0, 22.0, dist), I.glow.a <= 1.0);
   let rim = pow(1.0 - clamp(dot(n0, v), 0.0, 1.0), mix(2.2, 0.9, far));
-  var c = shadePBR(in.p, n, v, albedo, matteRough(mr.g, mr.b), mr.b, 1.0, shadow) + I.glow.rgb * mix(1.0, 0.05 + 0.3 * far + 1.5 * rim * rim, I.glow.a);
+  var c = shadePBR(in.p, n, v, albedo, matteRough(mr.g, mr.b), mr.b, 1.0, shadow) + I.glow.rgb * mix(1.0, 0.05 + 0.3 * far + (1.0 + 0.6 * far) * rim * rim, I.glow.a);
   // A portal's stone (src/gfx/renderer.js portalModels): its runes and gems, painted the whirl's blue, glow of themselves.
   if (I.glow.a > 1.5) {
     let lit = smoothstep(0.22, 0.5, albedo.b) * smoothstep(0.08, 0.3, albedo.b - max(albedo.r, albedo.g * 0.85));

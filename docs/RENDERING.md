@@ -62,6 +62,13 @@ it's shadow; the inside of a cover is its own stuff at 40%. The inside of a plat
 marked in the piece number, `CLOTH_BIT`) is dark iron on `-2` and `-3` and a dark lining on `-1`. Until 2026-11-10 the
 covers were short flat near-black tubes, which read as grey rubber, and plate insides wore their outer paint.
 
+A party member's outfit puts its coat's code in the fraction of `info.z` (`coverCode` in `src/gfx/herolook.js`). A pale
+one (plain and light: a paladin's) wears bright mail whatever body it was cut from, and its plates' insides are a pale
+lining (0.36, 0.35, 0.33) with a little ambient light of its own, since a piece borrowed from another body can leave a
+hole into the hollow suit. Until 2026-11-16 "up inside a helm" was read in proportion (`clamp(v / 100)`), which took a
+tube's whole `v` away below 100: every tube's rings sat at nought along it, and close up the mail was the 0.015 between
+the rings. It's a step now (`v > 50`).
+
 ## The witch's gown: no cloth bones, no ripple
 
 On the owner's word ("so her cloth doesn't dance at the beginning when she talks to you"):

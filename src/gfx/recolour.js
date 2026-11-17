@@ -139,6 +139,8 @@ export function rampAt(ramp, t, out) {
 // ramp's middle with its light, the most colourful a dyed texel comes out, and how far a piece is made lighter or darker
 // as a whole to be as light as its set.
 const VALUE_PULL = 0.2, CHROMA_FOLLOW = 0.3, MAX_SAT = 0.5, GAIN = [0.65, 2.2];
+// On a pale outfit, the light its darks are drawn halfway up to.
+const PALE_TOE = 0.48;
 
 // How much a texel is gold trim (a yellow, bright enough and coloured enough, not a leather's red-brown): 0 to 1. Gold
 // keeps its own colour under any dye, as the owner's suits' trim does on the body it was made for.
@@ -146,6 +148,10 @@ export function goldOf(r, g, b) {
   const [h, s, v] = hsvOf([r, g, b]);
   return smooth(0.085, 0.11, h) * (1 - smooth(0.16, 0.19, h)) * smooth(0.3, 0.45, s) * smooth(0.2, 0.38, v);
 }
+// How much a texel is gold on metal, 0 to 1: a trim, kept whole even where it's a weak gold. (An archer's thin trim, a
+// dull gold, took the dye in part by goldOf alone and came out an olive line on her green, lost. Only on metal: a tan
+// leather strap isn't trim, and left tan it's a stain on a navy coat.) m: the texel's metalness, 0 to 1.
+export const trimOf = (r, g, b, m) => smooth(0.15, 0.4, goldOf(r, g, b)) * smooth(0.3, 0.5, m);
 
 // px: RGBA bytes, changed in place. ramp: the set's stops. range: [lo, hi] (lumRange). amount(i, k): how much of the dye
 // goes on texel i (k = i * 4), 0 to 1, or 0 to leave it. most: the most a piece is made lighter as a whole. Past the usual
@@ -173,7 +179,10 @@ export function rampMap(px, ramp, range, amount, most = GAIN[1]) {
     // brightness of one, held near the ramp's middle.
     // (A pale outfit's own light is pulled further to the ramp's: its grime and the shadows in its torn hem, lifted, were
     // freckles and holes in ivory.)
-    const L0 = Math.min(0.95, curve ? Math.pow(l, gam) : l * gain), L = L0 + (lc - L0) * (curve ? 0.4 : VALUE_PULL);
+    let L0 = Math.min(0.95, curve ? Math.pow(l, gam) : l * gain), L = L0 + (lc - L0) * (curve ? 0.4 : VALUE_PULL);
+    // (And its darkest half as far under the plate: a paladin's black gloves, lifted only by the curve, were still near
+    // black under silver vambraces.)
+    if (curve && L < PALE_TOE) L = PALE_TOE - (PALE_TOE - L) * 0.4;
     let R = (mid[0] + (c[0] / 255 / lc - mid[0]) * CHROMA_FOLLOW) * L - L;
     let G = (mid[1] + (c[1] / 255 / lc - mid[1]) * CHROMA_FOLLOW) * L - L;
     let B = (mid[2] + (c[2] / 255 / lc - mid[2]) * CHROMA_FOLLOW) * L - L;
