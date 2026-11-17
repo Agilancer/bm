@@ -1,0 +1,329 @@
+[
+ {
+  "id": "ph2_03_01_banner_blood",
+  "name": "Blood-red banner",
+  "size": [
+   1024,
+   1536
+  ],
+  "value": 0.122,
+  "sat": 0.598,
+  "light": 0.96,
+  "warnings": [
+   "uneven light 0.96 (want <= 0.45): no vignette, sun patch or dark corner",
+   "too dark (0.122): want mean 0.18 to 0.55",
+   "too saturated (0.598)"
+  ],
+  "status": "WARN"
+ },
+ {
+  "id": "ph2_03_02_banner_blue",
+  "name": "Royal blue banner",
+  "size": [
+   1024,
+   1536
+  ],
+  "value": 0.211,
+  "sat": 0.485,
+  "light": 1.06,
+  "warnings": [
+   "uneven light 1.06 (want <= 0.45): no vignette, sun patch or dark corner"
+  ],
+  "status": "WARN"
+ },
+ {
+  "id": "ph2_03_03_banner_white",
+  "name": "White banner with skulls",
+  "size": [
+   1024,
+   1536
+  ],
+  "value": 0.5,
+  "sat": 0.192,
+  "light": 1.08,
+  "warnings": [
+   "uneven light 1.08 (want <= 0.45): no vignette, sun patch or dark corner"
+  ],
+  "status": "WARN"
+ },
+ {
+  "id": "ph2_03_04_banner_green",
+  "name": "Forest green banner",
+  "size": [
+   1024,
+   1536
+  ],
+  "value": 0.239,
+  "sat": 0.399,
+  "light": 0.88,
+  "warnings": [
+   "uneven light 0.88 (want <= 0.45): no vignette, sun patch or dark corner"
+  ],
+  "status": "WARN"
+ },
+ {
+  "id": "ph2_03_05_banner_greygold",
+  "name": "Grey and gold banner",
+  "size": [
+   1024,
+   1536
+  ],
+  "value": 0.257,
+  "sat": 0.164,
+  "light": 0.31,
+  "warnings": [],
+  "status": "PASS"
+ },
+ {
+  "id": "ph2_03_06_war_banner",
+  "name": "Velscour's great war banner",
+  "size": [
+   1024,
+   1536
+  ],
+  "value": 0.15,
+  "sat": 0.306,
+  "light": 0.47,
+  "warnings": [
+   "uneven light 0.47 (want <= 0.45): no vignette, sun patch or dark corner",
+   "too dark (0.15): want mean 0.18 to 0.55"
+  ],
+  "status": "WARN"
+ },
+ {
+  "id": "ph2_03_07_tapestry_war",
+  "name": "Tapestry of demons at war",
+  "size": [
+   1536,
+   1024
+  ],
+  "value": 0.22,
+  "sat": 0.438,
+  "light": 0.2,
+  "warnings": [],
+  "status": "PASS"
+ },
+ {
+  "id": "ph2_03_08_tapestry_hunt",
+  "name": "Tapestry of a night hunt",
+  "size": [
+   1536,
+   1024
+  ],
+  "value": 0.189,
+  "sat": 0.447,
+  "light": 0.29,
+  "warnings": [],
+  "status": "PASS"
+ },
+ {
+  "id": "ph2_03_09_thorn_brocade",
+  "name": "Blood-red thorn brocade",
+  "size": [
+   1254,
+   1254
+  ],
+  "value": 0.238,
+  "sat": 0.557,
+  "seam_x": 1.25,
+  "seam_y": 1.41,
+  "light": 0.07,
+  "warnings": [
+   "too saturated (0.557)"
+  ],
+  "status": "WARN"
+ },
+ {
+  "id": "ph2_03_10_black_panelling",
+  "name": "Black lacquer panelling",
+  "size": [
+   1254,
+   1254
+  ],
+  "value": 0.161,
+  "sat": 0.407,
+  "seam_x": 0.58,
+  "seam_y": 2.05,
+  "light": 0.05,
+  "warnings": [
+   "seam on y is 2.05 (want <= 1.6): run make_tileable.py and repaint the band",
+   "too dark (0.161): want mean 0.18 to 0.55"
+  ],
+  "status": "WARN"
+ },
+ {
+  "id": "ph2_03_11_oxblood_marble",
+  "name": "Oxblood marble floor",
+  "size": [
+   1254,
+   1254
+  ],
+  "value": 0.175,
+  "sat": 0.451,
+  "seam_x": 1.85,
+  "seam_y": 2.24,
+  "light": 0.36,
+  "warnings": [
+   "seam on x is 1.85 (want <= 1.6): run make_tileable.py and repaint the band",
+   "seam on y is 2.24 (want <= 1.6): run make_tileable.py and repaint the band",
+   "too dark (0.175): want mean 0.18 to 0.55"
+  ],
+  "status": "WARN"
+ },
+ {
+  "id": "ph2_03_12_bone_checker",
+  "name": "Black and bone checker floor",
+  "size": [
+   1254,
+   1254
+  ],
+  "value": 0.334,
+  "sat": 0.196,
+  "seam_x": 1.39,
+  "seam_y": 1.67,
+  "light": 1.16,
+  "warnings": [
+   "seam on y is 1.67 (want <= 1.6): run make_tileable.py and repaint the band",
+   "uneven light 1.16 (want <= 0.45): no vignette, sun patch or dark corner"
+  ],
+  "status": "WARN"
+ },
+ {
+  "id": "ph2_03_13_sooty_plaster",
+  "name": "Sooty damp plaster",
+  "size": [
+   1254,
+   1254
+  ],
+  "value": 0.305,
+  "sat": 0.233,
+  "seam_x": 1.12,
+  "seam_y": 0.77,
+  "light": 0.57,
+  "warnings": [
+   "uneven light 0.57 (want <= 0.45): no vignette, sun patch or dark corner"
+  ],
+  "status": "WARN"
+ },
+ {
+  "id": "ph2_03_14_frieze_strip",
+  "name": "Painted thorn frieze (strip)",
+  "size": [
+   1536,
+   1024
+  ],
+  "value": 0.252,
+  "sat": 0.611,
+  "seam_x": 1.12,
+  "light": 0.19,
+  "warnings": [
+   "too saturated (0.611)"
+  ],
+  "status": "WARN"
+ },
+ {
+  "id": "ph2_03_15_worn_floorboards",
+  "name": "Worn floorboards",
+  "size": [
+   1254,
+   1254
+  ],
+  "value": 0.173,
+  "sat": 0.565,
+  "seam_x": 1.46,
+  "seam_y": 0.56,
+  "light": 0.68,
+  "warnings": [
+   "uneven light 0.68 (want <= 0.45): no vignette, sun patch or dark corner",
+   "too dark (0.173): want mean 0.18 to 0.55",
+   "too saturated (0.565)"
+  ],
+  "status": "WARN"
+ },
+ {
+  "id": "ph2_03_16_fireback",
+  "name": "Soot-black fireplace brick",
+  "size": [
+   1254,
+   1254
+  ],
+  "value": 0.135,
+  "sat": 0.218,
+  "seam_x": 1.24,
+  "seam_y": 0.85,
+  "light": 0.26,
+  "warnings": [
+   "too dark (0.135): want mean 0.18 to 0.55"
+  ],
+  "status": "WARN"
+ },
+ {
+  "id": "ph2_03_17_book_spines",
+  "name": "Shelves of old books",
+  "size": [
+   1254,
+   1254
+  ],
+  "value": 0.151,
+  "sat": 0.542,
+  "seam_x": 1.73,
+  "seam_y": 1.69,
+  "light": 0.2,
+  "warnings": [
+   "seam on x is 1.73 (want <= 1.6): run make_tileable.py and repaint the band",
+   "seam on y is 1.69 (want <= 1.6): run make_tileable.py and repaint the band",
+   "too dark (0.151): want mean 0.18 to 0.55"
+  ],
+  "status": "WARN"
+ },
+ {
+  "id": "ph2_03_18_jar_shelves",
+  "name": "Alchemist's jar shelves",
+  "size": [
+   1254,
+   1254
+  ],
+  "value": 0.18,
+  "sat": 0.451,
+  "seam_x": 1.95,
+  "seam_y": 2.71,
+  "light": 0.3,
+  "warnings": [
+   "seam on x is 1.95 (want <= 1.6): run make_tileable.py and repaint the band",
+   "seam on y is 2.71 (want <= 1.6): run make_tileable.py and repaint the band"
+  ],
+  "status": "WARN"
+ },
+ {
+  "id": "ph2_03_19_dyed_cloth",
+  "name": "Dyed cloth lengths",
+  "size": [
+   1254,
+   1254
+  ],
+  "value": 0.239,
+  "sat": 0.468,
+  "seam_x": 1.17,
+  "seam_y": 1.12,
+  "light": 0.57,
+  "warnings": [
+   "uneven light 0.57 (want <= 0.45): no vignette, sun patch or dark corner"
+  ],
+  "status": "WARN"
+ },
+ {
+  "id": "ph2_03_20_wool_blanket",
+  "name": "Rough wool blanket",
+  "size": [
+   1254,
+   1254
+  ],
+  "value": 0.198,
+  "sat": 0.42,
+  "seam_x": 1.3,
+  "seam_y": 1.13,
+  "light": 0.38,
+  "warnings": [],
+  "status": "PASS"
+ }
+]

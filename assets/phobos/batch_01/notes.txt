@@ -1,0 +1,13 @@
+BATCH 01 - 20 individually generated textures; built-in image generation and image edits.
+Native square outputs: 1254 x 1254; architectural strips: 1536 x 1024. No upscaling.
+Original item IDs retained. Base generation prompts are in CATALOG.json and prompts_used.json. Reference images supplied as material mood/palette, with layout guides for strips and drain.
+Corrections: rubble wall regenerated as uncoursed irregular stone; grille, bone wall, arch stones and cornice received center-seam repair edits after half-offset; rust desaturated; oak, grille, wharf, drain and water exposure increased; cornice shading reduced.
+All wrapping originals were processed with supplied make_tileable.py to prepare offset/mask candidates. Built-in editing uses reference guidance rather than a strict pixel-locked mask API. Unchanged originals retained where checks passed; do not assume pixel-perfect seamlessness from a numerical PASS.
+The supplied quickfix fallback was used only on irregular slum ground and moat water, never on planks or coursed masonry. Some image edits changed more texture detail than requested. No normal/roughness maps included; these remain downstream work per HOW_TO_USE.
+Remaining limitations to review before engine use:
+- Studded oak: slight vertical repeat warning remains after three generations/edits; best repaired exposure retained. Iron strap spacing varies at repeat.
+- Wharf decking: brighter second version retained; third edit worsened edge scores. Slight horizontal repeat warning remains (1.61 vs threshold 1.6).
+- Gutter: dark wet channel gives a uniformity warning; retained as the requested wet-grime band. Some relief shading remains.
+- Drain: black openings against lighter stone/iron give a uniformity warning; retained as requested, not artificially lifted to grey. Some relief shading remains.
+- Waterline wall: REQUEST says xy but also requires grey upper stone and green-black lower third. These cannot repeat naturally vertically without a visible reset. Preserved lower-third waterline; use horizontal repeat and clamp vertically. Original wrap metadata retained for traceability. Expected vertical seam and uniformity warnings remain.
+Review CONTACT_SHEET.jpg and individual repeat previews. Remaining warnings are recorded honestly in check_report.json; this is a complete generated source set, not a claim of flawless production-ready albedo/seams.

@@ -14,8 +14,8 @@
 // Nothing is done to a hero who wears nothing: their body is the one the renderer built for them, untouched.
 import { accessor, imageBytes, parseGLB } from '../core/glb.js';
 import { mipCountFor } from './gpu.js';
-import { PROP_PALS, bareHead, bodyClass, lookOf, outfitRamps, paleLift, paled, rampFor, shapeShows } from '../items/partygear.js';
-import { fillFrom, goldOf, hsvOf, fromHsv, linesOf, lumOf, lumRange, paintProp, rampMap, wideOf } from './recolour.js';
+import { IVORY, PROP_PALS, bareHead, bodyClass, lookOf, outfitRamps, paleLift, paled, rampFor, shapeShows } from '../items/partygear.js';
+import { fillFrom, goldOf, hsvOf, fromHsv, linesOf, lumOf, lumRange, paintProp, rampMap, trimOf, wideOf } from './recolour.js';
 
 const GROUPS = ['helm', 'chest', 'shoulders', 'arms', 'legs', 'boots'];
 const MAX_DONORS = 3;          // bodies borrowed from at once, beside the wearer's own: a picture of 2 x 2 cells at most
@@ -325,27 +325,47 @@ export class HeroLooks {
           px[k] = c[0]; px[k + 1] = c[1]; px[k + 2] = c[2];
         }
       }
-      // (Its gilt, as it was: kept gold by the dye, and left gold below.)
-      const gilt = new Uint8Array(px.length / 4);
-      for (let i = 0, k = 0; k < px.length; i++, k += 4) if (dyed(i) && goldOf(px[k], px[k + 1], px[k + 2]) > 0.3) gilt[i] = 1;
+      // (Its gilt, as it was: kept gold by the dye, and left gold below. And a weak gold on metal, a trim, kept whole: not
+      // on a pale outfit, whose trim is sorted out above.)
+      const gilt = new Uint8Array(px.length / 4), trim = rec.lift ? null : new Float32Array(px.length / 4);
+      for (let i = 0, k = 0; k < px.length; i++, k += 4) {
+        if (!dyed(i)) continue;
+        if (goldOf(px[k], px[k + 1], px[k + 2]) > 0.3) gilt[i] = 1;
+        if (trim) trim[i] = trimOf(px[k], px[k + 1], px[k + 2], metalAt(i));
+      }
       for (const g of want) {
         const n = groupNo[g];
         const range = lumRange(px, (i) => mask[i] === n);
         // (Cloth and leather take the set's colours whole; steel most of them, so it's still steel, coloured.)
-        rampMap(px, rec.colours[g], range, (i) => (mask[i] !== n ? 0 : 0.92 - 0.3 * metalAt(i)), rec.lift);
+        rampMap(px, rec.colours[g], range, (i) => (mask[i] !== n ? 0 : (0.92 - 0.3 * metalAt(i)) * (trim ? 1 - trim[i] : 1)), rec.lift);
       }
       // (Dyed steel is steel with a colour to it, not a gilt or a bronze: in a tan set, a paladin's plate was gold under its
       // gold trim, gold on gold. On metal, the dye's colour half as strong, and a little lighter than the cloth it's over,
       // so an archer in green is green steel on a darker green, not one bottle-green mass; the trim's gold as it is. A pale
       // outfit's is light enough.)
       // (And its cloth a step under it: an archer's emerald skirt was the brightest thing on her, over near-black plate.)
+      // (The lift is the darker steel's, and the lightest is drawn down a little: a lift of the whole made the archer's
+      // pale breastplate a near-white mint. Cloth a little greyer than the dye: a rogue's lavender pouches were plastic.)
+      // (A pale outfit's cloth is a little lighter and leans to ivory, a cream: a pale set's cape was a grey, the light
+      // of its own mid-grey cloth. Its plate stays silver.)
       const up = rec.lift ? 0 : 0.5;
       for (let i = 0, k = 0; k < px.length; i++, k += 4) {
-        if (!dyed(i) || gilt[i]) continue;
+        if (!dyed(i) || gilt[i] || (trim && trim[i] > 0.5)) continue;
         const m = metalAt(i);
-        if (m <= 0.2 && rec.lift) continue;
         const [h, s, v] = hsvOf([px[k], px[k + 1], px[k + 2]]);
-        const c = m <= 0.2 ? fromHsv(h, s * 0.85, v * 0.9) : fromHsv(h, s * (1 - 0.55 * m), Math.min(1, v * (1 + up * m)));
+        let c;
+        if (m <= 0.2 && rec.lift) {
+          const V = Math.min(1, v * 1.15), a = fromHsv(h, s, V), w = fromHsv(IVORY[0], Math.min(0.22, Math.max(s, IVORY[1])), V);
+          c = a.map((x, j) => x + (w[j] - x) * 0.55);
+        } else if (m <= 0.2) c = fromHsv(h, s * 0.78, v * 0.9);
+        else {
+          let V = v * (1 + up * m * Math.max(0, 1 - v / 0.8));
+          if (up && V > 0.7) V -= (V - 0.7) * 0.5 * m;
+          // (A pale outfit's dark steel drawn up toward its plate's light, the more the more it's metal: as metal, dark
+          // paint takes no light but its reflection's, and a paladin's black gauntlets under silver vambraces stayed black.)
+          if (!up && V < 0.7) V += (0.7 - V) * 0.6 * m;
+          c = fromHsv(h, s * (1 - 0.55 * m), Math.min(1, V));
+        }
         px[k] = c[0]; px[k + 1] = c[1]; px[k + 2] = c[2];
       }
       alb.ctx.putImageData(img, 0, 0);
@@ -409,11 +429,11 @@ export class HeroLooks {
         sum += lumOf(px[k], px[k + 1], px[k + 2]); n++;
       }
       // (A dark dye on the ground is lost in the dirt: lifted, as the pack's dark pictures are, to be seen lying there. And
-      // a strong one, whole and on its own, is a toy's (a magenta coat, a pair of jeans): its colour halved.)
+      // a strong one, whole and on its own, is a toy's (a magenta coat, a pair of jeans): only a third of its colour left.)
       const lift = n ? Math.min(1.8, Math.max(1, 0.3 / Math.max(0.02, sum / n))) : 1;
       for (let k = 0; k < px.length; k += 4) {
         if (px[k + 3] <= 8) continue;
-        const [h, s, v] = hsvOf([px[k], px[k + 1], px[k + 2]]), c = fromHsv(h, s * 0.5, Math.min(1, v * lift));
+        const [h, s, v] = hsvOf([px[k], px[k + 1], px[k + 2]]), c = fromHsv(h, s * 0.35, Math.min(1, v * lift));
         px[k] = c[0]; px[k + 1] = c[1]; px[k + 2] = c[2];
       }
       ctx.putImageData(d, 0, 0);
