@@ -15,7 +15,7 @@
 import { accessor, imageBytes, parseGLB } from '../core/glb.js';
 import { mipCountFor } from './gpu.js';
 import { IVORY, PROP_PALS, bareHead, bodyClass, lookOf, outfitRamps, paleLift, paled, rampFor, shapeShows } from '../items/partygear.js';
-import { fillFrom, goldOf, hsvOf, fromHsv, linesOf, lumOf, lumRange, paintProp, rampMap, trimOf, wideOf } from './recolour.js';
+import { fillFrom, goldOf, hsvOf, fromHsv, linesOf, lumOf, lumRange, matchLum, paintProp, rampMap, trimOf, wideOf } from './recolour.js';
 
 const GROUPS = ['helm', 'chest', 'shoulders', 'arms', 'legs', 'boots'];
 const MAX_DONORS = 3;          // bodies borrowed from at once, beside the wearer's own: a picture of 2 x 2 cells at most
@@ -299,7 +299,7 @@ export class HeroLooks {
       const tris = runs.map((x) => [want.includes(x.g) ? groupNo[x.g] : 255, x.t0, x.p.tcount]);
       const mask = groupMask(prim, tris, alb.W, alb.H);
       const img = alb.ctx.getImageData(0, 0, alb.W, alb.H), px = img.data;
-      const metal = mr.ctx.getImageData(0, 0, mr.W, mr.H).data, mw = mr.W, sx = mr.W / alb.W;
+      const mimg = mr.ctx.getImageData(0, 0, mr.W, mr.H), metal = mimg.data, mw = mr.W, sx = mr.W / alb.W;
       const metalAt = (i) => { const x = i % alb.W, y = (i / alb.W) | 0; return metal[((y * sx | 0) * mw + (x * sx | 0)) * 4 + 2] / 255; };
       const dyed = (i) => mask[i] >= 1 && mask[i] <= GROUPS.length;
       if (rec.lift) {
@@ -313,6 +313,28 @@ export class HeroLooks {
         const wide = wideOf(g, alb.W, alb.H, Math.max(1, Math.round(4 * S / 1024)));
         for (let i = 0, k = 0; i < n; i++, k += 4) g[i] = !wide[i] && dyed(i) && goldOf(px[k], px[k + 1], px[k + 2]) > 0.3 ? 1 : 0;
         const lines = linesOf(g, alb.W, alb.H, Math.max(6, Math.round(28 * S / 1024)));
+        // (Its old gold, all of it but the trim kept, made as light as the rest of its piece first: a dull ochre, too dark
+        // to be called gold, was dyed by its own light, and a suit drawn half in gold scrollwork came out pale swirls on a
+        // darker ivory, a marbling, its thick gold white blocks. Its scrollwork now is in its relief alone.)
+        const old = new Uint8Array(n), at = (j) => Math.min(n - 1, ((j / mw | 0) / sx | 0) * alb.W + ((j % mw) / sx | 0));
+        for (let i = 0, k = 0; i < n; i++, k += 4) {
+          if (!dyed(i)) continue;
+          if (lines[i] && goldOf(px[k], px[k + 1], px[k + 2]) > 0.3) { old[i] = 2; continue; }
+          const [h, s] = hsvOf([px[k], px[k + 1], px[k + 2]]);
+          old[i] = wide[i] || (h > 0.04 && h < 0.2 && s > 0.2) ? 1 : 0;
+        }
+        for (const gn of want) matchLum(px, (i) => old[i] === 1 && mask[i] === groupNo[gn], (i) => !old[i] && mask[i] === groupNo[gn]);
+        // (And its metal and roughness made its piece's: left as they were, the old gold still shone as gold and took the
+        // sky's and the ground's light, and below it was dyed as steel, greyer than the cream round it. A paladin's
+        // filigree, thick trim and scrollwork were grey shapes over a matte ivory, a camouflage. The piece's own is the
+        // middle of the rest of it.)
+        const mid = {}, med = (L) => (L.sort((a, b) => a - b), L[L.length >> 1]);
+        for (const gn of want) {
+          const no = groupNo[gn], M = [], R = [];
+          for (let j = 0; j < metal.length / 4; j++) { const i = at(j); if (mask[i] === no && !old[i]) { M.push(metal[j * 4 + 2]); R.push(metal[j * 4 + 1]); } }
+          if (M.length) mid[no] = [med(M), med(R)];
+        }
+        for (let j = 0; j < metal.length / 4; j++) { const i = at(j), m = mid[mask[i]]; if (old[i] === 1 && m) { metal[j * 4 + 2] = m[0]; metal[j * 4 + 1] = m[1]; } }
         // (Gold in a field, wide: plate, its colour taken off and its own relief kept. Gold in short bits, a fleck: painted
         // out with the plate or cloth round it, or, its colour taken off, it was darker than the plate, a rust freckle.)
         const gild = new Uint8Array(n);
@@ -348,27 +370,32 @@ export class HeroLooks {
       // pale breastplate a near-white mint. Cloth a little greyer than the dye: a rogue's lavender pouches were plastic.)
       // (A pale outfit's cloth is a little lighter and leans to ivory, a cream: a pale set's cape was a grey, the light
       // of its own mid-grey cloth. Its plate stays silver.)
-      const up = rec.lift ? 0 : 0.5;
+      const up = 0.5;
       for (let i = 0, k = 0; k < px.length; i++, k += 4) {
         if (!dyed(i) || gilt[i] || (trim && trim[i] > 0.5)) continue;
         const m = metalAt(i);
         const [h, s, v] = hsvOf([px[k], px[k + 1], px[k + 2]]);
         let c;
-        if (m <= 0.2 && rec.lift) {
-          const V = Math.min(1, v * 1.15), a = fromHsv(h, s, V), w = fromHsv(IVORY[0], Math.min(0.22, Math.max(s, IVORY[1])), V);
-          c = a.map((x, j) => x + (w[j] - x) * 0.55);
+        if (rec.lift) {
+          // (Cloth to plate by how metal it is, not a switch at a fifth: where a piece's metalness wanders about that,
+          // cream and grey steel took turns texel by texel, a camouflage. Plate a little less lifted and less ivory.)
+          const t = Math.min(1, Math.max(0, (m - 0.1) / 0.35)), w = t * t * (3 - 2 * t);
+          let V = Math.min(1, v * (1.15 - 0.1 * w));
+          // (Its dark steel drawn up toward its plate's light, the more the more it's metal: as metal, dark paint takes no
+          // light but its reflection's, and a paladin's black gauntlets under silver vambraces stayed black.)
+          if (V < 0.7) V += (0.7 - V) * 0.6 * m;
+          const a = fromHsv(h, s * (1 - 0.55 * m), V), iv = fromHsv(IVORY[0], Math.min(0.22, Math.max(s, IVORY[1])), V);
+          c = a.map((x, j) => x + (iv[j] - x) * (0.55 - 0.25 * w));
         } else if (m <= 0.2) c = fromHsv(h, s * 0.78, v * 0.9);
         else {
           let V = v * (1 + up * m * Math.max(0, 1 - v / 0.8));
-          if (up && V > 0.7) V -= (V - 0.7) * 0.5 * m;
-          // (A pale outfit's dark steel drawn up toward its plate's light, the more the more it's metal: as metal, dark
-          // paint takes no light but its reflection's, and a paladin's black gauntlets under silver vambraces stayed black.)
-          if (!up && V < 0.7) V += (0.7 - V) * 0.6 * m;
+          if (V > 0.7) V -= (V - 0.7) * 0.5 * m;
           c = fromHsv(h, s * (1 - 0.55 * m), Math.min(1, V));
         }
         px[k] = c[0]; px[k + 1] = c[1]; px[k + 2] = c[2];
       }
       alb.ctx.putImageData(img, 0, 0);
+      if (rec.lift) mr.ctx.putImageData(mimg, 0, 0);
     }
     const tex = (pic, format) => {
       const mips = mipCountFor(pic.W, pic.H);

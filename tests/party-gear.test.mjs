@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { fillFrom, goldOf, harmonize, hsvOf, linesOf, lumOf, lumRange, paintProp, plainRamp, rampMap, richer, trimOf, wideOf } from '../src/gfx/recolour.js';
+import { fillFrom, goldOf, harmonize, hsvOf, linesOf, lumOf, lumRange, matchLum, paintProp, plainRamp, rampMap, richer, trimOf, wideOf } from '../src/gfx/recolour.js';
 import { coverCode } from '../src/gfx/herolook.js';
 import { useKit, outfitRamps, setsWorn, toneWeight, pieceRamp, shapeClass, paleLift, palNear, rampFor, lookOf, bareHead, rollPartyGear, partyDrops, catchUp, fits, score, bestOf, gearStats, groundModelOf, sizeOfHG, hgLines, hgWorth, kindsOf, shapeShows, HG_SLOTS, HG_ARMOUR, SHIELD_KINDS, PROP_PALS } from '../src/items/partygear.js';
 import { makeRng } from '../src/items/items.js';
@@ -275,6 +275,25 @@ test("a pale outfit is lifted by a curve: a dark cloth comes up further than a l
   const px = new Uint8ClampedArray([4, 4, 4, 255]);
   rampMap(px, ramp, [0.04, 0.5], () => 1, paleLift('paladin'));
   assert.ok(px[0] > 90, `a pale outfit's black a dark steel (${px[0]})`);
+  // (Its light and dark closer together than a plain outfit's: its own painted shading, at its full spread, was a mottle.)
+  const spread = (most) => { const p = new Uint8ClampedArray([40, 40, 40, 255, 110, 110, 110, 255]);
+    rampMap(p, [[150, 150, 150], [200, 200, 200], [240, 240, 240]], [0.1, 0.5], () => 1, most); return (p[4] - p[0]) / (p[4] + p[0]); };
+  // (0.16 by the curve alone; 0.4 on a plain outfit.)
+  assert.ok(spread(paleLift('paladin')) < 0.12, `a pale outfit's spread squeezed (${spread(paleLift('paladin')).toFixed(3)} vs ${spread().toFixed(3)})`);
+});
+
+test("a pale outfit's old gold is made as light as the rest of its piece, its own light and dark kept", () => {
+  const px = new Uint8ClampedArray(400 * 4);
+  for (let i = 0; i < 400; i++) { const gold = i < 200, l = gold ? 150 + (i % 20) : 40 + (i % 10); px.set(gold ? [l, l * 0.8, l * 0.4, 255] : [l, l, l, 255], i * 4); }
+  const before = [lumOf(px[0], px[1], px[2]), lumOf(px[19 * 4], px[19 * 4 + 1], px[19 * 4 + 2])];
+  matchLum(px, (i) => i < 200, (i) => i >= 200);
+  const mean = (a, b) => { let s = 0; for (let i = a; i < b; i++) s += lumOf(px[i * 4], px[i * 4 + 1], px[i * 4 + 2]); return s / (b - a); };
+  assert.ok(Math.abs(mean(0, 200) - mean(200, 400)) < 0.02, `as light (${mean(0, 200).toFixed(3)} vs ${mean(200, 400).toFixed(3)})`);
+  assert.ok(lumOf(px[19 * 4], px[19 * 4 + 1], px[19 * 4 + 2]) > lumOf(px[0], px[1], px[2]) && before[1] > before[0], 'its lighter texel still the lighter');
+  assert.ok(px[0] > px[2], 'its colour as it was, a warm one');
+  const few = new Uint8ClampedArray([200, 160, 80, 255, 40, 40, 40, 255]);
+  matchLum(few, (i) => i === 0, (i) => i === 1);
+  assert.equal(few[0], 200, 'too few to tell: left');
 });
 
 test('a weak gold on metal is trim, kept; on leather it is dyed', () => {

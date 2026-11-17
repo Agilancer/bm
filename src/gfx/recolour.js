@@ -111,6 +111,22 @@ export function linesOf(m, W, H, L) {
   return out;
 }
 
+// The texels of px (RGBA) that are a(i) made as light as the ones that are b(i): their middle on b's middle, their spread
+// on b's (a little more at most), their colour as it was. Fewer than 50 of either and nothing is done.
+export function matchLum(px, a, b) {
+  const la = [], lb = [];
+  for (let i = 0, k = 0; k < px.length; i++, k += 4) { if (a(i)) la.push(lumOf(px[k], px[k + 1], px[k + 2])); else if (b(i)) lb.push(lumOf(px[k], px[k + 1], px[k + 2])); }
+  if (la.length < 50 || lb.length < 50) return;
+  la.sort((x, y) => x - y); lb.sort((x, y) => x - y);
+  const q = (L, p) => L[Math.floor(p * (L.length - 1))];
+  const mA = q(la, 0.5), mB = q(lb, 0.5), k2 = Math.min(1.2, Math.max(0.02, q(lb, 0.8) - q(lb, 0.2)) / Math.max(0.02, q(la, 0.8) - q(la, 0.2)));
+  for (let i = 0, k = 0; k < px.length; i++, k += 4) {
+    if (!a(i)) continue;
+    const l = lumOf(px[k], px[k + 1], px[k + 2]), f = Math.max(0.01, mB + (l - mA) * k2) / Math.max(0.004, l);
+    px[k] *= f; px[k + 1] *= f; px[k + 2] *= f;
+  }
+}
+
 // Each texel of px (RGBA, W x H) that's bad(i) made the mean of the good(i) ones within r of it (a square), if there are
 // any: a fleck painted out with what's round it.
 export function fillFrom(px, W, H, bad, good, r) {
@@ -141,6 +157,9 @@ export function rampAt(ramp, t, out) {
 const VALUE_PULL = 0.2, CHROMA_FOLLOW = 0.3, MAX_SAT = 0.5, GAIN = [0.65, 2.2];
 // On a pale outfit, the light its darks are drawn halfway up to.
 const PALE_TOE = 0.48;
+// (And all its light drawn this far toward its ramp's middle: its own painted shading and the trim's old gold, at their full
+// spread, were a grey mottle over ivory plate, a camouflage. Its relief is in its normals.)
+const PALE_SQUEEZE = 0.6;
 
 // How much a texel is gold trim (a yellow, bright enough and coloured enough, not a leather's red-brown): 0 to 1. Gold
 // keeps its own colour under any dye, as the owner's suits' trim does on the body it was made for.
@@ -183,6 +202,7 @@ export function rampMap(px, ramp, range, amount, most = GAIN[1]) {
     // (And its darkest half as far under the plate: a paladin's black gloves, lifted only by the curve, were still near
     // black under silver vambraces.)
     if (curve && L < PALE_TOE) L = PALE_TOE - (PALE_TOE - L) * 0.4;
+    if (curve) L = ml + (L - ml) * PALE_SQUEEZE;
     let R = (mid[0] + (c[0] / 255 / lc - mid[0]) * CHROMA_FOLLOW) * L - L;
     let G = (mid[1] + (c[1] / 255 / lc - mid[1]) * CHROMA_FOLLOW) * L - L;
     let B = (mid[2] + (c[2] / 255 / lc - mid[2]) * CHROMA_FOLLOW) * L - L;

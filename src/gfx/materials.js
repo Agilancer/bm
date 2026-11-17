@@ -844,7 +844,9 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
   // still show as bands, rowFade, and past that it's an even dull iron.)
   let tg = tubeUV * vec2f(67.0, 134.0) * select(1.0, 0.6, LEAN);
   let tgPx = max(length(dpdx(tg)), length(dpdy(tg)));
-  let tFade = (1.0 - smoothstep(0.3, 0.7, tgPx)) * select(0.0, 1.0, isCover);
+  // (Rings only while each is some pixels across: down to a pixel and a half, crowns and the dark between them were a
+  // black-and-white dot pattern that swam as the hero moved.)
+  let tFade = (1.0 - smoothstep(0.2, 0.5, tgPx)) * select(0.0, 1.0, isCover);
   let rowFade = (1.0 - smoothstep(0.8, 2.2, tgPx)) * select(0.0, 1.0, isCover);
   let tq = tubeUV * 33.0 * select(1.0, 0.6, LEAN);
   let qFade = (1.0 - smoothstep(0.15, 0.4, max(length(dpdx(tq)), length(dpdy(tq))))) * select(0.0, 1.0, isCover);
@@ -874,15 +876,20 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
       let row = floor(tg.y);
       let cell = fract(vec2f(tg.x + row * 0.5, tg.y)) - 0.5;
       let rr = length(cell);
-      let ring = smoothstep(0.2, 0.3, rr) * (1.0 - smoothstep(0.42, 0.5, rr));
+      // (Its edges as soft as a pixel is wide, so a ring a few pixels across is drawn, not sampled.)
+      let rw = min(0.1, 0.5 * tgPx);
+      let ring = smoothstep(0.2 - rw, 0.3 + rw, rr) * (1.0 - smoothstep(0.42 - rw, 0.5 + rw, rr));
       // (Each ring catches the light a little differently: that sparkle is what says mail from a way off.)
       let jit = h1(row * 7.31 + floor(tg.x + row * 0.5) * 3.17);
       mailH = ring * 0.0012 * tFade;
-      let crown = select(vec3f(0.40, 0.40, 0.41), vec3f(0.14, 0.14, 0.15), darkSuit);
+      // (The dark between the rings not a black: at 0.015 under crowns of 0.4 it was the most contrast on the hero, and
+      // it shimmered. A pale suit's a step lighter again, crowns and all: its mail was the darkest thing on an ivory suit.)
+      let crown = select(select(vec3f(0.40, 0.40, 0.41), vec3f(0.48, 0.48, 0.47), paleCoat), vec3f(0.14, 0.14, 0.15), darkSuit);
+      let gap = select(select(vec3f(0.05), vec3f(0.09), paleCoat), vec3f(0.015), darkSuit);
       // (Melted: a stop under the plate beside it, its rows still banding it light and dark.)
       let band = 1.0 + 0.25 * (abs(fract(tg.y * 0.5) - 0.5) * 4.0 - 1.0) * rowFade;
-      let melt = select(vec3f(0.3, 0.3, 0.305), vec3f(0.06, 0.06, 0.062), darkSuit) * band;
-      albedo = mix(melt, mix(vec3f(0.015), crown, ring), tFade);
+      let melt = select(select(vec3f(0.3, 0.3, 0.305), vec3f(0.36, 0.36, 0.355), paleCoat), vec3f(0.06, 0.06, 0.062), darkSuit) * band;
+      albedo = mix(melt, mix(gap, crown, ring), tFade);
       rough = mix(0.6, mix(0.9, 0.25 + 0.2 * jit, ring), tFade);
       metal = mix(select(0.25, 0.4, darkSuit), ring, tFade);
       coverEnv = select(0.6, 0.4, darkSuit);
@@ -930,12 +937,16 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
     // (A pale suit's, paleCoat, is a pale lining: as steel, in its own shadow it took no light but its reflection's.)
     // (And it has a little light of its own: where a piece cut from another body leaves a hole into the hollow suit, its
     // far inside, wholly in shadow, was a black void in ivory.)
-    if (C.info.z < -1.5 && paleCoat) { albedo = vec3f(0.36, 0.35, 0.33); metal = 0.0; rough = 0.85; paleIn = 1.0; }
+    if (C.info.z < -1.5 && paleCoat) { albedo = vec3f(0.46, 0.45, 0.43); metal = 0.0; rough = 0.85; paleIn = 1.0; }
     else if (C.info.z < -1.5) { albedo = vec3f(0.10, 0.098, 0.095); metal = 1.0; rough = 0.6; }
     else { albedo = albedo * 0.35; metal = 0.0; rough = 0.85; }
     backAO = 0.45;
     rimK = 0.3;
     n = n0;
+  } else if (heroLook && !front && paleCoat) {
+    // (A pale suit's cloth seen from inside, where a tabard or a cape turns: its own cream, with a little light of its own.
+    // Its normal turned to the eye, it took the ground's light, and the inside of an ivory tabard was a grey hole in it.)
+    paleIn = 0.5;
   }
   if (in.uv.x < -1.5) {
     // A stump: the cap inside a limb that shows once what was beyond it has gone. Bone at the middle, meat round it, blackening at the rim.
