@@ -40,11 +40,12 @@ test('there are plenty of them, and three or more go into each party dungeon', (
   for (const id of IDS) assert.equal(RULES[id], LAND_RULES[id], id);
   const into = (key) => IDS.filter((id) => LAND_RULES[id].steps.some((s) => s.enter === key || s.kill === key || BOSSES.find((b) => b.key === s.boss)?.delve === key));
   for (const d of ['warrens', 'blackvigil', 'deeps']) assert.ok(into(d).length >= 3, `${d}: ${into(d)}`);
-  // (And two or more into each of the four made after them. Phobos's sewers' are the city's: tests/sewers.test.mjs.)
-  for (const d of DELVES.filter((q) => !q.sewer)) assert.ok(into(d.key).length >= 2, `${d.key}: ${into(d.key)}`);
+  // (And two or more into each of the four made after them. Phobos's sewers' and its castle's are the city's: tests/sewers.test.mjs,
+  // tests/castle.test.mjs.)
+  for (const d of DELVES.filter((q) => !q.sewer && !q.castle)) assert.ok(into(d.key).length >= 2, `${d.key}: ${into(d.key)}`);
   assert.ok(IDS.filter((id) => LAND_RULES[id].steps.some((s) => s.kill === 'catacombs' || (s.bring && !s.at))).length >= 2, 'the catacombs');
   // Each dungeon's first boss and its last have a quest.
-  for (const d of DELVES.filter((q) => !q.sewer)) {
+  for (const d of DELVES.filter((q) => !q.sewer && !q.castle)) {
     const mine = BOSSES.filter((b) => b.delve === d.key).map((b) => b.key);
     if (!mine.length) continue;
     for (const key of [mine[0], mine[mine.length - 1]]) assert.ok(IDS.some((id) => LAND_RULES[id].steps.some((s) => s.boss === key)), `no quest for ${key}`);

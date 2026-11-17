@@ -347,6 +347,8 @@ const highRooms = [
   R('pa_lamp', "the Lamplighter's Hall", 146, -236, 20, 20, 2, 16, { rock: 'ashlar', foot: 'block', ground: 'flags' }),
   R('pa_approach', 'the Approach Culvert', 146, -294, 4, 28, 2.5, 7, { fires: 7 }),
   R('pa_garden', 'the Sunk Garden', 146, -336, 18, 18, 3, 14, { rock: 'pale:ashlar', foot: 'pale:block', ground: 'flags' }),
+  // The Aqueduct Foot, off the garden's east side: the gate up into Castle Velscour's Lower Ward (src/core/delve-castle.js).
+  R('pa_aqfoot', 'the Aqueduct Foot', 186, -341, 8, 6, 3, 9, { rock: 'slate:ashlar', foot: 'slate:block', ground: 'flags' }),
 ];
 const highTunnels = [
   { pts: [[-17, -120], [-45, -120]], w: 2.2, h: 4.5 },
@@ -356,6 +358,7 @@ const highTunnels = [
   { pts: [[100, -237], [100, -280], [143, -280]], w: 2, h: 4 },
   { pts: [[134, -217], [134, -210]], w: 2, h: 4, dead: true, door: 'pa_lamp' },
   { pts: [[158, -217], [158, -210]], w: 2, h: 4, dead: true, door: 'pa_lamp' },
+  { pts: [[160, -341], [180, -341]], w: 2, h: 4 },
 ];
 // The Lamplighter's ring of lamps in his hall: what his wick-men go to light (src/sim/sewer-fights.js).
 export const LAMP_RING = Array.from({ length: 8 }, (_, k) => { const a = k * Math.PI / 4 + 0.39; return [146 + Math.sin(a) * 10, -236 - Math.cos(a) * 10]; });
@@ -421,7 +424,7 @@ export const HIGH_CONDUITS = {
   // The Barracks Ward's mouth, by the King's Mile; the Approach's, by the High Loop: straight down to the Sunk Garden.
   portal: { x: 10152.9, z: 79.7, yaw: -0.496, r: 2.2 },
   ways: [{ x: 10591.1, z: 53.6, yaw: 1.249, in: { x: 132.6, z: -336, yaw: PI / 2 } }],
-  links: [{ x: -55.4, z: -120, yaw: PI / 2, to: 'charnelruns', n: 1 }],
+  links: [{ x: -55.4, z: -120, yaw: PI / 2, to: 'charnelruns', n: 1 }, { x: 189.4, z: -341, yaw: -PI / 2, to: 'lowerward', n: 0 }],
   last: 'lamplighter', tough: { hp: 20, damage: 2.35 }, pay: { xp: 28000, gold: 4200 },
   names: { 'Plague Knights': 'CONDUIT WARDEN', 'Haunted Mannequins': 'WICK-MAN', "Velscour's Knights": 'KNIGHT OF THE CONDUITS', 'Night Paralysis Demons': 'SOOT-DEMON' },
   look: { wall: 'course', foot: 'block', floor: 'flags', roof: 'stone', flame: 'flame', banner: false, lamp: 'bowl', still: true, light: [1, 0.66, 0.3], fire: [1, 0.7, 0.34], every: 9, high: 2.4, glow: 1.6, lit: 0.5, beam: 'block' },

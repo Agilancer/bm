@@ -716,14 +716,18 @@ export const PROPS = {
     }
   },
   // Spears stood in a frame against a wall, facing yaw out from it.
+  // (h: how tall its posts are; n: how many shafts it holds. An armoury's are taller and fuller than a guardroom's.)
   rack(K, d, p, x, y, z) {
-    const c = Math.cos(p.yaw), s = Math.sin(p.yaw);
-    for (const u of [-1.1, 1.1]) K.box('wood', x + u * c, y, z - u * s, 0.06, 1.5, 0.06, p.yaw, NO);
-    for (const h of [0.5, 1.4]) K.box('wood', x, y + h, z, 1.15, 0.07, 0.05, p.yaw, NO);
-    for (let k = 0; k < 5; k++) {
-      const u = (k - 2) * 0.45, px = x + u * c + 0.12 * s, pz = z - u * s + 0.12 * c;
-      K.box('wood', px, y, pz, 0.025, 2.2, 0.025, p.yaw, { collide: false, top: false });
-      K.cone('iron', px, y + 2.2, pz, 0.06, 0.4, 4);
+    const c = Math.cos(p.yaw), s = Math.sin(p.yaw), h = p.h || 1.5, n = p.n || 5, hw = (n - 1) * 0.225 + 0.2, len = h + 0.7;
+    for (const u of [-hw, hw]) K.box('wood', x + u * c, y, z - u * s, 0.06, h, 0.06, p.yaw, NO);
+    for (const b of [0.5, h - 0.1]) K.box('wood', x, y + b, z, hw + 0.05, 0.07, 0.05, p.yaw, NO);
+    // (board: an armoury's, a dark board behind its shafts and a trough their butts stand in, a gap every fourth.)
+    if (p.board) { K.box('dark:wood', x - 0.03 * s, y + 0.3, z - 0.03 * c, hw, h - 0.3, 0.03, p.yaw, NO); K.box('dark:wood', x + 0.12 * s, y, z + 0.12 * c, hw, 0.22, 0.16, p.yaw, NO); }
+    for (let k = 0; k < n; k++) {
+      if (p.board && k % 4 === 3) continue;
+      const u = (k - (n - 1) / 2) * 0.45, px = x + u * c + 0.12 * s, pz = z - u * s + 0.12 * c;
+      K.box('wood', px, y, pz, 0.025, len, 0.025, p.yaw, { collide: false, top: false });
+      K.cone('iron', px, y + len, pz, 0.06, 0.4, 4);
     }
   },
   // A suit of his black plate on a stand, his red on it.
@@ -815,22 +819,78 @@ export const PROPS = {
     glow(K, d, x, h + 0.5, z, 2.4);
   },
   // A great hearth in a wall, facing yaw out from it.
+  // (great: so many times the size, with a hood over it on corbels and a bed of embers out before it: a castle kitchen's,
+  // a forge's.)
   hearth(K, d, p, x, y, z) {
-    const c = Math.cos(p.yaw), s = Math.sin(p.yaw), P = (u, w) => [x + u * c + w * s, z - u * s + w * c];
-    for (const u of [-2, 2]) { const [px, pz] = P(u, 0.3); K.box('dark:rubble', px, y, pz, 0.45, 2.6, 0.5, p.yaw, NO); }
-    { const [px, pz] = P(0, 0.3); K.box('dark:rubble', px, y + 2.6, pz, 2.5, 0.7, 0.6, p.yaw, NO); K.box('dark:stone', px, y + 3.3, pz, 2, 3, 0.4, p.yaw, NO); }
-    { const [px, pz] = P(0, 0.25); K.box('obsidian', px, y, pz, 1.55, 2.6, 0.06, p.yaw, { collide: false, top: false }); }
-    for (const u of [-0.8, 0, 0.8]) { const [px, pz] = P(u, 0.5); fire(K, d, px, y + 0.2, pz, 0.5, 1.2 + (u ? 0 : 0.5), { ember: !u, glow: u ? 0 : 2 }); K.box('wood', px, y, pz, 0.5, 0.18, 0.12, p.yaw + u, NO); }
-    { const [px, pz] = P(0, 0.5); K.box(d.look.flame, px, y + 0.02, pz, 1.2, 0.1, 0.3, p.yaw, NO); }
+    const c = Math.cos(p.yaw), s = Math.sin(p.yaw), P = (u, w) => [x + u * c + w * s, z - u * s + w * c], g = p.great || 1;
+    for (const u of [-2 * g, 2 * g]) { const [px, pz] = P(u, 0.3); K.box('dark:rubble', px, y, pz, 0.45 * g, 2.6 * g, 0.5, p.yaw, NO); }
+    { const [px, pz] = P(0, 0.3); K.box('dark:rubble', px, y + 2.6 * g, pz, 2.5 * g, 0.7, 0.6, p.yaw, NO); K.box('dark:stone', px, y + 2.6 * g + 0.7, pz, 2 * g, 3, 0.4, p.yaw, NO); }
+    { const [px, pz] = P(0, 0.25); K.box('obsidian', px, y, pz, 1.55 * g, 2.6 * g, 0.06, p.yaw, { collide: false, top: false }); }
+    for (const u of [-0.8, 0, 0.8]) { const [px, pz] = P(u * g, 0.5); fire(K, d, px, y + 0.2, pz, 0.5 * g, (1.2 + (u ? 0 : 0.5)) * g, { ember: !u, glow: u ? 0 : 2 * g }); K.box('wood', px, y, pz, 0.5 * g, 0.18, 0.12, p.yaw + u, NO); }
+    { const [px, pz] = P(0, 0.5); K.box(d.look.flame, px, y + 0.02, pz, 1.2 * g, 0.1, 0.3 * g, p.yaw, NO); }
+    if (p.great) {
+      // The hood, out over the fire on two corbels, and the embers raked out onto the hearthstone before it, glowing.
+      { const [px, pz] = P(0, 1.3); K.box('dark:stone', px, y + 2.6 * g, pz, 2.3 * g, 0.6, 1.1, p.yaw, NO); }
+      for (const u of [-2.1 * g, 2.1 * g]) { const [px, pz] = P(u, 1.2); K.box('dark:rubble', px, y + 2.6 * g - 0.6, pz, 0.3, 0.6, 0.9, p.yaw, NO); }
+      { const [px, pz] = P(0, 1.6); K.box('dark:rubble', px, y, pz, 2.2 * g, 0.12, 1, p.yaw, NO); K.box(d.look.flame, px, y + 0.13, pz, 1.7 * g, 0.03, 0.7, p.yaw, NO); glow(K, d, px, y + 0.5, pz, 2.6 * g); }
+    }
   },
   beam(K, d, p, x, y, z) {
     K.box('wood', x, y + p.up, z, p.hx, 0.5, 0.25, 0, NO);
     for (const s of [-1, 1]) K.box('wood', x + s * (p.hx - 1.2), y + p.up - 1.1, z, 0.9, 0.22, 0.2, s * 0.0, NO);
   },
+  // (Its back to the south, facing north; flip: its back to the north, facing south.)
   seat(K, d, p, x, y, z) {
+    const b = p.flip ? -1 : 1;
     K.box(p.stone || 'dark:stone', x, y, z, p.hx, 0.7, p.hz, 0, NO);
-    K.box(p.stone || 'dark:stone', x, y + 0.7, z + p.hz - 0.25, p.hx, 2.6, 0.25, 0, NO);
-    K.box(p.cloth || 'cloth_red', x, y + 0.7, z - 0.1, p.hx - 0.25, 0.05, p.hz - 0.4, 0, NO);
+    K.box(p.stone || 'dark:stone', x, y + 0.7, z + b * (p.hz - 0.25), p.hx, 2.6, 0.25, 0, NO);
+    K.box(p.cloth || 'cloth_red', x, y + 0.7, z - b * 0.1, p.hx - 0.25, 0.05, p.hz - 0.4, 0, NO);
+  },
+  // A casting pit in a forge's floor: a ring of dark stone round a round of metal run molten, glowing. (What his idol is
+  // cast in, at the end.)
+  castpit(K, d, p, x, y, z) {
+    K.disc('soot:block', x, y + 0.03, z, p.r + 0.9, 16);
+    for (let k = 0; k < 14; k++) { const a = k / 14 * TAU; K.box('dark:block', x + Math.cos(a) * (p.r + 0.35), y, z + Math.sin(a) * (p.r + 0.35), 0.36, 0.45, 0.2, Math.PI / 2 - a, NO); }
+    K.disc(d.look.flame, x, y + 0.3, z, p.r, 16); K.disc('blood:flame', x, y + 0.32, z, p.r * 0.55, 12);
+    glow(K, d, x, y + 0.9, z, p.r * 1.6);
+  },
+  // A pit cut in a floor: a kerb of dark stone, block against block, round a round of black water far down. (The
+  // oubliettes': you're put down one.)
+  pit(K, d, p, x, y, z) {
+    K.disc('lake', x, y + 0.04, z, p.r, 20);
+    const n = 22, R = p.r + 0.3, half = Math.PI * R / n + 0.03;
+    for (let k = 0; k < n; k++) { const a = k / n * TAU; K.box('dark:ashlar', x + Math.cos(a) * R, y, z + Math.sin(a) * R, half, 0.4, 0.3, Math.PI / 2 - a, NO); }
+  },
+  // His mark: a ring of black iron upright, facing yaw, two horns of his red fire standing out of its top. On his gates and
+  // his chairs. (A ring and two horns: no letter, nothing of hers.)
+  mark(K, d, p, x, y, z) {
+    const r = p.r || 0.8, h = y + (p.up ?? 3) + r, c = Math.cos(p.yaw || 0), s = Math.sin(p.yaw || 0), g = r / 0.8;
+    // (A round of his red behind it, so the black ring shows on black stone: slices, widest at the middle.)
+    const R = r * 1.3, b = (p.back || 1) * 0.1;
+    for (let i = 0; i < 9; i++) { const v = -R + (i + 0.5) * R * 2 / 9; K.box('cloth_red', x + b * s, h + v - R / 9, z + b * c, Math.sqrt(R * R - v * v), R * 2 / 9, 0.03, p.yaw || 0, NO); }
+    for (let k = 0; k < 14; k++) { const a = k / 14 * TAU, u = Math.cos(a) * r; K.box('iron', x + u * c, h + Math.sin(a) * r - 0.07 * g, z - u * s, 0.1 * g, 0.14 * g, 0.06 * g, p.yaw || 0, NO); }
+    for (const sg of [-1, 1]) { const u = sg * r * 0.55; K.cone('blood:flame', x + u * c, h + r * 0.8, z - u * s, 0.13 * g, 0.95 * g, 5); glow(K, d, x + u * c, h + r * 1.2, z - u * s, 0.9 * g, 'blood:flame'); }
+  },
+  // A fire basket: an iron bowl up on a wall-walk's merlon, burning.
+  basket(K, d, p, x, y, z) {
+    const h = y + p.up;
+    K.drum('iron', x, h, z, 0.22, 0.3, 7, { r2: 0.4, open: true, collide: false });
+    fire(K, d, x, h + 0.25, z, 0.35, 0.9, { ember: true, glow: 1.6 });
+  },
+  // An iron sill across a floor: where something comes down (the gate's teeth, in their slots overhead).
+  sill(K, d, p, x, y, z) { K.box('iron', x, y, z, p.hx, 0.05, p.hz || 0.3, 0, NO); },
+  // A wall-walk up a yard's wall: a ledge of stone at up, corbels under it, merlons along its edge on the yard's side (side:
+  // which way that is, +1 or -1 along the ledge's short way).
+  walk(K, d, p, x, y, z) {
+    const h = y + p.up, along = p.hx > p.hz, len = along ? p.hx : p.hz, deep = along ? p.hz : p.hx, sd = p.side || 1;
+    K.box('ashlar', x, h - 0.45, z, p.hx, 0.45, p.hz, 0, NO);
+    for (let u = -len + 1; u <= len - 1; u += 2) {
+      const ex = along ? x + u : x + sd * deep, ez = along ? z + sd * deep : z + u;
+      K.box('ashlar', ex - (along ? 0 : sd * 0.18), h, ez - (along ? sd * 0.18 : 0), along ? 0.5 : 0.18, 1.1, along ? 0.18 : 0.5, 0, NO);
+      const cx = along ? x + u : x - sd * (deep - 0.5), cz = along ? z - sd * (deep - 0.5) : z + u;
+      K.box('dark:block', cx, h - 1.3, cz, along ? 0.25 : 0.5, 0.85, along ? 0.5 : 0.25, 0, NO);
+    }
+    K.box('ashlar', along ? x : x + sd * deep, h, along ? z + sd * deep : z, along ? p.hx : 0.12, 0.45, along ? 0.12 : p.hz, 0, NO);
   },
   // The Castellan's throne: black stone, a back as tall as three men, teeth of black glass along its top, his red down it.
   throne(K, d, p, x, y, z) {
@@ -1150,12 +1210,13 @@ export const PROPS = {
     rod(K, 'iron', x, cy, z - 1.2, x, cy, z + 1.2, 0.25);
   },
   // A stone spout high in a wall, facing south, and the water off its lip down to the floor.
+  // (layer: what its water's drawn in; falls, a white sheet, if not said.)
   spout(K, d, p, x, y, z) {
-    const top = y + p.up, w = p.w;
+    const top = y + p.up, w = p.w, wl = p.layer || 'falls';
     K.box(d.look.foot || 'block', x, top - 0.5, z + 0.6, w + 0.4, 0.5, 1.4, 0, NO);
     K.box(d.look.foot || 'block', x, top, z + 0.2, w + 0.6, 1.2, 1, 0, NO);
-    K.quad('falls', [x - w, y - 0.1, z + 3.2], [x + w, y - 0.1, z + 3.2], [x + w, top - 0.5, z + 1.9], [x - w, top - 0.5, z + 1.9]);
-    K.quad('falls', [x + w, y - 0.1, z + 3.2], [x - w, y - 0.1, z + 3.2], [x - w, top - 0.5, z + 1.9], [x + w, top - 0.5, z + 1.9]);
+    K.quad(wl, [x - w, y - 0.1, z + 3.2], [x + w, y - 0.1, z + 3.2], [x + w, top - 0.5, z + 1.9], [x - w, top - 0.5, z + 1.9]);
+    K.quad(wl, [x + w, y - 0.1, z + 3.2], [x - w, y - 0.1, z + 3.2], [x - w, top - 0.5, z + 1.9], [x + w, top - 0.5, z + 1.9]);
   },
   // A shaft of daylight down from a garden over the roof: the sky's disc where the roof's open, and the light's pool on the
   // floor under it (its lamp: src/core/dungeon.js braziers, LIT).
@@ -1418,10 +1479,11 @@ export const PROPS = {
     }
   },
   // A lintel across a passage, on two uprights: hx (or hz) half its span.
+  // (stone: dressed stone for it, a castle's, not rubble.)
   lintel(K, d, p, x, y, z) {
     const along = p.hx !== undefined, w = along ? p.hx : p.hz, top = Math.min(caveRoofY(x, z) - y - 0.9, 5.2);
-    for (const u of [-w + 0.45, w - 0.45]) K.box('rubble', x + (along ? u : 0), y - 0.2, z + (along ? 0 : u), along ? 0.42 : 0.5, top + 0.2, along ? 0.5 : 0.42, 0, NO);
-    K.box('pale:rubble', x, y + top, z, along ? w : 0.6, 0.7, along ? 0.6 : w, 0, NO);
+    for (const u of [-w + 0.45, w - 0.45]) K.box(p.stone || 'rubble', x + (along ? u : 0), y - 0.2, z + (along ? 0 : u), along ? 0.42 : 0.5, top + 0.2, along ? 0.5 : 0.42, 0, NO);
+    K.box(p.stone || 'pale:rubble', x, y + top, z, along ? w : 0.6, 0.7, along ? 0.6 : w, 0, NO);
   },
   // A funeral urn, lidded, an offering beside it.
   urn(K, d, p, x, y, z) {

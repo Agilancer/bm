@@ -429,9 +429,28 @@ world-space grime layer (soot, damp, moss, rust, cracks) that chunk 2 asked for.
 The Cistern Maze, the Undercroft, the Tower of the Ninefold Eye, Ironmercy Gaol, the Rotting Hospice, the Gilded Vault
 (drafts). Each with raid-style boss mechanics.
 
-## Chunk 8: Castle Velscour — not started
+## Chunk 8: Castle Velscour — under way
 
-- [ ] Wings (20+), the stair graph up and down, key-gated wings.
+The castle is carved as three wards, each a delve of its own (src/core/delve-castle.js), in the sewers' row past the
+world's north edge, east of them. Gone in alone (party: false), as the sewers are.
+
+- [x] **The Lower Ward** (`lowerward`, level 58, 19 rooms): the Gate Passage, the Captain's Yard, the West and East Ranges,
+  the Kitchens and Cellars, the Drill Floor and Bunk Rooms, the Armoury Stair, the Armoury, the Coal Way and the Forge,
+  the Pit Stair and the Oubliettes, the Aqueduct and its Head, the Servants' Hall and the servants' ways behind six
+  wings, the Middle Ward Stair and the shut Middle Ward Gate. 14 packs and two patrols on the servants' ways.
+  - Ways in: the world portal against the north drum's yard face (10805, 22), and the Aqueduct Head's gate down to the
+    Aqueduct Foot off the Sunk Garden in the High Conduits (both ways linked).
+  - The Gate Captain (level 66 by his quest) in the yard (src/sim/castle-fights.js): cleave, charge, shield bash, the
+    gate's teeth dropped from three roof slots right across the yard, crossbow volleys; two garrison waves whose
+    shields cover him (he takes a third) while any stand. Each wing you empty first leaves him less: the Bunk Rooms,
+    fewer garrison; the Armoury, no volleys; the Oubliettes (their Gaoler keeps the gate's winch), no gate.
+  - Princess Apricot's two quests: Up the Aqueduct (58) and The Gate Captain (66), with her lines.
+  - New props for it (src/core/delve-build.js): a great hearth (hood, corbels, ember bed), a casting pit, a stone-ringed
+    pit, his mark (an iron ring with two red flame horns; no letter), a wall-walk with merlons; racks take a height
+    and a count; a seat can face south; a lintel can be dressed stone.
+  - Not done: chests in the wings (the chest list is fixed for saves: room chests need a new kind of chest kept by
+    place); a cold or blue light per room (the engine has none).
+- [ ] The Middle Ward and the High Ward: the rest of the twenty-four wings, the stair graph up and down, key-gated wings.
 - [ ] The Librarian's home in the ancient library; the Librarian and his four; their quests; his deception magic.
 - [ ] Dozens of castle quests.
 
@@ -476,6 +495,17 @@ Models, monsters, textures, houses, furniture, terrain, trees; Blender MCP passe
 resolution; tell the owner which aren't good enough.
 
 ## Did not pass the critics
+
+The Lower Ward (2026-11-16): young APPROVE 8/10 at round 2; veteran 5, 6.5, then REJECT 7/10 at round 3 ("close, the
+three fixes are small"). His three round-3 fixes were made after it and checked in shots, not judged again: the
+oubliette pits a kerb of 22 touching blocks round black water; the Aqueduct Head's spout in dark water, not a white sheet;
+the Captain's mark on the front of his chair, disc, ring and horns as one (and the chair moved east, off the way out).
+Leftovers, the young critic's, not blocking:
+- A call when each key wing is cleared ("The bunks are empty: fewer will come down to the Captain"), before the fight.
+- The three portcullises really drop to the floor when the gate move goes off, and wind back up.
+- A few EMPTY HARNESS crossbowmen on the yard's wall-walk, gone once the Armoury is cleared.
+- (The "four-footed lamp stand" the young critic saw in the Kitchens is the spit seen end on: five stones and two posts.)
+Sheets: art/phobos/east/lowerward_r1.jpg, _r2.jpg, _r3.jpg.
 
 Chunk 0, after round 3 (2026-11-15), both critics' remaining notes:
 - **Apricot, beside the nostril:** two or three dark triangle specks that read as torn mesh; paint them out and paint a
@@ -529,3 +559,6 @@ Chunk 2 (textures), left open after both critics approved round 3 (2026-11-15):
 - The two passes: never played by a human; the phone (Low tier, lean build) never run on a real phone: on this PC the
   Mobile tier's GPU time is 1.3-2.1 ms, Ultra's 3.6-4.8 ms, both at the 144 fps cap. Near cells popping in on the Mile
   when running or surfing. The moving flames and the gate's uplights from a long way off; the weathering up close.
+- The Lower Ward: never played by a human, by hand or by auto-play end to end; the Gate Captain seen fighting (his calls,
+  volleys, the gate's teeth) but never killed; the weakening for emptied wings never seen in a fight; the two patrols
+  never seen walking; the phone never run in it.

@@ -17,14 +17,16 @@ import { KNOWN, WAYS } from '../src/ui/autowarrens.js';
 const LATER = ['vaults', 'sporehold', 'playhouse', 'kingsbarrow', 'elder'];
 // (And Phobos's sewers after them, src/core/delve-sewers.js: four sectors, one great thing in each.)
 const SEWERS = ['westdrains', 'sloughmains', 'charnelruns', 'highconduits'];
+// (And Castle Velscour's wards after them, src/core/delve-castle.js: the Lower Ward so far.)
+const CASTLE = ['lowerward'];
 const json = (p) => JSON.parse(readFileSync(new URL(p, import.meta.url), 'utf8'));
 
 test('there are eight delves, the first three where they were, the later four each with three bosses, and the Elder Gods with four', () => {
-  assert.deepEqual(DELVES.map((d) => d.key), ['warrens', 'blackvigil', 'deeps', ...LATER, ...SEWERS]);
-  for (const k of SEWERS) {
+  assert.deepEqual(DELVES.map((d) => d.key), ['warrens', 'blackvigil', 'deeps', ...LATER, ...SEWERS, ...CASTLE]);
+  for (const k of [...SEWERS, ...CASTLE]) {
     const d = delveByKey(k), mine = BOSSES.filter((b) => b.delve === k);
-    assert.ok(d.sewer && d.party === false && mine.length === 1 && mine[0].key === d.last, k);
-    assert.ok(d.ways.length >= 1 && d.links.every((l) => delveByKey(l.to).links[l.n].to === k), `${k}: its gates go both ways`);
+    assert.ok((d.sewer || d.castle) && d.party === false && mine.length === 1 && mine[0].key === d.last, k);
+    assert.ok((d.sewer ? d.ways.length >= 1 : true) && d.links.every((l) => delveByKey(l.to).links[l.n].to === k), `${k}: its gates go both ways`);
     assert.ok(d.names && d.level >= 28 && d.pay.xp > 0 && d.words.enter && d.words.clear && d.words.wipe, k);
   }
   // (A boss's number is sent from the sim and kept: the old ten keep theirs.)
@@ -102,7 +104,7 @@ test('a pack may have its own toughness and way of fighting, and no two packs of
 });
 
 test('auto-play has a way through each, every room on it, and knows every pack and boss', () => {
-  for (const k of LATER) {
+  for (const k of [...LATER, ...CASTLE]) {
     const d = delveByKey(k), way = WAYS[k];
     assert.ok(way, k);
     // (But the Elder Gods' islets, reached in their fights by a leap or a god's blow.)
@@ -118,7 +120,7 @@ test('the palettes and the variants the later delves wear are there', () => {
   // (New ones go on the end: a palette is known by its place.)
   assert.deepEqual(Object.keys(pal).slice(0, 4), ['Base', 'Ashen', 'Blighted', 'Infernal']);
   for (const [id, v] of Object.entries(VARIANTS)) assert.ok(roster[v.src] || roster[v.alt], `${id}: made on ${v.src}, which isn't in the roster`);
-  for (const k of LATER) for (const p of delveByKey(k).packs) for (const n of p.pal) assert.ok(pal[n], `${p.key}: no palette ${n}`);
+  for (const k of [...LATER, ...CASTLE]) for (const p of delveByKey(k).packs) for (const n of p.pal) assert.ok(pal[n], `${p.key}: no palette ${n}`);
 });
 
 // ---- marks to stand in, and blows shared (src/sim/perils.js) ----------------------------------------------------------------
@@ -161,8 +163,8 @@ test('each later delve has a quartermaster of its own, standing on open ground b
   const { BROKER_SPOTS, POSTS } = await import('../src/core/dungeon.js');
   const { BROKERS } = await import('../src/core/heroes.js');
   const { MAX_CHARS } = await import('../src/core/layout.js');
-  // (Not the sewers: anyone goes down them, and nobody hires a party at a drain.)
-  assert.deepEqual(POSTS.map((q) => q.broker), DELVES.slice(3).filter((d) => !d.sewer).map((d) => d.key));
+  // (Not the sewers, nor the castle's wards: anyone goes in, and nobody hires a party at a drain or at his gate.)
+  assert.deepEqual(POSTS.map((q) => q.broker), DELVES.slice(3).filter((d) => !d.sewer && !d.castle).map((d) => d.key));
   const names = new Set();
   for (const q of POSTS) {
     const d = delveByKey(q.broker), [x, z, face] = BROKER_SPOTS[q.broker], b = BROKERS.find((k) => k.broker === q.broker);

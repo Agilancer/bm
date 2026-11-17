@@ -396,4 +396,58 @@ export const QUESTS = {
       "I walked up the Approach yesterday, into the street, in daylight. Nobody knew me. I bought an apricot. I'd never had one.",
     ],
   },
+  up_the_aqueduct: {
+    title: 'Up the Aqueduct',
+    giver: 'apricot',
+    needs: 'lamps_out_in_the_conduits',
+    offer: [
+      "Off the east side of my Garden there's a gate nobody uses: the Aqueduct Foot. The castle's water comes down through it, and I've always thought, if the water comes down, someone can go up.",
+      "I've never gone. I'm a princess; I'm allowed to be a coward about one thing. Would you go up for me, and tell me what's at the top?",
+    ],
+    accept: "I'll go up the Aqueduct.",
+    acceptLine: "Through the gate off the Garden's east side. At the top it's his castle: the Lower Ward, where his garrison lives. Don't fight the whole garrison. Look, and come back and tell me.",
+    decline: 'Not into the castle.',
+    declineLine: "No. Very sensible. I've been sensible about it for years. It hasn't made the castle any smaller.",
+    journal: [
+      "Princess Apricot has never gone through the gate off her Garden and up the Aqueduct. Go up it into the castle's Lower Ward and see what's there.",
+      "Go back to Princess Apricot in the Sunk Garden.",
+    ],
+    progress: [
+      "The gate off the Garden's east side, and up the Aqueduct.",
+    ],
+    done: [
+      "His kitchens? The castle's kitchens, at the top of my aqueduct? All these years. No. I'm not going to think about what's been coming down it.",
+      "Thank you. Truly. Now I know what's up there, it's only a castle. Only a very large castle, full of his men.",
+    ],
+    after: [
+      "I keep looking at that gate. It's only a gate, now. Isn't it funny, what knowing does.",
+    ],
+  },
+  the_gate_captain: {
+    title: 'The Gate Captain',
+    giver: 'apricot',
+    needs: 'up_the_aqueduct',
+    offer: [
+      "Whoever comes up to the castle by the front meets the Gate Captain, in his yard behind the gate. Nobody gets past him. His garrison comes down off the walls, and their shields cover him while they stand.",
+      "But you've been in by the back now. You know the servants' ways. When you're ready, and not before, go and see him from the inside.",
+    ],
+    accept: "I'll see to the Gate Captain.",
+    acceptLine: "Up the Aqueduct, through the Kitchens, along the West Range to his yard. Bring his garrison down first: while one of them stands, he hardly feels you. And when he drops the gate's teeth, don't be under them.",
+    decline: 'Not yet. He can keep his gate.',
+    declineLine: "He will. He's kept it a long time. Come and tell me when you're bigger. Stronger, I mean. You're quite tall enough.",
+    journal: [
+      "The Gate Captain holds the yard behind the castle's gate, and his garrison's shields cover him while any of them stand. Kill him.",
+      "Go back to Princess Apricot in the Sunk Garden.",
+    ],
+    progress: [
+      "His yard, behind the gate. The garrison first.",
+    ],
+    done: [
+      "He's dead? Then anyone can walk up to the castle and in at the front. Oh, they'll all be going up there now, won't they. All the brave idiots. I'd better put the kettle on.",
+      "This came out of his gate, didn't it. I can tell. It's cold. Take it anyway; it's yours, you won it.",
+    ],
+    after: [
+      "Louis says people go up to the castle in daylight now. He says it's because of you. He was cross about it. He's proud of you, really.",
+    ],
+  },
 };

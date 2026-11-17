@@ -33,6 +33,7 @@ import { PLAYHOUSE } from './delve-playhouse.js';
 import { KINGSBARROW } from './delve-kingsbarrow.js';
 import { ELDER } from './delve-elder.js';
 import { SEWERS } from './delve-sewers.js';
+import { CASTLE } from './delve-castle.js';
 import { WARRENS_PROPS, WARRENS_NICHES } from './delve-warrens.js';
 
 // Where it lies: its entrance, in the world, and the height its rooms are measured from.
@@ -206,7 +207,7 @@ const WARRENS = {
 // (In the order they were made: a delve's place in this list is sent with EV.DELVE and kept, so new ones go on the end.)
 // (And the four sectors of Phobos's sewers, src/core/delve-sewers.js: no party needed, a second way down into each, a gate
 // at each end into the next.)
-export const DELVES = [WARRENS, BLACKVIGIL, DEEPS, VAULTS, SPOREHOLD, PLAYHOUSE, KINGSBARROW, ELDER, ...SEWERS];
+export const DELVES = [WARRENS, BLACKVIGIL, DEEPS, VAULTS, SPOREHOLD, PLAYHOUSE, KINGSBARROW, ELDER, ...SEWERS, ...CASTLE];
 // The Free Company's posts at the later delves' portals: a quartermaster of its own on each terrace that has one (a delve's
 // post: who, and what they say of the place), to hire a party from where it's wanted. (src/core/heroes.js BROKERS has them
 // after the town's and the Warrens'; their posts go by the delve's key.)
@@ -573,7 +574,7 @@ export function torches(d = WARRENS) {
 }
 
 // The things in a room that burn (props, by kind), and how high over the floor each one's light is (a chandelier's is its own).
-const LIT = { brazier: 1.9, chandelier: null, hearth: 1.2, spit: 1, footlight: 0.5, greatcap: null, heartroot: 3, musicbox: 1.4, daylight: null };
+const LIT = { brazier: 1.9, chandelier: null, hearth: 1.2, spit: 1, footlight: 0.5, greatcap: null, heartroot: 3, musicbox: 1.4, daylight: null, castpit: 1, basket: null };
 // Braziers standing round the bigger rooms, a couple of strides out from the wall between its torches: fires on posts
 // that light the floor where the fighting is (src/core/delve-build.js builds them, src/gfx/renderer.js lights them). Clear
 // of the portals and the way in. And the ones a room's own things ask for (a prop of kind 'brazier'). [x, floor y, z]

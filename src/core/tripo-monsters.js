@@ -129,6 +129,8 @@ export const VARIANTS = {
   ps_mainworm: { src: 'worm_1', height: 1.9, name: 'MAIN-WORM' },
   pc_abbot: { src: 'necromancer_lord', height: 3.2, name: 'THE DROWNED ABBOT' },
   pa_lamplighter: { src: 'night_demon_red', height: 3.8, name: 'THE LAMPLIGHTER' },
+  // Castle Velscour's (src/core/delve-castle.js): the Gate Captain in his yard.
+  cl_captain: { src: 'velscour_knight_6', alt: 'velscour_knight_1', height: 3.4, name: 'THE GATE CAPTAIN' },
 };
 // And the land's new kinds (src/core/wilds.js): a palette, a size, a name and tricks of their own on the old bodies.
 Object.assign(VARIANTS, WILD_VARIANTS);

@@ -36,6 +36,9 @@ export const PHOBOS_RULES = {
   // Princess Apricot's: the Drowned Abbot's singing stopped, and the Lamplighter put out.
   the_drowned_abbot: { needs: 'letters_for_the_princess', steps: [{ boss: 'drownedabbot' }, { back: true, say: 'The Drowned Abbot sings no more.' }], gold: 1800, xp: 26000, item: 'skull', named: "The Abbot's Last Hour", seed: 0xab07 },
   lamps_out_in_the_conduits: { needs: 'the_drowned_abbot', steps: [{ boss: 'lamplighter' }, { back: true, say: "The Lamplighter's out, and every lamp of his." }], gold: 2600, xp: 36000, item: 'robe', named: 'The Sunk Garden Silk', seed: 0xa9c07 },
+  // ---- up into the castle (src/core/delve-castle.js): the princess's, by the gate off her Garden ----
+  up_the_aqueduct: { needs: 'lamps_out_in_the_conduits', steps: [{ enter: 'lowerward' }, { back: true, say: "I went up the Aqueduct. At the top of it are his kitchens." }], gold: 2800, xp: 40000 },
+  the_gate_captain: { needs: 'up_the_aqueduct', steps: [{ boss: 'gatecaptain' }, { back: true, say: 'The Gate Captain is dead, and his gate with him.' }], gold: 3600, xp: 52000, item: 'staff', named: 'The Portcullis Rod', seed: 0xc1a72 },
 };
 // The level each wants (src/ui/autobrain.js PLAN): you come to Phobos at about twenty.
 export const PHOBOS_LEVELS = [
@@ -45,4 +48,6 @@ export const PHOBOS_LEVELS = [
   // (The sewers: the West Drains 28-36, the Slough Mains 34-42, the Charnel Runs 40-50, the High Conduits 48-58.)
   ['down_the_drains', 28], ['caps_for_the_keepers', 29], ['the_main_runs_clear', 30], ['the_queens_larder', 33], ['caps_of_the_slough', 36],
   ['the_great_worm', 40], ['letters_for_the_princess', 43], ['the_drowned_abbot', 47], ['lamps_out_in_the_conduits', 54],
+  // (Castle Velscour's Lower Ward, 58-75: up the Aqueduct at 58, the Gate Captain at 66.)
+  ['up_the_aqueduct', 58], ['the_gate_captain', 66],
 ];
