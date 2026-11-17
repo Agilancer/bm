@@ -40,8 +40,9 @@ export const PIECES = {
   },
 
   // Flat dressing on the ground (paving, a plank walk, an ash ring): laid on the land a few centimetres up, a cell at a time.
-  paving(layer, x, z, hx, hz, yaw = 0, lift = 0.05) {
-    const P = this.frame(x, z, yaw), nx = Math.max(1, Math.ceil(hx / 2)), nz = Math.max(1, Math.ceil(hz / 2));
+  // (cell: at most how far a cell spans, half of it: 2 follows the land closely; coarser where it's flat and there's much of it.)
+  paving(layer, x, z, hx, hz, yaw = 0, lift = 0.05, cell = 2) {
+    const P = this.frame(x, z, yaw), nx = Math.max(1, Math.ceil(hx / cell)), nz = Math.max(1, Math.ceil(hz / cell));
     const V = (i, j) => { const [px, pz] = P(-hx + 2 * hx * i / nx, -hz + 2 * hz * j / nz); return [px, Y(px, pz) + lift, pz]; };
     for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) this.quad(layer, V(i, j), V(i, j + 1), V(i + 1, j + 1), V(i + 1, j), [0, 1, 0]);
   },

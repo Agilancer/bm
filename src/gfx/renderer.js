@@ -36,7 +36,7 @@ import { BODIES } from '../sim/undead.js';
 import { lerp, mat4Invert, mat4LookTo, mat4Mul, mat4Ortho, mat4Perspective, smoothstep } from '../core/math.js';
 import { shieldPose } from '../core/shield-pose.js';
 import { MipGen, makeBuffer, mipCountFor, loadTextureArray, decodeScaledBitmap } from './gpu.js';
-import { ARMOR, ARMOR_KIT, ARMOR_TRUE, GRASS, GRASS_CULL, ITEM, PROP, SHADOW, SKY, SKY_BAKE, STATIC, TERRAIN, VIEWMODEL, VIEWMODEL_SKULL, staticSoftCut } from './materials.js';
+import { ARMOR, ARMOR_KIT, ARMOR_TRUE, GRASS, GRASS_CULL, ITEM, PROP, SHADOW, SKY, SKY_BAKE, STATIC, STATIC_SLOTS, TERRAIN, VIEWMODEL, VIEWMODEL_SKULL, staticSoftCut } from './materials.js';
 import { AO, BLOOM, COMPOSITE, PARTICLE_DRAW, PARTICLE_SIM, SHAFTS, STAIN, TRAIL } from './post.js';
 import { SpellFX } from './spellfx.js';
 import { bodyRadius, inCascade } from './shadowcull.js';
@@ -311,6 +311,10 @@ export class Renderer {
     ]);
     this.village = village;
     const layerNames = manifest.layers.map((l) => l.name);
+    // The PH2 pack, the second array (tools/phobos/textures/wire_ph2.py): square, smaller, its layers 200 on (layerOf).
+    const p2 = manifest.ph2;
+    this.p2 = { names: p2.layers.map((l) => l.name), layers: p2.layers };
+    const p2w = Math.round(p2.size[0] * tier.texScale), p2d = Math.round(p2.detail[0] * tier.texScale);
     const tw = Math.round(manifest.size[0] * tier.texScale), th = Math.round(manifest.size[1] * tier.texScale);
     const dw = Math.round(manifest.detail[0] * tier.texScale), dh = Math.round(manifest.detail[1] * tier.texScale);
     const gs = Math.round(1024 * tier.texScale), gd = Math.round(512 * tier.texScale);
@@ -335,7 +339,7 @@ export class Renderer {
     landJobs.catch(() => {});
 
     // ---- the pictures ----
-    steps.add(manifest.layers.length * 2 + manifest.ground.length * 2);
+    steps.add(manifest.layers.length * 2 + manifest.ground.length * 2 + p2.layers.length * 2);
     const shrink = tier.texScale !== 1;
     const decode = (name, width, height) => {
       const url = `${base}assets/game/tex/${name}.webp`;
@@ -346,6 +350,8 @@ export class Renderer {
       loadTextureArray(device, this.mip, layerNames, (n) => decode(`${n}_d`, dw, dh), 'rgba8unorm', pictures),
       loadTextureArray(device, this.mip, manifest.ground, (n) => decode(`${n}_c`, gs, gs), 'rgba8unorm-srgb', pictures),
       loadTextureArray(device, this.mip, manifest.ground, (n) => decode(`${n}_d`, gd, gd), 'rgba8unorm', pictures),
+      loadTextureArray(device, this.mip, this.p2.names, (n) => decode(`${p2.dir}${n}_c`, p2w, p2w), 'rgba8unorm-srgb', pictures),
+      loadTextureArray(device, this.mip, this.p2.names, (n) => decode(`${p2.dir}${n}_d`, p2d, p2d), 'rgba8unorm', pictures),
     ]));
     worldPictures.catch(() => {});
     const interior = timed('the interiors', loadInterior(this, base, pool, tier, pictures, steps));
@@ -405,7 +411,7 @@ export class Renderer {
     steps.add(3);   // (the three that tick on their own below: the village built, the last of the scene, the opening)
 
     // ---- putting it together ----
-    [this.colorArr, this.detailArr, this.groundColor, this.groundDetail] = await worldPictures;
+    [this.colorArr, this.detailArr, this.groundColor, this.groundDetail, this.p2Color, this.p2Detail] = await worldPictures;
     const [terrain, forest, farRows, rows] = await landJobs;
     this.farMap = device.createTexture({ size: [this.farWide, this.farSize], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
     this.farTint = device.createTexture({ size: [this.farWide, this.farSize], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
@@ -657,6 +663,8 @@ export class Renderer {
       { binding: 0, visibility: VF, texture: { sampleType: 'float', viewDimension: '2d-array' } },
       { binding: 1, visibility: VF, texture: { sampleType: 'float', viewDimension: '2d-array' } },
       { binding: 2, visibility: VF, buffer: { type: 'uniform' } },
+      { binding: 3, visibility: VF, texture: { sampleType: 'float', viewDimension: '2d-array' } },
+      { binding: 4, visibility: VF, texture: { sampleType: 'float', viewDimension: '2d-array' } },
     ] });
     this.bglArmor = device.createBindGroupLayout({ entries: [
       { binding: 0, visibility: VF, buffer: { type: 'uniform' } },
@@ -770,23 +778,26 @@ export class Renderer {
   }
 
   // Parts as a kit builds them (Map layer -> {pos, nrm, uv, idx}) into a vertex and an index buffer of their own, the
-  // opaque first: { VB, IB, opaque, cut }. (As buildUnderSet packs a delve's.)
-  packParts(parts) {
-    const { layerNames, layers } = this.staticLayers, prims = [];
+  // opaque first: { VB, IB, opaque, cut }. (As buildUnderSet packs a delve's.) groups (a kit's, Kit.group): for those whose
+  // key starts so (keep), slices: Map(key -> [{ at: its byte offset in VB, shown: its corners as built }]), to fold away
+  // and put back (src/gfx/phobos-near.js hideDoor).
+  packParts(parts, groups = null, keep = 'door:') {
+    const prims = [];
     for (const [name, part] of parts) {
       const m = /^(dark|pale|frost|mire|spore|void|slate|blood|moss|umber|soot|eve|char):(.*)$/.exec(name), base = m ? m[2] : name;
-      let layer = layerNames.indexOf(base);
-      if (layer < 0) layer = FLAT[base] ?? 100;
-      prims.push({ layer: layer + (m ? TINTS[m[1]] * 1000 : 0), cutout: layer < 100 && layers[layer].cutout ? 1 : 0, ...part });
+      const layer = this.layerOf(base);
+      prims.push({ name, layer: layer + (m ? TINTS[m[1]] * 1000 : 0), cutout: this.cutOf(layer) ? 1 : 0, ...part });
     }
     prims.sort((a, b) => a.cutout - b.cutout);
     let nv = 0, ni = 0;
     for (const p of prims) { nv += p.pos.length / 3; ni += p.idx.length; }
     const verts = new ArrayBuffer(Math.max(1, nv) * 36), f = new Float32Array(verts), u = new Uint32Array(verts), indices = new Uint32Array(Math.max(1, ni)), runs = [0, 0];
     let vo = 0, io = 0;
+    const bases = new Map();
     for (const p of prims) {
       runs[p.cutout] += p.idx.length;
       const base = vo, n = p.pos.length / 3;
+      bases.set(p.name, base);
       for (let i = 0; i < n; i++) {
         const o = vo * 9;
         f[o] = p.pos[i * 3]; f[o + 1] = p.pos[i * 3 + 1]; f[o + 2] = p.pos[i * 3 + 2];
@@ -797,18 +808,35 @@ export class Renderer {
       }
       for (let i = 0; i < p.idx.length; i++) indices[io++] = p.idx[i] + base;
     }
-    return { opaque: runs[0], cut: runs[1], VB: makeBuffer(this.device, new Float32Array(verts), GPUBufferUsage.VERTEX), IB: makeBuffer(this.device, indices, GPUBufferUsage.INDEX) };
+    const slices = new Map();
+    if (groups) for (const [k, g] of groups) {
+      if (!k.startsWith(keep)) continue;
+      slices.set(k, g.ranges.map((r) => { const b = bases.get(r.layer); return { at: (b + r.v0) * 36, shown: f.slice((b + r.v0) * 9, (b + r.v1) * 9) }; }));
+    }
+    return { opaque: runs[0], cut: runs[1], slices, VB: makeBuffer(this.device, new Float32Array(verts), GPUBufferUsage.VERTEX), IB: makeBuffer(this.device, indices, GPUBufferUsage.INDEX) };
+  }
+
+  // A door of Phobos's as a thing of its own, swung (src/items/phobos-doors.js): its leaf (mesh(), the first time) in the
+  // PH2 pack's painting of that kind of door. Null till its painting's in.
+  phLeaf(kind, mesh) {
+    const m = (this.phLeaves ||= {});
+    if (kind in m) return m[kind];
+    m[kind] = null;
+    const flat = this.flatNormal || (this.flatNormal = this.pixel('rgba8unorm', [128, 128, 255, 255]));
+    fetch(`${this.base}assets/game/tex/p2/${kind}_c.webp`).then((r) => { if (!r.ok) throw new Error(r.status); return r.blob(); })
+      .then((b) => this.bitmapTexture(b, 'rgba8unorm-srgb', 1, true))
+      .then((alb) => { m[kind] = this.lyingModel(mesh(kind), alb, flat, this.pixel('rgba8unorm', [255, 217, 0, 255]), [0, 0, 0, 0]); })
+      .catch((e) => console.warn('door leaf', kind, e));
+    return null;
   }
 
   buildUnderSet(key) {
-    const { layerNames, layers } = this.staticLayers;
     const { parts, groups } = buildUnder(key);
     const prims = [];
     for (const [name, part] of parts) {
       const m = /^(dark|pale|frost|mire|spore|void|slate|blood|moss|umber|soot|eve|char):(.*)$/.exec(name), base = m ? m[2] : name;
-      let layer = layerNames.indexOf(base);
-      if (layer < 0) layer = FLAT[base] ?? 100;
-      prims.push({ name, layer: layer + (m ? TINTS[m[1]] * 1000 : 0), cutout: layer < 100 && layers[layer].cutout ? 1 : 0, ...part });
+      const layer = this.layerOf(base);
+      prims.push({ name, layer: layer + (m ? TINTS[m[1]] * 1000 : 0), cutout: this.cutOf(layer) ? 1 : 0, ...part });
     }
     // Opaque first, so the cutouts are one range at the end.
     prims.sort((a, b) => a.cutout - b.cutout);
@@ -850,17 +878,26 @@ export class Renderer {
       VB: makeBuffer(this.device, new Float32Array(verts), GPUBufferUsage.VERTEX), IB: makeBuffer(this.device, indices, GPUBufferUsage.INDEX) };
   }
 
+  // A painting's layer by its name: the first array's, the PH2 pack's (200 on: materials.js STATIC), or a flat material's.
+  layerOf(name) {
+    const i = this.staticLayers.layerNames.indexOf(name);
+    if (i >= 0) return i;
+    const j = this.p2.names.indexOf(name);
+    return j >= 0 ? 200 + j : FLAT[name] ?? 100;
+  }
+  cutOf(layer) { return layer < 100 ? !!this.staticLayers.layers[layer].cutout : layer >= 200 ? !!this.p2.layers[layer - 200].cutout : false; }
+
   buildStatics(glb, layerNames, layers, oaks) {
     const { device } = this;
+    this.staticLayers = { layerNames, layers };
     // Merge every primitive into one buffer, opaque first so the cutouts are one range at the end.
     const prims = [];
     const nodes = glb.json.nodes.filter((n) => n.mesh !== undefined);
     for (const n of nodes) {
       for (const pr of glb.json.meshes[n.mesh].primitives) {
         const name = glb.json.materials[pr.material].name;
-        let layer = layerNames.indexOf(name);
-        if (layer < 0) layer = FLAT[name] ?? 100;
-        const cutout = layer < 100 && layers[layer].cutout;
+        const layer = this.layerOf(name);
+        const cutout = this.cutOf(layer);
         prims.push({ layer, cutout, pos: accessor(glb, pr.attributes.POSITION), nrm: accessor(glb, pr.attributes.NORMAL), uv: accessor(glb, pr.attributes.TEXCOORD_0), idx: accessor(glb, pr.indices) });
       }
     }
@@ -870,9 +907,8 @@ export class Renderer {
     const sites = buildSites(true, !!this.tier.lean);
     for (const [name, part] of sites.parts) {
       const m = /^(dark|pale|frost|mire|spore|void|slate|blood|moss|umber|soot|eve|char):(.*)$/.exec(name), base = m ? m[2] : name;
-      let layer = layerNames.indexOf(base);
-      if (layer < 0) layer = FLAT[base] ?? 100;
-      const cutout = layer < 100 && layers[layer].cutout;
+      const layer = this.layerOf(base);
+      const cutout = this.cutOf(layer);
       prims.push({ name, layer: layer + (m ? TINTS[m[1]] * 1000 : 0), cutout, pos: part.pos, nrm: part.nrm, uv: part.uv, idx: part.idx });
     }
     // The opaque, then the cutouts.
@@ -931,7 +967,7 @@ export class Renderer {
     this.staticRuns = { land: [0, runs[0]], landCut: [runs[0], runs[1]] };
     this.shadowEpoch = (this.shadowEpoch || 0) + 1;
     // Per-layer parameters: cutout, parallax depth in uv, has windows, foliage.
-    const params = new Float32Array(64 * 4);
+    const params = new Float32Array(STATIC_SLOTS * 4);
     const pomDepth = this.tier.pom > 0 ? 1 : 0;
     layers.forEach((l, i) => {
       params[i * 4] = l.cutout ? 1 : 0;
@@ -939,11 +975,22 @@ export class Renderer {
       params[i * 4 + 2] = l.kind === 'wall' ? 1 : 0;
       params[i * 4 + 3] = /^(leaves|pine|pine_far)(_\d)?$/.test(l.name) ? 1 : 0;
     });
+    // (The PH2 pack's from entry 64: its relief by what it is; its stained glass lit by the day behind it, its lit
+    // windows by a lamp at night. materials.js STATIC.)
+    this.p2.layers.forEach((l, i) => {
+      const o = (64 + i) * 4;
+      if (o >= params.length) return;
+      params[o] = l.cutout ? 1 : 0;
+      params[o + 1] = pomDepth * ({ stone: 0.01, brick: 0.012, roof: 0.016, wood: 0.01, plaster: 0.006, metal: 0.006 }[l.kind] || 0);
+      params[o + 2] = l.kind === 'stained' ? 2 : l.kind === 'lit' ? 1.25 : 0;
+    });
     const layerUBO = makeBuffer(device, params, GPUBufferUsage.UNIFORM);
     this.staticBG = device.createBindGroup({ layout: this.bglStatic, entries: [
       { binding: 0, resource: this.colorArr.createView({ dimension: '2d-array' }) },
       { binding: 1, resource: this.detailArr.createView({ dimension: '2d-array' }) },
       { binding: 2, resource: { buffer: layerUBO } },
+      { binding: 3, resource: this.p2Color.createView({ dimension: '2d-array' }) },
+      { binding: 4, resource: this.p2Detail.createView({ dimension: '2d-array' }) },
     ] });
     this.stats.staticTris = ni / 3;
   }
@@ -2030,8 +2077,10 @@ export class Renderer {
     this.bglShCut = device.createBindGroupLayout({ entries: [
       { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '2d-array' } },
       { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+      { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '2d-array' } },
     ] });
-    this.shCutBG = device.createBindGroup({ layout: this.bglShCut, entries: [{ binding: 0, resource: this.colorArr.createView({ dimension: '2d-array' }) }, { binding: 1, resource: this.repeatSmp }] });
+    this.shCutBG = device.createBindGroup({ layout: this.bglShCut, entries: [{ binding: 0, resource: this.colorArr.createView({ dimension: '2d-array' }) }, { binding: 1, resource: this.repeatSmp },
+      { binding: 2, resource: this.p2Color.createView({ dimension: '2d-array' }) }] });
     this.pines.buildPipelines(...this.pineArgs, shDepth, this.bglShadow, this.bglShCut);
     this.rocks.buildPipelines(...this.pineArgs.slice(0, 4), shDepth, this.bglShadow);
     this.pShCut = device.createRenderPipeline({

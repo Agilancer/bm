@@ -682,6 +682,7 @@ async function boot(msg) {
   }
   const bank = new ClipBank(clipsMeta, clipsBin);
   sim.world = new World(village, await fetchJSON(`${base}assets/game/interior/interior.json`));
+  phWorld = sim.world; phWorld.setPhobosDoors(PH_OPEN);
   sim.player = new Player({ 1: new ArmsRig(arms1h), 2: new ArmsRig(arms2h), 3: new ArmsRig(armsStaff) });
   sim.player.y = sim.world.height(sim.player.x, sim.player.z);
   sim.casting = new Casting({ attack: new ArmsRig(spellAttack), raise: new ArmsRig(spellRaise) });
@@ -880,9 +881,20 @@ ${err.stack}` }); }
   }
 }
 
+// City State Phobos's doors that stand open (src/items/phobos-doors.js), kept here as the render thread says, and put to
+// the world once it's up (and to it as they change).
+const PH_OPEN = new Set();
+let phWorld = null;
+function phDoors(m) {
+  if (m.type === 'phDoors') { PH_OPEN.clear(); for (const id of m.open) PH_OPEN.add(id); phWorld?.setPhobosDoors(PH_OPEN); return; }
+  if (m.open) PH_OPEN.add(m.id); else PH_OPEN.delete(m.id);
+  phWorld?.setPhobosDoor(m.id, m.open);
+}
+
 self.addEventListener('message', (e) => {
   // Where the townsfolk stand (src/folk/layout.js bodies: x, z, radius, y), for the player to bump into.
   if (e.data.type === 'folk') { globalThis.folkBodies = mapFolk(e.data.buffer).bodies; return; }
+  if (e.data.type === 'phDoor' || e.data.type === 'phDoors') { phDoors(e.data); return; }
   // (What it fetches as it starts is named on the loading screen, with the render thread's own: src/core/files.js.)
   if (e.data.type === 'boot') watchFiles((f) => self.postMessage({ type: 'file', name: f.name, state: f.state }));
   if (e.data.type === 'boot') boot(e.data).catch((err) => self.postMessage({ type: 'error', message: `${err.message}\n${err.stack}` }));

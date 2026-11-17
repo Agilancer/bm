@@ -24,6 +24,7 @@ import { marches } from './marches.js';
 import { phobos, phobosCell } from './phobos-build.js';
 import { PHOBOS_SEALS } from './phobos-seals.js';
 import { PH_TILE } from './phobos-tiles.js';
+import { P2_TILE } from './phobos-p2.js';
 import { buildHouse, buildTower } from './belltower.js';
 
 const TAU = Math.PI * 2;
@@ -35,6 +36,7 @@ const TILE = { wall: [7, 4.2], roof: [4, 2.3], stone: [3, 1.7], rubble: [3, 1.7]
 export const tileOf = (layer) => {
   const n = layer.replace(/^(dark|pale|frost|mire|spore|void|slate|blood|moss|umber|soot|eve|char):/, '');
   if (n.startsWith('ph_')) return PH_TILE[n] || TILE.stone;   // (Phobos's own: tools/phobos/textures/wire_layers.py)
+  if (n.startsWith('p2_')) return P2_TILE[n] || TILE.stone;   // (and the PH2 pack: tools/phobos/textures/wire_ph2.py)
   return n.startsWith('wall') || n === 'door_wall' ? TILE.wall : n.startsWith('roof') ? TILE.roof : n.startsWith('door') ? TILE.door : TILE[n] || TILE.cloth;
 };
 
@@ -175,6 +177,8 @@ export class Kit {
     const [tw, th] = tileOf(layer);
     const p = this.part(layer);
     for (let i = 0; i < sides; i++) {
+      // (skip: a side left out, where a doorway goes through it.)
+      if (o.skip?.(i)) continue;
       const a = a0 + i / sides * TAU, b = a0 + (i + 1) / sides * TAU;
       const base = p.pos.length / 3, arc = TAU * r / sides;
       const pts = [[x + Math.cos(a) * r, y, z + Math.sin(a) * r], [x + Math.cos(b) * r, y, z + Math.sin(b) * r], [x + Math.cos(b) * r2, y + h, z + Math.sin(b) * r2], [x + Math.cos(a) * r2, y + h, z + Math.sin(a) * r2]];
@@ -220,8 +224,10 @@ export class Kit {
       const hh = o.ruin ? h * (0.35 + 0.65 * hash2(Math.round(x), Math.round(z))) : h;
       this.box(layer, x, y, z, len / n / 2 + 0.05, (o.y ?? y + 0.5) + hh - y, t / 2, yaw);
       if (o.crenel && !o.ruin) for (let k = 0; k < 2; k++) {
-        const v = (k - 0.5) * len / n / 2;
-        this.box(layer, x + Math.cos(yaw) * v, top, z - Math.sin(yaw) * v, 0.6, 1.2, t / 2, yaw, { collide: false });
+        const v = (k - 0.5) * len / n / 2, mx = x + Math.cos(yaw) * v, mz = z - Math.sin(yaw) * v;
+        // (skip: none where the wall runs into a tower, whose room its walk goes through.)
+        if (o.skip?.(mx, mz)) continue;
+        this.box(layer, mx, top, mz, 0.6, 1.2, t / 2, yaw, { collide: false });
       }
     }
   }
@@ -1471,7 +1477,8 @@ export function buildPhobosCell(cell) {
   const K = new Kit(true);
   phobosCell(K, cell);
   K.finish();
-  return { parts: K.parts, lamps: K.lamps || [] };
+  // (groups: its doors' leaves, each its own, which the renderer folds away while one's open: src/gfx/phobos-near.js.)
+  return { parts: K.parts, lamps: K.lamps || [], groups: K.groups };
 }
 
 /** The parts let go, once they're in the renderer's buffer. Everything else stays. */

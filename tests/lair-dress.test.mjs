@@ -42,7 +42,12 @@ test('the dressing is for the eye: no collider, nothing on a road, no cloth', ()
 });
 
 test('every painting a place or a dungeon asks for is in the game', () => {
-  const have = new Set(manifest.layers.map((l) => l.name));
+  // (And the PH2 pack's, the second array: tools/phobos/textures/wire_ph2.py.)
+  const have = new Set([...manifest.layers, ...manifest.ph2.layers].map((l) => l.name));
+  // (Each has an entry in STATIC's table, from 64 on, and an index the shader doesn't clamp: src/gfx/materials.js.)
+  const slots = +/STATIC_SLOTS = (\d+)/.exec(fs.readFileSync(new URL('../src/gfx/materials.js', import.meta.url), 'utf8'))[1];
+  assert.ok(manifest.ph2.layers.length <= slots - 64, `${manifest.ph2.layers.length} PH2 layers, room for ${slots - 64}`);
+  for (const n of manifest.ph2.layers.map((l) => l.name)) for (const s of ['c', 'd']) assert.ok(fs.existsSync(new URL(`../assets/game/tex/${manifest.ph2.dir}${n}_${s}.webp`, import.meta.url)), `${n}_${s}.webp`);
   for (const layer of [...buildSites(true).parts.keys(), ...buildUnder().parts.keys()]) {
     const m = /^(dark|pale|frost|mire|spore|void|slate|blood|moss|umber|soot|eve|char):(.*)$/.exec(layer), base = m ? m[2] : layer;
     assert.ok(have.has(base) || FLAT.has(base), `no painting called ${base}`);
