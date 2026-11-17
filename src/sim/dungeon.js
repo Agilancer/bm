@@ -528,8 +528,8 @@ export class Warrens {
     if (a.from === 'edge' || !from.length) for (let i = 0; i < (a.places || 3); i++) { const ang = Math.random() * 6.28; from.push([rx + Math.sin(ang) * room.r * 0.7, rz + Math.cos(ang) * room.r * 0.7]); }
     if (a.from === 'boss') from = [[m.x, m.z]];
     if (a.warn) this.warn(WARN[a.warn]);
-    const each = Math.ceil(a.n / from.length);
-    let left = a.n;
+    const all = typeof a.n === 'function' ? a.n(this, f) : a.n, each = Math.ceil(all / from.length);
+    let left = all;
     f.addN = (f.addN || 0) + 1;
     from.forEach((at, i) => {
       const n = Math.min(each, left);

@@ -37,7 +37,12 @@ export const WAYS = {
   westdrains: ['pw_out', 'pw_main', 'pw_grate', 'pw_office', 'pw_grate', 'pw_over', 'pw_basin', 'pw_gate', 'pw_basin', 'pw_over', 'pw_grate', 'pw_cinder', 'pw_soot', 'pw_rook', 'pw_well', 'pw_larder'],
   sloughmains: ['ps_out', 'ps_main', 'ps_weir', 'ps_gate', 'ps_weir', 'ps_chain', 'ps_market', 'ps_chain', 'ps_weir', 'ps_tanmain', 'ps_dye', 'ps_silt', 'ps_bed', 'ps_east'],
   charnelruns: ['pc_out', 'pc_main', 'pc_cistern', 'pc_gate', 'pc_cistern', 'pc_stair', 'pc_cata', 'pc_mages', 'pc_rise', 'pc_mages', 'pc_chapter', 'pc_gate2'],
-  highconduits: ['pa_out', 'pa_main', 'pa_fall', 'pa_gate', 'pa_fall', 'pa_dukes', 'pa_lamps', 'pa_long', 'pa_lamp', 'pa_approach', 'pa_garden'],
+  highconduits: ['pa_out', 'pa_main', 'pa_fall', 'pa_gate', 'pa_fall', 'pa_dukes', 'pa_lamps', 'pa_long', 'pa_lamp', 'pa_approach', 'pa_garden', 'pa_aqfoot'],
+  // Castle Velscour's Lower Ward (src/core/delve-castle.js): the west wings, the Oubliettes, the east wings, the stair up, and
+  // the Gate Captain in his yard last.
+  lowerward: ['cl_gate', 'cl_yard', 'cl_wrange', 'cl_kitchen', 'cl_cellar', 'cl_kitchen', 'cl_aq', 'cl_aqhead', 'cl_aq', 'cl_kitchen', 'cl_wrange', 'cl_hall', 'cl_wrange', 'cl_yard',
+    'cl_pit', 'cl_oub', 'cl_pit', 'cl_yard', 'cl_erange', 'cl_drill', 'cl_bunks', 'cl_drill', 'cl_armstair', 'cl_armoury', 'cl_coal', 'cl_forge', 'cl_coal', 'cl_armoury', 'cl_armstair', 'cl_drill',
+    'cl_erange', 'cl_mstair', 'cl_mgate', 'cl_mstair', 'cl_erange', 'cl_yard'],
 };
 export const WAY = WAYS.warrens;
 // The level it wants before it goes down each the first time (its own, from the delve: the Warrens 7, the Deeps 10,
@@ -65,6 +70,8 @@ export const KNOWN = new Set([
   'ps_main', 'ps_main2', 'ps_tanmain', 'ps_dye', 'ps_silt', 'ps_chain', 'ps_market', 'ps_weir', 'greatworm',
   'pc_main', 'pc_main2', 'pc_cistern', 'pc_cata', 'pc_cata2', 'pc_mages', 'pc_rise', 'drownedabbot',
   'pa_main', 'pa_main2', 'pa_fall', 'pa_dukes', 'pa_lamps', 'pa_long', 'pa_approach', 'lamplighter',
+  // (Castle Velscour's Lower Ward: plain packs, and the Gate Captain, whose garrison it kills first as it would any adds.)
+  'cl_wrange', 'cl_kitchen', 'cl_cellar', 'cl_erange', 'cl_drill', 'cl_bunks', 'cl_armoury', 'cl_forge', 'cl_pit', 'cl_oub', 'cl_hall', 'cl_aq', 'cl_aqhead', 'cl_mstair', 'cl_wway', 'cl_eway', 'gatecaptain',
 ]);
 export function warrensCoverage() {
   const out = [];
