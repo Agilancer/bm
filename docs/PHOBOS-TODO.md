@@ -570,6 +570,16 @@ world's north edge, east of them. Gone in alone (party: false), as the sewers ar
   their own); the castle carved on the map table; jar shelves of green glass; horns smaller and strapped to a plate.
   And the Plague Knights' cross on the floor (src/sim/moves.js, everywhere they stand: the Lower Ward's gate wardens, the
   High Conduits' wardens, the Alchemists' Wing) is a ring now: three arms still read as a cross where two overlapped.
+- [ ] **Critics, round 2** (`art/phobos/east/middleward_r2.jpg`): veteran REJECT 6.5, young REJECT 6. Still to fix, for
+  round 3 (with the owner's castle pass): the still still reads as a hand-bell (make it a squat pot, wider than tall, a
+  long level swan neck into a coil); the oculus and the glass roof's glazing bars meet at a centre (parallel ribs, or
+  an odd number of spokes stopped at a hub ring) and light nothing (a real shaft and a pool on the floor); the portraits'
+  frames read pale beside the blue (blacken them) and the brocade reads purple (truer blue); the sitters are blocks
+  (a head-and-shoulders of five or six pieces, varied); liveries don't survive a thumbnail outside the Gallery (big lit
+  hangings, table and bench cloths, a sconce on each); the Court is still dark and the tree lost in it; the Hall's
+  table cloths read as a painted road line (a deep cloth with a border, candle clusters, the dais rim-lit); the Stacks'
+  spines still a grille (runs of varied height and colour, gaps, leaning books); monsters' line telegraphs that meet at a
+  right angle read as crosses (Inkshades' threads); the portal's cyan beside flame in the Court's shot.
 - [ ] **Not done in the Middle Ward**: the Clock Tower and the Menagerie wings themselves (chunk 9, with their keys);
   the Librarian's deception magic; the horns sounded to change the patrols; Wynn's two other painted doors; a word when
   you walk up to a shut keyed door; the Great Hall as a rest point once the Feast is dead (it respawns with the ward).

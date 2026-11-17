@@ -58,10 +58,14 @@ export const doorOf = (h) => (/dressed|rich_brick|basalt|granite|block|course/.t
 // A house's upstairs, if it has one: two storeys or more, and room inside for a stair up its left wall (local x -) from by
 // the door to the back, with floor beside it and beyond it. (Its floors, with the ground floor's: houseWalls.) { ix, iz, fy, uy, uc, sw, steps: [[lx, lz, y]], hole: [z0, z1],
 // rects } (rects: the floor and the treads, as K.deck takes them). RISE a step, TREAD its depth, SW the stair's width.
-const RISE = 0.3, TREAD = 0.27, SW = 0.95, STOREY = 3.3;
+// (Room to walk up it, the owner, 2026-11-17: the stair a good stride wide, a landing of a metre and more at its head
+// before the back wall, and its treads as deep as the house's depth lets them be, up to a comfortable 0.36. A house too
+// shallow for that has no upstairs.)
+const RISE = 0.3, SW = 1.25, STOREY = 3.3, LANDING = 1.1;
+const treadOf = (iz) => Math.min(0.36, (2 * iz - 0.45 - LANDING) / Math.round(STOREY / RISE));
 export function upstairs(h, F) {
-  const ix = h.hx - WALL, iz = h.hz - WALL;
-  if (!h.roof || h.h < 6 || ix < 2.2 || iz < 1.95) return null;
+  const ix = h.hx - WALL, iz = h.hz - WALL, TREAD = treadOf(iz);
+  if (!h.roof || h.h < 6 || ix < 2.4 || TREAD < 0.24) return null;
   const { hi, c, s } = F, f = h.front, fy = hi + 0.1, uy = fy + STOREY, uc = Math.min(hi + h.h - 0.3, uy + 2.9), n = Math.round(STOREY / RISE);
   const W = (lx, lz) => [h.x + lx * c + lz * s, h.z - lx * s + lz * c], yaw = h.yaw, sx = -ix + SW / 2, z0 = iz - 0.45, z1 = z0 - n * TREAD;
   const steps = [], rects = [];
@@ -75,7 +79,7 @@ export function upstairs(h, F) {
   rects.push([...W(sx, f * (z1 - iz) / 2), SW / 2, (z1 + iz) / 2, yaw, uy]);
   rects.push([...W(sx, f * (z0 + iz) / 2), SW / 2, (iz - z0) / 2, yaw, uy]);
   // (The rects' half-sizes are along the house's local x and z, the way world.js reads a rect turned by yaw.)
-  return { ix, iz, fy, uy, uc, steps, hole: [z1, z0], rects };
+  return { ix, iz, fy, uy, uc, steps, hole: [z1, z0], rects, tread: TREAD };
 }
 // Every house's door opens and shuts (the owner, 2026-11-16: "make sure all the doors on all the houses open and close"):
 // shut till you open it, E (src/items/phobos-doors.js). A door as the city's doors take it: { id, x, z, yaw (the house's,
@@ -293,7 +297,7 @@ function houseNear(K, h) {
 // newels; a railing round the hole; and a bedroom: a bed with a headboard, a chest at its foot, a stool, a rug, a pallet
 // in the bigger ones, a candle in most.
 function upstairsNear(K, h, up, P, r) {
-  const { ix, iz, fy, uy, uc, steps, hole: [z1, z0] } = up, f = h.front, xs = -ix + SW, n = steps.length;
+  const { ix, iz, fy, uy, uc, steps, hole: [z1, z0], tread: TREAD } = up, f = h.front, xs = -ix + SW, n = steps.length;
   const at = (lx, lz) => { const q = P(lx, 0, lz); return [q[0], q[2]]; };
   const bx = (layer, lx, y0, lz, hx, hh, hz, yaw = h.yaw) => { const [x, z] = at(lx, lz); K.box(layer, x, y0, z, hx, hh, hz, yaw, { collide: false }); };
   // (Each piece of floor a rect in the house's x and z: the board top at uy, the ceiling under it a hand lower.)
@@ -700,32 +704,95 @@ const GATE_FACE = [];
 // Water in the moat and the Slough (src/core/east.js cuts both): a sheet over each, three metres and more over the ditch's
 // floor at its middle, so it meets the banks wherever they are; left out at the gates' causeways and the Slough's bridges.
 const moatAt = (th, k) => { let m = 0; for (let j = 0; j < 12; j++) m = Math.max(m, Math.cos(th - j * Math.PI / 6)); const r = k / m; return [CITY.x + CITY.a * r * Math.cos(th), CITY.z + CITY.b * r * Math.sin(th)]; };
-// The moat's sheet's height over (x, z), r metres round it allowed for; -Infinity if it's nowhere near. (The barbican's
-// towers stand on its bank and its sheet ran through their ground floor: src/core/phobos-towers.js plan.)
+// Water lies level. The moat's ditch climbs with the ground round the city, from the plain by the Drawbridge Gate up toward
+// the castle's crag, and the Slough's bed runs over a rise in the city's middle: so each is a string of level reaches, a
+// weir of dark stone across the ditch wherever the bed has climbed out of the reach below, the water falling over it; and
+// where there's no ditch to hold any (the bed no lower than a bank: the crag's side of the ring) it's dry. (It was one
+// sheet following the ground: water lying up a hillside. The owner, 2026-11-17: "fixing the water".)
+// A run of beds [{ bed, bank }] walked from its lowest: each one's level (the reach it's in), or null where it's dry.
+const DEPTH = 2.4, SHALLOW = 0.7;
+function reaches(run, from) {
+  const lv = new Array(run.length).fill(null);
+  for (const dir of [1, -1]) {
+    let L = null;
+    for (let i = from; i >= 0 && i < run.length; i += dir) {
+      const { bed, bank } = run[i];
+      if (L === null || bed > L - SHALLOW) L = bed + DEPTH;          // (climbed out of the reach below: a weir, and a new reach)
+      if (bank < L + 0.25) { if (bank - bed < SHALLOW + 0.4) break; L = bank - 0.25; }   // (kept under its banks; no ditch, no water, and none beyond)
+      lv[i] = L;
+    }
+  }
+  return lv;
+}
+const MOAT_N = 720;
+let MOAT = null;
+function moatRing() {
+  if (MOAT) return MOAT;
+  const ring = [];
+  for (let i = 0; i < MOAT_N; i++) {
+    const th = i / MOAT_N * TAU, [cx, cz] = moatAt(th, 1.047), a = moatAt(th, 1.016), b = moatAt(th, 1.08), oa = moatAt(th, 1.006), ob = moatAt(th, 1.09);
+    ring.push({ th, a, b, bed: Y(cx, cz), bank: Math.min(Y(...oa), Y(...ob)) });
+  }
+  // (Walked both ways from its lowest, out on the plain; each way stops where the ditch runs out.)
+  let low = 0; for (let i = 1; i < MOAT_N; i++) if (ring[i].bed < ring[low].bed) low = i;
+  const turned = ring.slice(low).concat(ring.slice(0, low)), half = MOAT_N >> 1;
+  const fwd = reaches(turned.slice(0, half), 0), back = reaches(turned.slice(half).reverse(), 0).reverse();
+  turned.forEach((q, i) => { q.lv = i < half ? fwd[i] : back[i - half]; });
+  return (MOAT = ring);
+}
+// The moat's water's height over (x, z), r metres round it allowed for; -Infinity if it's nowhere near, or dry there. (The
+// barbican's towers stand on its bank and its sheet ran through their ground floor: src/core/phobos-towers.js plan.)
 export function moatLevel(x, z, r = 0) {
   const u = (x - CITY.x) / CITY.a, v = (z - CITY.z) / CITY.b, th = Math.atan2(v, u);
   let m = 0; for (let j = 0; j < 12; j++) m = Math.max(m, Math.cos(th - j * Math.PI / 6));
   const k = Math.hypot(u, v) * m, pad = r / Math.min(CITY.a, CITY.b);
   if (k < 1.016 - pad || k > 1.08 + pad) return -Infinity;
-  const [cx, cz] = moatAt(th, 1.047);
-  return Y(cx, cz) + 2.4;
+  const ring = moatRing(), i = Math.round(((th + TAU) % TAU) / TAU * MOAT_N) % MOAT_N;
+  let most = -Infinity;
+  for (let d = -3; d <= 3; d++) { const lv = ring[(i + d + MOAT_N) % MOAT_N].lv; if (lv !== null && lv > most) most = lv; }
+  return most;
+}
+// A weir: a wall of dark stone across a ditch from one bank's point to the other's, its top a hand under the upper reach,
+// and the water over it down to the lower.
+function weir(K, a, b, hi, lo, bed) {
+  const mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2, L = Math.hypot(b[0] - a[0], b[1] - a[1]), yaw = Math.atan2(-(b[1] - a[1]), b[0] - a[0]);
+  K.box('dark:block', mx, bed - 0.6, mz, L / 2 + 0.6, hi - 0.08 - (bed - 0.6), 0.5, yaw, { collide: false });
+  for (const sd of [-1, 1]) {
+    const nx = -(b[1] - a[1]) / L * sd * 0.52, nz = (b[0] - a[0]) / L * sd * 0.52, P = (q, y) => [q[0] + nx, y, q[1] + nz];
+    K.quad('water', sd > 0 ? P(a, hi) : P(b, hi), sd > 0 ? P(b, hi) : P(a, hi), sd > 0 ? P(b, lo) : P(a, lo), sd > 0 ? P(a, lo) : P(b, lo), [nx / 0.52, 0, nz / 0.52]);
+  }
 }
 function waters(K) {
-  const at = moatAt;
   const gw = (x, z) => (Math.abs(z) < 19 && x - CITY.x > 600) || (Math.abs(x - 9900) < 19 && z < -700) || (Math.abs(x - 9950) < 19 && z > 700);
-  const N = 360, ring = [];
-  for (let i = 0; i <= N; i++) { const th = i / N * TAU, [cx, cz] = at(th, 1.047), a = at(th, 1.016), b = at(th, 1.08); ring.push({ a, b, y: Y(cx, cz) + 2.4, gate: gw(cx, cz) || gw(...a) || gw(...b) }); }
-  for (let i = 0; i < N; i++) { const p = ring[i], q = ring[i + 1]; if (p.gate || q.gate) continue; K.quad('dark:water', [p.a[0], p.y, p.a[1]], [q.a[0], q.y, q.a[1]], [q.b[0], q.y, q.b[1]], [p.b[0], p.y, p.b[1]], [0, 1, 0]); }
-  const over = STREETS.filter((st) => st.name !== 'The Corpse Quay');
-  const bridge = (x, z) => over.some((st) => st.pts.some((q, j) => j + 1 < st.pts.length && segD(x, z, q, st.pts[j + 1]) < st.w + 8));
+  const ring = moatRing();
+  // (Every other of the ring's points to a quad, but where the level changes: the sheet's corners on its own reach.)
+  for (let i = 0; i < MOAT_N; i += 2) {
+    const p = ring[i], q = ring[(i + 2) % MOAT_N], m = ring[(i + 1) % MOAT_N];
+    if (p.lv === null || q.lv === null || m.lv === null) continue;
+    if (gw(...p.a) || gw(...p.b) || gw(...q.a) || gw(...q.b)) continue;
+    if (Math.abs(p.lv - q.lv) > 0.01) { const hi = Math.max(p.lv, q.lv), lo = Math.min(p.lv, q.lv); weir(K, m.a, m.b, hi, lo, m.bed); }
+    const [e0, e1] = Math.abs(p.lv - q.lv) > 0.01 ? [[p, m, p.lv], [m, q, q.lv]] : [[p, q, p.lv]];
+    for (const [u, v, y] of [e0, e1].filter(Boolean)) K.quad('dark:water', [u.a[0], y, u.a[1]], [v.a[0], y, v.a[1]], [v.b[0], y, v.b[1]], [u.b[0], y, u.b[1]], [0, 1, 0]);
+  }
+  // The Slough, down the city from its rise: reaches the same way, a weir at each step, running on under its bridges.
+  const w = 10.5, run = [];
   for (let i = 0; i + 1 < SLOUGH.length; i++) {
-    const A = SLOUGH[i], B = SLOUGH[i + 1], L = Math.hypot(B[0] - A[0], B[1] - A[1]), ux = (B[0] - A[0]) / L, uz = (B[1] - A[1]) / L, n = Math.ceil(L / 6), w = 10.5;
+    const A = SLOUGH[i], B = SLOUGH[i + 1], L = Math.hypot(B[0] - A[0], B[1] - A[1]), ux = (B[0] - A[0]) / L, uz = (B[1] - A[1]) / L, n = Math.ceil(L / 8);
     for (let k = 0; k < n; k++) {
-      const t0 = k / n * L, t1 = (k + 1) / n * L, p = [A[0] + ux * t0, A[1] + uz * t0], q = [A[0] + ux * t1, A[1] + uz * t1];
-      if (cityIn(...p) > 1.012 || cityIn(...q) > 1.012 || bridge(...p) || bridge(...q)) continue;
-      const y = Y((p[0] + q[0]) / 2, (p[1] + q[1]) / 2) + 2.6;
-      K.quad('water', [p[0] - uz * w, y, p[1] + ux * w], [q[0] - uz * w, y, q[1] + ux * w], [q[0] + uz * w, y, q[1] - ux * w], [p[0] + uz * w, y, p[1] - ux * w], [0, 1, 0]);
+      const t = (k + 0.5) / n * L, x = A[0] + ux * t, z = A[1] + uz * t, t0 = k / n * L, t1 = (k + 1) / n * L;
+      run.push({ p: [A[0] + ux * t0, A[1] + uz * t0], q: [A[0] + ux * t1, A[1] + uz * t1], ux, uz, bed: Y(x, z), bank: Math.min(Y(x - uz * (w + 3), z + ux * (w + 3)), Y(x + uz * (w + 3), z - ux * (w + 3))), out: cityIn(x, z) > 1.012 });
     }
+  }
+  let top = 0; for (let i = 1; i < run.length; i++) if (run[i].bed > run[top].bed) top = i;
+  // (From its head both ways downhill: each stretch's level is its reach's, set from the low end up.)
+  const lvN = reaches(run.slice(0, top + 1), 0), lvS = reaches(run.slice(top).reverse(), 0).reverse();
+  run.forEach((r, i) => { r.lv = i <= top ? lvN[i] : lvS[i - top]; });
+  for (let i = 0; i < run.length; i++) {
+    const r = run[i], { p, q, ux, uz, lv } = r;
+    if (lv === null || r.out) continue;
+    K.quad('water', [p[0] - uz * w, lv, p[1] + ux * w], [q[0] - uz * w, lv, q[1] + ux * w], [q[0] + uz * w, lv, q[1] - ux * w], [p[0] + uz * w, lv, p[1] - ux * w], [0, 1, 0]);
+    const nx = run[i + 1];
+    if (nx && nx.lv !== null && !nx.out && Math.abs(nx.lv - lv) > 0.01) weir(K, [q[0] - uz * w, q[1] + ux * w], [q[0] + uz * w, q[1] - ux * w], Math.max(lv, nx.lv), Math.min(lv, nx.lv), Math.max(r.bed, nx.bed) - 1);
   }
 }
 

@@ -1,0 +1,44 @@
+// Pictures of City State Phobos out on the land as the game draws it, for the critics and the owner: the player set down
+// at a spot (bm.cmd(19, 0, x, z)), the hour set, a camera held, the canvas saved without the HUD.
+//   node tools/phobos/city_shots.mjs [names]      PORT=<8481>  WAIT=<ms after each move, 12000>  HOUR=<12>
+// Needs the server (python tools/serve.py 8481 --no-open) and Playwright's Chromium. Saves tools/build/shots/<name>.png.
+import { createRequire } from 'node:module';
+import { terrainHeight } from '../../src/core/terrain.js';
+
+const require = createRequire(import.meta.url);
+const { chromium } = require('playwright');
+const WAIT = +(process.env.WAIT || 12000), HOUR = +(process.env.HOUR || 12);
+// [name, stand at [x, z], eye [x, up over the ground there, z], looking at [x, up over the ground there, z]]
+const SHOTS = [
+  ['city_moat_w', [9290, 60], [9290, 9, 60], [9330, 0, -40]],
+  ['city_moat_n', [9700, -700], [9690, 10, -712], [9760, 2, -760]],
+  ['city_slough', [9872, -200], [9885, 6, -150], [9862, 0, -300]],
+  ['city_slough_top', [9912, 150], [9920, 7, 120], [9905, 0, 220]],
+  ['city_mile', [9500, 0], [9500, 2.2, 0], [9600, 6, 0]],
+  ['city_street', [9700, -250], [9700, 2.2, -250], [9760, 5, -290]],
+  ['city_castle', [10600, 0], [10600, 12, 0], [10900, 120, 0]],
+  ['city_castle_far', [9980, 0], [9980, 30, 0], [10900, 200, 0]],
+];
+function cam(ex, ey, ez, tx, ty, tz) {
+  let fx = tx - ex, fy = ty - ey, fz = tz - ez; const l = Math.hypot(fx, fy, fz); fx /= l; fy /= l; fz /= l;
+  let rx = -fz, rz = fx; const rl = Math.hypot(rx, rz) || 1; rx /= rl; rz /= rl;
+  const ux = -rz * fy, uy = rz * fx - rx * fz, uz = rx * fy, s = Math.sign(uy) || 1;
+  return { x: ex, y: ey, z: ez, fx, fy, fz, ux: ux * s, uy: uy * s, uz: uz * s };
+}
+const asked = process.argv.slice(2), which = asked.length ? SHOTS.filter((s) => asked.includes(s[0])) : SHOTS;
+const b = await chromium.launch({ args: ['--enable-unsafe-webgpu', '--ignore-gpu-blocklist', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--use-angle=swiftshader', '--no-sandbox'] });
+const page = await b.newPage({ viewport: { width: 1280, height: 720 } });
+page.on('pageerror', (e) => console.log('PAGE ERROR', String(e).slice(0, 600)));
+await page.goto(`http://localhost:${process.env.PORT || 8481}/?auto&noopening&timer`, { waitUntil: 'load' });
+await page.waitForFunction(() => window.bm && bm.snap && bm.snap(), null, { timeout: 900000, polling: 1000 });
+await page.evaluate('bm.fixScale(1); bm.renderer.hideVM = true; bm.view.lands.cheats.noDamage = true; if (bm.view.questTrail) bm.view.questTrail.off = true;');
+for (const [name, at, eye, look] of which) {
+  const c = cam(eye[0], terrainHeight(eye[0], eye[2]) + eye[1], eye[2], look[0], terrainHeight(look[0], look[2]) + look[1], look[2]);
+  await page.evaluate(`bm.cmd(19, 0, ${at[0]}, ${at[1]}); bm.setTime(${HOUR}); bm.setCam(${JSON.stringify(c)});`);
+  await page.waitForTimeout(WAIT);
+  try {
+    await Promise.race([page.evaluate(`(bm.setCam(${JSON.stringify(c)}), bm.shot(${JSON.stringify(name)}))`), new Promise((_, r) => setTimeout(() => r(new Error('timed out')), 180000))]);
+    console.log('shot', name);
+  } catch (e) { console.log('FAILED', name, String(e).slice(0, 200)); }
+}
+await b.close();
