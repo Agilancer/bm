@@ -759,7 +759,7 @@ export function moatLevel(x, z, r = 0) {
 // the reach it's in; null where there's none).
 const SLOUGH_W = 10.5;
 let SLOUGH_RUN = null;
-function sloughRun() {
+export function sloughRun() {
   if (SLOUGH_RUN) return SLOUGH_RUN;
   // The Slough, down the city from its rise: reaches the same way, a weir at each step, running on under its bridges.
   const w = SLOUGH_W, run = [];
@@ -799,6 +799,17 @@ function waters(K) {
     if (Math.abs(p.lv - q.lv) > 0.01) { const hi = Math.max(p.lv, q.lv), lo = Math.min(p.lv, q.lv); weir(K, m.a, m.b, hi, lo, m.bed); }
     const [e0, e1] = Math.abs(p.lv - q.lv) > 0.01 ? [[p, m, p.lv], [m, q, q.lv]] : [[p, q, p.lv]];
     for (const [u, v, y] of [e0, e1].filter(Boolean)) K.quad('dark:water', [u.a[0], y, u.a[1]], [v.a[0], y, v.a[1]], [v.b[0], y, v.b[1]], [u.b[0], y, u.b[1]], [0, 1, 0]);
+  }
+  // Two footbridges over the Slough where no street crosses it: a deck of planks on two stone piers, a low kerb each side
+  // (no posts, no rails across). Walked: a deck over the water (walk).
+  for (const zc of [-390, 180]) {
+    const r0 = sloughRun().find((q) => !q.skip && q.lv !== null && Math.abs((q.p[1] + q.q[1]) / 2 - zc) < 5);
+    if (!r0) continue;
+    const mx = (r0.p[0] + r0.q[0]) / 2, mz = (r0.p[1] + r0.q[1]) / 2, { ux, uz } = r0, th = Math.atan2(-uz, ux), half = 16.5;
+    const y = Math.min(Y(mx - uz * 15.5, mz + ux * 15.5), Y(mx + uz * 15.5, mz - ux * 15.5)) + 0.3;
+    K.box('dark:wood', mx, y - 0.35, mz, 1.4, 0.35, half, th, { collide: false });
+    for (const e of [-1, 1]) { K.box('dark:wood', mx + ux * e * 1.4, y, mz + uz * e * 1.4, 0.1, 0.35, half, th, { collide: false }); K.box('soot:ph_basalt', mx - uz * e * 6, r0.lv - 1.5, mz + ux * e * 6, 1.4, y - 0.35 - r0.lv + 1.5, 0.7, th, { collide: false }); }
+    walk(K, [[mx, mz, 1.4, half, th, y]]);
   }
   // The Slough: its reaches (sloughRun), a weir at each step, none under the streets that cross it.
   const run = sloughRun(), w = SLOUGH_W;
@@ -1042,7 +1053,7 @@ function sloughNear(K, cell) {
     for (const sd of [-1, 1]) {
       const qx = mx - uz * sd * (w + 0.4), qz = mz + ux * sd * (w + 0.4), top = Math.max(r.lv + 1.1, Math.min(Y(mx - uz * sd * (w + 3.5), mz + ux * sd * (w + 3.5)), r.lv + 4.6));
       K.box('soot:ph_basalt', qx, r.lv - 1.2, qz, L / 2 + 0.05, top - r.lv + 1.2, 0.45, yaw, NC);
-      K.box('ph_basalt', qx - uz * sd * 0.1, top, qz + ux * sd * 0.1, L / 2 + 0.05, 0.22, 0.62, yaw, NC);
+      K.box('pale:ph_basalt', qx - uz * sd * 0.1, top, qz + ux * sd * 0.1, L / 2 + 0.05, 0.22, 0.62, yaw, NC);
       // (A slime line along the wall at the water, and a towpath of dark flags behind its coping.)
       K.box('mire:ph_basalt', qx + uz * sd * 0.03, r.lv - 0.1, qz - ux * sd * 0.03, L / 2 + 0.05, 0.5, 0.46, yaw, NC);
       { const tx = mx - uz * sd * (w + 2), tz = mz + ux * sd * (w + 2); K.box('dark:stone', tx, top - 0.5, tz, L / 2 + 0.05, 0.56, 1.5, yaw, NC); }
@@ -1058,12 +1069,16 @@ function sloughNear(K, cell) {
         const bx = mx - uz * sd * (w - 4.6) - ux * 2.5, bz = mz + ux * sd * (w - 4.6) - uz * 2.5, by = r.lv - 0.15;
         // (A barge: a long hull, pointed both ends, a deck load of casks and bales under a hide, a lantern on a post at its stern.)
         K.box('dark:wood', bx, by, bz, 4.6, 0.9, 1.5, yaw, NC);
+        for (const g of [-1, 1]) K.box('wood', bx - uz * g * 1.5, by + 0.9, bz + ux * g * 1.5, 4.6, 0.4, 0.09, yaw, NC);
+        K.beam('wood', [bx - ux * 4.4, by + 1.5, bz - uz * 4.4], [bx - ux * 6.4, by + 1.0, bz - uz * 6.4], 0.05);
         for (const e of [-1, 1]) K.quad('dark:wood', [bx + ux * e * 4.6 - uz * 1.5, by + 0.9, bz + uz * e * 4.6 + ux * 1.5], [bx + ux * e * 4.6 + uz * 1.5, by + 0.9, bz + uz * e * 4.6 - ux * 1.5], [bx + ux * e * 6.6, by + 1.15, bz + uz * e * 6.6], [bx + ux * e * 6.6, by + 1.15, bz + uz * e * 6.6]);
         K.box('p2_hessian', bx - ux * 1, by + 0.9, bz - uz * 1, 2, 0.9, 1.1, yaw, NC); K.drum('wood', bx + ux * 2.2, by + 0.9, bz + uz * 2.2, 0.45, 1, 8, NC); K.drum('wood', bx + ux * 3.2, by + 0.9, bz + uz * 3.2, 0.45, 1, 8, NC);
         K.box('dark:wood', bx - ux * 4, by + 0.9, bz - uz * 4, 0.07, 2.2, 0.07, 0, NC); K.cone('mire:flame', bx - ux * 4, by + 3.1, bz - uz * 4, 0.16, 0.4, 5);
         (K.lamps ||= []).push({ p: [bx - ux * 4, by + 3.2, bz - uz * 4], c: [0.55, 1, 0.5], r: 18, i: 14, flicker: 0.3 });
       }
     }
+    // (Scum on the water, here and there: a pale green skin, lying flat.)
+    if (hash2(i * 3, 77) > 0.55) { const o = (hash2(i, 5) - 0.5) * 12, sx = mx - uz * o, sz = mz + ux * o; K.disc('mire:stone', sx, r.lv + 0.03, sz, 1.6 + hash2(i, 9) * 1.6, 9); K.disc('mire:stone', sx + ux * 2.4, r.lv + 0.03, sz + uz * 2.4, 1.1, 7); }
     // The weir, where this stretch's water steps to the next's: a crest of dressed stone, a wing wall at each bank, the
     // water over it in a pale sheet, foam on the low side.
     if (step) {
