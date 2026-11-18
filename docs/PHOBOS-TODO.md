@@ -516,8 +516,20 @@ It really needs work."
 - [ ] **Detail**: not begun. Seen in pictures: far houses are plain boxes beside the near ones; the basin's cliffs are
   streaked; bare ground between houses and the Slough's banks (a quay wall, mooring posts, steps down); weirs want a
   sluice or a footbridge; the dry moat round the crag wants a bed of stones or stakes.
-- [ ] **The castle on the land**: not begun. Seen from the Approach: the gate's drums and the wall towers read pale
-  grey beside near-black curtains; the curtains are flat black slabs; the east wall stair's blank wedge left of the gate.
+- [x] **Every drum and cone lit from the right side** (src/core/sites.js Kit.drum): its sides were wound against their
+  normals, so the shader turned each normal round and every round tower, cone, column and barrel in the game was lit
+  from its far side. This is what "sunlit drums go silver" was, and why towers never matched walls. (The Keep's `char:`
+  and the notes about tints on round things were workarounds for it: they can be looked at again.)
+- [ ] **The castle on the land** — under way (`castleNear` in src/core/phobos-build.js, the crag's streamed cells; shots
+  `node tools/phobos/city_shots.mjs castle_gate castle_yard castle_mark castle_yard_n city_castle`, HOUR=16 for west light):
+  - Done: the crag kept clear of the wilds' rocks and tufts (src/core/rocks.js); the Lower Ward's yard flagged, a kerbed
+    way from the gate to **his mark** (a 6.4 m ring of black iron before a round of his red on a three-step plinth, two
+    horns of fire; far build, it stops you); fire bowls in pairs, close by the gate and wider toward the mark, their
+    flames the far build's; red pennants on poles (the arm from the pole's head: no cross); a well, a stable, racks,
+    stores, carts; a door, steps and fires to each Lower Ward hall; a low wall and two guard posts across the yard; the
+    castle's door lit; murder holes and chains in the gate's vault, no beam across its bars; the rim's bridges humped
+    and at two heights; towers in the walls' stone.
+  - Critics round 1 (`art/phobos/east/castle_r1.jpg`): both REJECT 4. Round 2 sheet: `castle_r2.jpg`.
 - Pictures: `node tools/phobos/city_shots.mjs [names]` (give it WAIT=30000: on a software GPU the ground comes late and
   shows white till it does).
 
