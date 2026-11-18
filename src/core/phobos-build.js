@@ -10,7 +10,7 @@
 
 import { terrainHeight } from './terrain.js';
 import { hash2 } from './terrain-noise.js';
-import { CITY, CITY_WALL, CRAG, HAUNTS, KEEP, PLAIN, SLOUGH, WARDS, cityIn } from './east.js';
+import { APPROACH_WALL, CITY, CITY_WALL, CRAG, HAUNTS, KEEP, PLAIN, SLOUGH, WARDS, cityIn } from './east.js';
 import { PHOBOS } from './phobos-data.js';
 import { HUBS, hubHouses, hubFar, hubNear, inHub } from './phobos-hubs.js';
 import { MOUTH_SQUARE, PHOBOS_SEALS, SEAL_SQUARE, SEWER_MOUTHS, inSealSquare } from './phobos-seals.js';
@@ -199,7 +199,7 @@ function houseNear(K, h) {
     const R = roofOf(h), rh = R.rh;
     gable(K, h.roof, h.x, top, h.z, R.sx, R.sz, rh, R.yaw, h.wall, 0.4);
     // (A chimney stack on most, a dark pot or two on it.)
-    if (r(1) < 0.7) { const [cx, , cz] = P((r(2) - 0.5) * h.hx * (R.turn ? 0.5 : 1.2), 0, (r(3) - 0.5) * h.hz * (R.turn ? 1.2 : 0.5)); K.box('soot:stone', cx, top + rh * 0.35, cz, 0.42, rh * 0.75 + 0.9, 0.42, h.yaw, { collide: false }); K.drum('dark:stone', cx - 0.14, top + rh * 1.1 + 0.9, cz, 0.15, 0.45, 6, { collide: false }); if (r(4) < 0.5) K.drum('dark:stone', cx + 0.17, top + rh * 1.1 + 0.9, cz, 0.13, 0.32, 6, { collide: false }); }
+    if (r(1) < 0.7) { const [cx, , cz] = P((r(2) - 0.5) * h.hx * (R.turn ? 0.5 : 1.2), 0, (r(3) - 0.5) * h.hz * (R.turn ? 1.2 : 0.5)); K.box('soot:stone', cx, top + rh * 0.35, cz, 0.42, rh * 0.75 + 0.9, 0.42, h.yaw, { collide: false }); K.drum('dark:stone', cx - 0.14, top + rh * 1.1 + 0.9, cz, 0.15, 0.45, 6, { collide: false }); if (r(4) < 0.5) K.drum('dark:stone', cx + 0.17, top + rh * 1.1 + 0.9, cz, 0.13, 0.32, 6, { collide: false }); if (r(8) < 0.6) (K.smokes ||= []).push([cx - 0.14, top + rh * 1.1 + 1.4, cz]); }
     if (!R.turn && h.hx > 4.2 && r(5) < 0.3) { const [dx, , dz] = P((r(6) - 0.5) * h.hx, 0, f * h.hz * 0.55); K.box(h.wall, dx, top + rh * 0.1, dz, 0.9, 1.5, 0.9, h.yaw, { collide: false, top: false }); gable(K, h.roof, dx, top + rh * 0.1 + 1.5, dz, 1.1, 1.1, 0.8, h.yaw + Math.PI / 2, h.wall, 0.2); }
   } else for (let k = 0; k < 3; k++) { const [qx, , qz] = P((r(20 + k) - 0.5) * ix * 1.5, 0, (r(30 + k) - 0.5) * iz * 1.5); K.rock('dark:rubble', qx, qz, 0.5 + r(40 + k) * 0.7, 0.4 + r(50 + k) * 0.5, { collide: false }); }
   // Windows, a pair to a storey front and back where there's room; most lit after dark. A lamp by one door in three.
@@ -1176,8 +1176,9 @@ function streets(K) {
         const kx = x + uz * (wide + 0.12) * sd, kz = z - ux * (wide + 0.12) * sd;
         // (Its top and its face to the road: two quads, not a box.)
         const ky = Y(kx, kz), hl = L / n / 2 + 0.05, e = (du, dv, yy) => [kx + ux * du + uz * dv * sd, yy, kz + uz * du - ux * dv * sd];
-        K.quad('stone', e(-hl, -0.14, ky + 0.2), e(hl, -0.14, ky + 0.2), e(hl, 0.14, ky + 0.2), e(-hl, 0.14, ky + 0.2), [0, 1, 0]);
-        K.quad('stone', e(-hl, 0.14, ky - 0.1), e(hl, 0.14, ky - 0.1), e(hl, 0.14, ky + 0.2), e(-hl, 0.14, ky + 0.2), [uz * sd, 0, -ux * sd]);
+        // (Sooted: pale, the kerbs down every street read as lines painted on a road.)
+        K.quad('soot:stone', e(-hl, -0.14, ky + 0.2), e(hl, -0.14, ky + 0.2), e(hl, 0.14, ky + 0.2), e(-hl, 0.14, ky + 0.2), [0, 1, 0]);
+        K.quad('soot:stone', e(-hl, 0.14, ky - 0.1), e(hl, 0.14, ky - 0.1), e(hl, 0.14, ky + 0.2), e(-hl, 0.14, ky + 0.2), [uz * sd, 0, -ux * sd]);
       }
     }
   }
@@ -1389,7 +1390,19 @@ export function phobosCastle(K) {
   // can come up), and pillars of fire in pairs up its top half: from where the King's Mile, slanting up onto it, has come
   // into its middle (src/core/lands.js ROUTES), so nothing stands in the road.
   for (let x = 10452; x < gx - 12; x += 8) K.paving('p2_bone_joint_flags', x + 4, 0, 4.05, 9.5, 0, 0.08);
-  for (let x = 10632; x < gx - 22; x += 48) for (const s of [-1, 1]) K.wall('dark:stone', x, s * 12.6, Math.min(x + 40, gx - 22), s * 12.6, 0.8, 1.15);
+  for (let x = 10632; x < APPROACH_WALL - 30; x += 48) for (const s of [-1, 1]) K.wall('dark:stone', x, s * 12.6, Math.min(x + 40, APPROACH_WALL - 30), s * 12.6, 0.8, 1.15);
+  // The causeway walled: a retaining wall each side from the ground below to the road, a parapet on it, buttresses down
+  // its face every twenty metres, a dark course at its foot. (Its ground falls sheer: src/core/east.js.)
+  for (let x = APPROACH_WALL - 30; x < gx - 14; x += 12) {
+    const xc = Math.min(x + 6, gx - 14), hx = Math.min(6, (gx - 14 - x) / 2), road = Y(xc, 0);
+    for (const s of [-1, 1]) {
+      const foot = Math.min(Y(xc, s * 22), road) - 1.5;
+      K.box('soot:p2_bridge_ashlar', xc, foot, s * 14.2, hx + 0.02, road - foot + 1.2, 0.8, 0);
+      K.box('p2_curtain_granite', xc, road + 1.2, s * 14.2, hx + 0.06, 0.22, 0.95, 0, { collide: false });
+      K.box('dark:block', xc, foot, s * 14.6, hx + 0.03, 1.6, 0.5, 0, { collide: false });
+      if (Math.round(x / 12) % 2 === 0 && road - foot > 4) K.box('soot:p2_bridge_ashlar', x, foot, s * 15.6, 1.3, road - foot - 0.6, 1.2, 0, { collide: false });
+    }
+  }
   for (let x = 10640; x < gx - 24; x += 24) for (const s of [-1, 1]) brazier(x, s * 10.8, 2.6);
 
   // ---- the Lower Ward (+120): the working castle

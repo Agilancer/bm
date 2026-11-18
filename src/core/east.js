@@ -37,6 +37,8 @@ export const HAUNTS = [
   { key: 'phobos_wharf', x: 9930, z: 545, r: 5, clear: 70 },
   { key: 'phobos_mages', x: 10398, z: -298, r: 5, clear: 70 },
 ];
+// Where the Castle Approach's walled causeway begins (east.js eastHeight; phobos-build.js phobosCastle).
+export const APPROACH_WALL = 10690;
 export const SLOUGH = [[9880, -780], [9860, -300], [9900, 100], [9930, 380], [9950, 794]];
 function sloughNear(x, z) {
   let best = 1e18;
@@ -229,7 +231,10 @@ export function eastHeight(x, z, h) {
     // The Castle Approach: a ramp built up from the city's top streets to the Lower Ward's gate, on the King's Mile's line.
     if (x > 10440 && x < 10830 && Math.abs(z) < 44) {
       const ramp = PLAIN + cityRise(10440) + (WARDS[0][1] - cityRise(10440)) * sstep(10440, 10790, x);
-      if (ramp > floor) floor += (ramp - floor) * (1 - sstep(13, 44, Math.abs(z)));
+      // (Its sides soft slopes where the High Loop comes up onto it; past that a causeway walled both sides, its ground
+      // falling sheer from the parapet's foot: src/core/phobos-build.js phobosCastle builds the walls.)
+      const sheer = sstep(APPROACH_WALL - 30, APPROACH_WALL, x), w0 = 13 + 0.6 * sheer, w1 = 44 - (44 - 15.6) * sheer;
+      if (ramp > floor) floor += (ramp - floor) * (1 - sstep(w0, w1, Math.abs(z)));
     }
     // (The basin's sides: a talus apron at their feet, then the cliff.)
     if (m > 0 && m < 30) floor += 21 * Math.pow(1 - m / 30, 1.5) * sstep(8990, 9080, x);

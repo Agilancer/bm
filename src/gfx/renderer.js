@@ -10,6 +10,7 @@ import { LISANDRA_FORMS, LISANDRA_SCALE, SKIRT_PALETTE_JOINTS } from '../core/li
 import { FOREST_REACH } from '../core/forest.js';
 import { WORLD_EAST, WORLD_EDGE } from '../core/lands.js';
 import { roadSegments } from '../core/roads.js';
+import { terrainHeight } from '../core/terrain.js';
 import { PORTAL_MODELS, buildSites, buildUnder, dropSiteGeometry } from '../core/sites.js';
 import { PhobosNear } from './phobos-near.js';
 import { DELVES, PORTAL_SPOTS, braziers, caveFloorY, caveRoofY, delveAt, inDungeon, torches } from '../core/dungeon.js';
@@ -1858,6 +1859,17 @@ export class Renderer {
   }
 
   // n motes of a portal's (a fraction's a chance of one), going round x, y, z (kind and pad: src/gfx/post.js ORBIT).
+  // Crows over Phobos while you're there: one let go over each roost every few seconds, each a minute on the wing (orbit
+  // kind 12, src/gfx/post.js), so a dozen or so circle each: over the Keep's crown, the castle's yard, the Bone Yards and
+  // Chainmarket's gibbet. [x, height over the ground there, z, how far out they go]. Not on a phone.
+  crows(cam) {
+    if (this.tier.lean || cam.x < 9000 || cam.x > 11800 || Math.abs(cam.z) > 1200) return;
+    const now = performance.now();
+    if (now - (this.crowT || 0) < 4500) return;
+    this.crowT = now;
+    for (const [x, up, z, r] of [[11220, 420, 0, 60], [10860, 70, 0, 50], [10000, 45, -600, 70], [9830, 40, -80, 45]]) this.orbit(12, 1, x, terrainHeight(x, z) + up, z, r, 50, 70, 0.45, 0.6);
+  }
+
   orbit(kind, n, x, y, z, pad, life0, life1, sz0, sz1) {
     const f = this.emitF, u = this.emitU, cap = f.length / 12;
     n = Math.floor(n + Math.random());
@@ -2510,6 +2522,8 @@ export class Renderer {
     this.followLand(cam);
     // (Phobos's houses near the eye, as they are from near: src/gfx/phobos-near.js.)
     (this.phobosNear ||= new PhobosNear(this)).update(cam);
+    this.phobosNear.smoke(this.frameDt || 1 / 60, cam);
+    this.crows(cam);
     this.slimeBodies?.update(snap, snap[H.TIME], cam);
     this.pines.update(cam, aspect, tan);
     this.rocks.update(cam, aspect, tan);

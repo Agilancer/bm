@@ -1482,7 +1482,8 @@ export function buildPhobosCell(cell) {
   phobosCell(K, cell);
   K.finish();
   // (groups: its doors' leaves, each its own, which the renderer folds away while one's open: src/gfx/phobos-near.js.)
-  return { parts: K.parts, lamps: K.lamps || [], groups: K.groups };
+  // (smokes: its chimneys that have a fire under them, [x, y, z]: smoke drawn up out of them, src/gfx/phobos-near.js.)
+  return { parts: K.parts, lamps: K.lamps || [], groups: K.groups, smokes: K.smokes || [] };
 }
 
 /** The parts let go, once they're in the renderer's buffer. Everything else stays. */
