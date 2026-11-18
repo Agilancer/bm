@@ -26,7 +26,7 @@ nearest chart's point), and everything is a function of that point:
 `sculpt` in a skin moves the face itself: each move a soft blob in the front view (brow ridge forward and down,
 cheekbones out, cheeks in, the nose broken to one side, the jaw longer and wider), on the head bone's own skin only.
 It writes assets/game/folk/<id>.glb, the base body with those points moved and their normals turned to match (and
-any triangle folded over on the head closed); the
+any triangle folded over on the head unfolded); the
 skeleton, weights and UVs are the base's, so the rig, the clips, the normal and occlusion maps and the town's thread
 (which poses by the base's glb) all still fit. The swap names it as `glb`, and src/gfx/folk.js draws it in place of the
 base's mesh.
@@ -204,6 +204,10 @@ def blob(x, y, c, r, power=2):
     return np.exp(-(((x - c[0]) / r[0]) ** 2 + ((y - c[1]) / r[1]) ** 2) ** (power / 2))
 
 
+def stub_zone(x, y, F):
+    return smooth(-y, -(F["nose_y"] + 0.004), -(F["nose_y"] - 0.008)) * smooth(np.abs(x - F["mid"]), 0.022, 0.032)
+
+
 def eye_gate(x, y, F, rx=0.0135, ry=0.0062):
     """1 everywhere but on the eyes themselves (the lids and the eyeball), where marks must not go."""
     return (1 - blob(x, y, F["eye_r"], (rx, ry), 4)) * (1 - blob(x, y, F["eye_l"], (rx, ry), 4))
@@ -214,7 +218,8 @@ def face_marks(pos, nrm, hd, F, k):
     fold the normal map is to be cut with, for the lines that are folds rather than shading)."""
     x, y, z = pos[..., 0], pos[..., 1], pos[..., 2]
     cx = F["mid"]
-    front = smooth(nrm[..., 2], 0.05, 0.45) * smooth(hd, 0.3, 0.7) * smooth(z, F["front_z"] - 0.02, F["front_z"])
+    # (Soft: a narrow gate on depth or facing follows the mesh's triangles, and its edge showed as a hard facet.)
+    front = smooth(nrm[..., 2], -0.25, 0.5) * smooth(hd, 0.3, 0.7) * smooth(z, F["front_z"] - 0.06, F["front_z"] + 0.005)
     dark = np.zeros(x.shape); light = np.zeros(x.shape); brows = np.zeros(x.shape); crease = np.zeros(x.shape)
     for ex, ey in (F["eye_r"], F["eye_l"]):
         out = 1 if ex > cx else -1                       # +1: this eye's outer side is +x
@@ -284,7 +289,9 @@ def face_marks(pos, nrm, hd, F, k):
         sw = F.get("scar_w", 0.003)
         core = line(x, y, piece, sw) * eg
         scar = np.maximum(scar, core)
-        rim = np.clip(line(x, y, piece, sw * 1.7) * eg - core, 0, 1)
+        # (The rim fades in over the first stretch of the stroke: where the core tapers to its start, a rim either side
+        # of it read as two strokes.)
+        rim = np.clip(line(x, y, piece, sw * 1.7) * eg - core, 0, 1) * smooth(poly_dist(x, y, piece)[1], 0.08, 0.3)
         dark += rim * k["scar_rim"]
         # Where it crosses the brow it is a gap in the hair, wider than the scar, and the scar itself faint there, so
         # brow and scar never make a cross.
@@ -324,9 +331,49 @@ def sculpt(src, dst, F, moves, tex):
             if "z" in mv:                                # only the surface near this depth (a nose, not the cheek behind it)
                 w = w * np.exp(-((z - mv["z"]) / mv.get("zr", 0.02)) ** 2)
             d += w[:, None] * np.array([o * mv["d"][0], mv["d"][1], mv["d"][2]])
-    Q = P + d
-    # Normals: each vertex's own, turned by however much its welded neighbourhood's area-weighted normal turned.
+    # Every copy of a point (the atlas splits a vertex at each UV seam, and the copies differ in normal and colour, so in
+    # the gate) takes the copies' mean move, or the seams would open.
     key = np.unique(np.round(P / 1e-5).astype(np.int64), axis=0, return_inverse=True)[1].ravel()
+    acc = np.zeros((key.max() + 1, 3)); cnt = np.zeros(key.max() + 1)
+    np.add.at(acc, key, d); np.add.at(cnt, key, 1)
+    d = acc[key] / cnt[key, None]
+    Q = P + d
+    # Flaps: a triangle on the head turned against the surface round it (Tripo leaves the odd one folded over, and as
+    # the game draws people two-sided it shows as a dark nick: Wes's "scar" on his right brow was one). Each is
+    # unfolded: its corners drawn toward the mean of their neighbours till it faces the way the surface does. (Not
+    # deleted: that opens a hole, tools/phobos/README.md.)
+    from scipy.spatial import cKDTree
+    nbr = [set() for _ in range(key.max() + 1)]
+    for t in I:
+        ka, kb, kc = key[t]
+        nbr[ka].update((kb, kc)); nbr[kb].update((ka, kc)); nbr[kc].update((ka, kb))
+    kpos = np.zeros((key.max() + 1, 3)); kpos[key] = Q
+
+    def facing(t):
+        fc = Q[I].mean(1)
+        fn = np.cross(Q[I[:, 1]] - Q[I[:, 0]], Q[I[:, 2]] - Q[I[:, 0]])
+        return fc, fn
+
+    fc, fn = facing(None)
+    idx = np.nonzero((hw[I].mean(1) > 0.5) & (fc[:, 1] > 1.5))[0]
+    tree = cKDTree(fc[idx])
+    flaps = []
+    for t in idx:
+        near = idx[tree.query_ball_point(fc[t], 0.012)]
+        avg = fn[near].sum(0)
+        if np.dot(fn[t], avg) < -0.3 * np.linalg.norm(fn[t]) * np.linalg.norm(avg):
+            flaps.append((t, avg / np.linalg.norm(avg)))
+    for t, avg in flaps:
+        ks = key[I[t]]
+        for _ in range(200):
+            for k in ks:
+                kpos[k] = kpos[k] * 0.5 + np.mean([kpos[j] for j in nbr[k]], 0) * 0.5
+            a, b_, c = kpos[ks]
+            n_ = np.cross(b_ - a, c - a)
+            if np.dot(n_, avg) > 0.95 * np.linalg.norm(n_):
+                break
+        Q = kpos[key]
+    # Normals: each vertex's own, turned by however much its welded neighbourhood's area-weighted normal turned.
 
     def welded(V):
         fn = np.cross(V[I[:, 1]] - V[I[:, 0]], V[I[:, 2]] - V[I[:, 0]])
@@ -341,31 +388,10 @@ def sculpt(src, dst, F, moves, tex):
     N2[moved] = Nn[moved] + (n1[moved] - n0[moved])
     # (Across the face's front, where the mesh is coarsest, the welded smooth normal itself: the base's per-corner
     # normals shade its few big triangles in hard planes, more so once moved.)
-    sm = (gate * smooth(y, 1.53, 1.56))[:, None]
+    gk = np.zeros(key.max() + 1); np.add.at(gk, key, gate)
+    sm = (gk[key] / cnt[key] * smooth(y, 1.53, 1.56))[:, None]
     N2 = N2 * (1 - sm) + n1 * sm
     N2 /= np.maximum(np.linalg.norm(N2, axis=1, keepdims=True), 1e-9)
-    # Flaps: a triangle on the face turned against the surface round it (Tripo leaves the odd one folded over, and as
-    # the game draws people two-sided it shows as a dark nick: Wes's "scar" on his right brow was one). Each is made
-    # degenerate, all three corners its first, so it draws nothing; the surface under it is whole.
-    fc = Q[I].mean(1)
-    fn = np.cross(Q[I[:, 1]] - Q[I[:, 0]], Q[I[:, 2]] - Q[I[:, 0]])
-    on = (hw[I].mean(1) > 0.5) & (fc[:, 1] > 1.5)
-    idx = np.nonzero(on)[0]
-    from scipy.spatial import cKDTree
-    tree = cKDTree(fc[idx])
-    flaps = []
-    for j, t in enumerate(idx):
-        near = idx[tree.query_ball_point(fc[t], 0.012)]
-        avg = fn[near].sum(0)
-        if np.dot(fn[t], avg) < -0.3 * np.linalg.norm(fn[t]) * np.linalg.norm(avg):
-            flaps.append(t)
-    I2 = I.copy()
-    I2[flaps] = I2[flaps, :1]
-    ia = J["accessors"][pr["indices"]]
-    ibv = J["bufferViews"][ia["bufferView"]]
-    ioff = b0 + ibv.get("byteOffset", 0) + ia.get("byteOffset", 0)
-    idt = {5125: "<u4", 5123: "<u2"}[ia["componentType"]]
-    b[ioff:ioff + I2.size * np.dtype(idt).itemsize] = I2.astype(idt).tobytes()
     for attr, arr in (("POSITION", Q), ("NORMAL", N2)):
         a = J["accessors"][pr["attributes"][attr]]
         bv = J["bufferViews"][a["bufferView"]]
@@ -379,7 +405,7 @@ def sculpt(src, dst, F, moves, tex):
     out = bytearray(b[:12]) + struct.pack("<II", len(js), 0x4E4F534A) + js + b[20 + jl:]
     struct.pack_into("<I", out, 8, len(out))
     open(dst, "wb").write(out)
-    print(f"  sculpt: {moved.sum()} vertices moved, at most {np.linalg.norm(d, axis=1).max() * 1000:.1f} mm; {len(flaps)} flaps closed")
+    print(f"  sculpt: {moved.sum()} vertices moved, at most {np.linalg.norm(d, axis=1).max() * 1000:.1f} mm; {len(flaps)} flaps unfolded")
 
 
 def normals(src, dst, pos, depth, heal, cov):
@@ -425,7 +451,10 @@ def kinds(a, pos, nrm, hd, H, F):
         grows = smooth(-y, -top - B.get("feather", 0.005), -top + B.get("feather", 0.005)) * smooth(y, B["bottom"], B["bottom"] + 0.004) \
             * smooth(-np.abs(x - F["mid"]), -B["half"] - 0.004, -B["half"]) * smooth(nrm[..., 2], -0.4, 0.0) * smooth(z, 0.02, 0.04) * smooth(hd, 0.15, 0.35)
         lips = blob(x, y, (F["mid"] + B["lips"][0], B["lips"][1]), B["lips"][2:], 4)
-        beard = grows * (1 - lips) * smooth(-v, -0.75, -0.6)
+        # (Skin-coloured texels are beard only well under the line, where grey hairs lie over skin; just under it, only
+        # what is hair-coloured: the cheek skin there painted as hair came out a rust-brown wedge.)
+        deep = smooth(-y, -(top - 0.008), -(top - 0.016))
+        beard = grows * (1 - lips) * smooth(-v, -0.75, -0.6) * (1 - skin * (1 - deep))
         hair = np.maximum(hair, beard)
         skin = skin * (1 - beard)
     linen = (1 - skin) * (1 - on_head) * smooth(v, 0.5, 0.62) * smooth(-s, -0.24, -0.14)
@@ -466,7 +495,7 @@ def make(sid, spec, look_dir=None):
     S = spec["skin"]
     sk = restyle(a, K["skin"], S["to"], S.get("keep", 1.0))
     out = out * (1 - K["skin"][..., None]) + sk * K["skin"][..., None]
-    face = smooth(nrm[..., 2], 0.05, 0.45) * smooth(hd, 0.3, 0.7) * smooth(z, F["front_z"] - 0.02, F["front_z"])
+    face = smooth(nrm[..., 2], -0.25, 0.5) * smooth(hd, 0.3, 0.7) * smooth(z, F["front_z"] - 0.06, F["front_z"] + 0.005)
     # The base's own marks healed: over each patch (any way the skin faces), whatever is darker than the skin's mean
     # there is lifted to it, so a scar's line goes and the skin's own lighter grain stays.
     heal = np.zeros(x.shape)
@@ -508,8 +537,14 @@ def make(sid, spec, look_dir=None):
     out = out * (1 - br[..., None] * k["brows"]) + np.array(k["brow_col"]) * (0.7 + 0.6 * fbm(pos, 0.0015, 81, 2))[..., None] * br[..., None] * k["brows"]
     out = out * (1 - dk[..., None] * (1 - np.array(k["shadow_col"])))
     out = out + (1 - out) * lt[..., None] * 0.3
+    # Where the beard thins into skin (and the stubble above it), the skin's warmth goes grey: half hair over sallow
+    # skin otherwise came out a rust-brown smear.
+    if F.get("beard"):
+        fringe = np.clip(K["hair"] * (1 - K["hair"]) * 4, 0, 1) * face + stub_zone(x, y, F) * face * K["skin"] * 0.6
+        g = out.mean(-1, keepdims=True)
+        out = out * (1 - fringe[..., None] * 0.6) + g * np.array([1.03, 1.0, 0.97]) * fringe[..., None] * 0.6
     # Stubble on the cheeks above the beard: fine dark grain, thinning upward.
-    stub = smooth(-y, -(F["nose_y"] + 0.004), -(F["nose_y"] - 0.008)) * smooth(np.abs(x - F["mid"]), 0.022, 0.032) * face * K["skin"]
+    stub = stub_zone(x, y, F) * face * K["skin"]
     grain = 0.35 + 0.65 * smooth(noise3(pos, 0.0007, 91), 0.45, 0.65)
     out = out * (1 - (stub * grain * k["stubble"])[..., None] * 0.55)
     # Broken veins on the nose and the cheekbones' tops: a faint mottled red.

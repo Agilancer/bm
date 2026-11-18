@@ -44,3 +44,24 @@ there. Wait about 7 s after a move for the land to be laid. `bm.firstSight(t)` p
 Traps: files here are a mix of LF and CRLF, so a patch script must match the file's own line ends; anything stood in
 `K.spots` must be standable (tests/sites-clear); nothing with a collider on a road; lairs need `lvl` or
 `tools/autoplay/check.mjs` fails; a new country needs `COUNTRY_FACTIONS` and `COUNTRY_TEARS`.
+
+## Grim skins: a different man in a townsperson's body
+
+`python tools/phobos/grim_skin.py [ids] [--look DIR]` makes Phobos people out of the townsfolk's Tripo bodies, by the
+recipes in `grim_skins.json` (the first: `ph_tallow`, Mordo Grisk the tallow-boiler, on Wes's body). Plain Python
+(NumPy, SciPy, Pillow); no Blender. Each texel of the base's colour map is given the point of the body it paints, so
+everything is placed on the body, not in the atlas: what each texel is (skin, hair and beard, linen, apron, trousers,
+boots, gloves), each kind's new value and colour, soot, tallow and mud in 3D noise, and the face's marks from the
+body's landmarks (`faces`). A recipe with `sculpt` also writes `<id>.glb`: the base body with the face's points moved
+(brow, cheekbones, cheeks, nose, jaw); one with `normals` its own `<id>_n.webp` with the folds cut in. The swap in
+`assets/game/folk/folk.json` names them (`glb`, `n`), and `src/gfx/folk.js` draws them in place of the base's. The
+town's thread still poses by the base's glb: the skeleton and weights are the same.
+
+- Landmarks: `tools/folk/viewer.html?flat&normals=0` draws a body unlit and unfiltered, so a probe texture whose
+  colours are its own texel coordinates tells you which texels lie under any pixel.
+- A face here is about 2.6-3.3 mm of skin a texel, and about 340 vertices: marks under ~6 mm smear, and a narrow gate
+  on depth or facing shows as a facet. Keep marks broad and gates soft.
+- Tripo leaves the odd triangle folded over on a head; drawn two-sided it's a dark nick (Wes's forehead "scar" is one,
+  and is still on Wes himself). The sculpt unfolds any on the head, and gives every copy of a split vertex the same
+  move, so no seam opens: the glb has as many open edges as its base.
+- Reviews: `art/phobos/review/ph_tallow_rounds.jpg` (the three critic rounds beside Wes) and `ph_tallow_final.jpg`.
