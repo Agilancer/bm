@@ -48,7 +48,7 @@ try { folkJson = await fetch(base + 'folk.json').then((r) => (r.ok ? r.json() : 
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
 renderer.setPixelRatio(Math.min(2, devicePixelRatio));
 renderer.setSize(innerWidth, innerHeight);
-renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.outputColorSpace = q.has('flat') ? THREE.LinearSRGBColorSpace : THREE.SRGBColorSpace;
 document.body.appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x3a3d42);
@@ -84,12 +84,13 @@ async function addBody(id, x) {
   g.setAttribute('normal', new THREE.BufferAttribute(N, 3));
   g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(uv), 2));
   g.setIndex(new THREE.BufferAttribute(new Uint32Array(idx), 1));
-  const mat = new THREE.MeshStandardMaterial({ color: 0xbbbbbb, roughness: 0.8, metalness: 0, side: THREE.DoubleSide })  // two-sided, as the game draws its people (cullMode none);
+  // (?flat: unlit and unfiltered, so a probe texture's texels can be read back off the screen.)
+  const mat = q.has('flat') ? new THREE.MeshBasicMaterial({ color: 0xbbbbbb, side: THREE.DoubleSide }) : new THREE.MeshStandardMaterial({ color: 0xbbbbbb, roughness: 0.8, metalness: 0, side: THREE.DoubleSide })  // two-sided, as the game draws its people (cullMode none);
   const c = folkJson?.swaps?.[id]?.c || model?.c;
-  if (c) tex.load(base + c, (t) => { t.colorSpace = THREE.SRGBColorSpace; t.flipY = false; mat.map = t; mat.color.set(0xffffff); mat.needsUpdate = true; });
+  if (c) tex.load(base + c, (t) => { t.colorSpace = q.has('flat') ? THREE.NoColorSpace : THREE.SRGBColorSpace; t.flipY = false; if (q.has('flat')) { t.magFilter = t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; } mat.map = t; mat.color.set(0xffffff); mat.needsUpdate = true; });
   // The normal map, read the glTF way (three's GLTFLoader flips its y on a mesh with no tangents, so here too).
   const n = folkJson?.swaps?.[id]?.n || model?.n;
-  if (n && q.get('normals') !== '0') tex.load(base + n, (t) => { t.flipY = false; mat.normalMap = t; mat.normalScale.set(1, -1); mat.needsUpdate = true; });
+  if (n && q.get('normals') !== '0' && !q.has('flat')) tex.load(base + n, (t) => { t.flipY = false; mat.normalMap = t; mat.normalScale.set(1, -1); mat.needsUpdate = true; });
   const mesh = new THREE.Mesh(g, mat);
   mesh.frustumCulled = false;
   scene.add(mesh);

@@ -1,5 +1,5 @@
 {
- "_": "Skins for tools/phobos/grim_skin.py. faces: each base body's landmarks seen from the front in its bind pose (metres; his left +x; mid the nose's line; eye_r/eye_l each eye's middle; brow_y the brows' height, brow_in/out how far they run from mid; nose_w/mouth_w the nose's wings and the mouth's corners from mid; front_z the face's front; forehead: lines as [height, from, to] about mid (none crosses the middle); heal: the base's own marks to paint out, [centre, radii]; normals.depth: how deep the folds are cut into the normal map, metres, beard: where it grows {top, bottom, half its width, lips [x from mid, y, rx, ry]} ; scar: strokes, each a list of points). skins: clothes and skin targets are [lightness, saturation, hue turns or null to keep each texel's own, keep]; lightness scales each kind about its mean, keep how much of its own contrast it holds. sculpt: moves of the face, each {at: [x from mid, y], r: radii, d: shift, both: mirrored, z/zr: only near that depth}.",
+ "_": "Skins for tools/phobos/grim_skin.py. faces: each base body's landmarks seen from the front in its bind pose (metres; his left +x; mid the nose's line; eye_r/eye_l each eye's middle; brow_y the brows' height, brow_in/out how far they run from mid; nose_w/mouth_w the nose's wings and the mouth's corners from mid; front_z the face's front; forehead: lines as [height, from, to] about mid (none crosses the middle); heal: the base's own marks to paint out, [centre, radii]; normals.depth: how deep the folds are cut into the normal map, metres, beard: where it grows {line: its top as [distance from mid, height] pairs, feather, bottom, half its width, lips [x from mid, y, rx, ry]}; nose_break: the side (+1 his left) the nose was knocked to ; scar: strokes, each a list of points). skins: clothes and skin targets are [lightness, saturation, hue turns or null to keep each texel's own, keep]; lightness scales each kind about its mean, keep how much of its own contrast it holds. sculpt: moves of the face, each {at: [x from mid, y], r: radii, d: shift, both: mirrored, z/zr: only near that depth}.",
  "faces": {
   "wes": {
    "mid": -0.008,
@@ -22,29 +22,24 @@
    "front_z": 0.06,
    "forehead": [
     [
-     1.7,
-     -0.034,
-     -0.011
+     1.704,
+     -0.036,
+     -0.013
     ],
     [
-     1.703,
-     0.008,
-     0.03
+     1.706,
+     0.01,
+     0.018
     ],
     [
-     1.71,
-     -0.027,
-     -0.009
+     1.712,
+     -0.028,
+     -0.012
     ],
     [
-     1.713,
-     0.011,
-     0.034
-    ],
-    [
-     1.72,
-     -0.02,
-     -0.01
+     1.721,
+     -0.022,
+     -0.012
     ]
    ],
    "heal": [
@@ -95,18 +90,53 @@
      ]
     ]
    ],
-   "scar_w": 0.0048,
+   "scar_w": 0.0046,
    "beard": {
-    "top": 1.613,
+    "line": [
+     [
+      0.0,
+      1.6195
+     ],
+     [
+      0.012,
+      1.6175
+     ],
+     [
+      0.022,
+      1.609
+     ],
+     [
+      0.032,
+      1.604
+     ],
+     [
+      0.045,
+      1.614
+     ],
+     [
+      0.058,
+      1.63
+     ],
+     [
+      0.07,
+      1.652
+     ],
+     [
+      0.09,
+      1.67
+     ]
+    ],
+    "feather": 0.005,
     "bottom": 1.52,
-    "half": 0.075,
+    "half": 0.085,
     "lips": [
      0.0,
      1.593,
-     0.021,
-     0.0045
+     0.02,
+     0.0042
     ]
-   }
+   },
+   "nose_break": 1
   }
  },
  "skins": {
@@ -141,10 +171,10 @@
      0.07
     ],
     "hair": [
-     0.085,
-     0.24,
+     0.15,
+     0.22,
      0.075,
-     1.5
+     1.6
     ]
    },
    "skin": {
@@ -181,10 +211,10 @@
     "grease": 0.35
    },
    "face": {
-    "bags": 0.85,
+    "bags": 0.65,
     "socket": 0.5,
     "brow": 0.45,
-    "cheek": 0.4,
+    "cheek": 0.5,
     "cheekbone": 0.25,
     "fold": 0.65,
     "mouth": 0.8,
@@ -198,7 +228,7 @@
      0.045
     ],
     "stubble": 0.5,
-    "veins": 0.35,
+    "veins": 0.15,
     "iris": 0.75,
     "iris_col": [
      0.5,
@@ -206,15 +236,18 @@
      0.5
     ],
     "shadow_col": [
-     0.4,
-     0.31,
-     0.36
+     0.42,
+     0.36,
+     0.37
     ],
     "scar_col": [
      1.42,
      1.14,
      1.08
-    ]
+    ],
+    "lids": 0.45,
+    "nose": 0.45,
+    "lips": 0.55
    },
    "sculpt": [
     {
@@ -290,7 +323,7 @@
       0.012
      ],
      "d": [
-      0.0028,
+      0.006,
       0.0,
       0.0012
      ],
@@ -307,7 +340,7 @@
       0.008
      ],
      "d": [
-      0.0012,
+      0.003,
       -0.0015,
       0.0025
      ],
@@ -364,6 +397,10 @@
    ],
    "normals": {
     "depth": 0.0009
+   },
+   "hair": {
+    "clumps": 0.35,
+    "grey": 0.5
    }
   }
  }
