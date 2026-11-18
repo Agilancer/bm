@@ -1,0 +1,19 @@
+{
+ "_": "Skins for tools/phobos/grim_skin.py. faces: each base body's landmarks seen from the front in its bind pose (metres; his left +x; mid the nose's line; eye_r/eye_l each eye's middle; brow_y the brows' height, brow_in/out how far they run from mid; nose_w/mouth_w the nose's wings and the mouth's corners from mid; front_z the face's front; scar: strokes, each a list of points). skins: clothes targets are [lightness, saturation, hue turns or null to keep each texel's own]; lightness scales each kind about its mean, so its own light and dark stay.",
+ "faces": {
+  "wes": {"mid": -0.008, "eye_r": [-0.040, 1.665], "eye_l": [0.028, 1.664], "brow_y": 1.683, "brow_in": 0.010, "brow_out": 0.050,
+          "cheek_y": 1.633, "nose_w": 0.016, "nose_y": 1.626, "mouth_w": 0.026, "mouth_y": 1.593, "forehead": [1.703, 1.714], "front_z": 0.06,
+          "scar": [[[0.019, 1.704], [0.025, 1.691], [0.030, 1.678]], [[0.036, 1.652], [0.041, 1.639], [0.046, 1.627]]], "scar_w": 0.0028}
+ },
+ "skins": {
+  "ph_tallow": {
+   "base": "wes",
+   "note": "a tallow-boiler of the Slough: linen gone dishwater grey, the apron black with fat and soot, a sallow face that's never seen the sun, a scar down through his left brow",
+   "clothes": {"linen": [0.34, 0.10, 0.09], "leather": [0.17, 0.20, null], "hair": [0.36, 0.05, 0.10], "keep": 1.0},
+   "skin": {"hue": 0.008, "sat": 0.72, "val": 0.86, "grey": 0.25, "grey_tint": [1.0, 0.98, 0.95]},
+   "grime": {"cell": 0.12, "thresh": 0.45, "soot": 0.35, "hems": 0.3, "on_skin": 0.15, "soot_col": [0.55, 0.52, 0.5], "mud": 0.5, "mud_col": [0.62, 0.55, 0.45]},
+   "face": {"bags": 0.45, "socket": 0.4, "brow": 0.35, "cheek": 0.3, "cheekbone": 0.25, "fold": 0.45, "mouth": 0.4, "frown": 0.5, "forehead": 0.3,
+            "shadow_col": [0.42, 0.33, 0.33], "scar_col": [1.35, 1.12, 1.08]}
+  }
+ }
+}
