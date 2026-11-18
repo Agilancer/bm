@@ -555,7 +555,7 @@ export class Renderer {
         : { p: [x, y + (lift ?? 1.9), z], c: L.fire, r: (lift > 4 ? 22 : 15) * g, i: (lift > 4 ? 6.5 : 5.2) * g, flicker: 0.9 * cold });
       // (Daylight down a shaft or through glass, src/core/delve-build.js daylight: cold and steady, from just under the roof, and
       // kept among the frame's lights before the torches round it: the Sunk Garden's, the Library's oculus, the Conservatory.)
-      for (const p of d.props) if (p.kind === 'daylight') { const x = d.x + p.x, z = d.z + p.z, fy = caveFloorY(x, z); warrens.push({ p: [x, Math.min(caveRoofY(x, z) - 2.2, fy + 6.5), z], c: [0.7, 0.78, 0.95], r: 20 + p.r * 2.5, i: 70 + p.r * 8, flicker: 0, prio: 14 }); }
+      for (const p of d.props) if (p.kind === 'daylight') { const x = d.x + p.x, z = d.z + p.z, fy = caveFloorY(x, z); warrens.push({ p: [x, Math.min(caveRoofY(x, z) - 2.2, fy + 6.5), z], c: [0.7, 0.78, 0.95], r: 20 + p.r * 2.5, i: 70 + p.r * 8, flicker: 0, prio: 80 }); }
       // (The Elder Gods' islands: the Galeward's pylons, the Cinderwell's vent, the altar, the Rimespire's claws. src/core/delve-build.js)
       if (d.style === 'void') for (const p of d.props) {
         const x = d.x + p.x, z = d.z + p.z, y = caveFloorY(x, z);

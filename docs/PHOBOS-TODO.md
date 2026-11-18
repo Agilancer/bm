@@ -606,6 +606,18 @@ world's north edge, east of them. Gone in alone (party: false), as the sewers ar
   table cloths read as a painted road line (a deep cloth with a border, candle clusters, the dais rim-lit); the Stacks'
   spines still a grille (runs of varied height and colour, gaps, leaning books); monsters' line telegraphs that meet at a
   right angle read as crosses (Inkshades' threads); the portal's cyan beside flame in the Court's shot.
+- [x] **Critics, round 3** (`art/phobos/east/middleward_r3.jpg`): **both REJECT, 6.5 each. Not passed.** No rule break
+  confirmed. Landed: the Gallery's royal blue and dark frames, the Map Room's blue rug and hangings, the still no longer
+  a bell. Their leftovers (the first two made after the round, unjudged: cloths the tables' full width in his dark
+  red, a pale round under the oculus and by the Conservatory's basin):
+  1. The Hall's table cloths read as a road's centre line; light the dais as the room's focus.
+  2. The oculus and the Conservatory's glass light nothing: a cool pool and a faint shaft under each.
+  3. The Court is a black void and its tree lost: moonlight, a rim on the tree, a readable sky.
+  4. Green livery too dark in the Alchemists' Wing; a sconce on each hanging; the still wants its coil and green glass seen.
+  5. The Library, the Stacks and the Alchemists' Wing are alike at a glance: one lit hero prop each.
+  6. Sitters still flat blocks: a shoulder silhouette, a dark ground, a vignette.
+  7. To check close: the Conservatory's glazing against the tree's limbs (spokes), a chequered hanging by the blue in
+     the Court, the Map Room's rug under the table from above.
 - [ ] **Not done in the Middle Ward**: the Clock Tower and the Menagerie wings themselves (chunk 9, with their keys);
   the Librarian's deception magic; the horns sounded to change the patrols; Wynn's two other painted doors; a word when
   you walk up to a shut keyed door; the Great Hall as a rest point once the Feast is dead (it respawns with the ward).

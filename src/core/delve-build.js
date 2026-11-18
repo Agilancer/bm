@@ -709,8 +709,10 @@ export const PROPS = {
     for (let k = 0; k < Math.floor(a / 2); k++) { const o = (k - (Math.floor(a / 2) - 1) / 2) * 2; K.drum(k % 2 ? 'iron' : 'cloth_oat', x + (long ? 0.15 : o), y + up, z + (long ? o : 0.15), 0.16, 0.06 + (k % 2) * 0.16, 6, NO); }
     // (cloth: a long cloth down it, pale, hanging over its ends; and plates laid down both sides of it.)
     if (p.cloth) {
-      K.box(p.cloth, x, y + up - 0.005, z, long ? 0.45 : a - 0.1, 0.012, long ? a - 0.1 : 0.45, 0, NO);
-      for (const e of [-1, 1]) K.box(p.cloth, x + (long ? 0 : e * (a - 0.1)), y + up - 0.3, z + (long ? e * (a - 0.1) : 0), long ? 0.45 : 0.01, 0.3, long ? 0.01 : 0.45, 0, NO);
+      // (The whole board's width and over its sides, a hand down all round: a strip down its middle read as a line painted on a road.)
+      K.box(p.cloth, x, y + up - 0.005, z, long ? 0.66 : a - 0.1, 0.012, long ? a - 0.1 : 0.66, 0, NO);
+      for (const e of [-1, 1]) { K.box(p.cloth, x + (long ? 0 : e * (a - 0.1)), y + up - 0.3, z + (long ? e * (a - 0.1) : 0), long ? 0.66 : 0.01, 0.3, long ? 0.01 : 0.66, 0, NO);
+        K.box(p.cloth, x + (long ? e * 0.66 : 0), y + up - 0.22, z + (long ? 0 : e * 0.66), long ? 0.01 : a - 0.1, 0.22, long ? a - 0.1 : 0.01, 0, NO); }
       for (let o = -a + 1; o <= a - 1; o += 1.4) for (const sd of [-1, 1]) K.drum('pale:stone', x + (long ? sd * 0.38 : o), y + up + 0.01, z + (long ? o : sd * 0.38), 0.15, 0.02, 8, NO);
     }
   },
@@ -908,21 +910,21 @@ export const PROPS = {
     K.drum('iron', e[0], e[1] + 0.3 * s, e[2], 0.64 * s, 0.08, 10, { open: true, collide: false });
   },
   // An alchemist's still: a pot of iron on three legs over its coals, its head, an arm out to a flask of glass.
-  // (A furnace of brick with its fire showing in its mouth, a round-bellied pot of dark copper on it, a swan neck down to a
-  // flask of green glass on a stool: nothing of it shaped like a bell.)
+  // (A low furnace of brick, its fire in its mouth; on it a squat pot of dark copper, wider than it's tall, a flat lid; a
+  // long neck out level from its shoulder to a coil standing in a tub, and a flask of green glass under the coil's end.
+  // Nothing of it shaped like a bell: no dome, no flare.)
   alembic(K, d, p, x, y, z) {
     const yaw = p.yaw || 0, fx = Math.sin(yaw), fz = Math.cos(yaw);
-    K.box('dark:block', x, y, z, 0.62, 0.9, 0.62, yaw, NO);
-    K.box('obsidian', x + fx * 0.63, y + 0.15, z + fz * 0.63, 0.26, 0.4, 0.02, yaw, NO);
-    fire(K, d, x + fx * 0.5, y + 0.12, z + fz * 0.5, 0.18, 0.35, { hue: 'flame', glow: 0.9 });
-    K.drum('umber:iron', x, y + 0.9, z, 0.32, 0.22, 10, { r2: 0.5, open: true, collide: false });
-    K.drum('umber:iron', x, y + 1.12, z, 0.5, 0.4, 10, { r2: 0.36, open: true, collide: false });
-    K.drum('umber:iron', x, y + 1.52, z, 0.36, 0.2, 10, { r2: 0.12, collide: false });
-    K.drum('umber:iron', x, y + 1.72, z, 0.1, 0.3, 6, { r2: 0.08, collide: false });
-    const top = [x, y + 2.0, z], mid = [x + fx * 0.6, y + 2.15, z + fz * 0.6], end = [x + fx * 1.35, y + 1.05, z + fz * 1.35];
-    bar(K, 'umber:iron', top, mid, 0.04, 0.035); bar(K, 'umber:iron', mid, end, 0.035, 0.03);
-    K.box('wood', x + fx * 1.45, y, z + fz * 1.45, 0.28, 0.6, 0.28, yaw, NO);
-    K.drum('forest:stone', x + fx * 1.45, y + 0.6, z + fz * 1.45, 0.24, 0.32, 8, { r2: 0.07, collide: false });
+    K.box('dark:block', x, y, z, 0.75, 0.6, 0.75, yaw, NO);
+    K.box('obsidian', x + fx * 0.76, y + 0.1, z + fz * 0.76, 0.3, 0.32, 0.02, yaw, NO);
+    fire(K, d, x + fx * 0.62, y + 0.1, z + fz * 0.62, 0.2, 0.3, { hue: 'flame', glow: 0.9 });
+    K.drum('umber:iron', x, y + 0.6, z, 0.62, 0.5, 12, { r2: 0.62, collide: false });
+    K.drum('umber:iron', x, y + 1.1, z, 0.66, 0.06, 12, { collide: false });
+    const a = [x + fx * 0.6, y + 1.0, z + fz * 0.6], b = [x + fx * 1.9, y + 1.0, z + fz * 1.9];
+    bar(K, 'umber:iron', a, b, 0.045, 0.04);
+    K.drum('wood', b[0] + fx * 0.3, y, b[2] + fz * 0.3, 0.42, 0.75, 8, NO);
+    for (let k = 0; k < 4; k++) K.drum('umber:iron', b[0] + fx * 0.3, y + 0.8 + k * 0.1, b[2] + fz * 0.3, 0.26, 0.05, 8, { open: true, collide: false });
+    K.drum('forest:stone', b[0] + fx * 0.95, y, b[2] + fz * 0.95, 0.16, 0.34, 8, { r2: 0.07, collide: false });
   },
   // A shelf of the alchemists' jars against a wall, facing yaw out from it: boards on brackets, jars of green glass on them.
   jarshelf(K, d, p, x, y, z) {
@@ -1471,15 +1473,20 @@ export const PROPS = {
   // the cloth of their livery (no letters, no plaque); then its frame dark iron, and sz so much bigger.)
   portrait(K, d, p, x, y, z) {
     const c = Math.cos(p.yaw), s = Math.sin(p.yaw), k = p.sz || 1, q = (u, h, o) => [x + u * k * c + o * s, y + (h - 1.5) * k + 1.5 + (p.up || 0), z - u * k * s + o * c];
-    K.quad(p.sitter ? 'iron' : 'wood', q(-0.8, 1.5, 0.03), q(0.8, 1.5, 0.03), q(0.8, 3.7, 0.03), q(-0.8, 3.7, 0.03), [s, 0, c]);
+    K.quad(p.sitter ? 'dark:wood' : 'wood', q(-0.8, 1.5, 0.03), q(0.8, 1.5, 0.03), q(0.8, 3.7, 0.03), q(-0.8, 3.7, 0.03), [s, 0, c]);
     K.quad('dark:cloth_oat', q(-0.62, 1.68, 0.06), q(0.62, 1.68, 0.06), q(0.62, 3.52, 0.06), q(-0.62, 3.52, 0.06), [s, 0, c]);
     if (!p.sitter) return;
-    // The sitter: shoulders in their cloth, a neck, a face, the hair over it; and a hand at the breast.
-    K.quad(p.sitter, q(-0.5, 1.68, 0.075), q(0.5, 1.68, 0.075), q(0.36, 2.55, 0.075), q(-0.36, 2.55, 0.075), [s, 0, c]);
-    K.quad('pale:cloth_oat', q(-0.07, 2.5, 0.08), q(0.07, 2.5, 0.08), q(0.07, 2.66, 0.08), q(-0.07, 2.66, 0.08), [s, 0, c]);
-    K.quad('pale:cloth_oat', q(-0.15, 2.62, 0.085), q(0.15, 2.62, 0.085), q(0.13, 3.02, 0.085), q(-0.13, 3.02, 0.085), [s, 0, c]);
-    K.quad('dark:wood', q(-0.17, 2.9, 0.09), q(0.17, 2.9, 0.09), q(0.12, 3.14, 0.09), q(-0.12, 3.14, 0.09), [s, 0, c]);
-    K.quad('pale:cloth_oat', q(0.05, 2.0, 0.08), q(0.2, 2.0, 0.08), q(0.2, 2.12, 0.08), q(0.05, 2.12, 0.08), [s, 0, c]);
+    // The sitter, head and shoulders: sloped shoulders in their cloth, a collar, a neck, a face narrowed to the chin, hair
+    // over the brow and down one side; turned a little one way or the other (turn).
+    const t = p.turn || 0, Q = (u, h, o) => q(u + t * (h - 1.7) * 0.06, h, o);
+    K.quad(p.sitter, Q(-0.52, 1.68, 0.075), Q(0.52, 1.68, 0.075), Q(0.4, 2.3, 0.075), Q(-0.4, 2.3, 0.075), [s, 0, c]);
+    K.quad(p.sitter, Q(-0.4, 2.3, 0.075), Q(0.4, 2.3, 0.075), Q(0.12, 2.58, 0.075), Q(-0.12, 2.58, 0.075), [s, 0, c]);
+    K.quad('dark:cloth_oat', Q(-0.16, 2.44, 0.08), Q(0.16, 2.44, 0.08), Q(0.1, 2.6, 0.08), Q(-0.1, 2.6, 0.08), [s, 0, c]);
+    K.quad('pale:cloth_oat', Q(-0.06, 2.56, 0.082), Q(0.06, 2.56, 0.082), Q(0.07, 2.7, 0.082), Q(-0.07, 2.7, 0.082), [s, 0, c]);
+    K.quad('pale:cloth_oat', Q(-0.08, 2.66, 0.085), Q(0.08, 2.66, 0.085), Q(0.15, 2.82, 0.085), Q(-0.15, 2.82, 0.085), [s, 0, c]);
+    K.quad('pale:cloth_oat', Q(-0.15, 2.82, 0.085), Q(0.15, 2.82, 0.085), Q(0.13, 3.04, 0.085), Q(-0.13, 3.04, 0.085), [s, 0, c]);
+    K.quad('dark:wood', Q(-0.17, 2.94, 0.09), Q(0.17, 2.94, 0.09), Q(0.11, 3.14, 0.09), Q(-0.11, 3.14, 0.09), [s, 0, c]);
+    K.quad('dark:wood', Q(t >= 0 ? 0.11 : -0.2, 2.6, 0.088), Q(t >= 0 ? 0.2 : -0.11, 2.6, 0.088), Q(t >= 0 ? 0.18 : -0.12, 3.0, 0.088), Q(t >= 0 ? 0.12 : -0.18, 3.0, 0.088), [s, 0, c]);
   },
   // A rail of coats: two posts, a bar, what hangs from it.
   coatrail(K, d, p, x, y, z) {
