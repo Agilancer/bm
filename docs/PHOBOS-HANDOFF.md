@@ -29,6 +29,16 @@ Written 2026-11-17.
 PRs 209, 214 and 216 are stacked. 214 is built on 209, and 216 on 214. They were merged in that order on 2026-11-17, at the
 owner's word.
 
+**Done on branch `claude/sharp-cori-de0kwb` (2026-11-17/18), after the Middle Ward:** the city's water lies level
+(reaches and weirs), house stairs widened, the camera kept under Phobos's roofs, every drum and cone lit from the right
+side (a winding bug in `Kit.drum`), the castle's gate yard paved and furnished with his mark at its end (`castleNear`),
+the Slough dressed from near with two footbridges. Critics: the Middle Ward 6.5/6.5 (not passed), the castle's exterior
+7/6 (split), the Slough 6.5/7 (split). Their leftovers are in PHOBOS-TODO.md.
+
+- Pictures of the city and castle on the land: `node tools/phobos/city_shots.mjs [names]` (WAIT=30000, HOUR=15 or 16
+  for light on the west faces; two shots a run, and never alongside the test suite: this container restarts when both
+  run at once).
+
 **Next**, in the plan's order:
 
 1. The castle's High Ward, as a delve next to the Middle Ward (`within`, like it). Both its ways in are keyed by chunk 9's

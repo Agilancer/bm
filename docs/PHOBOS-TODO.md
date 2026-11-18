@@ -513,7 +513,18 @@ It really needs work."
 - [ ] **The clipping plane**: the near plane is 0.08 m and the far is infinite (src/core/math.js); nothing wrong found
   there. If the owner means something else (things cut off at a distance, near cells popping at 150 m, the camera in
   walls somewhere), it wants a word from him or a picture.
-- [ ] **Detail**: not begun. Seen in pictures: far houses are plain boxes beside the near ones; the basin's cliffs are
+- [x] **The Slough from near** (`sloughNear` in src/core/phobos-build.js, streamed cells): quay walls on both banks with
+  a pale coping and a slime line, a flagged towpath, mooring posts, stepped landings with laden barges (gunwales, a
+  tiller, a green lantern), outfalls, casks and crates, scum on the water; weirs with a dressed crest, wing walls and a
+  falling sheet; and **two plank footbridges** on stone piers where no street crosses (far build, walked).
+  Critics: round 1 REJECT 5 and 4 (`art/phobos/east/city_r1.jpg`); round 2 REJECT 6 and 6 (`city_r2.jpg`); **round 3
+  veteran REJECT 6.5, young APPROVE 7** (`city_r3.jpg`), no rule break. Not passed by both. Leftovers: the weir still
+  doesn't read from downstream (a white-water face, a churn apron, a visible lip); scum darker, ragged, against the
+  walls and hulls (darkened after the round, unjudged); the gravel berm between street and canal (setts or a stepped
+  revetment); the quay wall one dark tile (buttresses, drain mouths, ladders); the footbridges want a paler deck and a
+  lamp at each end; the east bank's blank shells (lit windows, a hoist, a warehouse door); nobody on the water; the
+  water a flat mirror (a moving normal map, darker under bridges and along walls: a shader job).
+- [ ] **Detail elsewhere**: not begun. Seen in pictures: far houses are plain boxes beside the near ones; the basin's cliffs are
   streaked; bare ground between houses and the Slough's banks (a quay wall, mooring posts, steps down); weirs want a
   sluice or a footbridge; the dry moat round the crag wants a bed of stones or stakes.
 - [x] **Every drum and cone lit from the right side** (src/core/sites.js Kit.drum): its sides were wound against their

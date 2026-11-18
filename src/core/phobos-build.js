@@ -1078,7 +1078,7 @@ function sloughNear(K, cell) {
       }
     }
     // (Scum on the water, here and there: a pale green skin, lying flat.)
-    if (hash2(i * 3, 77) > 0.55) { const o = (hash2(i, 5) - 0.5) * 12, sx = mx - uz * o, sz = mz + ux * o; K.disc('mire:stone', sx, r.lv + 0.03, sz, 1.6 + hash2(i, 9) * 1.6, 9); K.disc('mire:stone', sx + ux * 2.4, r.lv + 0.03, sz + uz * 2.4, 1.1, 7); }
+    if (hash2(i * 3, 77) > 0.55) { const o = (hash2(i, 5) - 0.5) * 12, sx = mx - uz * o, sz = mz + ux * o; K.disc('mire:ph_basalt', sx, r.lv + 0.03, sz, 1.6 + hash2(i, 9) * 1.6, 9); K.disc('mire:ph_basalt', sx + ux * 2.4, r.lv + 0.03, sz + uz * 2.4, 1.1, 7); }
     // The weir, where this stretch's water steps to the next's: a crest of dressed stone, a wing wall at each bank, the
     // water over it in a pale sheet, foam on the low side.
     if (step) {
