@@ -1143,7 +1143,8 @@ function yardThings() {
   // The way, flagged; and the yard either side of it in the wards' paving, in eight-metre slabs.
   for (let x = YARD.x0; x < YARD.x1; x += 8) for (let z = -YARD.hz; z < YARD.hz; z += 8) add('slab', x + 4, z + 4, { way: Math.abs(z + 4) < 9 });
   for (const [x, z, big] of YARD_FIRES) add('fire', x, z, { big });
-  for (const x of [10821, 10843, 10866]) for (const s of [-1, 1]) add('pole', x, s * 17, { face: s });
+  // (Against the yard's cross-wall, not out in the open: nothing upright stands in the yard's sightlines.)
+  for (const z of [26, 42, 56]) for (const s of [-1, 1]) add('pole', 10850.4, s * z, { face: s });
   // (The yard's two halves: a drill ground north of the way, the carters' and the smiths' south of it.)
   for (const [x, z] of [[10826, 36], [10832, 42], [10838, 36], [10832, 30]]) add('dummy', x, z);
   for (const [x, z, yaw] of [[10822, 52, Math.PI], [10830, 52, Math.PI], [10838, 52, Math.PI], [10866, -52, 0], [10874, -52, 0]]) add('rack', x, z, { yaw });
@@ -1164,7 +1165,7 @@ let YARD_THINGS = null;
 function castleNear(K, cell) {
   for (const t of (YARD_THINGS ||= yardThings())) if (t.cell === cell) {
     const { x, z } = t, y = Y(x, z), NC = { collide: false };
-    if (t.kind === 'slab') K.paving(t.way ? 'dark:p2_bone_joint_flags' : 'p2_ward_paving', x, z, 4.02, 4.02, 0, t.way ? 0.07 : 0.04);
+    if (t.kind === 'slab') K.paving(t.way ? 'soot:p2_bone_joint_flags' : 'p2_ward_paving', x, z, 4.02, 4.02, 0, t.way ? 0.07 : 0.04);
     else if (t.kind === 'dummy') {
       // (A drill post: a stake, a straw body bound on it, a helm on its head. No arms out.)
       K.box('dark:wood', x, y, z, 0.09, 2.1, 0.09, 0, NC); K.drum('p2_straw_ground', x, y + 0.8, z, 0.34, 0.9, 7, { r2: 0.28, collide: false }); K.drum('char:stone', x, y + 1.75, z, 0.2, 0.3, 7, { r2: 0.12, collide: false });

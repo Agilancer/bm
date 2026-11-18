@@ -529,7 +529,18 @@ It really needs work."
     stores, carts; a door, steps and fires to each Lower Ward hall; a low wall and two guard posts across the yard; the
     castle's door lit; murder holes and chains in the gate's vault, no beam across its bars; the rim's bridges humped
     and at two heights; towers in the walls' stone.
-  - Critics round 1 (`art/phobos/east/castle_r1.jpg`): both REJECT 4. Round 2 sheet: `castle_r2.jpg`.
+  - Critics: round 1 both REJECT 4 (`castle_r1.jpg`); round 2 both REJECT 6 (`castle_r2.jpg`); **round 3: veteran
+    APPROVE 7, young REJECT 6** (`castle_r3.jpg`), no rule break. Not passed by both. Added for rounds 2 and 3: a neck of
+    two crenellated walls out of the gate, a crenellated wall and two guard posts across the yard, fewer bowls, a drill
+    ground, porches on the hall doors, the curtain's plinth, string course and loops from near, the ring in black glass.
+    After round 3, unjudged: the pennants moved against the cross-wall, the way a step lighter.
+  - Leftovers: (1) white stair-stepped slabs either side of the Approach in every picture (the ground there, or its
+    parapets: find which); (2) the gate passage still has no moment: teeth overhead, chains seen against the lit mouth,
+    a glow from above; (3) each half of the yard wants one hero thing three metres and more with its own warm light (a
+    drill frame with straw targets, a loaded wagon under a canopy); fewer, bigger clusters of stores against the walls;
+    (4) porches with a bigger warm pool and steps, to pull from across the yard; (5) the outer curtain half a stop off
+    the towers; (6) to check close: the arrow loops are plain slits; the Keep's pale window grid away from warm light.
+  - Not begun: the Middle Ward's and the High Ward's ground on the land, the ramp, anything past the yard's cross-wall.
 - Pictures: `node tools/phobos/city_shots.mjs [names]` (give it WAIT=30000: on a software GPU the ground comes late and
   shows white till it does).
 
