@@ -92,6 +92,15 @@ export const POSTED = [
   posted({ id: 'martleboro', sewer: 'westdrains', name: 'Martleboro', title: 'Keeper of the Drains', body: 'martleboro', sex: 'm', age: 44, post: [9291.6, -5843, -73], face: -1.571, idles: ['fold_arms', 'look_around', 'idle'] }),
   posted({ id: 'louis_g', sewer: 'westdrains', name: 'Louis G', title: 'Keeper of the Far Drains', body: 'louis_g', sex: 'm', age: 41, post: [9286.5, -5849, -73], face: -0.983, idles: ['look_around', 'scratch', 'idle'] }),
   posted({ id: 'apricot', sewer: 'highconduits', name: 'Princess Apricot', title: 'of the Sunk Garden', body: 'apricot', sex: 'f', age: 26, post: [10406, -6044.5, -63], face: 0, idles: ['idle', 'look_around', 'fold_arms'] }),
+  // Castle Velscour's Middle Ward (src/core/delve-castle.js): the Librarian and his household in his rooms off the Ancient
+  // Library. All five loyal to Tessariel, and nothing of it shows: they wear what his castle's own people wear (the V and T
+  // rule). Seen only from down there, like the keepers; their bodies loaded only once you're on your way to Phobos (late,
+  // as the crowd's: src/gfx/folk.js). Their words: src/folk/lines/phobos-castle.js.
+  posted({ id: 'ph_librarian', delve: 'middleward', late: true, name: 'Master Aldric Pell', title: 'Librarian of the Castle', body: 'ph_librarian', sex: 'm', age: 71, post: [11223.4, -5858.8, -60], face: -2.36, speed: 0.75, idles: ['idle', 'look_around', 'fold_arms'] }),
+  posted({ id: 'ph_wynn', delve: 'middleward', late: true, name: 'Wynn Pell', title: "the Librarian's ward, map-maker", body: 'ph_wynn', sex: 'f', age: 19, post: [11226, -5861, -60], face: -2.0, idles: ['look_around', 'idle', 'fold_arms'] }),
+  posted({ id: 'ph_ondine', delve: 'middleward', late: true, name: 'Ondine', title: 'once a sister of his Sanctuaries', body: 'ph_ondine', sex: 'f', age: 58, post: [11229.5, -5858, -60], face: -2.4, idles: ['fold_arms', 'idle', 'wait'] }),
+  posted({ id: 'ph_jory', delve: 'middleward', late: true, name: 'Jory Tallis', title: 'once quartermaster of the Armoury', body: 'ph_jory', sex: 'm', age: 66, post: [11218.5, -5863.6, -60], face: 1.29, speed: 0.8, idles: ['fold_arms', 'scratch', 'idle'] }),
+  posted({ id: 'ph_pip', delve: 'middleward', late: true, name: 'Pip Carrow', title: 'horn-blower of the Galleries', body: 'ph_pip', sex: 'm', age: 12, post: [11227.5, -5865.5, -60], face: -0.79, idles: ['look_around', 'idle', 'wait'] }),
   posted({ id: 'ph_ash', hub: 'ash', name: 'Edda Grail', title: 'Warden of the Ashwardens', body: 'ph_ash', sex: 'f', age: 52, post: [10059.7, -551.4], face: -3.11, idles: ['fold_arms_ual', 'idle_ual', 'look_around'] }),
 ];
 // City State Phobos's street crowd: ruffians, riff-raff and adventurer folk, on the town's own thread with no house, bed or

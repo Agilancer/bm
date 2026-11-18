@@ -6,6 +6,7 @@
 //   Edda Grail, Warden of the Ashwardens: demon hunters in a charnel yard at the Bone Yards' north end.
 // (And the people down the sewers, and their quests: src/folk/lines/phobos-sewers.js, taken in at the end.)
 import { LINES as SEWER_LINES, QUESTS as SEWER_QUESTS } from './phobos-sewers.js';
+import { LINES as CASTLE_LINES, QUESTS as CASTLE_QUESTS } from './phobos-castle.js';
 
 export const LINES = {
   ph_penny: {
@@ -569,5 +570,5 @@ export const QUESTS = {
   },
 };
 
-Object.assign(LINES, SEWER_LINES);
-Object.assign(QUESTS, SEWER_QUESTS);
+Object.assign(LINES, SEWER_LINES, CASTLE_LINES);
+Object.assign(QUESTS, SEWER_QUESTS, CASTLE_QUESTS);

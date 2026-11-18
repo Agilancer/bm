@@ -58,10 +58,14 @@ export const doorOf = (h) => (/dressed|rich_brick|basalt|granite|block|course/.t
 // A house's upstairs, if it has one: two storeys or more, and room inside for a stair up its left wall (local x -) from by
 // the door to the back, with floor beside it and beyond it. (Its floors, with the ground floor's: houseWalls.) { ix, iz, fy, uy, uc, sw, steps: [[lx, lz, y]], hole: [z0, z1],
 // rects } (rects: the floor and the treads, as K.deck takes them). RISE a step, TREAD its depth, SW the stair's width.
-const RISE = 0.3, TREAD = 0.27, SW = 0.95, STOREY = 3.3;
+// (Room to walk up it, the owner, 2026-11-17: the stair a good stride wide, a landing of a metre and more at its head
+// before the back wall, and its treads as deep as the house's depth lets them be, up to a comfortable 0.36. A house too
+// shallow for that has no upstairs.)
+const RISE = 0.3, SW = 1.25, STOREY = 3.3, LANDING = 1.1;
+const treadOf = (iz) => Math.min(0.36, (2 * iz - 0.45 - LANDING) / Math.round(STOREY / RISE));
 export function upstairs(h, F) {
-  const ix = h.hx - WALL, iz = h.hz - WALL;
-  if (!h.roof || h.h < 6 || ix < 2.2 || iz < 1.95) return null;
+  const ix = h.hx - WALL, iz = h.hz - WALL, TREAD = treadOf(iz);
+  if (!h.roof || h.h < 6 || ix < 2.4 || TREAD < 0.24) return null;
   const { hi, c, s } = F, f = h.front, fy = hi + 0.1, uy = fy + STOREY, uc = Math.min(hi + h.h - 0.3, uy + 2.9), n = Math.round(STOREY / RISE);
   const W = (lx, lz) => [h.x + lx * c + lz * s, h.z - lx * s + lz * c], yaw = h.yaw, sx = -ix + SW / 2, z0 = iz - 0.45, z1 = z0 - n * TREAD;
   const steps = [], rects = [];
@@ -75,7 +79,7 @@ export function upstairs(h, F) {
   rects.push([...W(sx, f * (z1 - iz) / 2), SW / 2, (z1 + iz) / 2, yaw, uy]);
   rects.push([...W(sx, f * (z0 + iz) / 2), SW / 2, (iz - z0) / 2, yaw, uy]);
   // (The rects' half-sizes are along the house's local x and z, the way world.js reads a rect turned by yaw.)
-  return { ix, iz, fy, uy, uc, steps, hole: [z1, z0], rects };
+  return { ix, iz, fy, uy, uc, steps, hole: [z1, z0], rects, tread: TREAD };
 }
 // Every house's door opens and shuts (the owner, 2026-11-16: "make sure all the doors on all the houses open and close"):
 // shut till you open it, E (src/items/phobos-doors.js). A door as the city's doors take it: { id, x, z, yaw (the house's,
@@ -293,7 +297,7 @@ function houseNear(K, h) {
 // newels; a railing round the hole; and a bedroom: a bed with a headboard, a chest at its foot, a stool, a rug, a pallet
 // in the bigger ones, a candle in most.
 function upstairsNear(K, h, up, P, r) {
-  const { ix, iz, fy, uy, uc, steps, hole: [z1, z0] } = up, f = h.front, xs = -ix + SW, n = steps.length;
+  const { ix, iz, fy, uy, uc, steps, hole: [z1, z0], tread: TREAD } = up, f = h.front, xs = -ix + SW, n = steps.length;
   const at = (lx, lz) => { const q = P(lx, 0, lz); return [q[0], q[2]]; };
   const bx = (layer, lx, y0, lz, hx, hh, hz, yaw = h.yaw) => { const [x, z] = at(lx, lz); K.box(layer, x, y0, z, hx, hh, hz, yaw, { collide: false }); };
   // (Each piece of floor a rect in the house's x and z: the board top at uy, the ceiling under it a hand lower.)
@@ -700,32 +704,121 @@ const GATE_FACE = [];
 // Water in the moat and the Slough (src/core/east.js cuts both): a sheet over each, three metres and more over the ditch's
 // floor at its middle, so it meets the banks wherever they are; left out at the gates' causeways and the Slough's bridges.
 const moatAt = (th, k) => { let m = 0; for (let j = 0; j < 12; j++) m = Math.max(m, Math.cos(th - j * Math.PI / 6)); const r = k / m; return [CITY.x + CITY.a * r * Math.cos(th), CITY.z + CITY.b * r * Math.sin(th)]; };
-// The moat's sheet's height over (x, z), r metres round it allowed for; -Infinity if it's nowhere near. (The barbican's
-// towers stand on its bank and its sheet ran through their ground floor: src/core/phobos-towers.js plan.)
+// Water lies level. The moat's ditch climbs with the ground round the city, from the plain by the Drawbridge Gate up toward
+// the castle's crag, and the Slough's bed runs over a rise in the city's middle: so each is a string of level reaches, a
+// weir of dark stone across the ditch wherever the bed has climbed out of the reach below, the water falling over it; and
+// where there's no ditch to hold any (the bed no lower than a bank: the crag's side of the ring) it's dry. (It was one
+// sheet following the ground: water lying up a hillside. The owner, 2026-11-17: "fixing the water".)
+// A run of beds [{ bed, bank }] walked from its lowest: each one's level (the reach it's in), or null where it's dry.
+const DEPTH = 2.4, SHALLOW = 0.7;
+function reaches(run, from) {
+  const lv = new Array(run.length).fill(null);
+  for (const dir of [1, -1]) {
+    let L = null;
+    for (let i = from; i >= 0 && i < run.length; i += dir) {
+      const { bed, bank, skip } = run[i];
+      if (skip) { lv[i] = null; continue; }                         // (filled in under a street that crosses: no water, the reach goes on past)
+      if (L === null || bed > L - SHALLOW) L = bed + DEPTH;          // (climbed out of the reach below: a weir, and a new reach)
+      // (Kept under its banks. Where there's no ditch, no water: and whatever's beyond starts a reach of its own.)
+      if (bank < L + 0.25) { if (bank - bed < SHALLOW + 0.4) { L = null; continue; } L = bank - 0.25; }
+      lv[i] = L;
+    }
+  }
+  return lv;
+}
+const MOAT_N = 720;
+let MOAT = null;
+function moatRing() {
+  if (MOAT) return MOAT;
+  const ring = [];
+  for (let i = 0; i < MOAT_N; i++) {
+    const th = i / MOAT_N * TAU, [cx, cz] = moatAt(th, 1.047), a = moatAt(th, 1.016), b = moatAt(th, 1.08), oa = moatAt(th, 1.006), ob = moatAt(th, 1.09);
+    ring.push({ th, a, b, bed: Y(cx, cz), bank: Math.min(Y(...oa), Y(...ob)) });
+  }
+  // (Walked both ways from its lowest, out on the plain; each way stops where the ditch runs out.)
+  let low = 0; for (let i = 1; i < MOAT_N; i++) if (ring[i].bed < ring[low].bed) low = i;
+  const turned = ring.slice(low).concat(ring.slice(0, low)), half = MOAT_N >> 1;
+  const fwd = reaches(turned.slice(0, half), 0), back = reaches(turned.slice(half).reverse(), 0).reverse();
+  turned.forEach((q, i) => { q.lv = i < half ? fwd[i] : back[i - half]; });
+  return (MOAT = ring);
+}
+// The moat's water's height over (x, z), r metres round it allowed for; -Infinity if it's nowhere near, or dry there. (The
+// barbican's towers stand on its bank and its sheet ran through their ground floor: src/core/phobos-towers.js plan.)
 export function moatLevel(x, z, r = 0) {
   const u = (x - CITY.x) / CITY.a, v = (z - CITY.z) / CITY.b, th = Math.atan2(v, u);
   let m = 0; for (let j = 0; j < 12; j++) m = Math.max(m, Math.cos(th - j * Math.PI / 6));
   const k = Math.hypot(u, v) * m, pad = r / Math.min(CITY.a, CITY.b);
   if (k < 1.016 - pad || k > 1.08 + pad) return -Infinity;
-  const [cx, cz] = moatAt(th, 1.047);
-  return Y(cx, cz) + 2.4;
+  const ring = moatRing(), i = Math.round(((th + TAU) % TAU) / TAU * MOAT_N) % MOAT_N;
+  let most = -Infinity;
+  for (let d = -3; d <= 3; d++) { const lv = ring[(i + d + MOAT_N) % MOAT_N].lv; if (lv !== null && lv > most) most = lv; }
+  return most;
 }
-function waters(K) {
-  const at = moatAt;
-  const gw = (x, z) => (Math.abs(z) < 19 && x - CITY.x > 600) || (Math.abs(x - 9900) < 19 && z < -700) || (Math.abs(x - 9950) < 19 && z > 700);
-  const N = 360, ring = [];
-  for (let i = 0; i <= N; i++) { const th = i / N * TAU, [cx, cz] = at(th, 1.047), a = at(th, 1.016), b = at(th, 1.08); ring.push({ a, b, y: Y(cx, cz) + 2.4, gate: gw(cx, cz) || gw(...a) || gw(...b) }); }
-  for (let i = 0; i < N; i++) { const p = ring[i], q = ring[i + 1]; if (p.gate || q.gate) continue; K.quad('dark:water', [p.a[0], p.y, p.a[1]], [q.a[0], q.y, q.a[1]], [q.b[0], q.y, q.b[1]], [p.b[0], p.y, p.b[1]], [0, 1, 0]); }
+// The Slough's stretches, eight metres each, down the city from its rise: each one's ends (p, q), which way it runs, its
+// bed and lower bank, whether a street crosses there (skip) or it's out past the wall (out), and its water's level (lv:
+// the reach it's in; null where there's none).
+const SLOUGH_W = 10.5;
+let SLOUGH_RUN = null;
+export function sloughRun() {
+  if (SLOUGH_RUN) return SLOUGH_RUN;
+  // The Slough, down the city from its rise: reaches the same way, a weir at each step, running on under its bridges.
+  const w = SLOUGH_W, run = [];
   const over = STREETS.filter((st) => st.name !== 'The Corpse Quay');
   const bridge = (x, z) => over.some((st) => st.pts.some((q, j) => j + 1 < st.pts.length && segD(x, z, q, st.pts[j + 1]) < st.w + 8));
   for (let i = 0; i + 1 < SLOUGH.length; i++) {
-    const A = SLOUGH[i], B = SLOUGH[i + 1], L = Math.hypot(B[0] - A[0], B[1] - A[1]), ux = (B[0] - A[0]) / L, uz = (B[1] - A[1]) / L, n = Math.ceil(L / 6), w = 10.5;
+    const A = SLOUGH[i], B = SLOUGH[i + 1], L = Math.hypot(B[0] - A[0], B[1] - A[1]), ux = (B[0] - A[0]) / L, uz = (B[1] - A[1]) / L, n = Math.ceil(L / 8);
     for (let k = 0; k < n; k++) {
-      const t0 = k / n * L, t1 = (k + 1) / n * L, p = [A[0] + ux * t0, A[1] + uz * t0], q = [A[0] + ux * t1, A[1] + uz * t1];
-      if (cityIn(...p) > 1.012 || cityIn(...q) > 1.012 || bridge(...p) || bridge(...q)) continue;
-      const y = Y((p[0] + q[0]) / 2, (p[1] + q[1]) / 2) + 2.6;
-      K.quad('water', [p[0] - uz * w, y, p[1] + ux * w], [q[0] - uz * w, y, q[1] + ux * w], [q[0] + uz * w, y, q[1] - ux * w], [p[0] + uz * w, y, p[1] - ux * w], [0, 1, 0]);
+      const t = (k + 0.5) / n * L, x = A[0] + ux * t, z = A[1] + uz * t, t0 = k / n * L, t1 = (k + 1) / n * L;
+      run.push({ p: [A[0] + ux * t0, A[1] + uz * t0], q: [A[0] + ux * t1, A[1] + uz * t1], ux, uz, bed: Y(x, z), bank: Math.min(Y(x - uz * 15, z + ux * 15), Y(x + uz * 15, z - ux * 15)), out: cityIn(x, z) > 1.012, skip: bridge(A[0] + ux * t0, A[1] + uz * t0) || bridge(A[0] + ux * t1, A[1] + uz * t1) });
     }
+  }
+  let top = 0; for (let i = 1; i < run.length; i++) if (run[i].bed > run[top].bed) top = i;
+  // (From its head both ways downhill: each stretch's level is its reach's, set from the low end up.)
+  const lvN = reaches(run.slice(0, top + 1), 0), lvS = reaches(run.slice(top).reverse(), 0).reverse();
+  run.forEach((r, i) => { r.lv = i <= top ? lvN[i] : lvS[i - top]; });
+  return (SLOUGH_RUN = run);
+}
+// A weir: a wall of dark stone across a ditch from one bank's point to the other's, its top a hand under the upper reach,
+// and the water over it down to the lower.
+function weir(K, a, b, hi, lo, bed) {
+  const mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2, L = Math.hypot(b[0] - a[0], b[1] - a[1]), yaw = Math.atan2(-(b[1] - a[1]), b[0] - a[0]);
+  K.box('dark:block', mx, bed - 0.6, mz, L / 2 + 0.6, hi - 0.08 - (bed - 0.6), 0.5, yaw, { collide: false });
+  for (const sd of [-1, 1]) {
+    const nx = -(b[1] - a[1]) / L * sd * 0.52, nz = (b[0] - a[0]) / L * sd * 0.52, P = (q, y) => [q[0] + nx, y, q[1] + nz];
+    K.quad('water', sd > 0 ? P(a, hi) : P(b, hi), sd > 0 ? P(b, hi) : P(a, hi), sd > 0 ? P(b, lo) : P(a, lo), sd > 0 ? P(a, lo) : P(b, lo), [nx / 0.52, 0, nz / 0.52]);
+  }
+}
+function waters(K) {
+  const gw = (x, z) => (Math.abs(z) < 19 && x - CITY.x > 600) || (Math.abs(x - 9900) < 19 && z < -700) || (Math.abs(x - 9950) < 19 && z > 700);
+  const ring = moatRing();
+  // (Every other of the ring's points to a quad, but where the level changes: the sheet's corners on its own reach.)
+  for (let i = 0; i < MOAT_N; i += 2) {
+    const p = ring[i], q = ring[(i + 2) % MOAT_N], m = ring[(i + 1) % MOAT_N];
+    if (p.lv === null || q.lv === null || m.lv === null) continue;
+    if (gw(...p.a) || gw(...p.b) || gw(...q.a) || gw(...q.b)) continue;
+    if (Math.abs(p.lv - q.lv) > 0.01) { const hi = Math.max(p.lv, q.lv), lo = Math.min(p.lv, q.lv); weir(K, m.a, m.b, hi, lo, m.bed); }
+    const [e0, e1] = Math.abs(p.lv - q.lv) > 0.01 ? [[p, m, p.lv], [m, q, q.lv]] : [[p, q, p.lv]];
+    for (const [u, v, y] of [e0, e1].filter(Boolean)) K.quad('dark:water', [u.a[0], y, u.a[1]], [v.a[0], y, v.a[1]], [v.b[0], y, v.b[1]], [u.b[0], y, u.b[1]], [0, 1, 0]);
+  }
+  // Two footbridges over the Slough where no street crosses it: a deck of planks on two stone piers, a low kerb each side
+  // (no posts, no rails across). Walked: a deck over the water (walk).
+  for (const zc of [-390, 180]) {
+    const r0 = sloughRun().find((q) => !q.skip && q.lv !== null && Math.abs((q.p[1] + q.q[1]) / 2 - zc) < 5);
+    if (!r0) continue;
+    const mx = (r0.p[0] + r0.q[0]) / 2, mz = (r0.p[1] + r0.q[1]) / 2, { ux, uz } = r0, th = Math.atan2(-uz, ux), half = 16.5;
+    const y = Math.min(Y(mx - uz * 15.5, mz + ux * 15.5), Y(mx + uz * 15.5, mz - ux * 15.5)) + 0.3;
+    K.box('dark:wood', mx, y - 0.35, mz, 1.4, 0.35, half, th, { collide: false });
+    for (const e of [-1, 1]) { K.box('dark:wood', mx + ux * e * 1.4, y, mz + uz * e * 1.4, 0.1, 0.35, half, th, { collide: false }); K.box('soot:ph_basalt', mx - uz * e * 6, r0.lv - 1.5, mz + ux * e * 6, 1.4, y - 0.35 - r0.lv + 1.5, 0.7, th, { collide: false }); }
+    walk(K, [[mx, mz, 1.4, half, th, y]]);
+  }
+  // The Slough: its reaches (sloughRun), a weir at each step, none under the streets that cross it.
+  const run = sloughRun(), w = SLOUGH_W;
+  for (let i = 0; i < run.length; i++) {
+    const r = run[i], { p, q, ux, uz, lv } = r;
+    if (lv === null || r.out) continue;
+    K.quad('mire:water', [p[0] - uz * w, lv, p[1] + ux * w], [q[0] - uz * w, lv, q[1] + ux * w], [q[0] + uz * w, lv, q[1] - ux * w], [p[0] + uz * w, lv, p[1] - ux * w], [0, 1, 0]);
+    const nx = run[i + 1];
+    if (nx && nx.lv !== null && !nx.out && Math.abs(nx.lv - lv) > 0.01) weir(K, [q[0] - uz * w, q[1] + ux * w], [q[0] + uz * w, q[1] - ux * w], Math.max(lv, nx.lv), Math.min(lv, nx.lv), Math.max(r.bed, nx.bed) - 1);
   }
 }
 
@@ -946,6 +1039,58 @@ function wallNear(K, cell) {
     }
   }
 }
+// The Slough from near: a quay wall of dark stone down each bank to the water, a coping along its top; mooring posts
+// along it; here and there a flight of steps down to the water, and a boat moored at their foot (a hull, two thwarts, a
+// pole laid in it). (Nothing here stops a body: the ditch itself does.)
+function sloughNear(K, cell) {
+  const run = sloughRun(), w = SLOUGH_W, NC = { collide: false };
+  run.forEach((r, i) => {
+    if (r.lv === null || r.out || r.skip) return;
+    const mx = (r.p[0] + r.q[0]) / 2, mz = (r.p[1] + r.q[1]) / 2;
+    if (cellOf(mx, mz) !== cell) return;
+    const { ux, uz } = r, yaw = Math.atan2(ux, uz) - Math.PI / 2, L = Math.hypot(r.q[0] - r.p[0], r.q[1] - r.p[1]);
+    const nx = run[i + 1], step = nx && nx.lv !== null && !nx.out && !nx.skip && Math.abs(nx.lv - r.lv) > 0.01;
+    for (const sd of [-1, 1]) {
+      const qx = mx - uz * sd * (w + 0.4), qz = mz + ux * sd * (w + 0.4), top = Math.max(r.lv + 1.1, Math.min(Y(mx - uz * sd * (w + 3.5), mz + ux * sd * (w + 3.5)), r.lv + 4.6));
+      K.box('soot:ph_basalt', qx, r.lv - 1.2, qz, L / 2 + 0.05, top - r.lv + 1.2, 0.45, yaw, NC);
+      K.box('pale:ph_basalt', qx - uz * sd * 0.1, top, qz + ux * sd * 0.1, L / 2 + 0.05, 0.22, 0.62, yaw, NC);
+      // (A slime line along the wall at the water, and a towpath of dark flags behind its coping.)
+      K.box('mire:ph_basalt', qx + uz * sd * 0.03, r.lv - 0.1, qz - ux * sd * 0.03, L / 2 + 0.05, 0.5, 0.46, yaw, NC);
+      { const tx = mx - uz * sd * (w + 2), tz = mz + ux * sd * (w + 2); K.box('dark:stone', tx, top - 0.5, tz, L / 2 + 0.05, 0.56, 1.5, yaw, NC); }
+      const k = hash2(i * 7 + (sd > 0 ? 3 : 0), 19), k2 = hash2(i * 13 + (sd > 0 ? 5 : 0), 23);
+      if (k > 0.25) { const px = r.p[0] - uz * sd * (w - 0.3), pz = r.p[1] + ux * sd * (w - 0.3); K.drum('dark:wood', px, r.lv - 1, pz, 0.2, 2.5, 6, NC); K.drum('char:stone', px, r.lv + 1.25, pz, 0.24, 0.14, 6, { open: true, collide: false }); }
+      // (An outfall in the wall, one stretch in five: a dark mouth, its stain down to the water.)
+      if (k2 > 0.8) { const ox = mx - uz * sd * (w - 0.08), oz = mz + ux * sd * (w - 0.08), N = [uz * sd, 0, -ux * sd]; const Q = (u, h) => [ox + ux * u, r.lv + h, oz + uz * u]; K.quad('obsidian', Q(-0.7, 0.5), Q(0.7, 0.5), Q(0.7, 1.7), Q(-0.7, 1.7), N); K.quad('mire:stone', Q(-0.5, -0.05), Q(0.5, -0.05), Q(0.6, 0.5), Q(-0.6, 0.5), N); }
+      // (What's kept on the towpath: casks and crates against the bank, one stretch in three.)
+      if (k2 < 0.33) { const cx = mx - uz * sd * (w + 2.9) + ux * 2, cz = mz + ux * sd * (w + 2.9) + uz * 2; K.box('wood', cx, top, cz, 0.6, 0.9, 0.6, k2 * 9, NC); K.drum('wood', cx - ux * 1.4, top, cz - uz * 1.4, 0.42, 1, 8, NC); K.box('wood', cx + ux * 1.3, top, cz + uz * 1.3, 0.5, 0.6, 0.5, -k2 * 7, NC); }
+      // (Steps down, one stretch in six, and a boat by them.)
+      if (k < 0.17) {
+        for (let st = 0; st < 6; st++) { const o = w - 0.6 - st * 0.55, sx = mx - uz * sd * o + ux * 1.5, sz = mz + ux * sd * o + uz * 1.5; K.box('ph_basalt', sx, r.lv - 1, sz, 1.4, 1 + (top - r.lv) * (1 - st / 6), 0.28, yaw, NC); }
+        const bx = mx - uz * sd * (w - 4.6) - ux * 2.5, bz = mz + ux * sd * (w - 4.6) - uz * 2.5, by = r.lv - 0.15;
+        // (A barge: a long hull, pointed both ends, a deck load of casks and bales under a hide, a lantern on a post at its stern.)
+        K.box('dark:wood', bx, by, bz, 4.6, 0.9, 1.5, yaw, NC);
+        for (const g of [-1, 1]) K.box('wood', bx - uz * g * 1.5, by + 0.9, bz + ux * g * 1.5, 4.6, 0.4, 0.09, yaw, NC);
+        K.beam('wood', [bx - ux * 4.4, by + 1.5, bz - uz * 4.4], [bx - ux * 6.4, by + 1.0, bz - uz * 6.4], 0.05);
+        for (const e of [-1, 1]) K.quad('dark:wood', [bx + ux * e * 4.6 - uz * 1.5, by + 0.9, bz + uz * e * 4.6 + ux * 1.5], [bx + ux * e * 4.6 + uz * 1.5, by + 0.9, bz + uz * e * 4.6 - ux * 1.5], [bx + ux * e * 6.6, by + 1.15, bz + uz * e * 6.6], [bx + ux * e * 6.6, by + 1.15, bz + uz * e * 6.6]);
+        K.box('p2_hessian', bx - ux * 1, by + 0.9, bz - uz * 1, 2, 0.9, 1.1, yaw, NC); K.drum('wood', bx + ux * 2.2, by + 0.9, bz + uz * 2.2, 0.45, 1, 8, NC); K.drum('wood', bx + ux * 3.2, by + 0.9, bz + uz * 3.2, 0.45, 1, 8, NC);
+        K.box('dark:wood', bx - ux * 4, by + 0.9, bz - uz * 4, 0.07, 2.2, 0.07, 0, NC); K.cone('mire:flame', bx - ux * 4, by + 3.1, bz - uz * 4, 0.16, 0.4, 5);
+        (K.lamps ||= []).push({ p: [bx - ux * 4, by + 3.2, bz - uz * 4], c: [0.55, 1, 0.5], r: 18, i: 14, flicker: 0.3 });
+      }
+    }
+    // (Scum on the water, here and there: a pale green skin, lying flat.)
+    if (hash2(i * 3, 77) > 0.55) { const o = (hash2(i, 5) - 0.5) * 12, sx = mx - uz * o, sz = mz + ux * o; K.disc('mire:ph_basalt', sx, r.lv + 0.03, sz, 1.6 + hash2(i, 9) * 1.6, 9); K.disc('mire:ph_basalt', sx + ux * 2.4, r.lv + 0.03, sz + uz * 2.4, 1.1, 7); }
+    // The weir, where this stretch's water steps to the next's: a crest of dressed stone, a wing wall at each bank, the
+    // water over it in a pale sheet, foam on the low side.
+    if (step) {
+      const hi = Math.max(r.lv, nx.lv), lo = Math.min(r.lv, nx.lv), dn = nx.lv < r.lv ? 1 : -1, cx = r.q[0], cz = r.q[1];
+      K.box('ph_basalt', cx, lo - 1, cz, 0.9, hi - lo + 1.12, w + 0.6, yaw + Math.PI / 2, NC);
+      for (const sd of [-1, 1]) K.box('soot:ph_basalt', cx - uz * sd * (w + 0.3), lo - 1, cz + ux * sd * (w + 0.3), 2.6, hi - lo + 2.6, 0.8, yaw, NC);
+      const fx = cx + ux * dn * 0.95, fz = cz + uz * dn * 0.95, N = [ux * dn, 0, uz * dn];
+      K.quad('pale:water', [fx - uz * (w - 0.4), hi + 0.06, fz + ux * (w - 0.4)], [fx + uz * (w - 0.4), hi + 0.06, fz - ux * (w - 0.4)], [fx + uz * (w - 0.4) + ux * dn * 0.5, lo, fz - ux * (w - 0.4) + uz * dn * 0.5], [fx - uz * (w - 0.4) + ux * dn * 0.5, lo, fz + ux * (w - 0.4) + uz * dn * 0.5], N);
+      { const ax = cx + ux * dn * 3.2, az = cz + uz * dn * 3.2; K.quad('pale:water', [ax - uz * (w - 0.5) - ux * 1.9, lo + 0.04, az + ux * (w - 0.5) - uz * 1.9], [ax + uz * (w - 0.5) - ux * 1.9, lo + 0.04, az - ux * (w - 0.5) - uz * 1.9], [ax + uz * (w - 0.5) + ux * 1.9, lo + 0.04, az - ux * (w - 0.5) + uz * 1.9], [ax - uz * (w - 0.5) + ux * 1.9, lo + 0.04, az + ux * (w - 0.5) + uz * 1.9], [0, 1, 0]); }
+    }
+  });
+}
 export function phobosCell(K, cell) {
   const n0 = K.colliders.length;
   for (const l of phobosLamps()) if (l.cell === cell) {
@@ -958,6 +1103,7 @@ export function phobosCell(K, cell) {
   for (const t of cityTowers()) if (t.cell === cell) towerNear(K, t);
   for (const hb of HUBS) if (cellOf(hb.x, hb.z) === cell) hubNear(K, hb);
   if (CASTLE_CELLS.has(cell)) castleNear(K, cell);
+  sloughNear(K, cell);
   wallNear(K, cell);
   // A seal's square: dark flags laid round it, an iron lantern at each corner. (The seal itself: src/core/sites.js.)
   for (const s of PHOBOS_SEALS) if (cellOf(s.x, s.z) === cell) {
@@ -1054,7 +1200,125 @@ export function phobosCity(K) { wall(K); districts(K); streets(K); landmarks(K);
 // ---------------------------------------------------------------- the castle
 
 // The castle from near, one cell of it (phobosCell): nothing yet.
-function castleNear(K, cell) {}
+// The castle from near, a cell at a time (CASTLE_CELLS): the Lower Ward's yard behind the gate, which is where you stand
+// in it. Flagged from the gate to the ramp up to the Middle Ward, his fires in pairs down the way and his banners on poles
+// between them; the yard's well; spears in racks and his stores by the gate; a stable against the north curtain; and a
+// door, its steps and two fires to each of the Lower Ward's halls. (Nothing here stops a body: what does is in
+// phobosCastle's build. Fires here are still flames with a light each: the moving ones are the far build's alone.)
+const YARD = { x0: CRAG.x - CRAG.a * 0.86 + 10, x1: 10924, hz: 64 };
+// The yard's fires: [x, z, big]: pairs down the flagged way, close together by the gate and further apart toward his mark;
+// and two tall ones by the castle's door. Bowls here (castleNear), flames in the far build (phobosCastle).
+const YARD_FIRES = [...[10810, 10832, 10878].flatMap((x) => [[x, -13.4, 0], [x, 13.4, 0]]), [10812.5, 15.4, 1], [10812.5, 30.6, 1]];
+// The Lower Ward's halls, as phobosCastle stands them: [x, z, half along, half through, yaw, which long side faces the yard].
+// The outer curtain's stretches near the yard (the ring phobosCastle walls the crag with), for castleNear's plinths.
+const RING_NEAR = () => { const out = []; for (let i = 0; i < 44; i++) { const a = i / 44 * TAU, b = (i + 1) / 44 * TAU, p = [CRAG.x + Math.cos(a) * CRAG.a * 0.86, CRAG.z + Math.sin(a) * CRAG.b * 0.86], q = [CRAG.x + Math.cos(b) * CRAG.a * 0.86, CRAG.z + Math.sin(b) * CRAG.b * 0.86]; if (p[0] < 10900 && !(Math.abs(p[1]) < 22)) out.push([...p, ...q]); } return out; };
+const YARD_HALLS = [[10850, 150, 44, 12, 0.25, -1], [10880, 215, 30, 10, 0.25, -1], [10850, -150, 40, 13, -0.25, 1], [10890, -215, 26, 9, -0.25, 1]];
+function yardThings() {
+  const out = [], add = (kind, x, z, o = {}) => out.push({ kind, x, z, cell: cellOf(x, z), ...o });
+  // The way, flagged; and the yard either side of it in the wards' paving, in eight-metre slabs.
+  for (let x = YARD.x0; x < YARD.x1; x += 8) for (let z = -YARD.hz; z < YARD.hz; z += 8) add('slab', x + 4, z + 4, { way: Math.abs(z + 4) < 9 });
+  for (const [x, z, big] of YARD_FIRES) add('fire', x, z, { big });
+  // (Against the yard's cross-wall, not out in the open: nothing upright stands in the yard's sightlines.)
+  for (const z of [26, 42, 56]) for (const s of [-1, 1]) add('pole', 10850.4, s * z, { face: s });
+  // (The yard's two halves: a drill ground north of the way, the carters' and the smiths' south of it.)
+  for (const [x, z] of [[10826, 36], [10832, 42], [10838, 36], [10832, 30]]) add('dummy', x, z);
+  for (const [x, z, yaw] of [[10822, 52, Math.PI], [10830, 52, Math.PI], [10838, 52, Math.PI], [10866, -52, 0], [10874, -52, 0]]) add('rack', x, z, { yaw });
+  for (const [x, z] of [[10830, -34], [10836, -38], [10842, -32], [10874, 30], [10880, 26], [10868, -40], [10890, 40]]) add('stores', x, z);
+  add('cart', 10836, -28, { yaw: 1.2 }); add('cart', 10878, -30, { yaw: -0.4 });
+  for (const [ax, az, bx, bz] of RING_NEAR()) add('curtain', (ax + bx) / 2, (az + bz) / 2, { ax, az, bx, bz });
+  // (Kerbs down both edges of the way.)
+  for (let x = YARD.x0; x < YARD.x1 - 26; x += 8) for (const s of [-1, 1]) add('kerb', x + 4, s * 8.2);
+  add('well', 10840, 34);
+  for (const [x, z, yaw] of [[10800, -44, 0], [10806, -44, 0], [10812, -44, 0], [10800, 46, Math.PI], [10806, 46, Math.PI]]) add('rack', x, z, { yaw });
+  for (const [x, z] of [[10822, -46], [10826, -43], [10868, 40], [10896, -38], [10900, -34]]) add('stores', x, z);
+  add('cart', 10858, -30, { yaw: 0.5 }); add('cart', 10884, 44, { yaw: -0.9 });
+  add('stable', 10872, 58);
+  for (const [x, z, hx, hz, yaw, side] of YARD_HALLS) add('door', x, z, { hx, hz, yaw, side });
+  return out;
+}
+let YARD_THINGS = null;
+function castleNear(K, cell) {
+  for (const t of (YARD_THINGS ||= yardThings())) if (t.cell === cell) {
+    const { x, z } = t, y = Y(x, z), NC = { collide: false };
+    if (t.kind === 'slab') K.paving(t.way ? 'soot:p2_bone_joint_flags' : 'p2_ward_paving', x, z, 4.02, 4.02, 0, t.way ? 0.07 : 0.04);
+    else if (t.kind === 'dummy') {
+      // (A drill post: a stake, a straw body bound on it, a helm on its head. No arms out.)
+      K.box('dark:wood', x, y, z, 0.09, 2.1, 0.09, 0, NC); K.drum('p2_straw_ground', x, y + 0.8, z, 0.34, 0.9, 7, { r2: 0.28, collide: false }); K.drum('char:stone', x, y + 1.75, z, 0.2, 0.3, 7, { r2: 0.12, collide: false });
+    } else if (t.kind === 'curtain') {
+      // (The curtain by the yard from near: a battered plinth along its foot, a string course under the walk, arrow loops
+      // a man high between: so its thirty metres read as thirty.)
+      const L = Math.hypot(t.bx - t.ax, t.bz - t.az), ux = (t.bx - t.ax) / L, uz = (t.bz - t.az) / L, yaw = Math.atan2(t.bx - t.ax, t.bz - t.az) - Math.PI / 2, g = Y(x, z) - 0.5;
+      K.box('p2_curtain_granite', x, g, z, L / 2, 2.6, 3.6, yaw, NC); K.box('p2_curtain_granite', x, g + 2.6, z, L / 2, 0.7, 3.1, yaw, NC);
+      K.box('p2_curtain_granite', x, g + 19, z, L / 2, 0.8, 3.0, yaw, NC);
+      for (let u = -L / 2 + 4; u < L / 2 - 3; u += 7) for (const sd of [-1, 1]) { const fx = x + ux * u - uz * sd * 2.56, fz = z + uz * u + ux * sd * 2.56; K.quad('obsidian', [fx - ux * 0.22, g + 9, fz - uz * 0.22], [fx + ux * 0.22, g + 9, fz + uz * 0.22], [fx + ux * 0.22, g + 11.2, fz + uz * 0.22], [fx - ux * 0.22, g + 11.2, fz - uz * 0.22], [-uz * sd, 0, ux * sd]); }
+    }
+    else if (t.kind === 'kerb') K.box('dark:stone', x, y - 0.1, z, 4, 0.32, 0.22, 0, NC);
+    else if (t.kind === 'fire') {
+      // (A bowl of his fire on a tapered pillar of dark stone; the door's two twice the height. The flame is the far build's.)
+      const h = t.big ? 5 : 2.6;
+      K.drum('dark:stone', x, y - 0.3, z, t.big ? 1 : 0.8, h + 0.1, 6, { r2: t.big ? 0.6 : 0.5, collide: false });
+      K.drum('char:stone', x, y + h - 0.2, z, 0.4, 0.5, 8, { r2: t.big ? 0.95 : 0.72, collide: false });
+      (K.lamps ||= []).push({ p: [x, y + h + 1, z], c: [1, 0.42, 0.18], r: t.big ? 34 : 26, i: t.big ? 40 : 20, flicker: 0.4 });
+    } else if (t.kind === 'pole') {
+      // (His banner on a pole, hung from an arm out toward the way: one arm, out one side, the cloth below it.)
+      // (The arm from the pole's very head, nothing of the pole over it: an arm part way down a pole is a cross.)
+      K.box('dark:wood', x, y, z, 0.13, 11.27, 0.13, 0, NC);
+      K.beam('dark:wood', [x, y + 11.2, z], [x, y + 11.2, z - t.face * 2.4], 0.08);
+      // (His red, plain, tapering to a point: both faces. The pack's skull banner is a cut-out, which the near cells don't draw.)
+      for (const e of [-1, 1]) {
+        const zx = (u) => z - t.face * u, X = x + e * 0.02, T = y + 11.1;
+        K.quad('char:cloth_red', [X, T, zx(0.15)], [X, T, zx(2.35)], [X, T - 0.5, zx(2.35)], [X, T - 0.5, zx(0.15)], [e, 0, 0]);
+        K.quad('cloth_red', [X, T - 0.5, zx(0.15)], [X, T - 0.5, zx(2.35)], [X, T - 4.6, zx(2.35)], [X, T - 4.6, zx(0.15)], [e, 0, 0]);
+        K.quad('cloth_red', [X, T - 4.6, zx(0.15)], [X, T - 4.6, zx(2.35)], [X, T - 6, zx(1.25)], [X, T - 6, zx(1.25)], [e, 0, 0]);
+      }
+    } else if (t.kind === 'well') {
+      // (A kerb of dark blocks round black water, a windlass over it on two posts: its drum, a crank out one end.)
+      for (let k = 0; k < 14; k++) { const a = k / 14 * TAU; K.box('dark:stone', x + Math.cos(a) * 1.9, y, z + Math.sin(a) * 1.9, 0.45, 0.9, 0.3, Math.PI / 2 - a, NC); }
+      K.disc('dark:water', x, y + 0.5, z, 1.7, 14);
+      for (const s of [-1, 1]) K.box('dark:wood', x + s * 2.1, y, z, 0.13, 3.1, 0.13, 0, NC);
+      K.beam('dark:wood', [x - 2.1, y + 2.6, z], [x + 2.1, y + 2.6, z], 0.2); K.beam('iron', [x + 2.1, y + 2.6, z], [x + 2.7, y + 2.25, z], 0.04);
+      K.beam('iron', [x, y + 2.5, z], [x, y + 1.1, z], 0.025); K.drum('dark:wood', x, y + 0.75, z, 0.24, 0.36, 7, NC);
+    } else if (t.kind === 'rack') {
+      // (Spears stood against a backboard, their butts in a trough: nothing across the shafts.)
+      const c = Math.cos(t.yaw), s = Math.sin(t.yaw);
+      K.box('dark:wood', x, y + 0.3, z, 1.7, 1.9, 0.05, t.yaw, NC); K.box('dark:wood', x + s * 0.2, y, z + c * 0.2, 1.7, 0.25, 0.18, t.yaw, NC);
+      for (let k = -3; k <= 3; k++) { const px = x + k * 0.46 * c + s * 0.2, pz = z - k * 0.46 * s + c * 0.2; K.box('wood', px, y, pz, 0.028, 3, 0.028, t.yaw, NC); K.cone('iron', px, y + 3, pz, 0.07, 0.45, 4); }
+    } else if (t.kind === 'stores') {
+      const k = hash2(x, z);
+      if (k > 0.5) for (const [ox, oz, h] of [[0, 0, 1.1], [1, 0.25, 1.1], [0.45, 0.9, 0.95]]) { K.drum('wood', x + ox, y, z + oz, 0.45, h, 8, NC); K.drum('iron', x + ox, y + h * 0.3, z + oz, 0.465, 0.07, 8, { open: true, collide: false }); K.drum('iron', x + ox, y + h * 0.72, z + oz, 0.465, 0.07, 8, { open: true, collide: false }); }
+      else { K.box('wood', x, y, z, 0.7, 1, 0.7, k * 3, NC); K.box('wood', x + 1.5, y, z + 0.2, 0.55, 0.8, 0.55, -k * 2, NC); K.box('wood', x + 0.4, y + 1, z, 0.45, 0.6, 0.45, k * 5, NC); }
+    } else if (t.kind === 'cart') {
+      const c = Math.cos(t.yaw), s = Math.sin(t.yaw);
+      K.box('wood', x, y + 0.55, z, 0.9, 0.7, 1.6, t.yaw, NC);
+      for (const u of [-1, 1]) K.drum('dark:wood', x + u * 1.0 * c, y + 0.1, z - u * 1.0 * s, 0.6, 0.12, 10, NC);
+      for (const u of [-0.7, 0.7]) K.beam('wood', [x + u * c + s * 1.6, y + 0.7, z - u * s + c * 1.6], [x + u * c + s * 3.6, y + 0.25, z - u * s + c * 3.6], 0.06);
+    } else if (t.kind === 'stable') {
+      // (A lean-to against the north curtain: four posts, a pent roof of slate down to the yard, three stalls' rails, straw.)
+      for (const u of [-9, -3, 3, 9]) K.box('dark:wood', x + u, y, z - 4, 0.16, 3, 0.16, 0, NC);
+      K.quad('p2_slate_roof', [x - 10, y + 4.6, z + 3], [x + 10, y + 4.6, z + 3], [x + 10, y + 3, z - 4.6], [x - 10, y + 3, z - 4.6], [0, 0.97, -0.23]);
+      K.quad('dark:wood', [x + 10, y + 4.55, z + 3], [x - 10, y + 4.55, z + 3], [x - 10, y + 2.95, z - 4.6], [x + 10, y + 2.95, z - 4.6], [0, -0.97, 0.23]);
+      for (const u of [-3, 3]) K.box('dark:wood', x + u, y, z - 0.5, 0.08, 1.4, 3.5, 0, NC);
+      K.paving('p2_straw_ground', x, z - 0.5, 9.6, 3.4, 0, 0.09);
+      K.box('dark:wood', x - 6, y, z - 3.2, 1.3, 0.6, 0.35, 0, NC); K.box('dark:wood', x, y, z + 3, 10, 3.4, 0.12, 0, NC);
+      K.drum('p2_straw_ground', x + 7, y - 0.2, z - 6.5, 1.6, 1.1, 7, { r2: 0.5, collide: false });
+    } else if (t.kind === 'door') {
+      // (A hall's door in its yard face: an iron-bound leaf in a frame of dressed stone, three steps down, a fire each side.)
+      const c = Math.cos(t.yaw), s = Math.sin(t.yaw), f = t.side, P = (lx, lz) => [t.x + lx * c + lz * s, t.z - lx * s + lz * c], N = [f * s, 0, f * c];
+      for (const lx of [-t.hx * 0.5, t.hx * 0.5]) {
+        const [dx, dz] = P(lx, f * (t.hz + 0.12)), gy = Y(dx, dz);
+        const Q = (u, h, o = 0) => { const [qx, qz] = P(lx + u, f * (t.hz + 0.12 + o)); return [qx, gy + h, qz]; };
+        K.quad('p2_door_iron', f > 0 ? Q(-1.5, 4.4) : Q(1.5, 4.4), f > 0 ? Q(1.5, 4.4) : Q(-1.5, 4.4), f > 0 ? Q(1.5, 0.5) : Q(-1.5, 0.5), f > 0 ? Q(-1.5, 0.5) : Q(1.5, 0.5), N, [[0, 0], [1, 0], [1, 1], [0, 1]]);
+        for (const u of [-1.9, 1.9]) { const [qx, qz] = P(lx + u, f * (t.hz + 0.3)); K.box('p2_curtain_granite', qx, gy, qz, 0.4, 5, 0.4, t.yaw, NC); }
+        { const [qx, qz] = P(lx, f * (t.hz + 0.3)); K.box('p2_curtain_granite', qx, gy + 4.5, qz, 2.6, 0.8, 0.5, t.yaw, NC); }
+        // (A porch out over its steps: two piers, a pent of his red tiles, a warm light under it.)
+        for (const u of [-3, 3]) { const [qx, qz] = P(lx + u, f * (t.hz + 3)); K.box('p2_curtain_granite', qx, gy - 0.4, qz, 0.5, 5.6, 0.5, t.yaw, NC); }
+        { const [qx, qz] = P(lx, f * (t.hz + 1.6)); K.box('blood:p2_blood_tiles', qx, gy + 5.2, qz, 3.8, 0.5, 1.9, t.yaw, NC); (K.lamps ||= []).push({ p: [qx, gy + 3.6, qz], c: [1, 0.6, 0.3], r: 26, i: 40, flicker: 0.2 }); }
+        for (let k = 0; k < 3; k++) { const [qx, qz] = P(lx, f * (t.hz + 0.9 + k * 0.5)); K.box('dark:stone', qx, gy - 0.4, qz, 2.6, 0.9 - k * 0.17 - 0.0, 0.26, t.yaw, NC); }
+        for (const u of [-3.4, 3.4]) { const [qx, qz] = P(lx + u, f * (t.hz + 1.6)); K.drum('dark:stone', qx, gy - 0.3, qz, 0.6, 2.3, 6, { r2: 0.4, collide: false }); K.drum('char:stone', qx, gy + 2, qz, 0.32, 0.45, 8, { r2: 0.58, collide: false }); K.cone('blood:flame', qx, gy + 2.4, qz, 0.4, 1, 6); (K.lamps ||= []).push({ p: [qx, gy + 3, qz], c: [1, 0.42, 0.18], r: 22, i: 16, flicker: 0.4 }); }
+      }
+    }
+  }
+}
 
 // The ground's height on the crag by ward, and a spot's own.
 const wardY = (i) => PLAIN + WARDS[i][1];
@@ -1066,7 +1330,9 @@ export function phobosCastle(K) {
   // (Its foot course and pilasters a step lighter, in the towers' granite: the ashlar's own lighter step is near white,
   // and a pale course across a dark face read as a cross from the gate. The V/T rule.)
   const BL = { crenel: true, lite: 'p2_curtain_granite' };
-  const S = 'soot:p2_curtain_granite', C = 'soot:p2_curtain_granite', B = 'soot:p2_bridge_ashlar', R = 'blood:p2_blood_tiles', RT = 'p2_fishscale_slate';
+  // (The towers in the curtains' own ashlar, as dark: in the granite they stood pale grey against near-black walls, two
+  // castles in one. The halls keep the granite, a step lighter than the walls round them.)
+  const S = 'soot:p2_curtain_granite', C = 'soot:p2_bridge_ashlar', B = 'soot:p2_bridge_ashlar', R = 'blood:p2_blood_tiles', RT = 'p2_fishscale_slate';
   // The outer curtain round the crag's edge, a tower every third stretch; the ward walls across it at each step up.
   const ring = [];
   for (let i = 0; i < 44; i++) { const a = i / 44 * TAU; ring.push([CRAG.x + Math.cos(a) * CRAG.a * 0.86, CRAG.z + Math.sin(a) * CRAG.b * 0.86]); }
@@ -1083,7 +1349,7 @@ export function phobosCastle(K) {
   }
   // The gatehouse at the head of the Approach: two great drums and the gate's head between.
   const gx = CRAG.x - CRAG.a * 0.86, gy = Y(gx, 0);
-  for (const s of [-1, 1]) tower(K, S, gx, s * 22, 13, 74, RT, { steep: 2.2, lit: 0.65 });
+  for (const s of [-1, 1]) tower(K, C, gx, s * 22, 13, 74, RT, { steep: 2.2, lit: 0.65 });
   K.box(S, gx, gy + 13, 0, 9, 40, 10, 0, { collide: false });
   { // (The passage under its head: dark walls and a dark vault, its mouths pointed both ends: the spandrels filled in.)
     for (const s of [-1, 1]) K.box('dark:stone', gx, gy - 0.5, s * 9.3, 9, 13.5, 0.3, 0, { collide: false, top: false });
@@ -1091,7 +1357,10 @@ export function phobosCastle(K) {
     for (const e of [-1, 1]) for (const s of [-1, 1]) K.tri(S, [gx + e * 9.04, gy + 7.5, s * 9], [gx + e * 9.04, gy + 13.05, s * 9], [gx + e * 9.04, gy + 13.05, 0]);
     for (const e of [-1, 1]) { K.quad('dark:stone', [gx + e * 9.08, gy + 7.2, -9.6], [gx + e * 9.08, gy + 7.2, -9], [gx + e * 9.08, gy + 13.4, 0.35], [gx + e * 9.08, gy + 13.4, -0.35], [e, 0, 0]); K.quad('dark:stone', [gx + e * 9.08, gy + 7.2, 9], [gx + e * 9.08, gy + 7.2, 9.6], [gx + e * 9.08, gy + 13.4, 0.35], [gx + e * 9.08, gy + 13.4, -0.35], [e, 0, 0]); }
     // (The portcullis wound up into the head, all but its teeth: bars down from a beam, none across.)
-    K.box('iron', gx - 7.6, gy + 12.2, 0, 0.12, 0.3, 8.8, 0, { collide: false });
+    // (No beam across their heads: with the bars it was a lattice. They hang from the vault itself. And the murder holes over
+    // the passage, three, his fire's red in them; chains down from two of them.)
+    for (const hx of [-5, 0, 5]) { K.quad('blood:flame', [gx + hx - 1.3, gy + 12.9, -1.3], [gx + hx + 1.3, gy + 12.9, -1.3], [gx + hx + 1.3, gy + 12.9, 1.3], [gx + hx - 1.3, gy + 12.9, 1.3], [0, -1, 0]); (K.lamps ||= []).push({ p: [gx + hx, gy + 11.5, 0], c: [1, 0.2, 0.08], r: 16, i: 30, flicker: 0.3 }); }
+    for (const [hx, hz, len] of [[-5, 5.5, 4.5], [5, -5.5, 3.6], [0, 6.2, 2.8]]) K.beam('char:stone', [gx + hx, gy + 13, hz], [gx + hx, gy + 13 - len * 1.6, hz], 0.14);
     for (let b = -8.5; b <= 8.51; b += 0.85) { const top = gy + 13 - Math.max(0, Math.abs(b) - 3.5) * 0.9; K.box('iron', gx - 7.6, top - 2.6, b, 0.08, Math.max(0.4, 2.6 - (gy + 13 - top)), 0.08, 0, { collide: false }); }
     // (Its head machicolated: the parapet carried out on corbels over the way in, merlons on it, his red down its face.)
     K.box(S, gx, gy + 53, 0, 11.2, 3.4, 11.6, 0, { collide: false });
@@ -1124,6 +1393,35 @@ export function phobosCastle(K) {
   for (let x = 10640; x < gx - 24; x += 24) for (const s of [-1, 1]) brazier(x, s * 10.8, 2.6);
 
   // ---- the Lower Ward (+120): the working castle
+  // His mark in the yard, where the flagged way from the gate ends under the Middle Ward's wall: a ring of black iron as
+  // tall as four men on a stepped plinth, two horns of his fire out of its top. (A ring and two horns: no letter. The same
+  // as on his gates inside: src/core/delve-build.js mark.) What the yard is walked toward, and seen from the gate.
+  { const mx = 10902, mz = 0, my = Y(mx, mz), r = 6.4, top = my + 3.2;
+    K.drum('dark:stone', mx, my - 0.4, mz, 9, 1.2, 12); K.drum('dark:stone', mx, my + 0.8, mz, 7.4, 1.2, 12, { collide: false }); K.drum('dark:stone', mx, my + 2, mz, 6, 1.2, 12, { collide: false });
+    // (A round of his red behind it, so the black ring shows from the gate: slices, widest at the middle; a slab of dark stone at its back.)
+    const R = r * 1.22;
+    // (Its back a round of dark stone, wider than the red: slices, as the red is. The ring black glass on iron, thirty pieces.)
+    { const RB = R * 1.2; for (let i = 0; i < 13; i++) { const v = -RB + (i + 0.5) * RB * 2 / 13; K.box('char:stone', mx + 1.1, top + r + v - RB / 13, mz, 0.45, RB * 2 / 13, Math.sqrt(RB * RB - v * v), 0, { collide: false }); } }
+    for (let i = 0; i < 11; i++) { const v = -R + (i + 0.5) * R * 2 / 11; K.box('cloth_red', mx + 0.6, top + r + v - R / 11, mz, 0.06, R * 2 / 11, Math.sqrt(R * R - v * v), 0, { collide: false }); }
+    for (let k = 0; k < 30; k++) { const a = k / 30 * TAU, a2 = (k + 1) / 30 * TAU; K.beam('obsidian', [mx, top + r + Math.sin(a) * r, mz + Math.cos(a) * r], [mx, top + r + Math.sin(a2) * r, mz + Math.cos(a2) * r], 0.62); }
+    for (const sg of [-1, 1]) { K.cone('blood:flame', mx, top + r * 1.82, mz + sg * r * 0.55, 0.8, 5.4, 5); fire(K, mx, top + r * 1.82, mz + sg * r * 0.55, 1.5, 4.4, 'blood:flame'); }
+    (K.lamps ||= []).push({ p: [mx - 6, top + r, mz], c: [1, 0.25, 0.1], r: 46, i: 160, flicker: 0.2, prio: 50 });
+    for (const sg of [-1, 1]) { K.drum('dark:stone', mx - 7.6, my - 0.3, mz + sg * 7.6, 0.9, 3.4, 6, { r2: 0.6 }); K.drum('char:stone', mx - 7.6, my + 3.1, mz + sg * 7.6, 0.5, 0.6, 8, { r2: 0.95, collide: false }); fire(K, mx - 7.6, my + 3.7, mz + sg * 7.6, 0.7, 1.9, 'blood:flame'); }
+  }
+  // The way's fires, and the door's (YARD_FIRES): the far build's, so they move. Their bowls are the near cells'.
+  for (const [fx, fz, big] of YARD_FIRES) fire(K, fx, Y(fx, fz) + (big ? 5.3 : 2.9), fz, big ? 0.9 : 0.55, big ? 2.6 : 1.5, 'blood:flame');
+  // The castle's door, the way in to the Lower Ward (src/core/delve-castle.js portal), against the north drum's yard face:
+  // the yard's one warm light, and a wash of it up the drum, so it's found from the gate.
+  (K.lamps ||= []).push({ p: [10811, Y(10811, 22) + 3.5, 22], c: [1, 0.62, 0.3], r: 34, i: 90, flicker: 0.25, prio: 40 });
+  // A low wall across the yard a third of the way up it, a gap for the way and a guard post either side of the gap: the
+  // walk from the gate to his mark in two beats.
+  for (const s of [-1, 1]) {
+    K.wall(B, 10852, s * 13, 10852, s * 60, 1.4, 3.2, { crenel: true });
+    // (And a neck out of the gate: two walls a man and a half high, so the yard opens as you come out between them.)
+    K.wall(B, gx + 10, s * 10.5, gx + 24, s * 10.5, 1.2, 5.5, { crenel: true });
+    fire(K, 10852, Y(10852, s * 13) + 12.4, s * 13, 0.7, 2, 'blood:flame');
+    K.drum(C, 10852, Y(10852, s * 13) - 1, s * 13, 2.6, 8, 8); K.cone(RT, 10852, Y(10852, s * 13) + 7, s * 13, 3.2, 5, 8);
+  }
   const y0 = wardY(0), y1 = wardY(1), y2 = wardY(2);
   hall(K, B, R, 10850, Y(10850, 150) - 2, 150, 44, 22, 12, 0.25);            // the Barracks and Drill Halls
   hall(K, B, R, 10880, Y(10880, 215) - 2, 215, 30, 16, 10, 0.25);            // the Armoury
@@ -1318,8 +1616,10 @@ export function phobosKeep(K) {
     K.cone(R, sx, P(top) + 1, sz, r + 2.6, r * (4 + 2 * hash2(i, 9)), 12);
     return [sx, sz, r, top];
   });
-  const link = (a, b, drop = 26) => { const d = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / d, uz = (b[1] - a[1]) / d, h = Math.min(a[3], b[3]) - drop; bridge(K, KB, [a[0] + ux * a[2], P(h), a[1] + uz * a[2]], [b[0] - ux * b[2], P(h), b[1] - uz * b[2]], 4, { arch: 2.5 }); };
-  for (let i = 0; i < 9; i++) link(sat[i], sat[(i + 1) % 9]);                // the rim's ring of towers, all the way round
+  const link = (a, b, drop = 26) => { const d = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / d, uz = (b[1] - a[1]) / d, h = Math.min(a[3], b[3]) - drop; bridge(K, KB, [a[0] + ux * a[2], P(h), a[1] + uz * a[2]], [b[0] - ux * b[2], P(h), b[1] - uz * b[2]], 4, { arch: 7 }); };
+  // (Each at a height of its own, turn about, and humped: two level spans meeting in a tower were one beam through it, a
+  // cross against the sky from the yard below. The V and T rule.)
+  for (let i = 0; i < 9; i++) link(sat[i], sat[(i + 1) % 9], i % 2 ? 44 : 26);                // the rim's ring of towers, all the way round
   for (const [i, j] of [[9, 0], [10, 8], [12, 13], [12, 14], [15, 10]]) link(sat[i], sat[j], 34);
   // The lesser towers: turrets out on the curtain and a few on the wards below, some two dozen, each tied by a light bridge to the
   // two towers nearest it, so from the city the whole rock is laced together.

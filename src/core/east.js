@@ -47,6 +47,17 @@ function sloughNear(x, z) {
   }
   return Math.sqrt(best);
 }
+// The nearest point of the Slough's line to (x, z), and which way it runs there: [px, pz, ux, uz].
+function sloughAt(x, z) {
+  let best = 1e18, out = null;
+  for (let i = 0; i + 1 < SLOUGH.length; i++) {
+    const a = SLOUGH[i], b = SLOUGH[i + 1], dx = b[0] - a[0], dz = b[1] - a[1], L = Math.hypot(dx, dz);
+    const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / (dx * dx + dz * dz)));
+    const d = (a[0] + dx * t - x) ** 2 + (a[1] + dz * t - z) ** 2;
+    if (d < best) { best = d; out = [a[0] + dx * t, a[1] + dz * t, dx / L, dz / L]; }
+  }
+  return out;
+}
 // How far (x, z) is outside the nearest of the city's streets that cross the Slough (the King's Mile, the Low Road).
 function streetOver(x, z) {
   let best = 1e9;
@@ -188,7 +199,13 @@ export function eastHeight(x, z, h) {
     if (cw < 1.02 && x > 9780 && x < 10030) {
       const sd = sloughNear(x, z);
       // (Left whole where a street crosses it: a causeway with the water, when there is water, let through under it.)
-      if (sd < 14) floor -= 4.5 * (1 - sstep(6, 14, sd)) * sstep(1, 7, streetOver(x, z));
+      // (Cut from the lower of its two banks, not from the ground it's in: it runs along the edge of a terrace in the city's
+      // middle, where a ditch cut from the high side had its bed over the low bank, and no water could lie in it.)
+      if (sd < 14) {
+        const [px, pz, ux, uz] = sloughAt(x, z), base = (bx, bz) => PLAIN + (fbm(bx * 0.02, bz * 0.02 + 40, 3) - 0.5) * 3 + cityRise(bx, bz);
+        const low = Math.min(floor, base(px - uz * 17, pz + ux * 17), base(px + uz * 17, pz - ux * 17));
+        floor -= (floor - low + 4.5) * (1 - sstep(6, 14, sd)) * sstep(1, 7, streetOver(x, z));
+      }
     }
     // The crag: three terraces, cliffs all round but where the Approach comes up to its west end.
     // (Not a round either: ribs and gullies in its sides, its terraces' edges skewed and wandering, a buttress to the west

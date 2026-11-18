@@ -53,10 +53,11 @@ export class FolkBodies {
     };
     while (left.size) {
       const i = next();
-      // (Phobos's street crowd last of all, and not till you're on your way there: a phone has only the first of them.)
-      if (PEOPLE[i].crowd) {
+      // (Phobos's street crowd last of all, and not till you're on your way there: a phone has only the first of them. And the
+      // people who stand in Castle Velscour's wards, late: not till then either.)
+      if (PEOPLE[i].crowd || PEOPLE[i].late) {
         this.loaded = true;
-        if (r.tier.lean && PEOPLE.filter((p) => p.crowd).indexOf(PEOPLE[i]) >= CROWD_LEAN) continue;
+        if (PEOPLE[i].crowd && r.tier.lean && PEOPLE.filter((p) => p.crowd).indexOf(PEOPLE[i]) >= CROWD_LEAN) continue;
         while (this.map.inbox[FIN.PX] < CITY.x - CITY.a - 1600) await new Promise((res) => setTimeout(res, 4000));
       }
       try {

@@ -51,7 +51,7 @@ const brain = (awake = []) => {
   return b;
 };
 const TOWN = { x: 2, z: 64 };
-const ends = [...Object.entries(SITES).map(([k, s]) => [k, s.x, s.z]), ...DELVES.map((d) => [`${d.key}'s portal`, d.portal.x, d.portal.z])];
+const ends = [...Object.entries(SITES).map(([k, s]) => [k, s.x, s.z]), ...DELVES.filter((d) => !d.within).map((d) => [`${d.key}'s portal`, d.portal.x, d.portal.z])];
 
 for (const lvl of [1, 12, 30]) {
   test(`at level ${lvl}, from Bellmourn to every place and portal it keeps to the roads`, () => {
@@ -106,7 +106,7 @@ const interior = read('assets/game/interior/interior.json');
 const world = new World(read('assets/game/village.json'), interior);
 const nav = navFor(world, interior);
 
-for (const d of DELVES) {
+for (const d of DELVES.filter((q) => !q.within)) {
   const S = portalStair(d), p = d.portal;
   // Along the middle of the flight from its foot (out the front: fx, fz) and across it.
   const frame = (x, z) => { const dx = x - S.out[0], dz = z - S.out[1]; return [-(dx * S.fx + dz * S.fz), dx * S.fz - dz * S.fx]; };

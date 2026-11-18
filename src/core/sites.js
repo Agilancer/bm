@@ -34,7 +34,7 @@ const TAU = Math.PI * 2;
 const TILE = { wall: [7, 4.2], roof: [4, 2.3], stone: [3, 1.7], rubble: [3, 1.7], wood: [2.4, 1.4], door: [1.8, 2.6], cloth: [2, 2],
   block: [8.1, 4.1, 5.4], course: [8.1, 4.1, 5.4], ashlar: [8.4, 4.2, 5.6], flags: [8.1, 4.2, 5.4] };
 export const tileOf = (layer) => {
-  const n = layer.replace(/^(dark|pale|frost|mire|spore|void|slate|blood|moss|umber|soot|eve|char):/, '');
+  const n = layer.replace(/^(dark|pale|frost|mire|spore|void|slate|blood|moss|umber|soot|eve|char|royal|forest):/, '');
   if (n.startsWith('ph_')) return PH_TILE[n] || TILE.stone;   // (Phobos's own: tools/phobos/textures/wire_layers.py)
   if (n.startsWith('p2_')) return P2_TILE[n] || TILE.stone;   // (and the PH2 pack: tools/phobos/textures/wire_ph2.py)
   return n.startsWith('wall') || n === 'door_wall' ? TILE.wall : n.startsWith('roof') ? TILE.roof : n.startsWith('door') ? TILE.door : TILE[n] || TILE.cloth;
@@ -187,7 +187,10 @@ export class Kit {
       for (const q of nn) { const l = Math.hypot(...q); p.nrm.push(q[0] / l, q[1] / l, q[2] / l); }
       const u = i * arc / tw;
       p.uv.push(u, -y / th, u + arc / tw, -y / th, u + arc / tw, -(y + h) / th, u, -(y + h) / th);
-      p.idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
+      // (Wound to agree with its normals, which point out: wound the other way, the shader took every side for its back
+      // seen and turned the normal round, and every drum and cone in the game was lit from its far side. A tower in the
+      // sun stood dark beside a lit wall, and one in shade pale beside a dark one.)
+      p.idx.push(base, base + 2, base + 1, base, base + 3, base + 2);
     }
     if (!o.open && r2 > 0.01) {
       const lid = o.lid || layer;
@@ -607,7 +610,8 @@ function portalWall(K, x, z, yaw, key, ground = terrainHeight) {
 // The ways in, out on the land: the Warrens' in its wall on the hillside near the kobolds' den, the keep's before its gate
 // on the Vigil Road, the Deeps' at the Howling Mouth. (Their spots: hf_portal, bv_portal, hd_portal.)
 function warrensMouth(K) {
-  for (const d of DELVES) portalWall(K, d.portal.x, d.portal.z, d.portal.yaw, `${d.tag}_portal`);
+  // (Not a ward gone into only from another: its portal is that one's. src/core/delve-castle.js within.)
+  for (const d of DELVES) if (!d.within) portalWall(K, d.portal.x, d.portal.z, d.portal.yaw, `${d.tag}_portal`);
   // (A sewer's second mouth in the streets of Phobos: src/core/delve-sewers.js ways.)
   for (const d of DELVES) (d.ways || []).forEach((w, i) => portalWall(K, w.x, w.z, w.yaw, `${d.tag}_w${i}`));
 }

@@ -39,6 +39,13 @@ S = {
     "ph_penny": ("dude", 0.3, 0.4, 0.55, "the Pennyless' purse: a good coat gone soot-green"),
     "ph_watch": ("young_3", 0.1, 0.35, 0.72, "the Quiet Watch's captain: a dyer's plain oat and umber"),
     "ph_ash": ("worker_f", 0.0, 0.12, 0.45, "the Ashwardens' warden: ash-grey, nothing bright"),
+    # The Librarian's household in Castle Velscour's Middle Ward (src/folk/people.js, delve 'middleward'): loyal to
+    # Tessariel and showing nothing of it, so in what his castle's own people wear: no blue, no gold, no white.
+    "ph_librarian": ("sage", 0.0, 0.3, 0.5, "the Librarian: a scholar's robe gone ink-black and dust-grey"),
+    "ph_wynn": ("young_4", 0.03, 0.7, 0.72, "his ward, the map-maker: rust and umber, ink to the wrists"),
+    "ph_ondine": ("lady_red_1", 0.0, 0.14, 0.72, "a lapsed sister of his Sanctuaries: a plain gown gone ash-grey"),
+    "ph_jory": ("old_man", 0.08, 0.7, 0.8, "the old quartermaster: a buff coat, darkened"),
+    "ph_pip": ("boy_1", 0.88, 1.3, 0.75, "the horn-blower boy: his red livery, madder"),
 }
 
 

@@ -293,6 +293,20 @@ export class World {
     return over;
   }
 
+  // Under a roof of Phobos's: on one of a house's or a tower's own floors (a stack of them, src/core/phobos-build.js
+  // houseWalls), not out on its doorstep. The third-person camera keeps low and close there, as in Bellmourn's houses
+  // (src/sim/sim.worker.js): the ceilings and the floors over aren't in what it's tested against.
+  indoors(x, z) {
+    const list = this.platGrid.get(boxKey(Math.floor(x / 64), Math.floor(z / 64)));
+    if (!list) return false;
+    for (const p of list) {
+      if (!p.stack || p.over || Math.abs(x - p.x) > p.r || Math.abs(z - p.z) > p.r) continue;
+      const f = p.rects[0], dx = x - f.x, dz = z - f.z;
+      if (Math.abs(dx * f.c - dz * f.s) <= f.hu && Math.abs(dx * f.s + dz * f.c) <= f.hw) return true;
+    }
+    return false;
+  }
+
   height(x, z, y) {
     const plat = this.platformAt(x, z, y);
     if (plat !== null) return plat;
