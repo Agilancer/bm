@@ -1125,7 +1125,101 @@ export function phobosCity(K) { wall(K); districts(K); streets(K); landmarks(K);
 // ---------------------------------------------------------------- the castle
 
 // The castle from near, one cell of it (phobosCell): nothing yet.
-function castleNear(K, cell) {}
+// The castle from near, a cell at a time (CASTLE_CELLS): the Lower Ward's yard behind the gate, which is where you stand
+// in it. Flagged from the gate to the ramp up to the Middle Ward, his fires in pairs down the way and his banners on poles
+// between them; the yard's well; spears in racks and his stores by the gate; a stable against the north curtain; and a
+// door, its steps and two fires to each of the Lower Ward's halls. (Nothing here stops a body: what does is in
+// phobosCastle's build. Fires here are still flames with a light each: the moving ones are the far build's alone.)
+const YARD = { x0: CRAG.x - CRAG.a * 0.86 + 10, x1: 10924, hz: 64 };
+// The yard's fires: [x, z, big]: pairs down the flagged way, close together by the gate and further apart toward his mark;
+// and two tall ones by the castle's door. Bowls here (castleNear), flames in the far build (phobosCastle).
+const YARD_FIRES = [...[10800, 10810, 10824, 10842, 10866, 10884].flatMap((x) => [[x, -10.4, 0], [x, 10.4, 0]]), [10812.5, 13.4, 1], [10812.5, 30.6, 1]];
+// The Lower Ward's halls, as phobosCastle stands them: [x, z, half along, half through, yaw, which long side faces the yard].
+const YARD_HALLS = [[10850, 150, 44, 12, 0.25, -1], [10880, 215, 30, 10, 0.25, -1], [10850, -150, 40, 13, -0.25, 1], [10890, -215, 26, 9, -0.25, 1]];
+function yardThings() {
+  const out = [], add = (kind, x, z, o = {}) => out.push({ kind, x, z, cell: cellOf(x, z), ...o });
+  // The way, flagged; and the yard either side of it in the wards' paving, in eight-metre slabs.
+  for (let x = YARD.x0; x < YARD.x1; x += 8) for (let z = -YARD.hz; z < YARD.hz; z += 8) add('slab', x + 4, z + 4, { way: Math.abs(z + 4) < 9 });
+  for (const [x, z, big] of YARD_FIRES) add('fire', x, z, { big });
+  for (const x of [10817, 10833, 10875]) for (const s of [-1, 1]) add('pole', x, s * 11.4, { face: s });
+  // (Kerbs down both edges of the way.)
+  for (let x = YARD.x0; x < YARD.x1 - 26; x += 8) for (const s of [-1, 1]) add('kerb', x + 4, s * 8.2);
+  add('well', 10840, 34);
+  for (const [x, z, yaw] of [[10800, -44, 0], [10806, -44, 0], [10812, -44, 0], [10800, 46, Math.PI], [10806, 46, Math.PI]]) add('rack', x, z, { yaw });
+  for (const [x, z] of [[10822, -46], [10826, -43], [10868, 40], [10896, -38], [10900, -34]]) add('stores', x, z);
+  add('cart', 10858, -30, { yaw: 0.5 }); add('cart', 10884, 44, { yaw: -0.9 });
+  add('stable', 10872, 58);
+  for (const [x, z, hx, hz, yaw, side] of YARD_HALLS) add('door', x, z, { hx, hz, yaw, side });
+  return out;
+}
+let YARD_THINGS = null;
+function castleNear(K, cell) {
+  for (const t of (YARD_THINGS ||= yardThings())) if (t.cell === cell) {
+    const { x, z } = t, y = Y(x, z), NC = { collide: false };
+    if (t.kind === 'slab') K.paving(t.way ? 'p2_bone_joint_flags' : 'p2_ward_paving', x, z, 4.02, 4.02, 0, t.way ? 0.07 : 0.04);
+    else if (t.kind === 'kerb') K.box('dark:stone', x, y - 0.1, z, 4, 0.32, 0.22, 0, NC);
+    else if (t.kind === 'fire') {
+      // (A bowl of his fire on a tapered pillar of dark stone; the door's two twice the height. The flame is the far build's.)
+      const h = t.big ? 5 : 2.6;
+      K.drum('dark:stone', x, y - 0.3, z, t.big ? 1 : 0.8, h + 0.1, 6, { r2: t.big ? 0.6 : 0.5, collide: false });
+      K.drum('char:stone', x, y + h - 0.2, z, 0.4, 0.5, 8, { r2: t.big ? 0.95 : 0.72, collide: false });
+      (K.lamps ||= []).push({ p: [x, y + h + 1, z], c: [1, 0.42, 0.18], r: t.big ? 34 : 26, i: t.big ? 40 : 20, flicker: 0.4 });
+    } else if (t.kind === 'pole') {
+      // (His banner on a pole, hung from an arm out toward the way: one arm, out one side, the cloth below it.)
+      // (The arm from the pole's very head, nothing of the pole over it: an arm part way down a pole is a cross.)
+      K.box('dark:wood', x, y, z, 0.11, 8.27, 0.11, 0, NC);
+      K.beam('dark:wood', [x, y + 8.2, z], [x, y + 8.2, z - t.face * 1.9], 0.07);
+      // (His red, plain, tapering to a point: both faces. The pack's skull banner is a cut-out, which the near cells don't draw.)
+      for (const e of [-1, 1]) {
+        const zx = (u) => z - t.face * u, X = x + e * 0.02;
+        K.quad('blood:cloth_red', [X, y + 8.1, zx(0.15)], [X, y + 8.1, zx(1.85)], [X, y + 5.2, zx(1.85)], [X, y + 5.2, zx(0.15)], [e, 0, 0]);
+        K.quad('blood:cloth_red', [X, y + 5.2, zx(0.15)], [X, y + 5.2, zx(1.85)], [X, y + 4.1, zx(1.0)], [X, y + 4.1, zx(1.0)], [e, 0, 0]);
+      }
+    } else if (t.kind === 'well') {
+      // (A kerb of dark blocks round black water, a windlass over it on two posts: its drum, a crank out one end.)
+      for (let k = 0; k < 14; k++) { const a = k / 14 * TAU; K.box('dark:stone', x + Math.cos(a) * 1.9, y, z + Math.sin(a) * 1.9, 0.45, 0.9, 0.3, Math.PI / 2 - a, NC); }
+      K.disc('dark:water', x, y + 0.5, z, 1.7, 14);
+      for (const s of [-1, 1]) K.box('dark:wood', x + s * 2.1, y, z, 0.13, 3.1, 0.13, 0, NC);
+      K.beam('dark:wood', [x - 2.1, y + 2.6, z], [x + 2.1, y + 2.6, z], 0.2); K.beam('iron', [x + 2.1, y + 2.6, z], [x + 2.7, y + 2.25, z], 0.04);
+      K.beam('iron', [x, y + 2.5, z], [x, y + 1.1, z], 0.025); K.drum('dark:wood', x, y + 0.75, z, 0.24, 0.36, 7, NC);
+    } else if (t.kind === 'rack') {
+      // (Spears stood against a backboard, their butts in a trough: nothing across the shafts.)
+      const c = Math.cos(t.yaw), s = Math.sin(t.yaw);
+      K.box('dark:wood', x, y + 0.3, z, 1.7, 1.9, 0.05, t.yaw, NC); K.box('dark:wood', x + s * 0.2, y, z + c * 0.2, 1.7, 0.25, 0.18, t.yaw, NC);
+      for (let k = -3; k <= 3; k++) { const px = x + k * 0.46 * c + s * 0.2, pz = z - k * 0.46 * s + c * 0.2; K.box('wood', px, y, pz, 0.028, 3, 0.028, t.yaw, NC); K.cone('iron', px, y + 3, pz, 0.07, 0.45, 4); }
+    } else if (t.kind === 'stores') {
+      const k = hash2(x, z);
+      if (k > 0.5) for (const [ox, oz, h] of [[0, 0, 1.1], [1, 0.25, 1.1], [0.45, 0.9, 0.95]]) { K.drum('wood', x + ox, y, z + oz, 0.45, h, 8, NC); K.drum('iron', x + ox, y + h * 0.3, z + oz, 0.465, 0.07, 8, { open: true, collide: false }); K.drum('iron', x + ox, y + h * 0.72, z + oz, 0.465, 0.07, 8, { open: true, collide: false }); }
+      else { K.box('wood', x, y, z, 0.7, 1, 0.7, k * 3, NC); K.box('wood', x + 1.5, y, z + 0.2, 0.55, 0.8, 0.55, -k * 2, NC); K.box('wood', x + 0.4, y + 1, z, 0.45, 0.6, 0.45, k * 5, NC); }
+    } else if (t.kind === 'cart') {
+      const c = Math.cos(t.yaw), s = Math.sin(t.yaw);
+      K.box('wood', x, y + 0.55, z, 0.9, 0.7, 1.6, t.yaw, NC);
+      for (const u of [-1, 1]) K.drum('dark:wood', x + u * 1.0 * c, y + 0.1, z - u * 1.0 * s, 0.6, 0.12, 10, NC);
+      for (const u of [-0.7, 0.7]) K.beam('wood', [x + u * c + s * 1.6, y + 0.7, z - u * s + c * 1.6], [x + u * c + s * 3.6, y + 0.25, z - u * s + c * 3.6], 0.06);
+    } else if (t.kind === 'stable') {
+      // (A lean-to against the north curtain: four posts, a pent roof of slate down to the yard, three stalls' rails, straw.)
+      for (const u of [-9, -3, 3, 9]) K.box('dark:wood', x + u, y, z - 4, 0.16, 3, 0.16, 0, NC);
+      K.quad('p2_slate_roof', [x - 10, y + 4.6, z + 3], [x + 10, y + 4.6, z + 3], [x + 10, y + 3, z - 4.6], [x - 10, y + 3, z - 4.6], [0, 0.97, -0.23]);
+      K.quad('dark:wood', [x + 10, y + 4.55, z + 3], [x - 10, y + 4.55, z + 3], [x - 10, y + 2.95, z - 4.6], [x + 10, y + 2.95, z - 4.6], [0, -0.97, 0.23]);
+      for (const u of [-3, 3]) K.box('dark:wood', x + u, y, z - 0.5, 0.08, 1.4, 3.5, 0, NC);
+      K.paving('p2_straw_ground', x, z - 0.5, 9.6, 3.4, 0, 0.09);
+      K.box('dark:wood', x - 6, y, z - 3.2, 1.3, 0.6, 0.35, 0, NC); K.box('dark:wood', x, y, z + 3, 10, 3.4, 0.12, 0, NC);
+      K.drum('p2_straw_ground', x + 7, y - 0.2, z - 6.5, 1.6, 1.1, 7, { r2: 0.5, collide: false });
+    } else if (t.kind === 'door') {
+      // (A hall's door in its yard face: an iron-bound leaf in a frame of dressed stone, three steps down, a fire each side.)
+      const c = Math.cos(t.yaw), s = Math.sin(t.yaw), f = t.side, P = (lx, lz) => [t.x + lx * c + lz * s, t.z - lx * s + lz * c], N = [f * s, 0, f * c];
+      for (const lx of [-t.hx * 0.5, t.hx * 0.5]) {
+        const [dx, dz] = P(lx, f * (t.hz + 0.12)), gy = Y(dx, dz);
+        const Q = (u, h, o = 0) => { const [qx, qz] = P(lx + u, f * (t.hz + 0.12 + o)); return [qx, gy + h, qz]; };
+        K.quad('p2_door_iron', f > 0 ? Q(-1.5, 4.4) : Q(1.5, 4.4), f > 0 ? Q(1.5, 4.4) : Q(-1.5, 4.4), f > 0 ? Q(1.5, 0.5) : Q(-1.5, 0.5), f > 0 ? Q(-1.5, 0.5) : Q(1.5, 0.5), N, [[0, 0], [1, 0], [1, 1], [0, 1]]);
+        for (const u of [-1.9, 1.9]) { const [qx, qz] = P(lx + u, f * (t.hz + 0.3)); K.box('p2_curtain_granite', qx, gy, qz, 0.4, 5, 0.4, t.yaw, NC); }
+        { const [qx, qz] = P(lx, f * (t.hz + 0.3)); K.box('p2_curtain_granite', qx, gy + 4.5, qz, 2.6, 0.8, 0.5, t.yaw, NC); }
+        for (let k = 0; k < 3; k++) { const [qx, qz] = P(lx, f * (t.hz + 0.9 + k * 0.5)); K.box('dark:stone', qx, gy - 0.4, qz, 2.6, 0.9 - k * 0.17 - 0.0, 0.26, t.yaw, NC); }
+        for (const u of [-3.4, 3.4]) { const [qx, qz] = P(lx + u, f * (t.hz + 1.6)); K.drum('dark:stone', qx, gy - 0.3, qz, 0.6, 2.3, 6, { r2: 0.4, collide: false }); K.drum('char:stone', qx, gy + 2, qz, 0.32, 0.45, 8, { r2: 0.58, collide: false }); K.cone('blood:flame', qx, gy + 2.4, qz, 0.4, 1, 6); (K.lamps ||= []).push({ p: [qx, gy + 3, qz], c: [1, 0.42, 0.18], r: 22, i: 16, flicker: 0.4 }); }
+      }
+    }
+  }
+}
 
 // The ground's height on the crag by ward, and a spot's own.
 const wardY = (i) => PLAIN + WARDS[i][1];
@@ -1137,7 +1231,9 @@ export function phobosCastle(K) {
   // (Its foot course and pilasters a step lighter, in the towers' granite: the ashlar's own lighter step is near white,
   // and a pale course across a dark face read as a cross from the gate. The V/T rule.)
   const BL = { crenel: true, lite: 'p2_curtain_granite' };
-  const S = 'soot:p2_curtain_granite', C = 'soot:p2_curtain_granite', B = 'soot:p2_bridge_ashlar', R = 'blood:p2_blood_tiles', RT = 'p2_fishscale_slate';
+  // (The towers in the curtains' own ashlar, as dark: in the granite they stood pale grey against near-black walls, two
+  // castles in one. The halls keep the granite, a step lighter than the walls round them.)
+  const S = 'soot:p2_curtain_granite', C = 'char:p2_bridge_ashlar', B = 'soot:p2_bridge_ashlar', R = 'blood:p2_blood_tiles', RT = 'p2_fishscale_slate';
   // The outer curtain round the crag's edge, a tower every third stretch; the ward walls across it at each step up.
   const ring = [];
   for (let i = 0; i < 44; i++) { const a = i / 44 * TAU; ring.push([CRAG.x + Math.cos(a) * CRAG.a * 0.86, CRAG.z + Math.sin(a) * CRAG.b * 0.86]); }
@@ -1154,7 +1250,7 @@ export function phobosCastle(K) {
   }
   // The gatehouse at the head of the Approach: two great drums and the gate's head between.
   const gx = CRAG.x - CRAG.a * 0.86, gy = Y(gx, 0);
-  for (const s of [-1, 1]) tower(K, S, gx, s * 22, 13, 74, RT, { steep: 2.2, lit: 0.65 });
+  for (const s of [-1, 1]) tower(K, C, gx, s * 22, 13, 74, RT, { steep: 2.2, lit: 0.65 });
   K.box(S, gx, gy + 13, 0, 9, 40, 10, 0, { collide: false });
   { // (The passage under its head: dark walls and a dark vault, its mouths pointed both ends: the spandrels filled in.)
     for (const s of [-1, 1]) K.box('dark:stone', gx, gy - 0.5, s * 9.3, 9, 13.5, 0.3, 0, { collide: false, top: false });
@@ -1162,7 +1258,10 @@ export function phobosCastle(K) {
     for (const e of [-1, 1]) for (const s of [-1, 1]) K.tri(S, [gx + e * 9.04, gy + 7.5, s * 9], [gx + e * 9.04, gy + 13.05, s * 9], [gx + e * 9.04, gy + 13.05, 0]);
     for (const e of [-1, 1]) { K.quad('dark:stone', [gx + e * 9.08, gy + 7.2, -9.6], [gx + e * 9.08, gy + 7.2, -9], [gx + e * 9.08, gy + 13.4, 0.35], [gx + e * 9.08, gy + 13.4, -0.35], [e, 0, 0]); K.quad('dark:stone', [gx + e * 9.08, gy + 7.2, 9], [gx + e * 9.08, gy + 7.2, 9.6], [gx + e * 9.08, gy + 13.4, 0.35], [gx + e * 9.08, gy + 13.4, -0.35], [e, 0, 0]); }
     // (The portcullis wound up into the head, all but its teeth: bars down from a beam, none across.)
-    K.box('iron', gx - 7.6, gy + 12.2, 0, 0.12, 0.3, 8.8, 0, { collide: false });
+    // (No beam across their heads: with the bars it was a lattice. They hang from the vault itself. And the murder holes over
+    // the passage, three, his fire's red in them; chains down from two of them.)
+    for (const hx of [-5, 0, 5]) K.quad('blood:flame', [gx + hx - 0.7, gy + 12.96, -0.7], [gx + hx + 0.7, gy + 12.96, -0.7], [gx + hx + 0.7, gy + 12.96, 0.7], [gx + hx - 0.7, gy + 12.96, 0.7], [0, -1, 0]);
+    for (const [hx, hz, len] of [[-5, 5.5, 4.5], [5, -5.5, 3.6], [0, 6.2, 2.8]]) K.beam('iron', [gx + hx, gy + 13, hz], [gx + hx, gy + 13 - len, hz], 0.05);
     for (let b = -8.5; b <= 8.51; b += 0.85) { const top = gy + 13 - Math.max(0, Math.abs(b) - 3.5) * 0.9; K.box('iron', gx - 7.6, top - 2.6, b, 0.08, Math.max(0.4, 2.6 - (gy + 13 - top)), 0.08, 0, { collide: false }); }
     // (Its head machicolated: the parapet carried out on corbels over the way in, merlons on it, his red down its face.)
     K.box(S, gx, gy + 53, 0, 11.2, 3.4, 11.6, 0, { collide: false });
@@ -1195,6 +1294,31 @@ export function phobosCastle(K) {
   for (let x = 10640; x < gx - 24; x += 24) for (const s of [-1, 1]) brazier(x, s * 10.8, 2.6);
 
   // ---- the Lower Ward (+120): the working castle
+  // His mark in the yard, where the flagged way from the gate ends under the Middle Ward's wall: a ring of black iron as
+  // tall as four men on a stepped plinth, two horns of his fire out of its top. (A ring and two horns: no letter. The same
+  // as on his gates inside: src/core/delve-build.js mark.) What the yard is walked toward, and seen from the gate.
+  { const mx = 10902, mz = 0, my = Y(mx, mz), r = 6.4, top = my + 3.2;
+    K.drum('dark:stone', mx, my - 0.4, mz, 9, 1.2, 12); K.drum('dark:stone', mx, my + 0.8, mz, 7.4, 1.2, 12, { collide: false }); K.drum('dark:stone', mx, my + 2, mz, 6, 1.2, 12, { collide: false });
+    // (A round of his red behind it, so the black ring shows from the gate: slices, widest at the middle; a slab of dark stone at its back.)
+    const R = r * 1.22;
+    K.box('char:stone', mx + 1.2, top - 0.2, mz, 0.5, R * 2 + 1, R + 0.8, 0, { collide: false });
+    for (let i = 0; i < 11; i++) { const v = -R + (i + 0.5) * R * 2 / 11; K.box('cloth_red', mx + 0.6, top + r + v - R / 11, mz, 0.06, R * 2 / 11, Math.sqrt(R * R - v * v), 0, { collide: false }); }
+    for (let k = 0; k < 20; k++) { const a = k / 20 * TAU; K.box('char:stone', mx, top + r + Math.sin(a) * r - 0.55, mz + Math.cos(a) * r, 0.6, 1.1, 0.72, 0, { collide: false }); }
+    for (const sg of [-1, 1]) { K.cone('blood:flame', mx, top + r * 1.82, mz + sg * r * 0.55, 0.8, 5.4, 5); fire(K, mx, top + r * 1.82, mz + sg * r * 0.55, 1.5, 4.4, 'blood:flame'); }
+    (K.lamps ||= []).push({ p: [mx - 6, top + r, mz], c: [1, 0.25, 0.1], r: 46, i: 160, flicker: 0.2, prio: 50 });
+    for (const sg of [-1, 1]) { K.drum('dark:stone', mx - 7.6, my - 0.3, mz + sg * 7.6, 0.9, 3.4, 6, { r2: 0.6 }); K.drum('char:stone', mx - 7.6, my + 3.1, mz + sg * 7.6, 0.5, 0.6, 8, { r2: 0.95, collide: false }); fire(K, mx - 7.6, my + 3.7, mz + sg * 7.6, 0.7, 1.9, 'blood:flame'); }
+  }
+  // The way's fires, and the door's (YARD_FIRES): the far build's, so they move. Their bowls are the near cells'.
+  for (const [fx, fz, big] of YARD_FIRES) fire(K, fx, Y(fx, fz) + (big ? 5.3 : 2.9), fz, big ? 0.9 : 0.55, big ? 2.6 : 1.5, 'blood:flame');
+  // The castle's door, the way in to the Lower Ward (src/core/delve-castle.js portal), against the north drum's yard face:
+  // the yard's one warm light, and a wash of it up the drum, so it's found from the gate.
+  (K.lamps ||= []).push({ p: [10811, Y(10811, 22) + 3.5, 22], c: [1, 0.62, 0.3], r: 34, i: 90, flicker: 0.25, prio: 40 });
+  // A low wall across the yard a third of the way up it, a gap for the way and a guard post either side of the gap: the
+  // walk from the gate to his mark in two beats.
+  for (const s of [-1, 1]) {
+    K.wall('dark:stone', 10852, s * 13, 10852, s * 58, 1.2, 1.7);
+    K.drum(C, 10852, Y(10852, s * 13) - 1, s * 13, 2.6, 8, 8); K.cone(RT, 10852, Y(10852, s * 13) + 7, s * 13, 3.2, 5, 8);
+  }
   const y0 = wardY(0), y1 = wardY(1), y2 = wardY(2);
   hall(K, B, R, 10850, Y(10850, 150) - 2, 150, 44, 22, 12, 0.25);            // the Barracks and Drill Halls
   hall(K, B, R, 10880, Y(10880, 215) - 2, 215, 30, 16, 10, 0.25);            // the Armoury
@@ -1389,8 +1513,10 @@ export function phobosKeep(K) {
     K.cone(R, sx, P(top) + 1, sz, r + 2.6, r * (4 + 2 * hash2(i, 9)), 12);
     return [sx, sz, r, top];
   });
-  const link = (a, b, drop = 26) => { const d = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / d, uz = (b[1] - a[1]) / d, h = Math.min(a[3], b[3]) - drop; bridge(K, KB, [a[0] + ux * a[2], P(h), a[1] + uz * a[2]], [b[0] - ux * b[2], P(h), b[1] - uz * b[2]], 4, { arch: 2.5 }); };
-  for (let i = 0; i < 9; i++) link(sat[i], sat[(i + 1) % 9]);                // the rim's ring of towers, all the way round
+  const link = (a, b, drop = 26) => { const d = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / d, uz = (b[1] - a[1]) / d, h = Math.min(a[3], b[3]) - drop; bridge(K, KB, [a[0] + ux * a[2], P(h), a[1] + uz * a[2]], [b[0] - ux * b[2], P(h), b[1] - uz * b[2]], 4, { arch: 7 }); };
+  // (Each at a height of its own, turn about, and humped: two level spans meeting in a tower were one beam through it, a
+  // cross against the sky from the yard below. The V and T rule.)
+  for (let i = 0; i < 9; i++) link(sat[i], sat[(i + 1) % 9], i % 2 ? 44 : 26);                // the rim's ring of towers, all the way round
   for (const [i, j] of [[9, 0], [10, 8], [12, 13], [12, 14], [15, 10]]) link(sat[i], sat[j], 34);
   // The lesser towers: turrets out on the curtain and a few on the wards below, some two dozen, each tied by a light bridge to the
   // two towers nearest it, so from the city the whole rock is laced together.
