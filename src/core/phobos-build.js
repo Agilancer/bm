@@ -754,6 +754,30 @@ export function moatLevel(x, z, r = 0) {
   for (let d = -3; d <= 3; d++) { const lv = ring[(i + d + MOAT_N) % MOAT_N].lv; if (lv !== null && lv > most) most = lv; }
   return most;
 }
+// The Slough's stretches, eight metres each, down the city from its rise: each one's ends (p, q), which way it runs, its
+// bed and lower bank, whether a street crosses there (skip) or it's out past the wall (out), and its water's level (lv:
+// the reach it's in; null where there's none).
+const SLOUGH_W = 10.5;
+let SLOUGH_RUN = null;
+function sloughRun() {
+  if (SLOUGH_RUN) return SLOUGH_RUN;
+  // The Slough, down the city from its rise: reaches the same way, a weir at each step, running on under its bridges.
+  const w = SLOUGH_W, run = [];
+  const over = STREETS.filter((st) => st.name !== 'The Corpse Quay');
+  const bridge = (x, z) => over.some((st) => st.pts.some((q, j) => j + 1 < st.pts.length && segD(x, z, q, st.pts[j + 1]) < st.w + 8));
+  for (let i = 0; i + 1 < SLOUGH.length; i++) {
+    const A = SLOUGH[i], B = SLOUGH[i + 1], L = Math.hypot(B[0] - A[0], B[1] - A[1]), ux = (B[0] - A[0]) / L, uz = (B[1] - A[1]) / L, n = Math.ceil(L / 8);
+    for (let k = 0; k < n; k++) {
+      const t = (k + 0.5) / n * L, x = A[0] + ux * t, z = A[1] + uz * t, t0 = k / n * L, t1 = (k + 1) / n * L;
+      run.push({ p: [A[0] + ux * t0, A[1] + uz * t0], q: [A[0] + ux * t1, A[1] + uz * t1], ux, uz, bed: Y(x, z), bank: Math.min(Y(x - uz * 15, z + ux * 15), Y(x + uz * 15, z - ux * 15)), out: cityIn(x, z) > 1.012, skip: bridge(A[0] + ux * t0, A[1] + uz * t0) || bridge(A[0] + ux * t1, A[1] + uz * t1) });
+    }
+  }
+  let top = 0; for (let i = 1; i < run.length; i++) if (run[i].bed > run[top].bed) top = i;
+  // (From its head both ways downhill: each stretch's level is its reach's, set from the low end up.)
+  const lvN = reaches(run.slice(0, top + 1), 0), lvS = reaches(run.slice(top).reverse(), 0).reverse();
+  run.forEach((r, i) => { r.lv = i <= top ? lvN[i] : lvS[i - top]; });
+  return (SLOUGH_RUN = run);
+}
 // A weir: a wall of dark stone across a ditch from one bank's point to the other's, its top a hand under the upper reach,
 // and the water over it down to the lower.
 function weir(K, a, b, hi, lo, bed) {
@@ -776,25 +800,12 @@ function waters(K) {
     const [e0, e1] = Math.abs(p.lv - q.lv) > 0.01 ? [[p, m, p.lv], [m, q, q.lv]] : [[p, q, p.lv]];
     for (const [u, v, y] of [e0, e1].filter(Boolean)) K.quad('dark:water', [u.a[0], y, u.a[1]], [v.a[0], y, v.a[1]], [v.b[0], y, v.b[1]], [u.b[0], y, u.b[1]], [0, 1, 0]);
   }
-  // The Slough, down the city from its rise: reaches the same way, a weir at each step, running on under its bridges.
-  const w = 10.5, run = [];
-  const over = STREETS.filter((st) => st.name !== 'The Corpse Quay');
-  const bridge = (x, z) => over.some((st) => st.pts.some((q, j) => j + 1 < st.pts.length && segD(x, z, q, st.pts[j + 1]) < st.w + 8));
-  for (let i = 0; i + 1 < SLOUGH.length; i++) {
-    const A = SLOUGH[i], B = SLOUGH[i + 1], L = Math.hypot(B[0] - A[0], B[1] - A[1]), ux = (B[0] - A[0]) / L, uz = (B[1] - A[1]) / L, n = Math.ceil(L / 8);
-    for (let k = 0; k < n; k++) {
-      const t = (k + 0.5) / n * L, x = A[0] + ux * t, z = A[1] + uz * t, t0 = k / n * L, t1 = (k + 1) / n * L;
-      run.push({ p: [A[0] + ux * t0, A[1] + uz * t0], q: [A[0] + ux * t1, A[1] + uz * t1], ux, uz, bed: Y(x, z), bank: Math.min(Y(x - uz * 15, z + ux * 15), Y(x + uz * 15, z - ux * 15)), out: cityIn(x, z) > 1.012, skip: bridge(A[0] + ux * t0, A[1] + uz * t0) || bridge(A[0] + ux * t1, A[1] + uz * t1) });
-    }
-  }
-  let top = 0; for (let i = 1; i < run.length; i++) if (run[i].bed > run[top].bed) top = i;
-  // (From its head both ways downhill: each stretch's level is its reach's, set from the low end up.)
-  const lvN = reaches(run.slice(0, top + 1), 0), lvS = reaches(run.slice(top).reverse(), 0).reverse();
-  run.forEach((r, i) => { r.lv = i <= top ? lvN[i] : lvS[i - top]; });
+  // The Slough: its reaches (sloughRun), a weir at each step, none under the streets that cross it.
+  const run = sloughRun(), w = SLOUGH_W;
   for (let i = 0; i < run.length; i++) {
     const r = run[i], { p, q, ux, uz, lv } = r;
     if (lv === null || r.out) continue;
-    K.quad('water', [p[0] - uz * w, lv, p[1] + ux * w], [q[0] - uz * w, lv, q[1] + ux * w], [q[0] + uz * w, lv, q[1] - ux * w], [p[0] + uz * w, lv, p[1] - ux * w], [0, 1, 0]);
+    K.quad('mire:water', [p[0] - uz * w, lv, p[1] + ux * w], [q[0] - uz * w, lv, q[1] + ux * w], [q[0] + uz * w, lv, q[1] - ux * w], [p[0] + uz * w, lv, p[1] - ux * w], [0, 1, 0]);
     const nx = run[i + 1];
     if (nx && nx.lv !== null && !nx.out && Math.abs(nx.lv - lv) > 0.01) weir(K, [q[0] - uz * w, q[1] + ux * w], [q[0] + uz * w, q[1] - ux * w], Math.max(lv, nx.lv), Math.min(lv, nx.lv), Math.max(r.bed, nx.bed) - 1);
   }
@@ -1017,6 +1028,54 @@ function wallNear(K, cell) {
     }
   }
 }
+// The Slough from near: a quay wall of dark stone down each bank to the water, a coping along its top; mooring posts
+// along it; here and there a flight of steps down to the water, and a boat moored at their foot (a hull, two thwarts, a
+// pole laid in it). (Nothing here stops a body: the ditch itself does.)
+function sloughNear(K, cell) {
+  const run = sloughRun(), w = SLOUGH_W, NC = { collide: false };
+  run.forEach((r, i) => {
+    if (r.lv === null || r.out || r.skip) return;
+    const mx = (r.p[0] + r.q[0]) / 2, mz = (r.p[1] + r.q[1]) / 2;
+    if (cellOf(mx, mz) !== cell) return;
+    const { ux, uz } = r, yaw = Math.atan2(ux, uz) - Math.PI / 2, L = Math.hypot(r.q[0] - r.p[0], r.q[1] - r.p[1]);
+    const nx = run[i + 1], step = nx && nx.lv !== null && !nx.out && !nx.skip && Math.abs(nx.lv - r.lv) > 0.01;
+    for (const sd of [-1, 1]) {
+      const qx = mx - uz * sd * (w + 0.4), qz = mz + ux * sd * (w + 0.4), top = Math.max(r.lv + 1.1, Math.min(Y(mx - uz * sd * (w + 3.5), mz + ux * sd * (w + 3.5)), r.lv + 4.6));
+      K.box('soot:ph_basalt', qx, r.lv - 1.2, qz, L / 2 + 0.05, top - r.lv + 1.2, 0.45, yaw, NC);
+      K.box('ph_basalt', qx - uz * sd * 0.1, top, qz + ux * sd * 0.1, L / 2 + 0.05, 0.22, 0.62, yaw, NC);
+      // (A slime line along the wall at the water, and a towpath of dark flags behind its coping.)
+      K.box('mire:ph_basalt', qx + uz * sd * 0.03, r.lv - 0.1, qz - ux * sd * 0.03, L / 2 + 0.05, 0.5, 0.46, yaw, NC);
+      { const tx = mx - uz * sd * (w + 2), tz = mz + ux * sd * (w + 2); K.box('dark:stone', tx, top - 0.5, tz, L / 2 + 0.05, 0.56, 1.5, yaw, NC); }
+      const k = hash2(i * 7 + (sd > 0 ? 3 : 0), 19), k2 = hash2(i * 13 + (sd > 0 ? 5 : 0), 23);
+      if (k > 0.25) { const px = r.p[0] - uz * sd * (w - 0.3), pz = r.p[1] + ux * sd * (w - 0.3); K.drum('dark:wood', px, r.lv - 1, pz, 0.2, 2.5, 6, NC); K.drum('char:stone', px, r.lv + 1.25, pz, 0.24, 0.14, 6, { open: true, collide: false }); }
+      // (An outfall in the wall, one stretch in five: a dark mouth, its stain down to the water.)
+      if (k2 > 0.8) { const ox = mx - uz * sd * (w - 0.08), oz = mz + ux * sd * (w - 0.08), N = [uz * sd, 0, -ux * sd]; const Q = (u, h) => [ox + ux * u, r.lv + h, oz + uz * u]; K.quad('obsidian', Q(-0.7, 0.5), Q(0.7, 0.5), Q(0.7, 1.7), Q(-0.7, 1.7), N); K.quad('mire:stone', Q(-0.5, -0.05), Q(0.5, -0.05), Q(0.6, 0.5), Q(-0.6, 0.5), N); }
+      // (What's kept on the towpath: casks and crates against the bank, one stretch in three.)
+      if (k2 < 0.33) { const cx = mx - uz * sd * (w + 2.9) + ux * 2, cz = mz + ux * sd * (w + 2.9) + uz * 2; K.box('wood', cx, top, cz, 0.6, 0.9, 0.6, k2 * 9, NC); K.drum('wood', cx - ux * 1.4, top, cz - uz * 1.4, 0.42, 1, 8, NC); K.box('wood', cx + ux * 1.3, top, cz + uz * 1.3, 0.5, 0.6, 0.5, -k2 * 7, NC); }
+      // (Steps down, one stretch in six, and a boat by them.)
+      if (k < 0.17) {
+        for (let st = 0; st < 6; st++) { const o = w - 0.6 - st * 0.55, sx = mx - uz * sd * o + ux * 1.5, sz = mz + ux * sd * o + uz * 1.5; K.box('ph_basalt', sx, r.lv - 1, sz, 1.4, 1 + (top - r.lv) * (1 - st / 6), 0.28, yaw, NC); }
+        const bx = mx - uz * sd * (w - 4.6) - ux * 2.5, bz = mz + ux * sd * (w - 4.6) - uz * 2.5, by = r.lv - 0.15;
+        // (A barge: a long hull, pointed both ends, a deck load of casks and bales under a hide, a lantern on a post at its stern.)
+        K.box('dark:wood', bx, by, bz, 4.6, 0.9, 1.5, yaw, NC);
+        for (const e of [-1, 1]) K.quad('dark:wood', [bx + ux * e * 4.6 - uz * 1.5, by + 0.9, bz + uz * e * 4.6 + ux * 1.5], [bx + ux * e * 4.6 + uz * 1.5, by + 0.9, bz + uz * e * 4.6 - ux * 1.5], [bx + ux * e * 6.6, by + 1.15, bz + uz * e * 6.6], [bx + ux * e * 6.6, by + 1.15, bz + uz * e * 6.6]);
+        K.box('p2_hessian', bx - ux * 1, by + 0.9, bz - uz * 1, 2, 0.9, 1.1, yaw, NC); K.drum('wood', bx + ux * 2.2, by + 0.9, bz + uz * 2.2, 0.45, 1, 8, NC); K.drum('wood', bx + ux * 3.2, by + 0.9, bz + uz * 3.2, 0.45, 1, 8, NC);
+        K.box('dark:wood', bx - ux * 4, by + 0.9, bz - uz * 4, 0.07, 2.2, 0.07, 0, NC); K.cone('mire:flame', bx - ux * 4, by + 3.1, bz - uz * 4, 0.16, 0.4, 5);
+        (K.lamps ||= []).push({ p: [bx - ux * 4, by + 3.2, bz - uz * 4], c: [0.55, 1, 0.5], r: 18, i: 14, flicker: 0.3 });
+      }
+    }
+    // The weir, where this stretch's water steps to the next's: a crest of dressed stone, a wing wall at each bank, the
+    // water over it in a pale sheet, foam on the low side.
+    if (step) {
+      const hi = Math.max(r.lv, nx.lv), lo = Math.min(r.lv, nx.lv), dn = nx.lv < r.lv ? 1 : -1, cx = r.q[0], cz = r.q[1];
+      K.box('ph_basalt', cx, lo - 1, cz, 0.9, hi - lo + 1.12, w + 0.6, yaw + Math.PI / 2, NC);
+      for (const sd of [-1, 1]) K.box('soot:ph_basalt', cx - uz * sd * (w + 0.3), lo - 1, cz + ux * sd * (w + 0.3), 2.6, hi - lo + 2.6, 0.8, yaw, NC);
+      const fx = cx + ux * dn * 0.95, fz = cz + uz * dn * 0.95, N = [ux * dn, 0, uz * dn];
+      K.quad('pale:water', [fx - uz * (w - 0.4), hi + 0.06, fz + ux * (w - 0.4)], [fx + uz * (w - 0.4), hi + 0.06, fz - ux * (w - 0.4)], [fx + uz * (w - 0.4) + ux * dn * 0.5, lo, fz - ux * (w - 0.4) + uz * dn * 0.5], [fx - uz * (w - 0.4) + ux * dn * 0.5, lo, fz + ux * (w - 0.4) + uz * dn * 0.5], N);
+      { const ax = cx + ux * dn * 3.2, az = cz + uz * dn * 3.2; K.quad('pale:water', [ax - uz * (w - 0.5) - ux * 1.9, lo + 0.04, az + ux * (w - 0.5) - uz * 1.9], [ax + uz * (w - 0.5) - ux * 1.9, lo + 0.04, az - ux * (w - 0.5) - uz * 1.9], [ax + uz * (w - 0.5) + ux * 1.9, lo + 0.04, az - ux * (w - 0.5) + uz * 1.9], [ax - uz * (w - 0.5) + ux * 1.9, lo + 0.04, az + ux * (w - 0.5) + uz * 1.9], [0, 1, 0]); }
+    }
+  });
+}
 export function phobosCell(K, cell) {
   const n0 = K.colliders.length;
   for (const l of phobosLamps()) if (l.cell === cell) {
@@ -1029,6 +1088,7 @@ export function phobosCell(K, cell) {
   for (const t of cityTowers()) if (t.cell === cell) towerNear(K, t);
   for (const hb of HUBS) if (cellOf(hb.x, hb.z) === cell) hubNear(K, hb);
   if (CASTLE_CELLS.has(cell)) castleNear(K, cell);
+  sloughNear(K, cell);
   wallNear(K, cell);
   // A seal's square: dark flags laid round it, an iron lantern at each corner. (The seal itself: src/core/sites.js.)
   for (const s of PHOBOS_SEALS) if (cellOf(s.x, s.z) === cell) {
