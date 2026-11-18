@@ -70,7 +70,8 @@ const bodies = [];
 async function addBody(id, x) {
   const model = folkJson?.models?.[id] || folkJson?.models?.[folkJson?.swaps?.[id]?.base];
   const glbId = folkJson?.swaps?.[id]?.base || id;
-  const buf = await fetch(`${base}${glbId}.glb`).then((r) => { if (!r.ok) throw new Error(`${glbId}.glb ${r.status}`); return r.arrayBuffer(); });
+  const glbFile = folkJson?.swaps?.[id]?.glb || `${glbId}.glb`;
+  const buf = await fetch(`${base}${glbFile}`).then((r) => { if (!r.ok) throw new Error(`${glbFile} ${r.status}`); return r.arrayBuffer(); });
   const glb = parseGLB(buf);
   const rig = new FolkRig(glb, clips, { armOut: id === 'smith' ? PEOPLE.find((p) => p.id === 'homunculus').armOut : model?.armOut || 0, skirt: model?.skirt || null, fist: model?.fist });
   const pose = new FolkPose(rig);
@@ -86,6 +87,9 @@ async function addBody(id, x) {
   const mat = new THREE.MeshStandardMaterial({ color: 0xbbbbbb, roughness: 0.8, metalness: 0, side: THREE.DoubleSide })  // two-sided, as the game draws its people (cullMode none);
   const c = folkJson?.swaps?.[id]?.c || model?.c;
   if (c) tex.load(base + c, (t) => { t.colorSpace = THREE.SRGBColorSpace; t.flipY = false; mat.map = t; mat.color.set(0xffffff); mat.needsUpdate = true; });
+  // The normal map, read the glTF way (three's GLTFLoader flips its y on a mesh with no tangents, so here too).
+  const n = folkJson?.swaps?.[id]?.n || model?.n;
+  if (n && q.get('normals') !== '0') tex.load(base + n, (t) => { t.flipY = false; mat.normalMap = t; mat.normalScale.set(1, -1); mat.needsUpdate = true; });
   const mesh = new THREE.Mesh(g, mat);
   mesh.frustumCulled = false;
   scene.add(mesh);

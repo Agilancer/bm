@@ -1,19 +1,370 @@
 {
- "_": "Skins for tools/phobos/grim_skin.py. faces: each base body's landmarks seen from the front in its bind pose (metres; his left +x; mid the nose's line; eye_r/eye_l each eye's middle; brow_y the brows' height, brow_in/out how far they run from mid; nose_w/mouth_w the nose's wings and the mouth's corners from mid; front_z the face's front; scar: strokes, each a list of points). skins: clothes targets are [lightness, saturation, hue turns or null to keep each texel's own]; lightness scales each kind about its mean, so its own light and dark stay.",
+ "_": "Skins for tools/phobos/grim_skin.py. faces: each base body's landmarks seen from the front in its bind pose (metres; his left +x; mid the nose's line; eye_r/eye_l each eye's middle; brow_y the brows' height, brow_in/out how far they run from mid; nose_w/mouth_w the nose's wings and the mouth's corners from mid; front_z the face's front; forehead: lines as [height, from, to] about mid (none crosses the middle); heal: the base's own marks to paint out, [centre, radii]; normals.depth: how deep the folds are cut into the normal map, metres, beard: where it grows {top, bottom, half its width, lips [x from mid, y, rx, ry]} ; scar: strokes, each a list of points). skins: clothes and skin targets are [lightness, saturation, hue turns or null to keep each texel's own, keep]; lightness scales each kind about its mean, keep how much of its own contrast it holds. sculpt: moves of the face, each {at: [x from mid, y], r: radii, d: shift, both: mirrored, z/zr: only near that depth}.",
  "faces": {
-  "wes": {"mid": -0.008, "eye_r": [-0.040, 1.665], "eye_l": [0.028, 1.664], "brow_y": 1.683, "brow_in": 0.010, "brow_out": 0.050,
-          "cheek_y": 1.633, "nose_w": 0.016, "nose_y": 1.626, "mouth_w": 0.026, "mouth_y": 1.593, "forehead": [1.703, 1.714], "front_z": 0.06,
-          "scar": [[[0.019, 1.704], [0.025, 1.691], [0.030, 1.678]], [[0.036, 1.652], [0.041, 1.639], [0.046, 1.627]]], "scar_w": 0.0028}
+  "wes": {
+   "mid": -0.008,
+   "eye_r": [
+    -0.04,
+    1.665
+   ],
+   "eye_l": [
+    0.028,
+    1.664
+   ],
+   "brow_y": 1.683,
+   "brow_in": 0.008,
+   "brow_out": 0.052,
+   "cheek_y": 1.633,
+   "nose_w": 0.016,
+   "nose_y": 1.626,
+   "mouth_w": 0.026,
+   "mouth_y": 1.593,
+   "front_z": 0.06,
+   "forehead": [
+    [
+     1.7,
+     -0.034,
+     -0.011
+    ],
+    [
+     1.703,
+     0.008,
+     0.03
+    ],
+    [
+     1.71,
+     -0.027,
+     -0.009
+    ],
+    [
+     1.713,
+     0.011,
+     0.034
+    ],
+    [
+     1.72,
+     -0.02,
+     -0.01
+    ]
+   ],
+   "heal": [
+    [
+     [
+      -0.023,
+      1.706
+     ],
+     [
+      0.01,
+      0.013
+     ]
+    ]
+   ],
+   "scar": [
+    [
+     [
+      0.02,
+      1.72
+     ],
+     [
+      0.024,
+      1.705
+     ],
+     [
+      0.028,
+      1.692
+     ],
+     [
+      0.031,
+      1.681
+     ],
+     [
+      0.034,
+      1.668
+     ],
+     [
+      0.037,
+      1.655
+     ],
+     [
+      0.04,
+      1.643
+     ],
+     [
+      0.043,
+      1.632
+     ]
+    ]
+   ],
+   "scar_w": 0.0048,
+   "beard": {
+    "top": 1.613,
+    "bottom": 1.52,
+    "half": 0.075,
+    "lips": [
+     0.0,
+     1.593,
+     0.021,
+     0.0045
+    ]
+   }
+  }
  },
  "skins": {
   "ph_tallow": {
    "base": "wes",
-   "note": "a tallow-boiler of the Slough: linen gone dishwater grey, the apron black with fat and soot, a sallow face that's never seen the sun, a scar down through his left brow",
-   "clothes": {"linen": [0.34, 0.10, 0.09], "leather": [0.17, 0.20, null], "hair": [0.36, 0.05, 0.10], "keep": 1.0},
-   "skin": {"hue": 0.008, "sat": 0.72, "val": 0.86, "grey": 0.25, "grey_tint": [1.0, 0.98, 0.95]},
-   "grime": {"cell": 0.12, "thresh": 0.45, "soot": 0.35, "hems": 0.3, "on_skin": 0.15, "soot_col": [0.55, 0.52, 0.5], "mud": 0.5, "mud_col": [0.62, 0.55, 0.45]},
-   "face": {"bags": 0.45, "socket": 0.4, "brow": 0.35, "cheek": 0.3, "cheekbone": 0.25, "fold": 0.45, "mouth": 0.4, "frown": 0.5, "forehead": 0.3,
-            "shadow_col": [0.42, 0.33, 0.33], "scar_col": [1.35, 1.12, 1.08]}
+   "note": "Mordo Grisk, a tallow-boiler of the Slough: black greasy hair and beard, a sallow face that's never seen the sun, a broken nose, a scar down through his left brow; linen gone dishwater yellow-grey, the apron black and waxed with tallow",
+   "clothes": {
+    "linen": [
+     0.42,
+     0.09,
+     0.14
+    ],
+    "apron": [
+     0.1,
+     0.22,
+     0.06,
+     1.1
+    ],
+    "legs": [
+     0.21,
+     0.17,
+     0.16
+    ],
+    "boots": [
+     0.15,
+     0.16,
+     0.08
+    ],
+    "gloves": [
+     0.13,
+     0.18,
+     0.07
+    ],
+    "hair": [
+     0.085,
+     0.24,
+     0.075,
+     1.5
+    ]
+   },
+   "skin": {
+    "to": [
+     0.46,
+     0.27,
+     0.075
+    ],
+    "keep": 1.05
+   },
+   "grime": {
+    "cell": 0.12,
+    "thresh": 0.45,
+    "soot": 0.32,
+    "hems": 0.4,
+    "on_skin": 0.12,
+    "soot_col": [
+     0.5,
+     0.48,
+     0.46
+    ],
+    "mud": 0.75,
+    "mud_col": [
+     0.34,
+     0.31,
+     0.26
+    ],
+    "tallow": 0.6,
+    "tallow_col": [
+     0.43,
+     0.4,
+     0.33
+    ],
+    "grease": 0.35
+   },
+   "face": {
+    "bags": 0.85,
+    "socket": 0.5,
+    "brow": 0.45,
+    "cheek": 0.4,
+    "cheekbone": 0.25,
+    "fold": 0.65,
+    "mouth": 0.8,
+    "frown": 0.95,
+    "forehead": 0.2,
+    "scar_rim": 0.6,
+    "brows": 0.85,
+    "brow_col": [
+     0.07,
+     0.055,
+     0.045
+    ],
+    "stubble": 0.5,
+    "veins": 0.35,
+    "iris": 0.75,
+    "iris_col": [
+     0.5,
+     0.52,
+     0.5
+    ],
+    "shadow_col": [
+     0.4,
+     0.31,
+     0.36
+    ],
+    "scar_col": [
+     1.42,
+     1.14,
+     1.08
+    ]
+   },
+   "sculpt": [
+    {
+     "at": [
+      0.028,
+      1.687
+     ],
+     "r": [
+      0.022,
+      0.009
+     ],
+     "d": [
+      0.0,
+      -0.0025,
+      0.0045
+     ],
+     "both": true
+    },
+    {
+     "at": [
+      0.0,
+      1.682
+     ],
+     "r": [
+      0.009,
+      0.008
+     ],
+     "d": [
+      0.0,
+      -0.002,
+      0.003
+     ]
+    },
+    {
+     "at": [
+      0.05,
+      1.648
+     ],
+     "r": [
+      0.016,
+      0.012
+     ],
+     "d": [
+      0.004,
+      0.0,
+      0.002
+     ],
+     "both": true
+    },
+    {
+     "at": [
+      0.045,
+      1.617
+     ],
+     "r": [
+      0.014,
+      0.013
+     ],
+     "d": [
+      -0.002,
+      0.0,
+      -0.004
+     ],
+     "both": true
+    },
+    {
+     "at": [
+      0.0,
+      1.65
+     ],
+     "r": [
+      0.008,
+      0.012
+     ],
+     "d": [
+      0.0028,
+      0.0,
+      0.0012
+     ],
+     "z": 0.11,
+     "zr": 0.02
+    },
+    {
+     "at": [
+      0.0,
+      1.63
+     ],
+     "r": [
+      0.011,
+      0.008
+     ],
+     "d": [
+      0.0012,
+      -0.0015,
+      0.0025
+     ],
+     "z": 0.12,
+     "zr": 0.015
+    },
+    {
+     "at": [
+      0.016,
+      1.627
+     ],
+     "r": [
+      0.007,
+      0.006
+     ],
+     "d": [
+      0.0025,
+      0.0,
+      0.0
+     ],
+     "both": true
+    },
+    {
+     "at": [
+      0.0,
+      1.548
+     ],
+     "r": [
+      0.03,
+      0.025
+     ],
+     "d": [
+      0.0,
+      -0.007,
+      0.005
+     ]
+    },
+    {
+     "at": [
+      0.062,
+      1.565
+     ],
+     "r": [
+      0.02,
+      0.025
+     ],
+     "d": [
+      0.005,
+      -0.003,
+      0.0
+     ],
+     "both": true
+    }
+   ],
+   "normals": {
+    "depth": 0.0009
+   }
   }
  }
 }

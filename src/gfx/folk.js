@@ -37,9 +37,11 @@ export class FolkBodies {
       if (!tex.has(f)) tex.set(f, file(f).then((res) => res.blob()).then((b) => r.bitmapTexture(b, format, r.tier.texScale)));
       return tex.get(f);
     };
-    const model = (m) => {
-      if (!geo.has(m)) geo.set(m, file(folk.models[m].glb).then((res) => res.arrayBuffer()).then((buf) => this.mesh(parseGLB(buf), folk.models[m])));
-      return geo.get(m);
+    // (A swap may bring its own mesh, `glb`: the base body with its face moved, tools/phobos/grim_skin.py. Its skeleton and
+    // weights are the base's, so it's posed as the base is; only what's drawn differs.)
+    const model = (m, f = folk.models[m].glb) => {
+      if (!geo.has(f)) geo.set(f, file(f).then((res) => res.arrayBuffer()).then((buf) => this.mesh(parseGLB(buf), folk.models[m])));
+      return geo.get(f);
     };
     // (Whoever's nearest you next, each time: the town's, when you start in it; a small town's own people when you've come
     // to it by a seal before the last of Bellmourn's are in. Someone the town's thread hasn't placed yet waits their turn.)
@@ -64,9 +66,9 @@ export class FolkBodies {
         const p = PEOPLE[i], swap = folk.models[p.body] ? null : folk.swaps?.[p.body];
         const mk = swap ? swap.base : folk.models[p.body] ? p.body : 'worker';
         const m = folk.models[mk];
-        const g = await model(mk);
+        const g = await model(mk, swap?.glb);
         const sk = g.used++ ? r.cloneSkinned(g.base) : g.base;
-        const [alb, nrm, mr] = await Promise.all([texture(swap?.c || m.c, 'rgba8unorm-srgb'), texture(m.n, 'rgba8unorm'), texture(m.m, 'rgba8unorm')]);
+        const [alb, nrm, mr] = await Promise.all([texture(swap?.c || m.c, 'rgba8unorm-srgb'), texture(swap?.n || m.n, 'rgba8unorm'), texture(m.m, 'rgba8unorm')]);
         const ubo = r.device.createBuffer({ size: UBO_BYTES, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
         r.device.queue.writeBuffer(ubo, UBO_BYTES - 16, this.info);
         const matBG = r.device.createBindGroup({ layout: r.bglArmor, entries: [

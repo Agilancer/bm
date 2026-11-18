@@ -81,6 +81,6 @@
     "ph_ondine": {"base": "lady_red_1", "c": "ph_ondine_c.webp", "note": "Phobos's crowd: a lapsed sister of his Sanctuaries: a plain gown gone ash-grey"},
     "ph_jory": {"base": "old_man", "c": "ph_jory_c.webp", "note": "Phobos's crowd: the old quartermaster: a buff coat, darkened"},
     "ph_pip": {"base": "boy_1", "c": "ph_pip_c.webp", "note": "Phobos's crowd: the horn-blower boy: his red livery, madder"},
-    "ph_tallow": {"base": "wes", "c": "ph_tallow_c.webp", "note": "Phobos's crowd: a tallow-boiler of the Slough: linen gone dishwater grey, the apron black with fat and soot, a sallow face that's never seen the sun, a scar down through his left brow"}
+    "ph_tallow": {"base": "wes", "c": "ph_tallow_c.webp", "note": "Phobos's crowd: Mordo Grisk, a tallow-boiler of the Slough: black greasy hair and beard, a sallow face that's never seen the sun, a broken nose, a scar down through his left brow; linen gone dishwater yellow-grey, the apron black and waxed with tallow", "n": "ph_tallow_n.webp", "glb": "ph_tallow.glb"}
   }
 }
