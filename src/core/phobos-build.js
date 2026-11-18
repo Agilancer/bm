@@ -1233,7 +1233,7 @@ export function phobosCastle(K) {
   const BL = { crenel: true, lite: 'p2_curtain_granite' };
   // (The towers in the curtains' own ashlar, as dark: in the granite they stood pale grey against near-black walls, two
   // castles in one. The halls keep the granite, a step lighter than the walls round them.)
-  const S = 'soot:p2_curtain_granite', C = 'char:p2_bridge_ashlar', B = 'soot:p2_bridge_ashlar', R = 'blood:p2_blood_tiles', RT = 'p2_fishscale_slate';
+  const S = 'soot:p2_curtain_granite', C = 'soot:p2_bridge_ashlar', B = 'soot:p2_bridge_ashlar', R = 'blood:p2_blood_tiles', RT = 'p2_fishscale_slate';
   // The outer curtain round the crag's edge, a tower every third stretch; the ward walls across it at each step up.
   const ring = [];
   for (let i = 0; i < 44; i++) { const a = i / 44 * TAU; ring.push([CRAG.x + Math.cos(a) * CRAG.a * 0.86, CRAG.z + Math.sin(a) * CRAG.b * 0.86]); }

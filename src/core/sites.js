@@ -187,7 +187,10 @@ export class Kit {
       for (const q of nn) { const l = Math.hypot(...q); p.nrm.push(q[0] / l, q[1] / l, q[2] / l); }
       const u = i * arc / tw;
       p.uv.push(u, -y / th, u + arc / tw, -y / th, u + arc / tw, -(y + h) / th, u, -(y + h) / th);
-      p.idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
+      // (Wound to agree with its normals, which point out: wound the other way, the shader took every side for its back
+      // seen and turned the normal round, and every drum and cone in the game was lit from its far side. A tower in the
+      // sun stood dark beside a lit wall, and one in shade pale beside a dark one.)
+      p.idx.push(base, base + 2, base + 1, base, base + 3, base + 2);
     }
     if (!o.open && r2 > 0.01) {
       const lid = o.lid || layer;
