@@ -75,6 +75,12 @@ two halves of one shirt may be on opposite sides of the square.
 3. **No marks of Velscour on ordinary people either** (no sigils, no emblems, no heraldry) unless the owner asks for
    one of his own men. Plain folk wear plain cloth.
 4. **No real people, brands or logos.**
+5. **Some bodies come with things to paint out.** The noble men (`lord_blue`, `knight_blue`, `youth_blue`,
+   `lord_red`, `youth_red`) wear lion badges on their tabards and cloaks: a Phobos skin of them paints every badge
+   out into plain cloth. The blue bodies (`lady_blue`, `dame_blue`, `lord_blue`, `knight_blue`, `youth_blue`,
+   `girl_1`) are in Tessariel's blue: a Phobos skin of them takes the blue away entirely.
+6. **`smith` is Homunculus**, the town's smith and one of a kind. Don't give his face to anyone else; if his body is
+   used, it needs a different face (hair, beard, skin) and must not keep his red neckerchief.
 
 ---
 
