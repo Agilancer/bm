@@ -636,7 +636,10 @@ export class Player {
   // The view model's solved joints give the blade's tip and middle in view space.
   solveViewModel(snap, sim) {
     const { arms } = this;
-    arms.solve(arms.clips[this.clip === this.stance.idle ? this.rest : this.clip], this.t, this.fade, snap, VM_PALETTE);
+    // On the shield the staff's left out of the picture, so a shot from it moves nothing: the empty hand stays as it
+    // rides (the clip still runs underneath, for when the shot looses: casting.js stepStaff), on the owner's word.
+    if (this.surfing && this.stance.shoots) arms.solve(arms.clips[this.stance.idle], 0, 1, snap, VM_PALETTE);
+    else arms.solve(arms.clips[this.clip === this.stance.idle ? this.rest : this.clip], this.t, this.fade, snap, VM_PALETTE);
     if (sim.casting.armDown > 0) this.lowerSwordArm(snap, sim.casting.armDown);
     const tp = arms.tip * 3, rp = arms.weapon * 3, w = arms.wt;
     snap[H.TIP_X] = w[tp]; snap[H.TIP_Y] = w[tp + 1]; snap[H.TIP_Z] = w[tp + 2];
