@@ -169,6 +169,53 @@ function hangBanner(K, x, y, z, face, w, len, rep) {
   K.quad(BANNER, P(-w / 2, 0), P(w / 2, 0), P(w / 2, -h), P(-w / 2, -h), [nx, 0, nz], [[0, 0], [1, 0], [1, 1], [0, 1]]);
   K.hanging('cloth_red', x, y - h * 0.8, z, face, w, len - h * 0.8, rep);
 }
+// A shop's sign: a board hung out from the wall on an iron bracket by the door, edge on to the street so it's read from
+// down it, painted both sides with the shop's name and a picture of its trade, one of twenty (p2_signs, painted by
+// tools/phobos/textures/signs.py, a cell of four across and five down). (The owner, 2026-11-19: "put words on the signs".)
+const SIGNS = 20;
+function shopSign(K, h, P, fy, fz, i) {
+  // (Its chains from the bracket's two ends, by the wall and at its tip, never from along it: a cord hung from the middle of
+  // a bar is a T. The V/T rule.)
+  const f = h.front, lx = -DOOR - 0.9, hw = 0.38, zc = fz + f * (0.08 + hw), y0 = fy + 2.45, y1 = fy + 3.05, t = 0.045, tip = fz + f * (0.1 + 2 * hw);
+  K.beam('iron', P(lx, fy + 3.3, fz), P(lx, fy + 3.3, tip), 0.05);
+  for (const zz of [fz + f * 0.1, tip]) K.beam('iron', P(lx, fy + 3.3, zz), P(lx, y1, zz), 0.012);
+  const [bx, , bz] = P(lx, 0, zc); K.box('dark:wood', bx, y0 - 0.03, bz, t + 0.01, y1 - y0 + 0.06, hw + 0.03, h.yaw, { collide: false });
+  const u0 = (i % 4) / 4, u1 = u0 + 0.25, v0 = Math.floor(i / 4) / 5, v1 = v0 + 0.2, X = [Math.cos(h.yaw), 0, -Math.sin(h.yaw)];
+  for (const e of [1, -1]) {
+    // (Read from the side it faces: the viewer's right is the house's -z on the +x face, +z on the other.)
+    const x = lx + e * (t + 0.012), za = zc + e * hw, zb = zc - e * hw;
+    K.quad('p2_signs', P(x, y1, za), P(x, y1, zb), P(x, y0, zb), P(x, y0, za), X.map((v) => e * v), [[u0, v0], [u1, v0], [u1, v1], [u0, v1]]);
+  }
+}
+// The back of a house, on its yard or the alley behind: a back door with a step (a lamp over some), and along the wall what
+// a household leaves out: a rain butt under the eaves with its puddle, firewood stacked to dry, crates and sacks, a
+// heap of refuse, a bucket, now and then a handcart. (The owner, 2026-11-19: "there should be more than just walls in
+// alley ways. This is a city full of people.") Nothing here stops you; no ladders (their rungs are bars across).
+function backyard(K, h, P, fy, r) {
+  const f = h.front, bz = -f * (h.hz + 0.5), N = [-f * Math.sin(h.yaw), -f * Math.cos(h.yaw)], n0 = K.colliders.length;
+  const at = (lx, lz = bz) => { const q = P(lx, 0, lz); return [q[0], q[2]]; };
+  let door = null;
+  if (r(60) < 0.55 && h.hx > 2.2) {
+    const xd = (r(61) - 0.5) * (h.hx - 1.4), zo = -f * (h.hz + 0.03);
+    door = xd;
+    K.quad('p2_door_poor', P(xd - f * 0.5, fy, zo), P(xd + f * 0.5, fy, zo), P(xd + f * 0.5, fy + 2.05, zo), P(xd - f * 0.5, fy + 2.05, zo), [N[0], 0, N[1]], [[0, 1], [1, 1], [1, 0], [0, 0]]);
+    K.quad('dark:wood', P(xd - f * 0.6, fy + 2.05, zo), P(xd + f * 0.6, fy + 2.05, zo), P(xd + f * 0.6, fy + 2.17, zo), P(xd - f * 0.6, fy + 2.17, zo), [N[0], 0, N[1]]);
+    const [sx, sz] = at(xd, -f * (h.hz + 0.35)); K.box('stone', sx, Math.min(Y(sx, sz), fy) - 0.3, sz, 0.6, fy - Math.min(Y(sx, sz), fy) + 0.3, 0.35, h.yaw, { collide: false });
+    if (r(62) < 0.4) { const q = P(xd + 0.85, fy + 2.3, -f * h.hz); K.wallLamp(q[0], q[1], q[2], N); if (r(63) < 0.5) (K.lamps ||= []).push({ p: [q[0] + N[0] * 0.5, q[1] - 0.4, q[2] + N[1] * 0.5], c: [1, 0.62, 0.3], r: 12, i: 8, flicker: 0.4 }); }
+  }
+  for (let x = -h.hx + 0.7, k = 0; x < h.hx - 0.6; x += 1.5 + r(70 + k) * 0.9, k++) {
+    if (door !== null && Math.abs(x - door) < 1.1) continue;
+    const v = r(80 + k), [px, pz] = at(x), y = Y(px, pz);
+    if (v < 0.16) { K.barrel(px, pz, 0.42, 1.0); K.disc('dark:water', px + N[0] * 0.7, y + 0.03, pz + N[1] * 0.7, 0.5 + r(90 + k) * 0.5, 9); }
+    else if (v < 0.32) { const [wx, wz] = at(x, -f * (h.hz + 0.35)); K.woodpile(wx, wz, h.yaw, 0.65, 0.7 + r(91 + k) * 0.5, 0.3); }
+    else if (v < 0.46) { K.crate(px, pz, 0.4, h.yaw + r(92 + k)); if (r(93 + k) < 0.6) K.crate(px + 0.1, pz, 0.32, h.yaw + 0.4, y + 0.73); if (r(94 + k) < 0.5) { const [qx, qz] = at(x + 0.75); K.sack(qx, qz); } }
+    else if (v < 0.58) { K.rock('soot:rubble', px, pz, 0.6 + r(95 + k) * 0.4, 0.35, { collide: false }); K.disc('char:rubble', px, y + 0.04, pz, 1.1, 8); K.crate(px + 0.6, pz + 0.3, 0.26, r(96 + k) * 3, y - 0.12); }
+    else if (v < 0.68) { K.drum('soot:wood', px, y, pz, 0.19, 0.32, 8, { r2: 0.22, open: true, collide: false }); if (r(97 + k) < 0.5) K.disc('dark:water', px + N[0] * 0.5, y + 0.03, pz + N[1] * 0.5, 0.45, 8); }
+    else if (v < 0.73 && h.hx > 3) { const [cx, cz] = at(x, -f * (h.hz + 1.4)); K.cart(cx, cz, h.yaw + Math.PI / 2 + (r(98 + k) - 0.5) * 0.6); x += 1.2; }
+    else if (v < 0.86) { K.sack(px, pz); if (r(99 + k) < 0.6) { const [qx, qz] = at(x + 0.55); K.sack(qx, qz, 0.3); } }
+  }
+  K.colliders.length = n0;
+}
 function houseNear(K, h) {
   const F = footing(h), { lo, hi, c, s } = F, f = h.front, top = hi + h.h, fy = hi + 0.1, ceil = Math.min(top - 0.3, fy + 3.1);
   const P = (lx, ly, lz) => [h.x + lx * c + lz * s, ly, h.z - lx * s + lz * c];
@@ -293,9 +340,10 @@ function houseNear(K, h) {
     // (The red, or oat sooted to hessian: the plain oat cloth was butter yellow down the streets, the critics.)
     const cloth = r(21) < 0.5 ? 'cloth_red' : 'umber:cloth_oat', aw = Math.min(h.hx - 0.3, 2.2), ay = fy + 2.75;
     if (r(22) < 0.75) { K.quad(cloth, P(aw * f, ay, fz + f * 0.02), P(-aw * f, ay, fz + f * 0.02), P(-aw * f, ay - 0.5, fz + f * 1.5), P(aw * f, ay - 0.5, fz + f * 1.5)); K.quad(cloth, P(-aw * f, ay, fz + f * 0.02), P(aw * f, ay, fz + f * 0.02), P(aw * f, ay - 0.5, fz + f * 1.5), P(-aw * f, ay - 0.5, fz + f * 1.5)); }
-    if (r(23) < 0.6) { const b0 = P(-DOOR - 0.9, fy + 3.3, fz), b1 = P(-DOOR - 0.9, fy + 3.3, fz + f * 1.0), sg = P(-DOOR - 0.9, fy + 2.5, fz + f * 0.8); K.beam('iron', b0, b1, 0.05); K.box('wood', sg[0], sg[1], sg[2], 0.05, 0.6, 0.38, h.yaw, { collide: false }); }
+    if (r(23) < 0.9) shopSign(K, h, P, fy, fz, Math.floor(r(24) * SIGNS));
     if (r(24) < 0.45) { const g = P(DOOR + 1.6, 0, fz + f * 0.8); K.goods(g[0], g[2], 4, 0.7); }
   }
+  if (!ruin) backyard(K, h, P, fy, r);
   const n1 = K.colliders.length;
   if (/poor_brick|daub|soot/.test(h.wall) && r(17) < 0.16 && h.h > 7) { const a = P(-h.hx * 0.5, 0, fz + f * 0.15), b = P(-h.hx * 0.5, 0, fz + f * 2.85); K.washing(a[0], a[2], b[0], b[2], 3.6 + r(18) * 2.4); }
   if (r(19) < 0.14) { const q = P(-DOOR - 1.1, 0, fz + f * 0.5); K.barrel(q[0], q[2]); }

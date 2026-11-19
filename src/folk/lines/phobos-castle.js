@@ -377,7 +377,7 @@ export const QUESTS = {
     giver: 'ph_pip',
     needs: 'the_household',
     offer: [
-      "The hornwings roost on my horns. Right on them. In the bells. I can't sound a horn with a hornwing in it, it just goes HONK and the hornwing comes out angry.",
+      "The hornwings roost on my horns. Right on them. In their mouths. I can't sound a horn with a hornwing in it, it just goes HONK and the hornwing comes out angry.",
       "Can you get them off? Four of them, in the Horn Galleries. Then I can sound the patrols again and nobody will know it was a boy. Please?",
     ],
     accept: "I'll clear your horns.",
@@ -385,7 +385,7 @@ export const QUESTS = {
     decline: "Not now, Pip.",
     declineLine: "Everybody says not now. Then it's later and they still say not now.",
     journal: [
-      "Hornwings roost in the bells of the great horns in the Horn Galleries, and Pip Carrow can't sound them. Put down four of them there.",
+      "Hornwings roost in the mouths of the great horns in the Horn Galleries, and Pip Carrow can't sound them. Put down four of them there.",
       "Go back to Pip Carrow in the Librarian's rooms.",
     ],
     progress: [

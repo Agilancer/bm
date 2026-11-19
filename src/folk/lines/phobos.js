@@ -25,7 +25,7 @@ const KINDS = {
       morning: ["Morning. Took a job at the Bone Yards last night. I'm the one who came back."],
       day: ["Coin for a contract, half up front. The other half if you're still breathing to pay it.", "Everyone who comes through the gate's going to take the Keep. I've buried a few of them."],
       evening: ["Drink's cheap in the Rookeries and dear on Dukes' Row. Same drink."],
-      night: ["The Loyal change the watch at the second bell. Don't be on the Approach when they do."],
+      night: ["The Loyal change the watch at the turn of the night. Don't be on the Approach when they do."],
     },
     barks: {
       player: ["Hiring? No? Then you're in my light.", "That staff's seen use. Good. The pretty ones don't last."],
@@ -185,6 +185,133 @@ const KINDS = {
       player: ["Copper, mister? Copper?", "Are you going up the castle? My brother went up the castle."],
       day: ["Race you to the corner!"],
       magic: ["Do it again! Do it again!"],
+    },
+  },
+  // (The ten made on Meshy, 2026-11-19: the people who live here, not passing through. tools/phobos/residents.json.)
+  sweep: {
+    first: ["Mind the coat, it's all soot. So am I. Don't shake my hand, you'll be black to the elbow for a week."],
+    greet: {
+      morning: ["Up before the fires are lit, that's the trade. Can't sweep a chimney that's burning."],
+      day: ["Four flues since sunup. One had a dead crow in it. One had a live one."],
+      evening: ["Everyone's lighting up. Every chimney in the Cinder's drawing. You can taste it."],
+      night: ["I sleep on the warm side of a stack. Best bed in Phobos, if you don't mind the bricks."],
+    },
+    barks: {
+      player: ["Want your flue done? No? Suit yourself. Your house'll burn down.", "You've got soot on you already. Must be catching."],
+      night: ["Chimneys talk at night. The wind in them. That's all it is. That's all it is."],
+      magic: ["Don't do fire near me, I'm mostly kindling."],
+    },
+  },
+  fishwife: {
+    first: ["Eel, pike, something that was a pike once. Fresh up the Slough this morning. Well. Up the Slough, anyway."],
+    greet: {
+      morning: ["Best of the catch goes early. The rest goes to the Rookeries, and they don't ask."],
+      day: ["Two for a copper, and don't look at the eyes. Nobody looks at the eyes."],
+      evening: ["What's left is cheap. What's left after dark is free, and you don't want it."],
+      night: ["Never fish the Slough at night. Things come up to see what's on the hook."],
+    },
+    barks: {
+      player: ["Fish? You look like you need fish.", "Hands off the basket unless there's coin in them."],
+      day: ["Eel! Black eel, fat eel, eel!"],
+      magic: ["Light like that brings the big ones up. Don't."],
+    },
+  },
+  bonecarver: {
+    first: ["Buttons, combs, dice, needles. All bone. Everyone's leaving bone behind, here. Somebody ought to make use of it."],
+    greet: {
+      morning: ["The Yards give up something new every morning. Not always the same kind of something."],
+      day: ["A good knuckle makes a fine die. A good shin makes a flute. Don't ask whose."],
+      evening: ["My hands shake now. Not from age. From the carving. It goes into you."],
+      night: ["They knock, some nights, in the sack. I don't open the sack."],
+    },
+    barks: {
+      player: ["A comb? You've hair enough for one.", "Good bones on you. Strong. I notice, it's my trade."],
+      night: ["Don't walk the Yards after dark. Not because of the dead. Because of the diggers."],
+      magic: ["Careful. Bone remembers. It might remember that."],
+    },
+  },
+  tanner: {
+    first: ["Yes, it stinks. Everything that makes leather stinks. You'll stop smelling it in a week, and then you'll be one of us."],
+    greet: {
+      morning: ["Hides in by dawn, in the pits by noon. The pits don't wait."],
+      day: ["Belts, straps, boots, saddles. If it holds something together, I made the bit that does."],
+      evening: ["Hands are brown to the bone. Wash them all you like. They stay."],
+      night: ["Don't fall in a pit after dark. Takes three days to get you out, and you come out tanned."],
+    },
+    barks: {
+      player: ["That pack's coming apart at the seam. I could fix that.", "Good boots. Mine, probably."],
+      day: ["Out the way, hides coming through!"],
+      magic: ["Don't. The lime catches."],
+    },
+  },
+  watchman: {
+    first: ["You. Name and business. Don't bother lying, I won't remember either and I don't care. Just keep walking."],
+    greet: {
+      morning: ["Night watch's done. I've seen what I've seen and I'm going to bed."],
+      day: ["Move along. Nothing to see. If there were, I'd be paid more."],
+      evening: ["Lamps up on the Mile. Anyone in the dark after this is in the dark on their own."],
+      night: ["Out after curfew. I could take you in. I'm not going to. Don't make me change my mind."],
+    },
+    barks: {
+      player: ["Eyes front.", "I've got my eye on you, stranger. One of them, anyway."],
+      night: ["Keep to the lamps. What's past them isn't mine to stop."],
+      magic: ["Put that out. Now. Before someone higher up than me sees it."],
+    },
+  },
+  ragwoman: {
+    first: ["Rags and bones, rags and bones. What's no good to you is good to someone, dearie. What've you got that's no good?"],
+    greet: {
+      morning: ["Early pickings. The rich throw out the best things before they're awake to miss them."],
+      day: ["This shawl was a lady's once. Now it's mine. Next year it'll be a rag. Then it'll be paper."],
+      evening: ["My back's bent from the sack, not the years. Well. The years too."],
+      night: ["I hear everything from the gutter. Everything. Want to buy some of it?"],
+    },
+    barks: {
+      player: ["Anything you're done with, dearie?", "Pretty boots. When you're dead, I'll have them."],
+      night: ["Shh. Listen. No? Good. Nothing's coming then."],
+      magic: ["Ooh. Sparkly. I had a sparkly once."],
+    },
+  },
+  smelter: {
+    first: ["Out of the way of the cart. That's slag, and it's still hot, and it'll take your foot off at the ankle."],
+    greet: {
+      morning: ["Fires never go out in the Cinder. We just change who's feeding them."],
+      day: ["Iron for the castle. Always iron for the castle. Never asks what it's for."],
+      evening: ["You can tell a smelter by the eyebrows. We don't have any."],
+      night: ["Furnace glow on the clouds tonight. Means the Keep's ordered more."],
+    },
+    barks: {
+      player: ["Strong arms on you. You'd last a month at the bellows.", "Mind the sparks."],
+      day: ["Heat! Coming through!"],
+      magic: ["Call that a fire? Come see a real one."],
+    },
+  },
+  apothecary: {
+    first: ["Feverwort, lung moss, black salve, sleep in a bottle. And something for the cough, which everyone in Phobos has."],
+    greet: {
+      morning: ["The night's sick come in at dawn. The ones who made it through the night, I mean."],
+      day: ["Two drops, not three. Three drops and you'll sleep forever. People always take three."],
+      evening: ["Every ailment in this city comes back to the water, the smoke or the castle. I can only help with two."],
+      night: ["If you're knocking at this hour, it's poison or a birth. Tell me which before I open."],
+    },
+    barks: {
+      player: ["You've a cut that wants cleaning. Don't let it go green.", "That cough's the smoke. Everyone's got it. It's free."],
+      night: ["Shutters closed. Remedies are for the day."],
+      magic: ["Spells mend nothing that a poultice can't. Slower, but it doesn't bite back."],
+    },
+  },
+  merchant: {
+    first: ["Fine cloth, finer wine, papers of passage, and a word in the right ear. Everything has a price on Dukes' Row. Even you."],
+    greet: {
+      morning: ["Early trade is honest trade. That's why I'm up before it."],
+      day: ["Silk from the south, salt from the north, and from the Keep, orders. Always orders."],
+      evening: ["The Row's lamps are better than the Mile's. We pay for them. Twice, I suspect."],
+      night: ["I don't walk at night. I'm carried. You should try it."],
+    },
+    barks: {
+      player: ["Coin talks, stranger. What's yours saying?", "A traveller with a staff. Is that for sale?"],
+      day: ["Mind the coat. It's worth more than your house."],
+      magic: ["Careful with that. My coat's velvet."],
     },
   },
 };

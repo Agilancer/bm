@@ -871,6 +871,11 @@
     "name": "p2_banner_skull",
     "kind": "cloth",
     "cutout": true
+   },
+   {
+    "name": "p2_signs",
+    "kind": "single",
+    "cutout": false
    }
   ]
  }

@@ -37,7 +37,17 @@
     "worker": {"glb": "worker.glb", "c": "worker_c.webp", "n": "worker_n.webp", "m": "worker_m.webp", "height": 1.83, "hips": 0.99, "head": 1.62, "joints": 52, "tris": 8990},
     "apricot": {"glb": "apricot.glb", "c": "apricot_c.webp", "n": "apricot_n.webp", "m": "apricot_m.webp", "height": 1.57, "hips": 0.865, "head": 1.319, "joints": 54, "tris": 30984, "fist": 0.45},
     "martleboro": {"glb": "martleboro.glb", "c": "martleboro_c.webp", "n": "martleboro_n.webp", "m": "martleboro_m.webp", "height": 1.63, "hips": 0.807, "head": 1.348, "joints": 53, "tris": 31303, "fist": 0.45},
-    "louis_g": {"glb": "louis_g.glb", "c": "louis_g_c.webp", "n": "louis_g_n.webp", "m": "louis_g_m.webp", "height": 1.88, "hips": 1.052, "head": 1.604, "joints": 53, "tris": 30931, "fist": 0.45}
+    "louis_g": {"glb": "louis_g.glb", "c": "louis_g_c.webp", "n": "louis_g_n.webp", "m": "louis_g_m.webp", "height": 1.88, "hips": 1.052, "head": 1.604, "joints": 53, "tris": 30931, "fist": 0.45},
+    "sweep": {"glb": "sweep.glb", "height": 1.62, "hips": 0.913, "head": 1.368, "joints": 53, "tris": 31039, "fist": 0.45, "c": "sweep_c.webp", "n": "sweep_n.webp", "m": "sweep_m.webp"},
+    "fishwife": {"glb": "fishwife.glb", "height": 1.6, "hips": 0.861, "head": 1.323, "joints": 53, "tris": 31056, "fist": 0.45, "c": "fishwife_c.webp", "n": "fishwife_n.webp", "m": "fishwife_m.webp"},
+    "bonecarver": {"glb": "bonecarver.glb", "height": 1.66, "hips": 0.922, "head": 1.409, "joints": 53, "tris": 30996, "fist": 0.45, "c": "bonecarver_c.webp", "n": "bonecarver_n.webp", "m": "bonecarver_m.webp"},
+    "tanner": {"glb": "tanner.glb", "height": 1.64, "hips": 0.879, "head": 1.399, "joints": 53, "tris": 30950, "fist": 0.45, "c": "tanner_c.webp", "n": "tanner_n.webp", "m": "tanner_m.webp"},
+    "watchman": {"glb": "watchman.glb", "height": 1.82, "hips": 0.971, "head": 1.521, "joints": 53, "tris": 31019, "fist": 0.45, "c": "watchman_c.webp", "n": "watchman_n.webp", "m": "watchman_m.webp"},
+    "ragwoman": {"glb": "ragwoman.glb", "height": 1.52, "hips": 0.716, "head": 1.193, "joints": 53, "tris": 30754, "fist": 0.45, "c": "ragwoman_c.webp", "n": "ragwoman_n.webp", "m": "ragwoman_m.webp"},
+    "cutpurse": {"glb": "cutpurse.glb", "height": 1.72, "hips": 0.938, "head": 1.453, "joints": 53, "tris": 31059, "fist": 0.45, "c": "cutpurse_c.webp", "n": "cutpurse_n.webp", "m": "cutpurse_m.webp"},
+    "smelter": {"glb": "smelter.glb", "height": 1.88, "hips": 1.036, "head": 1.576, "joints": 53, "tris": 31134, "fist": 0.45, "c": "smelter_c.webp", "n": "smelter_n.webp", "m": "smelter_m.webp"},
+    "apothecary": {"glb": "apothecary.glb", "height": 1.68, "hips": 0.951, "head": 1.433, "joints": 53, "tris": 30615, "fist": 0.45, "c": "apothecary_c.webp", "n": "apothecary_n.webp", "m": "apothecary_m.webp"},
+    "merchant": {"glb": "merchant.glb", "height": 1.7, "hips": 0.863, "head": 1.391, "joints": 53, "tris": 30853, "fist": 0.45, "c": "merchant_c.webp", "n": "merchant_n.webp", "m": "merchant_m.webp"}
   },
   "swaps": {
     "kit": {"base": "boy_1", "c": "kit_c.webp", "note": "Pip's little brother: same face, russet hood, moss-green breeches, hair a shade lighter"},

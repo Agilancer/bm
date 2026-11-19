@@ -14,3 +14,6 @@ art/dragons/anim/
 
 # Phobos character models mid-pipeline (Meshy downloads, stage 1 and 2): the finished ones are in assets/game/folk.
 art/phobos/models/
+
+# (Raw Meshy downloads, before tools/phobos/meshy_to_folk.py: kept out like art/phobos/models/.)
+art/phobos/residents/*.glb

@@ -135,6 +135,17 @@ export const CROWD = [
   roam({ id: 'ph_harl', name: 'Big Harl', title: 'a hired brute', kind: 'sellsword', body: 'ph_brute', sex: 'm', age: 36, walk: 'walk_proud', speed: 0.9, idles: ['fold_arms', 'idle', 'scratch'] }),
   roam({ id: 'ph_wenna', name: 'Wenna Glass', title: 'of the Gutted Lamb', kind: 'tavern', body: 'ph_glass', sex: 'f', age: 25, idles: ['relax', 'laugh', 'wait'] }),
   roam({ id: 'ph_tib', name: 'Tib', title: 'a street girl', kind: 'urchin', body: 'ph_tib', sex: 'f', age: 10, speed: 1.15, idles: ['look_around', 'idle', 'scratch'] }),
+  // (The people who live here, made on Meshy, 2026-11-19: tools/phobos/residents.json, their bodies their own.)
+  roam({ id: 'ph_soot', name: 'Wick Hollis', title: 'a chimney sweep', kind: 'sweep', body: 'sweep', sex: 'm', age: 15, speed: 1.1, idles: ['scratch', 'look_around', 'idle'] }),
+  roam({ id: 'ph_mog', name: 'Mog Sallow', title: 'a fishwife', kind: 'fishwife', body: 'fishwife', sex: 'f', age: 51, walk: 'walk_ual', speed: 0.85, idles: ['fold_arms_ual', 'complain', 'idle_ual'] }),
+  roam({ id: 'ph_osric_bone', name: 'Old Fenwick', title: 'a bone-carver', kind: 'bonecarver', body: 'bonecarver', sex: 'm', age: 72, walk: 'walk_ual', speed: 0.6, still: 0.6, idles: ['idle_ual', 'depressed', 'look_around'] }),
+  roam({ id: 'ph_hesk', name: 'Hesk Marrow', title: 'a tanner', kind: 'tanner', body: 'tanner', sex: 'f', age: 35, idles: ['fold_arms', 'idle', 'look_around'] }),
+  roam({ id: 'ph_garrow', name: 'Garrow Teague', title: 'of the night watch', kind: 'watchman', body: 'watchman', sex: 'm', age: 41, walk: 'walk_proud', speed: 0.85, idles: ['fold_arms_ual', 'look_around', 'idle_ual'] }),
+  roam({ id: 'ph_nan', name: 'Nan Tatters', title: 'a rag-and-bone woman', kind: 'ragwoman', body: 'ragwoman', sex: 'f', age: 76, walk: 'walk_ual', speed: 0.5, still: 0.7, idles: ['depressed', 'idle_ual', 'scratch'] }),
+  roam({ id: 'ph_quick', name: 'Quick Dell', title: 'a cutpurse', kind: 'cutpurse', body: 'cutpurse', sex: 'm', age: 20, speed: 1.1, idles: ['look_around', 'wait', 'idle'] }),
+  roam({ id: 'ph_brann', name: 'Brann Cinder', title: 'a smelter', kind: 'smelter', body: 'smelter', sex: 'm', age: 45, walk: 'swagger', speed: 0.9, idles: ['fold_arms', 'warm_up', 'idle'] }),
+  roam({ id: 'ph_gall', name: 'Mother Gall', title: 'an apothecary', kind: 'apothecary', body: 'apothecary', sex: 'f', age: 50, walk: 'walk_ual', speed: 0.8, idles: ['idle_ual', 'look_around', 'fold_arms_ual'] }),
+  roam({ id: 'ph_orme', name: 'Master Orme', title: 'a merchant of Dukes\' Row', kind: 'merchant', body: 'merchant', sex: 'm', age: 56, walk: 'walk_proud', speed: 0.7, idles: ['fold_arms_ual', 'idle_ual', 'look_around'] }),
 ];
 export const CROWD_LEAN = 8;
 // Everyone with a body on the town's thread: the town's people, then the posted, then Phobos's crowd (the folk buffer's order).
