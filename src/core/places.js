@@ -12,6 +12,8 @@ import { hash2 } from './terrain-noise.js';
 
 const TAU = Math.PI * 2;
 const Y = (x, z) => terrainHeight(x, z);
+// (Phobos's box, the city and the crag, src/core/east.js: what lies about its streets there is sooted, its timber and its cloth.)
+const inPhobos = (x, z) => x > 9300 && x < 11800 && Math.abs(z) < 1100;
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 const unit = (a) => { const l = Math.hypot(...a) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
@@ -55,14 +57,14 @@ export const PIECES = {
     }
   },
 
-  crate(x, z, s = 0.45, yaw = 0, y = null) { this.box('wood', x, (y ?? Y(x, z)) - 0.05, z, s, s * 1.7 + 0.05, s, yaw, { collide: y === null }); },
+  crate(x, z, s = 0.45, yaw = 0, y = null) { this.box(inPhobos(x, z) ? 'soot:wood' : 'wood', x, (y ?? Y(x, z)) - 0.05, z, s, s * 1.7 + 0.05, s, yaw, { collide: y === null }); },
   barrel(x, z, r = 0.36, h = 0.95, y = null) {
     const y0 = y ?? Y(x, z) - 0.05;
-    this.drum('wood', x, y0, z, r, h, 8, { r2: r * 0.92, collide: y === null });
+    this.drum(inPhobos(x, z) ? 'soot:wood' : 'wood', x, y0, z, r, h, 8, { r2: r * 0.92, collide: y === null });
     this.drum('iron', x, y0 + h * 0.62, z, r * 1.0, h * 0.09, 8, { r2: r * 0.985, open: true, collide: false });
   },
-  // (In Phobos, x 9300 to 11800, the hessian sooted brown: its pale oat cloth on the streets there read as cheeses, the critics.)
-  sack(x, z, r = 0.34, y = null) { this.drum(x > 9300 && x < 11800 && Math.abs(z) < 1100 ? 'umber:cloth_oat' : 'cloth_oat', x, (y ?? Y(x, z)) - 0.05, z, r, r * 1.5, 6, { r2: r * 0.55, collide: false, turn: x }); },
+  // (In Phobos the hessian sooted brown: its pale oat cloth on the streets there read as cheeses, the critics.)
+  sack(x, z, r = 0.34, y = null) { this.drum(inPhobos(x, z) ? 'umber:cloth_oat' : 'cloth_oat', x, (y ?? Y(x, z)) - 0.05, z, r, r * 1.5, 6, { r2: r * 0.55, collide: false, turn: x }); },
   // A heap of goods: crates, barrels and sacks about a middle, n of them, the same every time for the same place.
   goods(x, z, n = 5, spread = 1.4) {
     for (let i = 0; i < n; i++) {

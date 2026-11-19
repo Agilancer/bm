@@ -251,7 +251,8 @@ function houseNear(K, h) {
   if (r(8) < (h.shop ? 0.9 : 0.5)) { const q = P(DOOR + 0.5, fy + 2.5, fz); K.wallLamp(...q, [f * s, f * c]); if (r(8) < 0.3) (K.lamps ||= []).push({ p: [q[0] + f * s * 0.5, q[1] - 0.4, q[2] + f * c * 0.5], c: [1, 0.62, 0.3], r: 18, i: 11, flicker: 0.4 }); }
   // A shop's front, on the named streets: an awning over the door, a board hung out on an iron bracket, goods by the step.
   if (h.shop && !ruin) {
-    const cloth = r(21) < 0.5 ? 'cloth_red' : 'cloth_oat', aw = Math.min(h.hx - 0.3, 2.2), ay = fy + 2.75;
+    // (The red, or oat sooted to hessian: the plain oat cloth was butter yellow down the streets, the critics.)
+    const cloth = r(21) < 0.5 ? 'cloth_red' : 'umber:cloth_oat', aw = Math.min(h.hx - 0.3, 2.2), ay = fy + 2.75;
     if (r(22) < 0.75) { K.quad(cloth, P(aw * f, ay, fz + f * 0.02), P(-aw * f, ay, fz + f * 0.02), P(-aw * f, ay - 0.5, fz + f * 1.5), P(aw * f, ay - 0.5, fz + f * 1.5)); K.quad(cloth, P(-aw * f, ay, fz + f * 0.02), P(aw * f, ay, fz + f * 0.02), P(aw * f, ay - 0.5, fz + f * 1.5), P(-aw * f, ay - 0.5, fz + f * 1.5)); }
     if (r(23) < 0.6) { const b0 = P(-DOOR - 0.9, fy + 3.3, fz), b1 = P(-DOOR - 0.9, fy + 3.3, fz + f * 1.0), sg = P(-DOOR - 0.9, fy + 2.5, fz + f * 0.8); K.beam('iron', b0, b1, 0.05); K.box('wood', sg[0], sg[1], sg[2], 0.05, 0.6, 0.38, h.yaw, { collide: false }); }
     if (r(24) < 0.45) { const g = P(DOOR + 1.6, 0, fz + f * 0.8); K.goods(g[0], g[2], 4, 0.7); }
@@ -1110,7 +1111,7 @@ function sloughNear(K, cell) {
     // and nine-sided, it was white octagons on the water, a texture gone missing: the critics.)
     if (hash2(i * 3, 77) > 0.55) {
       const o = (hash2(i, 5) - 0.5) * 12, sx = mx - uz * o, sz = mz + ux * o;
-      for (let k = 0; k < 4; k++) { const a = hash2(i, 40 + k) * 6.28, d = k ? 1 + 1.6 * hash2(i, 50 + k) : 0; K.disc(k % 2 ? 'char:ph_basalt' : 'char:rubble', sx + Math.cos(a) * d, r.lv + 0.03 + k * 0.004, sz + Math.sin(a) * d, (k ? 0.7 : 1.3) + hash2(i, 9 + k) * 1.1, 7); }
+      for (let k = 0; k < 4; k++) { const a = hash2(i, 40 + k) * 6.28, d = k ? 1 + 1.6 * hash2(i, 50 + k) : 0; K.disc('char:ph_basalt', sx + Math.cos(a) * d, r.lv + 0.03 + k * 0.004, sz + Math.sin(a) * d, (k ? 0.5 : 0.9) + hash2(i, 9 + k) * 0.8, 11); }
     }
     // The weir, where this stretch's water steps to the next's: a crest of dressed stone, a wing wall at each bank, the
     // water over it in a pale sheet, foam on the low side.
