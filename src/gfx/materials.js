@@ -1,6 +1,7 @@
 // WGSL for everything drawn in the world pass.
 import { COMMON } from './shaders.js';
 import { CHURCH_Z } from '../core/church.js';
+import { CRAG } from '../core/east.js';
 import { RD_CELL, RD_HALF, RD_MAX, RD_N, RD_NX } from '../core/roads.js';
 
 export const TERRAIN = COMMON + /* wgsl */ `
@@ -229,6 +230,12 @@ fn rot(p: vec2f, a: f32) -> vec2f { let c = cos(a); let s = sin(a); return vec2f
     rockCol = vec3f(grey) * vec3f(0.72, 0.72, 0.76) * (0.75 + 0.5 * dirtDet.a);
   }
   albedo = mix(albedo, rockCol * (1.0 + 0.18 * fk.a), rockAmt);
+  // (The castle's crag, src/core/east.js CRAG, inside its curtain and down its banks: rock and gravel near half as dark, a
+  // dull brown-black. Pale, its slopes in the yard and the wards were snow against the black walls, the gate lost on them.
+  // The critics.)
+  let cragD = (p.xz - vec2f(${CRAG.x.toFixed(1)}, ${CRAG.z.toFixed(1)})) / vec2f(${CRAG.a.toFixed(1)}, ${CRAG.b.toFixed(1)});
+  let cragE = dot(cragD, cragD);   // (not pow: of a negative it's nothing, and the crag's ground went white)
+  albedo *= mix(vec3f(0.5, 0.48, 0.45), vec3f(1.0), smoothstep(0.85, 1.15, cragE));
   det = mix(det, rockDet, rockAmt * select(0.0, 1.0, haveRock));
   // Snow over all, thinning where the slope's too steep to hold it.
   var snowCol = vec3f(0.84, 0.87, 0.93) * (0.88 + 0.16 * grassDet.a);

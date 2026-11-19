@@ -63,6 +63,7 @@ const asked = process.argv.slice(2), which = asked.length ? SHOTS.filter((s) => 
 const b = await chromium.launch({ args: ['--enable-unsafe-webgpu', '--ignore-gpu-blocklist', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--use-angle=swiftshader', '--no-sandbox'] });
 const page = await b.newPage({ viewport: { width: 1280, height: 720 } });
 page.on('pageerror', (e) => console.log('PAGE ERROR', String(e).slice(0, 600)));
+if (process.env.CONSOLE) page.on('console', (m) => { if (/error|warn/i.test(m.type()) || /wgsl|shader/i.test(m.text())) console.log('CONSOLE', m.type(), m.text().slice(0, 400)); });
 await page.goto(`http://localhost:${process.env.PORT || 8481}/?auto&noopening&timer`, { waitUntil: 'load' });
 await page.waitForFunction(() => window.bm && bm.snap && bm.snap(), null, { timeout: 900000, polling: 1000 });
 await page.evaluate('bm.fixScale(1); bm.renderer.hideVM = true; bm.view.lands.cheats.noDamage = true; if (bm.view.questTrail) bm.view.questTrail.off = true;');
