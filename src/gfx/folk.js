@@ -14,6 +14,10 @@ import { bodyRadius, inCascade } from './shadowcull.js';
 
 const UBO_BYTES = 24 * 64 + 256 + 16;
 
+// A palette swap's recolour as the folk shader reads it from info.x (src/gfx/materials.js ARMOR): 10 + hue shift (as a turn,
+// 0 to 1: a little back is near 1) + 2 * saturation in tenths + 32 * value in tenths. tint: [hue shift, saturation, value].
+export const swapCode = ([dh, sat, val]) => 10 + ((dh % 1) + 1) % 1 + 2 * Math.round(Math.min(15, sat * 10)) + 32 * Math.round(Math.min(15, val * 10));
+
 export class FolkBodies {
   constructor(renderer, map) {
     this.r = renderer; this.map = map;
@@ -68,7 +72,8 @@ export class FolkBodies {
         const sk = g.used++ ? r.cloneSkinned(g.base) : g.base;
         const [alb, nrm, mr] = await Promise.all([texture(swap?.c || m.c, 'rgba8unorm-srgb'), texture(m.n, 'rgba8unorm'), texture(m.m, 'rgba8unorm')]);
         const ubo = r.device.createBuffer({ size: UBO_BYTES, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
-        r.device.queue.writeBuffer(ubo, UBO_BYTES - 16, this.info);
+        // (A palette swap with no paint of its own: its base's paint, recoloured in the shader by info.x, swapCode.)
+        r.device.queue.writeBuffer(ubo, UBO_BYTES - 16, swap?.tint ? new Float32Array([swapCode(swap.tint), 1, 0, 1]) : this.info);
         const matBG = r.device.createBindGroup({ layout: r.bglArmor, entries: [
           { binding: 0, resource: { buffer: ubo } }, { binding: 1, resource: alb.createView() }, { binding: 2, resource: nrm.createView() }, { binding: 3, resource: mr.createView() },
         ] });

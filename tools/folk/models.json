@@ -79,6 +79,26 @@
     "joiner": { "file": "art/phobos/models/joiner.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.01, "height": 1.76, "tris": 32000 },
     "pieseller": { "file": "art/phobos/models/pieseller.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.01, "height": 1.62, "tris": 32000 },
     "gaoler": { "file": "art/phobos/models/gaoler.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.01, "height": 1.84, "tris": 32000 },
-    "dukeservant": { "file": "art/phobos/models/dukeservant.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.01, "height": 1.74, "tris": 32000 }
+    "dukeservant": { "file": "art/phobos/models/dukeservant.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.01, "height": 1.74, "tris": 32000 },
+    "charcoalburner": { "file": "art/phobos/models/charcoalburner.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.01, "height": 1.74, "tris": 32000 },
+    "netmender": { "file": "art/phobos/models/netmender.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.01, "height": 1.70, "tris": 32000 },
+    "bargewoman": { "file": "art/phobos/models/bargewoman.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.01, "height": 1.70, "tris": 32000 },
+    "offduty": { "file": "art/phobos/models/offduty.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.01, "height": 1.80, "tris": 32000 },
+    "magestudent": { "file": "art/phobos/models/magestudent.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.01, "height": 1.65, "tris": 32000 },
+    "younglord": { "file": "art/phobos/models/younglord.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.01, "height": 1.78, "tris": 32000 },
+    "ladysmaid": { "file": "art/phobos/models/ladysmaid.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.01, "height": 1.60, "tris": 32000 },
+    "pilgrim": { "file": "art/phobos/models/pilgrim.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.01, "height": 1.72, "tris": 32000 },
+    "tollkeeper": { "file": "art/phobos/models/tollkeeper.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.01, "height": 1.70, "tris": 32000 },
+    "spiceseller": { "file": "art/phobos/models/spiceseller.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.01, "height": 1.64, "tris": 32000 },
+    "peddler": { "file": "art/phobos/models/peddler.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.01, "height": 1.66, "tris": 32000 },
+    "graverobber": { "file": "art/phobos/models/graverobber.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.01, "height": 1.72, "tris": 32000 },
+    "demonsteward": { "file": "art/phobos/models/demonsteward.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.01, "height": 1.95, "tris": 32000 },
+    "bonebutler": { "file": "art/phobos/models/bonebutler.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.01, "height": 1.80, "tris": 32000 },
+    "imppage": { "file": "art/phobos/models/imppage.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.01, "height": 1.15, "tris": 32000 },
+    "torturer": { "file": "art/phobos/models/torturer.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.01, "height": 1.85, "tris": 32000 },
+    "ghoulscullion": { "file": "art/phobos/models/ghoulscullion.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.01, "height": 1.60, "tris": 32000 },
+    "archivistghost": { "file": "art/phobos/models/archivistghost.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.01, "height": 1.75, "tris": 32000 },
+    "hellguard": { "file": "art/phobos/models/hellguard.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.01, "height": 2.00, "tris": 32000 },
+    "keeppriestess": { "file": "art/phobos/models/keeppriestess.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.01, "height": 1.75, "tris": 32000 }
   }
 }

@@ -1083,6 +1083,27 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
   rough = max(matteRough(rough, metal) - 0.2 * darkPaint, rough);
   envBoost = mix(1.0, 1.1, metal) * coverEnv;
   sunSpecScale = mix(1.0, 0.55, darkPaint);
+  // A townsperson's palette swap, in the shader (src/gfx/folk.js swapCode): info.x of ten and over is 10 + hue shift (0 to 1)
+  // + 2 * saturation (tenths) + 32 * value (tenths). Clothes and hair moved in hue a little, and dulled or darkened; skin, by
+  // its colour, left as it is. Never blue: whatever a shift would make blue goes grey instead (no blue beside gold).
+  if (C.info.x >= 10.0) {
+    let code = C.info.x - 10.0, vi = floor(code / 32.0), rem = code - vi * 32.0, si = floor(rem / 2.0), dh = rem - si * 2.0;
+    let mx = max(albedo.r, max(albedo.g, albedo.b)), mn = min(albedo.r, min(albedo.g, albedo.b)), dl = mx - mn;
+    var hh = 0.0;
+    if (dl > 1e-4) {
+      if (mx == albedo.r) { hh = (albedo.g - albedo.b) / dl; } else if (mx == albedo.g) { hh = 2.0 + (albedo.b - albedo.r) / dl; } else { hh = 4.0 + (albedo.r - albedo.g) / dl; }
+      hh = fract(hh / 6.0 + 1.0);
+    }
+    let sat = select(0.0, dl / mx, mx > 1e-4);
+    let skin = (1.0 - smoothstep(0.09, 0.13, hh)) * smoothstep(0.1, 0.18, sat) * (1.0 - smoothstep(0.55, 0.7, sat)) * smoothstep(0.12, 0.22, mx);
+    var nh = fract(hh + dh - select(0.0, 1.0, dh > 0.5));
+    var ns = clamp(sat * si / 10.0, 0.0, 1.0);
+    ns *= 1.0 - 0.8 * smoothstep(0.46, 0.52, nh) * (1.0 - smoothstep(0.7, 0.76, nh));
+    let nv = mx * vi / 10.0;
+    let k6 = vec3f(5.0, 3.0, 1.0) + nh * 6.0;
+    let rgb = nv - nv * ns * clamp(min(fract(k6 / 6.0) * 6.0, 4.0 - fract(k6 / 6.0) * 6.0), vec3f(0.0), vec3f(1.0));
+    albedo = mix(rgb, albedo, skin);
+  }
   albedo *= C.info.y;
   // Bright scraped steel at the cut's lips and scratches.
   let bare = max(wound.lip, wound.torn);

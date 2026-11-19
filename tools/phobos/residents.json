@@ -1,5 +1,5 @@
 {
-  "_": "Ten of Phobos's people (the owner, 2026-11-19: 'you may use my meshy account to generate 10 people who would live in Phobos'). Made by tools/phobos/residents.mjs: Meshy text-to-3D preview, refined with PBR textures, rigged; saved in art/phobos/residents/. Every prompt keeps the V/T rule: no text, letters, emblems or crosses, no blue beside gold; Velscour's own people in his blood red. Thirty more on 2026-11-19 ('Add 30 more inhabitants of Phobos via Meshy'): sex 'f' marks who takes the townswoman's fingers.",
+  "_": "Ten of Phobos's people (the owner, 2026-11-19: 'you may use my meshy account to generate 10 people who would live in Phobos'). Made by tools/phobos/residents.mjs: Meshy text-to-3D preview, refined with PBR textures, rigged; saved in art/phobos/residents/. Every prompt keeps the V/T rule: no text, letters, emblems or crosses, no blue beside gold; Velscour's own people in his blood red. Thirty more on 2026-11-19 ('Add 30 more inhabitants of Phobos via Meshy'): sex 'f' marks who takes the townswoman's fingers. Twenty more, 2026-11-19 ('Make up to 20 additional characters ... for the different areas within phobos, and creatures that might inhabit Velscour's keep/castle'): area says where in the city they live; castle ones stand in the castle's wards.",
   "style": "Realistic 3D game character for a dark, grim medieval fantasy RPG, full body, standing in a T-pose with arms straight out and empty open hands, front view, plain grey background, PBR. No text, no letters, no logos, no emblems, no crosses, no blue, no gold.",
   "people": {
     "sweep": {
@@ -191,6 +191,126 @@
       "height": 1.74,
       "sex": "m",
       "prompt": "A stiff, prim manservant of a great house, about thirty, slicked blond hair, a narrow face, a black tailcoat livery with blood-red cuffs and collar, a white cravat, white gloves, polished black shoes."
+    },
+    "charcoalburner": {
+      "height": 1.74,
+      "sex": "m",
+      "area": "cinder",
+      "prompt": "A soot-blackened charcoal-burner of about fifty, grey stubble, red-rimmed eyes, a long scorched leather smock, a sack of charcoal tied at his hip, black-stained hands, heavy boots."
+    },
+    "netmender": {
+      "height": 1.7,
+      "sex": "m",
+      "area": "wharf",
+      "prompt": "An old net-mender of a canal wharf, about seventy, white beard, a knitted grey cap, a thick oiled wool sweater, a fishing net draped over one shoulder, rolled canvas trousers, bare feet."
+    },
+    "bargewoman": {
+      "height": 1.7,
+      "sex": "f",
+      "area": "wharf",
+      "prompt": "A tough bargewoman of about forty, sun-darkened face, short grey-streaked hair under a tied cloth, a sleeveless leather jerkin, a long pole-callused grip, wide canvas trousers, tall waxed boots."
+    },
+    "offduty": {
+      "height": 1.8,
+      "sex": "m",
+      "area": "barracks",
+      "prompt": "An off-duty soldier of a tyrant's garrison, about twenty-five, cropped hair, a cocky grin, an unbuttoned blood-red padded tunic, no armour, a black belt with an empty scabbard, black trousers, scuffed boots."
+    },
+    "magestudent": {
+      "height": 1.65,
+      "sex": "f",
+      "area": "mages",
+      "prompt": "A young apprentice mage of about nineteen, sharp clever face, ink-smudged cheek, long black hair in a loose knot, a long dark purple robe with wide sleeves, a satchel of scrolls, soft boots."
+    },
+    "younglord": {
+      "height": 1.78,
+      "sex": "m",
+      "area": "dukes",
+      "prompt": "A languid young lord of about twenty-two, pale, long wavy dark hair, a sneer, a fitted black velvet doublet slashed with oxblood silk, a short black cape, silver rings, polished black boots."
+    },
+    "ladysmaid": {
+      "height": 1.6,
+      "sex": "f",
+      "area": "dukes",
+      "prompt": "A neat, nervous lady's maid of about twenty, hair in a tidy bun under a lace cap, a black dress with a crisp white collar and apron, white cuffs, black buckled shoes."
+    },
+    "pilgrim": {
+      "height": 1.72,
+      "sex": "m",
+      "area": "approach",
+      "prompt": "A gaunt pilgrim to a dark castle, about forty, shaved head, hollow fervent eyes, a long undyed grey wool habit belted with rope, bare feet bound in rags, a plain walking staff slung on his back."
+    },
+    "tollkeeper": {
+      "height": 1.7,
+      "sex": "m",
+      "area": "barbican",
+      "prompt": "A fat, suspicious toll-keeper of a city gate, about fifty, small eyes, a jowly face, a red felt cap, a long brown coat with a heavy money pouch, a ledger tucked under his belt, boots."
+    },
+    "spiceseller": {
+      "height": 1.64,
+      "sex": "f",
+      "area": "market",
+      "prompt": "A dark-eyed spice-seller of about thirty-five, long braided black hair, gold-free copper earrings, a layered saffron and rust-red shawl over a dark dress, many small pouches on her belt, sandals."
+    },
+    "peddler": {
+      "height": 1.66,
+      "sex": "m",
+      "area": "market",
+      "prompt": "A wiry travelling peddler of about fifty, a sly smile, a wide battered hat hung with trinkets, a patched brown coat with many pockets, a large pack frame on his back, worn boots."
+    },
+    "graverobber": {
+      "height": 1.72,
+      "sex": "m",
+      "area": "bones",
+      "prompt": "A shifty grave-robber of about thirty, a hooded dark brown cloak, a gaunt stubbled face, a dirt-stained leather jerkin, a coil of rope and a small shovel on his back, muddy boots."
+    },
+    "demonsteward": {
+      "height": 1.95,
+      "sex": "m",
+      "area": "castle",
+      "prompt": "A tall demon steward of a dark lord's castle, grey-red skin, small curled black horns, a long gaunt face, an immaculate black and blood-red livery tailcoat, white gloves, black hooved feet."
+    },
+    "bonebutler": {
+      "height": 1.8,
+      "sex": "m",
+      "area": "castle",
+      "prompt": "A skeletal butler of a dark lord's castle: a bare bone skull face with dim red eye-lights, a tall black butler's livery with blood-red waistcoat and white cravat, white gloves on bony hands, polished black shoes."
+    },
+    "imppage": {
+      "height": 1.15,
+      "sex": "m",
+      "area": "castle",
+      "prompt": "A small imp page boy of a dark lord's castle, red skin, big pointed ears, two tiny horns, a mischievous grin, a little blood-red page's tunic with black trim, black hose, bare clawed feet, a thin tail."
+    },
+    "torturer": {
+      "height": 1.85,
+      "sex": "m",
+      "area": "castle",
+      "prompt": "A hulking castle torturer, bare-chested and scarred, a black leather hood mask with eye holes, a heavy blood-stained leather apron, thick leather gloves, black trousers, heavy boots."
+    },
+    "ghoulscullion": {
+      "height": 1.6,
+      "sex": "f",
+      "area": "castle",
+      "prompt": "A ghoul scullion of a dark castle's kitchens, grey-green mottled skin, sunken glowing eyes, lank black hair, a filthy stained apron over a tattered grey servant's dress, bare clawed feet."
+    },
+    "archivistghost": {
+      "height": 1.75,
+      "sex": "m",
+      "area": "castle",
+      "prompt": "The pale ghost of a blind old archivist, translucent bluish-grey skin, white blank eyes, long white beard, a long faded dark scholar's robe trailing into mist at the hem, ink-stained spectral hands."
+    },
+    "hellguard": {
+      "height": 2.0,
+      "sex": "m",
+      "area": "castle",
+      "prompt": "A hulking hellguard of a dark lord's castle, dark red skin, curved ram horns, burning eyes, heavy blackened plate armour with blood-red trim, a spiked collar, clawed gauntlets, armoured boots."
+    },
+    "keeppriestess": {
+      "height": 1.75,
+      "sex": "f",
+      "area": "castle",
+      "prompt": "A severe priestess of a dark lord's keep, about forty, pale with dark painted lips, black hair in a tall braided crown, a long high-collared blood-red and black robe, a black veil down her back, no symbols."
     }
   }
 }
