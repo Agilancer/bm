@@ -1087,8 +1087,14 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
   // + 2 * saturation (tenths) + 32 * value (tenths). Clothes and hair moved in hue a little, and dulled or darkened; skin, by
   // its colour, left as it is. Never blue: whatever a shift would make blue goes grey instead (no blue beside gold).
   if (C.info.x >= 10.0) {
-    let code = C.info.x - 10.0, vi = floor(code / 32.0), rem = code - vi * 32.0, si = floor(rem / 2.0), dh = rem - si * 2.0;
-    let mx = max(albedo.r, max(albedo.g, albedo.b)), mn = min(albedo.r, min(albedo.g, albedo.b)), dl = mx - mn;
+    let code = C.info.x - 10.0;
+    let vi = floor(code / 32.0);
+    let rem = code - vi * 32.0;
+    let si = floor(rem / 2.0);
+    let dh = rem - si * 2.0;
+    let mx = max(albedo.r, max(albedo.g, albedo.b));
+    let mn = min(albedo.r, min(albedo.g, albedo.b));
+    let dl = mx - mn;
     var hh = 0.0;
     if (dl > 1e-4) {
       if (mx == albedo.r) { hh = (albedo.g - albedo.b) / dl; } else if (mx == albedo.g) { hh = 2.0 + (albedo.b - albedo.r) / dl; } else { hh = 4.0 + (albedo.r - albedo.g) / dl; }
