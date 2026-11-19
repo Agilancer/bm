@@ -687,7 +687,31 @@ world's north edge, east of them. Gone in alone (party: false), as the sewers ar
     castle yard wants a reason to cross it (a cart, people at work); boats on the quay low on detail. Corners: PC
     1,595,937 of 1,600,000, phone 899,228 of 950,000, so anything more on the land wants something taken off first.
 
-## Chunk 9: the castle's eight dungeons and the idol — not started
+## Chunk 9: the castle's eight dungeons and the idol — under way
+
+- [x] **The look made over (2026-11-19)**, the owner: "Everything looks so bland with the same texture repeated over and
+  over ... Make this shit look amazing." In the ground and static shaders (src/gfx/materials.js), in Phobos's box only, not
+  on a phone: no tile the same as the next (two slid copies, the seam in the mortar; renderer.js marks a layer's kind in
+  its params.w: -1 masonry, -2 roofs and boards); weathering in the world's own metres (tone and warmth house to house,
+  grime, soot down every ledge, cracks, moss and lichen in the damp, dead ivy, old render over the city's brick falling
+  away in islands); the Slough a murky fen; the castle crag's ground darker.
+- [x] **Houses lived in**: windows open through the wall (unglazed, one mullion, shutters back), the room seen through
+  them; the hearth on the side wall across from the stair (Pantin's and Quiney's town-house plans), one up each floor,
+  the stack straight over it clear of the ridge; shops' signs painted with names (p2_signs, tools/phobos/textures/signs.py,
+  IM Fell English, OFL); the backs of houses dressed (backyard()). Ten residents made on the owner's Meshy account
+  (tools/phobos/residents.mjs, residents_folk.py) walk in the crowd with lines of their own; FOLK_MAX 96.
+- [x] **The castle**: his V on its battlements (Kit.vee, swallowtail merlons); the Keep's winding stairs walled and roofed
+  (spiral enclose); a viewing deck under every spire's crown; the Sally Gate east and the Ash Terrace past it; a shut
+  postern on each cliff. The PC's corner ceiling raised to 1.8 million (tests/sites-lean.test.mjs); a phone's unchanged.
+- [x] **The Iron Barracks** (src/core/delve-barracks.js, fights in src/sim/castle-fights.js), the first of the eight, under
+  the castle yard (its portal on the yard's south side), level 64, a party welcome: the Kennelmaster (hounds in waves, his
+  whip maddens them, the blood-scent you wash off in the kennel trough), the Quartermaster (powder-runners: one that
+  reaches him, he throws its keg), the Iron Marshal (his ranks across the hall, the Iron Standard that mends him till it's
+  cut down, his last stand). Played out: all won; still dies on each; slow wins the first two, half the time the Marshal.
+  Maud Treller's quest to it, The Iron Muster. Auto-play knows it (src/ui/autowarrens.js).
+- [ ] Left open: auto-play not yet watched playing the Iron Barracks in the page; the watchman's gambeson is quilted in a
+  diamond lattice (check it against the owner's crosses); the crag's sheer faces still streak (the terrain shader's).
+
 
 The Drowned Archive, the Iron Barracks, the Gallery of a Thousand Portraits, the Clockworks, the Alchemists' Undercroft, the
 Menagerie of Chains, the Ossuary Chapel, the Hall of Mirrors (drafts). Boss keys; idol materials (each run at least 5
