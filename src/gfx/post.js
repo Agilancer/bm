@@ -15,6 +15,13 @@ fn portalOrbit(c: vec3f, kind: u32, seed: f32, pad: f32, age: f32, maxLife: f32)
   let k = clamp(age / maxLife, 0.0, 1.0);
   let s1 = fract(seed * 7.31); let s2 = fract(seed * 13.7); let s3 = fract(seed * 29.3);
   let a0 = seed * 6.2832;
+  // 12: a crow, round and round over a roost (c) a long way out (pad), slow, rising and sinking on the air, some one way and
+  // some the other.
+  if (kind == 12u) {
+    let r = pad * (0.55 + 0.75 * s1);
+    let th = a0 + age * (0.16 + 0.14 * s2) * select(1.0, -1.0, s3 > 0.5);
+    return c + vec3f(cos(th) * r, s3 * pad * 0.35 + sin(age * 0.37 + a0) * 3.0, sin(th) * r);
+  }
   if (kind == 9u) {
     let R = 1.86;
     let r = R * (0.75 + 0.35 * s1) * (1.0 - 0.92 * pow(k, 0.85));
@@ -66,7 +73,7 @@ fn main(@builtin(global_invocation_id) id: vec3u) {
   if (p.life <= 0.0) { particles[i].life = 0.0; return; }
   let dt = S.dt;
   // A portal's motes go where their age puts them.
-  if (p.kind >= 8u && p.kind <= 11u) {
+  if (p.kind >= 8u && p.kind <= 12u) {
     p.pos = portalOrbit(p.vel, p.kind, p.seed, p.pad, p.maxLife - p.life, p.maxLife);
     particles[i] = p;
     let at = atomicAdd(&drawArgs.instanceCount, 1u);
@@ -101,6 +108,11 @@ fn main(@builtin(global_invocation_id) id: vec3u) {
     case 5u: {
       let t = S.time * 0.8 + p.seed * 40.0;
       p.vel = S.wind.xyz * 0.25 + vec3f(sin(t), sin(t * 0.7 + 1.0) * 0.5, cos(t * 1.1)) * 0.11;
+    }
+    case 13u: {
+      // Ash, falling: on the wind, slow, turning over as it comes down (the Cinder quarter, src/gfx/renderer.js ash).
+      let t = S.time * 0.9 + p.seed * 50.0;
+      p.vel = S.wind.xyz * 0.4 + vec3f(sin(t) * 0.28, -0.42 - 0.2 * p.seed, cos(t * 1.3) * 0.28);
     }
     case 7u: {
       // Slows hard as it hits still air, then the heat takes it up, swelling.
@@ -234,6 +246,16 @@ struct V {
       let hot = mix(vec3f(0.08, 0.3, 1.8), vec3f(0.6, 1.3, 3.0), fract(pt.seed * 3.7) * 0.6 + 0.4 * (1.0 - k));
       col = vec4f(hot * show * min(1.0, 0.03 / max(pt.size, 0.01)) * mix(1.0, 0.5, haze), 0.0);
     }
+    case 13u: {
+      let lit = sun * 0.3 + amb * 0.7;
+      col = vec4f(mix(vec3f(0.2, 0.19, 0.18), vec3f(0.42, 0.4, 0.38), pt.seed) * lit, 0.85 * smoothstep(0.0, 0.15, a) * (1.0 - smoothstep(0.9, 1.0, a)));
+    }
+    case 12u: {
+      // A crow: near black, its wings in a V that beats now and then and glides between (fade carries the beat to fs).
+      let beat = sin(F.camPos.w * 9.0 + pt.seed * 40.0) * step(0.55, fract(F.camPos.w * 0.21 + pt.seed));
+      o.fade = 0.5 + 0.5 * beat;
+      col = vec4f(0.03, 0.028, 0.034, 0.92);
+    }
     case 7u: {
       // White at the mouth, through yellow and orange to a dull red that's gone before it reads as a ball.
       let hot = mix(mix(vec3f(1.5, 0.2, 0.02), vec3f(4.2, 1.45, 0.2), smoothstep(0.2, 0.6, a)), vec3f(4.6, 3.0, 1.0), smoothstep(0.72, 1.0, a));
@@ -269,6 +291,12 @@ struct V {
   if (!LEAN) {
     scene = textureLoad(depthTex, vec2i(in.pos.xy), 0).r;
     if (scene < in.viewZ - 0.02) { discard; }
+  }
+  // (A crow's two wings, a V, not a round dot.)
+  if (in.kind == 12u) {
+    let d = abs(in.uv.y - (abs(in.uv.x) * (0.15 + 0.7 * in.fade) - 0.25));
+    if (d > 0.16 || abs(in.uv.x) > 0.96) { discard; }
+    return vec4f(in.color.rgb * in.color.a, in.color.a);
   }
   let r2 = dot(in.uv, in.uv);
   if (r2 > 1.0) { discard; }

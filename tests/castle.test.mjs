@@ -99,10 +99,24 @@ test("the Feast That Walks: in the Great Hall, his servers fed to him, and a lan
   assert.deepEqual(rows(marks('aisle')), [HALL_ROWS[1]]);
 });
 
+test("the castle's own eight: in its wards, clear of the rock, each with his own two hundred lines and more", async () => {
+  const { POSTED } = await import('../src/folk/people.js');
+  const { LINES } = await import('../src/folk/lines/phobos.js');
+  const own = POSTED.filter((p) => p.id.startsWith('cs_'));
+  assert.equal(own.length, 8);
+  for (const p of own) {
+    assert.ok(p.late && (p.delve === 'lowerward' || p.delve === 'middleward'), p.id);
+    assert.ok(caveRoom(p.post[0], p.post[1]) > 0.4, `${p.id} stands clear`);
+    const n = (v) => (Array.isArray(v) ? v.length : v && typeof v === 'object' ? Object.entries(v).filter(([k]) => k !== 'topics').reduce((s, [, x]) => s + n(x), 0) : 0);
+    assert.ok(n(LINES[p.id]) >= 200, `${p.id}: ${n(LINES[p.id])} lines`);
+  }
+});
+
 test("the Librarian's household: in his rooms down the Middle Ward, with work for you, none of it showing whose they are", async () => {
   const { POSTED } = await import('../src/folk/people.js');
   const { LINES } = await import('../src/folk/lines/phobos-hubs.js');
-  const house = POSTED.filter((p) => p.delve === 'middleward');
+  // (The household: not the castle's own, cs_, who serve Him in its wards: below.)
+  const house = POSTED.filter((p) => p.delve === 'middleward' && !p.id.startsWith('cs_'));
   assert.deepEqual(house.map((p) => p.id).sort(), ['ph_jory', 'ph_librarian', 'ph_ondine', 'ph_pip', 'ph_wynn']);
   const rooms = MW.rooms.find((r) => r.id === 'cm_rooms');
   for (const p of house) {

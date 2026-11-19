@@ -282,6 +282,50 @@ export const QUESTS = {
       "Pip asks after you every day. Every single day. I've told him you're busy. He says busy doing what. I've told him to ask you.",
     ],
   },
+  his_servants: {
+    title: 'His Servants',
+    giver: 'ph_librarian',
+    needs: 'the_household',
+    offer: [
+      "You've met my household. Now meet his. Eight of them keep this castle for him, in the Lower Ward and in this one, and none of them is what they seem, and all of them are worse.",
+      "Speak to each. Learn their faces and their voices. When the day comes that you need to get past one of them, you'll want to know which to fear, and which to bribe, and which to pity.",
+    ],
+    accept: "I'll meet his servants.",
+    acceptLine: "The steward in the Lower Ward's West Range, the scullion in the Kitchens, the one they call the Quiet Man in the Oubliettes. Here: a hellguard and a priestess in the court, an imp in the Gallery, the butler in the Great Hall, and in the Stacks, if you can see him, Thorne.",
+    decline: 'Not yet.',
+    declineLine: "No. One should never hurry to meet them. But one should meet them.",
+    journal: [
+      "The Librarian wants you to meet the castle's eight servants. Start with the steward, in the Lower Ward's West Range.",
+      "The ghoul scullion, in the Lower Ward's Kitchens.",
+      "The Quiet Man, in the Oubliettes.",
+      "The hellguard, in the Middle Court.",
+      "The priestess of the Keep, in the Middle Court.",
+      "The imp page, in the Portrait Gallery.",
+      "The bone butler, in the Great Hall.",
+      "The archive's blind ghost, in the Stacks.",
+      "Go back to Master Aldric Pell.",
+    ],
+    progress: [
+      "His eight servants, about the Lower Ward and the Middle Ward.",
+    ],
+    others: {
+      cs_steward: ["The castle keeps itself. I merely remind it how. You are a guest, I take it. Guests are counted, and fed, and seldom leave. Mind the carpets."],
+      cs_ghoul: ["Cook? Everything. Everything that comes down. You smell nice. Not to eat. Just nice. Go on, go on, before I forget the difference."],
+      cs_torturer: ["...", "No one."],
+      cs_hellguard: ["The court. The stair. Him. You are none of those. Stand where I can see you, and keep standing there."],
+      cs_priestess: ["To Him, child. Only ever to Him. And He hears. Do you feel it, when you stand in the court? That's Him, hearing you."],
+      cs_imp: ["I'm a page! I'm a very good page. I carry things. I carry messages. I carry secrets, sometimes, in my cheeks. Want one? Costs a copper."],
+      cs_butler: ["The household, sir. The house. The Master. In that order, and all at once. Will you be dining? No. Few do, twice."],
+      cs_archivist: ["Hear you? I hear everything in these Stacks. The dust settling. The books breathing. You, now. You breathe louder than the books."],
+    },
+    done: [
+      "All eight. And you came back, which is more than some who went to meet the Quiet Man. Now you know them. Remember them.",
+      "Take this. And when you pass one of them in a corridor, say nothing of me. They listen. Even the dead one.",
+    ],
+    after: [
+      "Thorne asked after you. Thorne has not asked after anyone in eighty years. I do not know whether to be glad.",
+    ],
+  },
   dust_in_the_stacks: {
     title: 'Dust in the Stacks',
     giver: 'ph_librarian',
@@ -371,13 +415,44 @@ export const QUESTS = {
     ],
   },
 
+  // ---- Maud Treller's, of the Quiet Watch ----
+  the_iron_muster: {
+    title: 'The Iron Muster',
+    giver: 'ph_watch',
+    needs: 'the_gate_captain',
+    offer: [
+      "The Gate Captain's dead. Good. But he was the door, not the house. Under his yard there's a stair down to where the garrison musters: the Iron Barracks. Kennels, stores, cells, and the Iron Marshal over all of it.",
+      "Every patrol that walks this city in red comes up out of that stair. Break the Marshal and his muster, and the Watch breathes easier for a season. Take friends. Take the Free Company if you can pay them.",
+    ],
+    accept: "I'll go down the Muster Stair.",
+    acceptLine: "The barracks' door is on the south side of the castle yard, past the Lower Ward's. Mind his hounds, mind his powder, and when he plants his standard, cut it down.",
+    decline: "Not yet.",
+    declineLine: "Not yet. They'll be mustering tomorrow, and the day after. They always are.",
+    journal: [
+      "Under the castle yard, the Iron Barracks: Maud Treller of the Quiet Watch wants the Iron Marshal dead. Its door is on the south side of the yard.",
+      "Break the Iron Marshal in his hall. The Kennelmaster and the Quartermaster keep its doors.",
+      "Go back to Maud Treller of the Quiet Watch.",
+    ],
+    progress: [
+      "Down the Muster Stair, into the Iron Barracks.",
+      "The Iron Marshal, in the Iron Hall.",
+    ],
+    done: [
+      "The Marshal's dead? Then the muster's broken, and his patrols will be thin on the Mile for weeks. You've given this city a breath it hasn't had in years.",
+      "Here. It's his muster-roll, every name down there. Half of them are struck through now, by you. Keep it. A reminder of what one person can do.",
+    ],
+    after: [
+      "Fewer red cloaks on the Mile. Not none. Fewer. That's how it goes here: fewer, and then fewer, and one day none.",
+    ],
+  },
+
   // ---- Pip's ----
   the_hornwings: {
     title: 'The Hornwings',
     giver: 'ph_pip',
     needs: 'the_household',
     offer: [
-      "The hornwings roost on my horns. Right on them. In the bells. I can't sound a horn with a hornwing in it, it just goes HONK and the hornwing comes out angry.",
+      "The hornwings roost on my horns. Right on them. In their mouths. I can't sound a horn with a hornwing in it, it just goes HONK and the hornwing comes out angry.",
       "Can you get them off? Four of them, in the Horn Galleries. Then I can sound the patrols again and nobody will know it was a boy. Please?",
     ],
     accept: "I'll clear your horns.",
@@ -385,7 +460,7 @@ export const QUESTS = {
     decline: "Not now, Pip.",
     declineLine: "Everybody says not now. Then it's later and they still say not now.",
     journal: [
-      "Hornwings roost in the bells of the great horns in the Horn Galleries, and Pip Carrow can't sound them. Put down four of them there.",
+      "Hornwings roost in the mouths of the great horns in the Horn Galleries, and Pip Carrow can't sound them. Put down four of them there.",
       "Go back to Pip Carrow in the Librarian's rooms.",
     ],
     progress: [

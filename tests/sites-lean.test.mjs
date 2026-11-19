@@ -26,7 +26,9 @@ test('the land\'s corners are typed arrays of just their length, and can be let 
   for (const p of full.parts.values()) { assert.ok(typed(p) && whole(p)); verts += p.pos.length / 3; }
   // (A PC's land has the outposts' fences, tents and stones as well, src/core/wild-dress.js, and the roads' carts, stumps and
   // cold fires, src/core/roadside.js; a phone's, below, hasn't.)
-  assert.ok(verts > 150000 && verts < 1600000,   // (a million and a half with Phobos blocked out: src/core/phobos-build.js. It wants a build of its own, like the delves', before it's detailed.)
+  // (A PC's ceiling raised to 1.8 million, 2026-11-19, for the castle the owner asked for ("make this shit look amazing"):
+  // its stairs walled, its spires' decks, his V on every battlement. A phone's, below, is where memory bites, and it's not.)
+  assert.ok(verts > 150000 && verts < 1800000,   // (a million and a half with Phobos blocked out: src/core/phobos-build.js. It wants a build of its own, like the delves', before it's detailed.)
     `${verts} corners: the land's, and none of the delves'`);
   const phone = buildSites(true, true);
   let pv = 0;

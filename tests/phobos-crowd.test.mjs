@@ -3,6 +3,8 @@
 // talking; and with you as you go, the ones left behind set down again ahead.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { PHOBOS } from '../src/core/phobos-data.js';
+const DISTRICTS = Object.fromEntries(PHOBOS.districts.map((d) => [d.key, d]));
 import { readFileSync } from 'node:fs';
 import { parseGLB } from '../src/core/glb.js';
 import { FolkClips, FolkRig } from '../src/folk/rig.js';
@@ -73,9 +75,14 @@ test('in the street: parked out of the city, up and about inside it, and along w
       life.update(dt, { hour: 20, day: 0, player: [px, 0, pz], dangers: [], yaw });
       talk.update(dt, { player: [px, 0, pz], cast: 0 });
     }
+    // (Each lives in a district of their own and is about only while you're near it, on its streets: src/folk/brain.js
+    // AREA_REACH. Those with none go along with you.)
     for (const me of crowd) {
+      const D = me.p.area && DISTRICTS[me.p.area];
+      if (D && Math.hypot(px - D.x, pz - D.z) > D.r + 120) { assert.ok(me.parked, `${me.id} is up away from ${me.p.area}`); continue; }
       assert.ok(!me.parked, `${me.id} isn't up in the city`);
-      assert.ok(Math.hypot(me.x - px, me.z - pz) < 105, `${me.id} is ${Math.hypot(me.x - px, me.z - pz) | 0} m off`);
+      if (D) assert.ok(Math.hypot(me.x - D.x, me.z - D.z) < D.r + 40, `${me.id} has wandered out of ${me.p.area}`);
+      else assert.ok(Math.hypot(me.x - px, me.z - pz) < 105, `${me.id} is ${Math.hypot(me.x - px, me.z - pz) | 0} m off`);
       assert.ok(onLane(me), `${me.id} is off the streets at ${me.x | 0}, ${me.z | 0} (lane ${me.lane} k ${me.lk} act ${me.act} pair ${!!me.pairWith} at ${phobosLanes()[me.lane]?.pts[me.lk]})`);
       for (const h of HAUNTS) assert.ok(Math.hypot(me.x - h.x, me.z - h.z) > h.clear - 20, `${me.id} by ${h.key}`);
       assert.ok(Math.abs(me.y - life.ground.landHeight(me.x, me.z)) < 0.05, `${me.id} isn't on the ground`);
@@ -84,7 +91,7 @@ test('in the street: parked out of the city, up and about inside it, and along w
       if (Math.hypot(me.x - x0, me.z - z0) > 5) moved++; else stood++;
     }
   }
-  assert.ok(moved > crowd.length, `only ${moved} moves`);
+  assert.ok(moved > 20, `only ${moved} moves`);
   assert.ok(stood > 0, 'nobody ever stood about');
   // Some of them stopped to talk, and the player, near, heard some of it.
   assert.ok(said.some((e) => e.type === 'say' && e.kind === 'small'), 'no talk in the street');

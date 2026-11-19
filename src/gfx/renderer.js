@@ -10,6 +10,7 @@ import { LISANDRA_FORMS, LISANDRA_SCALE, SKIRT_PALETTE_JOINTS } from '../core/li
 import { FOREST_REACH } from '../core/forest.js';
 import { WORLD_EAST, WORLD_EDGE } from '../core/lands.js';
 import { roadSegments } from '../core/roads.js';
+import { terrainHeight } from '../core/terrain.js';
 import { PORTAL_MODELS, buildSites, buildUnder, dropSiteGeometry } from '../core/sites.js';
 import { PhobosNear } from './phobos-near.js';
 import { DELVES, PORTAL_SPOTS, braziers, caveFloorY, caveRoofY, delveAt, inDungeon, torches } from '../core/dungeon.js';
@@ -978,7 +979,9 @@ export class Renderer {
       params[i * 4] = l.cutout ? 1 : 0;
       params[i * 4 + 1] = pomDepth * ({ wall: 0.011, roof: 0.022, stone: 0.02, door: 0.012 }[l.kind] || 0);
       params[i * 4 + 2] = l.kind === 'wall' ? 1 : 0;
-      params[i * 4 + 3] = /^(leaves|pine|pine_far)(_\d)?$/.test(l.name) ? 1 : 0;
+      // (w: 1 foliage, which stirs; -1 a tiled masonry, -2 a roof or boards, which Phobos takes apart so no two tiles are
+      // the same and weathers, masonry the most, materials.js STATIC. Never a door, a banner or a picture laid once.)
+      params[i * 4 + 3] = /^(leaves|pine|pine_far)(_\d)?$/.test(l.name) ? 1 : /^(wall|stone)$/.test(l.kind) ? -1 : l.kind === 'roof' || (l.kind === 'wood' && !/bark/.test(l.name)) ? -2 : 0;
     });
     // (The PH2 pack's from entry 64: its relief by what it is; its stained glass lit by the day behind it, its lit
     // windows by a lamp at night. materials.js STATIC.)
@@ -988,6 +991,7 @@ export class Renderer {
       params[o] = l.cutout ? 1 : 0;
       params[o + 1] = pomDepth * ({ stone: 0.01, brick: 0.012, roof: 0.016, wood: 0.01, plaster: 0.006, metal: 0.006 }[l.kind] || 0);
       params[o + 2] = l.kind === 'stained' ? 2 : l.kind === 'lit' ? 1.25 : 0;
+      params[o + 3] = /^(stone|brick|plaster)$/.test(l.kind) ? -1 : l.kind === 'roof' || (l.kind === 'wood' && !/door|shutter/.test(l.name)) ? -2 : 0;
     });
     const layerUBO = makeBuffer(device, params, GPUBufferUsage.UNIFORM);
     this.staticBG = device.createBindGroup({ layout: this.bglStatic, entries: [
@@ -1858,6 +1862,30 @@ export class Renderer {
   }
 
   // n motes of a portal's (a fraction's a chance of one), going round x, y, z (kind and pad: src/gfx/post.js ORBIT).
+  // Crows over Phobos while you're there: one let go over each roost every few seconds, each a minute on the wing (orbit
+  // kind 12, src/gfx/post.js), so a dozen or so circle each: over the Keep's crown, the castle's yard, the Bone Yards and
+  // Chainmarket's gibbet. [x, height over the ground there, z, how far out they go]. Not on a phone.
+  crows(cam) {
+    if (this.tier.lean || cam.x < 9000 || cam.x > 11800 || Math.abs(cam.z) > 1200) return;
+    const now = performance.now();
+    if (now - (this.crowT || 0) < 4500) return;
+    this.crowT = now;
+    for (const [x, up, z, r] of [[11220, 420, 0, 60], [10860, 70, 0, 50], [10000, 45, -600, 70], [9830, 40, -80, 45]]) this.orbit(12, 1, x, terrainHeight(x, z) + up, z, r, 50, 70, 0.45, 0.6);
+  }
+
+  // Ash coming down over the Cinder quarter, its smelters' and charcoal-burners' (src/core/phobos-build.js), round you while
+  // you're in it: kind 13 (src/gfx/post.js), a couple of flakes a frame let go above you within thirty metres. Not on a phone.
+  ash(cam) {
+    if (this.tier.lean) return;
+    const d = Math.hypot(cam.x - 9640, cam.z + 380);
+    if (d > 210) return;
+    const n = d < 150 ? 2 : 1;
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2, r = 30 * Math.sqrt(Math.random());
+      this.emit(13, 1, cam.x + Math.cos(a) * r, cam.y + 5 + Math.random() * 10, cam.z + Math.sin(a) * r, 0, -1, 0, 0.2, 0.2, 0.4, 0.05, 0.09, 14, 20);
+    }
+  }
+
   orbit(kind, n, x, y, z, pad, life0, life1, sz0, sz1) {
     const f = this.emitF, u = this.emitU, cap = f.length / 12;
     n = Math.floor(n + Math.random());
@@ -2510,6 +2538,9 @@ export class Renderer {
     this.followLand(cam);
     // (Phobos's houses near the eye, as they are from near: src/gfx/phobos-near.js.)
     (this.phobosNear ||= new PhobosNear(this)).update(cam);
+    this.phobosNear.smoke(this.frameDt || 1 / 60, cam);
+    this.crows(cam);
+    this.ash(cam);
     this.slimeBodies?.update(snap, snap[H.TIME], cam);
     this.pines.update(cam, aspect, tan);
     this.rocks.update(cam, aspect, tan);

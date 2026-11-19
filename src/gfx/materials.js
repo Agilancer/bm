@@ -1,6 +1,7 @@
 // WGSL for everything drawn in the world pass.
 import { COMMON } from './shaders.js';
 import { CHURCH_Z } from '../core/church.js';
+import { CRAG } from '../core/east.js';
 import { RD_CELL, RD_HALF, RD_MAX, RD_N, RD_NX } from '../core/roads.js';
 
 export const TERRAIN = COMMON + /* wgsl */ `
@@ -229,6 +230,12 @@ fn rot(p: vec2f, a: f32) -> vec2f { let c = cos(a); let s = sin(a); return vec2f
     rockCol = vec3f(grey) * vec3f(0.72, 0.72, 0.76) * (0.75 + 0.5 * dirtDet.a);
   }
   albedo = mix(albedo, rockCol * (1.0 + 0.18 * fk.a), rockAmt);
+  // (The castle's crag, src/core/east.js CRAG, inside its curtain and down its banks: rock and gravel near half as dark, a
+  // dull brown-black. Pale, its slopes in the yard and the wards were snow against the black walls, the gate lost on them.
+  // The critics.)
+  let cragD = (p.xz - vec2f(${CRAG.x.toFixed(1)}, ${CRAG.z.toFixed(1)})) / vec2f(${CRAG.a.toFixed(1)}, ${CRAG.b.toFixed(1)});
+  let cragE = dot(cragD, cragD);   // (not pow: of a negative it's nothing, and the crag's ground went white)
+  albedo *= mix(vec3f(0.5, 0.48, 0.45), vec3f(1.0), smoothstep(0.85, 1.15, cragE));
   det = mix(det, rockDet, rockAmt * select(0.0, 1.0, haveRock));
   // Snow over all, thinning where the slope's too steep to hold it.
   var snowCol = vec3f(0.84, 0.87, 0.93) * (0.88 + 0.16 * grassDet.a);
@@ -292,6 +299,11 @@ fn slotOf(lay: u32) -> u32 { return select(min(lay, 63u), min(lay - 136u, ${STAT
 fn colAt(uv: vec2f, l: i32, dx: vec2f, dy: vec2f) -> vec4f {
   if (l >= 200) { return textureSampleGrad(p2Color, repeatSmp, uv, l - 200, dx, dy); }
   return textureSampleGrad(colorArr, repeatSmp, uv, l, dx, dy);
+}
+// (One of the pack's laid in the world's own metres, s to a repeat, its level from how far off it is: a pixel's width at
+// that distance over a texel's. Phobos's weathering.)
+fn p2W(uv: vec2f, l: i32, s: f32, dist: f32) -> vec4f {
+  return textureSampleLevel(p2Color, repeatSmp, uv, l - 200, clamp(log2(max(dist * 1.25 / s, 1e-3)), 0.0, 9.0));
 }
 fn detAt(uv: vec2f, l: i32, dx: vec2f, dy: vec2f) -> vec4f {
   if (l >= 200) { return textureSampleGrad(p2Detail, repeatSmp, uv, l - 200, dx, dy); }
@@ -439,10 +451,33 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
     tex = mix(colAt(uv + oa, layerI, dx, dy), colAt(uv + ob, layerI, dx, dy), w);
     det = mix(da, db, w);
   }
+  // Phobos: no tile the same as the one beside it. Its masonry, roofs and boards (params.w < 0: renderer.js) read from two
+  // copies of the tile, each slid along its own way, a slow noise choosing between them and the seam following the
+  // painting's height, so it runs in the mortar and not across a stone. Slid along only, never up, so courses and strips
+  // stay level. (The same tile over a whole street read as a game from the nineties: the owner.)
+  let phob = !LEAN && p.x > 9300.0 && p.x < 11800.0 && abs(p.z) < 1100.0 && !flat_ && params.z >= 0.0;
+  if (phob && params.w < 0.0 && dist < 320.0) {
+    let l = textureSampleLevel(noiseTex, repeatSmp, uv * 0.093 + vec2f(0.71, 0.29), 0.0).g * 9.0;
+    let ia = floor(l);
+    let oa = vec2f(fract(sin(ia * 12.9898) * 43758.5), 0.0); let ob = vec2f(fract(sin((ia + 1.0) * 12.9898) * 43758.5), 0.0);
+    let da = detAt(uv + oa, layerI, dx, dy);
+    let db = detAt(uv + ob, layerI, dx, dy);
+    let w = smoothstep(0.32, 0.68, l - ia + (db.a - da.a) * 0.9);
+    tex = mix(colAt(uv + oa, layerI, dx, dy), colAt(uv + ob, layerI, dx, dy), w);
+    det = mix(da, db, w);
+  }
   if (flat_) {
     let m = flatMaterial(lay, p, F.camPos.w);
     albedo = m.rgb; rough = m.a;
     let t = F.camPos.w;
+    // (Fen water, 'mire:water', Phobos's Slough: green-brown and thick, a scum of muck on it in drifts, a slow stir and no
+    // more, the sky in it dulled. As well water it was a clean canal, a mirror: the critics.)
+    if (lay == 102u && tintK == 4u) {
+      let d = textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.06 + vec2f(t * 0.004, t * 0.002), 0.0);
+      albedo = mix(vec3f(0.034, 0.036, 0.016), vec3f(0.06, 0.052, 0.026), smoothstep(0.42, 0.7, d.r));
+      rough = mix(0.68, 0.8, smoothstep(0.5, 0.75, d.g)); ao = 0.36;   // (the sky in it dulled to a third: the whole sky lay on it in white sheets)
+      n = normalize(vec3f((d.b - 0.5) * 0.06, 1.0, (d.a - 0.5) * 0.06));
+    }
     if (lay == 110u || lay == 112u) {
       // Open water stirs in two sets of ripples; ice lies still, cracked.
       let a = textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.045 + vec2f(t * 0.011, t * 0.007), 0.0).rg - 0.5;
@@ -500,7 +535,7 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
     // (Each pane a little different, and at night near black, the moon only a glint in it.)
     let paneK = fract(sin(dot(floor(p * 0.55), vec3f(12.99, 4.13, 78.23))) * 43758.5);
     let dayK = smoothstep(0.3, 0.9, F.sunColor.a);
-    if (lay == 100u && tintK == 7u) { albedo = vec3f(0.045, 0.052, 0.066) * (0.6 + 0.8 * paneK) * mix(0.3, 1.0, dayK); metal = 0.1 * dayK; rough = mix(0.88, mix(0.34, 0.6, paneK), dayK); }
+    if (lay == 100u && tintK == 7u) { albedo = vec3f(0.03, 0.034, 0.042) * (0.6 + 0.8 * paneK) * mix(0.3, 1.0, dayK); metal = 0.04 * dayK; rough = mix(0.88, mix(0.5, 0.72, paneK), dayK); ao = 0.55; }   // (darker and duller: the sky full in them, they were blank paper, the critics)
     if (lay == 108u) { emissive = select(vec3f(6.0, 6.0, 5.6), vec3f(1.6, 1.6, 1.5), F.blood.w < 0.5); albedo = vec3f(0.0); }
     if (lay == 101u) {
       // (Its own light beside it, put out: src/gfx/homelights.js. A light the frame has no room for leaves the flame be.)
@@ -533,7 +568,7 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
       if (tintK == 12u) { emissive *= vec3f(0.5, 0.7, 0.95) * night; }
       if (tintK == 8u) { emissive = vec3f(dot(emissive, vec3f(0.3, 0.5, 0.2))) * vec3f(0.95, 0.1, 0.035); }
       albedo = vec3f(0.0);
-      if (tintK == 12u) { albedo = vec3f(0.045, 0.052, 0.066) * (0.6 + 0.8 * paneK) * (1.0 - night); metal = 0.1 * (1.0 - night); rough = mix(0.34, 0.6, paneK); }
+      if (tintK == 12u) { albedo = vec3f(0.03, 0.034, 0.042) * (0.6 + 0.8 * paneK) * (1.0 - night); metal = 0.04 * (1.0 - night); rough = mix(0.5, 0.72, paneK); ao = mix(0.55, 1.0, night); }
     }
   } else {
     if (params.x > 0.0 && tex.a < 0.5) { discard; }
@@ -564,13 +599,59 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
       if (tintK == 14u) { albedo = mix(albedo, vec3f(lum * 1.5 + 0.05) * vec3f(0.13, 0.27, 0.9), 0.94); }
       if (tintK == 15u) { albedo = mix(albedo, vec3f(lum * 1.4 + 0.04) * vec3f(0.2, 0.56, 0.2), 0.92); }
     }
-    // Phobos's walls weathered: rain-streaks down every face from whatever's over it, and a broad blotching, so a drum a
-    // hundred metres high isn't one even tone. (Only there, in the box of the city and the crag: src/core/phobos-build.js.)
-    if (p.x > 9300.0 && p.x < 11500.0 && abs(p.z) < 900.0 && abs(n0.y) < 0.45 && params.z >= 0.0 && params.x == 0.0) {
+    // Phobos's walls weathered, in the world's own space so it runs on over every tile, joint and house: a slow drift of
+    // tone and warmth so no two houses and no two stretches of a curtain are the same stone; soot run down from every
+    // ledge and sill (the PH2 pack's soot streaks); grime in broad clouds; cracks here and there; moss and lichen in the
+    // damp, most on what faces north; dead ivy up some walls; and on its roofs moss in the hollows and grime down the
+    // slope. (Only there, the box of the city and the crag: src/core/phobos-build.js. Not on a phone.)
+    if (phob && params.x == 0.0) {
+      let vert = abs(n0.y) < 0.45;
       let along = select(p.z, p.x, abs(n0.z) > abs(n0.x));
-      let sk = textureSampleLevel(noiseTex, repeatSmp, vec2f(along * 0.21, p.y * 0.006), 0.0).r;
-      let blot = textureSampleLevel(noiseTex, repeatSmp, vec2f(along * 0.0045 + 0.3, p.y * 0.0045 + 0.7), 0.0).g;
-      albedo *= (1.0 - 0.36 * smoothstep(0.5, 0.8, sk)) * (0.74 + 0.5 * blot);
+      let q = select(p.xz, vec2f(along, p.y), vert);
+      let big = textureSampleLevel(noiseTex, repeatSmp, q * 0.0061 + vec2f(0.13, 0.57), 0.0);
+      let mid = textureSampleLevel(noiseTex, repeatSmp, q * 0.031 + vec2f(0.41, 0.09), 0.0);
+      // Tone and warmth, house by house and stretch by stretch.
+      albedo *= 0.62 + 0.66 * big.r;
+      albedo = mix(albedo, albedo * vec3f(1.12, 1.0, 0.84), smoothstep(0.45, 0.75, big.g) * 0.8);
+      albedo = mix(albedo, albedo * vec3f(0.86, 0.94, 1.08), smoothstep(0.45, 0.75, big.b) * 0.6);
+      // Grime in clouds.
+      let gr = p2W(q / 9.0, 287, 9.0, dist).r;
+      albedo *= 1.0 - 0.55 * gr * smoothstep(0.25, 0.65, mid.r);
+      let mason = params.w > -1.5 && params.w < -0.5;   // (masonry, -1, only: boards, roofs, doors and cloth are spared what follows but the tone and grime)
+      if (vert && mason) {
+        // In the city, the houses' old render: a skin of sooted plaster over their brick and stone, here whole, there
+        // fallen away in ragged islands to the masonry, its edge following the stones. (Not on the castle's walls.)
+        if (params.w < 0.0 && p.x < 10640.0) {
+          let pl = p2W(vec2f(along, -p.y) / 3.0, 252, 3.0, dist).rgb;
+          let keep = smoothstep(0.46, 0.54, big.a * 0.8 + mid.a * 0.45 + (det.a - 0.5) * 0.3 - 0.1);
+          albedo = mix(albedo, pl * (0.55 + 0.5 * big.r), keep * 0.92);
+          // (A dark lip where it's broken off.)
+          albedo *= 1.0 - 0.35 * (1.0 - abs(keep * 2.0 - 1.0)) * keep;
+        }
+        // Soot down from every ledge, in four-metre runs; heavier toward the city's smoke.
+        let st = p2W(vec2f(along / 4.0, -p.y / 4.0), 280, 4.0, dist).r;
+        albedo *= 1.0 - 0.72 * st * smoothstep(0.3, 0.6, mid.g + 0.15);
+        // And on what's tall, the castle's towers and curtains above all, long runs of soot and rain from far up, fourteen
+        // metres across and thirty-six down a repeat: a drum a hundred metres high streaked the length of it, not ruled.
+        let tall = p2W(vec2f(along / 14.0, -p.y / 36.0), 280, 14.0, dist).r;
+        albedo *= 1.0 - 0.5 * tall * smoothstep(0.3, 0.6, big.r + 0.12);
+        // Cracks, now and then.
+        let ck = p2W(vec2f(along / 3.0, -p.y / 3.0) + 0.37, 285, 3.0, dist).r;
+        albedo *= 1.0 - 0.5 * ck * smoothstep(0.62, 0.8, big.a);
+        // Moss and lichen in the damp, more on what faces north and toward the foot of a wall.
+        let damp = smoothstep(0.55, 0.8, mid.b + max(-n0.z, 0.0) * 0.25 + (0.5 - fract(p.y / 23.0)) * 0.05);
+        let moss = p2W(vec2f(along / 2.0, -p.y / 2.0), 282, 2.0, dist).rgb;
+        let li = p2W(vec2f(along, -p.y) / 1.5, 286, 1.5, dist).rgb;
+        albedo = mix(albedo, mix(li * 0.7, moss * 0.8, 0.6), damp * 0.55);
+        // Dead ivy up some walls, dark and dry.
+        let iv = p2W(vec2f(along / 3.0, -p.y / 4.5), 293, 4.0, dist).r;
+        albedo = mix(albedo, vec3f(0.07, 0.06, 0.045), iv * smoothstep(0.7, 0.86, big.b) * 0.92);
+        rough = max(rough, 0.6);
+      } else if (n0.y > 0.45) {
+        // A roof's or a ledge's top: moss in its hollows, darker in the grime's clouds.
+        let moss = p2W(p.xz / 2.0, 282, 2.0, dist).rgb;
+        albedo = mix(albedo, moss * 0.7, smoothstep(0.58, 0.82, mid.b) * smoothstep(0.1, 0.5, 1.0 - det.a) * 0.6);
+      }
     }
     n = perturbD(n0, dp1, dp2, dx, dy, det.rg, select(1.0, mix(1.4, 0.7, smoothstep(5.0, 20.0, dist)), params.z < 0.0));
     if (params.z < 0.0) {
@@ -1002,6 +1083,33 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
   rough = max(matteRough(rough, metal) - 0.2 * darkPaint, rough);
   envBoost = mix(1.0, 1.1, metal) * coverEnv;
   sunSpecScale = mix(1.0, 0.55, darkPaint);
+  // A townsperson's palette swap, in the shader (src/gfx/folk.js swapCode): info.x of ten and over is 10 + hue shift (0 to 1)
+  // + 2 * saturation (tenths) + 32 * value (tenths). Clothes and hair moved in hue a little, and dulled or darkened; skin, by
+  // its colour, left as it is. Never blue: whatever a shift would make blue goes grey instead (no blue beside gold).
+  if (C.info.x >= 10.0) {
+    let code = C.info.x - 10.0;
+    let vi = floor(code / 32.0);
+    let rem = code - vi * 32.0;
+    let si = floor(rem / 2.0);
+    let dh = rem - si * 2.0;
+    let mx = max(albedo.r, max(albedo.g, albedo.b));
+    let mn = min(albedo.r, min(albedo.g, albedo.b));
+    let dl = mx - mn;
+    var hh = 0.0;
+    if (dl > 1e-4) {
+      if (mx == albedo.r) { hh = (albedo.g - albedo.b) / dl; } else if (mx == albedo.g) { hh = 2.0 + (albedo.b - albedo.r) / dl; } else { hh = 4.0 + (albedo.r - albedo.g) / dl; }
+      hh = fract(hh / 6.0 + 1.0);
+    }
+    let sat = select(0.0, dl / mx, mx > 1e-4);
+    let skin = (1.0 - smoothstep(0.09, 0.13, hh)) * smoothstep(0.1, 0.18, sat) * (1.0 - smoothstep(0.55, 0.7, sat)) * smoothstep(0.12, 0.22, mx);
+    var nh = fract(hh + dh - select(0.0, 1.0, dh > 0.5));
+    var ns = clamp(sat * si / 10.0, 0.0, 1.0);
+    ns *= 1.0 - 0.8 * smoothstep(0.46, 0.52, nh) * (1.0 - smoothstep(0.7, 0.76, nh));
+    let nv = mx * vi / 10.0;
+    let k6 = vec3f(5.0, 3.0, 1.0) + nh * 6.0;
+    let rgb = nv - nv * ns * clamp(min(fract(k6 / 6.0) * 6.0, 4.0 - fract(k6 / 6.0) * 6.0), vec3f(0.0), vec3f(1.0));
+    albedo = mix(rgb, albedo, skin);
+  }
   albedo *= C.info.y;
   // Bright scraped steel at the cut's lips and scratches.
   let bare = max(wound.lip, wound.torn);

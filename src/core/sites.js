@@ -123,6 +123,24 @@ export class Kit {
   }
 
   // A box, its foot at y, turned by yaw about its middle. top: false leaves the lid off. collide: a collider for it.
+  // A swallowtail merlon, Velscour's: a block hx along the wall, hz through it, h tall from y, a V cut down into its top
+  // to cut (of h) so it stands as two horns. His V along every battlement of his castle (the owner, 2026-11-19: "V is for
+  // Velscour, remember?!"). Its two faces, its ends, and the V's two slopes.
+  vee(layer, x, y, z, hx, h, hz, yaw = 0, cut = 0.45) {
+    const c = Math.cos(yaw), s = Math.sin(yaw), P = (lx, ly, lz) => [x + lx * c + lz * s, y + ly, z - lx * s + lz * c];
+    const hc = h * (1 - cut), X = [c, 0, -s], Z = [s, 0, c], neg = (v) => v.map((q) => -q);
+    for (const e of [-1, 1]) {
+      const zz = e * hz, N = e > 0 ? Z : neg(Z);
+      this.quad(layer, P(-hx, 0, zz), P(hx, 0, zz), P(hx, hc, zz), P(-hx, hc, zz), N);
+      this.quad(layer, P(-hx, hc, zz), P(0, hc, zz), P(-hx, h, zz), P(-hx, h, zz), N);
+      this.quad(layer, P(0, hc, zz), P(hx, hc, zz), P(hx, h, zz), P(hx, h, zz), N);
+      this.quad(layer, P(e * hx, 0, -hz), P(e * hx, 0, hz), P(e * hx, h, hz), P(e * hx, h, -hz), e > 0 ? X : neg(X));
+    }
+    const sl = Math.hypot(hx, h - hc), nl = [(h - hc) / sl, hx / sl];
+    this.quad(layer, P(-hx, h, -hz), P(-hx, h, hz), P(0, hc, hz), P(0, hc, -hz), [X[0] * nl[0] + 0, nl[1], X[2] * nl[0]]);
+    this.quad(layer, P(hx, h, -hz), P(hx, h, hz), P(0, hc, hz), P(0, hc, -hz), [-X[0] * nl[0], nl[1], -X[2] * nl[0]]);
+  }
+
   box(layer, x, y, z, hx, h, hz, yaw = 0, o = {}) {
     const c = Math.cos(yaw), s = Math.sin(yaw);
     const P = (lx, ly, lz) => [x + lx * c + lz * s, y + ly, z - lx * s + lz * c];
@@ -230,7 +248,7 @@ export class Kit {
         const v = (k - 0.5) * len / n / 2, mx = x + Math.cos(yaw) * v, mz = z - Math.sin(yaw) * v;
         // (skip: none where the wall runs into a tower, whose room its walk goes through.)
         if (o.skip?.(mx, mz)) continue;
-        this.box(layer, mx, top, mz, 0.6, 1.2, t / 2, yaw, { collide: false });
+        if (o.vee) this.vee(layer, mx, top, mz, 0.7, 1.5, t / 2, yaw); else this.box(layer, mx, top, mz, 0.6, 1.2, t / 2, yaw, { collide: false });
       }
     }
   }
@@ -1482,7 +1500,8 @@ export function buildPhobosCell(cell) {
   phobosCell(K, cell);
   K.finish();
   // (groups: its doors' leaves, each its own, which the renderer folds away while one's open: src/gfx/phobos-near.js.)
-  return { parts: K.parts, lamps: K.lamps || [], groups: K.groups };
+  // (smokes: its chimneys that have a fire under them, [x, y, z]: smoke drawn up out of them, src/gfx/phobos-near.js.)
+  return { parts: K.parts, lamps: K.lamps || [], groups: K.groups, smokes: K.smokes || [] };
 }
 
 /** The parts let go, once they're in the renderer's buffer. Everything else stays. */

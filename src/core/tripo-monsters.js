@@ -133,6 +133,14 @@ export const VARIANTS = {
   cl_captain: { src: 'velscour_knight_6', alt: 'velscour_knight_1', height: 3.4, name: 'THE GATE CAPTAIN' },
   // And the Middle Ward's: the Feast That Walks at his high table.
   cm_feast: { src: 'plague_giant_2', alt: 'plague_giant_1', height: 4.8, name: 'THE FEAST THAT WALKS' },
+  // And the Iron Barracks' (src/core/delve-barracks.js): the Kennelmaster and his war-hounds, the Quartermaster and his
+  // powder-runners, the Iron Marshal and his standard.
+  ib_kennelmaster: { src: 'possessed_knight_1', alt: 'velscour_knight_2', height: 3.1, name: 'THE KENNELMASTER' },
+  ib_hound: { src: 'werewolf_brown', height: 1.8, name: 'WAR-HOUND' },
+  ib_quartermaster: { src: 'plague_giant_armored', alt: 'plague_giant_1', height: 4.2, name: 'THE QUARTERMASTER' },
+  ib_runner: { src: 'kobold_armored_1', alt: 'kobold_1', height: 1.3, name: 'POWDER-RUNNER' },
+  ib_marshal: { src: 'velscour_knight_5', alt: 'velscour_knight_1', height: 4.0, name: 'THE IRON MARSHAL' },
+  ib_standard: { src: 'mannequin_2', alt: 'mannequin_1', height: 3.0, name: 'THE IRON STANDARD' },
 };
 // And the land's new kinds (src/core/wilds.js): a palette, a size, a name and tricks of their own on the old bodies.
 Object.assign(VARIANTS, WILD_VARIANTS);

@@ -184,6 +184,9 @@ def main():
         if r["note"] or (r["seam"] and r["seam"] > SEAM) or r["cutout"]:
             print(n.ljust(26), r["kind"].ljust(8), r["m"], "seam", r["seam"], r["note"], "cut" if r["cutout"] else "")
     print(len(res), "layers")
+    # (And the shops' signs after them, painted, not one of the pack's: signs.py.)
+    import signs
+    signs.main()
 
 
 if __name__ == "__main__":

@@ -47,6 +47,9 @@ export const WAYS = {
   lowerward: ['cl_gate', 'cl_yard', 'cl_wrange', 'cl_kitchen', 'cl_cellar', 'cl_kitchen', 'cl_aq', 'cl_aqhead', 'cl_aq', 'cl_kitchen', 'cl_wrange', 'cl_hall', 'cl_wrange', 'cl_yard',
     'cl_pit', 'cl_oub', 'cl_pit', 'cl_yard', 'cl_erange', 'cl_drill', 'cl_bunks', 'cl_drill', 'cl_armstair', 'cl_armoury', 'cl_coal', 'cl_forge', 'cl_coal', 'cl_armoury', 'cl_armstair', 'cl_drill',
     'cl_erange', 'cl_mstair', 'cl_mgate', 'cl_mstair', 'cl_erange', 'cl_yard'],
+  // The Iron Barracks (src/core/delve-barracks.js): down the Muster Stair, the Kennels and the Practice Yard off the Muster
+  // Hall, the War Room, the Cells and the Stores off it, and the Iron Marshal in his hall last.
+  ironbarracks: ['ib_stair', 'ib_muster', 'ib_kennels', 'ib_muster', 'ib_yard', 'ib_muster', 'ib_war', 'ib_cells', 'ib_war', 'ib_stores', 'ib_war', 'ib_iron'],
 };
 export const WAY = WAYS.warrens;
 // The level it wants before it goes down each the first time (its own, from the delve: the Warrens 7, the Deeps 10,
@@ -79,6 +82,9 @@ export const KNOWN = new Set([
   // (And the Middle Ward's: plain packs, and the Feast, whose servers it kills first as it would any adds; and the long
   // tables and the aisle are lines on the floor like any others, perilStep's.)
   'cm_court', 'cm_screens', 'cm_gallery', 'cm_maps', 'cm_horns', 'cm_stacks', 'cm_still', 'cm_conserv', 'cm_hway', 'feast',
+  // (The Iron Barracks: plain packs; the Kennelmaster's scent is an order (to the trough), the Quartermaster's runners and
+  // the Marshal's standard are orders (to them), the rest marks, rings and adds, as any.)
+  'ib_stairguard', 'ib_rank_w', 'ib_rank_e', 'ib_drill', 'ib_officers', 'ib_defaulters', 'kennelmaster', 'quartermaster', 'ironmarshal',
 ]);
 export function warrensCoverage() {
   const out = [];

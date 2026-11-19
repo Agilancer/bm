@@ -40,6 +40,23 @@ export class PhobosNear {
     this.r.shadowEpoch = (this.r.shadowEpoch || 0) + 1;
   }
 
+  // Smoke up out of the chimneys of the cells that are up, the nearest few at a time: a wisp each, now and then, drifting
+  // off on the wind and thinning. (The renderer's own smoke, src/gfx/renderer.js emit 4.) Not on a phone.
+  smoke(dt, cam) {
+    const r = this.r;
+    if (r.tier.lean || !this.cells.size || (this.smokeT = (this.smokeT || 0) - dt) > 0) return;
+    this.smokeT = 0.18;
+    let n = 0;
+    for (const c of this.cells.values()) {
+      if (!c.smokes?.length || Math.hypot(c.x - cam.x, c.z - cam.z) > 160) continue;
+      for (let k = 0; k < c.smokes.length && n < 14; k += 1 + ((Math.random() * 3) | 0)) {
+        const [x, y, z] = c.smokes[k];
+        r.emit(4, 1, x, y, z, 0.35, 1, 0.15, 0.25, 0.6, 1.1, 0.5, 1.6, 4, 7);
+        n++;
+      }
+    }
+  }
+
   // Each frame: the nearest cell that wants building is built (one a frame: a few milliseconds), and any gone far is let go.
   update(cam) {
     const r = this.r;
@@ -63,7 +80,7 @@ export class PhobosNear {
       // (Its hearths, door lamps and street lanterns light what's round them, as the land's own lamps do, while it's up.)
       for (const l of built.lamps) { l.phobos = want[0]; r.lights.push(l); }
       if (built.lamps.length) r.litOrder = null;   // (the renderer's own list of them by nearness is made again)
-      this.cells.set(want[0], { ...set, x: want[1], z: want[2], lamps: built.lamps.length });
+      this.cells.set(want[0], { ...set, x: want[1], z: want[2], lamps: built.lamps.length, smokes: built.smokes });
       r.foldLand('ph:' + want[0], true);
       changed = true;
     }
