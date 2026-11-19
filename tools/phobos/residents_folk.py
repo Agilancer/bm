@@ -33,7 +33,8 @@ def base_colour(glb):
 def one(name):
     src = os.path.join(ROOT, "art", "phobos", "residents", f"{name}.glb")
     out = os.path.join(ROOT, "art", "phobos", "models", f"{name}.glb")
-    donor = os.path.join(ROOT, "assets", "game", "folk", ("worker_f" if name in WOMEN else "worker_2") + ".glb")
+    woman = name in WOMEN or CFG["people"][name].get("sex") == "f"
+    donor = os.path.join(ROOT, "assets", "game", "folk", ("worker_f" if woman else "worker_2") + ".glb")
     os.makedirs(os.path.dirname(out), exist_ok=True)
     with tempfile.TemporaryDirectory() as tmp:
         fitted = os.path.join(tmp, "fitted.glb")

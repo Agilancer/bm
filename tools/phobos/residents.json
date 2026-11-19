@@ -1,16 +1,196 @@
 {
-  "_": "Ten of Phobos's people (the owner, 2026-11-19: 'you may use my meshy account to generate 10 people who would live in Phobos'). Made by tools/phobos/residents.mjs: Meshy text-to-3D preview, refined with PBR textures, rigged; saved in art/phobos/residents/. Every prompt keeps the V/T rule: no text, letters, emblems or crosses, no blue beside gold; Velscour's own people in his blood red.",
+  "_": "Ten of Phobos's people (the owner, 2026-11-19: 'you may use my meshy account to generate 10 people who would live in Phobos'). Made by tools/phobos/residents.mjs: Meshy text-to-3D preview, refined with PBR textures, rigged; saved in art/phobos/residents/. Every prompt keeps the V/T rule: no text, letters, emblems or crosses, no blue beside gold; Velscour's own people in his blood red. Thirty more on 2026-11-19 ('Add 30 more inhabitants of Phobos via Meshy'): sex 'f' marks who takes the townswoman's fingers.",
   "style": "Realistic 3D game character for a dark, grim medieval fantasy RPG, full body, standing in a T-pose with arms straight out and empty open hands, front view, plain grey background, PBR. No text, no letters, no logos, no emblems, no crosses, no blue, no gold.",
   "people": {
-    "sweep": { "height": 1.62, "prompt": "A wiry teenage chimney sweep of a soot-choked city: thin face smeared black with soot, messy dark hair under a battered flat cap, too-big patched black coat with frayed cuffs, grey neckerchief, ragged knee breeches, bare soot-blackened shins, worn-out leather boots tied with string." },
-    "fishwife": { "height": 1.6, "prompt": "A stout, strong fishwife of a dark canal city, about fifty, ruddy weathered face, grey hair bound up in a stained linen kerchief, sleeves rolled to the elbow on thick forearms, a heavy oilcloth apron over a dun brown wool dress, a wide leather belt with a gutting-knife sheath, wooden clogs." },
-    "bonecarver": { "height": 1.66, "prompt": "An old, gaunt bone-carver of a city's bone yards, about seventy, bald with long thin white hair at the sides, hollow cheeks, deep-set eyes, a long leather apron dusted pale with bone dust over a faded dark green tunic, leather wrist guards, little bone beads sewn along the apron's hem, soft leather shoes." },
-    "tanner": { "height": 1.64, "prompt": "A tough tanner woman of about thirty-five, strong shoulders, dark hair cropped short, a burn scar on one cheek, forearms stained brown to the elbow with tanning liquor, a thick waxed leather apron over a coarse undyed linen shirt and brown wool trousers, tall muddy leather boots." },
-    "watchman": { "height": 1.82, "prompt": "A grim night-watchman of a tyrant's city, about forty, scarred stubbled jaw, hard eyes, a dented black iron open-faced helmet, a quilted blood-red gambeson under black leather pauldrons and a black leather belt, black wool trousers, black boots with iron toecaps, a short black cloak lined in blood red." },
-    "ragwoman": { "height": 1.52, "prompt": "A hunched old rag-and-bone woman, about seventy-five, crooked back, sharp nose, wisps of grey hair from under a layered grey hood, layer on layer of patched mismatched rags in grey, brown and faded oxblood, fingerless knitted mittens, a sack-cloth shawl, wrapped rag feet." },
-    "cutpurse": { "height": 1.72, "prompt": "A lean young cutpurse of a thieves' guild, about twenty, sly narrow face, a thin scar through one eyebrow, dark hood up over unkempt hair, a fitted charcoal leather jerkin with many small pockets, dark grey sleeves, a cloth mask pulled down around the neck, slim black trousers, soft quiet leather boots." },
-    "smelter": { "height": 1.88, "prompt": "A huge burly smelter from a city's furnace quarter, about forty-five, shaved head, thick black beard singed at the edges, soot and sweat on his skin, bare muscular arms, a heavy scorched leather apron over a sleeveless dark tunic, thick leather gauntlets tucked in his belt, heavy boots." },
-    "apothecary": { "height": 1.68, "prompt": "A sharp-eyed apothecary woman of about fifty, long grey-streaked auburn hair in a braid, round wire spectacles, a dark plum wool coat over a cream blouse, a belt hung with many small leather pouches and corked glass vials, ink-stained fingers, sturdy brown boots." },
-    "merchant": { "height": 1.7, "prompt": "A portly, prosperous merchant of a tyrant's city, about fifty-five, jowly clean-shaven face, slicked-back dark hair going grey, a long deep oxblood velvet coat trimmed with black fur, a black brocade waistcoat over a fine white shirt, silver rings, black hose and polished black buckled shoes." }
+    "sweep": {
+      "height": 1.62,
+      "prompt": "A wiry teenage chimney sweep of a soot-choked city: thin face smeared black with soot, messy dark hair under a battered flat cap, too-big patched black coat with frayed cuffs, grey neckerchief, ragged knee breeches, bare soot-blackened shins, worn-out leather boots tied with string."
+    },
+    "fishwife": {
+      "height": 1.6,
+      "prompt": "A stout, strong fishwife of a dark canal city, about fifty, ruddy weathered face, grey hair bound up in a stained linen kerchief, sleeves rolled to the elbow on thick forearms, a heavy oilcloth apron over a dun brown wool dress, a wide leather belt with a gutting-knife sheath, wooden clogs."
+    },
+    "bonecarver": {
+      "height": 1.66,
+      "prompt": "An old, gaunt bone-carver of a city's bone yards, about seventy, bald with long thin white hair at the sides, hollow cheeks, deep-set eyes, a long leather apron dusted pale with bone dust over a faded dark green tunic, leather wrist guards, little bone beads sewn along the apron's hem, soft leather shoes."
+    },
+    "tanner": {
+      "height": 1.64,
+      "prompt": "A tough tanner woman of about thirty-five, strong shoulders, dark hair cropped short, a burn scar on one cheek, forearms stained brown to the elbow with tanning liquor, a thick waxed leather apron over a coarse undyed linen shirt and brown wool trousers, tall muddy leather boots."
+    },
+    "watchman": {
+      "height": 1.82,
+      "prompt": "A grim night-watchman of a tyrant's city, about forty, scarred stubbled jaw, hard eyes, a dented black iron open-faced helmet, a quilted blood-red gambeson under black leather pauldrons and a black leather belt, black wool trousers, black boots with iron toecaps, a short black cloak lined in blood red."
+    },
+    "ragwoman": {
+      "height": 1.52,
+      "prompt": "A hunched old rag-and-bone woman, about seventy-five, crooked back, sharp nose, wisps of grey hair from under a layered grey hood, layer on layer of patched mismatched rags in grey, brown and faded oxblood, fingerless knitted mittens, a sack-cloth shawl, wrapped rag feet."
+    },
+    "cutpurse": {
+      "height": 1.72,
+      "prompt": "A lean young cutpurse of a thieves' guild, about twenty, sly narrow face, a thin scar through one eyebrow, dark hood up over unkempt hair, a fitted charcoal leather jerkin with many small pockets, dark grey sleeves, a cloth mask pulled down around the neck, slim black trousers, soft quiet leather boots."
+    },
+    "smelter": {
+      "height": 1.88,
+      "prompt": "A huge burly smelter from a city's furnace quarter, about forty-five, shaved head, thick black beard singed at the edges, soot and sweat on his skin, bare muscular arms, a heavy scorched leather apron over a sleeveless dark tunic, thick leather gauntlets tucked in his belt, heavy boots."
+    },
+    "apothecary": {
+      "height": 1.68,
+      "prompt": "A sharp-eyed apothecary woman of about fifty, long grey-streaked auburn hair in a braid, round wire spectacles, a dark plum wool coat over a cream blouse, a belt hung with many small leather pouches and corked glass vials, ink-stained fingers, sturdy brown boots."
+    },
+    "merchant": {
+      "height": 1.7,
+      "prompt": "A portly, prosperous merchant of a tyrant's city, about fifty-five, jowly clean-shaven face, slicked-back dark hair going grey, a long deep oxblood velvet coat trimmed with black fur, a black brocade waistcoat over a fine white shirt, silver rings, black hose and polished black buckled shoes."
+    },
+    "baker": {
+      "height": 1.6,
+      "sex": "f",
+      "prompt": "A plump, flour-dusted baker woman of about forty-five, round red cheeks, dark hair tied up in a kerchief, sleeves rolled up, a long flour-whitened apron over a brown wool dress, wooden clogs."
+    },
+    "butcher": {
+      "height": 1.85,
+      "sex": "m",
+      "prompt": "A massive butcher of about fifty, bald head, thick neck, a grizzled beard, a heavy blood-stained leather apron over a sleeveless grey tunic, thick bare forearms, a cleaver loop on his belt, heavy boots."
+    },
+    "gravedigger": {
+      "height": 1.74,
+      "sex": "m",
+      "prompt": "A gaunt old gravedigger of about sixty, long stringy grey hair, sunken eyes, a battered wide-brimmed black hat, a muddy long dark coat, earth-caked trousers, mud to the knees on his boots."
+    },
+    "lamplighter": {
+      "height": 1.78,
+      "sex": "m",
+      "prompt": "A tall thin lamplighter of about thirty-five, long face, neat moustache, a tall black stovepipe hat, a long charcoal greatcoat, a small brass oil can on his belt, polished black boots."
+    },
+    "washerwoman": {
+      "height": 1.58,
+      "sex": "f",
+      "prompt": "A sturdy washerwoman of about forty, red raw hands, damp curly brown hair under a cap, a wet-hemmed grey skirt hitched up, a patched blouse, a wide apron, bare feet in wooden pattens."
+    },
+    "ferryman": {
+      "height": 1.76,
+      "sex": "m",
+      "prompt": "A weathered old ferryman of a dark canal, about sixty-five, deep-lined face, white stubble, a wide-brimmed oilskin hat, a long waxed dark green coat, rope coiled over one shoulder, tall waders."
+    },
+    "plaguedoctor": {
+      "height": 1.8,
+      "sex": "m",
+      "prompt": "A plague doctor in a long black waxed leather coat to the ankles, a long curved beaked leather mask with round dark glass eyes, a wide-brimmed black hat, black leather gloves, black boots."
+    },
+    "grinder": {
+      "height": 1.66,
+      "sex": "m",
+      "prompt": "A wiry knife-grinder of about forty, quick dark eyes, a stubbly chin, a leather cap, a soot-grey shirt with rolled sleeves, a heavy leather apron scored with sparks, leather wrist guards, worn boots."
+    },
+    "chandler": {
+      "height": 1.62,
+      "sex": "f",
+      "prompt": "A candle-maker woman of about fifty, pale waxy skin, grey hair in a tight bun, a long cream apron spattered with tallow drips over a dark grey dress, cord of candle wicks over one shoulder, soft shoes."
+    },
+    "mason": {
+      "height": 1.8,
+      "sex": "m",
+      "prompt": "A broad stonemason of about forty-five, dusty grey hair, a short dusty beard, stone dust on everything, a leather apron, a dusty grey linen shirt, a leather tool belt with chisels, sturdy boots."
+    },
+    "dockhand": {
+      "height": 1.72,
+      "sex": "f",
+      "prompt": "A tall strong dockhand woman of about thirty, braided black hair, a scar on her chin, broad shoulders, a sleeveless leather vest over a coarse shirt, rope burns on her forearms, canvas trousers, heavy boots."
+    },
+    "porter": {
+      "height": 1.7,
+      "sex": "m",
+      "prompt": "A stooped porter of about thirty-five, strong back, a padded leather shoulder yoke, a patched brown tunic, a rope belt, sacking wrapped round his calves, worn sandals."
+    },
+    "moneylender": {
+      "height": 1.64,
+      "sex": "m",
+      "prompt": "A thin, sharp-faced moneylender of about sixty, beady eyes, a hooked nose, a black skullcap, a long dark purple robe with fur trim at the collar, many rings, a heavy purse on a chain at his belt."
+    },
+    "acolyte": {
+      "height": 1.68,
+      "sex": "f",
+      "prompt": "A pale young acolyte of a dark temple, about twenty-two, shaven head, dark-ringed eyes, a long plain blood-red hooded robe with black cuffs, a black rope belt, bare feet. No symbols, no jewellery."
+    },
+    "mourner": {
+      "height": 1.64,
+      "sex": "f",
+      "prompt": "A hired mourner, about forty, a long black veil over grey hair, a hollow tear-streaked face, a long black mourning dress, a black shawl, black gloves, black shoes."
+    },
+    "veteran": {
+      "height": 1.76,
+      "sex": "m",
+      "prompt": "An old one-eyed veteran soldier of about sixty, an eyepatch, a grey crew cut, a scarred face, a faded padded dark red jacket with old dents in a breastplate over it, a worn sword belt with no sword, patched trousers, boots."
+    },
+    "dyer": {
+      "height": 1.62,
+      "sex": "f",
+      "prompt": "A dyer woman of about thirty-five, hands and forearms stained deep purple and blue-black to the elbows, a stained headscarf, a long splotched canvas apron over a brown dress, bare feet in clogs."
+    },
+    "weaver": {
+      "height": 1.6,
+      "sex": "f",
+      "prompt": "A thin weaver of about thirty, tired eyes, mousy hair in a long plait, a neat homespun dove-grey dress, a woven shawl of muted red and brown stripes, a small shuttle tucked in her belt, soft shoes."
+    },
+    "innkeeper": {
+      "height": 1.75,
+      "sex": "m",
+      "prompt": "A big jovial innkeeper of about fifty, a red nose, mutton-chop whiskers, a stained white shirt with rolled sleeves, a brown leather waistcoat, a towel over one shoulder, a long apron, buckled shoes."
+    },
+    "noblewoman": {
+      "height": 1.7,
+      "sex": "f",
+      "prompt": "A haughty noblewoman of about forty, pale powdered face, dark red lips, dark hair piled high with black pins, a high-collared black velvet gown with deep oxblood panels, black lace gloves, a jet necklace."
+    },
+    "fiddler": {
+      "height": 1.72,
+      "sex": "m",
+      "prompt": "A ragged street musician of about thirty, long tangled hair, a crooked grin, a battered feathered hat, a patched motley coat of faded red and mustard yellow, a fiddle strapped across his back, worn boots."
+    },
+    "scribe": {
+      "height": 1.66,
+      "sex": "m",
+      "prompt": "A hunched scribe of about fifty, thinning grey hair, ink-stained fingers, small round wire spectacles pushed up his forehead, a long dark brown scholar's robe, a writing case on a strap, soft shoes."
+    },
+    "barber": {
+      "height": 1.73,
+      "sex": "m",
+      "prompt": "A barber-surgeon of about forty-five, slicked dark hair, a thin moustache, a rust-stained grey smock over dark clothes, a leather roll of instruments at his belt, sleeves rolled up, black boots."
+    },
+    "beggarwoman": {
+      "height": 1.55,
+      "sex": "f",
+      "prompt": "A thin, ragged beggar woman of about fifty, matted grey-brown hair, hollow cheeks, a tattered brown hooded cloak over rags, bare dirty feet wrapped in strips of cloth."
+    },
+    "urchingirl": {
+      "height": 1.3,
+      "sex": "f",
+      "prompt": "A scrappy street girl of about twelve, freckles, a grubby face, short ragged auburn hair, an oversized patched grey coat, a too-big flat cap, bare scuffed knees, worn boots with no laces."
+    },
+    "hedgewitch": {
+      "height": 1.6,
+      "sex": "f",
+      "prompt": "A wild-haired hedge-witch of about sixty, long tangled white hair with dried herbs and small bones knotted in it, a sharp face, a layered dark green and brown cloak, many pouches, bare feet."
+    },
+    "joiner": {
+      "height": 1.76,
+      "sex": "m",
+      "prompt": "A carpenter of about thirty-five, curly brown hair, sawdust on his clothes, a pencil behind his ear, a canvas apron full of tools over a cream linen shirt, brown trousers, sturdy boots."
+    },
+    "pieseller": {
+      "height": 1.62,
+      "sex": "f",
+      "prompt": "A cheerful pie-seller of about thirty, rosy cheeks, curly red hair under a white cap, a striped red and cream dress, a clean white apron, a wide shallow tray hung from a strap round her neck, clogs."
+    },
+    "gaoler": {
+      "height": 1.84,
+      "sex": "m",
+      "prompt": "A brutish gaoler of about forty-five, a shaved head, a flat broken nose, a heavy leather jerkin studded with iron, a big ring of iron keys on his belt, thick leather bracers, black boots."
+    },
+    "dukeservant": {
+      "height": 1.74,
+      "sex": "m",
+      "prompt": "A stiff, prim manservant of a great house, about thirty, slicked blond hair, a narrow face, a black tailcoat livery with blood-red cuffs and collar, a white cravat, white gloves, polished black shoes."
+    }
   }
 }
