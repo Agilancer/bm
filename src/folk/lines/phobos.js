@@ -3,6 +3,8 @@
 // Velscour's castle and keep out of the way of what walks for him: nobody here's surprised by a spell, and nobody says his
 // name above a mutter. (No Bellmourn in any of it: they've never heard of the place.)
 import { CROWD } from '../people.js';
+import { SAYS } from './crowd/index.js';
+export { MEETS } from './crowd/index.js';
 
 const KINDS = {
   cutpurse: {
@@ -656,4 +658,10 @@ export const CHATTER = [
 ];
 
 // Everyone in the crowd, by id, with their kind's lines.
-export const LINES = Object.fromEntries(CROWD.map((p) => [p.id, KINDS[p.kind]]));
+// (Each one's own lines laid over their kind's: theirs where they have them, the kind's for anything they haven't. And the
+// castle's eight, posted in its wards, theirs alone.)
+const over = (k = {}, o = {}) => ({ ...k, ...o, greet: { ...k.greet, ...o.greet }, barks: { ...k.barks, ...o.barks } });
+export const LINES = {
+  ...Object.fromEntries(CROWD.map((p) => [p.id, over(KINDS[p.kind], SAYS[p.base || p.id])])),
+  ...Object.fromEntries(Object.entries(SAYS).filter(([id]) => id.startsWith('cs_')).map(([id, v]) => [id, over({}, v)])),
+};

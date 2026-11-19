@@ -47,6 +47,8 @@ export const PHOBOS_RULES = {
   the_librarians_letters: { needs: 'the_gate_captain', steps: [{ enter: 'middleward' }, { talk: 'ph_librarian', say: 'Princess Apricot had your letter. She sent me up.', end: true }], gold: 3000, xp: 44000 },
   the_household: { needs: 'the_librarians_letters', steps: [{ talk: 'ph_wynn', say: 'Master Pell said to come and find you.' }, { talk: 'ph_jory', say: 'Master Pell said you keep the keys.' }, { talk: 'ph_ondine', say: 'Master Pell said to say good evening.' }, { talk: 'ph_pip', say: "Master Pell said you'd be at your horns." }, { back: true, say: "I've met all four." }], gold: 1400, xp: 22000 },
   dust_in_the_stacks: { needs: 'the_librarians_letters', steps: [{ kill: 'middleward', n: 10 }, { back: true, say: 'Ten of them. The ward will notice.' }], gold: 3200, xp: 48000 },
+  // (Know your enemy: his servants in his wards, the castle's own eight. src/folk/people.js cs_; their words, crowd/part6.js.)
+  his_servants: { needs: 'the_household', steps: [{ talk: 'cs_steward', say: 'I was told the steward keeps this castle.' }, { talk: 'cs_ghoul', say: 'What do you cook down here?' }, { talk: 'cs_torturer', say: '...Who are you?' }, { talk: 'cs_hellguard', say: 'Who do you guard?' }, { talk: 'cs_priestess', say: 'Who do you pray to?' }, { talk: 'cs_imp', say: 'What are you?' }, { talk: 'cs_butler', say: 'Who do you serve?' }, { talk: 'cs_archivist', say: 'Can you hear me?' }, { back: true, say: "I've met all eight of his servants." }], gold: 2600, xp: 46000 },
   wynns_map: { needs: 'the_household', steps: [{ visit: ['room:cm_gallery', 'room:cm_horns', 'room:cm_still', 'room:cm_conserv'] }, { back: true, say: "I've walked all four. The Conservatory's longer than it looks." }], gold: 3200, xp: 50000, item: 'scroll' },
   the_quiet_watchs_steel: { needs: 'the_household', steps: [{ visit: ['room:cl_armoury', 'room:cl_forge'] }, { talk: 'ph_watch', say: 'Jory Tallis says the third rack on the left is yours.', end: true }], gold: 3400, xp: 52000 },
   the_hornwings: { needs: 'the_household', steps: [{ kill: 'room:cm_horns', n: 4 }, { back: true, say: 'Your horns are clear, Pip.' }], gold: 3400, xp: 54000, item: 'skull', named: "The Horn-Blower's Skull", seed: 0xc4a11 },
@@ -63,5 +65,5 @@ export const PHOBOS_LEVELS = [
   // (Castle Velscour's Lower Ward, 58-75: up the Aqueduct at 58, the Gate Captain at 66.)
   ['up_the_aqueduct', 58], ['the_gate_captain', 66], ['the_iron_muster', 68],
   // (The Middle Ward, 75-95: up through its gate at 75, the household's work 76 to 82, the Feast That Walks at 88.)
-  ['the_librarians_letters', 75], ['the_household', 75], ['dust_in_the_stacks', 76], ['wynns_map', 78], ['the_quiet_watchs_steel', 80], ['the_hornwings', 82], ['the_feast_that_walks', 88],
+  ['the_librarians_letters', 75], ['the_household', 75], ['his_servants', 76], ['dust_in_the_stacks', 76], ['wynns_map', 78], ['the_quiet_watchs_steel', 80], ['the_hornwings', 82], ['the_feast_that_walks', 88],
 ];
