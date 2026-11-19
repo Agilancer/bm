@@ -325,6 +325,14 @@ export const LAIRS = [
 for (const o of OUTPOSTS) LAIRS.push(outpostLair(o));
 for (const b of BATTLES) LAIRS.push(...battleLairs(b));
 
+// How hard the land is at a lair: what it says (lvl), or by how far it is from Bellmourn. And what that does to whatever
+// stands there: each level a wizard gains makes his spells bite 7% of their first strength harder and gives him 8 more life
+// (src/items/levels.js), so each level of the land gives its monsters as much more life and a twentieth more bite. Without
+// it the far countries fell over as fast as the woods by the town. (A delve's packs have their own `tough`, far past this.)
+export const landLevel = (x, z) => Math.max(1, Math.min(24, Math.round(Math.hypot(x, z) / 230)));
+export const lairLevel = (l) => l.lvl ?? landLevel(l.x, l.z);
+export const levelTough = (lvl) => { const n = Math.max(1, lvl) - 1; return { hp: 1 + n * 0.07, damage: 1 + n * 0.05 }; };
+
 // A lair as it can be stood up from this roster: its lists thinned to the models there are (a boss list left empty is no
 // boss; a pick list left empty, nobody).
 export function lairFor(l, roster) {

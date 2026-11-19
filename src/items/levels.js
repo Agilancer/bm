@@ -1,4 +1,5 @@
-// Experience and levels. A kill pays by what it was; each level makes every spell bite harder, and deepens life and mana.
+// Experience and levels. A kill pays by what it was; each level makes every spell bite harder and deepens your life, and
+// your mana a very little: a deep or a quick well of mana is a matter of what you wear (src/sim/spells.js MAX_MANA).
 // It's kept in the pack's save, and worked out on the render thread: the sim only gets what it comes to (writeWeapon).
 
 // (Two hundred: every level's spell power, life and mana, and a point for the six trees and one for each of your party's.)
@@ -13,7 +14,7 @@ export const xpFor = (level) => (level <= 1 ? 0 : Math.round(90 * (level - 1) **
 
 export const levelPerks = (level) => {
   const n = Math.max(level, 1) - 1;
-  return { power: 1 + n * 0.07, life: n * 8, mana: n * 6, regen: 1 + n * 0.04 };
+  return { power: 1 + n * 0.07, life: n * 8, mana: n, regen: 1 };
 };
 
 // Adds to the pack's total. Returns whether that was a new level.

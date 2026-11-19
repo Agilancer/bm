@@ -226,7 +226,11 @@ export class SpellBar {
 
   update(snap) {
     const m = snap[H.MANA];
-    this.manaEl.style.transform = `scaleX(${Math.max(0, Math.min(1, m / (snap[H.MAX_MANA] || 1)))})`;
+    const mf = Math.max(0, Math.min(1, m / (snap[H.MAX_MANA] || 1)));
+    this.manaEl.style.transform = `scaleX(${mf})`;
+    // (Running low: the bar says so before a spell fizzles in your hands.)
+    const low = mf < 0.25;
+    if (low !== this.manaLow) { this.manaLow = low; this.manaEl.parentElement.classList.toggle('low', low); }
     for (let k = 0; k < SLOTS; k++) {
       const i = this.loadout[k], d = i >= 0 ? this.def(i) : null, short = !!d && m < d.mana;
       if (short !== this.drawnShort[k]) { this.drawnShort[k] = short; this.slots[k].classList.toggle('short', short); }

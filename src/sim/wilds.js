@@ -197,7 +197,7 @@ export class Wilds {
     T.stage++;
     // (The bonus wave only for the quick.)
     if (T.stage === 3 && sim.time - T.t0 > TEAR.bonus) T.stage = 4;
-    const tough = { hp: 0.7 + T.lvl * 0.04, damage: 0.75 + T.lvl * 0.03 };
+    const tough = { hp: 0.7 + T.lvl * 0.08, damage: 0.75 + T.lvl * 0.055 };
     const set = (m) => { m.opts.sight = 80; m.opts.leash = 170; m.aggro = true; };
     const base = { tag: 'tear', x: T.x, z: T.z, r: 7, pal: K.pal, side: K.side, tough, set };
     let secs = 0;
@@ -280,7 +280,7 @@ export class Wilds {
     if (!best) best = [R.x + R.r + RAID.out, R.z, 4, 1.57];
     R.from = best[2];
     R.gate = [R.x + Math.sin(best[3]) * (R.r * 0.55), R.z + Math.cos(best[3]) * (R.r * 0.55)];
-    const tough = { hp: 0.8 + R.lvl * 0.03, damage: 0.8 + R.lvl * 0.02 };
+    const tough = { hp: 0.8 + R.lvl * 0.06, damage: 0.8 + R.lvl * 0.04 };
     const set = (m) => { m.opts.sight = 40; m.opts.leash = 600; m.opts.roam = 2; m.opts.march = 0.7; m.idleT = 0; };
     R.lair = this.stand({ tag: 'raid', x: best[0], z: best[1], r: 5, boss: R.wave === 1 ? F.chief : F.elite, pick: F.rank.concat(F.elite), n: R.wave === 1 ? 4 : 3, pal: F.pal, side: F.side, tricks: true, tough, set });
     R.shown = -1;
@@ -355,7 +355,7 @@ export class Wilds {
   startMeet(key, x, z, force = null) {
     const sim = this.sim, p = sim.player, list = this.factionsAt(x, z);
     const fa = force?.a || pick(list), A = FACTIONS[fa], lvl = Math.max(wildLevel(x, z), 4);
-    const tough = { hp: 0.75 + lvl * 0.03, damage: 0.8 + lvl * 0.02 };
+    const tough = { hp: 0.75 + lvl * 0.06, damage: 0.8 + lvl * 0.04 };
     const M = { key, x, z, lvl, lairs: [], t0: sim.time, clock: 0, a: fa, b: null, march: null, risen: false, hit: false };
     const roam = (m) => { m.opts.sight = 30; m.opts.leash = 120; };
     const base = (F, more) => ({ tag: key, x, z, r: 6, pick: F.rank.concat(F.elite), pal: F.pal, side: F.side, tricks: F.lvl >= 9, tough, set: roam, ...more });

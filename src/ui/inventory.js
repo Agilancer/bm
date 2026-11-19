@@ -4,7 +4,7 @@
 import { CHARM_SLOTS, charmIcon, charmTip } from './lands.js';
 import { skinFilter } from '../items/skins.js';
 import { art } from './skin.js';
-import { GEMS, colorOf, compareLines, linesOf, nameOf, statsOf, wornSlot } from '../items/items.js';
+import { GEMS, GEM_GRADES, colorOf, compareLines, linesOf, nameOf, statsOf, wornSlot } from '../items/items.js';
 import { PACK_W, SLOTS, sizeOf } from '../items/pack.js';
 import { BEACON, COOLDOWN, isBeacon } from '../items/beacon.js';
 import { hgIcon } from './hgicons.js';
@@ -14,11 +14,14 @@ const SLOT_LABEL = { head: 'Head', neck: 'Neck', main: 'Staff', chest: 'Chest', 
 const DOUBLE_MS = 450;
 const DOUBLE_PX = 24;   // A quick second press elsewhere is setting it down: socketing can't be undone, so it mustn't be misread.
 
-// Three cuts of stone, rougher to finer, with facets laid over the colour.
+// Five cuts of stone, rougher to finer, with facets laid over the colour: the last two (only ever made, three into one) a round
+// brilliant with a star of facets, and a great pointed stone in a halo with a four-pointed glint.
 const GEM_SVG = [
   '<polygon points="12,2.5 19.5,6.5 21,15 14.5,21.5 6,19.5 2.8,10.5" fill="C"/><polygon points="12,2.5 14,10.5 6,19.5 2.8,10.5" fill="#fff" opacity=".22"/><polygon points="14,10.5 21,15 14.5,21.5 6,19.5" fill="#000" opacity=".25"/>',
   '<polygon points="12,2 20.5,7 20.5,17 12,22 3.5,17 3.5,7" fill="C"/><polygon points="12,6.5 16.5,9.2 16.5,14.8 12,17.5 7.5,14.8 7.5,9.2" fill="#fff" opacity=".28"/><polygon points="3.5,17 7.5,14.8 12,17.5 12,22" fill="#000" opacity=".28"/><polygon points="20.5,17 16.5,14.8 12,17.5 12,22" fill="#000" opacity=".16"/><polygon points="12,2 20.5,7 16.5,9.2 12,6.5" fill="#fff" opacity=".18"/>',
   '<polygon points="7,3 17,3 22,9 12,22 2,9" fill="C"/><polygon points="7,3 17,3 15,9 9,9" fill="#fff" opacity=".42"/><polygon points="2,9 9,9 12,22" fill="#fff" opacity=".12"/><polygon points="22,9 15,9 12,22" fill="#000" opacity=".28"/><polygon points="17,3 22,9 15,9" fill="#fff" opacity=".2"/><polygon points="7,3 2,9 9,9" fill="#000" opacity=".12"/>',
+  '<circle cx="12" cy="12" r="11.4" fill="C" opacity=".2"/><polygon points="12,2.2 18.9,5.1 21.8,12 18.9,18.9 12,21.8 5.1,18.9 2.2,12 5.1,5.1" fill="C"/><polygon points="12,2.2 18.9,5.1 15.4,8.6 12,7.2" fill="#fff" opacity=".4"/><polygon points="12,2.2 5.1,5.1 8.6,8.6 12,7.2" fill="#fff" opacity=".24"/><polygon points="2.2,12 5.1,5.1 8.6,8.6 7.2,12" fill="#fff" opacity=".1"/><polygon points="21.8,12 18.9,18.9 15.4,15.4 16.8,12" fill="#000" opacity=".22"/><polygon points="12,21.8 18.9,18.9 15.4,15.4 12,16.8" fill="#000" opacity=".32"/><polygon points="12,21.8 5.1,18.9 8.6,15.4 12,16.8" fill="#000" opacity=".2"/><polygon points="12,7.2 15.4,8.6 16.8,12 15.4,15.4 12,16.8 8.6,15.4 7.2,12 8.6,8.6" fill="#fff" opacity=".3"/><polygon points="12,8.4 13,11 15.6,12 13,13 12,15.6 11,13 8.4,12 11,11" fill="#fff" opacity=".7"/>',
+  '<circle cx="12" cy="12" r="11.8" fill="C" opacity=".16"/><circle cx="12" cy="12" r="9.6" fill="C" opacity=".22"/><polygon points="12,1.6 18.2,6.2 20.6,12 12,22.6 3.400,12 5.800,6.2" fill="C"/><polygon points="12,1.6 18.2,6.2 15,9 9,9 5.800,6.2" fill="#fff" opacity=".46"/><polygon points="5.800,6.2 9,9 7.6,12 3.400,12" fill="#fff" opacity=".2"/><polygon points="18.2,6.2 20.6,12 16.4,12 15,9" fill="#fff" opacity=".12"/><polygon points="9,9 15,9 16.4,12 7.6,12" fill="#fff" opacity=".3"/><polygon points="3.400,12 7.6,12 12,22.6" fill="#fff" opacity=".1"/><polygon points="20.6,12 16.4,12 12,22.6" fill="#000" opacity=".3"/><polygon points="7.6,12 16.4,12 12,22.6" fill="#000" opacity=".12"/><polygon points="16.6,2 17.4,5.2 20.6,6 17.4,6.800 16.6,10 15.800,6.800 12.6,6 15.800,5.2" fill="#fff" opacity=".95"/><polygon points="6.5,14.6 6.900,16.1 8.4,16.5 6.900,16.9 6.5,18.4 6.1,16.9 4.6,16.5 6.1,16.1" fill="#fff" opacity=".7"/>',
 ];
 
 const SOCKETED = new Set(['weapon', 'skull', 'shield']);
@@ -53,6 +56,10 @@ export class Inventory {
     this.tip2El = $('invTip2') || Object.assign(document.createElement('div'), { id: 'invTip2' });
     if (!this.tip2El.isConnected) this.tipEl.after(this.tip2El);
     $('invSort').addEventListener('click', () => this.sort());
+    // Combine gems: three of a kind and a cut into one of the next, all there are. (A button made here if the page has none.)
+    this.combineBtn = $('invCombine') || Object.assign(document.createElement('button'), { id: 'invCombine', textContent: 'COMBINE GEMS' });
+    if (!this.combineBtn.isConnected) $('invSort').before(this.combineBtn);
+    this.combineBtn.addEventListener('click', () => this.combineGems());
     this.carryEl = $('invCarry');
     this.note = $('invNote');
     this.grid.style.setProperty('--pw', PACK_W);
@@ -102,7 +109,7 @@ export class Inventory {
     // (A painted one from the art kit, where there is one: src/ui/skin.js.)
     const painted = art('goods', `gem_${gem.kind}_${gem.grade}`);
     if (painted) return `<img class="gem" src="${painted}" alt="" draggable="false">`;
-    return `<svg class="gem" viewBox="0 0 24 24">${GEM_SVG[gem.grade].replace('C', GEMS[gem.kind].color)}</svg>`;
+    return `<svg class="gem" viewBox="0 0 24 24">${GEM_SVG[gem.grade].replaceAll('"C"', `"${GEMS[gem.kind].color}"`)}</svg>`;
   }
 
   iconOf(item) {
@@ -170,6 +177,35 @@ export class Inventory {
       this.carryEl.style.cssText += `;display:block;--w:${w};--h:${h}`;
       this.carryEl.innerHTML = this.iconOf(this.carry.item);
     } else this.carryEl.style.display = 'none';
+    // The combine button: dim while there aren't three of anything (what's in the hand counted).
+    const can = this.canCombine();
+    this.combineBtn.disabled = !can;
+    this.combineBtn.title = can ? 'Combine gems: every three of the same kind and cut become one of the next cut' : 'Combine gems: nothing to combine yet. Three of the same kind and cut make the next cut.';
+  }
+
+  // Whether anything would combine: three loose gems of a kind and a cut, what's in the hand counted (it's set back first).
+  canCombine() {
+    if (this.pack.combinable().length) return true;
+    const g = this.carry?.item;
+    return g?.type === 'gem' && g.grade < GEM_GRADES.length - 1 && this.pack.looseGems(g.kind, g.grade).length >= 2;
+  }
+
+  // The button: all that can be combined, and what that makes in its turn, till nothing's left that can be. Says what came of it.
+  combineGems() {
+    this.putBack();
+    const made = [];
+    for (let got = this.pack.combineAll(); got.length; got = this.pack.combineAll()) made.push(...got);
+    if (made.length) this.pack.sort();   // (and what's left closes up, with no gaps where the three were)
+    // (What's said is what there is to show for it: a gem made and then gone into a finer one isn't counted.)
+    const kept = made.filter((g) => this.pack.entries.some((e) => e.item === g));
+    if (!kept.length) { this.flash('Nothing to combine: it takes three gems of the same kind and cut.', 3000); return; }
+    const count = new Map();
+    for (const g of kept.sort((a, b) => b.grade - a.grade)) count.set(nameOf(g), (count.get(nameOf(g)) || 0) + 1);
+    this.on.sound?.('socket');
+    this.on.change();
+    this.tipFor = null;
+    this.render();
+    this.flash(`Combined: ${[...count].map(([name, n]) => (n > 1 ? `${n} × ${name}` : name)).join(', ')}.`, 4000);
   }
 
   flash(text, ms = 2200) {
@@ -247,7 +283,7 @@ export class Inventory {
   // ---- hands on -------------------------------------------------------------------------------
 
   onDown(e) {
-    if (e.target.closest('#invClose, #invX, #invSort')) return;
+    if (e.target.closest('#invClose, #invX, #invSort, #invCombine')) return;
     if (e.button === 2) { this.quick(this.targetAt(e)); return; }
     if (e.button !== 0) return;
     const t = this.targetAt(e);
@@ -297,7 +333,9 @@ export class Inventory {
       const hit = this.pack.under(this.carry.item, x, y);
       const gemOnSword = this.carry.item.type === 'gem' && SOCKETED.has(t.item?.type) && (t.item.gems?.length || 0) < (t.item.sockets || 0);
       this.hover.style.cssText = `display:block;--x:${x};--y:${y};--w:${w};--h:${h}`;
-      this.hover.className = gemOnSword ? 'ok' : hit && hit.length <= 1 ? 'ok' : 'bad';
+      // (A gem over its like, kind and cut: they combine if that makes three with what's in the pack.)
+      const like = this.likeGem(this.carry.item, t.item);
+      this.hover.className = gemOnSword ? 'ok' : like ? (this.pack.looseGems(like.kind, like.grade).length >= 2 ? 'ok' : 'bad') : hit && hit.length <= 1 ? 'ok' : 'bad';
     } else this.hover.style.display = 'none';
     // The slot under a carried item lights up for whether it would take it.
     for (const s of SLOTS) {
@@ -307,6 +345,11 @@ export class Inventory {
       this.slotEls[s].classList.toggle('bad', on && !ok);
     }
     this.showTip(t.item || (this.touch && this.carry ? this.carry.item : null), e);
+  }
+
+  // A gem and another of its kind and cut that there's a finer cut than: the gem, or null.
+  likeGem(a, b) {
+    return a?.type === 'gem' && b?.type === 'gem' && a !== b && a.kind === b.kind && a.grade === b.grade && a.grade < GEM_GRADES.length - 1 ? a : null;
   }
 
   lift(t) {
@@ -332,6 +375,19 @@ export class Inventory {
         this.render();
         this.flash(`${nameOf(item)} set in ${nameOf(t.item)}.`);
       } else this.flash(t.item.sockets ? 'Every socket on that is full.' : 'That has no sockets.');
+      return;
+    }
+    // A gem on its like in the pack: with a third there, the three become one of the next cut, where the one it was set on lay.
+    if (t.kind === 'pack' && t.entry && this.likeGem(item, t.item)) {
+      const have = this.pack.looseGems(item.kind, item.grade).length + 1;
+      const made = this.pack.combine(item.kind, item.grade, { held: item, at: t.entry });
+      if (!made) { this.flash(`Three of a kind make the next cut: you have ${have}.`, 3000); return; }
+      this.on.sound?.('socket');
+      this.carry = null;
+      this.on.change();
+      this.tipFor = null;
+      this.render();
+      this.flash(`Three ${nameOf(item)} gems combined into a ${nameOf(made)}.`, 3200);
       return;
     }
     if (t.kind === 'pack') {

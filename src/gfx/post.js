@@ -247,8 +247,10 @@ struct V {
         if (sp > 0.05) {
           let dir = vv / sp;
           let perp = vec2f(-dir.y, dir.x);
-          let stretch = 1.0 + min(sp * 0.008 / max(pt.size, 0.001), 4.0);
-          off = (dir * q.y * pt.size * stretch + perp * q.x * pt.size) * lens;
+          // (Fine and long, and never a fat blob across the screen for being near the eye: a spark is a line.)
+          let near = min(1.0, 0.014 * -vp.z / max(pt.size, 0.001));
+          let stretch = 1.0 + min(sp * 0.02 / max(pt.size, 0.001), 9.0);
+          off = (dir * q.y * pt.size * stretch + perp * q.x * pt.size * 0.5) * lens * near;
         }
         col = vec4f(rampColor(pt.kind - 16u, 0.3 + a * 0.7) * (1.0 + a * a * 22.0), 0.0);
       } else {
@@ -520,9 +522,15 @@ fn ign2(p: vec2f) -> f32 { return fract(52.9829189 * fract(dot(p, vec2f(0.067110
   let r2 = dot(q, q);
   // Exposure, film curve, grade.
   col *= 1.08;
-  col = tonemap(col);
+  // The film curve, half of it laid on each colour and half on the brightness alone: laid on each colour alone, anything
+  // very bright (a spell's heart, a fire, a sunlit wall) goes to the same flat white whatever colour it was.
+  let lum0 = max(dot(col, vec3f(0.2126, 0.7152, 0.0722)), 1e-4);
+  let kept = clamp(col * (tonemap(vec3f(lum0)).x / lum0), vec3f(0.0), vec3f(1.0));
+  col = mix(tonemap(col), kept, 0.55);
+  // (A little lift at the foot, so a night away from any light is dark blue and not a black card round a spell.)
+  col = mix(col, pow(col, vec3f(0.88)), 0.6);
   let l = dot(col, vec3f(0.2126, 0.7152, 0.0722));
-  col = mix(vec3f(l), col, 1.1);
+  col = mix(vec3f(l), col, 1.14);
   // Warm the highs, cool the deep shadows a touch.
   col *= mix(vec3f(0.94, 0.98, 1.06), vec3f(1.04, 1.0, 0.94), smoothstep(0.1, 0.65, l));
   col = clamp(col, vec3f(0.0), vec3f(1.0));

@@ -1320,6 +1320,82 @@
    "brief": "The eighteen gems that are set into staffs, skulls and shields: six kinds across, three grades down. Each column is one kind, in its own colour; each row is one grade. Top row, rough: an uncut, lumpy, cloudy stone. Middle row, cut: a clean six-sided faceted stone. Bottom row, flawless: a brilliant many-faceted stone with a bright inner light and a small glint. The three in a column are plainly the same stone getting finer; the six in a row are plainly the same cut in different colours. Loose stones only: no settings, no rings, no frames."
   },
   {
+   "id": "fine_gems",
+   "title": "Icons: the two finest cuts of gem",
+   "priority": "C",
+   "size": [
+    1536,
+    1024
+   ],
+   "kind": "grid",
+   "cols": 6,
+   "rows": 2,
+   "out": 160,
+   "cells": [
+    {
+     "name": "gem_ruby_3",
+     "group": "goods",
+     "what": "A ruby, deep red: a flawless stone grown brighter, its facets blazing, a soft halo of its own colour about it."
+    },
+    {
+     "name": "gem_topaz_3",
+     "group": "goods",
+     "what": "A topaz, warm amber gold: a flawless stone grown brighter, its facets blazing, a soft halo of its own colour about it."
+    },
+    {
+     "name": "gem_emerald_3",
+     "group": "goods",
+     "what": "A emerald, green: a flawless stone grown brighter, its facets blazing, a soft halo of its own colour about it."
+    },
+    {
+     "name": "gem_sapphire_3",
+     "group": "goods",
+     "what": "A sapphire, blue: a flawless stone grown brighter, its facets blazing, a soft halo of its own colour about it."
+    },
+    {
+     "name": "gem_amethyst_3",
+     "group": "goods",
+     "what": "A amethyst, violet: a flawless stone grown brighter, its facets blazing, a soft halo of its own colour about it."
+    },
+    {
+     "name": "gem_diamond_3",
+     "group": "goods",
+     "what": "A diamond, clear, pale ice white: a flawless stone grown brighter, its facets blazing, a soft halo of its own colour about it."
+    },
+    {
+     "name": "gem_ruby_4",
+     "group": "goods",
+     "what": "A ruby, deep red: the finest there is: a flawless stone ablaze, in a wide halo of its own colour, a white four-pointed star of light glinting on its upper edge and smaller sparks about it."
+    },
+    {
+     "name": "gem_topaz_4",
+     "group": "goods",
+     "what": "A topaz, warm amber gold: the finest there is: a flawless stone ablaze, in a wide halo of its own colour, a white four-pointed star of light glinting on its upper edge and smaller sparks about it."
+    },
+    {
+     "name": "gem_emerald_4",
+     "group": "goods",
+     "what": "A emerald, green: the finest there is: a flawless stone ablaze, in a wide halo of its own colour, a white four-pointed star of light glinting on its upper edge and smaller sparks about it."
+    },
+    {
+     "name": "gem_sapphire_4",
+     "group": "goods",
+     "what": "A sapphire, blue: the finest there is: a flawless stone ablaze, in a wide halo of its own colour, a white four-pointed star of light glinting on its upper edge and smaller sparks about it."
+    },
+    {
+     "name": "gem_amethyst_4",
+     "group": "goods",
+     "what": "A amethyst, violet: the finest there is: a flawless stone ablaze, in a wide halo of its own colour, a white four-pointed star of light glinting on its upper edge and smaller sparks about it."
+    },
+    {
+     "name": "gem_diamond_4",
+     "group": "goods",
+     "what": "A diamond, clear, pale ice white: the finest there is: a flawless stone ablaze, in a wide halo of its own colour, a white four-pointed star of light glinting on its upper edge and smaller sparks about it."
+    }
+   ],
+   "brief": "The twelve finest gems: the same six kinds across as on the gems sheet, in the same order and colours, in two cuts finer than its bottom row. Each is the flawless stone of its kind from that sheet, the same shape, made grander. Top row, brilliant: brighter, every facet blazing, with a soft halo of its own colour close about it. Bottom row, perfect: brighter again, in a wide glowing halo, with a white four-pointed star of light on its upper edge and two or three small sparks around it. The two in a column are plainly the same stone, the lower the finer; the six in a row are plainly the same cut in different colours. Loose stones only: no settings, no rings, no frames, and nothing lettered."
+  },
+  {
    "id": "icons_marks",
    "title": "Icons: quest marks and party roles",
    "priority": "C",
