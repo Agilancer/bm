@@ -34,6 +34,7 @@ import { KINGSBARROW } from './delve-kingsbarrow.js';
 import { ELDER } from './delve-elder.js';
 import { SEWERS } from './delve-sewers.js';
 import { CASTLE } from './delve-castle.js';
+import { IRON_BARRACKS } from './delve-barracks.js';
 import { WARRENS_PROPS, WARRENS_NICHES } from './delve-warrens.js';
 
 // Where it lies: its entrance, in the world, and the height its rooms are measured from.
@@ -207,7 +208,8 @@ const WARRENS = {
 // (In the order they were made: a delve's place in this list is sent with EV.DELVE and kept, so new ones go on the end.)
 // (And the four sectors of Phobos's sewers, src/core/delve-sewers.js: no party needed, a second way down into each, a gate
 // at each end into the next.)
-export const DELVES = [WARRENS, BLACKVIGIL, DEEPS, VAULTS, SPOREHOLD, PLAYHOUSE, KINGSBARROW, ELDER, ...SEWERS, ...CASTLE];
+// (And the castle's eight dungeons after its wards, as they're made: the Iron Barracks first. src/core/delve-barracks.js.)
+export const DELVES = [WARRENS, BLACKVIGIL, DEEPS, VAULTS, SPOREHOLD, PLAYHOUSE, KINGSBARROW, ELDER, ...SEWERS, ...CASTLE, IRON_BARRACKS];
 // The Free Company's posts at the later delves' portals: a quartermaster of its own on each terrace that has one (a delve's
 // post: who, and what they say of the place), to hire a party from where it's wanted. (src/core/heroes.js BROKERS has them
 // after the town's and the Warrens'; their posts go by the delve's key.)

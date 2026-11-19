@@ -38,6 +38,9 @@ export const PHOBOS_RULES = {
   lamps_out_in_the_conduits: { needs: 'the_drowned_abbot', steps: [{ boss: 'lamplighter' }, { back: true, say: "The Lamplighter's out, and every lamp of his." }], gold: 2600, xp: 36000, item: 'robe', named: 'The Sunk Garden Silk', seed: 0xa9c07 },
   // ---- up into the castle (src/core/delve-castle.js): the princess's, by the gate off her Garden ----
   up_the_aqueduct: { needs: 'lamps_out_in_the_conduits', steps: [{ enter: 'lowerward' }, { back: true, say: "I went up the Aqueduct. At the top of it are his kitchens." }], gold: 2800, xp: 40000 },
+  // (The Iron Barracks, the castle's first dungeon, under its yard: Maud Treller of the Quiet Watch's, once the Gate
+  // Captain's dead and the yard's door to it can be reached. src/core/delve-barracks.js.)
+  the_iron_muster: { needs: 'the_gate_captain', steps: [{ enter: 'ironbarracks' }, { boss: 'ironmarshal' }, { back: true, say: 'The Iron Marshal is dead, and his muster broken.' }], gold: 4400, xp: 64000, item: 'skull', named: "The Marshal's Muster-Roll", seed: 0x1b4c5 },
   the_gate_captain: { needs: 'up_the_aqueduct', steps: [{ boss: 'gatecaptain' }, { back: true, say: 'The Gate Captain is dead, and his gate with him.' }], gold: 3600, xp: 52000, item: 'staff', named: 'The Portcullis Rod', seed: 0xc1a72 },
   // ---- the Middle Ward (words in src/folk/lines/phobos-castle.js): a bottle down the princess's Aqueduct, and the Librarian's
   // household in his rooms off the Ancient Library. Places: the ward ('middleward') and its rooms ('room:<id>'). ----
@@ -58,7 +61,7 @@ export const PHOBOS_LEVELS = [
   ['down_the_drains', 28], ['caps_for_the_keepers', 29], ['the_main_runs_clear', 30], ['the_queens_larder', 33], ['caps_of_the_slough', 36],
   ['the_great_worm', 40], ['letters_for_the_princess', 43], ['the_drowned_abbot', 47], ['lamps_out_in_the_conduits', 54],
   // (Castle Velscour's Lower Ward, 58-75: up the Aqueduct at 58, the Gate Captain at 66.)
-  ['up_the_aqueduct', 58], ['the_gate_captain', 66],
+  ['up_the_aqueduct', 58], ['the_gate_captain', 66], ['the_iron_muster', 68],
   // (The Middle Ward, 75-95: up through its gate at 75, the household's work 76 to 82, the Feast That Walks at 88.)
   ['the_librarians_letters', 75], ['the_household', 75], ['dust_in_the_stacks', 76], ['wynns_map', 78], ['the_quiet_watchs_steel', 80], ['the_hornwings', 82], ['the_feast_that_walks', 88],
 ];

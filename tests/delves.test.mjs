@@ -19,10 +19,12 @@ const LATER = ['vaults', 'sporehold', 'playhouse', 'kingsbarrow', 'elder'];
 const SEWERS = ['westdrains', 'sloughmains', 'charnelruns', 'highconduits'];
 // (And Castle Velscour's wards after them, src/core/delve-castle.js: the Lower Ward and the Middle Ward so far.)
 const CASTLE = ['lowerward', 'middleward'];
+// (The castle's dungeons, after its wards: three bosses each, as the later delves.)
+const DUNGEONS = ['ironbarracks'];
 const json = (p) => JSON.parse(readFileSync(new URL(p, import.meta.url), 'utf8'));
 
 test('there are eight delves, the first three where they were, the later four each with three bosses, and the Elder Gods with four', () => {
-  assert.deepEqual(DELVES.map((d) => d.key), ['warrens', 'blackvigil', 'deeps', ...LATER, ...SEWERS, ...CASTLE]);
+  assert.deepEqual(DELVES.map((d) => d.key), ['warrens', 'blackvigil', 'deeps', ...LATER, ...SEWERS, ...CASTLE, ...DUNGEONS]);
   for (const k of [...SEWERS, ...CASTLE]) {
     const d = delveByKey(k), mine = BOSSES.filter((b) => b.delve === k);
     assert.ok((d.sewer || d.castle) && d.party === false && mine.length === 1 && mine[0].key === d.last, k);
@@ -32,7 +34,7 @@ test('there are eight delves, the first three where they were, the later four ea
   // (A boss's number is sent from the sim and kept: the old ten keep theirs.)
   assert.deepEqual(BOSSES.slice(0, 10).map((b) => b.key), ['grubnash', 'twins', 'venomaw', 'maldrec', 'sorvane', 'brothers', 'castellan', 'hrymgar', 'broodmother', 'sleeper']);
   assert.equal(WARNINGS[32], 'Venomaw stamps! Step in behind each ring as it lands.');
-  for (const k of LATER) {
+  for (const k of [...LATER, ...DUNGEONS]) {
     const d = delveByKey(k), mine = BOSSES.filter((b) => b.delve === k);
     assert.equal(mine.length, k === 'elder' ? 4 : 3, k);
     assert.equal(mine[mine.length - 1].key, d.last, `${k}: its last boss is its last`);
@@ -50,11 +52,11 @@ test('a boss that waits waits on bosses of its own delve that come before it, an
     assert.ok(b.shut && WARN[b.shut] !== undefined, `${b.key}: nothing said in its empty room`);
   }
   // (The Vaults has none: its three are met in the order they lie.)
-  assert.deepEqual(BOSSES.filter((b) => b.needs).map((b) => b.key), ['heart', 'leadingman', 'dollmaker', 'wyrm', 'kaldurra', 'morvekh', 'nihvaroth']);
+  assert.deepEqual(BOSSES.filter((b) => b.needs).map((b) => b.key), ['heart', 'leadingman', 'dollmaker', 'wyrm', 'kaldurra', 'morvekh', 'nihvaroth', 'ironmarshal']);
 });
 
 test('every later boss has a body, a fight, calls that exist, and one thing of its own to do about', () => {
-  for (const b of BOSSES.filter((q) => LATER.includes(q.delve))) {
+  for (const b of BOSSES.filter((q) => [...LATER, ...DUNGEONS].includes(q.delve))) {
     for (const m of b.models) assert.ok(VARIANTS[m], `${b.key}: no body ${m}`);
     const spec = FIGHTS[b.key];
     assert.ok(spec, `${b.key}: no fight`);
@@ -74,8 +76,8 @@ test('every later boss has a body, a fight, calls that exist, and one thing of i
 
 test('every warning a later delve names is used by its fights or its bosses, and every one used is named', () => {
   // (The Elder Gods' four are in a file of their own, and their own words are warnings of their own: `<god>_say_<when>_<n>`.)
-  const src = ['delve-fights.js', 'elder-fights.js', 'voidland.js'].map((f) => readFileSync(new URL(`../src/sim/${f}`, import.meta.url), 'utf8')).join('\n');
-  for (const k of LATER) {
+  const src = ['delve-fights.js', 'elder-fights.js', 'voidland.js', 'castle-fights.js'].map((f) => readFileSync(new URL(`../src/sim/${f}`, import.meta.url), 'utf8')).join('\n');
+  for (const k of [...LATER, ...DUNGEONS]) {
     const d = delveByKey(k);
     for (const w of Object.keys(d.warnings)) {
       const used = src.includes(`WARN.${w}`) || src.includes(`'${w}'`) || Object.values(d.turnWarn).includes(w) || d.bosses.some((b) => b.shut === w || b.cue === w) || /_run_/.test(w) || /_say_/.test(w);
@@ -91,7 +93,7 @@ test('a pack may have its own toughness and way of fighting, and no two packs of
   for (const p of tough) assert.ok(p.tough.hp > 1 && p.tough.damage > 1, p.key);
   for (const p of ALL_PACKS.filter((q) => q.ai)) assert.ok(['melee', 'caster', 'stalker'].includes(p.ai), p.key);
   const at = (p) => { const r = roomOf(p.room); return [r.x + (p.at?.[0] || 0), r.z + (p.at?.[1] || 0)]; };
-  for (const k of LATER) {
+  for (const k of [...LATER, ...DUNGEONS]) {
     const ps = delveByKey(k).packs;
     assert.ok(ps.length >= 6, `${k}: ${ps.length} packs`);
     for (const a of ps) for (const b of ps) {
@@ -104,7 +106,7 @@ test('a pack may have its own toughness and way of fighting, and no two packs of
 });
 
 test('auto-play has a way through each, every room on it, and knows every pack and boss', () => {
-  for (const k of [...LATER, ...CASTLE]) {
+  for (const k of [...LATER, ...CASTLE, ...DUNGEONS]) {
     const d = delveByKey(k), way = WAYS[k];
     assert.ok(way, k);
     // (But the Elder Gods' islets, reached in their fights by a leap or a god's blow.)
@@ -120,7 +122,7 @@ test('the palettes and the variants the later delves wear are there', () => {
   // (New ones go on the end: a palette is known by its place.)
   assert.deepEqual(Object.keys(pal).slice(0, 4), ['Base', 'Ashen', 'Blighted', 'Infernal']);
   for (const [id, v] of Object.entries(VARIANTS)) assert.ok(roster[v.src] || roster[v.alt], `${id}: made on ${v.src}, which isn't in the roster`);
-  for (const k of [...LATER, ...CASTLE]) for (const p of delveByKey(k).packs) for (const n of p.pal) assert.ok(pal[n], `${p.key}: no palette ${n}`);
+  for (const k of [...LATER, ...CASTLE, ...DUNGEONS]) for (const p of delveByKey(k).packs) for (const n of p.pal) assert.ok(pal[n], `${p.key}: no palette ${n}`);
 });
 
 // ---- marks to stand in, and blows shared (src/sim/perils.js) ----------------------------------------------------------------

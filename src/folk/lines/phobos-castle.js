@@ -371,6 +371,37 @@ export const QUESTS = {
     ],
   },
 
+  // ---- Maud Treller's, of the Quiet Watch ----
+  the_iron_muster: {
+    title: 'The Iron Muster',
+    giver: 'ph_watch',
+    needs: 'the_gate_captain',
+    offer: [
+      "The Gate Captain's dead. Good. But he was the door, not the house. Under his yard there's a stair down to where the garrison musters: the Iron Barracks. Kennels, stores, cells, and the Iron Marshal over all of it.",
+      "Every patrol that walks this city in red comes up out of that stair. Break the Marshal and his muster, and the Watch breathes easier for a season. Take friends. Take the Free Company if you can pay them.",
+    ],
+    accept: "I'll go down the Muster Stair.",
+    acceptLine: "The barracks' door is on the south side of the castle yard, past the Lower Ward's. Mind his hounds, mind his powder, and when he plants his standard, cut it down.",
+    decline: "Not yet.",
+    declineLine: "Not yet. They'll be mustering tomorrow, and the day after. They always are.",
+    journal: [
+      "Under the castle yard, the Iron Barracks: Maud Treller of the Quiet Watch wants the Iron Marshal dead. Its door is on the south side of the yard.",
+      "Break the Iron Marshal in his hall. The Kennelmaster and the Quartermaster keep its doors.",
+      "Go back to Maud Treller of the Quiet Watch.",
+    ],
+    progress: [
+      "Down the Muster Stair, into the Iron Barracks.",
+      "The Iron Marshal, in the Iron Hall.",
+    ],
+    done: [
+      "The Marshal's dead? Then the muster's broken, and his patrols will be thin on the Mile for weeks. You've given this city a breath it hasn't had in years.",
+      "Here. It's his muster-roll, every name down there. Half of them are struck through now, by you. Keep it. A reminder of what one person can do.",
+    ],
+    after: [
+      "Fewer red cloaks on the Mile. Not none. Fewer. That's how it goes here: fewer, and then fewer, and one day none.",
+    ],
+  },
+
   // ---- Pip's ----
   the_hornwings: {
     title: 'The Hornwings',
