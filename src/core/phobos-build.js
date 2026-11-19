@@ -1563,8 +1563,10 @@ export function phobosKeep(K) {
     walk(K, [[cx, z, hx, hz, 0, P(b)]]);
     const fins = (len) => Math.max(3, Math.round(len / 9));
     for (const sd of [-1, 1]) {
-      for (let k = 0, n = fins(hx); k <= n; k++) { const fx = cx - hx + 2 * hx * k / n; K.box(G, fx, P(a), z + sd * (hz + 1.2), 1.4, (b - a) * 0.84, 1.6, 0, { collide: false }); K.spike(R, fx, P(a) + (b - a) * 0.84, z + sd * (hz + 1.4), 1.5, 9, 4, Math.PI / 4); }
-      for (let k = 0, n = fins(hz); k <= n; k++) { const fz = z - hz + 2 * hz * k / n; K.box(G, cx + sd * (hx + 1.2), P(a), fz, 1.6, (b - a) * 0.84, 1.4, 0, { collide: false }); K.spike(R, cx + sd * (hx + 1.4), P(a) + (b - a) * 0.84, fz, 1.5, 9, 4, Math.PI / 4); }
+      // (Fins a metre and a half proud, not three: in the afternoon sun the deep ones threw a grid of black shadow across
+    // every bay, holes in a frame, scaffolding, from the yard and the city. The critics, pass 1.)
+    for (let k = 0, n = fins(hx); k <= n; k++) { const fx = cx - hx + 2 * hx * k / n; K.box(G, fx, P(a), z + sd * (hz + 0.6), 1.4, (b - a) * 0.84, 0.9, 0, { collide: false }); K.spike(R, fx, P(a) + (b - a) * 0.84, z + sd * (hz + 0.8), 1.5, 9, 4, Math.PI / 4); }
+      for (let k = 0, n = fins(hz); k <= n; k++) { const fz = z - hz + 2 * hz * k / n; K.box(G, cx + sd * (hx + 0.6), P(a), fz, 0.9, (b - a) * 0.84, 1.4, 0, { collide: false }); K.spike(R, cx + sd * (hx + 0.8), P(a) + (b - a) * 0.84, fz, 1.5, 9, 4, Math.PI / 4); }
     }
     for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) { K.drum(C, cx + sx * hx, P(a), z + sz * hz, 7, b - a + 18, 10, { collide: false }); K.cone(R, cx + sx * hx, P(b) + 18, z + sz * hz, 8, 26, 10); }
     // (A row of merlons round each step's lip.)

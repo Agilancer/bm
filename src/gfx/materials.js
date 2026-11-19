@@ -443,6 +443,14 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
     let m = flatMaterial(lay, p, F.camPos.w);
     albedo = m.rgb; rough = m.a;
     let t = F.camPos.w;
+    // (Fen water, 'mire:water', Phobos's Slough: green-brown and thick, a scum of muck on it in drifts, a slow stir and no
+    // more, the sky in it dulled. As well water it was a clean canal, a mirror: the critics.)
+    if (lay == 102u && tintK == 4u) {
+      let d = textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.06 + vec2f(t * 0.004, t * 0.002), 0.0);
+      albedo = mix(vec3f(0.034, 0.036, 0.016), vec3f(0.06, 0.052, 0.026), smoothstep(0.42, 0.7, d.r));
+      rough = mix(0.68, 0.8, smoothstep(0.5, 0.75, d.g)); ao = 0.36;   // (the sky in it dulled to a third: the whole sky lay on it in white sheets)
+      n = normalize(vec3f((d.b - 0.5) * 0.06, 1.0, (d.a - 0.5) * 0.06));
+    }
     if (lay == 110u || lay == 112u) {
       // Open water stirs in two sets of ripples; ice lies still, cracked.
       let a = textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.045 + vec2f(t * 0.011, t * 0.007), 0.0).rg - 0.5;
