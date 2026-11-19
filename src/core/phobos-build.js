@@ -474,6 +474,61 @@ function upstairsNear(K, h, up, P, r) {
 }
 // A curtain wall with relief: a heavy course along its foot, a pilaster every eighteen metres a step lighter than the
 // wall, and an arrow slit both faces between each pair. (Forty metres of blank wall read as a cliff, not a wall built.)
+// The castle's lesser gates. SALLY: the stretch of the outer curtain (the ring of 44 round the crag, phobosCastle) the
+// Sally Gate stands in, east, where the crag runs out level to the shelf behind the Keep; POSTERNS: the stretches with a
+// postern each, on the cliffs north and south, too sheer for a way down: shut, iron-bound, a hoist's arm over the drop.
+export const SALLY = 0, POSTERNS = [11, 33];
+function ringAt(ring, i) {
+  const p = ring[i], q = ring[(i + 1) % ring.length], L = Math.hypot(q[0] - p[0], q[1] - p[1]), ux = (q[0] - p[0]) / L, uz = (q[1] - p[1]) / L;
+  const mx = (p[0] + q[0]) / 2, mz = (p[1] + q[1]) / 2, ox = mx - CRAG.x, oz = mz - CRAG.z, ol = Math.hypot(ox, oz);
+  return { mx, mz, ux, uz, nx: ox / ol, nz: oz / ol, yaw: Math.atan2(q[0] - p[0], q[1] - p[1]) - Math.PI / 2 };
+}
+// The Sally Gate: two drums with his V round their heads, a passage 5 m wide under a machicolated head, its portcullis
+// wound up but for its teeth, a brazier each side and fires in baskets down its walls; out of it a flagged road east over
+// the shelf to the Ash Terrace at the world's edge, round, walled, his V on its parapet: where the castle meets the sky.
+export const ASH_TERRACE = { x: 11590, z: 30, r: 26 };
+function sallyGate(K, ring, S, C, BL) {
+  const { mx, mz, ux, uz, nx, nz, yaw } = ringAt(ring, SALLY), y = Y(mx, mz), P = (a, h, b) => [mx + ux * a + nx * b, y + h, mz + uz * a + nz * b];
+  for (const e of [-1, 1]) { const [tx, , tz] = P(e * 8.5, 0, 0.5); tower(K, C, tx, tz, 6, 38, null, { lit: 0.6 }); }
+  // (The head over the passage, the passage's cheeks and vault dark, its teeth, the fires.)
+  { const [hx, , hz] = P(0, 0, 0); K.box(S, hx, y + 7, hz, 3.6, 22, 3.4, yaw, { collide: false });
+    for (const e of [-1, 1]) { const [cx, , cz] = P(e * 2.6, 0, 0); K.box('dark:stone', cx, y - 0.5, cz, 0.25, 7.6, 3.2, yaw, { collide: false }); }
+    const [vx, , vz] = P(0, 0, 0); K.box('dark:stone', vx, y + 6.9, vz, 2.6, 0.12, 3.2, yaw, { collide: false });
+    for (let b = -2.2; b <= 2.21; b += 0.55) { const [px, , pz] = P(b, 0, 2.9); K.box('iron', px, y + 5.4, pz, 0.06, 1.5, 0.06, yaw, { collide: false }); K.cone('iron', px, y + 5.4, pz, 0.07, -0.35, 4); }
+    for (const e of [-1, 1]) for (const d of [-1.6, 1.6]) { const [fx, , fz] = P(e * 2.15, 0, d); K.drum('iron', fx, y + 3.3, fz, 0.2, 0.45, 6, { r2: 0.38, open: true, collide: false }); fire(K, fx, y + 3.55, fz, 0.28, 1.0); }
+    (K.lamps ||= []).push({ p: P(0, 3.5, 0), c: [1, 0.45, 0.2], r: 22, i: 50, flicker: 0.35, prio: 20 });
+    for (const e of [-1, 1]) { const [bx, , bz] = P(e * 6, 0, 8); const by = Y(bx, bz); K.drum('dark:stone', bx, by - 0.3, bz, 0.75, 3.4, 4, { r2: 0.5, turn: Math.PI / 4 }); K.drum('iron', bx, by + 3.1, bz, 0.45, 0.7, 8, { r2: 1.0, open: true, collide: false }); fire(K, bx, by + 3.4, bz, 0.62, 2.1); }
+    (K.lamps ||= []).push({ p: P(0, 3, 9), c: [1, 0.4, 0.16], r: 34, i: 120, flicker: 0.25, prio: 30 });
+    // (His banner down the head, outside.)
+    const [bx2, , bz2] = P(0, 0, 3.5); hangBanner(K, bx2, y + 26, bz2, [nx, nz], 3.4, 12, 3); }
+  // The road out to the Ash Terrace, and the terrace.
+  { const [ax, , az] = P(0, 0, 4), T = ASH_TERRACE, L = Math.hypot(T.x - ax, T.z - az), dx = (T.x - ax) / L, dz = (T.z - az) / L, ry = Math.atan2(-dz, dx);
+    for (let d = 0; d < L - T.r + 1; d += 8) K.paving('p2_ward_paving', ax + dx * (d + 4), az + dz * (d + 4), 4.05, 3.2, ry, 0.08);
+    K.ringPaving('p2_ward_paving', T.x, T.z, 0, T.r, 24, 0.09);
+    const segs = 30;
+    for (let k = 0; k < segs; k++) {
+      const t = (k + 0.5) / segs * TAU, ex = T.x + Math.cos(t) * (T.r - 0.4), ez = T.z + Math.sin(t) * (T.r - 0.4), half = Math.PI * T.r / segs + 0.05;
+      if (Math.abs(Math.atan2(Math.sin(t - Math.atan2(-dz, -dx)), Math.cos(t - Math.atan2(-dz, -dx)))) < 0.2) continue;   // (open where the road comes in)
+      const ey = Y(ex, ez); K.box(S, ex, ey - 0.5, ez, 0.4, 1.6, half, -t); if (!K.lean) K.vee(S, ex, ey + 1.1, ez, 0.4, 1.4, half * 0.55, -t);
+    }
+    for (let k = 0; k < 4; k++) { const t = k / 4 * TAU + 0.78, bx = T.x + Math.cos(t) * (T.r - 3), bz = T.z + Math.sin(t) * (T.r - 3), by = Y(bx, bz);
+      K.drum('dark:stone', bx, by - 0.3, bz, 0.75, 3.0, 4, { r2: 0.5, turn: Math.PI / 4 }); K.drum('iron', bx, by + 2.7, bz, 0.45, 0.7, 8, { r2: 1.0, open: true, collide: false }); fire(K, bx, by + 3.0, bz, 0.62, 2.1);
+      if (k % 2 === 0) (K.lamps ||= []).push({ p: [bx, by + 4.5, bz], c: [1, 0.42, 0.18], r: 30, i: 70, flicker: 0.3 }); } }
+}
+// A postern: a squat tower in the curtain on the cliff, its door out onto a ledge over the drop, shut and iron-bound, a
+// lamp over it; a timber hoist's arm out from the ledge's lip, its chain hung from the arm's end, nothing across it.
+function postern(K, ring, i, C) {
+  const { mx, mz, ux, uz, nx, nz, yaw } = ringAt(ring, i), y = Y(mx, mz), P = (a, h, b) => [mx + ux * a + nx * b, y + h, mz + uz * a + nz * b];
+  tower(K, C, mx + nx * 2, mz + nz * 2, 6.5, 34, null, { lit: 0.5 });
+  const [lx, , lz] = P(0, 0, 9.5); K.box('dark:p2_bridge_ashlar', lx, y - 6, lz, 4.2, 6.1, 3.2, yaw, { collide: false });
+  const [dx2, , dz2] = P(0, 0, 8.55), N = [nx, 0, nz];
+  K.quad('p2_studded_oak', P(-1.1, 0.05, 8.56), P(1.1, 0.05, 8.56), P(1.1, 2.9, 8.56), P(-1.1, 2.9, 8.56), N, [[0, 1], [1, 1], [1, 0], [0, 0]]);
+  K.quad('dark:stone', P(-1.3, 2.9, 8.57), P(1.3, 2.9, 8.57), P(1.3, 3.25, 8.57), P(-1.3, 3.25, 8.57), N);
+  { const q = P(1.9, 3.4, 8.5); K.wallLamp(q[0], q[1], q[2], [nx, nz]); (K.lamps ||= []).push({ p: P(1.9, 3.0, 9.1), c: [1, 0.55, 0.25], r: 14, i: 14, flicker: 0.4 }); }
+  const a0 = P(-2.8, 0, 12.2), a1 = P(-2.8, 5.2, 12.2), a2 = P(-2.8, 5.2, 15.4);
+  K.beam('dark:wood', [a0[0], y - 0.3, a0[2]], a1, 0.18); K.beam('dark:wood', a1, a2, 0.14); K.beam('iron', a2, P(-2.8, -4, 15.4), 0.03);
+  void dx2; void dz2;
+}
 function curtain(K, layer, ax, az, bx, bz, t, h, o = {}) {
   K.wall(layer, ax, az, bx, bz, t, h, o);
   if (K.lean) return;
@@ -1487,6 +1542,9 @@ export function phobosCastle(K) {
   ring.forEach((p, i) => {
     const q = ring[(i + 1) % ring.length];
     if (Math.abs(p[1]) < 22 && p[0] < CRAG.x) return;   // (the gate, at the west end)
+    // (The Sally Gate, east, behind the Keep: the stretch split round its passage, sallyGate below.)
+    if (i === SALLY) { const mx = (p[0] + q[0]) / 2, mz = (p[1] + q[1]) / 2, L = Math.hypot(q[0] - p[0], q[1] - p[1]), ux = (q[0] - p[0]) / L, uz = (q[1] - p[1]) / L;
+      curtain(K, B, p[0], p[1], mx - ux * 8.5, mz - uz * 8.5, 5, 24, BL); curtain(K, B, mx + ux * 8.5, mz + uz * 8.5, q[0], q[1], 5, 24, BL); return; }
     curtain(K, B, p[0], p[1], q[0], q[1], 5, 24, BL);
     if (i % 3 === 0) tower(K, C, p[0], p[1], 8, 48 + 14 * hash2(i, 4), i % 2 ? RT : null, { steep: 2.6 });
   });
@@ -1495,6 +1553,10 @@ export function phobosCastle(K) {
     for (const s of [-1, 1]) { curtain(K, B, x0 - s * 46 * 0.22 - 0, s * 24, x0 - s * 250 * 0.22, s * 250, 8, 48, BL); tower(K, C, x0, s * 24, 13, 96, RT, { steep: 2.4, sides: 16 }); for (const zz of [90, 170]) tower(K, C, x0 - s * zz * 0.22, s * zz, 9, 70, zz > 100 ? R : null); }
     K.box(S, x0, Y(x0, 0) + 14, 0, 9, 44, 16, 0, { collide: false });
   }
+  // The castle's other ways in (the owner, 2026-11-19: "Give the castle other entrances too"): the Sally Gate east, out
+  // onto the shelf behind the Keep; and a postern in the curtain on each cliff, north and south, shut.
+  sallyGate(K, ring, S, C, BL);
+  for (const i of POSTERNS) postern(K, ring, i, C);
   // The gatehouse at the head of the Approach: two great drums and the gate's head between.
   const gx = CRAG.x - CRAG.a * 0.86, gy = Y(gx, 0);
   for (const s of [-1, 1]) tower(K, C, gx, s * 22, 13, 74, RT, { steep: 2.2, lit: 0.65 });
