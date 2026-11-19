@@ -49,7 +49,7 @@ test('every painting a place or a dungeon asks for is in the game', () => {
   assert.ok(manifest.ph2.layers.length <= slots - 64, `${manifest.ph2.layers.length} PH2 layers, room for ${slots - 64}`);
   for (const n of manifest.ph2.layers.map((l) => l.name)) for (const s of ['c', 'd']) assert.ok(fs.existsSync(new URL(`../assets/game/tex/${manifest.ph2.dir}${n}_${s}.webp`, import.meta.url)), `${n}_${s}.webp`);
   for (const layer of [...buildSites(true).parts.keys(), ...buildUnder().parts.keys()]) {
-    const m = /^(dark|pale|frost|mire|spore|void|slate|blood|moss|umber|soot|eve|char):(.*)$/.exec(layer), base = m ? m[2] : layer;
+    const m = /^(dark|pale|frost|mire|spore|void|slate|blood|moss|umber|soot|eve|char|royal|forest):(.*)$/.exec(layer), base = m ? m[2] : layer;
     assert.ok(have.has(base) || FLAT.has(base), `no painting called ${base}`);
   }
   for (const n of ['block', 'flags', 'ashlar', 'course']) {
@@ -76,7 +76,7 @@ test('no one painting is most of a dungeon any more', () => {
       m.set(layer, (m.get(layer) || 0) + ar);
     }
   }
-  assert.equal(area.size, 13);
+  assert.equal(area.size, 14);
   for (const [key, m] of area) {
     const all = [...m.values()].reduce((s, v) => s + v, 0), [top, most] = [...m].sort((p, q) => q[1] - p[1])[0];
     assert.ok(most / all < 0.56, `${top} is ${Math.round(most / all * 100)}% of the dungeon at ${key}`);

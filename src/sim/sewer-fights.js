@@ -50,7 +50,7 @@ const due = (W, f, name, secs, free) => { const d = (f.due ||= {}); if (W.every(
 
 // An add that fights nobody: it walks to `to` ([x, z], or what a function gives each tick) at `pace` (slowed while it's
 // hurt), and does `there` when it gets there, and is gone. Bring it down first.
-function errand(W, k, m, to, pace, there) {
+export function errand(W, k, m, to, pace, there) {
   k.opts.damage = 0; k.aggro = true; k.opts.leash = 400; k.opts.sight = 80;
   k.script = (b, dt, sim) => {
     if (m.dead) { b.script = null; return false; }

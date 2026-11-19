@@ -495,6 +495,66 @@ spires and they have decor and purpose!"
   outside blows out. Door 3286 is grazed by a street post. The street braziers unseen at night; the doors' swing and
   sound and the moving flames unjudged (stills only); the phone unmeasured.
 
+## The city's once-over (owner, 2026-11-17) — under way
+
+The owner: "do a once over of the entire city adding detail, fixing things, making sure there's enough room to walk up
+stairs in the houses, make sure the clipping plane is correct, fixing the water, etc. then start working on the Castle.
+It really needs work."
+
+- [x] **The water.** The moat's and the Slough's sheets followed the ground: the moat's climbed 130 m up the crag and
+  the Slough's ran over a 20 m rise. Each is now level reaches with a weir of dark stone at every step (`reaches`,
+  `weir`, `waters` in src/core/phobos-build.js); the moat is dry where no ditch holds water (the crag's side, about a
+  third of the ring is wet: the west, and up the north and south as far as there's a ditch). The Slough's ditch is cut
+  from the lower of its two banks (src/core/east.js), so it holds water end to end; none under the streets' causeways.
+- [x] **House stairs**: 1.25 m wide (0.95), treads 0.36 deep (0.27), a landing of 1.1 m at the head; all 9,348 keep
+  their upstairs.
+- [x] **The camera indoors**: the third-person camera is kept low and close inside Phobos's houses and towers
+  (`World.indoors`), as in Bellmourn's: it lifted through their ceilings and upper floors.
+- [ ] **The clipping plane**: the near plane is 0.08 m and the far is infinite (src/core/math.js); nothing wrong found
+  there. If the owner means something else (things cut off at a distance, near cells popping at 150 m, the camera in
+  walls somewhere), it wants a word from him or a picture.
+- [x] **The Slough from near** (`sloughNear` in src/core/phobos-build.js, streamed cells): quay walls on both banks with
+  a pale coping and a slime line, a flagged towpath, mooring posts, stepped landings with laden barges (gunwales, a
+  tiller, a green lantern), outfalls, casks and crates, scum on the water; weirs with a dressed crest, wing walls and a
+  falling sheet; and **two plank footbridges** on stone piers where no street crosses (far build, walked).
+  Critics: round 1 REJECT 5 and 4 (`art/phobos/east/city_r1.jpg`); round 2 REJECT 6 and 6 (`city_r2.jpg`); **round 3
+  veteran REJECT 6.5, young APPROVE 7** (`city_r3.jpg`), no rule break. Not passed by both. Leftovers: the weir still
+  doesn't read from downstream (a white-water face, a churn apron, a visible lip); scum darker, ragged, against the
+  walls and hulls (darkened after the round, unjudged); the gravel berm between street and canal (setts or a stepped
+  revetment); the quay wall one dark tile (buttresses, drain mouths, ladders); the footbridges want a paler deck and a
+  lamp at each end; the east bank's blank shells (lit windows, a hoist, a warehouse door); nobody on the water; the
+  water a flat mirror (a moving normal map, darker under bridges and along walls: a shader job).
+- [ ] **Detail elsewhere**: not begun. Seen in pictures: far houses are plain boxes beside the near ones; the basin's cliffs are
+  streaked; bare ground between houses and the Slough's banks (a quay wall, mooring posts, steps down); weirs want a
+  sluice or a footbridge; the dry moat round the crag wants a bed of stones or stakes.
+- [x] **Every drum and cone lit from the right side** (src/core/sites.js Kit.drum): its sides were wound against their
+  normals, so the shader turned each normal round and every round tower, cone, column and barrel in the game was lit
+  from its far side. This is what "sunlit drums go silver" was, and why towers never matched walls. (The Keep's `char:`
+  and the notes about tints on round things were workarounds for it: they can be looked at again.)
+- [ ] **The castle on the land** — under way (`castleNear` in src/core/phobos-build.js, the crag's streamed cells; shots
+  `node tools/phobos/city_shots.mjs castle_gate castle_yard castle_mark castle_yard_n city_castle`, HOUR=16 for west light):
+  - Done: the crag kept clear of the wilds' rocks and tufts (src/core/rocks.js); the Lower Ward's yard flagged, a kerbed
+    way from the gate to **his mark** (a 6.4 m ring of black iron before a round of his red on a three-step plinth, two
+    horns of fire; far build, it stops you); fire bowls in pairs, close by the gate and wider toward the mark, their
+    flames the far build's; red pennants on poles (the arm from the pole's head: no cross); a well, a stable, racks,
+    stores, carts; a door, steps and fires to each Lower Ward hall; a low wall and two guard posts across the yard; the
+    castle's door lit; murder holes and chains in the gate's vault, no beam across its bars; the rim's bridges humped
+    and at two heights; towers in the walls' stone.
+  - Critics: round 1 both REJECT 4 (`castle_r1.jpg`); round 2 both REJECT 6 (`castle_r2.jpg`); **round 3: veteran
+    APPROVE 7, young REJECT 6** (`castle_r3.jpg`), no rule break. Not passed by both. Added for rounds 2 and 3: a neck of
+    two crenellated walls out of the gate, a crenellated wall and two guard posts across the yard, fewer bowls, a drill
+    ground, porches on the hall doors, the curtain's plinth, string course and loops from near, the ring in black glass.
+    After round 3, unjudged: the pennants moved against the cross-wall, the way a step lighter.
+  - Leftovers: (1) white stair-stepped slabs either side of the Approach in every picture (the ground there, or its
+    parapets: find which); (2) the gate passage still has no moment: teeth overhead, chains seen against the lit mouth,
+    a glow from above; (3) each half of the yard wants one hero thing three metres and more with its own warm light (a
+    drill frame with straw targets, a loaded wagon under a canopy); fewer, bigger clusters of stores against the walls;
+    (4) porches with a bigger warm pool and steps, to pull from across the yard; (5) the outer curtain half a stop off
+    the towers; (6) to check close: the arrow loops are plain slits; the Keep's pale window grid away from warm light.
+  - Not begun: the Middle Ward's and the High Ward's ground on the land, the ramp, anything past the yard's cross-wall.
+- Pictures: `node tools/phobos/city_shots.mjs [names]` (give it WAIT=30000: on a software GPU the ground comes late and
+  shows white till it does).
+
 ## Chunk 7: the city's six dungeons — not started
 
 The Cistern Maze, the Undercroft, the Tower of the Ninefold Eye, Ironmercy Gaol, the Rotting Hospice, the Gilded Vault
@@ -521,9 +581,85 @@ world's north edge, east of them. Gone in alone (party: false), as the sewers ar
     and a count; a seat can face south; a lintel can be dressed stone.
   - Not done: chests in the wings (the chest list is fixed for saves: room chests need a new kind of chest kept by
     place); a cold or blue light per room (the engine has none).
-- [ ] The Middle Ward and the High Ward: the rest of the twenty-four wings, the stair graph up and down, key-gated wings.
-- [ ] The Librarian's home in the ancient library; the Librarian and his four; their quests; his deception magic.
-- [ ] Dozens of castle quests.
+- [x] **The Middle Ward** (`middleward`, level 75, 12 rooms; 2026-11-17): the Middle Gate, the Middle Court (a wall-walk on
+  two sides, a dead tree in a planter), the Screens Passage and the Great Hall (two long tables and their benches, the
+  high table on its dais, his chair and mark, two great hearths, the hunt in tapestry), the Portrait Gallery (his house's
+  faces in two rows, a painting that's a door: a way on no map to the Alchemists' Wing), the Map Room (the map table,
+  cases, charts with no letters), the Horn Galleries (great horns on brackets at two heights, a wall-walk), the Ancient
+  Library (book-spine walls to its 16 m roof, bays of bookcases, reading tables, lecterns, hung chandeliers), the Long
+  Stacks, the Librarian's Rooms, the Alchemists' Wing (jar-shelf walls, two stills, a working circle), the Conservatory
+  (glass over it, dead trees in planters, roots, a black basin). 8 packs and a patrol on the Horn Walk; liveries as the
+  layout bible says (Abyssal for royal blue, Mossback for forest green, his red, the Hall mixed red and white).
+  - **Gone into only from the Lower Ward** (`within: 'lowerward'`): no arch of its own on the land (the land's budget),
+    its portal the Lower Ward's (the castle gate), where its Postern and the Hall's north door let you out. The Lower
+    Ward's Middle Ward Gate is an arch up to it, **shut till the Gate Captain has died**, now or ever (a link's `shut`;
+    the render thread's quests tell the sim every boss that's ever died, `bossesDown`; the arch is dark till then).
+  - **The Feast That Walks** (88, src/sim/castle-fights.js): his servers bring courses through the doors by the screens,
+    and each that reaches him feeds him (life back, harder blows); he heaves the long tables down their rows (the aisle
+    is clear) or sweeps the aisle (the benches are clear); his maw, his belly, the plate, the bile. Headless: a hired
+    party wins in about three minutes; `--slow` wins at 7%; `--still` dies.
+  - **The keyed doors, shut for now**: the Clock Tower's (end of the Horn Galleries; the Gallery of a Thousand Portraits'
+    key), the Menagerie's (the Conservatory's far wall; the Iron Barracks' key), the Sanctuaries Stair (the Long Stacks'
+    far wall; the Drowned Archive's key, up to the High Ward). Plain portcullises (bars from a beam, none across), his
+    mark over each. They open with chunk 9's dungeons.
+  - New props: bookcase (book-spine faces, a frame), bench, horn, alembic, map table, dead tree in a planter; a portcullis
+    can be plain, a portrait hung higher, a seat face any way, and a chandelier can light the floor as a hung fire (`hang`).
+- [x] **The Librarian's household** in his rooms off the Library (src/folk/people.js, delve 'middleward'): Master Aldric
+  Pell, the Librarian; Wynn Pell, his ward, the map-maker; Ondine, once a sister of his Sanctuaries; Jory Tallis, once
+  quartermaster of the Armoury; Pip Carrow, the horn-blower. All loyal to Tessariel and showing nothing of it: recoloured
+  townsfolk bodies (tools/phobos/crowd_swaps.py: ink-black, umber, ash-grey, buff, his red), no name of hers, no oath,
+  no bells. Loaded late, as the crowd is (`late`), so a phone carries them only once it's on its way to Phobos. FOLK_MAX 84.
+- [x] **Seven quests** (src/folk/phobos-quests.js, words in src/folk/lines/phobos-castle.js): A Letter Down the
+  Aqueduct (Apricot, 75), The Household (75), Dust in the Stacks (76), Wynn's Map (78, walk four wings), The Quiet
+  Watch's Steel (80, the Armoury and Forge, then the dye works), The Hornwings (82), The Feast That Walks (88). Quest
+  places can now be a delve's room (`room:<id>`).
+- [x] **Auto-play** goes up to the Middle Ward through the Lower Ward's gate (`delveWay`), walks it (WAYS: the Feast last),
+  and now talks to anyone standing down a delve (`delveTalk`): the sewer-keepers, the princess and the household, by
+  the delve's portal or the gates between delves. (Before this it couldn't reach the people down the sewers at all.)
+- [x] **Critics, round 1** (2026-11-17, `art/phobos/east/middleward_r1.jpg`): veteran REJECT 5.5, young REJECT 5.5. Both:
+  the spear racks' rails crossed the shafts (crosses), the chandeliers' four chains (a cross in a ring from below), the
+  stills read as bells; no royal blue or forest green but on the monsters; the Court, Hall, Library and Gallery dark or
+  blank; portraits empty; the book spines a grille; the Hall's tables lost in the floor and its hearths' ember beds read
+  as lava; the oculus and the Conservatory's glass missing. Fixed: racks have no rails anywhere (a backboard and a
+  trough, the Lower Ward's too), chandeliers hang on three chains everywhere, the still is a brick furnace with a pot and
+  a swan neck; `royal` and `forest` tints (src/gfx/materials.js) for blue brocade, runners, hangings and table cloths in
+  the Gallery, Map Room, Library and Stacks, green hangings and glass in the Alchemists' Wing and Conservatory; painted
+  sitters in dark iron frames, three sizes, two rows, the secret door bigger, ajar, its swing scored in the boards;
+  spines at twice the size with shelf lips; cloths and plates on the Hall's tables, his red runner down the safe aisle, the
+  dais lit; hearths without the ember bed; the oculus and the glass as cold daylight (daylight props now give a light of
+  their own); the castle carved on the map table; jar shelves of green glass; horns smaller and strapped to a plate.
+  And the Plague Knights' cross on the floor (src/sim/moves.js, everywhere they stand: the Lower Ward's gate wardens, the
+  High Conduits' wardens, the Alchemists' Wing) is a ring now: three arms still read as a cross where two overlapped.
+- [ ] **Critics, round 2** (`art/phobos/east/middleward_r2.jpg`): veteran REJECT 6.5, young REJECT 6. Still to fix, for
+  round 3 (with the owner's castle pass): the still still reads as a hand-bell (make it a squat pot, wider than tall, a
+  long level swan neck into a coil); the oculus and the glass roof's glazing bars meet at a centre (parallel ribs, or
+  an odd number of spokes stopped at a hub ring) and light nothing (a real shaft and a pool on the floor); the portraits'
+  frames read pale beside the blue (blacken them) and the brocade reads purple (truer blue); the sitters are blocks
+  (a head-and-shoulders of five or six pieces, varied); liveries don't survive a thumbnail outside the Gallery (big lit
+  hangings, table and bench cloths, a sconce on each); the Court is still dark and the tree lost in it; the Hall's
+  table cloths read as a painted road line (a deep cloth with a border, candle clusters, the dais rim-lit); the Stacks'
+  spines still a grille (runs of varied height and colour, gaps, leaning books); monsters' line telegraphs that meet at a
+  right angle read as crosses (Inkshades' threads); the portal's cyan beside flame in the Court's shot.
+- [x] **Critics, round 3** (`art/phobos/east/middleward_r3.jpg`): **both REJECT, 6.5 each. Not passed.** No rule break
+  confirmed. Landed: the Gallery's royal blue and dark frames, the Map Room's blue rug and hangings, the still no longer
+  a bell. Their leftovers (the first two made after the round, unjudged: cloths the tables' full width in his dark
+  red, a pale round under the oculus and by the Conservatory's basin):
+  1. The Hall's table cloths read as a road's centre line; light the dais as the room's focus.
+  2. The oculus and the Conservatory's glass light nothing: a cool pool and a faint shaft under each.
+  3. The Court is a black void and its tree lost: moonlight, a rim on the tree, a readable sky.
+  4. Green livery too dark in the Alchemists' Wing; a sconce on each hanging; the still wants its coil and green glass seen.
+  5. The Library, the Stacks and the Alchemists' Wing are alike at a glance: one lit hero prop each.
+  6. Sitters still flat blocks: a shoulder silhouette, a dark ground, a vignette.
+  7. To check close: the Conservatory's glazing against the tree's limbs (spokes), a chequered hanging by the blue in
+     the Court, the Map Room's rug under the table from above.
+- [ ] **Not done in the Middle Ward**: the Clock Tower and the Menagerie wings themselves (chunk 9, with their keys);
+  the Librarian's deception magic; the horns sounded to change the patrols; Wynn's two other painted doors; a word when
+  you walk up to a shut keyed door; the Great Hall as a rest point once the Feast is dead (it respawns with the ward).
+- [ ] **The High Ward** (+115 m, 95–112): the Sanctuaries, the Ossuary Chapel, the Generals' Crypt, the Hall of Mirrors,
+  the Treasury, the Observatory, the Throne Antechambers; the Sexton of the High Ward (105). Its two ways in are both
+  keyed (the Sanctuaries Stair, the Drowned Archive's key; the Crypt door from the Oubliettes, the Alchemists'
+  Undercroft's), so it waits for chunk 9's first dungeons, or a third way in for now (the owner's call).
+- [ ] Dozens more castle quests.
 
 ## Chunk 9: the castle's eight dungeons and the idol — not started
 

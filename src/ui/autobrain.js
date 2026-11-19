@@ -50,8 +50,8 @@ import { LISANDRA } from '../folk/lines/lisandra.js';
 import { TUMBLER_SIZES } from '../sim/tumblers.js';
 import { TRADES, offerFor, worth } from '../folk/shops.js';
 import { GEMS, GEM_GRADES, ROBES, gearTotals, matName } from '../items/items.js';
-import { BOSSES, DELVES, delveByKey, delveOf, inDungeon, toWorld as caveWorld } from '../core/dungeon.js';
-import { caveStep, doHire, doWarrens, hireJob, hiring, perilsNear, tactics, warrensCoverage, warrensJob } from './autowarrens.js';
+import { BOSSES, DELVES, delveAt, delveByKey, delveOf, inDungeon, toWorld as caveWorld } from '../core/dungeon.js';
+import { caveStep, delveWay, doHire, doWarrens, hireJob, hiring, perilsNear, tactics, warrensCoverage, warrensJob } from './autowarrens.js';
 import { HallNav, STATIONS, hallAt, inArena, inHall } from '../core/testhall.js';
 import { thirdLead } from './autocam.js';
 import { LET_OUT, ONE_MORE, PACK_MAKER } from './folk.js';
@@ -218,7 +218,9 @@ const HUNTS = {
   waste: ['vigil_patrol_1', 'vigil_patrol_2', 'vigil_patrol_3', 'vigil_guard', 'waste_lancers', 'obelisk_guard'].map((k) => LAIRS.find((l) => l.key === k)).filter(Boolean).map((l) => [l.x, l.z]),
 };
 // Where to hunt for a kill step: its own grounds; a lair's glade; nowhere for a dungeon's (it goes down it instead).
-const huntsFor = (k) => HUNTS[k] || (k.startsWith('lair:') && area(k) ? [[area(k).x, area(k).z]] : DELVE_KEYS.includes(k) ? [] : null);
+// (A room down a delve, 'room:<id>', is that delve's: roomDelve.)
+const roomDelve = (k) => (typeof k === 'string' && k.startsWith('room:') ? DELVES.find((d) => d.rooms.some((r) => r.id === k.slice(5)))?.key ?? null : null);
+const huntsFor = (k) => HUNTS[k] || (k.startsWith('lair:') && area(k) ? [[area(k).x, area(k).z]] : DELVE_KEYS.includes(k) || roomDelve(k) ? [] : null);
 
 // The menu's grinding grounds (src/ui/autoplay.js GRINDS).
 export const GRINDS = {
@@ -1995,7 +1997,9 @@ export class Brain {
     // Once it's at the black knight, it sees him through (unless he's done it in, and it's falling back to mend).
     if (questing && this.job?.kind === 'boss' && this.blackKnight(this.snap) && m.hpf > 0.4) return this.job;
     // Down the Warrens, the Warrens; a party to hire when it's ready for one; then the Warrens themselves when it's strong enough.
-    if (inDungeon(m.x, m.z)) return this.mode === 'dungeons' ? this.dungeonJob(m) || warrensJob(this, m) : warrensJob(this, m);
+    // (But a word with someone who stands down a delve, the sewer-keepers, the princess, the Librarian's household, first:
+    // delveTalk. And a quest that wants a ward gone into from this one goes on through its gate: warrensJob, delveWay.)
+    if (inDungeon(m.x, m.z)) return this.mode === 'dungeons' ? this.dungeonJob(m) || warrensJob(this, m) : (questing && this.delveTalk(m)) || warrensJob(this, m, this.delveWants(m));
     const hire = hireJob(this, m);
     if (hire) return hire;
     // (With a quest still to do, only the dungeon a quest in hand wants: delveOwed. Round them for their own sake after.)
@@ -2109,6 +2113,26 @@ export class Brain {
   // The giver of a quest, or whoever a step's to be said to: their place in the town's list.
   personIndex(id) { return this.o.townUI.people.findIndex((p) => p.id === id); }
 
+  // A word with someone who stands down a delve (Phobos's sewer-keepers and their princess, the Librarian's household): a
+  // quest's word with them, or its giver to go back to, or work they have. Gone to by that delve's portal, or the gate to it
+  // from the one it's down (approach, delveWay). Asked down a delve: the rest of its talk waits till it's out.
+  delveTalk(m) {
+    const { townUI } = this.o, Q = townUI.quests;
+    const down = (i) => { const w = i >= 0 ? townUI.whereOf(i) : null; return !!w && !!delveAt(w.x, w.z); };
+    for (const [id, lvl] of PLAN_ALL) {
+      const s = Q.state(id), st = Q.step(id);
+      if (!s || s.stage === 'done' || !st) continue;
+      const q = QUESTS[id], who = st.talk ? this.personIndex(st.talk) : st.back ? this.personIndex(q.giver) : -1;
+      if (!down(who) || (st.talk && m.lvl < lvl + (this.bump[`q:${id}`] || 0))) continue;
+      const j = this.talkJob(who, 'quest', `${q.title}: to ${townUI.people[who].name}.`);
+      if (j) return { ...j, quest: id };
+    }
+    const o = this.offerJob(m);
+    return o && down(o.who) ? o : null;
+  }
+  // Whether a gate between delves shut till a boss has died is open: it has died, now or ever (src/sim/dungeon.js open).
+  gateOpen = (key) => this.o.townUI.quests.flags.has(`boss:${key}`) || !!this.o.game.party?.warrens?.down?.includes(key);
+
   // The party dungeons the quests it has in hand send it down, and is of a level for: to go in, to kill there, or for a boss.
   delveWants(m) {
     const Q = this.o.townUI.quests, out = [];
@@ -2116,7 +2140,9 @@ export class Brain {
       const st = Q.step(id);
       if (!st || m.lvl < lvl + (this.bump[`q:${id}`] || 0)) continue;
       const farm = st.bring && DELVE_KEYS.includes(st.at) && (this.o.pack.mats[st.bring] || 0) < st.n;
-      const k = st.boss ? BOSSES.find((b) => b.key === st.boss)?.delve : DELVE_KEYS.includes(st.enter) ? st.enter : DELVE_KEYS.includes(st.kill) ? st.kill : farm ? st.at : null;
+      // (And rooms down one to walk or kill in, 'room:<id>': its way through goes through every room. roomDelve.)
+      const seen = Q.state(id)?.seen || [], room = roomDelve(st.kill) || roomDelve(st.enter) || (st.visit || []).filter((v) => !seen.includes(v)).map(roomDelve).find(Boolean);
+      const k = st.boss ? BOSSES.find((b) => b.key === st.boss)?.delve : DELVE_KEYS.includes(st.enter) ? st.enter : DELVE_KEYS.includes(st.kill) ? st.kill : farm ? st.at : room;
       if (k && !out.includes(k)) out.push(k);
     }
     return out;
@@ -2134,7 +2160,7 @@ export class Brain {
     for (const [id, r] of Object.entries(RULES)) {
       if (Q.done(id)) continue;
       for (const st of r.steps || []) {
-        const k = st.boss ? BOSSES.find((b) => b.key === st.boss)?.delve : DELVE_KEYS.includes(st.enter) ? st.enter : DELVE_KEYS.includes(st.kill) ? st.kill : null;
+        const k = st.boss ? BOSSES.find((b) => b.key === st.boss)?.delve : DELVE_KEYS.includes(st.enter) ? st.enter : DELVE_KEYS.includes(st.kill) ? st.kill : roomDelve(st.kill) || roomDelve(st.enter) || (st.visit || []).map(roomDelve).find(Boolean) || null;
         if (k) out.add(k);
       }
     }
@@ -2190,8 +2216,8 @@ export class Brain {
       return null;
     }
     if (m.lvl < lvl + (this.bump[`q:${id}`] || 0)) return null;
-    // Down a party dungeon (to go in, to kill there, a boss of it): the delve's own work, with a party (delveWants).
-    if (st.boss || DELVE_KEYS.includes(st.enter) || DELVE_KEYS.includes(st.kill)) return null;
+    // Down a party dungeon (to go in, to kill there, a boss of it, a room of it to walk): the delve's own work, with a party (delveWants).
+    if (st.boss || DELVE_KEYS.includes(st.enter) || DELVE_KEYS.includes(st.kill) || roomDelve(st.kill) || roomDelve(st.enter) || (st.visit || []).some((v) => roomDelve(v) && !(s.seen || []).includes(v))) return null;
     if (st.enter) {
       if (st.night && !isNight(m.hour) && !(m.hour >= 19.5)) return null;
       const a = area(st.enter);
@@ -2498,7 +2524,8 @@ export class Brain {
     const lap = `lap ${this.laps + 1}`;
     // (With a party fit to go down: hireJob, before this, sees to one if it can pay. Down one already, that one.)
     const P = this.o.game.party, here = delveOf(m.x, m.z);
-    if (here && here.key !== d.key) return null;
+    // (Down the ward it's gone into from, the Lower for the Middle: on through its gate. doWarrens.)
+    if (here && here.key !== d.key && delveByKey(d.key)?.within !== here.key) return null;
     if (!here && !P?.fit()) return null;
     return { kind: 'warrens', why: `run:${d.key}`, delve: d.key, run: d.key, say: `Dungeon runs, ${lap}: ${here ? `down ${lower(d.name)}` : `to ${lower(d.name)}, with the party`}.` };
   }
@@ -2600,6 +2627,15 @@ export class Brain {
     // out: counted from the start, nobody more than a minute's walk off was ever reached. Ser Hale is 2.4 km from the
     // square; it gave him up 600 m down the road, turned back to grind, and set out again, for as long as it was watched.)
     if (!j.since || d < (j.best ?? Infinity) - 2) { j.since = this.t; j.best = d; }
+    // (Someone down a delve it isn't down: by that delve's portal, or the gate to it from the one it's in, and then on to them.)
+    const there = delveAt(w.x, w.z), here = delveOf(m.x, m.z);
+    if (there && here?.key !== there) {
+      const at = delveWay(here, delveByKey(there), this.gateOpen);
+      j.wayT ??= this.t; j.since = this.t;
+      if (!at || this.t - j.wayT > 900) { this.giveUp(`p:${j.who}`, 240); this.job = null; return; }
+      this.goTo(at[0], at[1], 0.4, true);
+      return;
+    }
     if (this.t - j.since > 75) { this.giveUp(`p:${j.who}`, 240); this.job = null; return; }
     // Face to face, and nothing between them: no wall, no shut door. (A quest isn't taken or handed in from the street
     // through the side of a house: it goes in at the door.)

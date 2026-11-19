@@ -131,6 +131,8 @@ export const VARIANTS = {
   pa_lamplighter: { src: 'night_demon_red', height: 3.8, name: 'THE LAMPLIGHTER' },
   // Castle Velscour's (src/core/delve-castle.js): the Gate Captain in his yard.
   cl_captain: { src: 'velscour_knight_6', alt: 'velscour_knight_1', height: 3.4, name: 'THE GATE CAPTAIN' },
+  // And the Middle Ward's: the Feast That Walks at his high table.
+  cm_feast: { src: 'plague_giant_2', alt: 'plague_giant_1', height: 4.8, name: 'THE FEAST THAT WALKS' },
 };
 // And the land's new kinds (src/core/wilds.js): a palette, a size, a name and tricks of their own on the old bodies.
 Object.assign(VARIANTS, WILD_VARIANTS);

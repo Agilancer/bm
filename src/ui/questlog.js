@@ -61,6 +61,9 @@ export function areaSpot(k) {
   // A party dungeon: its portal, out in the land. The Waste, where Velscour's knights ride: the Vigil Road through it.
   const d = DELVES.find((q) => q.key === k);
   if (d) return { x: d.portal.x, z: d.portal.z, name: `${d.name}: its portal` };
+  // A room down one ('room:<id>'): its delve's portal, named for the room.
+  const rd = k.startsWith('room:') ? DELVES.find((q) => q.rooms.some((r) => r.id === k.slice(5))) : null;
+  if (rd) { const n = rd.rooms.find((r) => r.id === k.slice(5)).name; return { x: rd.portal.x, z: rd.portal.z, name: `${n[0].toUpperCase()}${n.slice(1)}, in ${rd.name}` }; }
   if (k === 'waste') return { x: -4250, z: -200, r: 700, name: 'The Ashen Waste, along the Vigil Road' };
   // A lair (src/core/tripo-monsters.js LAIRS): its glade, named by the nearest place.
   const at = placeSpot(k);

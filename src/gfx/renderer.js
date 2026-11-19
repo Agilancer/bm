@@ -12,7 +12,7 @@ import { WORLD_EAST, WORLD_EDGE } from '../core/lands.js';
 import { roadSegments } from '../core/roads.js';
 import { PORTAL_MODELS, buildSites, buildUnder, dropSiteGeometry } from '../core/sites.js';
 import { PhobosNear } from './phobos-near.js';
-import { DELVES, PORTAL_SPOTS, braziers, caveFloorY, delveAt, inDungeon, torches } from '../core/dungeon.js';
+import { DELVES, PORTAL_SPOTS, braziers, caveFloorY, caveRoofY, delveAt, inDungeon, torches } from '../core/dungeon.js';
 import { DOOR, HALL, hallLights, inHall } from '../core/testhall.js';
 import { SlimeBodies } from './slimes.js';
 import { DUST_AT, OPENING, SWAP_AT, prettyShown } from '../core/opening.js';
@@ -108,7 +108,7 @@ const LINEAR_DEPTH = 'r16float';
 const DEPTH = 'depth32float';
 const FLAT = { iron: 100, flame: 101, water: 102, fruit: 103, fruit2: 104, white: 106, tile: 107, glow: 108, lake: 110, falls: 111, ice: 112, seal: 113, obsidian: 114, gold: 115, voidglass: 116, magma: 117, rune: 118, storm: 119 };
 // A painting in another light (src/core/sites.js): its layer plus a thousand times which (materials.js STATIC).
-const TINTS = { dark: 1, pale: 2, frost: 3, mire: 4, spore: 5, void: 6, slate: 7, blood: 8, moss: 9, umber: 10, soot: 11, eve: 12, char: 13 };
+const TINTS = { dark: 1, pale: 2, frost: 3, mire: 4, spore: 5, void: 6, slate: 7, blood: 8, moss: 9, umber: 10, soot: 11, eve: 12, char: 13, royal: 14, forest: 15 };
 const MAX_GROUND = 160;
 // The portals (portalModel): the Warrens' three in their walls, at these spots (src/core/sites.js portalWall), and a seal's at
 // every seal (seal_*). How big each is drawn is PORTAL_MODELS's. SWIRL: each one's whirl for the shader (src/gfx/materials.js
@@ -553,6 +553,9 @@ export class Renderer {
       for (const [x, y, z, lift, how] of braziers(d)) warrens.push(how === 'hang'
         ? { p: [x, y + lift - 1.6, z], c: L.fire, r: 17 * Math.min(g, 1.4), i: 30 * g, flicker: 0.5 * cold }
         : { p: [x, y + (lift ?? 1.9), z], c: L.fire, r: (lift > 4 ? 22 : 15) * g, i: (lift > 4 ? 6.5 : 5.2) * g, flicker: 0.9 * cold });
+      // (Daylight down a shaft or through glass, src/core/delve-build.js daylight: cold and steady, from just under the roof, and
+      // kept among the frame's lights before the torches round it: the Sunk Garden's, the Library's oculus, the Conservatory.)
+      for (const p of d.props) if (p.kind === 'daylight') { const x = d.x + p.x, z = d.z + p.z, fy = caveFloorY(x, z); warrens.push({ p: [x, Math.min(caveRoofY(x, z) - 2.2, fy + 6.5), z], c: [0.7, 0.78, 0.95], r: 20 + p.r * 2.5, i: 70 + p.r * 8, flicker: 0, prio: 80 }); }
       // (The Elder Gods' islands: the Galeward's pylons, the Cinderwell's vent, the altar, the Rimespire's claws. src/core/delve-build.js)
       if (d.style === 'void') for (const p of d.props) {
         const x = d.x + p.x, z = d.z + p.z, y = caveFloorY(x, z);
@@ -568,8 +571,9 @@ export class Renderer {
     this.portalOutLights = [];
     // (A gate from one of Phobos's sewers into the next is lit the colour of where it goes: green to the West Drains, blue to
     // the Slough Mains, violet to the Charnel Runs, amber to the High Conduits. src/core/delve-sewers.js links.)
-    const gateTint = {};
-    for (const d of DELVES) (d.links || []).forEach((l, i) => { gateTint[`${d.tag}_l${i}`] = DELVES.find((q) => q.key === l.to)?.look.light; });
+    // (And one shut till a boss has died, src/core/delve-castle.js shut, is dark till it's open: gateOpen.)
+    const gateTint = {}, gateShut = {};
+    for (const d of DELVES) (d.links || []).forEach((l, i) => { gateTint[`${d.tag}_l${i}`] = DELVES.find((q) => q.key === l.to)?.look.light; if (l.shut) gateShut[`${d.tag}_l${i}`] = l.shut; });
     for (const key of PORTAL_SPOTS) {
       if (!portalSpots[key]) continue;
       const [x, y, z, yaw] = portalSpots[key];
@@ -577,6 +581,7 @@ export class Renderer {
       warrens.push(L);
       const out = DELVES.find((d) => key === `${d.tag}_out`);
       if (out) this.portalOutLights.push({ L, d: out });
+      if (gateShut[key]) this.portalOutLights.push({ L, shut: gateShut[key] });
     }
     for (const key in portalSpots) {
       if (!key.startsWith('seal_')) continue;
@@ -784,7 +789,7 @@ export class Renderer {
   packParts(parts, groups = null, keep = 'door:') {
     const prims = [];
     for (const [name, part] of parts) {
-      const m = /^(dark|pale|frost|mire|spore|void|slate|blood|moss|umber|soot|eve|char):(.*)$/.exec(name), base = m ? m[2] : name;
+      const m = /^(dark|pale|frost|mire|spore|void|slate|blood|moss|umber|soot|eve|char|royal|forest):(.*)$/.exec(name), base = m ? m[2] : name;
       const layer = this.layerOf(base);
       prims.push({ name, layer: layer + (m ? TINTS[m[1]] * 1000 : 0), cutout: this.cutOf(layer) ? 1 : 0, ...part });
     }
@@ -834,7 +839,7 @@ export class Renderer {
     const { parts, groups } = buildUnder(key);
     const prims = [];
     for (const [name, part] of parts) {
-      const m = /^(dark|pale|frost|mire|spore|void|slate|blood|moss|umber|soot|eve|char):(.*)$/.exec(name), base = m ? m[2] : name;
+      const m = /^(dark|pale|frost|mire|spore|void|slate|blood|moss|umber|soot|eve|char|royal|forest):(.*)$/.exec(name), base = m ? m[2] : name;
       const layer = this.layerOf(base);
       prims.push({ name, layer: layer + (m ? TINTS[m[1]] * 1000 : 0), cutout: this.cutOf(layer) ? 1 : 0, ...part });
     }
@@ -906,7 +911,7 @@ export class Renderer {
     this.staticLayers = { layerNames, layers };
     const sites = buildSites(true, !!this.tier.lean);
     for (const [name, part] of sites.parts) {
-      const m = /^(dark|pale|frost|mire|spore|void|slate|blood|moss|umber|soot|eve|char):(.*)$/.exec(name), base = m ? m[2] : name;
+      const m = /^(dark|pale|frost|mire|spore|void|slate|blood|moss|umber|soot|eve|char|royal|forest):(.*)$/.exec(name), base = m ? m[2] : name;
       const layer = this.layerOf(base);
       const cutout = this.cutOf(layer);
       prims.push({ name, layer: layer + (m ? TINTS[m[1]] * 1000 : 0), cutout, pos: part.pos, nrm: part.nrm, uv: part.uv, idx: part.idx });
@@ -1808,16 +1813,22 @@ export class Renderer {
   // A delve's way out is open once its last boss is down (the sim's word, by src/main.js: delveState; src/sim/dungeon.js lets
   // you through it by the same rule). Till then it's drawn gone out: no glow, no whirl, no motes, no light.
   portalOpen(d) { const W = this.delveState; return !!W && W.delve === d.key && !!W.down?.includes(d.last); }
+  // A gate between delves shut till a boss has died: open once it has, now (the sim's word) or ever (the quests': bossFlags,
+  // from src/main.js). As src/sim/dungeon.js open.
+  gateOpen(key) { return !!this.bossFlags?.has(`boss:${key}`) || !!this.delveState?.down?.includes(key); }
 
   makePortals() {
     const { spots } = buildSites(), out = [];
-    const put = (kind, [x, y, z, yaw], way = null) => {
+    // (shut: the boss whose death opens a gate between delves: dark till then, gateOpen.)
+    const shuts = {};
+    for (const d of DELVES) (d.links || []).forEach((l, i) => { if (l.shut) shuts[`${d.tag}_l${i}`] = l.shut; });
+    const put = (kind, [x, y, z, yaw], way = null, shut = null) => {
       const { scale: S, sink } = PORTAL_MODELS[kind], c = Math.cos(yaw), s = Math.sin(yaw);
       const mat = new Float32Array([S * c, 0, -S * s, 0, 0, S, 0, 0, S * s, 0, S * c, 0, x, y - sink, z, 1]);
-      const at = { kind, x, y: y - sink, z, c, s, S, out: way };   // (out: the delve whose way out this is. Not named `out` here: that's the list.)
+      const at = { kind, x, y: y - sink, z, c, s, S, out: way, shut };   // (out: the delve whose way out this is. Not named `out` here: that's the list.)
       out.push({ portal: `${kind}_stone`, mat, at }, { portal: `${kind}_swirl`, mat, at });
     };
-    for (const key of PORTAL_SPOTS) if (spots[key]) put('dungeon', spots[key], DELVES.find((d) => key === `${d.tag}_out`));
+    for (const key of PORTAL_SPOTS) if (spots[key]) put('dungeon', spots[key], DELVES.find((d) => key === `${d.tag}_out`), shuts[key]);
     for (const key in spots) if (key.startsWith('seal_')) put('ground', spots[key]);
     return out;
   }
@@ -3104,8 +3115,8 @@ export class Renderer {
     for (const g of this.bellItems) drawn.push(g);
     this.portalItems ||= this.makePortals();
     if (this.portalItems.length && !this.portalModels) this.portalModel();
-    for (const o of this.portalOutLights || []) o.L.dim = this.portalOpen(o.d) ? 1 : 0;
-    for (const g of this.portalItems) { g.off = !!g.at.out && !this.portalOpen(g.at.out); if ((g.at.x - cam.x) ** 2 + (g.at.z - cam.z) ** 2 < 600 ** 2) drawn.push(g); }
+    for (const o of this.portalOutLights || []) o.L.dim = (o.shut ? this.gateOpen(o.shut) : this.portalOpen(o.d)) ? 1 : 0;
+    for (const g of this.portalItems) { g.off = g.at.shut ? !this.gateOpen(g.at.shut) : !!g.at.out && !this.portalOpen(g.at.out); if ((g.at.x - cam.x) ** 2 + (g.at.z - cam.z) ** 2 < 600 ** 2) drawn.push(g); }
     // The Test Dungeon's door, sliding up into its wall and down again (src/core/testhall.js), from wherever in the hall you are.
     if (inHall(cam.x, cam.z)) drawn.push(this.hallDoorItem(dt));
     this.stallItems ||= this.makeStalls();

@@ -16,13 +16,16 @@ import { HUB, inHub, hubPost } from '../src/core/phobos-hubs.js';
 import { phobosHouses } from '../src/core/phobos-build.js';
 import { questLevel } from '../src/ui/autobrain.js';
 import { describe as describeWho } from '../src/ui/questlog.js';
-import { delveByKey, toWorld } from '../src/core/dungeon.js';
+import { delveByKey, roomOf, toWorld } from '../src/core/dungeon.js';
 
 const IDS = Object.keys(PHOBOS_RULES);
 const WHO = new Set([...FOLK, ...BEYOND].map((p) => p.id));
 const HUBFOLK = POSTED.filter((p) => p.hub);
 // Where to stand for a place: a delve's (the sewers') is down in its first hall past the way in, not at its mouth on the land.
-const spotIn = (k) => { const d = delveByKey(k); if (!d) return placeSpot(k); const r = d.rooms[1], [x, z] = toWorld(r.x, r.z, d); return { x, z }; };
+const spotIn = (k) => {
+  // (A room down a delve, 'room:<id>': its middle.)
+  if (k.startsWith('room:')) { const r = roomOf(k.slice(5)), [x, z] = toWorld(r.x, r.z, r.delve); return { x, z }; }
+  const d = delveByKey(k); if (!d) return placeSpot(k); const r = d.rooms[1], [x, z] = toWorld(r.x, r.z, d); return { x, z }; };
 const book = () => new QuestBook({ change() {}, toast() {}, done() {} });
 
 test('three hubs, each with its giver in its own yard, clear of the lairs and of the houses', () => {

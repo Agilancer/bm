@@ -559,6 +559,10 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
       if (tintK == 11u) { albedo = mix(albedo, vec3f(lum * 0.62) * vec3f(0.62, 0.55, 0.5), 0.8); rough = max(rough, 0.72); }
       // (And the Keep's own, 'char': near black, and matte, so the sun on a round shaft doesn't turn it silver.)
       if (tintK == 13u) { albedo = vec3f(lum * 0.5) * vec3f(0.52, 0.47, 0.47); rough = max(rough, 0.8); }
+      // (And two of his liveries in Castle Velscour's wings, docs/PHOBOS-LAYOUT.md: royal blue, and forest green. Never gold
+      // beside the blue.)
+      if (tintK == 14u) { albedo = mix(albedo, vec3f(lum * 1.5 + 0.05) * vec3f(0.13, 0.27, 0.9), 0.94); }
+      if (tintK == 15u) { albedo = mix(albedo, vec3f(lum * 1.4 + 0.04) * vec3f(0.2, 0.56, 0.2), 0.92); }
     }
     // Phobos's walls weathered: rain-streaks down every face from whatever's over it, and a broad blotching, so a drum a
     // hundred metres high isn't one even tone. (Only there, in the box of the city and the crag: src/core/phobos-build.js.)

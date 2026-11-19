@@ -78,6 +78,8 @@ AREAS.waste = (x, y, z) => Math.hypot(x, z) > 1700 && y > -20 && countryAt(x, z)
 // Any other of the land's places, by its key; down in a party dungeon, by its; and the ground round a lair.
 for (const k of Object.keys(SITES)) AREAS[k] ??= near(k, 1.2);
 for (const d of DELVE.DELVES || []) AREAS[d.key] = (x, y, z) => DELVE.delveAt?.(x, z) === d.key;
+// And one of a delve's rooms ('room:<id>'): stood in it. (Castle Velscour's wings: src/folk/phobos-quests.js.)
+for (const d of DELVE.DELVES || []) for (const r of d.rooms) AREAS[`room:${r.id}`] = (x, y, z) => { const lx = x - d.x - r.x, lz = z - d.z - r.z; return r.hx !== undefined ? Math.abs(lx) < r.hx && Math.abs(lz) < r.hz : Math.hypot(lx, lz) < r.r; };
 export const LAIR_REACH = 70;
 for (const l of LAIRS) AREAS[`lair:${l.key}`] = (x, y, z) => Math.hypot(x - l.x, z - l.z) < l.r + LAIR_REACH;
 // City State Phobos: anywhere inside its wall ('phobos'), and each of its districts ('ph:<key>', src/core/phobos-data.js).
@@ -102,6 +104,9 @@ export function placeSpot(k) {
   if (k.startsWith('ph:')) { const d = PHOBOS.districts.find((q) => q.key === k.slice(3)); return d ? { x: d.x, z: d.z, near: d.r * 0.5 } : null; }
   const p = delvePortal(k);
   if (p) return { x: p.x, z: p.z, near: 3, delve: k };
+  // A room down one ('room:<id>'): that delve's portal.
+  const rd = k.startsWith('room:') ? (DELVE.DELVES || []).find((q) => q.rooms.some((r) => r.id === k.slice(5))) : null;
+  if (rd) return { ...placeSpot(rd.key), room: k.slice(5) };
   return SITES[k] ? { x: SITES[k].x, z: SITES[k].z, near: SITES[k].r * 0.8 } : null;
 }
 

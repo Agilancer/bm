@@ -1553,6 +1553,10 @@ class GameView {
     // (Phobos's after Bellmourn's: their swung leaves join the drawn doors that that's just started afresh.)
     const phDoor = this.phDoors.update(dt, snap[H.PX], snap[H.PY], snap[H.PZ], this.input.yaw);
     this.nearDoor = this.input.enabled && !this.input.menu ? door || phDoor : null;
+    // (Which bosses have ever died, told to the sim when it changes: Castle Velscour's gates that a death opens. src/sim/dungeon.js open.)
+    const fl = this.townUI?.quests.flags;
+    this.renderer.bossFlags = fl;
+    if (fl && (fl !== this.flagsSent || fl.size !== this.flagsN)) { this.flagsSent = fl; this.flagsN = fl.size; this.sim?.postMessage({ type: 'bossesDown', keys: [...fl].filter((f) => f.startsWith('boss:')).map((f) => f.slice(5)) }); }
     const rope = this.bells.update(dt, snap[H.PX], snap[H.PY], snap[H.PZ], this.input.yaw);
     // Someone to talk to, if there's nothing to take or open first.
     const free = this.input.enabled && !this.input.menu && !d && !this.nearChest;

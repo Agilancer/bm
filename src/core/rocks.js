@@ -10,7 +10,7 @@ import { CAVE_PATH, PATHS, PLOTS, ROADS, fbm, hash2, nearest, openingTerrain, se
 import { forestAmount } from './forest.js';
 import { inCaveBox, onWay } from './opening.js';
 import { CLIFF, COUNTRY_KEYS, MOUNT, WATERS, countryWeights, groundCover, routeDist, siteAt } from './lands.js';
-import { cityIn } from './east.js';
+import { CRAG as CASTLE_CRAG, cityIn } from './east.js';
 import { churchSite } from './church.js';
 import { PORTAL } from './dungeon.js';
 import { huntEdge } from './hunts.js';
@@ -62,6 +62,8 @@ export function roadEdge(x, z) {
 // Nowhere a stone may lie: the town, the church's ground, the houses' plots, the cave, the places, the water, the cliff's face.
 function barred(x, z) {
   if (x > 9200 && x < 10900 && cityIn(x, z) < 1.105) return true;   // (nothing lies about in Phobos's streets: src/core/phobos-build.js dresses them; nor in its moat, under the water, nor on its lip)
+  // (Nor on the castle's crag, among its wards and under its Keep: paved yards and bare rock, his. src/core/east.js CRAG.)
+  if (x > 10700 && ((x - CASTLE_CRAG.x) / (CASTLE_CRAG.a + 20)) ** 2 + ((z - CASTLE_CRAG.z) / (CASTLE_CRAG.b + 20)) ** 2 < 1) return true;
   if (Math.hypot(x, z) < TOWN) return true;
   // (And the town's east end, built since on the ground the church stood on: the manor, the bakehouse and the herbalist's. A boulder
   // lay against the herbalist's wall, and stones in the manor's forecourt.)

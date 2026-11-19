@@ -219,7 +219,7 @@ class Sim {
     const px = ex + rx * THIRD.side * side, py = ey + THIRD.up, pz = ez + rz * THIRD.side * side;
     // (As far back as the wheel can take it (src/ui/view.js), and the drawing thread keeps to what it's asked for. Not under a
     // roof, nor down below: there it's V's own, as ever, since the ceilings aren't in the walls it's tested against.)
-    const house = floorAt(p.x, p.z) !== null || homeFloor(p.x, p.z, p.y) !== null || underRoof(p.x, p.z, p.y);
+    const house = floorAt(p.x, p.z) !== null || homeFloor(p.x, p.z, p.y) !== null || underRoof(p.x, p.z, p.y) || w.indoors(p.x, p.z);
     const roofed = house || p.y < -6 || inChurch(p.x, p.y + 1, p.z) || inDungeon(p.x, p.z) || inHall(p.x, p.z);
     const most = roofed ? THIRD.dist : THIRD.far;
     let dist = c.trace(this, px, py, pz, -fx, -fy, -fz, most + THIRD.skin) - THIRD.skin;
@@ -781,6 +781,8 @@ async function boot(msg) {
     // (Your own level: the other Tessariels out in the world keep pace with it.)
     if (m.type === 'playerLevel') sim.heroWorld?.keepPace(m.level);
     if (m.type === 'warrensDebug') sim.warrens?.debug?.(m);
+    // (Every boss that's ever died, from the render thread's quests: the castle's gates that open on a death. src/sim/dungeon.js open.)
+    if (m.type === 'bossesDown') { if (sim.warrens) sim.warrens.ever = new Set(m.keys); }
     if (m.type === 'hall') sim.testHall?.message(m);
     // What's been bought in the six trees (src/items/skillbook.js): the spells are cast with it from now on.
     if (m.type === 'skills') { sim.casting.setSkills(m.ranks); return; }
