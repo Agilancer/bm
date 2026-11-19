@@ -1329,8 +1329,20 @@ function landmarks(K) {
   // (Each one's towers are gone into, a room on every floor and somebody's things in it: src/core/phobos-towers.js
   // landmarkTowers, which stands them where they were, or clear of what they were built against.)
   { const d = { x: D.bones.x + 14, z: D.bones.z - 62 }, y = Y(d.x, d.z); hall(K, 'dark:ashlar', 'soot:roof_2', d.x, y - 2, d.z, 64, 56, 21, 0.2, { pitch: 1.1 }); }
-  // Chainmarket: the gibbet tower in the square's middle, chains out from its head.
-  { const d = { x: D.market.x + 4, z: D.market.z - 34 }, top = Y(d.x, d.z) + 72; for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; K.beam('iron', [d.x + Math.cos(a) * 7, top - 3, d.z + Math.sin(a) * 7], [d.x + Math.cos(a) * 30, top - 40, d.z + Math.sin(a) * 30], 0.45); } }
+  // Chainmarket: the gibbet tower in the square's middle, its head ringed with gibbet arms: a braced iron arm out from the
+  // wall, a chain down from its end, and a cage on it, swung out over the square for the whole market to see.
+  { const d = { x: D.market.x + 4, z: D.market.z - 34 }, top = Y(d.x, d.z) + 72;
+    for (let i = 0; i < 8; i++) {
+      const a = (i + 0.5) / 8 * TAU, c = Math.cos(a), sn = Math.sin(a), at = (r, y) => [d.x + c * r, y, d.z + sn * r];
+      const ay = top - 5, reach = 15, cy = ay - 5.2, R = 1.15, H = 2.7;
+      K.beam('iron', at(7.4, ay), at(reach + 0.4, ay), 0.22);              // (the arm)
+      K.beam('iron', at(7.6, ay - 6), at(reach - 2.5, ay - 0.15), 0.14);   // (its brace, back to the wall)
+      K.beam('iron', at(reach, ay), at(reach, cy + H + 0.1), 0.05);            // (the chain)
+      const [cx, , cz] = at(reach, 0);
+      K.drum('iron', cx, cy + H, cz, R, 0.45, 6, { r2: 0.35, open: true, collide: false });   // (the cage's head)
+      for (let k = 0; k < 6; k++) { const b = k / 6 * TAU; K.beam('iron', [cx + Math.cos(b) * R, cy + H, cz + Math.sin(b) * R], [cx + Math.cos(b) * R, cy, cz + Math.sin(b) * R], 0.045); }
+      K.drum('iron', cx, cy - 0.12, cz, R + 0.05, 0.14, 6, { collide: false });                     // (and its floor)
+    } }
   // The Barracks Ward: the parade ground's four corner forts, the long drill hall, and the Marshal's tower over it.
   { const d = D.barracks, y = Y(d.x, d.z); hall(K, 'block', 'roof_2', d.x, y - 1, d.z - 84, 54, 26, 13, 0, { buttress: false }); K.cone('roof_2', d.x + 70, y + 82, d.z - 84, 15, 30, 4, Math.PI / 4); }
   // The Mages' Rise: the Tower of the Ninefold Eye, taller than anything in the city, and two lesser by it.
