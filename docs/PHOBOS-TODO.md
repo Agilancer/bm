@@ -661,6 +661,32 @@ world's north edge, east of them. Gone in alone (party: false), as the sewers ar
   Undercroft's), so it waits for chunk 9's first dungeons, or a third way in for now (the owner's call).
 - [ ] Dozens more castle quests.
 
+- [x] **The city and the castle, twice over (2026-11-19), branch `claude/sharp-cori-de0kwb`.** Two passes, the critics
+  three rounds each; **both approved pass 2** (pass 1: the veteran approved, the young one held out on the Keep and the
+  Slough, which pass 2 took up). Shots: `node tools/phobos/city_shots.mjs` (new street-level `p2_*`, `castle_up_*`;
+  `EVAL=<js>` logs a value off the page, `CONSOLE=1` the console's errors and shader messages).
+  - The Approach a walled causeway from `APPROACH_WALL` (src/core/east.js): its sides sheer, buttressed retaining walls
+    and a parapet, rubble down the banks below. The gate passage lit: fire baskets down both walls, the lanterns stronger.
+  - The Keep's bridges (`bridge()`, phobos-build.js) drawn as faces along their fall and arch, not stepped boxes; piers
+    only where they come down on the rock (one hung in the air under a deck was a T from the yard). Its fins half as deep.
+  - Curtains buttressed in their own stone (pale, they were seams) with a corbelled shelf under the merlons. Towers'
+    bands half a step up from soot (`dark:`), no longer blue rings.
+  - Life: chimney smoke from the near houses (`smokes`, src/gfx/phobos-near.js), crows over the Keep's crown, the yard,
+    the Bone Yards and the gibbet (particle kind 12), ash falling round you in the Cinder quarter (kind 13). Neither
+    shows in the stills: the software renderer gets a frame every ten seconds or so.
+  - The Slough 'mire:water' in the ground shader: murky green-brown, dull, a slow drift; its scum dark round blots.
+  - Window glass: `slate:iron` and `eve:flame` by day darker and duller. (Flat layers like iron take no tint:
+    `char:iron` is bare iron, a mirror, and was paler.)
+  - Kerbs `char:stone`; crates, barrels and sacks in the city's box sooted (src/core/places.js `inPhobos`); awnings
+    hessian; lamp posts dark wood; street lamps first for the frame's twelve lights (`prio: 8`).
+  - The castle crag's ground near half as dark in the terrain shader (src/gfx/materials.js, CRAG from east.js).
+  - **Left open:** the crag's sheer faces stretch the ground texture into streaks, a white zig-zag on their tops (the
+    terrain shader's, the whole land's, so not touched); the Keep's faces show a grid of dark bays in the afternoon
+    sun (shadows off the fins and cornices: gone by morning); some slabs that stand up out of the High Loop's walks near
+    (10480, -250), not traced; the King's Mile's roadway dark at dusk (its lamps on the walks); sacks still cones; the
+    castle yard wants a reason to cross it (a cart, people at work); boats on the quay low on detail. Corners: PC
+    1,595,937 of 1,600,000, phone 899,228 of 950,000, so anything more on the land wants something taken off first.
+
 ## Chunk 9: the castle's eight dungeons and the idol — not started
 
 The Drowned Archive, the Iron Barracks, the Gallery of a Thousand Portraits, the Clockworks, the Alchemists' Undercroft, the
