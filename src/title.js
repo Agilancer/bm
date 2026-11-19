@@ -48,7 +48,7 @@ const store = {
 
 const SETTINGS_KEY = 'velscour.settings';
 // keep: whether the game's files are kept on this device (coi-sw.js), asked once before the title ('ask' until then).
-export const settings = { volume: 0.8, music: 0.7, ambience: 0.8, look: 1, res: 'auto', gfx: 'auto', perf: 'off', tags: 'full', bubbles: 'on', chatlog: 'on', heroes: 'auto', keep: 'ask', autohide: 'off', autohideMap: 'on', autohideChat: 'on', autocam: 'director', autoread: 'on', autotell: 'on', phobosAwe: 'on' };
+export const settings = { volume: 0.8, music: 0.7, ambience: 0.8, look: 1, res: 'auto', gfx: 'auto', perf: 'off', tags: 'full', bubbles: 'on', chatlog: 'on', heroes: 'auto', keep: 'ask', autohide: 'off', autohideMap: 'on', autohideChat: 'on', autocam: 'director', autoread: 'on', autotell: 'on', phobosAwe: 'on', ticker: 1, background: 'run', bgSound: 'on' };
 // What auto-play sees to by itself (src/ui/autobrain.js allow()): each 'on' or 'off'. Off, it's left for you to do.
 // [key, what it is, on, off]
 export const AI_PARTS = [
@@ -87,6 +87,9 @@ const SETTINGS = `
     <label><span>Music</span><input data-k="music" type="range" min="0" max="1" step="0.05"></label>
     <label><span>Ambience</span><input data-k="ambience" type="range" min="0" max="1" step="0.05"></label>
     <label><span>Look speed</span><input data-k="look" type="range" min="0.4" max="2.5" step="0.1"></label>
+    <label><span>Emergency bar size</span><input data-k="ticker" type="range" min="1" max="2.5" step="0.1"></label>
+    <label><span>When the game's out of sight</span><select data-k="background"><option value="run">Keeps running</option><option value="auto">Keeps running in auto-play only</option><option value="pause">Pauses</option></select></label>
+    <label><span>Sound while out of sight</span><select data-k="bgSound"><option value="on">Keeps playing</option><option value="off">Muted</option></select></label>
     <label><span>Resolution</span><select data-k="res"><option value="auto">Auto (holds the frame rate)</option><option value="1">Full</option><option value="0.75">75%</option><option value="0.5">Half</option></select></label>
     <label><span>Graphics</span><select data-k="gfx"><option value="auto">Auto (from your GPU)</option><option value="ultra">Ultra</option><option value="high">High</option><option value="medium">Medium (laptops)</option><option value="mobile">Low</option></select></label>
     <label><span>Names over heads</span><select data-k="tags"><option value="full">Names and guilds</option><option value="names">Names only</option><option value="off">Off</option></select></label>
