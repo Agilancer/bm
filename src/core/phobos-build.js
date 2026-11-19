@@ -633,6 +633,20 @@ export function spiral(K, layer, cx, cz, r, y0, y1, a0 = 0, dir = 1, o = {}) {
       K.quad(layer, P(s1, ri, b1), P(s1, ro, b1), P(s1, ro, y), P(s1, ri, y), [-Math.sin(s1), 0, Math.cos(s1)]);
     } else if (layer && (!K.lean || k % 4 === 0)) K.box(layer, x, y - th, z, hw, th, K.lean ? half * 4 : half, -a, { collide: false });
   }
+  // (o.enclose: the stair walled and roofed as it winds, three steps to a stretch, an arrow slit every fifth and some lit:
+  // a stair open round the outside of a tower is no stair a castle would have, the owner, 2026-11-19. Not on a phone.)
+  if (o.enclose && layer && !K.lean) {
+    const ro = r + hw + 0.4, ri = r - hw, Q = (an, rr, yy) => [cx + Math.cos(an) * rr, yy, cz + Math.sin(an) * rr];
+    for (let k0 = 0, j = 0; k0 < n; k0 += 3, j++) {
+      const k1 = Math.min(n, k0 + 3), A0 = a0 + dir * k0 * da, A1 = a0 + dir * k1 * da, Y0 = y0 + k0 * rise, Y1 = y0 + k1 * rise, am = (A0 + A1) / 2;
+      const out = [Math.cos(am), 0, Math.sin(am)], inw = out.map((v) => -v);
+      K.quad(o.enclose, Q(A0, ro, Y0 - 1.2), Q(A1, ro, Y1 - 1.2), Q(A1, ro, Y1 + 3.6), Q(A0, ro, Y0 + 3.6), out);
+      K.quad(o.enclose, Q(A0, ro - 0.4, Y0), Q(A1, ro - 0.4, Y1), Q(A1, ro - 0.4, Y1 + 3.4), Q(A0, ro - 0.4, Y0 + 3.4), inw);
+      K.quad(o.enclose, Q(A0, ri, Y0 + 3.6), Q(A1, ri, Y1 + 3.6), Q(A1, ro + 0.3, Y1 + 3.6), Q(A0, ro + 0.3, Y0 + 3.6), [0, 1, 0]);
+      K.quad(o.enclose, Q(A0, ri, Y0 + 3.4), Q(A1, ri, Y1 + 3.4), Q(A1, ro, Y1 + 3.4), Q(A0, ro, Y0 + 3.4), [0, -1, 0]);
+      if (j % 5 === 2) { const w = 0.2 / ro, ym = (Y0 + Y1) / 2 + 0.9; K.quad(hash2(Math.round(cx + j), Math.round(cz)) < 0.3 ? 'eve:flame' : 'slate:iron', Q(am - w, ro + 0.02, ym), Q(am + w, ro + 0.02, ym), Q(am + w, ro + 0.02, ym + 1.5), Q(am - w, ro + 0.02, ym + 1.5), out); }
+    }
+  }
   walk(K, rects);
   return a0 + dir * n * da;
 }
@@ -1462,7 +1476,8 @@ export function phobosCastle(K) {
   // a wall seen from the city. The critics, round 2.)
   // (Its foot course and pilasters a step lighter, in the towers' granite: the ashlar's own lighter step is near white,
   // and a pale course across a dark face read as a cross from the gate. The V/T rule.)
-  const BL = { crenel: true, lite: 'p2_curtain_granite' };
+  // (vee: his swallowtail merlons, a V cut in each, all along the castle's walls: Kit.vee, src/core/sites.js.)
+  const BL = { crenel: true, lite: 'p2_curtain_granite', vee: true };
   // (The towers in the curtains' own ashlar, as dark: in the granite they stood pale grey against near-black walls, two
   // castles in one. The halls keep the granite, a step lighter than the walls round them.)
   const S = 'soot:p2_curtain_granite', C = 'soot:p2_bridge_ashlar', B = 'soot:p2_bridge_ashlar', R = 'blood:p2_blood_tiles', RT = 'p2_fishscale_slate';
@@ -1722,9 +1737,9 @@ export function phobosKeep(K) {
   // The way up the trunk's outside from the body's top step: a stair winding round its third stage, by a gallery at 560
   // where the Blood Spire's bridge lands, to the gallery at its head; then round the fourth to the crown's floor.
   { let a = Math.PI + 0.9;
-    a = spiral(K, G, x, z, 35.6, P(STEPS[3][3]), P(560), a, 1); ring(K, G, x, z, 32.5, 38.6, P(560));
-    a = spiral(K, G, x, z, 35.6, P(560), P(580), a, 1); ring(K, G, x, z, 23, 38.6, P(580));
-    a = spiral(K, G, x, z, 26.6, P(580), P(630), a, 1); ring(K, null, x, z, 0, 29, P(630)); }
+    a = spiral(K, G, x, z, 35.6, P(STEPS[3][3]), P(560), a, 1, { enclose: S }); ring(K, G, x, z, 32.5, 38.6, P(560));
+    a = spiral(K, G, x, z, 35.6, P(560), P(580), a, 1, { enclose: S }); ring(K, G, x, z, 23, 38.6, P(580));
+    a = spiral(K, G, x, z, 26.6, P(580), P(630), a, 1, { enclose: S }); ring(K, null, x, z, 0, 29, P(630)); }
   // The Grand Patio (the Crown Court): the first step's top carried on out west over the Middle Ward on tall piers, 190 m
   // wide, a row of pinnacles along its lip.
   { const py = P(300), px = x - 110 - 74;
@@ -1758,8 +1773,25 @@ export function phobosKeep(K) {
     let y = P(on.b), a = Math.atan2(z - sz, on.cx - sx) - 0.2;
     for (const lv of [P(foot) + (top - foot) * 0.34, P(foot) + (top - foot) * 0.67, P(top) - 20]) {
       if (lv <= y + 1) continue;
-      a = spiral(K, G, sx, sz, RS, y, lv, a, 1); ring(K, G, sx, sz, r - 0.5, RS + 2.4, lv); y = lv;
+      a = spiral(K, G, sx, sz, RS, y, lv, a, 1, { enclose: C }); ring(K, G, sx, sz, r - 0.5, RS + 2.4, lv); y = lv;
     }
+    // Its viewing deck, under its crown where its bridge leaves: a broad round terrace carried out on corbels, a solid
+    // parapet crowned with his V merlons all round, an iron brazier burning at each quarter: a place to stand and see the
+    // whole city and the Sill beyond from. (The owner, 2026-11-19: "the spires ... need decks, viewing points at the top
+    // with patios around them.")
+    { const dy = P(top) - 20, RD = RS + 7;
+      ring(K, G, sx, sz, r - 0.5, RD, dy);
+      K.drum('dark:p2_bridge_ashlar', sx, dy - 0.02, sz, RD - 0.6, 0.04, 24, { r2: RD - 0.6, collide: false });
+      for (let k = 0; k < 16; k++) { const t = (k + 0.5) / 16 * TAU; K.spike(G, sx + Math.cos(t) * (RD - 1.2), dy - 1.2, sz + Math.sin(t) * (RD - 1.2), 1.1, -6, 4, -t); }
+      const segs = 28;
+      for (let k = 0; k < segs; k++) {
+        const t = (k + 0.5) / segs * TAU, px = sx + Math.cos(t) * (RD - 0.3), pz = sz + Math.sin(t) * (RD - 0.3), half = Math.PI * (RD - 0.3) / segs + 0.05;
+        K.box(G, px, dy, pz, 0.3, 1.1, half, -t);
+        if (!K.lean) K.vee(G, px, dy + 1.1, pz, 0.3, 1.3, half * 0.55, -t);
+      }
+      for (let k = 0; k < 4; k++) { const t = k / 4 * TAU + 0.4, bx = sx + Math.cos(t) * (RD - 2.4), bz = sz + Math.sin(t) * (RD - 2.4);
+        K.drum('dark:stone', bx, dy, bz, 0.5, 1.4, 6, { r2: 0.35, collide: false }); K.drum('iron', bx, dy + 1.4, bz, 0.45, 0.6, 8, { r2: 0.9, open: true, collide: false }); fire(K, bx, dy + 1.7, bz, 0.55, 1.8);
+        if (k === 0) (K.lamps ||= []).push({ p: [bx, dy + 3, bz], c: [1, 0.42, 0.18], r: 30, i: 60, flicker: 0.35 }); } }
   }
   tops.forEach(([ax, az, ar, , atop], i) => {
     const nx = tops[i + 1] || [x, z, 33, 0, 590], [bx, bz, br] = nx, bfoot = i < 4 ? tops[i + 1][3] + (tops[i + 1][4] - tops[i + 1][3]) * 0.34 : 560;
