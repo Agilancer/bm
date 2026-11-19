@@ -381,7 +381,21 @@ function curtain(K, layer, ax, az, bx, bz, t, h, o = {}) {
   const len = Math.hypot(bx - ax, bz - az), yaw = Math.atan2(bx - ax, bz - az) - Math.PI / 2, ux = (bx - ax) / len, uz = (bz - az) / len;
   const lite = o.lite || (layer.startsWith('soot:') ? layer.slice(5) : layer.startsWith('char:') ? 'soot:' + layer.slice(5) : 'soot:' + layer.replace(/^\w+:/, ''));
   const n = Math.max(1, Math.round(len / 18));
-  for (let k = 0; k <= n; k++) { const x = ax + (bx - ax) * k / n, z = az + (bz - az) * k / n; K.box(lite, x, Y(x, z) - 0.5, z, 0.9, h * 0.94, t / 2 + 0.7, yaw, { collide: false }); }
+  // (Its buttresses in its own stone, stepped out wider at their feet: in the lighter they were pale strips up a dark wall,
+  // seams and not masonry standing out of it, the critics.)
+  for (let k = 0; k <= n; k++) {
+    const x = ax + (bx - ax) * k / n, z = az + (bz - az) * k / n, y = Y(x, z) - 0.5;
+    K.box(layer, x, y, z, 1.1, h * 0.94, t / 2 + 0.7, yaw, { collide: false });
+    K.box(layer, x, y, z, 1.5, h * 0.36, t / 2 + 1.5, yaw, { collide: false });
+  }
+  // (And under its merlons a shelf carried out a stretch at a time, as on corbels: its head stands out over its face, the
+  // wall's line at the top a shadow and not a ruled edge.)
+  // (Chunk by chunk as K.wall lays it, its top following the ground's: one to a stretch stood off a slope's wall.)
+  if (h > 12 && !o.y) { const c = Math.max(1, Math.ceil(len / 8)); for (let k = 0; k < c; k++) {
+    const x = ax + (bx - ax) * (k + 0.5) / c, z = az + (bz - az) * (k + 0.5) / c;
+    const y = Math.min(Y(x - (bx - ax) / c / 2, z - (bz - az) / c / 2), Y(x + (bx - ax) / c / 2, z + (bz - az) / c / 2));
+    K.box('dark:stone', x, y + h - 2.4, z, len / c / 2 + 0.05, 1.5, t / 2 + 0.75, yaw, { collide: false });
+  } }
   for (let k = 0; k < n; k++) {
     const x = ax + (bx - ax) * (k + 0.5) / n, z = az + (bz - az) * (k + 0.5) / n, y = Y(x, z) - 0.5;
     K.box(lite, x, y, z, len / n / 2, 3.4, t / 2 + 0.9, yaw, { collide: false });
@@ -457,16 +471,31 @@ export function tower(K, layer, x, z, r, h, roof, o = {}) {
 // A bridge between two points in the air: a deck, a parapet either side, and pointed hangers under it. Not stood on yet.
 function bridge(K, layer, a, b, w = 3, o = {}) {
   const dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2], L = Math.hypot(dx, dz), yaw = Math.atan2(-dz, dx), n = Math.max(1, Math.round(L / 14));
-  for (let i = 0; i < n; i++) {
-    const u = (i + 0.5) / n, x = a[0] + dx * u, y = a[1] + dy * u, z = a[2] + dz * u, sag = o.arch ? -Math.sin(u * Math.PI) * o.arch : 0;
-    // (Deeper toward its ends, where it springs from a tower: its underside an arch, not a plank.)
-    const deep = 4 + (n > 1 ? 8 * Math.pow(1 - Math.sin(u * Math.PI), 2) : 0);
-    K.box(layer, x, y - deep - sag, z, L / n / 2 + 0.1, deep, w, yaw, { collide: false });
-    if (o.piers && i % 2 === 1) { const fy = Math.max(Y(x, z), y - 190); K.box(layer, x, fy, z, 2.6, y - 4 - sag - fy, w * 0.8, yaw, { collide: false }); }
+  // Its deck, sides and parapets drawn as faces that follow its fall, its hump and its arch underneath, a span a few metres
+  // at a time: boxes a segment each stepped on its top where it fell and on its underside where it deepened toward a tower,
+  // and a merlon stuck up mid each made, from the yard, a row of broken blocks and crosses against the sky. The critics; the
+  // V and T rule.
+  const sx = Math.sin(yaw), sz = Math.cos(yaw), arch = o.arch || 0, m = Math.max(2, Math.round(L / 6));
+  const top = (u) => a[1] + dy * u + Math.sin(u * Math.PI) * arch;
+  const bot = (u) => top(u) - 4 - (L > 20 ? 8 * Math.pow(1 - Math.sin(u * Math.PI), 2) : 0);
+  const at = (u, off, y) => [a[0] + dx * u + sx * off, y, a[2] + dz * u + sz * off];
+  const W = w + 0.3, I = w - 0.3;
+  for (let k = 0; k < m; k++) {
+    const u0 = k / m, u1 = (k + 1) / m, t0 = top(u0), t1 = top(u1), b0 = bot(u0), b1 = bot(u1);
+    K.quad(layer, at(u0, -I, t0), at(u1, -I, t1), at(u1, I, t1), at(u0, I, t0), [0, 1, 0]);
+    K.quad(layer, at(u0, -W, b0), at(u1, -W, b1), at(u1, W, b1), at(u0, W, b0), [0, -1, 0]);
     for (const s of [-1, 1]) {
-      K.box(layer, x + Math.sin(yaw) * s * w, y - sag, z + Math.cos(yaw) * s * w, L / n / 2 + 0.1, 1.2, 0.3, yaw, { collide: false });
-      if (!K.lean) for (const v of [0]) { const mx = x + Math.cos(yaw) * v * L / n + Math.sin(yaw) * s * w, mz = z - Math.sin(yaw) * v * L / n + Math.cos(yaw) * s * w; K.box(layer, mx, y - sag + 1.2, mz, 0.7, 0.9, 0.32, yaw, { collide: false }); }
+      const N = [sx * s, 0, sz * s], M = [-sx * s, 0, -sz * s];
+      K.quad(layer, at(u0, s * W, b0), at(u1, s * W, b1), at(u1, s * W, t1 + 1.2), at(u0, s * W, t0 + 1.2), N);
+      K.quad(layer, at(u0, s * I, t0), at(u1, s * I, t1), at(u1, s * I, t1 + 1.2), at(u0, s * I, t0 + 1.2), M);
+      K.quad(layer, at(u0, s * I, t0 + 1.2), at(u1, s * I, t1 + 1.2), at(u1, s * W, t1 + 1.2), at(u0, s * W, t0 + 1.2), [0, 1, 0]);
     }
+  }
+  // (A pier only where it comes down on the rock: one that stopped in the air was a block hung under the deck, and a deck
+  // across a post is a T against the sky from the yard. Under every other stretch of the old fourteen metres.)
+  if (o.piers) for (let i = 1; i < n; i += 2) {
+    const u = (i + 0.5) / n, x = a[0] + dx * u, z = a[2] + dz * u, fy = Y(x, z) - 2, ty = bot(u) + 0.5;
+    if (ty - fy < 190) K.box(layer, x, fy, z, 2.6, ty - fy, w * 0.8, yaw, { collide: false });
   }
   // (walk: its deck is stood on, a tread at a time, following its fall and its arch. Its ends run a little into what it joins.)
   if (o.walk) {
@@ -1077,8 +1106,12 @@ function sloughNear(K, cell) {
         (K.lamps ||= []).push({ p: [bx - ux * 4, by + 3.2, bz - uz * 4], c: [0.55, 1, 0.5], r: 18, i: 14, flicker: 0.3 });
       }
     }
-    // (Scum on the water, here and there: a pale green skin, lying flat.)
-    if (hash2(i * 3, 77) > 0.55) { const o = (hash2(i, 5) - 0.5) * 12, sx = mx - uz * o, sz = mz + ux * o; K.disc('mire:ph_basalt', sx, r.lv + 0.03, sz, 1.6 + hash2(i, 9) * 1.6, 9); K.disc('mire:ph_basalt', sx + ux * 2.4, r.lv + 0.03, sz + uz * 2.4, 1.1, 7); }
+    // (Scum on the water, here and there: a dark skin of weed and muck, lying flat, three or four blots run together. Pale,
+    // and nine-sided, it was white octagons on the water, a texture gone missing: the critics.)
+    if (hash2(i * 3, 77) > 0.55) {
+      const o = (hash2(i, 5) - 0.5) * 12, sx = mx - uz * o, sz = mz + ux * o;
+      for (let k = 0; k < 4; k++) { const a = hash2(i, 40 + k) * 6.28, d = k ? 1 + 1.6 * hash2(i, 50 + k) : 0; K.disc(k % 2 ? 'char:ph_basalt' : 'char:rubble', sx + Math.cos(a) * d, r.lv + 0.03 + k * 0.004, sz + Math.sin(a) * d, (k ? 0.7 : 1.3) + hash2(i, 9 + k) * 1.1, 7); }
+    }
     // The weir, where this stretch's water steps to the next's: a crest of dressed stone, a wing wall at each bank, the
     // water over it in a pale sheet, foam on the low side.
     if (step) {
@@ -1384,8 +1417,17 @@ export function phobosCastle(K) {
     K.cone('iron', lx, ly + 0.95, 0, 0.42, 0.35, 6); K.drum('iron', lx, ly - 0.1, 0, 0.3, 0.12, 6, { collide: false });
     for (let k = 0; k < 6; k++) { const t = k / 6 * TAU; K.box('iron', lx + Math.cos(t) * 0.33, ly, Math.sin(t) * 0.33, 0.025, 0.95, 0.025, 0, { collide: false }); }
     K.cone('flame', lx, ly + 0.02, 0, 0.2, 0.62, 5);
-    (K.lamps ||= []).push({ p: [lx, ly + 0.4, 0], c: [1, 0.5, 0.22], r: 20, i: 34, flicker: 0.3 });
+    (K.lamps ||= []).push({ p: [lx, ly + 0.4, 0], c: [1, 0.5, 0.22], r: 24, i: 90, flicker: 0.3, prio: 40 });
   }
+  // (And fires down both its walls in iron baskets on brackets out from the stone, so from all down the Approach the way in is
+  // a lit passage, the goal at the top of the climb, and not a slot: the critics. Each its basket's bars up, none across.)
+  for (const s of [-1, 1]) for (const bx of [gx - 6.5, gx, gx + 6.5]) {
+    const by = gy + 4.6, bz = s * 8.3;
+    K.box('iron', bx, by - 0.5, s * 8.85, 0.09, 0.5, 0.55, 0, { collide: false });
+    K.drum('iron', bx, by, bz, 0.22, 0.5, 6, { r2: 0.42, open: true, collide: false });
+    fire(K, bx, by + 0.3, bz, 0.3, 1.1);
+  }
+  for (const s of [-1, 1]) (K.lamps ||= []).push({ p: [gx - 3, gy + 5.4, s * 7.4], c: [1, 0.46, 0.2], r: 22, i: 60, flicker: 0.35, prio: 30 });
   // The Approach: flagged down its crown, a low parapet along both edges (broken every so often, so what's on the slopes
   // can come up), and pillars of fire in pairs up its top half: from where the King's Mile, slanting up onto it, has come
   // into its middle (src/core/lands.js ROUTES), so nothing stands in the road.
@@ -1393,6 +1435,16 @@ export function phobosCastle(K) {
   for (let x = 10632; x < APPROACH_WALL - 30; x += 48) for (const s of [-1, 1]) K.wall('dark:stone', x, s * 12.6, Math.min(x + 40, APPROACH_WALL - 30), s * 12.6, 0.8, 1.15);
   // The causeway walled: a retaining wall each side from the ground below to the road, a parapet on it, buttresses down
   // its face every twenty metres, a dark course at its foot. (Its ground falls sheer: src/core/east.js.)
+  // (The embankment below the walls, down both sides of the Approach's lower half, bare gravel slopes and nothing on them:
+  // rubble and fallen blocks down it, more toward its foot, and dark scree. The critics.)
+  if (!K.lean) for (let x = 10470; x < APPROACH_WALL - 20; x += 7) for (const s of [-1, 1]) for (let k = 0; k < 2; k++) {
+    const h = hash2(Math.round(x) * 3 + k, s * 17), zz = s * (15.5 + 22 * hash2(Math.round(x) + k * 7, s * 5)), xx = x + 5 * hash2(Math.round(x), k + 9);
+    if (h > 0.7) continue;
+    const y = Y(xx, zz), rr = 0.35 + 1.1 * hash2(Math.round(xx), Math.round(zz)) ** 2;
+    if (h < 0.25) K.box('dark:rubble', xx, y - rr * 0.4, zz, rr * 1.2, rr * 1.1, rr * 0.8, h * 20, { collide: false });
+    else K.drum('soot:rubble', xx, y - rr * 0.3, zz, rr, rr * 0.8, 5, { r2: rr * 0.55, collide: false });
+    if (h < 0.4) K.disc('dark:rubble', xx + s * 1.5, y + 0.05, zz + s * 1.2, rr * 2.2, 7);
+  }
   for (let x = APPROACH_WALL - 30; x < gx - 14; x += 12) {
     const xc = Math.min(x + 6, gx - 14), hx = Math.min(6, (gx - 14 - x) / 2), road = Y(xc, 0);
     for (const s of [-1, 1]) {
