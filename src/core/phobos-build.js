@@ -173,18 +173,59 @@ function houseNear(K, h) {
   const F = footing(h), { lo, hi, c, s } = F, f = h.front, top = hi + h.h, fy = hi + 0.1, ceil = Math.min(top - 0.3, fy + 3.1);
   const P = (lx, ly, lz) => [h.x + lx * c + lz * s, ly, h.z - lx * s + lz * c];
   const id = Math.round(h.x * 7 + h.z * 13), r = (k) => hash2(id, k), ruin = !h.roof;
-  // Outside: back and sides whole; the front in three round the doorway.
-  const fz = f * h.hz, out = (ax, az, bx, bz, y0, y1) => K.quad(h.wall, P(ax, y0, az), P(bx, y0, bz), P(bx, y1, bz), P(ax, y1, az));
-  const dh = fy + 2.35;
-  if (f > 0) { out(h.hx, fz, DOOR, fz, lo - 0.5, top); out(-DOOR, fz, -h.hx, fz, lo - 0.5, top); out(DOOR, fz, -DOOR, fz, dh, top); out(-h.hx, -fz, h.hx, -fz, lo - 0.5, top); }
-  else { out(-h.hx, fz, -DOOR, fz, lo - 0.5, top); out(DOOR, fz, h.hx, fz, lo - 0.5, top); out(-DOOR, fz, DOOR, fz, dh, top); out(h.hx, -fz, -h.hx, -fz, lo - 0.5, top); }
+  // The windows first, so the walls can be built round them. A pair to a storey front and back where there's room (the
+  // back's fewer, onto the yard); none in the sides, which are party walls, as a town's are. (On the named streets, the
+  // street front's half again as wide and twice as tall, and a third in the middle of each storey over the door, unless
+  // his red hangs there.) Where there's a floor behind to stand on, the ground's and the one upstairs, a window is open
+  // through the wall: unglazed, as a poor town's were, one mullion up the middle, its shutters hung back outside, the room
+  // and its fire seen through it. (The owner, 2026-11-19: "aren't windows typically see through?") Over those, where no
+  // room's been built behind, shut: the shutters closed, or a pane, a lamp behind some at night.
+  const fz = f * h.hz, ix = h.hx - WALL, iz = h.hz - WALL, dh = fy + 2.35;
+  const up = upstairs(h, F), gz = f * iz, roofY = ruin ? top : up ? up.uc : ceil;
+  const storeys = Math.max(1, Math.round(h.h / 3.3)), big = !!h.shop, flag = h.spine && !ruin && r(31) < 0.3, wins = [];
+  for (let st = 0; st < storeys; st++) for (const side of [1, -1]) for (const sd of [-1, 0, 1]) {
+    if (sd === 0 && (!big || side < 0 || st === 0 || flag || h.hx < 3.2)) continue;
+    const wx = sd * Math.min(h.hx - (big ? 1.05 : 1.1), DOOR + 1.6), wy = fy + (big ? 0.9 : 1.2) + st * 3.3;
+    if (wy + (big ? 1.6 : 1) > top || h.hx < 2.4) continue;
+    if (side < 0 && hash2(id + st, 77) > 0.3) continue;
+    const lit = !ruin && r(9) < 0.8 && hash2(id + st * 3 + sd, side + 9) < (st === 0 ? 0.42 : 0.2);
+    const ww = big && side > 0 ? 0.4 + 0.06 * r(14) : 0.26 + 0.08 * r(14), wh = big && side > 0 ? 1.15 + 0.25 * r(15) : 0.6 + 0.2 * r(15);
+    const open = !ruin && st <= (up ? 1 : 0) && wy + wh < roofY - 0.15 && Math.abs(wx) + ww < ix - 0.1;
+    wins.push({ st, side, sd, q: side * f, wx, wy, ww, wh, lit, open });
+  }
+  // A wall across the house at local z (zw), facing out (out 1) or in (-1), from y0 to y1, with holes cut in it [x0, x1,
+  // ya, yb]: cut into upright strips at every hole's edges, each strip whole but where a hole is.
+  const wallZ = (layer, zw, out, y0, y1, holes) => {
+    const sz = Math.sign(zw) * out, xa = out > 0 ? -h.hx : -ix, xb = -xa;
+    const xs = [xa, xb, ...holes.flatMap((o) => [o[0], o[1]])].map((x) => Math.max(xa, Math.min(xb, x))).sort((a, b) => a - b);
+    for (let k = 0; k + 1 < xs.length; k++) {
+      const u = xs[k], v = xs[k + 1];
+      if (v - u < 1e-3) continue;
+      const m = (u + v) / 2, cut = holes.filter((o) => o[0] < m && o[1] > m).sort((a, b) => a[2] - b[2]);
+      let y = y0;
+      for (const o of [...cut, [0, 0, y1, y1]]) {
+        const ya = Math.max(y, Math.min(o[2], y1));
+        if (ya - y > 1e-3) { if (sz > 0) K.quad(layer, P(v, y, zw), P(u, y, zw), P(u, ya, zw), P(v, ya, zw)); else K.quad(layer, P(u, y, zw), P(v, y, zw), P(v, ya, zw), P(u, ya, zw)); }
+        y = Math.max(y, o[3]);
+      }
+    }
+  };
+  // Outside: the sides whole; the front and the back round their doorway and their open windows.
+  const holes = (sgn, inner) => [...(sgn === f ? [[-DOOR, DOOR, inner ? fy - 1 : lo - 1, dh]] : []), ...wins.filter((w) => w.open && w.q === sgn).map((w) => [w.wx - w.ww, w.wx + w.ww, w.wy, w.wy + w.wh])];
+  wallZ(h.wall, h.hz, 1, lo - 0.5, top, holes(1, false)); wallZ(h.wall, -h.hz, 1, lo - 0.5, top, holes(-1, false));
+  const out = (ax, az, bx, bz, y0, y1) => K.quad(h.wall, P(ax, y0, az), P(bx, y0, bz), P(bx, y1, bz), P(ax, y1, az));
   out(h.hx, -h.hz, h.hx, h.hz, lo - 0.5, top); out(-h.hx, h.hz, -h.hx, -h.hz, lo - 0.5, top);
   // Inside: the same four the other way round, a hand's breadth in; the doorway's cheeks and head; floor and ceiling.
-  const ix = h.hx - WALL, iz = h.hz - WALL, IN = /poor|daub|soot|burnt|char/.test(h.wall) ? 'p2_sooty_plaster' : 'pale:ph_grey_plaster', inn = (ax, az, bx, bz, y0, y1) => K.quad(IN, P(ax, y0, az), P(bx, y0, bz), P(bx, y1, bz), P(ax, y1, az));
-  const up = upstairs(h, F), gz = f * iz, roofY = ruin ? top : up ? up.uc : ceil;
-  if (f > 0) { inn(DOOR, gz, ix, gz, fy, roofY); inn(-ix, gz, -DOOR, gz, fy, roofY); inn(-DOOR, gz, DOOR, gz, dh, roofY); inn(ix, -gz, -ix, -gz, fy, roofY); }
-  else { inn(-DOOR, gz, -ix, gz, fy, roofY); inn(ix, gz, DOOR, gz, fy, roofY); inn(DOOR, gz, -DOOR, gz, dh, roofY); inn(-ix, -gz, ix, -gz, fy, roofY); }
+  const IN = /poor|daub|soot|burnt|char/.test(h.wall) ? 'p2_sooty_plaster' : 'pale:ph_grey_plaster', inn = (ax, az, bx, bz, y0, y1) => K.quad(IN, P(ax, y0, az), P(bx, y0, bz), P(bx, y1, bz), P(ax, y1, az));
+  wallZ(IN, iz, -1, fy, roofY, holes(1, true)); wallZ(IN, -iz, -1, fy, roofY, holes(-1, true));
   inn(ix, iz, ix, -iz, fy, roofY); inn(-ix, -iz, -ix, iz, fy, roofY);
+  // The open windows' reveals, through the wall's thickness: their cheeks and head in the wall's stone, a stone sill.
+  for (const w of wins) if (w.open) {
+    const zo = w.q * h.hz, zi = w.q * iz, X = [c, 0, -s];
+    for (const e of [-1, 1]) { const x = w.wx + e * w.ww; K.quad(h.wall, P(x, w.wy, zo), P(x, w.wy, zi), P(x, w.wy + w.wh, zi), P(x, w.wy + w.wh, zo), X.map((v) => -e * v)); }
+    K.quad('stone', P(w.wx - w.ww, w.wy, zo), P(w.wx + w.ww, w.wy, zo), P(w.wx + w.ww, w.wy, zi), P(w.wx - w.ww, w.wy, zi), [0, 1, 0]);
+    K.quad(h.wall, P(w.wx - w.ww, w.wy + w.wh, zo), P(w.wx + w.ww, w.wy + w.wh, zo), P(w.wx + w.ww, w.wy + w.wh, zi), P(w.wx - w.ww, w.wy + w.wh, zi), [0, -1, 0]);
+  }
   for (const sd of [-1, 1]) K.quad('wood', P(sd * DOOR, fy - 0.2, fz), P(sd * DOOR, fy - 0.2, gz), P(sd * DOOR, dh, gz), P(sd * DOOR, dh, fz));
   K.quad('wood', P(-DOOR, dh, fz), P(DOOR, dh, fz), P(DOOR, dh, gz), P(-DOOR, dh, gz), [0, -1, 0]);
   K.quad('p2_worn_floorboards', P(-ix, fy, -iz), P(-ix, fy, iz), P(ix, fy, iz), P(ix, fy, -iz), [0, 1, 0]);
@@ -199,37 +240,35 @@ function houseNear(K, h) {
     const R = roofOf(h), rh = R.rh;
     gable(K, h.roof, h.x, top, h.z, R.sx, R.sz, rh, R.yaw, h.wall, 0.4);
     // (A chimney stack on most, a dark pot or two on it.)
-    if (r(1) < 0.7) { const [cx, , cz] = P((r(2) - 0.5) * h.hx * (R.turn ? 0.5 : 1.2), 0, (r(3) - 0.5) * h.hz * (R.turn ? 1.2 : 0.5)); K.box('soot:stone', cx, top + rh * 0.35, cz, 0.42, rh * 0.75 + 0.9, 0.42, h.yaw, { collide: false }); K.drum('dark:stone', cx - 0.14, top + rh * 1.1 + 0.9, cz, 0.15, 0.45, 6, { collide: false }); if (r(4) < 0.5) K.drum('dark:stone', cx + 0.17, top + rh * 1.1 + 0.9, cz, 0.13, 0.32, 6, { collide: false }); if (r(8) < 0.6) (K.smokes ||= []).push([cx - 0.14, top + rh * 1.1 + 1.4, cz]); }
+    // (Its stack straight over the hearth, on the side wall across from the stair, up through the roof and a metre and more
+    // clear of its ridge, as a stack must draw; a dark pot or two on it, smoke out of most.)
+    if (ix > 1.4) { const [cx, , cz] = P(h.hx - 0.45, 0, -f * iz * 0.28), ct = top + rh + 1.3; K.box('soot:stone', cx, top - 0.4, cz, 0.45, ct - top + 0.4, 1.05, h.yaw, { collide: false }); K.box('dark:stone', cx, ct, cz, 0.52, 0.18, 1.12, h.yaw, { collide: false }); { const [p1, , q1] = P(h.hx - 0.45, 0, -f * iz * 0.28 - 0.35), [p2, , q2] = P(h.hx - 0.45, 0, -f * iz * 0.28 + 0.35); K.drum('dark:stone', p1, ct + 0.18, q1, 0.15, 0.45, 6, { collide: false }); if (r(4) < 0.5) K.drum('dark:stone', p2, ct + 0.18, q2, 0.13, 0.32, 6, { collide: false }); } if (r(8) < 0.75) (K.smokes ||= []).push([cx, ct + 0.7, cz]); }
     if (!R.turn && h.hx > 4.2 && r(5) < 0.3) { const [dx, , dz] = P((r(6) - 0.5) * h.hx, 0, f * h.hz * 0.55); K.box(h.wall, dx, top + rh * 0.1, dz, 0.9, 1.5, 0.9, h.yaw, { collide: false, top: false }); gable(K, h.roof, dx, top + rh * 0.1 + 1.5, dz, 1.1, 1.1, 0.8, h.yaw + Math.PI / 2, h.wall, 0.2); }
   } else for (let k = 0; k < 3; k++) { const [qx, , qz] = P((r(20 + k) - 0.5) * ix * 1.5, 0, (r(30 + k) - 0.5) * iz * 1.5); K.rock('dark:rubble', qx, qz, 0.5 + r(40 + k) * 0.7, 0.4 + r(50 + k) * 0.5, { collide: false }); }
-  // Windows, a pair to a storey front and back where there's room; most lit after dark. A lamp by one door in three.
-  // (On the named streets, the street front's: a window half again as wide and twice as tall, and a third in the middle of
-  // each storey over the door, unless his red hangs there.)
-  const storeys = Math.max(1, Math.round(h.h / 3.3)), big = !!h.shop, flag = h.spine && !ruin && r(31) < 0.3;
-  for (let st = 0; st < storeys; st++) for (const side of [1, -1]) for (const sd of [-1, 0, 1]) {
-    if (sd === 0 && (!big || side < 0 || st === 0 || flag || h.hx < 3.2)) continue;
-    const wx = sd * Math.min(h.hx - (big ? 1.05 : 1.1), DOOR + 1.6), wy = fy + (big ? 0.9 : 1.2) + st * 3.3;
-    if (wy + (big ? 1.6 : 1) > top || h.hx < 2.4) continue;
-    if (side < 0 && hash2(id + st, 77) > 0.3) continue;   // (few in the back, which looks on the yard)
-    // (Lit: more of them low down, where people are, than up under the roofs; a house with nobody in has none. All one
-    // warm light. Each in a wooden frame with a sill, the frame proud of the wall and the pane set back in it.)
-    const lit = !ruin && r(9) < 0.8 && hash2(id + st * 3 + sd, side + 9) < (st === 0 ? 0.42 : 0.2), q = side * f, wz = q * (h.hz + 0.05), d = q > 0 ? 1 : -1, N = [q * s, 0, q * c];
-    const ww = big && side > 0 ? 0.4 + 0.06 * r(14) : 0.26 + 0.08 * r(14), wh = big && side > 0 ? 1.15 + 0.25 * r(15) : 0.6 + 0.2 * r(15), fw = ww + 0.1;
-    K.quad('wood', P(wx + d * fw, wy - 0.12, wz), P(wx - d * fw, wy - 0.12, wz), P(wx - d * fw, wy + wh + 0.1, wz), P(wx + d * fw, wy + wh + 0.1, wz), N);
-    K.quad(lit ? 'eve:flame' : 'slate:iron', P(wx + d * ww, wy, wz + q * 0.07), P(wx - d * ww, wy, wz + q * 0.07), P(wx - d * ww, wy + wh, wz + q * 0.07), P(wx + d * ww, wy + wh, wz + q * 0.07), N);
-    // (Two bars down the lit ones, so it's a window and not a hole: never one across, which would make a cross of it, and
-    // the cross is hers. A shutter hung open by some.)
-    if (lit && (st === 0 || big)) for (const bu of [-ww / 3, ww / 3]) K.quad('wood', P(wx + bu + d * 0.025, wy, wz + q * 0.1), P(wx + bu - d * 0.025, wy, wz + q * 0.1), P(wx + bu - d * 0.025, wy + wh, wz + q * 0.1), P(wx + bu + d * 0.025, wy + wh, wz + q * 0.1), N);
-    // (One leaf of a painted pair, the PH2 pack's, hinged at the frame.)
-    if (sd !== 0 && (st === 0 || r(16 + st) < 0.5)) K.quad('p2_shutters', P(wx - d * fw, wy, wz + q * 0.03), P(wx - d * (fw + 0.34), wy, wz + q * 0.03), P(wx - d * (fw + 0.34), wy + wh, wz + q * 0.03), P(wx - d * fw, wy + wh, wz + q * 0.03), N, [[0.5, 1], [0, 1], [0, 0], [0.5, 0]]);
-    // (And from inside, on the floors you can stand on: the frame and the pane on the plaster, facing in; the pane dark glass,
-    // the night or the next house's wall beyond it, whatever the lamp in it shows the street.)
-    if (!ruin && st <= (upstairs(h, F) ? 1 : 0)) {
-      const iw = q * (h.hz - WALL - 0.02), NI = [-q * s, 0, -q * c];
-      K.quad('wood', P(wx - d * fw, wy - 0.12, iw), P(wx + d * fw, wy - 0.12, iw), P(wx + d * fw, wy + wh + 0.1, iw), P(wx - d * fw, wy + wh + 0.1, iw), NI);
-      K.quad('slate:iron', P(wx - d * ww, wy, iw - q * 0.02), P(wx + d * ww, wy, iw - q * 0.02), P(wx + d * ww, wy + wh, iw - q * 0.02), P(wx - d * ww, wy + wh, iw - q * 0.02), NI);
-      K.quad('wood', P(wx - d * fw, wy - 0.14, iw - q * 0.18), P(wx + d * fw, wy - 0.14, iw - q * 0.18), P(wx + d * fw, wy - 0.1, iw), P(wx - d * fw, wy - 0.1, iw), [0, 1, 0]);
+  // The windows drawn (wins, above). Each in a wooden surround a hand proud of the wall, a sill under it.
+  for (const w of wins) {
+    const { st, sd, q, wx, wy, ww, wh, lit } = w, wz = q * (h.hz + 0.05), d = q > 0 ? 1 : -1, N = [q * s, 0, q * c], fw = ww + 0.1;
+    const frame = (zz, nn, rev) => {
+      const Q = (x0, y0, x1, y1) => (rev ? K.quad('wood', P(x0, y0, zz), P(x1, y0, zz), P(x1, y1, zz), P(x0, y1, zz), nn) : K.quad('wood', P(x1, y0, zz), P(x0, y0, zz), P(x0, y1, zz), P(x1, y1, zz), nn));
+      Q(wx - d * fw, wy - 0.12, wx + d * fw, wy); Q(wx - d * fw, wy + wh, wx + d * fw, wy + wh + 0.1);
+      Q(wx - d * fw, wy, wx - d * ww, wy + wh); Q(wx + d * ww, wy, wx + d * fw, wy + wh);
+    };
+    if (w.open) {
+      // Open: its surround inside and out, one mullion up the middle (never a bar across, which would make a cross of it,
+      // and the cross is hers), and the light of the room, if anyone's in, falling out of it at night.
+      frame(wz, N, false); frame(q * (iz - 0.02), [-q * s, 0, -q * c], true);
+      const [mx, , mz] = P(wx, 0, q * (h.hz - WALL / 2));
+      K.box('dark:wood', mx, wy, mz, 0.045, wh, WALL / 2, h.yaw, { collide: false });
+      if (lit) (K.lamps ||= []).push({ p: P(wx, wy + wh * 0.6, q * (iz - 0.6)), c: [1, 0.6, 0.3], r: 7, i: 5, flicker: 0.35, indoor: true });
+    } else {
+      // Shut: the pane, a lamp behind it after dark in some; two bars down the lit ones.
+      frame(wz, N, false);
+      K.quad(lit ? 'eve:flame' : 'slate:iron', P(wx + d * ww, wy, wz + q * 0.07), P(wx - d * ww, wy, wz + q * 0.07), P(wx - d * ww, wy + wh, wz + q * 0.07), P(wx + d * ww, wy + wh, wz + q * 0.07), N);
+      if (lit && (st === 0 || big)) for (const bu of [-ww / 3, ww / 3]) K.quad('wood', P(wx + bu + d * 0.025, wy, wz + q * 0.1), P(wx + bu - d * 0.025, wy, wz + q * 0.1), P(wx + bu - d * 0.025, wy + wh, wz + q * 0.1), P(wx + bu + d * 0.025, wy + wh, wz + q * 0.1), N);
     }
+    // (A stone sill out under it, and one leaf of a painted pair hung back at its side, the PH2 pack's.)
+    K.quad('stone', P(wx - d * fw, wy - 0.12, wz), P(wx + d * fw, wy - 0.12, wz), P(wx + d * fw, wy - 0.12, wz + q * 0.16), P(wx - d * fw, wy - 0.12, wz + q * 0.16), [0, 1, 0]);
+    if (sd !== 0 && (w.open || st === 0 || r(16 + st) < 0.5)) K.quad('p2_shutters', P(wx - d * fw, wy, wz + q * 0.03), P(wx - d * (fw + 0.34), wy, wz + q * 0.03), P(wx - d * (fw + 0.34), wy + wh, wz + q * 0.03), P(wx - d * fw, wy + wh, wz + q * 0.03), N, [[0.5, 1], [0, 1], [0, 0], [0.5, 0]]);
   }
   if (big && !ruin) {
     const NF = [f * s, 0, f * c], band = (y, t, o) => { K.quad('dark:stone', P(-h.hx, y, fz + f * o), P(h.hx, y, fz + f * o), P(h.hx, y + t, fz + f * o), P(-h.hx, y + t, fz + f * o), NF); K.quad('dark:stone', P(-h.hx, y + t, fz), P(h.hx, y + t, fz), P(h.hx, y + t, fz + f * o), P(-h.hx, y + t, fz + f * o), [0, 1, 0]); };
@@ -262,18 +301,28 @@ function houseNear(K, h) {
   if (r(19) < 0.14) { const q = P(-DOOR - 1.1, 0, fz + f * 0.5); K.barrel(q[0], q[2]); }
   else if (r(19) < 0.2) { const q = P(h.hx - 1.2, 0, fz + f * 0.45); K.woodpile(q[0], q[2], h.yaw, 0.9, 0.8, 0.3); }
   K.colliders.length = n1;
-  // A hearth against the back wall: a chimney breast to the ceiling, a black firebox in it, logs, and a fire if anyone's home.
+  // The hearth: on the side wall across from the stair, in the house's back half, as a town house had its stack on a party
+  // wall behind the hall (Pantin's and Quiney's plans); a chimney breast up through every floor to the stack over it, a
+  // black firebox in it, a mantel beam, logs and a fire if anyone's home; and upstairs another in the same breast, on the
+  // same flue. (The owner, 2026-11-19: put the fireplaces where they'd be in a house that's lived in. The stack had stood
+  // anywhere on the roof, the hearth in the middle of the back wall.)
+  const zH = -f * iz * 0.28;
   if (!ruin && ix > 1.4) {
-    const [qx, , qz] = P(0, 0, -f * (iz - 0.3)), fb = -f * (iz - 0.62);
-    K.box('stone', qx, fy, qz, 1.15, roofY - fy, 0.3, h.yaw, { collide: false });
-    K.quad('dark:stone', P(0.7 * f, fy + 0.05, fb), P(-0.7 * f, fy + 0.05, fb), P(-0.7 * f, fy + 1.15, fb), P(0.7 * f, fy + 1.15, fb), [f * s, 0, f * c]);
-    K.box('wood', qx + f * s * 0.36, fy + 1.3, qz + f * c * 0.36, 1.3, 0.12, 0.12, h.yaw, { collide: false });
-    const [gx, , gz] = P(0, 0, -f * (iz - 0.85));
-    for (const [u, v] of [[-0.3, 0.05], [0.3, -0.05]]) { const e0 = P(u - 0.35, fy + 0.12, -f * (iz - 0.85) + v), e1 = P(u + 0.35, fy + 0.2, -f * (iz - 0.85) - v); K.beam('bark', e0, e1, 0.09); }
-    if (r(9) < 0.8) {
-      K.cone('flame', gx, fy + 0.15, gz, 0.34, 0.95, 6); K.cone('flame', gx + c * 0.22, fy + 0.15, gz - s * 0.22, 0.2, 0.6, 5); K.cone('flame', gx - c * 0.2, fy + 0.15, gz + s * 0.2, 0.17, 0.5, 5);
-      (K.lamps ||= []).push({ p: [gx + f * s * 0.6, fy + 1.0, gz + f * c * 0.6], c: [1, 0.6, 0.3], r: Math.max(11, h.hx + h.hz + 4), i: 16, flicker: 0.6, indoor: true });
-    }
+    const X = [-c, 0, s], H = (lx, y, lz) => P(lx, y, lz);
+    const [qx, , qz] = H(ix - 0.3, 0, zH), fb = ix - 0.62;
+    K.box('stone', qx, fy, qz, 0.3, roofY - fy, 1.05, h.yaw, { collide: false });
+    const hearthAt = (y, lit) => {
+      K.quad('dark:stone', H(fb, y + 0.05, zH + 0.65), H(fb, y + 0.05, zH - 0.65), H(fb, y + 1.1, zH - 0.65), H(fb, y + 1.1, zH + 0.65), X);
+      const [mx, , mz] = H(fb - 0.08, 0, zH); K.box('wood', mx, y + 1.22, mz, 0.12, 0.12, 1.2, h.yaw, { collide: false });
+      K.quad('stone', H(fb, y + 0.02, zH - 0.75), H(fb, y + 0.02, zH + 0.75), H(fb - 0.6, y + 0.02, zH + 0.75), H(fb - 0.6, y + 0.02, zH - 0.75), [0, 1, 0]);
+      for (const [u, v] of [[-0.3, 0.05], [0.3, -0.05]]) K.beam('bark', H(fb - 0.22 + v, y + 0.12, zH + u - 0.35), H(fb - 0.22 - v, y + 0.2, zH + u + 0.35), 0.09);
+      if (!lit) return;
+      const [gx, , gz] = H(fb - 0.22, 0, zH);
+      K.cone('flame', gx, y + 0.15, gz, 0.32, 0.9, 6); K.cone('flame', gx + s * 0.22, y + 0.15, gz + c * 0.22, 0.2, 0.6, 5); K.cone('flame', gx - s * 0.2, y + 0.15, gz - c * 0.2, 0.17, 0.5, 5);
+      (K.lamps ||= []).push({ p: H(fb - 0.8, y + 1.0, zH), c: [1, 0.6, 0.3], r: Math.max(11, h.hx + h.hz + 4), i: 16, flicker: 0.6, indoor: true });
+    };
+    hearthAt(fy, r(9) < 0.8);
+    if (up) hearthAt(up.uy, r(9) < 0.8 && r(10) < 0.4);
   }
   // A little of somebody's life: a table and a bench, a barrel or two, a heap of goods, a rack. (Nothing here stops you.)
   if (!ruin && ix > 1.6 && iz > 1.6) {
@@ -284,11 +333,12 @@ function houseNear(K, h) {
     const set = (u, v, fn) => { const [px, pz] = at(u, v); onFloor(K, px, pz, fy, () => fn(px, pz)); };
     {
     set(-0.45, f * 0.15, (px, pz) => { K.table(px, pz, h.yaw, 1.2); if (r(9) < 0.8) { const ty = Y(px, pz) + 0.78; K.drum('pale:stone', px, ty, pz, 0.035, 0.16, 5, { collide: false }); K.cone('flame', px, ty + 0.16, pz, 0.03, 0.09, 4); (K.lamps ||= []).push({ p: [px, fy + 1.25, pz], c: [1, 0.78, 0.5], r: Math.max(8, h.hx + h.hz), i: 7, flicker: 0.25, indoor: true }); } }); set(-0.45, f * 0.45, (px, pz) => K.bench(px, pz, h.yaw, 1.0)); set(-0.45, -f * 0.15, (px, pz) => K.bench(px, pz, h.yaw, 1.0));
-    if (r(11) < 0.75) set(0.85, -f * 0.75, (px, pz) => K.barrel(px, pz));
-    if (r(11) < 0.4) set(0.6, -f * 0.8, (px, pz) => K.barrel(px, pz));
+    // (The barrels in the front corner and at the back, clear of the hearth on the right-hand wall.)
+    if (r(11) < 0.75) set(0.9, f * 0.95, (px, pz) => K.barrel(px, pz));
+    if (r(11) < 0.4) set(-0.1, -f * 1.0, (px, pz) => K.barrel(px, pz));
     if (r(12) < 0.6) set(0.7, f * 0.5, (px, pz) => K.goods(px, pz, 5, 0.8));
     if (r(13) < 0.45) set(-0.85, -f * 0.6, (px, pz) => K.rack(px, pz, h.yaw + Math.PI / 2, 1.2));
-    if (r(25) < 0.5) set(0.45, -f * 0.9, (px, pz) => K.woodpile(px, pz, h.yaw, 0.7, 0.6, 0.25));
+    if (r(25) < 0.5) set(0.35, -f * 0.95, (px, pz) => K.woodpile(px, pz, h.yaw, 0.7, 0.6, 0.25));   // (by the hearth)
     }
     K.colliders.length = n0;
   }

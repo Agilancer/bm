@@ -979,7 +979,9 @@ export class Renderer {
       params[i * 4] = l.cutout ? 1 : 0;
       params[i * 4 + 1] = pomDepth * ({ wall: 0.011, roof: 0.022, stone: 0.02, door: 0.012 }[l.kind] || 0);
       params[i * 4 + 2] = l.kind === 'wall' ? 1 : 0;
-      params[i * 4 + 3] = /^(leaves|pine|pine_far)(_\d)?$/.test(l.name) ? 1 : 0;
+      // (w: 1 foliage, which stirs; -1 a tiled masonry, -2 a roof or boards, which Phobos takes apart so no two tiles are
+      // the same and weathers, masonry the most, materials.js STATIC. Never a door, a banner or a picture laid once.)
+      params[i * 4 + 3] = /^(leaves|pine|pine_far)(_\d)?$/.test(l.name) ? 1 : /^(wall|stone)$/.test(l.kind) ? -1 : l.kind === 'roof' || (l.kind === 'wood' && !/bark/.test(l.name)) ? -2 : 0;
     });
     // (The PH2 pack's from entry 64: its relief by what it is; its stained glass lit by the day behind it, its lit
     // windows by a lamp at night. materials.js STATIC.)
@@ -989,6 +991,7 @@ export class Renderer {
       params[o] = l.cutout ? 1 : 0;
       params[o + 1] = pomDepth * ({ stone: 0.01, brick: 0.012, roof: 0.016, wood: 0.01, plaster: 0.006, metal: 0.006 }[l.kind] || 0);
       params[o + 2] = l.kind === 'stained' ? 2 : l.kind === 'lit' ? 1.25 : 0;
+      params[o + 3] = /^(stone|brick|plaster)$/.test(l.kind) ? -1 : l.kind === 'roof' || (l.kind === 'wood' && !/door|shutter/.test(l.name)) ? -2 : 0;
     });
     const layerUBO = makeBuffer(device, params, GPUBufferUsage.UNIFORM);
     this.staticBG = device.createBindGroup({ layout: this.bglStatic, entries: [

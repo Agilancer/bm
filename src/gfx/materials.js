@@ -300,6 +300,11 @@ fn colAt(uv: vec2f, l: i32, dx: vec2f, dy: vec2f) -> vec4f {
   if (l >= 200) { return textureSampleGrad(p2Color, repeatSmp, uv, l - 200, dx, dy); }
   return textureSampleGrad(colorArr, repeatSmp, uv, l, dx, dy);
 }
+// (One of the pack's laid in the world's own metres, s to a repeat, its level from how far off it is: a pixel's width at
+// that distance over a texel's. Phobos's weathering.)
+fn p2W(uv: vec2f, l: i32, s: f32, dist: f32) -> vec4f {
+  return textureSampleLevel(p2Color, repeatSmp, uv, l - 200, clamp(log2(max(dist * 1.25 / s, 1e-3)), 0.0, 9.0));
+}
 fn detAt(uv: vec2f, l: i32, dx: vec2f, dy: vec2f) -> vec4f {
   if (l >= 200) { return textureSampleGrad(p2Detail, repeatSmp, uv, l - 200, dx, dy); }
   return textureSampleGrad(detailArr, repeatSmp, uv, l, dx, dy);
@@ -446,6 +451,21 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
     tex = mix(colAt(uv + oa, layerI, dx, dy), colAt(uv + ob, layerI, dx, dy), w);
     det = mix(da, db, w);
   }
+  // Phobos: no tile the same as the one beside it. Its masonry, roofs and boards (params.w < 0: renderer.js) read from two
+  // copies of the tile, each slid along its own way, a slow noise choosing between them and the seam following the
+  // painting's height, so it runs in the mortar and not across a stone. Slid along only, never up, so courses and strips
+  // stay level. (The same tile over a whole street read as a game from the nineties: the owner.)
+  let phob = !LEAN && p.x > 9300.0 && p.x < 11800.0 && abs(p.z) < 1100.0 && !flat_ && params.z >= 0.0;
+  if (phob && params.w < 0.0 && dist < 320.0) {
+    let l = textureSampleLevel(noiseTex, repeatSmp, uv * 0.093 + vec2f(0.71, 0.29), 0.0).g * 9.0;
+    let ia = floor(l);
+    let oa = vec2f(fract(sin(ia * 12.9898) * 43758.5), 0.0); let ob = vec2f(fract(sin((ia + 1.0) * 12.9898) * 43758.5), 0.0);
+    let da = detAt(uv + oa, layerI, dx, dy);
+    let db = detAt(uv + ob, layerI, dx, dy);
+    let w = smoothstep(0.32, 0.68, l - ia + (db.a - da.a) * 0.9);
+    tex = mix(colAt(uv + oa, layerI, dx, dy), colAt(uv + ob, layerI, dx, dy), w);
+    det = mix(da, db, w);
+  }
   if (flat_) {
     let m = flatMaterial(lay, p, F.camPos.w);
     albedo = m.rgb; rough = m.a;
@@ -579,13 +599,55 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
       if (tintK == 14u) { albedo = mix(albedo, vec3f(lum * 1.5 + 0.05) * vec3f(0.13, 0.27, 0.9), 0.94); }
       if (tintK == 15u) { albedo = mix(albedo, vec3f(lum * 1.4 + 0.04) * vec3f(0.2, 0.56, 0.2), 0.92); }
     }
-    // Phobos's walls weathered: rain-streaks down every face from whatever's over it, and a broad blotching, so a drum a
-    // hundred metres high isn't one even tone. (Only there, in the box of the city and the crag: src/core/phobos-build.js.)
-    if (p.x > 9300.0 && p.x < 11500.0 && abs(p.z) < 900.0 && abs(n0.y) < 0.45 && params.z >= 0.0 && params.x == 0.0) {
+    // Phobos's walls weathered, in the world's own space so it runs on over every tile, joint and house: a slow drift of
+    // tone and warmth so no two houses and no two stretches of a curtain are the same stone; soot run down from every
+    // ledge and sill (the PH2 pack's soot streaks); grime in broad clouds; cracks here and there; moss and lichen in the
+    // damp, most on what faces north; dead ivy up some walls; and on its roofs moss in the hollows and grime down the
+    // slope. (Only there, the box of the city and the crag: src/core/phobos-build.js. Not on a phone.)
+    if (phob && params.x == 0.0) {
+      let vert = abs(n0.y) < 0.45;
       let along = select(p.z, p.x, abs(n0.z) > abs(n0.x));
-      let sk = textureSampleLevel(noiseTex, repeatSmp, vec2f(along * 0.21, p.y * 0.006), 0.0).r;
-      let blot = textureSampleLevel(noiseTex, repeatSmp, vec2f(along * 0.0045 + 0.3, p.y * 0.0045 + 0.7), 0.0).g;
-      albedo *= (1.0 - 0.36 * smoothstep(0.5, 0.8, sk)) * (0.74 + 0.5 * blot);
+      let q = select(p.xz, vec2f(along, p.y), vert);
+      let big = textureSampleLevel(noiseTex, repeatSmp, q * 0.0061 + vec2f(0.13, 0.57), 0.0);
+      let mid = textureSampleLevel(noiseTex, repeatSmp, q * 0.031 + vec2f(0.41, 0.09), 0.0);
+      // Tone and warmth, house by house and stretch by stretch.
+      albedo *= 0.62 + 0.66 * big.r;
+      albedo = mix(albedo, albedo * vec3f(1.12, 1.0, 0.84), smoothstep(0.45, 0.75, big.g) * 0.8);
+      albedo = mix(albedo, albedo * vec3f(0.86, 0.94, 1.08), smoothstep(0.45, 0.75, big.b) * 0.6);
+      // Grime in clouds.
+      let gr = p2W(q / 9.0, 287, 9.0, dist).r;
+      albedo *= 1.0 - 0.55 * gr * smoothstep(0.25, 0.65, mid.r);
+      let mason = params.w > -1.5 && params.w < -0.5;   // (masonry, -1, only: boards, roofs, doors and cloth are spared what follows but the tone and grime)
+      if (vert && mason) {
+        // In the city, the houses' old render: a skin of sooted plaster over their brick and stone, here whole, there
+        // fallen away in ragged islands to the masonry, its edge following the stones. (Not on the castle's walls.)
+        if (params.w < 0.0 && p.x < 10640.0) {
+          let pl = p2W(vec2f(along, -p.y) / 3.0, 252, 3.0, dist).rgb;
+          let keep = smoothstep(0.46, 0.54, big.a * 0.8 + mid.a * 0.45 + (det.a - 0.5) * 0.3 - 0.1);
+          albedo = mix(albedo, pl * (0.55 + 0.5 * big.r), keep * 0.92);
+          // (A dark lip where it's broken off.)
+          albedo *= 1.0 - 0.35 * (1.0 - abs(keep * 2.0 - 1.0)) * keep;
+        }
+        // Soot down from every ledge, in four-metre runs; heavier toward the city's smoke.
+        let st = p2W(vec2f(along / 4.0, -p.y / 4.0), 280, 4.0, dist).r;
+        albedo *= 1.0 - 0.72 * st * smoothstep(0.3, 0.6, mid.g + 0.15);
+        // Cracks, now and then.
+        let ck = p2W(vec2f(along / 3.0, -p.y / 3.0) + 0.37, 285, 3.0, dist).r;
+        albedo *= 1.0 - 0.5 * ck * smoothstep(0.62, 0.8, big.a);
+        // Moss and lichen in the damp, more on what faces north and toward the foot of a wall.
+        let damp = smoothstep(0.55, 0.8, mid.b + max(-n0.z, 0.0) * 0.25 + (0.5 - fract(p.y / 23.0)) * 0.05);
+        let moss = p2W(vec2f(along / 2.0, -p.y / 2.0), 282, 2.0, dist).rgb;
+        let li = p2W(vec2f(along, -p.y) / 1.5, 286, 1.5, dist).rgb;
+        albedo = mix(albedo, mix(li * 0.7, moss * 0.8, 0.6), damp * 0.55);
+        // Dead ivy up some walls, dark and dry.
+        let iv = p2W(vec2f(along / 3.0, -p.y / 4.5), 293, 4.0, dist).r;
+        albedo = mix(albedo, vec3f(0.07, 0.06, 0.045), iv * smoothstep(0.7, 0.86, big.b) * 0.92);
+        rough = max(rough, 0.6);
+      } else if (n0.y > 0.45) {
+        // A roof's or a ledge's top: moss in its hollows, darker in the grime's clouds.
+        let moss = p2W(p.xz / 2.0, 282, 2.0, dist).rgb;
+        albedo = mix(albedo, moss * 0.7, smoothstep(0.58, 0.82, mid.b) * smoothstep(0.1, 0.5, 1.0 - det.a) * 0.6);
+      }
     }
     n = perturbD(n0, dp1, dp2, dx, dy, det.rg, select(1.0, mix(1.4, 0.7, smoothstep(5.0, 20.0, dist)), params.z < 0.0));
     if (params.z < 0.0) {

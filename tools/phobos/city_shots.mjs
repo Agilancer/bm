@@ -74,7 +74,7 @@ for (const [name, at, eye, look] of which) {
   // (EVAL=<js>: a value read off the page before the shot, to see what's going on there.)
   if (process.env.EVAL) console.log(name, 'EVAL', JSON.stringify(await page.evaluate(process.env.EVAL)));
   try {
-    await Promise.race([page.evaluate(`(bm.setCam(${JSON.stringify(c)}), bm.shot(${JSON.stringify(name)}))`), new Promise((_, r) => setTimeout(() => r(new Error('timed out')), 180000))]);
+    await Promise.race([page.evaluate(`(bm.setCam(${JSON.stringify(c)}), bm.shot(${JSON.stringify(name)}))`), new Promise((_, r) => setTimeout(() => r(new Error('timed out')), +(process.env.SHOT_MS || 180000)))]);
     console.log('shot', name);
   } catch (e) { console.log('FAILED', name, String(e).slice(0, 200)); }
 }
