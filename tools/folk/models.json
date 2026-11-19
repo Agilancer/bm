@@ -49,6 +49,10 @@
     "cutpurse": { "file": "art/phobos/models/cutpurse.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.01, "height": 1.72, "tris": 32000 },
     "smelter": { "file": "art/phobos/models/smelter.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.01, "height": 1.88, "tris": 32000 },
     "apothecary": { "file": "art/phobos/models/apothecary.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.01, "height": 1.68, "tris": 32000 },
-    "merchant": { "file": "art/phobos/models/merchant.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.01, "height": 1.70, "tris": 32000 }
+    "merchant": { "file": "art/phobos/models/merchant.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.01, "height": 1.70, "tris": 32000 },
+    "baker": { "file": "art/phobos/models/baker.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.01, "height": 1.60, "tris": 32000 },
+    "butcher": { "file": "art/phobos/models/butcher.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.01, "height": 1.85, "tris": 32000 },
+    "gravedigger": { "file": "art/phobos/models/gravedigger.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.01, "height": 1.74, "tris": 32000 },
+    "lamplighter": { "file": "art/phobos/models/lamplighter.glb", "repo": true, "keep_uv": true, "fist": 0.45, "calm_head": 0.01, "height": 1.78, "tris": 32000 }
   }
 }
