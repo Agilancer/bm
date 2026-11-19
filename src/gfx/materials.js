@@ -508,7 +508,7 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
     // (Each pane a little different, and at night near black, the moon only a glint in it.)
     let paneK = fract(sin(dot(floor(p * 0.55), vec3f(12.99, 4.13, 78.23))) * 43758.5);
     let dayK = smoothstep(0.3, 0.9, F.sunColor.a);
-    if (lay == 100u && tintK == 7u) { albedo = vec3f(0.045, 0.052, 0.066) * (0.6 + 0.8 * paneK) * mix(0.3, 1.0, dayK); metal = 0.1 * dayK; rough = mix(0.88, mix(0.34, 0.6, paneK), dayK); }
+    if (lay == 100u && tintK == 7u) { albedo = vec3f(0.03, 0.034, 0.042) * (0.6 + 0.8 * paneK) * mix(0.3, 1.0, dayK); metal = 0.04 * dayK; rough = mix(0.88, mix(0.5, 0.72, paneK), dayK); ao = 0.55; }   // (darker and duller: the sky full in them, they were blank paper, the critics)
     if (lay == 108u) { emissive = select(vec3f(6.0, 6.0, 5.6), vec3f(1.6, 1.6, 1.5), F.blood.w < 0.5); albedo = vec3f(0.0); }
     if (lay == 101u) {
       // (Its own light beside it, put out: src/gfx/homelights.js. A light the frame has no room for leaves the flame be.)
@@ -541,7 +541,7 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
       if (tintK == 12u) { emissive *= vec3f(0.5, 0.7, 0.95) * night; }
       if (tintK == 8u) { emissive = vec3f(dot(emissive, vec3f(0.3, 0.5, 0.2))) * vec3f(0.95, 0.1, 0.035); }
       albedo = vec3f(0.0);
-      if (tintK == 12u) { albedo = vec3f(0.045, 0.052, 0.066) * (0.6 + 0.8 * paneK) * (1.0 - night); metal = 0.1 * (1.0 - night); rough = mix(0.34, 0.6, paneK); }
+      if (tintK == 12u) { albedo = vec3f(0.03, 0.034, 0.042) * (0.6 + 0.8 * paneK) * (1.0 - night); metal = 0.04 * (1.0 - night); rough = mix(0.5, 0.72, paneK); ao = mix(0.55, 1.0, night); }
     }
   } else {
     if (params.x > 0.0 && tex.a < 0.5) { discard; }

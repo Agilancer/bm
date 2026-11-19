@@ -216,7 +216,7 @@ function houseNear(K, h) {
     const lit = !ruin && r(9) < 0.8 && hash2(id + st * 3 + sd, side + 9) < (st === 0 ? 0.42 : 0.2), q = side * f, wz = q * (h.hz + 0.05), d = q > 0 ? 1 : -1, N = [q * s, 0, q * c];
     const ww = big && side > 0 ? 0.4 + 0.06 * r(14) : 0.26 + 0.08 * r(14), wh = big && side > 0 ? 1.15 + 0.25 * r(15) : 0.6 + 0.2 * r(15), fw = ww + 0.1;
     K.quad('wood', P(wx + d * fw, wy - 0.12, wz), P(wx - d * fw, wy - 0.12, wz), P(wx - d * fw, wy + wh + 0.1, wz), P(wx + d * fw, wy + wh + 0.1, wz), N);
-    K.quad(lit ? 'eve:flame' : 'char:iron', P(wx + d * ww, wy, wz + q * 0.07), P(wx - d * ww, wy, wz + q * 0.07), P(wx - d * ww, wy + wh, wz + q * 0.07), P(wx + d * ww, wy + wh, wz + q * 0.07), N);
+    K.quad(lit ? 'eve:flame' : 'slate:iron', P(wx + d * ww, wy, wz + q * 0.07), P(wx - d * ww, wy, wz + q * 0.07), P(wx - d * ww, wy + wh, wz + q * 0.07), P(wx + d * ww, wy + wh, wz + q * 0.07), N);
     // (Two bars down the lit ones, so it's a window and not a hole: never one across, which would make a cross of it, and
     // the cross is hers. A shutter hung open by some.)
     if (lit && (st === 0 || big)) for (const bu of [-ww / 3, ww / 3]) K.quad('wood', P(wx + bu + d * 0.025, wy, wz + q * 0.1), P(wx + bu - d * 0.025, wy, wz + q * 0.1), P(wx + bu - d * 0.025, wy + wh, wz + q * 0.1), P(wx + bu + d * 0.025, wy + wh, wz + q * 0.1), N);
@@ -227,7 +227,7 @@ function houseNear(K, h) {
     if (!ruin && st <= (upstairs(h, F) ? 1 : 0)) {
       const iw = q * (h.hz - WALL - 0.02), NI = [-q * s, 0, -q * c];
       K.quad('wood', P(wx - d * fw, wy - 0.12, iw), P(wx + d * fw, wy - 0.12, iw), P(wx + d * fw, wy + wh + 0.1, iw), P(wx - d * fw, wy + wh + 0.1, iw), NI);
-      K.quad('char:iron', P(wx - d * ww, wy, iw - q * 0.02), P(wx + d * ww, wy, iw - q * 0.02), P(wx + d * ww, wy + wh, iw - q * 0.02), P(wx - d * ww, wy + wh, iw - q * 0.02), NI);
+      K.quad('slate:iron', P(wx - d * ww, wy, iw - q * 0.02), P(wx + d * ww, wy, iw - q * 0.02), P(wx + d * ww, wy + wh, iw - q * 0.02), P(wx - d * ww, wy + wh, iw - q * 0.02), NI);
       K.quad('wood', P(wx - d * fw, wy - 0.14, iw - q * 0.18), P(wx + d * fw, wy - 0.14, iw - q * 0.18), P(wx + d * fw, wy - 0.1, iw), P(wx - d * fw, wy - 0.1, iw), [0, 1, 0]);
     }
   }
@@ -574,7 +574,7 @@ function stairs(K, layer, face, zc, y0, y1, side = -1) {
 // dark glass by day) or black glass. A dark stone surround a hand proud of the wall and two mullions down it in the wall's own stone, so it's
 // three lights; never a bar across one down, which is a cross, and the cross is hers. (Quads only: nothing here stops a body.)
 function lancet(K, cx, cz, nx, nz, w, y0, y1, lit, stone) {
-  const ax = nz, az = -nx, P = (u, y, o) => [cx + ax * u + nx * o, y, cz + az * u + nz * o], N = [nx, 0, nz], pk = y1 + w * 1.15, G = lit ? 'eve:flame' : 'char:iron';
+  const ax = nz, az = -nx, P = (u, y, o) => [cx + ax * u + nx * o, y, cz + az * u + nz * o], N = [nx, 0, nz], pk = y1 + w * 1.15, G = lit ? 'eve:flame' : 'slate:iron';
   K.quad('dark:stone', P(-w - 0.5, y0 - 0.7, 0.06), P(w + 0.5, y0 - 0.7, 0.06), P(w + 0.5, y1, 0.06), P(-w - 0.5, y1, 0.06), N);
   K.tri('dark:stone', P(-w - 0.5, y1, 0.06), P(w + 0.5, y1, 0.06), P(0, pk + 0.75, 0.06));
   K.quad(G, P(-w, y0, 0.12), P(w, y0, 0.12), P(w, y1, 0.12), P(-w, y1, 0.12), N);
@@ -1577,7 +1577,7 @@ export function phobosKeep(K) {
       for (let yy = P(a) + 12; yy < P(b) - 5; yy += 12) K.box(G, cx, yy, z, hx + 0.6, 0.9, hz + 0.6, 0, { collide: false, top: false });
       // (Not every bay the same, or it's an office block: some blind, some a pair of tall slits, some a window running
       // most of the storey's height, now and then one with a balcony on corbels under it.)
-      const pane = (wx, wy, wz, nx, nz, w, h, lit) => { const ax = nz * w, az = -nx * w; K.quad(lit ? 'eve:flame' : 'char:iron', [wx - ax, wy, wz - az], [wx + ax, wy, wz + az], [wx + ax, wy + h, wz + az], [wx - ax, wy + h, wz - az], [nx, 0, nz]); };
+      const pane = (wx, wy, wz, nx, nz, w, h, lit) => { const ax = nz * w, az = -nx * w; K.quad(lit ? 'eve:flame' : 'slate:iron', [wx - ax, wy, wz - az], [wx + ax, wy, wz + az], [wx + ax, wy + h, wz + az], [wx - ax, wy + h, wz - az], [nx, 0, nz]); };
       const win = (wx, wy, wz, nx, nz, v, lit) => {
         if (v < 0.16) return;
         if (v < 0.32) { for (const e of [-0.6, 0.6]) pane(wx + nz * e, wy - 1, wz - nx * e, nx, nz, 0.22, 7.2, lit); return; }
