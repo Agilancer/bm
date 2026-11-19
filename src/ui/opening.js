@@ -299,6 +299,15 @@ export class OpeningHUD {
       const n = caveNearest(snap[H.PX], snap[H.PZ]);
       if (n.s > 0 && n.s < 22) r.emit(4, 2, snap[H.PX] + (Math.random() - 0.5) * 2, n.floor + n.h - 0.3, snap[H.PZ] + (Math.random() - 0.5) * 2, 0, -0.6, 0, 0.3, 0.2, 0.6, 0.15, 0.4, 1.5, 2.5);
     }
+    if (stage === OPENING.LEAVE && CUE_IDS[snap[H.OPENING_CUE] - 1] === 'run' && every(0.22)) {
+      // And once it's letting go, dust and stones coming down all round you, and ahead.
+      const n = caveNearest(snap[H.PX], snap[H.PZ]);
+      if (n.s > 0) {
+        const ahead = 1.5 + Math.random() * 3, x = snap[H.PX] + CAVE_OUT[0] * ahead + (Math.random() - 0.5) * 2.2, z = snap[H.PZ] + CAVE_OUT[1] * ahead + (Math.random() - 0.5) * 2.2;
+        r.emit(4, 3, x, n.floor + n.h - 0.25, z, 0, -1.2, 0, 0.6, 0.3, 0.9, 0.25, 0.7, 1.4, 2.4);
+        r.emit(3, 2, x, n.floor + n.h - 0.3, z, 0, -2.5, 0, 0.5, 0.4, 1.2, 0.05, 0.14, 0.7, 1.2);
+      }
+    }
     if (stage !== OPENING.COLLAPSE) return;
     if (t > 4.6 && t < 6.9 && every(0.2)) r.emit(4, 3, top[0], top[1], top[2], CAVE_OUT[0] * 0.5, -0.3, CAVE_OUT[1] * 0.5, 0.6, 0.3, 1.2, 0.3, 0.8, 1.5, 3);
     if (t > 6.2 && t < 7.1 && every(0.12)) r.emit(3, 3, top[0], top[1], top[2], CAVE_OUT[0] * 0.6, -1, CAVE_OUT[1] * 0.6, 1, 0.5, 2.5, 0.06, 0.2, 0.8, 1.4);
@@ -446,12 +455,14 @@ export class OpeningHUD {
     } else {
       look = face; fov = her(); rate = t < SPARK_AT + 1.2 ? 6 : 3.5;
       // At her hearth the lens eases wider still, to the fire and the room it lights; on her name for you, it leans in.
-      fov *= 1 + 0.18 * bump(t, C.toHearth + 2, C.toHearth + 6, C.rose - 1, C.ledger);
+      fov *= 1 + 0.18 * bump(t, C.toHearth + 2, C.toHearth + 6, C.turn + 2.4, C.ledger);
       fov *= 1 - 0.14 * bump(t, REVEAL_AT - 0.4, REVEAL_AT + 0.3, REVEAL_AT + 2.2, REVEAL_AT + 3.4);
     }
     const shake = t < SWAP_AT + 0.35 ? 0.012 * (1 - scramble) : 0;
-    // (The view is hers until she sends you out: no look of your own.)
-    return { eye, look, fov, fovRate: t < SWAP_AT + 0.6 ? 14 : 3, rate, free: 0, inside: true, shake, sway: t > C.comeBack };
+    // (The view is hers, but from the flash on you can look a little way round it: the mouse or a drag, eased back when let go.
+    // Not while it's down at your hand.)
+    const free = t > SWAP_AT + 1.5 && !(t > C.hands && t < SPARK_AT + 0.35) ? 0.45 : 0;
+    return { eye, look, fov, fovRate: t < SWAP_AT + 0.6 ? 14 : 3, rate, free, home: true, inside: true, shake, sway: t > C.comeBack };
   }
 
   herdShot(t, P, h) {
@@ -499,9 +510,9 @@ export class OpeningHUD {
       look = face; fov = framing(D, 1.45, 28, 60); rate = 4;
     } else if (t < FALL.catch - 0.5) {
       look = face; fov = close; rate = 4;
-    } else if (t < FALL.catch + 0.9) {
-      // The double take: her, the rubble, her.
-      look = t < FALL.catch - 0.1 || t > FALL.catch + 0.5 ? face : mouth; rate = 9; fov = close;
+    } else if (t < FALL.sun) {
+      // "…Why are you staring at me like that?": a slow push in on her face (you are staring).
+      look = face; rate = 4; fov = close * lerp(1, 0.85, smoothstep(FALL.catch - 0.5, FALL.catch + 2.5, t));
     } else if (t > FALL.coming + 0.8 && t < FALL.coming + 3.0) {
       // "So I'm coming to Bellmourn with you." Out over the valley, to the town.
       look = valley(P); rate = 2.2; fov = 26;

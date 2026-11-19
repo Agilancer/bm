@@ -134,7 +134,7 @@ test('she talks the whole way down, one line at a time', () => {
     }
     // (Only the breath between lines: about a second each.)
     assert.ok(quiet / t < 0.35, `quiet ${(quiet / t * 100).toFixed(0)}% of the way`);
-    for (const id of ['lead', 'sight', 'scream', 'walk']) assert.ok(said.some((l) => l.id === id), `never said ${id}`);
+    for (const id of ['oldLis', 'door', 'scream', 'walk']) assert.ok(said.some((l) => l.id === id), `never said ${id}`);
     assert.equal(new Set(said.filter((l) => !l.id.startsWith('keep')).map((l) => l.id)).size, said.filter((l) => !l.id.startsWith('keep')).length, 'a line said twice');
   }
 });

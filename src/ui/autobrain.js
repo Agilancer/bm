@@ -28,6 +28,7 @@
 import * as LAYOUT from '../core/layout.js';
 import { C, C_HERO, C_SIZE, CHARS_START, H, INPUT, MAX_SLIMES, MAX_TUMBLERS, SLIME_FLOATS, SLIMES_START, TUMBLER_FLOATS, TUMBLERS_START } from '../core/layout.js';
 import { CAVE_MOUTH, CAVE_OUT, HERD_CONTROL, OPENING, RUN_OUT, WAY, WAY_FOOT } from '../core/opening.js';
+import { CUE_IDS } from '../core/opening-script.js';
 import { ROUTE, cornerAhead, routeAt, routeDir, routeNear } from '../core/escort.js';
 import { terrainHeight } from '../core/terrain.js';
 import { SITES } from '../core/lands.js';
@@ -1335,12 +1336,14 @@ export class Brain {
     if (st === OPENING.HERD && t < HERD_CONTROL) { this.say('Lisandra says your name.'); return; }
     if (st === OPENING.HERD || st === OPENING.LEAVE) {
       // Out of the cave the way she points, by the marks down its middle (never back in: she won't have it).
-      this.say('Out of the cave.');
+      // (And at a run once the tunnel starts coming down: she shouts for it.)
+      const run = CUE_IDS[snap[H.OPENING_CUE] - 1] === 'run';
+      this.say(run ? 'Out of the cave, at a run: it is coming down.' : 'Out of the cave.');
       const pts = RUN_OUT.concat([[CAVE_MOUTH[0] + CAVE_OUT[0] * 6, CAVE_MOUTH[1] + CAVE_OUT[1] * 6]]);
       let k = 0, best = 1e9;
       pts.forEach((p, i) => { const d = dist(p[0], p[1], m.x, m.z); if (d < best) { best = d; k = i; } });
       const to = pts[Math.min(pts.length - 1, best < 3 || k === 0 ? k + 1 : k)];
-      this.steer(to[0] - m.x, to[1] - m.z, false);
+      this.steer(to[0] - m.x, to[1] - m.z, run);
       return;
     }
     if (st === OPENING.ESCORT) {

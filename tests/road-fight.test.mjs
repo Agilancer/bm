@@ -1,12 +1,13 @@
 // Run with node --test tests/*.test.mjs. No browser required.
-// The fight on the road down from Lisandra's cave (src/sim/opening.js fight, src/sim/undead.js openingRaise): twenty of
-// the dead, five at a time; at eight left, twenty more and ten of their children; at ten left, a necromancer from each
+// The fight on the road down from Lisandra's cave (src/sim/opening.js fight, src/sim/undead.js openingRaise): eight of
+// the dead, four at a time; at three left, six more and four of their children; at four left, a necromancer from each
 // side; and on to town once they're all down. Stand-in bodies stand in for the dead: who comes up, when, and how many.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Opening } from '../src/sim/opening.js';
 import { COLLAPSE_END, OPENING } from '../src/core/opening.js';
-import { CUE_IDS } from '../src/core/opening-script.js';
+import { CUES, CUE_IDS } from '../src/core/opening-script.js';
+import { READ_CPS } from '../src/core/opening-cave.js';
 import { ROUTE, routeAt, routeDir, routeNear } from '../src/core/escort.js';
 import { BODIES, Caster, Zombie } from '../src/sim/undead.js';
 
@@ -65,38 +66,49 @@ function play(kill) {
   return { op, log, said, at, s, sim };
 }
 
-test('twenty come up five at a time; then twenty more and ten children; then a necromancer from each side', () => {
+test('eight come up four at a time; then six more and four children; then a necromancer from each side', () => {
   // Nothing dies for twelve seconds, then two a second.
   const { op, log, said, sim } = play((up, t) => (t < 12 ? 0 : 2));
   assert.equal(op.stage, OPENING.ARRIVED, 'on to town when it is over');
-  // The first wave: fives, a couple of seconds apart, to twenty and no more.
+  // The first wave: fours, a couple of seconds apart, to eight and no more.
   let before = 0;
-  for (const e of log.filter((e) => e.t < 12)) { assert.ok(e.up - before <= 5 && e.up <= 20, `${e.up} up at ${e.t.toFixed(1)} s`); before = e.up; }
-  assert.equal(log.filter((e) => e.t > 10 && e.t < 12).at(-1).up, 20);
-  assert.ok(log.find((e) => e.up === 20).t > 6, 'not all at once');
-  // The second comes only once eight or fewer of the first are left; and brings children.
+  for (const e of log.filter((e) => e.t < 12)) { assert.ok(e.up - before <= 4 && e.up <= 8, `${e.up} up at ${e.t.toFixed(1)} s`); before = e.up; }
+  assert.equal(log.filter((e) => e.t > 10 && e.t < 12).at(-1).up, 8);
+  assert.ok(log.find((e) => e.up === 8).t > 1, 'not all at once');
+  // The second comes only once three or fewer of the first are left; and brings children.
   const second = log.find((e) => e.phase === 2);
-  assert.ok(log[log.indexOf(second) - 1].up <= 8, 'the second wave waited for eight');
-  assert.ok(Math.max(...log.map((e) => e.children)) >= 3, 'children among them');
+  assert.ok(log[log.indexOf(second) - 1].up <= 3, 'the second wave waited for three');
+  assert.ok(Math.max(...log.map((e) => e.children)) >= 2, 'children among them');
   const raised = sim.knights.filter((k) => !(k instanceof Caster)).reduce((n, k) => n + k.ups, 0);
-  assert.equal(raised, 50, 'fifty of the dead in all');
-  assert.equal(sim.knights.filter((k) => k.opts.child).reduce((n, k) => n + k.ups, 0), 10, 'ten of them children');
-  // The necromancers: two, once ten or fewer are left, and never before.
+  assert.equal(raised, 18, 'eighteen of the dead in all');
+  assert.equal(sim.knights.filter((k) => k.opts.child).reduce((n, k) => n + k.ups, 0), 4, 'four of them children');
+  // The necromancers: two, once four or fewer are left, and never before.
   const third = log.find((e) => e.phase === 3);
-  assert.ok(log[log.indexOf(third) - 1].up <= 10, 'the necromancers waited for ten');
+  assert.ok(log[log.indexOf(third) - 1].up <= 4, 'the necromancers waited for four');
   assert.equal(Math.max(...log.map((e) => e.casters)), 2);
   assert.ok(log.filter((e) => e.phase < 3).every((e) => e.casters === 0));
   // What she says of it, in order; and her fire in the air.
   const ids = said.map((l) => l.id);
-  for (const id of ['risen', 'wave2', 'necro', 'after', 'heal0', 'wed4']) assert.ok(ids.includes(id), `never said ${id}`);
+  for (const id of ['risen', 'wave2', 'necro', 'after', 'heal1', 'wed', 'heal6']) assert.ok(ids.includes(id), `never said ${id}`);
   assert.ok(ids.indexOf('risen') < ids.indexOf('wave2') && ids.indexOf('wave2') < ids.indexOf('necro') && ids.indexOf('necro') < ids.indexOf('after'));
   assert.ok(log.some((e) => e.bolts > 0), 'she throws fire');
+});
+
+test('no line of hers on the way down, the fight\'s calls included, is replaced before it can be read', () => {
+  for (const kill of [(up, t) => (t < 3 ? 0 : 1), (up, t) => (t < 1 ? 0 : 3)]) {
+    const { said } = play(kill);
+    for (let i = 1; i < said.length; i++) {
+      const a = said[i - 1], read = CUES[a.id].text.length / READ_CPS;
+      if (CUES[a.id].caption) continue;
+      assert.ok(said[i].t - a.t >= read - 1e-6, `${said[i].id} over ${a.id} after ${(said[i].t - a.t).toFixed(1)} s (it takes ${read.toFixed(1)} to read)`);
+    }
+  }
 });
 
 test('with fewer bodies than the waves want, the fallen go back into the ground and come up again', () => {
   const { op, sim } = play((up, t) => (t < 4 ? 0 : 3));
   assert.equal(op.stage, OPENING.ARRIVED);
-  assert.equal(sim.knights.filter((k) => !(k instanceof Caster)).reduce((n, k) => n + k.ups, 0), 50);
+  assert.equal(sim.knights.filter((k) => !(k instanceof Caster)).reduce((n, k) => n + k.ups, 0), 18);
 });
 
 test('the bodies kept for the road are enough for its children and its necromancers, and no model is listed twice but the children\'s', () => {
