@@ -1101,7 +1101,7 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
       hh = fract(hh / 6.0 + 1.0);
     }
     let sat = select(0.0, dl / mx, mx > 1e-4);
-    let skin = (1.0 - smoothstep(0.09, 0.13, hh)) * smoothstep(0.1, 0.18, sat) * (1.0 - smoothstep(0.55, 0.7, sat)) * smoothstep(0.12, 0.22, mx);
+    let skin = (1.0 - smoothstep(0.055, 0.07, hh)) * smoothstep(0.3, 0.42, sat) * (1.0 - smoothstep(0.8, 0.88, sat)) * smoothstep(0.02, 0.07, mx);
     var nh = fract(hh + dh - select(0.0, 1.0, dh > 0.5));
     var ns = clamp(sat * si / 10.0, 0.0, 1.0);
     ns *= 1.0 - 0.8 * smoothstep(0.46, 0.52, nh) * (1.0 - smoothstep(0.7, 0.76, nh));
