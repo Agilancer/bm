@@ -10,7 +10,7 @@
 // chapel and the frozen shrine are Tessariel's and carry his T. tools/lands/check.mjs keeps them 1.5 km apart.
 
 import { portalFloor, terrainHeight } from './terrain.js';
-import { BARROWS, CLIFF, MOUNT, POOL, SITES, WATERS, routeDist, waterLevel } from './lands.js';
+import { BARROWS, CLIFF, MOUNT, POOL, PORTAL_BANKS, SITES, WATERS, routeDist, waterLevel } from './lands.js';
 import { hash2, vnoise } from './terrain-noise.js';
 import { DELVES, PORTAL_PAD, caveFloorY } from './dungeon.js';
 import { buildDelves } from './delve-build.js';
@@ -630,8 +630,99 @@ function portalWall(K, x, z, yaw, key, ground = terrainHeight) {
 function warrensMouth(K) {
   // (Not a ward gone into only from another: its portal is that one's. src/core/delve-castle.js within.)
   for (const d of DELVES) if (!d.within) portalWall(K, d.portal.x, d.portal.z, d.portal.yaw, `${d.tag}_portal`);
+  // (And out on the land, the bank each is cut into, and what's on it: PORTAL_BANKS, portalDress.)
+  for (const b of PORTAL_BANKS) portalDress(K, b);
   // (A sewer's second mouth in the streets of Phobos: src/core/delve-sewers.js ways.)
   for (const d of DELVES) (d.ways || []).forEach((w, i) => portalWall(K, w.x, w.z, w.yaw, `${d.tag}_w${i}`));
+}
+
+// What's on and round the bank a dungeon's way in is cut into (src/core/lands.js PORTAL_BANKS), so the terrace and its wall
+// read as a door in that place and not a thing set down on it: rocks along the bank's crest and down its cheeks, and each
+// place's own. Nothing on the terrace or the flight up to it, or in front of that: the way in is kept clear (portalStair).
+// [u across, w through (+ out the front)], in the terrace's frame.
+function portalDress(K, [bx, bz, yaw, H, kind]) {
+  const { P } = terraceFrame(bx, bz, yaw), U = PORTAL_PAD.hu + PLAT.edge, W = PORTAL_PAD.hw + PLAT.edge;
+  const at = (u, w) => { const [x, z] = P(u, w); return [x, Y(x, z), z]; };
+  const r = (i, j) => hash2(Math.round(bx) + i * 17, Math.round(bz) + j * 31);
+  const clear = (u, w) => Math.abs(u) > U + 1.2 || w < -W - 1.2;
+  // The crest and the cheeks: rocks, half sunk.
+  for (let i = 0; i < 16; i++) {
+    const side = i % 2 ? 1 : -1, t = r(i, 1);
+    const [u, w] = i < 8 ? [(t * 2 - 1) * (U + 6), -W - 2.5 - r(i, 2) * 9] : [side * (U + 1.8 + r(i, 3) * 6), -W + r(i, 4) * (W * 2 + 2)];
+    if (!clear(u, w)) continue;
+    const [x, , z] = at(u, w);
+    K.rock(r(i, 5) > 0.5 ? 'dark:rubble' : 'rubble', x, z, 0.7 + r(i, 6) * 1.1, 0.7 + r(i, 7) * 1.2, { collide: false, turn: t * 3 });
+  }
+  if (kind === 'barrow') {
+    // A kerb of standing stones round the mound's foot, and two tall ones either side of the way up to its door.
+    for (let i = 0; i < 11; i++) {
+      const a = -0.5 + i / 10 * (Math.PI + 1), ru = U + 7, rw = W + 9, u = Math.cos(a) * ru, w = -W - 2 - Math.sin(a) * rw * 0.9;
+      if (!clear(u, w)) continue;
+      const [x, , z] = at(u, w); K.menhir('rubble', x, z, 0.45 + r(i, 8) * 0.2, 1.3 + r(i, 9) * 1.1, -yaw - a, (r(i, 10) - 0.5) * 0.18);
+    }
+    for (const sd of [-1, 1]) { const [x, , z] = at(sd * (U + 1.6), W + 1.5); K.menhir('rubble', x, z, 0.6, 3.6, -yaw, sd * 0.04); }
+    for (const [u, w] of [[U + 9, W + 4], [-U - 10, W + 2]]) { const [x, , z] = at(u, w); K.cairn(x, z, 0.9, 1.1); }
+  } else if (kind === 'keep') {
+    // The keep's outworks, fallen: a broken curtain running off either cheek, a tower's stump on one, rubble down the bank.
+    for (const sd of [-1, 1]) {
+      const [ax, , az] = at(sd * (U + 1.5), -W - 1), [cx, , cz] = at(sd * (U + 15), W + 6);
+      K.wall('dark:rubble', ax, az, cx, cz, 1.6, 4.5 + r(sd, 11) * 2, { ruin: true });
+    }
+    { const [x, y, z] = at(U + 7, -W - 6); K.drum('dark:rubble', x, y - 1, z, 3.4, 6.5, 10, { r2: 3.1 }); K.heap('dark:rubble', x - 3, z + 2, 2.6, 1.4, 8, { collide: false }); }
+    for (let i = 0; i < 5; i++) { const [x, , z] = at((r(i, 12) * 2 - 1) * (U + 8), -W - 3 - r(i, 13) * 6); K.heap('rubble', x, z, 1.2 + r(i, 14), 0.6 + r(i, 15) * 0.6, 7, { collide: false }); }
+  } else if (kind === 'mine') {
+    // A drift into the hill: props of timber against the bank either side, planks on the ground, the spoil heap off to one
+    // side with a cart left at its foot, a lantern on a post.
+    for (const sd of [-1, 1]) for (const w of [-W + 0.5, -W + 3]) {
+      const [x, y, z] = at(sd * (U + 0.9), w); K.box('wood', x, y - 0.3, z, 0.22, 6.2, 0.22, yaw, { collide: false });
+    }
+    for (const sd of [-1, 1]) { const [ax, ay, az] = at(sd * (U + 0.9), -W + 0.5), [cx, cy, cz] = at(sd * (U + 0.9), -W + 3); K.beam('wood', [ax, ay + 5.9, az], [cx, cy + 5.9, cz], 0.2); }
+    { const [x, , z] = at(U + 12, W + 3); K.heap('dark:rubble', x, z, 5, 2.6, 9); K.cart(x - 2.5, z + 4, yaw + 0.6, { load: 'dark:rubble', len: 1.1 }); }
+    { const [x, , z] = at(-U - 3, W + 2); K.lantern(x, z, 2.6, yaw); K.woodpile(x - 2, z - 3, yaw, 1.3, 0.8, 0.45); }
+  } else if (kind === 'drowned') {
+    // An old embankment gone to water: its pillars broken off at all heights, pools in the hollows either side, rubble.
+    for (let i = 0; i < 7; i++) {
+      const sd = i % 2 ? 1 : -1, [u, w] = [sd * (U + 2 + r(i, 16) * 7), -W - 1 + r(i, 17) * 9];
+      if (!clear(u, w)) continue;
+      const [x, y, z] = at(u, w); K.drum('stone', x, y - 0.4, z, 0.55, 0.8 + r(i, 18) * 3.2, 8, { r2: 0.5 });
+    }
+    for (const sd of [-1, 1]) { const [x, , z] = at(sd * (U + 6), W + 5); K.paving('water', x, z, 3.2, 2.2, yaw, 0.04); }
+    for (let i = 0; i < 4; i++) { const [x, , z] = at((i % 2 ? 1 : -1) * (U + 4 + i), W + 1 + i); K.heap('stone', x, z, 0.9, 0.5, 6, { collide: false }); }
+  } else if (kind === 'spore') {
+    // The knoll gone over to the fungus: caps the height of a man up its cheeks and over its crest, their young at its foot.
+    const cap = (u, w, h, big) => {
+      if (!clear(u, w)) return;
+      const [x, y, z] = at(u, w);
+      K.drum('cloth_oat', x, y - 0.2, z, 0.35 + h * 0.08, h, big ? 8 : 5, { r2: 0.25 + h * 0.06, collide: false });
+      K.drum('fruit', x, y + h - 0.2, z, 1 + h * 0.45, 0.35, big ? 12 : 7, { r2: 0.8 + h * 0.4, collide: false });
+      K.cone('fruit', x, y + h + 0.15, z, 0.8 + h * 0.4, 0.5 + h * 0.18, big ? 12 : 7);
+    };
+    for (const sd of [-1, 1]) cap(sd * (U + 2.2), W - 0.5, 4.5, true);
+    for (let i = 0; i < 9; i++) cap((r(i, 19) * 2 - 1) * (U + 9), -W - 2 - r(i, 20) * 10, 1.4 + r(i, 21) * 2.6, true);
+    for (let i = 0; i < 12; i++) cap((i % 2 ? 1 : -1) * (U + 1.5 + r(i, 22) * 8), -W + r(i, 23) * (2 * W + 6), 0.3 + r(i, 24) * 0.6, false);
+  } else if (kind === 'playhouse') {
+    // The bank is what's left of its tiers of seats: broken rows of them stepping up either side, a column or two of its
+    // front still standing, faded cloth on a pole.
+    for (const sd of [-1, 1]) for (let row = 0; row < 5; row++) for (let k = 0; k < 3; k++) {
+      if (r(row * 3 + k, sd + 30) < 0.25) continue;
+      const u = sd * (U + 1.5 + row * 1.4), w = -W + 0.5 + k * 3.2 - row * 0.6, [x, y, z] = at(u, w);
+      K.box('stone', x, y - 0.3, z, 0.6, 0.65, 1.5, yaw, { collide: false });
+    }
+    for (const [u, w, h] of [[U + 3, W + 4, 5.5], [-U - 3.5, W + 3, 3.2], [-U - 6, W + 7, 1.4]]) { const [x, y, z] = at(u, w); K.drum('pale:stone', x, y - 0.3, z, 0.55, h, 10); }
+    { const [x, , z] = at(U + 5, W + 1); K.banner(x, z, 5, yaw, 'wall_13', { w: 0.6, len: 1.8 }); }
+  } else if (kind === 'bones') {
+    // A ridge of rock with the old bones in it: ribs as long as a ship arching over the way up to the door, from one cheek to
+    // the other, and more of them broken off up its back.
+    for (let i = 0; i < 4; i++) {
+      const w0 = W + 2 + i * 3.4, half = U + 2.5;
+      const pt = (q) => { const a = q * Math.PI, [x, y, z] = at(-Math.cos(a) * half, w0 - i * 0.3); return [x, y - 0.5 + Math.sin(a) * (11 - i * 0.8), z]; };
+      for (let s = 0; s < 8; s++) K.beam('pale:stone', pt(s / 8), pt((s + 1) / 8), 0.6 - Math.abs(s - 3.5) * 0.03, 0.45);
+    }
+    for (let i = 0; i < 5; i++) {
+      const sd = i % 2 ? 1 : -1, [x, y, z] = at(sd * (3 + i * 2.5), -W - 4 - i * 2.2);
+      K.spike('pale:stone', x, y - 0.5, z, 0.6, 5 + r(i, 25) * 4, 6, 0, [sd * 0.25, -0.2]);
+    }
+  }
 }
 
 // ---------------------------------------------------------------- the places
