@@ -8,8 +8,8 @@
 // it's on as READING (the same handshake as the fight's snapshot, src/core/layout.js).
 
 // (The town's people, those posted out in the land, and City State Phobos's street crowd: src/folk/people.js FOLK.)
-// (96 since 2026-11-19: Phobos's ten people made on Meshy joined the crowd. A phone loads only CROWD_LEAN of the crowd.)
-export const FOLK_MAX = 96;
+// (128 since 2026-11-19: Phobos's forty people made on Meshy joined the crowd. A phone loads only CROWD_LEAN of the crowd.)
+export const FOLK_MAX = 128;
 // Palette joints a person can have: their own (55 at most in the owner's models) and the four the skirt borrows.
 export const FOLK_JOINTS = 72;
 
