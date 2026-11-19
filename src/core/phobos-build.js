@@ -176,7 +176,8 @@ const SIGNS = 20;
 function shopSign(K, h, P, fy, fz, i) {
   // (Its chains from the bracket's two ends, by the wall and at its tip, never from along it: a cord hung from the middle of
   // a bar is a T. The V/T rule.)
-  const f = h.front, lx = -DOOR - 0.9, hw = 0.38, zc = fz + f * (0.08 + hw), y0 = fy + 2.45, y1 = fy + 3.05, t = 0.045, tip = fz + f * (0.1 + 2 * hw);
+  // (Half again as big as it was: its name read from across the street, the critics.)
+  const f = h.front, lx = -DOOR - 0.9, hw = 0.56, zc = fz + f * (0.08 + hw), y0 = fy + 2.35, y1 = fy + 3.23, t = 0.05, tip = fz + f * (0.1 + 2 * hw);
   K.beam('iron', P(lx, fy + 3.3, fz), P(lx, fy + 3.3, tip), 0.05);
   for (const zz of [fz + f * 0.1, tip]) K.beam('iron', P(lx, fy + 3.3, zz), P(lx, y1, zz), 0.012);
   const [bx, , bz] = P(lx, 0, zc); K.box('dark:wood', bx, y0 - 0.03, bz, t + 0.01, y1 - y0 + 0.06, hw + 0.03, h.yaw, { collide: false });
@@ -296,7 +297,7 @@ function houseNear(K, h) {
   for (const w of wins) {
     const { st, sd, q, wx, wy, ww, wh, lit } = w, wz = q * (h.hz + 0.05), d = q > 0 ? 1 : -1, N = [q * s, 0, q * c], fw = ww + 0.1;
     const frame = (zz, nn, rev) => {
-      const Q = (x0, y0, x1, y1) => (rev ? K.quad('wood', P(x0, y0, zz), P(x1, y0, zz), P(x1, y1, zz), P(x0, y1, zz), nn) : K.quad('wood', P(x1, y0, zz), P(x0, y0, zz), P(x0, y1, zz), P(x1, y1, zz), nn));
+      const Q = (x0, y0, x1, y1) => (rev ? K.quad('dark:wood', P(x0, y0, zz), P(x1, y0, zz), P(x1, y1, zz), P(x0, y1, zz), nn) : K.quad('dark:wood', P(x1, y0, zz), P(x0, y0, zz), P(x0, y1, zz), P(x1, y1, zz), nn));   // (dark: in plain wood, lit by the lamps, the frames glowed orange, the critics)
       Q(wx - d * fw, wy - 0.12, wx + d * fw, wy); Q(wx - d * fw, wy + wh, wx + d * fw, wy + wh + 0.1);
       Q(wx - d * fw, wy, wx - d * ww, wy + wh); Q(wx + d * ww, wy, wx + d * fw, wy + wh);
     };
@@ -588,7 +589,8 @@ export function tower(K, layer, x, z, r, h, roof, o = {}) {
   if (roof) { if (r < 9 && hash2(id, 11) < 0.08) K.cone(roof, x, y + h, z, r + 0.5, r * (o.steep ?? 2.4) * 1.8, sides, turn); else K.cone(roof, x, y + h, z, r + (r >= 8 ? 2.4 : 0.8), r * (o.steep ?? 2.4), sides, turn); }
   else {
     if (o.shell) cap();
-    for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; K.box(layer, x + Math.cos(a) * (r - 0.5), y + h, z + Math.sin(a) * (r - 0.5), 0.8, 1.6, 0.5, -a, { collide: false }); }
+    // (His V cut in each: swallowtail merlons round its head, the notch along the wall. On a phone, plain.)
+    for (let i = 0; i < 8; i++) { const a = i / 8 * TAU, mx = x + Math.cos(a) * (r - 0.5), mz = z + Math.sin(a) * (r - 0.5); if (K.lean) K.box(layer, mx, y + h, mz, 0.8, 1.6, 0.5, -a, { collide: false }); else K.vee(layer, mx, y + h, mz, Math.min(1.4, r * 0.18), 2.0, 0.5, -a + Math.PI / 2, 0.5); }
     if (hash2(id, 12) < 0.45) { K.drum('iron', x, y + h, z, r * 0.22, 1.2, 8, { r2: r * 0.34, open: true, collide: false }); fire(K, x, y + h + 0.6, z, r * 0.24, r * 0.62); }
   }
   if (K.lean || o.plain) return y + h;

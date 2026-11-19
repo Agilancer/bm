@@ -30,7 +30,7 @@ SIGNS = [
     ("Ash & Ember|Forge", "anvil"), ("Rag &|Bone", "sack"), ("Charnel|Candles", "skullcandle"), ("Cooper", "barrel"),
     ("The Bitter|End", "tankard"), ("Fat Hen|Poultry", "hen"), ("Loaves", "loaf"), ("The Slough|Ferry", "boat"),
 ]
-CREAM, BLOOD, DARK = (214, 198, 166), (118, 26, 22), (26, 18, 14)
+CREAM, BLOOD, DARK = (226, 210, 178), (168, 38, 30), (20, 14, 11)
 
 
 def board(rng, w, h):
@@ -75,7 +75,9 @@ def picture(d, kind, cx, cy, s, ink):
         E([cx - s * 0.75, cy - s * 0.12, cx - s * 0.6, cy + s * 0.03], fill=DARK)
     elif kind == "pie":
         d.chord([cx - s, cy - s * 0.5, cx + s, cy + s * 0.9], 180, 360, fill=ink); d.rectangle([cx - s, cy + s * 0.2, cx + s, cy + s * 0.45], fill=ink)
-        for k in (-0.4, 0, 0.4): L([(cx + s * k - 0.12 * s, cy - s * 0.05), (cx + s * k + 0.12 * s, cy - s * 0.05)], 2)
+        # (Its crust's vents cut dark, and a crimped rim: a pie, not the loaf's dome.)
+        for k in (-0.4, 0, 0.4): d.line([(cx + s * k - 0.1 * s, cy - s * 0.32), (cx + s * k + 0.1 * s, cy - s * 0.12)], fill=DARK, width=3)
+        for k in range(9): E([cx - s + k * s * 0.25 - s * 0.08, cy + s * 0.12, cx - s + k * s * 0.25 + s * 0.08, cy + s * 0.3], fill=DARK)
     elif kind == "tankard":
         d.rectangle([cx - s * 0.5, cy - s * 0.6, cx + s * 0.4, cy + s * 0.8], fill=ink); d.arc([cx + s * 0.2, cy - s * 0.35, cx + s * 0.9, cy + s * 0.45], 270, 90, fill=ink, width=5)
         E([cx - s * 0.65, cy - s * 0.9, cx + s * 0.55, cy - s * 0.45], fill=(200, 190, 170))
@@ -106,13 +108,15 @@ def picture(d, kind, cx, cy, s, ink):
         E([cx - s * 0.7, cy - s * 0.4, cx + s * 0.7, cy + s * 0.95], fill=ink); d.polygon([(cx - s * 0.3, cy - s * 0.45), (cx + s * 0.3, cy - s * 0.45), (cx + s * 0.15, cy - s * 0.85), (cx - s * 0.15, cy - s * 0.85)], fill=ink)
     elif kind == "barrel":
         E([cx - s * 0.65, cy - s * 0.95, cx + s * 0.65, cy + s * 0.95], fill=ink)
-        for k in (-0.55, 0.55): L([(cx - s * 0.62, cy + s * k), (cx + s * 0.62, cy + s * k)], 3)
+        # (Its hoops cut dark, so it reads as a cask and not a red egg. Hoops only: staves across them were a grid of crosses.)
+        for k in (-0.6, -0.2, 0.2, 0.6): d.line([(cx - s * 0.6, cy + s * k), (cx + s * 0.6, cy + s * k)], fill=DARK, width=3 if abs(k) > 0.5 else 2)
     elif kind == "hen":
         E([cx - s * 0.8, cy - s * 0.3, cx + s * 0.5, cy + s * 0.7], fill=ink); E([cx + s * 0.2, cy - s * 0.85, cx + s * 0.75, cy - s * 0.2], fill=ink)
         d.polygon([(cx + s * 0.72, cy - s * 0.6), (cx + s * 1.0, cy - s * 0.5), (cx + s * 0.72, cy - s * 0.42)], fill=(190, 120, 40)); L([(cx - s * 0.2, cy + s * 0.65), (cx - s * 0.2, cy + s)], 3)
     elif kind == "loaf":
-        d.chord([cx - s, cy - s * 0.7, cx + s, cy + s * 0.9], 180, 360, fill=ink); d.rectangle([cx - s, cy + s * 0.1, cx + s, cy + s * 0.3], fill=ink)
-        for k in (-0.45, 0, 0.45): L([(cx + s * k - 0.12 * s, cy - s * 0.4), (cx + s * k + 0.1 * s, cy - s * 0.05)], 3)
+        # (A long loaf lying, scored three times dark: not the pie's round.)
+        E([cx - s * 1.2, cy - s * 0.45, cx + s * 1.2, cy + s * 0.45], fill=ink)
+        for k in (-0.55, 0, 0.55): d.line([(cx + s * k - 0.18 * s, cy + s * 0.25), (cx + s * k + 0.18 * s, cy - s * 0.25)], fill=DARK, width=3)
     elif kind == "boat":
         d.polygon([(cx - s, cy), (cx + s, cy), (cx + s * 0.7, cy + s * 0.5), (cx - s * 0.7, cy + s * 0.5)], fill=ink); L([(cx + s * 0.6, cy - s * 1.0), (cx + s * 0.3, cy + s * 0.1)], 3)
 
@@ -124,7 +128,7 @@ def cell(i, name, kind, w, h):
     ink = CREAM if i % 3 else BLOOD
     edge = DARK if ink == CREAM else (210, 190, 160)
     lines = name.split("|")
-    fs = 30 if max(len(t) for t in lines) < 11 else 25
+    fs = 33 if max(len(t) for t in lines) < 11 else 27
     f = ImageFont.truetype(FONT, fs)
     pic_h = h * 0.42
     picture(d, kind, w / 2, 14 + pic_h / 2, pic_h * 0.42, ink)
@@ -132,8 +136,9 @@ def cell(i, name, kind, w, h):
     for t in lines:
         bb = d.textbbox((0, 0), t, font=f)
         x = (w - (bb[2] - bb[0])) / 2 - bb[0]
-        d.text((x + 1.5, ty + 1.5), t, font=f, fill=edge)
-        d.text((x, ty), t, font=f, fill=ink)
+        # (Bold: the letters stroked with their own paint, and a dark shadow under, to read from across the street.)
+        d.text((x + 2, ty + 2), t, font=f, fill=edge, stroke_width=1, stroke_fill=edge)
+        d.text((x, ty), t, font=f, fill=ink, stroke_width=1, stroke_fill=ink)
         ty += fs * 1.02
     # (Weather: the paint flaked here and there, the whole a little dulled.)
     a = np.asarray(im, np.float32)

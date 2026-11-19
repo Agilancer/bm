@@ -631,6 +631,10 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
         // Soot down from every ledge, in four-metre runs; heavier toward the city's smoke.
         let st = p2W(vec2f(along / 4.0, -p.y / 4.0), 280, 4.0, dist).r;
         albedo *= 1.0 - 0.72 * st * smoothstep(0.3, 0.6, mid.g + 0.15);
+        // And on what's tall, the castle's towers and curtains above all, long runs of soot and rain from far up, fourteen
+        // metres across and thirty-six down a repeat: a drum a hundred metres high streaked the length of it, not ruled.
+        let tall = p2W(vec2f(along / 14.0, -p.y / 36.0), 280, 14.0, dist).r;
+        albedo *= 1.0 - 0.5 * tall * smoothstep(0.3, 0.6, big.r + 0.12);
         // Cracks, now and then.
         let ck = p2W(vec2f(along / 3.0, -p.y / 3.0) + 0.37, 285, 3.0, dist).r;
         albedo *= 1.0 - 0.5 * ck * smoothstep(0.62, 0.8, big.a);
