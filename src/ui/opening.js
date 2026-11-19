@@ -510,9 +510,9 @@ export class OpeningHUD {
       look = face; fov = framing(D, 1.45, 28, 60); rate = 4;
     } else if (t < FALL.catch - 0.5) {
       look = face; fov = close; rate = 4;
-    } else if (t < FALL.catch + 0.9) {
-      // The double take: her, the rubble, her.
-      look = t < FALL.catch - 0.1 || t > FALL.catch + 0.5 ? face : mouth; rate = 9; fov = close;
+    } else if (t < FALL.sun) {
+      // "…Why are you staring at me like that?": a slow push in on her face (you are staring).
+      look = face; rate = 4; fov = close * lerp(1, 0.85, smoothstep(FALL.catch - 0.5, FALL.catch + 2.5, t));
     } else if (t > FALL.coming + 0.8 && t < FALL.coming + 3.0) {
       // "So I'm coming to Bellmourn with you." Out over the valley, to the town.
       look = valley(P); rate = 2.2; fov = 26;

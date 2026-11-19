@@ -38,7 +38,7 @@ const sim = { player, world, villagers: [body(), body()], knights, time: 0, even
 const op = new Opening(sim);
 
 const names = Object.fromEntries(Object.entries(OPENING).map(([k, v]) => [v, k]));
-const clock = (s) => `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, '0')}`;
+const clock = (s) => { const d = Math.round(s * 10); return `${Math.floor(d / 600)}:${String(Math.floor(d % 600 / 10)).padStart(2, '0')}.${d % 10}`; };
 const dt = 1 / 60;
 let T = 0, stage = -1, stageT = 0, lastLine = null, lastCue = 0, s = 0, firstMove = null, firstCast = null, fightT = null, maxShake = 0;
 const took = {};

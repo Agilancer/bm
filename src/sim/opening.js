@@ -17,7 +17,7 @@ import { openingCaster, openingRaise } from './undead.js';
 const WEAVE_FROM = 9.4;             // into WAKE: she sets off across the cave to you
 const LEAVE_PACE = 2.4;             // how fast you can go in the cave, until the tunnel starts to come down
 // The tunnel shakes: once she's begged the door to hold (after this long, or this far in), and how hard.
-const QUAKE = { after: 2.6, deep: 9, shake: 0.42 };
+const QUAKE = { after: 3.6, deep: 12, shake: 0.42 };
 const KNEEL_TURN = 0.35;     // how far round from facing you she comes down
 const AWAY_TURN = 0.8;       // turned to the rubble, how far round toward you she stays (three-quarters from behind)
 // Hands put somewhere, in her body's space (x to her left, y up, z ahead): src/sim/village-walker.js act's b.reach.
@@ -38,7 +38,7 @@ const RUN_FROM = (() => { const p = CAVE_LINE.find((q) => q[4] >= 15); return [p
 // landing partway down them, the road, the pines, the dead, and the town in sight.
 const MARKS = { shelf: 9, steps: routeNear(WAY[WAY_HEAD][0], WAY[WAY_HEAD][1]) - 4, speech: routeNear(WAY[WAY_HALF][0], WAY[WAY_HALF][1]), foot: routeNear(WAY.at(-1)[0], WAY.at(-1)[1]) - 8,
   stepsEnd: routeNear(WAY[WAY_FOOT][0], WAY[WAY_FOOT][1]), ambush: routeNear(-161.5, 134.3), sight: routeNear(-84, 63) };
-MARKS.woods = MARKS.ambush - 34;
+MARKS.woods = MARKS.ambush - 60;
 // (How far down the way the dead come up: auto-play is off its shield and on its feet well before it. src/ui/autobrain.js.)
 export const AMBUSH_AT = MARKS.ambush;
 // (How near the road you have to be, going by that mark, for them to come up: a little way off it to either side.)
@@ -62,20 +62,19 @@ const GAITS = [2.2];
 // you're within HEAR of her (calls don't). Between the lines a place brings, these, in turn, while she's above the pines.
 const TALK_GAP = 1.1, HEAR = 17;
 const HILL = ['hill2', 'hill3', 'hill5'];
-const LOW = ['low1', 'low2', 'low3', 'low4', 'low5'];
 const KEEP = ['keep1', 'keep2', 'keep3'];
 // After the fight, who Velscour was, and what he was to her. (Said as you go: she keeps by you, and each line waits till
 // you're near enough to hear it.)
-const HEAL = ['heal0', 'heal1', 'heal2', 'heal3', 'heal5', 'heal6'];
-const WED = ['wed', 'wed4'];
+const HEAL = ['spark', 'heal1', 'heal2', 'heal3'];
+const WED = ['wed', 'heal6'];
 // On her shelf and down her steps you keep to a walk behind her: it's narrow, and she has things to say on it.
-const STEPS_PACE = 3.3, STEPS_STILL = 2.6;
+const STEPS_PACE = 5.0, STEPS_STILL = 2.6;
 const CORNER = { near: 1.6, pace: 1.15, gain: 1.4, give: 1.3 };
 const THEN = { staff: 'staff2' };
 // What's dropped unsaid at the town's edge, and what's dropped when the dead come up.
-// (What he was to her, too, if she hasn't begun it: she won't keep you stood at the edge of town for it.)
-const ROAD_TALK = new Set([...HILL, ...LOW, ...WED, 'lead', 'door', 'shelf', 'steps', 'speech', 'foot', 'staff', 'staff2', 'woods']);
-const BEFORE_FIGHT = new Set([...HILL, 'lead', 'door', 'shelf', 'steps', 'speech', 'foot', 'staff', 'staff2', 'woods']);
+// (Not her story: she finishes that at the town's edge before anything else happens.)
+const ROAD_TALK = new Set([...HILL, 'oldLis', 'door', 'shelf', 'steps', 'speech', 'foot', 'staff', 'staff2', 'woods']);
+const BEFORE_FIGHT = new Set([...HILL, 'oldLis', 'door', 'shelf', 'steps', 'speech', 'foot', 'staff', 'staff2', 'woods']);
 // The fight on the road, a little below the pines, where the hillside is bare on both sides of it: eight of the dead up
 // out of the open ground either side, four at a time; when three or fewer are left, six more and four of their children;
 // when four or fewer of those are left, a necromancer out of the nearest trees past the bare ground on each side, who raise
@@ -147,6 +146,13 @@ export class Opening {
     this.cue = CUE_IDS.indexOf(id) + 1;
     this.cueT = 0;
     this.talkLeft = CUES[id].dur + TALK_GAP;
+  }
+
+  // A call in the fight: now, over whatever she's saying, unless that's another call still being read (then straight after).
+  call(id) {
+    const said = CUE_IDS[this.cue - 1];
+    if (said && CUES[said].call && this.cueT < CUES[said].dur) this.queue(id, true);
+    else this.speak(id);
   }
 
   // Next on the road, once she's done with what she's saying (first: ahead of whatever else is waiting). Said once.
@@ -341,9 +347,7 @@ export class Opening {
     // What to do: her hand out down the cave, past you, to the tunnel and the world.
     const tunnel = chamberPoint(0, 0), out = at(tunnel, 1.5);
     if (t < C.pointOut + 3.6) return { clip: 'Pointing into the distance', face: yawTo(here, tunnel), turn: 3, look: out, blend: 4 };
-    if (t < C.cant) return { clip: 'Idle_Talking_Loop', rate: 0.6, face, look: eye, blend: 2.5 };
-    // "I can't come.": a look over her shoulder at the door behind her.
-    if (t < C.toOffer) return { clip: 'Idle_FoldArms_Loop', face, look: t > C.cant + 0.8 && t < C.cant + 3.4 ? door : eye, blend: 2.5 };
+    if (t < C.toOffer) return { clip: 'Idle_Talking_Loop', rate: 0.6, face, look: eye, blend: 2.5 };
     // The name. Round in front of you again; and only now does she hold out her hand: the old one.
     if (t < C.offer) return this.arc(clamp((t - C.toOffer) / (C.offer - 0.6 - C.toOffer), 0, 1), DOOR_SPOT, OFFER_SPOT, w, you, eye);
     if (off(here, OFFER_SPOT) > 0.06) return { to: OFFER_SPOT, speed: 0.8, face, look: eye };
@@ -474,10 +478,8 @@ export class Opening {
     const hands = [w.x + Math.sin(face) * 0.36, w.y + 1.0, w.z + Math.cos(face) * 0.36];
     if (t < F.sun + 3.4) return { clip: 'idle', face, look: t < F.sun + 2.4 ? hands : eye, reach: t < F.sun + 2.9 ? PALMS_UP : null, blend: 4 };
     if (t < F.home) return { clip: 'Idle_Talking_Loop', rate: 0.7, face, look: eye, blend: 3 };
-    // "I seem to have lost my home.": she holds her own arms, turned to the rubble.
+    // Her home: she holds her own arms, turned to the rubble, a moment; then back to you.
     if (t < F.coming) return { clip: t < F.home + 2.2 ? 'hug' : 'depressed', hold: t < F.home + 2.2 ? 0.95 : undefined, face: away, turn: 3, look: past };
-    // "Nobody but you sees this face.": she holds her own arms.
-    if (t > F.oldLis + 2.6 && t < F.oldLis + 5.2) return { clip: 'hug', face, hold: 0.95, look: eye, blend: 3 };
     // Coming with you: her hand out along the shelf, the way down.
     const down = routeAt(24);
     if (t < F.coming + 3.6) return { clip: 'Pointing into the distance', face: yawTo([w.x, w.z], down), turn: 4, look: [down[0], w.y + 0.8, down[1]] };
@@ -497,7 +499,7 @@ export class Opening {
     const gap = this.prog - mine;
     const far = Math.hypot(player.x - w.x, player.z - w.z);
     this.hopT += dt;
-    if (this.time > 0.4) this.mark('lead');
+    if (this.time > 0.4) this.mark('oldLis');
     const fighting = !!this.fightS && !this.ambushDone;
     // Run on past her and she calls after you.
     this.aheadT = -gap > 28 && !fighting ? this.aheadT + dt : 0;
@@ -509,7 +511,11 @@ export class Opening {
     this.stepBolts(dt);
     // The dead, in the pines: they come up when you come down onto the bare ground below them (wherever she's got to, and
     // whatever she's in the middle of saying), and she stands with you and fights it out.
-    if (!this.ambushDone && !this.fightS && this.youPassed(MARKS.ambush)) this.sprung = true;
+    // (Not over her warning about the pines: they wait till it's been read, unless you're well on past the place.)
+    // (One she's in the middle of is always let finish; one still waiting, only if you're not well on past the place.)
+    const said = CUE_IDS[this.cue - 1], lesson = ['staff', 'staff2', 'woods'];
+    const saying = lesson.includes(said) && this.cueT < CUES[said].dur, waiting = lesson.some((id) => this.queued.includes(id));
+    if (!this.ambushDone && !this.fightS && this.youPassed(MARKS.ambush) && !saying && (!waiting || this.youPassed(MARKS.ambush + 25))) this.sprung = true;
     if (!this.ambushDone && this.sprung) {
       const b = this.fight(dt, w, you, eye, far, mine);
       if (b) return b;
@@ -565,13 +571,12 @@ export class Opening {
       this.keepAt = this.time;
     }
     // Lines that wait for a place on the way.
-    if (this.fired.has('lead')) this.place('door');
+    if (this.fired.has('oldLis')) this.place('door');
     // (In the order of the way, each after what's still waiting; the pines' warning ahead of them all.)
     for (const id of ['shelf', 'steps', 'speech', 'foot']) if (this.prog > MARKS[id] && !this.fightS) this.place(id);
     if (this.fired.has('foot')) this.place('staff');
-    if (this.prog > MARKS.woods && !this.fightS) this.mark('woods');
-    // (The town in sight is said next, ahead of the rest of her story: it's about what's in front of you now.)
-    if (this.prog > MARKS.sight && !this.marked.has('sight')) { this.marked.add('sight'); this.queue('sight', true); }
+    // (After the staff's lesson, not over it: and the dead wait for it to be read, below.)
+    if (this.prog > MARKS.woods && !this.fightS) this.place('woods');
     // At the town's edge, with you there too (or on into town past her): once she's done talking, the scream.
     if (end && (far < 10 || mine > ROUTE.len - 2) && !this.arrived) {
       this.arrived = true;
@@ -663,16 +668,15 @@ export class Opening {
       f.phase = 2;
       for (let i = 0; i < WAVE.more + WAVE.children; i++) f.due.push(i % 2 === 1 && i < WAVE.children * 2);
       // (Called over whatever she's saying: the fight's short now, and these can't wait their turn.)
-      this.speak('wave2');
+      this.call('wave2');
     } else if (f.phase === 2 && !f.due.length && up.length <= WAVE.third) {
       f.phase = 3;
       for (const side of [-1, 1]) {
         const k = openingCaster(sim, ...this.necroSpot(side, mine));
         if (k) f.casters.push(k);
       }
-      this.speak('necro');
+      this.call('necro');
     }
-    if (f.t > 6) this.queue('fight', true);
     // Over: every one of them down (what the necromancers raised too), or it's gone on far too long.
     // (Only those still up and about, and near: one gone back into the ground, or left a long way behind, isn't the fight's.)
     const theirs = sim.knights.filter((k) => !k.dead && !k.dormant && k.owner && f.casters.includes(k.owner) && Math.hypot(k.x - player.x, k.z - player.z) < WAVE.reach * 1.5);
@@ -682,7 +686,7 @@ export class Opening {
       this.ambushDone = true;
       // (On from wherever the fight has left her.)
       this.prog = Math.max(this.prog, routeNear(w.x, w.z, this.prog, 400));
-      this.queued = this.queued.filter((id) => !['risen', 'fight', 'wave2', 'necro'].includes(id));
+      this.queued = this.queued.filter((id) => !['risen', 'wave2', 'necro'].includes(id));
       this.queue('after', true);
       this.queueStory();
       this.halted = false; this.pace = 0;
@@ -794,9 +798,9 @@ export class Opening {
   talk(dt, near) {
     this.talkLeft -= dt;
     if (this.talkLeft > 0) return;
-    // (With nothing else to say on the hill, above the pines: its small talk, in turn. And the town's, after the story.)
-    if (!this.queued.length && near && !this.arrived && this.fired.has('lead') && !(this.fightS && !this.ambushDone)) {
-      const run = this.ambushDone ? (this.fired.has('wed4') ? LOW : null) : this.fired.has('door') ? HILL : null;
+    // (With nothing else to say on the hill, above the pines: its small talk, in turn.)
+    if (!this.queued.length && near && !this.arrived && this.fired.has('oldLis') && !(this.fightS && !this.ambushDone)) {
+      const run = !this.ambushDone && this.fired.has('door') ? HILL : null;
       const next = run?.find((id) => !this.fired.has(id));
       if (next) this.queued.push(next);
     }
@@ -841,14 +845,12 @@ export class Opening {
       if (this.prog <= 0) { [player.x, player.z] = VIEW_SPOT; player.y = world.height(player.x, player.z); }
       this.ambushDone = this.prog > MARKS.ambush - 10;
       // (What she'd have said by there isn't said again.)
-      if (this.prog > 0) for (const id of ['lead', 'door']) { this.fired.add(id); this.marked.add(id); }
-      for (const id of ['shelf', 'steps', 'speech', 'foot', 'woods', 'sight']) if (this.prog > MARKS[id]) { this.fired.add(id); this.marked.add(id); }
+      if (this.prog > 0) for (const id of ['oldLis', 'door']) { this.fired.add(id); this.marked.add(id); }
+      for (const id of ['shelf', 'steps', 'speech', 'foot', 'woods']) if (this.prog > MARKS[id]) { this.fired.add(id); this.marked.add(id); }
       if (this.fired.has('foot')) for (const id of ['staff', 'staff2']) { this.fired.add(id); this.marked.add(id); }
-      if (this.ambushDone) for (const id of [...HILL, 'woods', 'risen', 'fight', 'wave2', 'necro', 'after']) this.fired.add(id);
+      if (this.ambushDone) for (const id of [...HILL, 'woods', 'risen', 'wave2', 'necro', 'after']) this.fired.add(id);
       // (Who Velscour was: told, if you're well on past the pines.)
       if (this.ambushDone && this.prog > MARKS.ambush + 60) { this.healQueued = true; for (const id of [...HEAL, ...WED]) this.fired.add(id); }
-      // (The town's talk, about as far through as she'd be.)
-      if (this.ambushDone) for (const id of LOW.slice(0, Math.floor(LOW.length * clamp((this.prog - MARKS.ambush) / (ROUTE.len - MARKS.ambush), 0, 1)))) this.fired.add(id);
     }
     for (const v of villagers) { v.x = w.x; v.z = w.z; v.y = world.height(w.x, w.z); v.yaw = yawTo([w.x, w.z], [player.x, player.z]); v.cloth?.reset(); }
   }

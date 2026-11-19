@@ -6,7 +6,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Opening } from '../src/sim/opening.js';
 import { COLLAPSE_END, OPENING } from '../src/core/opening.js';
-import { CUE_IDS } from '../src/core/opening-script.js';
+import { CUES, CUE_IDS } from '../src/core/opening-script.js';
+import { READ_CPS } from '../src/core/opening-cave.js';
 import { ROUTE, routeAt, routeDir, routeNear } from '../src/core/escort.js';
 import { BODIES, Caster, Zombie } from '../src/sim/undead.js';
 
@@ -88,9 +89,20 @@ test('eight come up four at a time; then six more and four children; then a necr
   assert.ok(log.filter((e) => e.phase < 3).every((e) => e.casters === 0));
   // What she says of it, in order; and her fire in the air.
   const ids = said.map((l) => l.id);
-  for (const id of ['risen', 'wave2', 'necro', 'after', 'heal0', 'heal6']) assert.ok(ids.includes(id), `never said ${id}`);
+  for (const id of ['risen', 'wave2', 'necro', 'after', 'spark', 'heal1', 'wed', 'heal6']) assert.ok(ids.includes(id), `never said ${id}`);
   assert.ok(ids.indexOf('risen') < ids.indexOf('wave2') && ids.indexOf('wave2') < ids.indexOf('necro') && ids.indexOf('necro') < ids.indexOf('after'));
   assert.ok(log.some((e) => e.bolts > 0), 'she throws fire');
+});
+
+test('no line of hers on the way down, the fight\'s calls included, is replaced before it can be read', () => {
+  for (const kill of [(up, t) => (t < 3 ? 0 : 1), (up, t) => (t < 1 ? 0 : 3)]) {
+    const { said } = play(kill);
+    for (let i = 1; i < said.length; i++) {
+      const a = said[i - 1], read = CUES[a.id].text.length / READ_CPS;
+      if (CUES[a.id].caption) continue;
+      assert.ok(said[i].t - a.t >= read - 1e-6, `${said[i].id} over ${a.id} after ${(said[i].t - a.t).toFixed(1)} s (it takes ${read.toFixed(1)} to read)`);
+    }
+  }
 });
 
 test('with fewer bodies than the waves want, the fallen go back into the ground and come up again', () => {

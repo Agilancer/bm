@@ -52,16 +52,19 @@ const STORY = [
   { w: 0.6, m: 'steps', text: '…And what is that in your hand? Look down.', eye: true, emote: 'question', feel: 1.8 },
   // The view tips down to your staff. Cast, and a spark leaps to the nearest candle; or it goes on its own after the wait.
   { m: 'hands', hold: 1.1 },
-  { m: 'cast', hold: 5.0 },
-  { m: 'spark', hold: 1.6 },
-  { m: 'magic', text: 'Magic. Nobody in this world has been born with it in two hundred years.' },
+  // (A first time, mid-scene, finding the key takes a while: she waits, eggs you on, and only then does it go by itself.)
+  { m: 'cast', hold: 7.0 },
+  { m: 'goOn', text: 'Go on. Throw it.' },
+  { w: 2.4, m: 'spark', hold: 1.6 },
+  { m: 'magic', text: 'Magic. Nobody has been born with that since the Dark Lord drank it all, to live.' },
   // Who she is. Her hand to her heart, and a slow, stiff bow. Her name comes up.
   { w: 0.5, m: 'bow', hold: 1.3 },
   { m: 'named', text: 'My name is Lisandra. The girl was a glamour. Nobody follows an old woman into a war.' },
   // The old story, told at her hearth: she crosses to it, holds her hands to the fire, and tells it into the flames; then
   // turns, and her hand goes out past you, at the door you came through.
   { w: 0.5, m: 'toHearth', text: 'Two hundred years ago, a stranger broke the Dark Lord Velscour on his own throne.' },
-  { w: 0.3, m: 'turn', text: 'Then the stranger left by that door, swearing to come back if he ever rose. Forty years ago, the Dark Lord rose.' },
+  { w: 0.3, m: 'turn', text: 'We called him Tessariel. He left by that door, and swore to come back if his enemy ever rose.' },
+  { w: 0.3, text: 'Forty years ago, the Dark Lord rose.' },
   // The forty-three. She looks down the room to the ledger on its stand by the tunnel; then at the floor.
   { w: 0.6, m: 'ledger', text: 'A season ago, the door began to answer. Forty-three times, and always the wrong person.' },
   { text: 'I told each of them what I told you, and sent them off to fight him.' },
@@ -72,14 +75,12 @@ const STORY = [
   { w: 0.4, m: 'round', text: 'So I’ll say it again, and this time it’s true.', eye: true },
   // On the name, the door's hum comes back for one breath, the portal swells and every flame leans toward you.
   { w: 1.2, m: 'reveal', text: 'You are Tessariel. You said you’d come back, and you have.', eye: true },
-  { w: 1.0, m: 'after', text: 'When you broke him, he drank every spark of magic there was, to stay alive. Every one you throw, he will feel.' },
+  { w: 1.0, m: 'after' },
   // What to do. She points down the cave, to the tunnel and the world.
   { w: 0.5, m: 'pointOut', text: 'Take the Long Road down the hill to Bellmourn. They need help there, and you need practice.' },
-  // A look over her shoulder at the door behind her.
-  { w: 0.5, m: 'cant', text: 'I can’t come. That door keeps me alive, and I have never left it for long.' },
   // The name. She comes round in front of you, and only now holds out her hand: the old one.
-  { w: 0.6, m: 'toOffer', text: 'One last thing. The others, I named myself. You, I’m asking.' },
-  { w: 0.4, m: 'offer', text: 'What did they call you, on the far side?', eye: true },
+  { w: 0.5, m: 'toOffer', hold: 2.6 },
+  { m: 'offer', text: 'Tessariel is what the songs call you. What did they call you, on the far side?', eye: true },
   { w: 0.5, m: 'prompt' },
 ];
 
@@ -88,9 +89,9 @@ const HERD_STORY = [
   { w: 0.3, m: 'name', text: '{name}.', say: '', secs: 1.6 },
   { w: 0.3, m: 'book', text: 'Good. That goes in the book: the first name in it I didn’t choose.' },
   { w: 0.4, m: 'point', text: 'The way out is down that tunnel. Go on ahead of me.' },
-  { w: 0.3, m: 'go', hold: 1.2 },
+  { w: 0.3, m: 'go' },
   { w: 0.1, m: 'control' },
-  { w: 1.5, m: 'end' },
+  { w: 0.5, m: 'end' },
 ];
 
 // The ledge, once she's out of the dust and has had it out with you (from FALL_FROM: before that the scene is set by
@@ -102,10 +103,10 @@ const FALL_STORY = [
   // Back to you, and she catches you looking; then down at her own hands, in the sun.
   { w: 1.0, m: 'catch', text: '…Why are you staring at me like that?', emote: 'question', feel: 2.2 },
   { w: 0.9, m: 'sun', text: 'Oh. The sun. That’s no glamour: daylight gives me back the face I had when I took up the door.' },
-  { w: 0.8, m: 'home', text: 'Well. I seem to have lost my home.', mutter: true, emote: 'gloom' },
-  { w: 0.6, m: 'coming', text: 'So I’m coming to Bellmourn with you, {name}. Somebody has to get you down this road in one piece.', say: 'So I’m coming to Bellmourn with you. Somebody has to get you down this road in one piece.' },
-  { w: 0.3, m: 'oldLis', text: 'Down there I’m Old Lis, who trades herbs for salt. Nobody but you sees this face.' },
-  { w: 0.9, m: 'end' },
+  // (Lost her home: she says so on the road, with the kettle. What she'll be in town is her first line on the way down.)
+  { w: 0.8, m: 'home', hold: 2.6 },
+  { m: 'coming', text: 'So I’m coming to Bellmourn with you, {name}. Somebody has to get you down this road in one piece.', say: 'So I’m coming to Bellmourn with you. Somebody has to get you down this road in one piece.' },
+  { w: 0.6, m: 'end' },
 ];
 
 // A line too long for one subtitle is shown in parts, split at a sentence break (or a comma), each up when her voice gets

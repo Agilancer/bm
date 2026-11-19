@@ -24,7 +24,7 @@ export const SCRIPT = {
   [OPENING.NAME]: [
     { at: 10, dur: 4.2, text: 'It’s your own name. The one you had on the far side.' },
     { at: 20, dur: 4.2, text: 'You’ve had it all your life. It will come back to you.' },
-    { at: 32, dur: 5.6, text: 'Take your time. I’ve waited two hundred years. I can wait a minute more.' },
+    { at: 32, dur: 5.6, text: 'Take your time. I’ve waited this long. I can wait a minute more.' },
   ],
   // She takes the name where she stands, and sends you out ahead of her.
   [OPENING.HERD]: HERD_LINES,
@@ -45,14 +45,15 @@ export const CUES = {
   back: { text: 'Not that way. You’ve only just come through it. The way out is down the tunnel.', emote: 'anger', witch: true },
   back2: { text: 'I said out. That door doesn’t open for the asking. Down the tunnel with you.', emote: 'anger', witch: true },
   // You pass her at the lectern, writing your name in the ledger.
-  pass: { text: 'I’ll see you as far as the ledge. After that, I’ve a door to mind.', witch: true },
-  tunnel: { text: 'Hold, door. Please. You’ve held for two hundred years. Hold one more morning…', off: true, witch: true },
+  pass: { text: 'I’ll see you as far as the ledge. That door keeps me alive, and I can’t leave it long.', witch: true },
+  tunnel: { text: 'Hold, door. Please. One more morning…', off: true, witch: true },
   run: { text: 'It’s letting go! Run for the light, and don’t you stop!', off: true, witch: true, call: true, big: true, emote: 'panic', feel: 2.0 },
   // Off the ledge, along the shelf, down the steps and the path to the road.
-  lead: { text: 'This way. Stay close, and mind the edge.' },
+  // Off the ledge: what she'll be in town (the first thing said on the way down).
+  oldLis: { text: 'Down there I’m Old Lis, who trades herbs for salt. Nobody but you sees this face.' },
   door: { text: 'No door to keep me alive now. One day I’ll die, like everyone else. I’d quite forgotten.' },
   shelf: { text: 'I cut this shelf out of the hill myself. It took ten years. I had the time.' },
-  steps: { text: 'Mind the steps. Two hundred winters of frost, and I only ever mended the ones I tripped on.' },
+  steps: { text: 'Mind the steps. I only ever mended the ones I tripped on.' },
   speech: { text: 'You don’t say much, do you? Good. The others all made speeches.' },
   foot: { text: 'This is the Long Road. Bellmourn is at the bottom, on the far side of those pines.' },
   staff: { text: 'That staff is not a walking stick. When something comes at you, point it and let fly.' },
@@ -63,29 +64,21 @@ export const CUES = {
   hill5: { text: 'It’s a small town. Bells, mud and gossip. By nightfall they’ll all have an opinion of you.' },
   woods: { text: 'Stay on the road through the pines. The dead are in there, and they don’t read prophecies.' },
   // The dead, coming up out of the ground in the pines: she fights beside you, with what fire she has left.
-  risen: { text: 'There, in the trees! They’re coming up! Don’t let them near you!', emote: 'panic', feel: 2.2, call: true },
-  fight: { text: 'Point the staff and burn them! That’s what the fire is for!', call: true },
-  wave2: { text: 'More of them, and children with them. He never lets anyone go. Not even the little ones.', emote: 'gloom', feel: 2.4, call: true },
-  necro: { text: 'Necromancers, out of the trees! Burn them first, or the dead won’t stay down!', emote: 'panic', feel: 2.2, call: true },
+  risen: { text: 'The dead, in the trees! Point the staff and burn them!', emote: 'panic', feel: 2.2, call: true },
+  wave2: { text: 'More, and children with them. He lets no one go.', emote: 'gloom', feel: 2.4, call: true },
+  necro: { text: 'Necromancers! Burn them first, or the dead won’t stay down!', emote: 'panic', feel: 2.2, call: true },
   after: { text: 'Well. You’ll do. You’ll do very nicely.', mutter: true },
+  // What you are to him now: every spark, felt (it was said in the cave before the cut).
+  spark: { text: 'Every spark you throw, he feels. Let him wonder which of the forty-three it is.' },
   // After the fight: who Velscour was, and what he did. She keeps to her own pace for it, and so do you.
-  heal0: { text: 'You’ll want to know why the dead get up and walk. It began as a kindness.' },
   heal1: { text: 'Velscour was a healer once. He sat up with the dying every night, and held their hands until they went cold.' },
-  heal2: { text: 'Then he lost a little girl he’d sat with nine nights, and decided death was a door he could close.' },
-  heal3: { text: 'So he closed it, and the dead stopped staying dead. When you broke him, it swung open again.' },
-  heal5: { text: 'Now he’s back, and leaning on it. That is why the dead won’t lie still.' },
+  heal2: { text: 'Then he lost a little girl he’d sat with nine nights, and swore nobody he loved would die again.' },
+  heal3: { text: 'So nothing that died would stay dead. When you broke him, they could rest at last. Now he’s back, and they can’t.' },
   heal6: { text: 'He still calls it mercy.', mutter: true },
   wed: { text: 'I know, because I was there. We were to be married in the spring.', emote: 'gloom', feel: 2.6 },
-  wed4: { text: 'Then I went looking for someone who could stop him, and I found you.' },
   // The last stretch, and the town.
-  low1: { text: 'Now, Bellmourn. Twelve of my forty-three walked in there before you, so they’ve stopped being impressed.' },
-  low2: { text: 'Bram Kettle keeps the inn, north of the well. He counts them on a slate. You’ll be his thirteenth.' },
-  low3: { text: 'The cathedral is on the hill past the far end of town. It’s the Dark Lord’s now, and his knight is on the door.' },
-  low4: { text: 'Three of the twelve went up to fight that knight. Stay off that hill until I say.' },
-  low5: { text: 'And if you hear the bell at midnight, stay indoors. Nobody living rings it.' },
-  sight: { text: 'There it is. Bellmourn. Let me do the talking.' },
   scream: { dur: 1.8, text: '[a scream]', caption: true },
-  walk: { text: 'That came from the cathedral hill. Keep walking. There’s nothing you can do for them yet.', emote: 'sweat' },
+  walk: { text: 'That came from the cathedral hill. There’s nothing you can do for them yet.', emote: 'sweat' },
   // You've fallen behind, and she's waiting for you; or you've run on past her.
   keep1: { text: 'This way! Keep up!', call: true },
   keep2: { text: 'Bellmourn’s down the hill. It won’t come up and fetch you.', call: true },
