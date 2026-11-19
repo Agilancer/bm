@@ -1555,7 +1555,9 @@ export function phobosKeep(K) {
   STEPS.forEach(([hx, hz, a, b], i) => {
     const cx = x + 40 - i * 8;
     const foot = i === 0 ? PLAIN + 165 : P(a);   // (the first goes down into the rock: it overhangs the Middle Ward)
-    K.box(S, cx, foot, z, hx, P(b) - foot, hz, 0, { collide: false });
+    // (Its walls half a step lighter than its fins and cornices: in the same soot the bays between went black in any shade,
+    // a grid of holes, scaffolding round nothing, from the yard. The critics.)
+    K.box('dark:p2_keep_basalt', cx, foot, z, hx, P(b) - foot, hz, 0, { collide: false });
     // (Solid from the side, stood on from above: t, the top less a step, as the portals' terraces have it.)
     K.colliders.push({ x: cx, z, hx, hz, yaw: 0, h: P(b) - Y(cx, z), t: P(b) - 0.45 });
     walk(K, [[cx, z, hx, hz, 0, P(b)]]);
