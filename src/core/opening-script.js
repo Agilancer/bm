@@ -61,19 +61,18 @@ export const CUES = {
   // Said in turn while there's nothing else to say, above the pines.
   hill2: { text: 'Everything I own is under that rock. I had a very good kettle.' },
   hill3: { text: 'Don’t look at me like that. It’s the dust. I am not crying.', emote: 'sweat', feel: 2.2 },
-  hill5: { text: 'It’s a small town. Bells, mud and gossip. By nightfall they’ll all have an opinion of you.' },
   woods: { text: 'Stay on the road through the pines. The dead are in there, and they don’t read prophecies.' },
   // The dead, coming up out of the ground in the pines: she fights beside you, with what fire she has left.
   risen: { text: 'The dead, in the trees! Point the staff and burn them!', emote: 'panic', feel: 2.2, call: true },
   wave2: { text: 'More, and children with them. He lets no one go.', emote: 'gloom', feel: 2.4, call: true },
   necro: { text: 'Necromancers! Burn them first, or the dead won’t stay down!', emote: 'panic', feel: 2.2, call: true },
   after: { text: 'Well. You’ll do. You’ll do very nicely.', mutter: true },
-  // What you are to him now: every spark, felt (it was said in the cave before the cut).
-  spark: { text: 'Every spark you throw, he feels. Let him wonder which of the forty-three it is.' },
+  // What you are to him now: every spark, felt. Said straight after the pines' warning, before the fight.
+  spark: { text: 'Every spark you throw, the Dark Lord feels. Let him wonder which of the forty-three it is.' },
   // After the fight: who Velscour was, and what he did. She keeps to her own pace for it, and so do you.
-  heal1: { text: 'Velscour was a healer once. He sat up with the dying every night, and held their hands until they went cold.' },
+  heal1: { text: 'Velscour was a healer once. He held the hands of the dying until they went cold.' },
   heal2: { text: 'Then he lost a little girl he’d sat with nine nights, and swore nobody he loved would die again.' },
-  heal3: { text: 'So nothing that died would stay dead. When you broke him, they could rest at last. Now he’s back, and they can’t.' },
+  heal3: { text: 'So nothing that died would stay dead. When you broke him, they could rest. Now he’s back.' },
   heal6: { text: 'He still calls it mercy.', mutter: true },
   wed: { text: 'I know, because I was there. We were to be married in the spring.', emote: 'gloom', feel: 2.6 },
   // The last stretch, and the town.

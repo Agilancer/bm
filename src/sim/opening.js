@@ -61,20 +61,20 @@ const GAITS = [2.2];
 // What she says on the way (CUES in src/core/opening-script.js): one line at a time, TALK_GAP s between, each waiting till
 // you're within HEAR of her (calls don't). Between the lines a place brings, these, in turn, while she's above the pines.
 const TALK_GAP = 1.1, HEAR = 17;
-const HILL = ['hill2', 'hill3', 'hill5'];
+const HILL = ['hill2', 'hill3'];
 const KEEP = ['keep1', 'keep2', 'keep3'];
 // After the fight, who Velscour was, and what he was to her. (Said as you go: she keeps by you, and each line waits till
 // you're near enough to hear it.)
-const HEAL = ['spark', 'heal1', 'heal2', 'heal3'];
+const HEAL = ['heal1', 'heal2', 'heal3'];
 const WED = ['wed', 'heal6'];
 // On her shelf and down her steps you keep to a walk behind her: it's narrow, and she has things to say on it.
 const STEPS_PACE = 5.0, STEPS_STILL = 2.6;
 const CORNER = { near: 1.6, pace: 1.15, gain: 1.4, give: 1.3 };
-const THEN = { staff: 'staff2' };
+const THEN = { staff: 'staff2', woods: 'spark' };
 // What's dropped unsaid at the town's edge, and what's dropped when the dead come up.
 // (Not her story: she finishes that at the town's edge before anything else happens.)
-const ROAD_TALK = new Set([...HILL, 'oldLis', 'door', 'shelf', 'steps', 'speech', 'foot', 'staff', 'staff2', 'woods']);
-const BEFORE_FIGHT = new Set([...HILL, 'oldLis', 'door', 'shelf', 'steps', 'speech', 'foot', 'staff', 'staff2', 'woods']);
+const ROAD_TALK = new Set([...HILL, 'oldLis', 'door', 'shelf', 'steps', 'speech', 'foot', 'staff', 'staff2', 'spark', 'woods']);
+const BEFORE_FIGHT = new Set([...HILL, 'oldLis', 'door', 'shelf', 'steps', 'speech', 'foot', 'staff', 'staff2', 'spark', 'woods']);
 // The fight on the road, a little below the pines, where the hillside is bare on both sides of it: eight of the dead up
 // out of the open ground either side, four at a time; when three or fewer are left, six more and four of their children;
 // when four or fewer of those are left, a necromancer out of the nearest trees past the bare ground on each side, who raise
@@ -513,8 +513,9 @@ export class Opening {
     // whatever she's in the middle of saying), and she stands with you and fights it out.
     // (Not over her warning about the pines: they wait till it's been read, unless you're well on past the place.)
     // (One she's in the middle of is always let finish; one still waiting, only if you're not well on past the place.)
-    const said = CUE_IDS[this.cue - 1], lesson = ['staff', 'staff2', 'woods'];
-    const saying = lesson.includes(said) && this.cueT < CUES[said].dur, waiting = lesson.some((id) => this.queued.includes(id));
+    const said = CUE_IDS[this.cue - 1], lesson = ['staff', 'staff2', 'spark', 'woods'];
+    // (And one she's about to run straight on into counts as being in the middle of it.)
+    const saying = (lesson.includes(said) && this.cueT < CUES[said].dur) || lesson.includes(this.then), waiting = lesson.some((id) => this.queued.includes(id));
     if (!this.ambushDone && !this.fightS && this.youPassed(MARKS.ambush) && !saying && (!waiting || this.youPassed(MARKS.ambush + 25))) this.sprung = true;
     if (!this.ambushDone && this.sprung) {
       const b = this.fight(dt, w, you, eye, far, mine);
@@ -805,7 +806,7 @@ export class Opening {
       if (next) this.queued.push(next);
     }
     // (Some lines run straight on into the next. At the town's edge she says what's left wherever you are.)
-    if (this.then) { this.speak(this.then); this.then = null; return; }
+    if (this.then) { const id = this.then; this.speak(id); this.then = THEN[id] || null; return; }
     const i = this.queued.findIndex((id) => near || this.arrived || CUES[id].call);
     if (i < 0) return;
     const [id] = this.queued.splice(i, 1);
@@ -847,7 +848,7 @@ export class Opening {
       // (What she'd have said by there isn't said again.)
       if (this.prog > 0) for (const id of ['oldLis', 'door']) { this.fired.add(id); this.marked.add(id); }
       for (const id of ['shelf', 'steps', 'speech', 'foot', 'woods']) if (this.prog > MARKS[id]) { this.fired.add(id); this.marked.add(id); }
-      if (this.fired.has('foot')) for (const id of ['staff', 'staff2']) { this.fired.add(id); this.marked.add(id); }
+      if (this.fired.has('foot')) for (const id of ['staff', 'staff2', 'spark']) { this.fired.add(id); this.marked.add(id); }
       if (this.ambushDone) for (const id of [...HILL, 'woods', 'risen', 'wave2', 'necro', 'after']) this.fired.add(id);
       // (Who Velscour was: told, if you're well on past the pines.)
       if (this.ambushDone && this.prog > MARKS.ambush + 60) { this.healQueued = true; for (const id of [...HEAL, ...WED]) this.fired.add(id); }

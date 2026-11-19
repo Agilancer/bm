@@ -64,7 +64,7 @@ const STORY = [
   // turns, and her hand goes out past you, at the door you came through.
   { w: 0.5, m: 'toHearth', text: 'Two hundred years ago, a stranger broke the Dark Lord Velscour on his own throne.' },
   { w: 0.3, m: 'turn', text: 'We called him Tessariel. He left by that door, and swore to come back if his enemy ever rose.' },
-  { w: 0.3, text: 'Forty years ago, the Dark Lord rose.' },
+  { w: 0.3, text: 'Forty years ago, the Dark Lord rose. I’ve called through that door every night since.' },
   // The forty-three. She looks down the room to the ledger on its stand by the tunnel; then at the floor.
   { w: 0.6, m: 'ledger', text: 'A season ago, the door began to answer. Forty-three times, and always the wrong person.' },
   { text: 'I told each of them what I told you, and sent them off to fight him.' },
@@ -80,7 +80,7 @@ const STORY = [
   { w: 0.5, m: 'pointOut', text: 'Take the Long Road down the hill to Bellmourn. They need help there, and you need practice.' },
   // The name. She comes round in front of you, and only now holds out her hand: the old one.
   { w: 0.5, m: 'toOffer', hold: 2.6 },
-  { m: 'offer', text: 'Tessariel is what the songs call you. What did they call you, on the far side?', eye: true },
+  { m: 'offer', text: 'Tessariel is what we called you. What did they call you, on the far side?', eye: true },
   { w: 0.5, m: 'prompt' },
 ];
 

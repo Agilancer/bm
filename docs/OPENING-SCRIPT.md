@@ -103,7 +103,7 @@ came through. Then a hand down the room at the ledger on its stand by the tunnel
 
 **LISANDRA**: We called him Tessariel. He left by that door, and swore to come back if his enemy ever rose.
 
-**LISANDRA**: Forty years ago, the Dark Lord rose.
+**LISANDRA**: Forty years ago, the Dark Lord rose. I’ve called through that door every night since.
 
 **LISANDRA**: A season ago, the door began to answer. Forty-three times, and always the wrong person.
 
@@ -129,7 +129,7 @@ she hold out her hand: the old one.*
 
 **LISANDRA**: Take the Long Road down the hill to Bellmourn. They need help there, and you need practice.
 
-**LISANDRA**: Tessariel is what the songs call you. What did they call you, on the far side?
+**LISANDRA**: Tessariel is what we called you. What did they call you, on the far side?
 
 *The name prompt.*
 
@@ -211,16 +211,15 @@ stays up: as long as it takes to read.
 |  | And keep your distance. The others had armour. You have a robe. | 5.2 |
 | With nothing else to say, above the pines (in turn) | Everything I own is under that rock. I had a very good kettle. | 5.1 |
 |  | Don’t look at me like that. It’s the dust. I am not crying. | 4.9 |
-|  | It’s a small town. Bells, mud and gossip. By nightfall they’ll all have an opinion of you. | 7 |
-| Nearing the pines (the dead wait till it has been read) | Stay on the road through the pines. The dead are in there, and they don’t read prophecies. | 7 |
+| Nearing the pines (the dead wait till both have been read) | Stay on the road through the pines. The dead are in there, and they don’t read prophecies. | 7 |
+|  | Every spark you throw, the Dark Lord feels. Let him wonder which of the forty-three it is. | 7 |
 | The dead come up | The dead, in the trees! Point the staff and burn them! | 4.6 |
 | The second wave | More, and children with them. He lets no one go. | 4.2 |
 | The necromancers | Necromancers! Burn them first, or the dead won’t stay down! | 4.9 |
 | The last of them down | Well. You’ll do. You’ll do very nicely. | 3.6 |
-|  | Every spark you throw, he feels. Let him wonder which of the forty-three it is. | 6.3 |
-| Who Velscour was, and what he was to her (all of it, at the town's edge if need be) | Velscour was a healer once. He sat up with the dying every night, and held their hands until they went cold. | 8.2 |
+| Who Velscour was, and what he was to her (all of it, at the town's edge if need be) | Velscour was a healer once. He held the hands of the dying until they went cold. | 6.3 |
 |  | Then he lost a little girl he’d sat with nine nights, and swore nobody he loved would die again. | 7.4 |
-|  | So nothing that died would stay dead. When you broke him, they could rest at last. Now he’s back, and they can’t. | 8.5 |
+|  | So nothing that died would stay dead. When you broke him, they could rest. Now he’s back. | 6.9 |
 |  | I know, because I was there. We were to be married in the spring. | 5.3 |
 |  | He still calls it mercy. | 2.6 |
 | At the town's edge, after a scream from the far side of it | That came from the cathedral hill. There’s nothing you can do for them yet. | 6 |
@@ -271,6 +270,7 @@ script, the code and the play-throughs from `node tools/opening/play.mjs`, and a
 | Before | 4:51 | 3:07 | 5:11 | 10:20 |
 | Round 1 | 2:40 | 1:00 | 2:57 | 6:36 |
 | Round 2 | 2:28 | 1:00 | 2:44 | 6:05 |
+| After approval | 2:31 | 1:00 | 2:47 | 6:11 |
 
 - **Round 1** (both sent it back, 6/10). Lines replaced before they could be read: the door's plea in the tunnel, the
   pines' warning and the fight's calls. Her marriage never told (it was dropped at the town's edge). "There it is.
@@ -279,3 +279,10 @@ script, the code and the play-throughs from `node tools/opening/play.mjs`, and a
   "Two hundred years" nine times; "door" meaning the portal, death and the cathedral's. Fixed in round 2: all of those,
   the steps' pace raised to 5 m/s, the ledge's "lost my home" turned into a held moment, her Old Lis line moved onto the
   walk, the double take on "staring" made a push in, and a test that no line on the road is replaced before it's read.
+- **Round 2** (both approved, 7.5/10). Left over, and taken after: "Forty years ago, the Dark Lord rose" now says what
+  she did since ("I’ve called through that door every night since"); "what we called you" for "what the songs call you"
+  (it was "we" ninety seconds before); "every spark" names the Dark Lord, and is said before the fight, after the pines'
+  warning; the healer story is shorter, and "It’s a small town" is cut. Still open: a player who runs the road stands
+  about 25 s at the town's edge for the end of her story (one who walks, a couple of seconds); the ledge holds you 49 s
+  (the veteran would hand the walk back sooner, at the sun); more casts in the cave bursting more candles (both: worth
+  doing, not a blocker); and her quest's first words, "Stop there a moment", after you've stood there.

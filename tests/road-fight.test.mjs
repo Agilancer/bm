@@ -89,7 +89,7 @@ test('eight come up four at a time; then six more and four children; then a necr
   assert.ok(log.filter((e) => e.phase < 3).every((e) => e.casters === 0));
   // What she says of it, in order; and her fire in the air.
   const ids = said.map((l) => l.id);
-  for (const id of ['risen', 'wave2', 'necro', 'after', 'spark', 'heal1', 'wed', 'heal6']) assert.ok(ids.includes(id), `never said ${id}`);
+  for (const id of ['risen', 'wave2', 'necro', 'after', 'heal1', 'wed', 'heal6']) assert.ok(ids.includes(id), `never said ${id}`);
   assert.ok(ids.indexOf('risen') < ids.indexOf('wave2') && ids.indexOf('wave2') < ids.indexOf('necro') && ids.indexOf('necro') < ids.indexOf('after'));
   assert.ok(log.some((e) => e.bolts > 0), 'she throws fire');
 });
