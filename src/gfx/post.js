@@ -109,6 +109,11 @@ fn main(@builtin(global_invocation_id) id: vec3u) {
       let t = S.time * 0.8 + p.seed * 40.0;
       p.vel = S.wind.xyz * 0.25 + vec3f(sin(t), sin(t * 0.7 + 1.0) * 0.5, cos(t * 1.1)) * 0.11;
     }
+    case 13u: {
+      // Ash, falling: on the wind, slow, turning over as it comes down (the Cinder quarter, src/gfx/renderer.js ash).
+      let t = S.time * 0.9 + p.seed * 50.0;
+      p.vel = S.wind.xyz * 0.4 + vec3f(sin(t) * 0.28, -0.42 - 0.2 * p.seed, cos(t * 1.3) * 0.28);
+    }
     case 7u: {
       // Slows hard as it hits still air, then the heat takes it up, swelling.
       p.vel *= 1.0 - 2.0 * dt;
@@ -240,6 +245,10 @@ struct V {
       let show = smoothstep(0.0, 0.12, k) * (1.0 - smoothstep(0.7, 1.0, k));
       let hot = mix(vec3f(0.08, 0.3, 1.8), vec3f(0.6, 1.3, 3.0), fract(pt.seed * 3.7) * 0.6 + 0.4 * (1.0 - k));
       col = vec4f(hot * show * min(1.0, 0.03 / max(pt.size, 0.01)) * mix(1.0, 0.5, haze), 0.0);
+    }
+    case 13u: {
+      let lit = sun * 0.3 + amb * 0.7;
+      col = vec4f(mix(vec3f(0.2, 0.19, 0.18), vec3f(0.42, 0.4, 0.38), pt.seed) * lit, 0.85 * smoothstep(0.0, 0.15, a) * (1.0 - smoothstep(0.9, 1.0, a)));
     }
     case 12u: {
       // A crow: near black, its wings in a V that beats now and then and glides between (fade carries the beat to fs).

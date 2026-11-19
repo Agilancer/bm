@@ -1,6 +1,6 @@
 // Pictures of City State Phobos out on the land as the game draws it, for the critics and the owner: the player set down
 // at a spot (bm.cmd(19, 0, x, z)), the hour set, a camera held, the canvas saved without the HUD.
-//   node tools/phobos/city_shots.mjs [names]      PORT=<8481>  WAIT=<ms after each move, 12000>  HOUR=<12>
+//   node tools/phobos/city_shots.mjs [names]      PORT=<8481>  WAIT=<ms after each move, 12000>  HOUR=<12>  EVAL=<js, logged>
 // Needs the server (python tools/serve.py 8481 --no-open) and Playwright's Chromium. Saves tools/build/shots/<name>.png.
 import { createRequire } from 'node:module';
 import { terrainHeight } from '../../src/core/terrain.js';
@@ -25,6 +25,7 @@ const SHOTS = [
   ['p2_ash', [9600, -300], [9600, 2, -300], [9640, 4, -380]],
   ['p2_low', [9720, 370], [9720, 2, 370], [9800, 4, 400]],
   ['p2_loop', [10435, -290], [10435, 2, -290], [10520, 6, -200]],
+  ['p2_loop_up', [10435, -290], [10440, 14, -300], [10475, 0, -250]],
   ['p2_quay', [9905, -100], [9905, 2.5, -100], [9890, 3, -300]],
   ['sv_cinder', [9600, -300], [9600, 1.8, -300], [9640, 4, -380]],
   ['sv_rookeries', [9600, 270], [9600, 1.8, 270], [9640, 4, 340]],
@@ -69,6 +70,8 @@ for (const [name, at, eye, look] of which) {
   const c = cam(eye[0], terrainHeight(eye[0], eye[2]) + eye[1], eye[2], look[0], terrainHeight(look[0], look[2]) + look[1], look[2]);
   await page.evaluate(`bm.cmd(19, 0, ${at[0]}, ${at[1]}); bm.setTime(${HOUR}); bm.setCam(${JSON.stringify(c)});`);
   await page.waitForTimeout(WAIT);
+  // (EVAL=<js>: a value read off the page before the shot, to see what's going on there.)
+  if (process.env.EVAL) console.log(name, 'EVAL', JSON.stringify(await page.evaluate(process.env.EVAL)));
   try {
     await Promise.race([page.evaluate(`(bm.setCam(${JSON.stringify(c)}), bm.shot(${JSON.stringify(name)}))`), new Promise((_, r) => setTimeout(() => r(new Error('timed out')), 180000))]);
     console.log('shot', name);

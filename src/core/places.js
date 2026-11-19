@@ -61,7 +61,8 @@ export const PIECES = {
     this.drum('wood', x, y0, z, r, h, 8, { r2: r * 0.92, collide: y === null });
     this.drum('iron', x, y0 + h * 0.62, z, r * 1.0, h * 0.09, 8, { r2: r * 0.985, open: true, collide: false });
   },
-  sack(x, z, r = 0.34, y = null) { this.drum('cloth_oat', x, (y ?? Y(x, z)) - 0.05, z, r, r * 1.5, 6, { r2: r * 0.55, collide: false, turn: x }); },
+  // (In Phobos, x 9300 to 11800, the hessian sooted brown: its pale oat cloth on the streets there read as cheeses, the critics.)
+  sack(x, z, r = 0.34, y = null) { this.drum(x > 9300 && x < 11800 && Math.abs(z) < 1100 ? 'umber:cloth_oat' : 'cloth_oat', x, (y ?? Y(x, z)) - 0.05, z, r, r * 1.5, 6, { r2: r * 0.55, collide: false, turn: x }); },
   // A heap of goods: crates, barrels and sacks about a middle, n of them, the same every time for the same place.
   goods(x, z, n = 5, spread = 1.4) {
     for (let i = 0; i < n; i++) {

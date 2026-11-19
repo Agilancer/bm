@@ -1870,6 +1870,19 @@ export class Renderer {
     for (const [x, up, z, r] of [[11220, 420, 0, 60], [10860, 70, 0, 50], [10000, 45, -600, 70], [9830, 40, -80, 45]]) this.orbit(12, 1, x, terrainHeight(x, z) + up, z, r, 50, 70, 0.45, 0.6);
   }
 
+  // Ash coming down over the Cinder quarter, its smelters' and charcoal-burners' (src/core/phobos-build.js), round you while
+  // you're in it: kind 13 (src/gfx/post.js), a couple of flakes a frame let go above you within thirty metres. Not on a phone.
+  ash(cam) {
+    if (this.tier.lean) return;
+    const d = Math.hypot(cam.x - 9640, cam.z + 380);
+    if (d > 210) return;
+    const n = d < 150 ? 2 : 1;
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2, r = 30 * Math.sqrt(Math.random());
+      this.emit(13, 1, cam.x + Math.cos(a) * r, cam.y + 5 + Math.random() * 10, cam.z + Math.sin(a) * r, 0, -1, 0, 0.2, 0.2, 0.4, 0.05, 0.09, 14, 20);
+    }
+  }
+
   orbit(kind, n, x, y, z, pad, life0, life1, sz0, sz1) {
     const f = this.emitF, u = this.emitU, cap = f.length / 12;
     n = Math.floor(n + Math.random());
@@ -2524,6 +2537,7 @@ export class Renderer {
     (this.phobosNear ||= new PhobosNear(this)).update(cam);
     this.phobosNear.smoke(this.frameDt || 1 / 60, cam);
     this.crows(cam);
+    this.ash(cam);
     this.slimeBodies?.update(snap, snap[H.TIME], cam);
     this.pines.update(cam, aspect, tan);
     this.rocks.update(cam, aspect, tan);
