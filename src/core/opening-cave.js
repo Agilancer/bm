@@ -25,6 +25,10 @@ export function speechSecs(voice, text) {
   return n / ((n >= 40 ? 11.8 : n >= 20 ? 9.9 : 7.9) * q) + 0.3;
 }
 
+// How long a line takes to read in a bubble: READ_CPS characters a second, and a moment to find it.
+export const READ_CPS = 15;
+export const readSecs = (text) => text.length / READ_CPS + 0.6;
+
 // A scene, in order. w: seconds of silence (her moves) before; m: a moment named there; hold: seconds held after the
 // moment, before what comes next. A line: its words, and as in opening-script.js (emote, feel, big, mutter, say); eye: the
 // view eases back to her for it; gap: seconds to the next instead of GAP; young: said in her young voice.
@@ -34,74 +38,60 @@ const STORY = [
   { w: 1.6, m: 'oh', text: '…You’re looking straight at me.' },
   { w: 0.5, m: 'drop', text: 'Not at the girl. At me.', emote: 'sweat', feel: 2.2 },
   // The snap. She backs away among her things, working her cold fingers, and raises the right hand at you.
-  { w: 0.5, m: 'backOff', hold: 3.2 },
+  { w: 0.5, m: 'backOff', hold: 2.4 },
   { m: 'aim', text: 'Hold still. It doesn’t hurt. It never hurts.' },
   // SNAP. The door's hum cuts dead; a breath of silence; the candles catch in a wave from her hand, past you, and the
   // fire in her hearth with them.
   { w: 0.3, m: 'snap', hold: 1.0 },
   { m: 'candles', hold: 1.8 },
   // She comes back through her things, watching your eyes the whole way, stops close, and leans in.
-  { m: 'comeBack', hold: 4.0 },
-  { m: 'lean', text: 'That was a charm. Whoever it touches believes the next thing I tell them.', eye: true },
+  { m: 'comeBack', hold: 3.0 },
+  { m: 'lean', text: 'That was a charm. Whoever it touches believes the next thing I say.', eye: true },
   { text: 'It has worked on forty-three people. It hasn’t worked on you.' },
-  // She straightens, steps back, and folds her arms.
-  { w: 0.8, m: 'fold', text: 'So you’d better have the truth. Bear with me. I’m out of practice.' },
+  // And then she sees your hand: embers on your knuckles.
+  { w: 0.6, m: 'steps', text: '…And what is that in your hand? Look down.', eye: true, emote: 'question', feel: 1.8 },
+  // The view tips down to your staff. Cast, and a spark leaps to the nearest candle; or it goes on its own after the wait.
+  { m: 'hands', hold: 1.1 },
+  // (A first time, mid-scene, finding the key takes a while: she waits, eggs you on, and only then does it go by itself.)
+  { m: 'cast', hold: 7.0 },
+  { m: 'goOn', text: 'Go on. Throw it.' },
+  { w: 2.4, m: 'spark', hold: 1.6 },
+  { m: 'magic', text: 'Magic. Nobody has been born with that since the Dark Lord drank it all, to live.' },
   // Who she is. Her hand to her heart, and a slow, stiff bow. Her name comes up.
   { w: 0.5, m: 'bow', hold: 1.3 },
   { m: 'named', text: 'My name is Lisandra. The girl was a glamour. Nobody follows an old woman into a war.' },
-  // Her hand goes out past you, at the door you came through.
-  { w: 0.5, m: 'doorPoint', text: 'That is a door behind you. You came through it a minute ago, from a long way off.' },
-  // The old story, told at her hearth: she crosses to it, holds her hands to the fire, and tells it into the flames.
-  { w: 0.5, m: 'toHearth', text: 'This country is Eldravayne. It belongs to Velscour, the Dark Lord.' },
-  { text: 'Two hundred years ago, a stranger called Tessariel broke him on his own throne.' },
-  { w: 0.3, m: 'turn', text: 'Then Tessariel left by that door, swearing to come back if he ever rose again.' },
-  // The old lantern on her table: she looks at it, and lays a hand on it.
-  { w: 0.5, m: 'lantern', text: 'I carried Tessariel’s lantern in that war. I have kept the door ever since.' },
-  { w: 0.4, m: 'rose', text: 'He rose. For forty years now, he has had his throne back.' },
+  // The old story, told at her hearth: she crosses to it, holds her hands to the fire, and tells it into the flames; then
+  // turns, and her hand goes out past you, at the door you came through.
+  { w: 0.5, m: 'toHearth', text: 'Two hundred years ago, a stranger broke the Dark Lord Velscour on his own throne.' },
+  { w: 0.3, m: 'turn', text: 'We called him Tessariel. He left by that door, and swore to come back if his enemy ever rose.' },
+  { w: 0.3, text: 'Forty years ago, the Dark Lord rose. I’ve called through that door every night since.' },
   // The forty-three. She looks down the room to the ledger on its stand by the tunnel; then at the floor.
-  { w: 0.6, m: 'ledger', text: 'A season ago, the door began to answer. Forty-three times, and every one the wrong person.' },
-  { text: 'So I told each of them what I told you, put a sword in their hand, and sent them off to fight him.' },
-  { w: 0.5, m: 'shame', text: 'I had stopped believing the real one would come.', mutter: true, emote: 'gloom', feel: 2.6 },
-  // The three proofs. She comes back across the cave to you.
-  { w: 0.7, m: 'toYou', text: 'Then it sent you. And three things tell me you are not like them.', eye: true },
-  { w: 0.3, m: 'one', text: 'One. It drops the others in ditches, all over the country. It put you here, at my feet.' },
-  { w: 0.3, m: 'two', text: 'Two. You saw my real face. The old songs say nothing false gets past Tessariel’s eyes.' },
-  { w: 0.4, m: 'steps', text: 'And the third is in your right hand. Look down.', eye: true },
-  // The view tips down to your staff, embers on your knuckles. Cast, and a spark leaps to the nearest candle; or it
-  // goes on its own after the wait.
-  { m: 'hands', hold: 1.1 },
-  { m: 'cast', hold: 4.0 },
-  { m: 'spark', hold: 1.6 },
-  { m: 'magic', text: 'That is magic. Nobody in this world has been born with it in two hundred years.' },
-  { text: 'When he was broken, he drank every spark of it to stay alive.' },
-  { w: 0.3, m: 'yours', text: 'And you have just walked in with a fistful of fire.' },
+  { w: 0.6, m: 'ledger', text: 'A season ago, the door began to answer. Forty-three times, and always the wrong person.' },
+  { text: 'I told each of them what I told you, and sent them off to fight him.' },
+  { w: 0.4, m: 'shame', text: 'I had stopped believing the real one would come.', mutter: true, emote: 'gloom', feel: 2.6 },
+  // Back across the cave to you.
+  { w: 0.7, m: 'toYou', text: 'But you saw through me. And you came through with fire in your hand.', eye: true },
   // Who you are. A slow half circle round you, to stand between you and the door.
-  { w: 0.5, m: 'round', text: 'So I’ll say it again, and this time it’s true.', eye: true },
+  { w: 0.4, m: 'round', text: 'So I’ll say it again, and this time it’s true.', eye: true },
   // On the name, the door's hum comes back for one breath, the portal swells and every flame leans toward you.
   { w: 1.2, m: 'reveal', text: 'You are Tessariel. You said you’d come back, and you have.', eye: true },
-  { w: 1.2, m: 'after', text: 'You won’t remember. Two hundred years beyond that door would wash anyone clean.' },
-  { text: 'But he will know you. Every spark you throw is one he has lost, and he will feel it.' },
-  { text: 'He is hunting forty-three of you already. My lies have bought you a little time.' },
+  { w: 1.0, m: 'after' },
   // What to do. She points down the cave, to the tunnel and the world.
-  { w: 0.7, m: 'plan', text: 'So here is what you do with it.' },
-  { m: 'pointOut', text: 'Take the Long Road down the hill to a town called Bellmourn. They need help there.' },
-  { text: 'Learn what those hands can do. Then go and finish what you started.' },
-  // A look over her shoulder at the door behind her.
-  { w: 0.5, m: 'cant', text: 'I can’t come. That door keeps me alive, and I have never left it for long.' },
+  { w: 0.5, m: 'pointOut', text: 'Take the Long Road down the hill to Bellmourn. They need help there, and you need practice.' },
   // The name. She comes round in front of you, and only now holds out her hand: the old one.
-  { w: 0.6, m: 'toOffer', text: 'One last thing. The others, I named myself. You, I’m asking.' },
-  { w: 0.4, m: 'offer', text: 'What did they call you, on the far side?', eye: true },
+  { w: 0.5, m: 'toOffer', hold: 2.6 },
+  { m: 'offer', text: 'Tessariel is what we called you. What did they call you, on the far side?', eye: true },
   { w: 0.5, m: 'prompt' },
 ];
 
 // She takes the name where she stands, and sends you out ahead of her. You can't look or walk till she's done.
 const HERD_STORY = [
   { w: 0.3, m: 'name', text: '{name}.', say: '', secs: 1.6 },
-  { w: 0.3, m: 'book', text: 'Good. That goes in the book. It’s the first name in there I didn’t choose myself.' },
+  { w: 0.3, m: 'book', text: 'Good. That goes in the book: the first name in it I didn’t choose.' },
   { w: 0.4, m: 'point', text: 'The way out is down that tunnel. Go on ahead of me.' },
-  { w: 0.3, m: 'go', text: 'And stop looking at me like that. I know what you see.', emote: 'sweat', feel: 2.2 },
+  { w: 0.3, m: 'go' },
   { w: 0.1, m: 'control' },
-  { w: 3.0, m: 'end' },
+  { w: 0.5, m: 'end' },
 ];
 
 // The ledge, once she's out of the dust and has had it out with you (from FALL_FROM: before that the scene is set by
@@ -109,15 +99,14 @@ const HERD_STORY = [
 export const FALL_FROM = 15.2;
 const FALL_STORY = [
   { m: 'rubble', text: 'Two hundred years I kept that door open. You walk through it once, and it lets go.' },
-  { text: 'I thought I was the one holding it. It was only ever waiting for you.', mutter: true },
+  { text: 'It was only ever waiting for you.', mutter: true },
   // Back to you, and she catches you looking; then down at her own hands, in the sun.
   { w: 1.0, m: 'catch', text: '…Why are you staring at me like that?', emote: 'question', feel: 2.2 },
-  { w: 0.9, m: 'sun', text: 'Oh. The sun. This is no glamour. Daylight gives me back the face I had when I took up the door.' },
-  { w: 0.2, m: 'only', text: 'The dark takes it away again. You are the only one who sees either.', emote: 'sweat', feel: 1.8 },
-  { w: 0.8, m: 'home', text: 'Well. I seem to have lost my home.', mutter: true, emote: 'gloom' },
-  { w: 0.7, m: 'coming', text: 'So I’m coming to Bellmourn with you, {name}. Somebody has to get you down this road in one piece.', say: 'So I’m coming to Bellmourn with you. Somebody has to get you down this road in one piece.' },
-  { w: 0.3, m: 'oldLis', text: 'Down there I’m Old Lis, a hag who trades herbs for salt. That is the face they’ll see.' },
-  { w: 0.9, m: 'end' },
+  { w: 0.9, m: 'sun', text: 'Oh. The sun. That’s no glamour: daylight gives me back the face I had when I took up the door.' },
+  // (Lost her home: she says so on the road, with the kettle. What she'll be in town is her first line on the way down.)
+  { w: 0.8, m: 'home', hold: 2.6 },
+  { m: 'coming', text: 'So I’m coming to Bellmourn with you, {name}. Somebody has to get you down this road in one piece.', say: 'So I’m coming to Bellmourn with you. Somebody has to get you down this road in one piece.' },
+  { w: 0.6, m: 'end' },
 ];
 
 // A line too long for one subtitle is shown in parts, split at a sentence break (or a comma), each up when her voice gets
@@ -145,7 +134,8 @@ function lay(story, from, voice) {
     if (e.m) marks[e.m] = t;
     if (e.m === 'named') named = true;
     if (e.text) {
-      const said = e.say ?? e.text, secs = e.secs ?? speechSecs(voice, said);
+      // (As long as it takes to read: her words are read, not heard. Her recordings aren't played.)
+      const said = e.say ?? e.text, secs = e.secs ?? readSecs(e.text);
       const { w, m, hold, gap, eye, ...rest } = e;
       lines.push({ ...rest, at: Math.round(t * 100) / 100, dur: Math.max(1.5, secs + 0.35, e.text.length / 15), secs, eye: !!eye, named, parts: parts(e.text, secs) });
       t += secs + (gap ?? GAP);

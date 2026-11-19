@@ -4,6 +4,7 @@
 // coming down). Played off the story's clock, so a moment is heard once, as it's crossed. Her words aren't heard: they're
 // in a bubble over her head and in the chat log (src/ui/opening.js words). Her recordings are still in assets/voice.
 import { H } from '../core/layout.js';
+import { CUE_IDS } from '../core/opening-script.js';
 import { smoothstep } from '../core/math.js';
 import {
   BURST_CANDLE, CANDLES, CANDLES_AT, CAVE, CAVE_LINE, CAVE_MOUTH, DAZZLE, HERD, DUST_AT, OPENING, PORTAL, REVEAL_AT, SNAP_AT, SPARK_AT,
@@ -255,6 +256,7 @@ export class OpeningSound {
   update(stage, t, snap, her, lids, inCave, amb = 1) {
     if (!this.ok) return;
     const prev = this.stage === stage ? this.t : -1;
+    if (stage === OPENING.WAKE) this.quaked = false;
     const crossed = (at) => prev < at && t >= at;
     if (stage !== this.stage && this.stage >= 0 && stage < this.stage && stage === OPENING.WAKE) this.stopAll();
     this.stage = stage; this.t = t;
@@ -311,13 +313,25 @@ export class OpeningSound {
       case OPENING.HERD:
         if (crossed(HERD.go)) this.whine();
         break;
-      case OPENING.LEAVE:
+      case OPENING.LEAVE: {
+        // The door letting go while you're in the tunnel (her shout to run): the roof groans and cracks all round you.
+        const run = CUE_IDS[snap[H.OPENING_CUE] - 1] === 'run';
+        if (run && !this.quaked) {
+          this.quaked = true;
+          this.rumble(3.2, 0.6); this.crackThud(1);
+          this.fx('rock_wall_2', snap[H.PX], snap[H.PY] + 2.6, snap[H.PZ], 0.4, 0.7);
+        }
+        if (run && Math.floor(t / 1.3) !== Math.floor(prev / 1.3)) {
+          this.crackThud(0.6);
+          this.fx('rock_meteor_throw_1', snap[H.PX] + (Math.random() - 0.5) * 3, snap[H.PY] + 2.6, snap[H.PZ] + (Math.random() - 0.5) * 3, 0.3, 0.7);
+        }
         // The door slipping as you go, and grit coming down from the roof.
-        if (Math.floor(t / 4.7) !== Math.floor(prev / 4.7) && prev > 0) {
+        if (!run && Math.floor(t / 4.7) !== Math.floor(prev / 4.7) && prev > 0) {
           this.crackThud(0.45);
           this.fx('rock_meteor_throw_1', snap[H.PX], snap[H.PY] + 2.6, snap[H.PZ], 0.22, 0.6);
         }
         break;
+      }
       case OPENING.COLLAPSE:
         if (crossed(3.0)) this.portalBlast();
         if (crossed(4.6)) { this.rumble(1.1, 0.5); this.fx('rock_wall_2', null, 0, 0, 0.45, 0.6); }

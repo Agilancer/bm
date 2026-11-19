@@ -389,7 +389,7 @@ export class HeroPlay {
     const lvl = 1 + h.person.level * 0.04;
     h.startSwing('Spell_Simple_Shoot', 1.3, [0.45], () => {
       if (who.dead) return;
-      who.hp = Math.min(who.maxHp, who.hp + (0.3 * who.maxHp + 12 * lvl) * (1 + (h.mods?.grace || 0)));
+      who.hp = Math.min(who.maxHp, who.hp + (0.3 * who.maxHp + 12 * lvl) * (1 + Math.min(h.mods?.grace || 0, 0.6)));
       sim.casting.burst(FX.COLUMN, ELEM.LIGHT, who.x, who.y, who.z, 0.6, 1.1, 1.0, { light: 14, lightR: 6, len: 3 });
       sim.casting.burst(FX.RING, ELEM.LIGHT, who.x, who.y + 0.05, who.z, 0.3, 1.3, 0.6);
     }, { mask: 'upper' });

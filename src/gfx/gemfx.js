@@ -1,5 +1,7 @@
 // What a gem does to what it's set in, to look at. Every kind has its own particles, motion and light, and they add up: a staff with
-// a ruby and a sapphire smoulders and snows at once. A better cut does it harder, and a Flawless stone adds a flourish of its own.
+// a ruby and a sapphire smoulders and snows at once. A better cut does it harder, and a Flawless stone adds a flourish of its own;
+// a Brilliant one (three Flawless made into one) does that flourish harder and wider, and a Perfect one twice over, with a crown of
+// its own light turning round it.
 // All of it is on the render thread and owes the sim nothing. Particle kinds 16 + an element are the spells' own colours (src/sim/spells.js).
 import { toChurch } from '../core/church.js';
 import { H } from '../core/layout.js';
@@ -10,7 +12,9 @@ import { ELEM } from '../sim/spells.js';
 // Where the skull is on the screen, in the world's wider camera: tan 32 over tan 38 turns one's slope into the other's.
 const SEAT_A = (SKULL_AT[0] / SKULL_AT[2]) * 0.8 * 0.6, SEAT_B = (SKULL_AT[1] / -SKULL_AT[2]) * 0.8 * 0.6;
 const K = (e) => 16 + e;
-const GRADE = [0.7, 1, 1.5];
+const GRADE = [0.7, 1, 1.5, 2.1, 3];
+// The flourish, by cut: how hard it's done from Flawless up.
+const FLOURISH = [0, 0, 1, 1.7, 2.6];
 const TAU = Math.PI * 2;
 const LANTERN = [1, 0.74, 0.5], RAGE_LIGHT = [1, 0.22, 0.1], PALE_LIGHT = [0.7, 0.82, 1];
 
@@ -80,15 +84,24 @@ export class GemFx {
     for (const g of gems) {
       const look = LOOKS[g.kind];
       if (!look) continue;
-      const k = GRADE[g.grade] * strength;
+      const grade = Math.max(0, Math.min(GRADE.length - 1, g.grade | 0)), k = GRADE[grade] * strength;
       look.shed(r, x, y, z, n(k), t);
-      if (g.grade === 2) look.flawless(r, x, y, z, n(strength), t);
-      const c = look.light || prism(t), i = look.i * GRADE[g.grade] * look.pulse(t);
-      lr += c[0] * i; lg += c[1] * i; lb += c[2] * i; li += i; lreach = Math.max(lreach, look.r);
+      if (grade >= 2) look.flawless(r, x, y, z, n(strength * FLOURISH[grade]), t);
+      // Perfect: the flourish again, out of step with the first, and a crown of four glints turning slowly about it.
+      if (grade >= 4) {
+        look.flawless(r, x, y, z, n(strength), t + 0.62);
+        const a = t * 1.1;
+        for (let q = 0; q < 4; q++) r.emit(2, n(strength)(9), x + Math.cos(a + q * TAU / 4) * 0.26, y + 0.05 * Math.sin(t * 2 + q), z + Math.sin(a + q * TAU / 4) * 0.26, 0, 1, 0, 0.2, 0, 0.06, 0.004, 0.009, 0.25, 0.5);
+      } else if (grade === 3) {
+        // Brilliant: a glint now and then, thrown straight up.
+        r.emit(2, n(strength)(5), x, y, z, 0, 1, 0, 0.6, 0.5, 1.2, 0.003, 0.007, 0.2, 0.45);
+      }
+      const c = look.light || prism(t), i = look.i * GRADE[grade] * look.pulse(t);
+      lr += c[0] * i; lg += c[1] * i; lb += c[2] * i; li += i; lreach = Math.max(lreach, look.r + (grade >= 3 ? grade - 2 : 0));
     }
     const L = this.pool[this.used++];
     if (!L || !li) return;
-    L.p[0] = x; L.p[1] = y; L.p[2] = z; L.c[0] = lr / li; L.c[1] = lg / li; L.c[2] = lb / li; L.r = lreach; L.i = Math.min(li, 3.5) * glow;
+    L.p[0] = x; L.p[1] = y; L.p[2] = z; L.c[0] = lr / li; L.c[1] = lg / li; L.c[2] = lb / li; L.r = lreach; L.i = Math.min(li, 4.5) * glow;
     this.lights.push(L);
   }
 

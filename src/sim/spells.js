@@ -2,8 +2,22 @@
 // more since the six schools (src/sim/skills.js has the trees they stand in, and what points spent in them do to these rows).
 // The first twenty keep their places: a save's bar and a scroll name a spell by its place here.
 
-export const MAX_MANA = 120;
-export const MANA_REGEN = 9;   // a second
+// Mana is a pool you can empty. It doesn't grow by itself as you level (a level is worth a little; what you wear and set
+// in its sockets is what deepens it, quickens it, or makes a cast cheaper), and it comes back slowly: nothing for a moment
+// after a spell, a trickle in a fight, and quickly once you've stopped spending it.
+export const MAX_MANA = 100;
+export const MANA_REGEN = 3;      // a second, in a fight
+export const REGEN_HOLD = 1.5;    // after a spell begins, nothing comes back for this long
+export const CALM_AFTER = 5;      // this long without spending any, and it's coming back
+export const CALM_REGEN = 0.12;   // at this share of the whole pool a second (or three times the fight's rate, if that's more): full in eight seconds, however deep the pool
+export const KILL_MANA = 2;       // what a kill gives back
+// The most that gear can do for it: this much more regeneration than none, this share off a cast.
+export const REGEN_CAP = 2.5, THRIFT_CAP = 0.4, POWER_CAP = 2;
+// A staff shot with no mana for it still goes, for nothing, with this much of its bite: there is always something to do.
+export const DRY_BITE = 0.6;
+// And a staff shot that strikes something gives this much back: the staff is how you earn the next spell, in a fight that's
+// long and has nothing in it to kill for mana (a boss). Spells spend; the staff builds.
+export const STAFF_GIVE = 4;
 // The furthest anything you cast reaches, staff or spell, in paces from your eyes: a bolt that's gone this far spends itself,
 // and nothing is laid on the ground, poured, struck or sought further off. Shorter than a boss's wheel of fire (11 paces from
 // its middle in the delves, src/sim/moves.js fireWheel), so to hit one from where you stand, you stand where its wheel turns.

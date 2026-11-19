@@ -104,7 +104,7 @@ export class Drops {
     setFind(y < -2 ? 2.4 : Math.hypot(x, z) > 150 ? 1.6 : 1);
     const orbs = [];
     if ((kind | 0) >= 2 && Math.random() < (this.low ? 0.45 : 0.2)) orbs.push({ type: 'orb', kind: 'life', rarity: 0 });
-    if ((kind | 0) >= 2 && Math.random() < 0.1) orbs.push({ type: 'orb', kind: 'mana', rarity: 0 });
+    if ((kind | 0) >= 2 && Math.random() < (this.dry ? 0.24 : 0.12)) orbs.push({ type: 'orb', kind: 'mana', rarity: 0 });
     // (And now and then something for your party, if you've one: src/items/partygear.js. party: main.js.)
     // (Never in Velscour's church: their gear is Tessariel's own. CLAUDE.md.)
     const theirs = inChurch(x, y + 1, z) ? [] : partyDrops(this.rng, kind | 0, this.party?.() || [], y < -2 ? 1.6 : 1);

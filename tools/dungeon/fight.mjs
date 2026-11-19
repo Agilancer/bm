@@ -11,7 +11,7 @@
 // It says how long each took, who fell, how much of the player's life went, and what was thrown at them. It fails on an
 // error in a tick, or a shape with a bad number in it.
 import fs from 'node:fs';
-import { FX_FLOATS, INPUT } from '../../src/core/layout.js';
+import { FX_FLOATS, INPUT, WEAPONS } from '../../src/core/layout.js';
 import { ALL_PACKS, BOSSES, DELVES, WARNINGS, caveClear, caveRoom, roomOf, roomSpot, toWorld } from '../../src/core/dungeon.js';
 import { spawnSync } from 'node:child_process';
 import { makeCast } from '../../src/core/heroes.js';
@@ -57,8 +57,11 @@ inp[INPUT.VIEW_ASPECT] = 16 / 9;
 // (GEAR=1: as if in good gear for its level, a stand-in for what a kitted player brings: half again the power, two fifths
 // more life, a third more mana back, a quarter off what's taken.)
 const GEAR = !!process.env.GEAR;
-inp[INPUT.LEVEL] = LEVEL; inp[INPUT.POWER] = (1 + (LEVEL - 1) * 0.07) * (GEAR ? 1.5 : 1); inp[INPUT.W_LIFE] = (LEVEL - 1) * 8 * (GEAR ? 1.4 : 1); inp[INPUT.MANA_MAX] = (LEVEL - 1) * 6; inp[INPUT.REGEN] = (1 + (LEVEL - 1) * 0.04) * (GEAR ? 1.33 : 1);
-if (GEAR) inp[INPUT.ARMOR] = 0.25;
+inp[INPUT.LEVEL] = LEVEL; inp[INPUT.POWER] = (1 + (LEVEL - 1) * 0.07) * (GEAR ? 1.5 : 1); inp[INPUT.W_LIFE] = (LEVEL - 1) * 8 * (GEAR ? 1.4 : 1); inp[INPUT.MANA_MAX] = Math.round((LEVEL - 1) * 0.5) + (GEAR ? 40 : 0); inp[INPUT.REGEN] = GEAR ? 1.33 : 1;
+// (A plain staff in hand: what it fights with when the mana's gone, and how it earns the next spell: STAFF_GIVE.)
+inp[INPUT.WEAPON] = WEAPONS.findIndex((w) => w?.id === 'crystal_staff'); inp[INPUT.W_MIN] = 12; inp[INPUT.W_MAX] = 18;
+let wand = false, wandT = 0, wandFor = 0;
+if (GEAR) inp[INPUT.ARMOR] = 33;   // (ward: a third more than a hundred is a quarter off what's taken)
 const tick = () => { sim.step(DT); if (sim.reported) throw new Error('a tick threw'); };
 const breathe = () => new Promise((r) => setImmediate(r));
 for (let i = 0; i < 10; i++) tick();
@@ -143,8 +146,13 @@ function play(target) {
     inp[INPUT.PITCH] = Math.atan2(target.y + (target.hover || 0) + Math.min((target.meta?.height || 1.6) * 0.5, 3) - (p.y + 1.6), d);
     inp[INPUT.SPELL] = FIREBOLT;
     // Firebolt, gathered half a second, one after another while there's mana for it.
+    // Out of mana, the staff, shot after shot, till there's enough for a run of spells again.
+    if (sim.casting.mana < 14) wand = true; else if (sim.casting.mana > 60) wand = false;
+    if (wand) { inp[INPUT.CAST] = 0; held = 0; wandFor += DT; if ((wandT -= DT) <= 0 && d < REACH) { wandT = 0.9; inp[INPUT.ATTACK]++; } }
+    else {
     held += DT;
     if (held < 0.55) { if (inp[INPUT.CAST] === 0 && sim.casting.mana > 14) { inp[INPUT.CAST] = 1; inp[INPUT.CAST_N]++; } } else { inp[INPUT.CAST] = 0; if (held > 0.75) held = 0; }
+    }
   } else inp[INPUT.CAST] = 0;
 }
 
@@ -188,7 +196,8 @@ async function fight(key) {
     W.carry(best[0], best[1], Math.atan2(rx - best[0], rz - best[1]));
   }
   home = [rx, rz, room.hx !== undefined ? Math.max(room.hx, room.hz) : room.r];
-  let t = 0, began = -1, maxFx = 0, low = { player: 1, tank: 1 }, fell = new Set(), end = '';
+  wandFor = 0;
+  let t = 0, began = -1, maxFx = 0, dry = 0, low = { player: 1, tank: 1 }, fell = new Set(), end = '';
   const lairKey = boss ? boss.key : pack.key, lair = () => sim.tripo.lairs.find((l) => l.key === lairKey);
   const tank = party.find((h) => h.role === 'tank');
   while (t < 600) {
@@ -208,6 +217,7 @@ async function fight(key) {
     // (FXDEBUG: what fills the frame's shapes, the first time it's all but full.)
     if (process.env.FXDEBUG && c.n >= +(process.env.FXDEBUG) && !globalThis.fxShown) { globalThis.fxShown = true; const h = {}; for (let i = 0; i < c.n; i++) { const k = `${c.data[i * FX_FLOATS + 8]}/${c.data[i * FX_FLOATS + 9]}`; h[k] = (h[k] || 0) + 1; } console.log(`shapes at ${sim.time.toFixed(1)} s (shape/elem): ${JSON.stringify(h)}; bursts ${c.bursts.length}, marks ${P.marks.length}`); }
     for (let k = 0; k < c.n * FX_FLOATS; k++) if (!Number.isFinite(c.data[k])) throw new Error(`a shape with a bad number (shape ${c.data[Math.floor(k / FX_FLOATS) * FX_FLOATS + 8]}, field ${k % FX_FLOATS})`);
+    if (began >= 0 && c.mana < 14) dry += DT;   // (no mana for a Firebolt: how much of the fight it could only use its staff)
     low.player = Math.min(low.player, p.hp / p.maxHp); if (tank) low.tank = Math.min(low.tank, tank.hp / tank.maxHp);
     for (const h of party) if (h.dead) fell.add(h.person.cls);
     if (process.env.TRACE && (sim.tick % 600) === 0) { const f = W.fight, b = boss && W.bossBodies(boss.key)[0]; console.log(`  t ${t.toFixed(0)} phase ${f?.phase} stage ${f?.air?.stage || ''} boss ${b ? `${(b.hp / b.maxHp * 100).toFixed(0)}% hit ${(sim.time - (b.playerHitT ?? -99)).toFixed(0)}s ago, y ${(b.y - p.y).toFixed(1)}, mana ${sim.casting.mana.toFixed(0)} st ${b.state} ${b.clip} lift ${(b.hover || 0).toFixed(1)} at ${(b.x - rx).toFixed(0)},${(b.z - rz).toFixed(0)}` : ''} p ${(p.hp / p.maxHp * 100).toFixed(0)}% at ${(p.x - rx).toFixed(0)},${(p.z - rz).toFixed(0)} marks ${P.marks.length} shots ${P.shots.length} party ${party.map((h) => (h.dead ? 'x' : (h.hp / h.maxHp * 100).toFixed(0))).join(' ')}`); }
@@ -219,7 +229,7 @@ async function fight(key) {
   inp[INPUT.CAST] = 0; inp[INPUT.MOVE_X] = 0; inp[INPUT.MOVE_Z] = 0;
   const left = boss ? W.bossBodies(boss.key).filter((m) => !m.dead).map((m) => `${Math.round(m.hp / m.maxHp * 100)}%`).join(' ') : '';
   const by = Object.entries(P.tally.by).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${n}`).join(', ');
-  console.log(`${(boss ? boss.name : `pack ${pack.key}`).padEnd(30)} ${(end || 'timed out').padEnd(18)} ${(t - Math.max(began, 0)).toFixed(0).padStart(4)} s  player low ${(low.player * 100).toFixed(0)}%  tank low ${(low.tank * 100).toFixed(0)}%  fell: ${[...fell].join(' ') || 'nobody'}  hit ${P.tally.hits}x for ${P.tally.dmg.toFixed(0)}  jumps ${jumps}  shapes ${maxFx}${left ? `  left ${left}` : ''}`);
+  console.log(`${(boss ? boss.name : `pack ${pack.key}`).padEnd(30)} ${(end || 'timed out').padEnd(18)} ${(t - Math.max(began, 0)).toFixed(0).padStart(4)} s  dry ${(dry / Math.max(1, t - Math.max(began, 0)) * 100).toFixed(0)}% staff ${(wandFor / Math.max(1, t - Math.max(began, 0)) * 100).toFixed(0)}%  player low ${(low.player * 100).toFixed(0)}%  tank low ${(low.tank * 100).toFixed(0)}%  fell: ${[...fell].join(' ') || 'nobody'}  hit ${P.tally.hits}x for ${P.tally.dmg.toFixed(0)}  jumps ${jumps}  shapes ${maxFx}${left ? `  left ${left}` : ''}`);
   if (!quiet && by) console.log(`    ${by}`);
   // (Out of the fight before the next.)
   if (p.dead) { inp[INPUT.RESTART]++; for (let i = 0; i < 20; i++) { tick(); await breathe(); } }

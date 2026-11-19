@@ -34,7 +34,7 @@ const CHEVRON = '<svg class="tk-chev" viewBox="0 0 16 12" aria-hidden="true"><pa
 
 const CSS = `
   #ticker { position: fixed; left: 0; right: 0; top: 0; z-index: 8; height: 2.1em; display: flex; align-items: stretch; overflow: hidden; pointer-events: none;
-    font: 900 17px/1 Cinzel, Georgia, serif; letter-spacing: .07em; color: #fff;
+    font: 900 calc(17px * var(--tk-k, 1))/1 Cinzel, Georgia, serif; letter-spacing: .07em; color: #fff;
     background: linear-gradient(#c0170f, #8a0a07 42%, #5c0505 100%);
     box-shadow: inset 0 1px 0 #ff6a4c, inset 0 -1px 0 #ff3b24, 0 2px 0 rgba(20,0,0,.85), 0 0 22px rgba(255,36,14,.45);
     transform: translateY(-115%); transition: transform .22s cubic-bezier(.2,.9,.3,1.15); }
@@ -66,7 +66,7 @@ const CSS = `
   @keyframes tkBlink { 50% { color: #ff4a2e; text-shadow: 0 0 10px rgba(255,60,30,.9); } }
   @keyframes tkSign { 50% { transform: scale(.86); filter: drop-shadow(0 0 7px rgba(255,90,40,.95)); } }
   body.touch { --st: calc(env(safe-area-inset-top, 0px) + var(--tk-dy, 0px)); }
-  body.touch #ticker { top: env(safe-area-inset-top, 0px); font-size: calc(12.5 * var(--u, 1px)); }
+  body.touch #ticker { top: env(safe-area-inset-top, 0px); font-size: calc(12.5 * var(--u, 1px) * var(--tk-k, 1)); }
   body.ui-bare #ticker { visibility: hidden !important; }
   @media (prefers-reduced-motion: reduce) { #ticker::before, #ticker.on, #ticker.on .tk-tag svg { animation: none; } }
 `;
@@ -153,6 +153,16 @@ export class Ticker {
     if (this.el.classList.contains('on')) return;
     this.room(this.roomNeeded());
     this.el.classList.add('on');
+  }
+
+  // The bar's size changed (Settings, Emergency bar size: --tk-k): what's along the top makes room for it again, if it's out.
+  refit() {
+    if (!this.el.classList.contains('on')) return;
+    // (Measured with nothing moved yet, so the new room is the bar's whole height, not what it's grown by.)
+    for (const a of this.moved.values()) a.cancel();
+    this.moved.clear();
+    this.phone?.cancel(); this.phone = null;
+    this.room(this.roomNeeded());
   }
 
   hide() {

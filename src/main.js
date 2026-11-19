@@ -32,6 +32,7 @@ import { PhobosDoors } from './items/phobos-doors.js';
 import { Bells } from './items/bells.js';
 import { buildSites } from './core/sites.js';
 import { saveSettings, settings, Title } from './title.js';
+import { beat, keepAwake } from './core/beat.js';
 import { ViewSwitch } from './ui/view.js';
 import { icon, paintIcons, setIcon } from './ui/icons.js';
 import { place as placeThumbs } from './ui/thumbs.js';
@@ -59,6 +60,7 @@ import { Lands } from './ui/lands.js';
 import { AutoPlay } from './ui/autoplay.js';
 import { FirstSight } from './ui/firstsight.js';
 import { FoeBars, isBoss } from './ui/foebars.js';
+import { DmgNums } from './ui/dmgnums.js';
 import { Arrange } from './ui/arrange.js';
 import { groundAt, setHomes } from './ui/places.js';
 import { HallUI } from './ui/testhall.js';
@@ -699,7 +701,8 @@ async function boot(plan, poolSize) {
       for (const r of tiers) {
         items.push(rollSkull(rng, { rarity: r }), rollWeapon(rng, { rarity: Math.min(r, 4) }), rollShield(rng, { rarity: Math.min(r, 4) }));
         if (Object.keys(ROBES).length) items.push(rollRobe(rng, { rarity: Math.min(r, 4) }));
-        items.push(rollGem(rng, { grade: Math.min(2, r - tiers[0]) }));
+        // (The gods' kit: the three finest cuts, the last two of them only ever made otherwise. rollGem keeps it to a cut there is.)
+        items.push(rollGem(rng, { grade: r - tiers[0] + (kind === 'god' ? 2 : 0) }));
       }
       const snap = game.currentSnap();
       let dropped = 0;
@@ -1003,6 +1006,11 @@ async function boot(plan, poolSize) {
     else if (k === 'res') {
       game.fixedScale = v !== 'auto';
       if (game.fixedScale) renderer.scale = Number(v);
+    } else if (k === 'ticker') {
+      document.documentElement.style.setProperty('--tk-k', String(v));
+      game.party?.ticker?.refit();
+    } else if (k === 'background' || k === 'bgSound') {
+      awayChanged();
     } else if (k === 'keep') {
       useStore(v === 'yes');
     } else if (k === 'gfx') {
@@ -1013,6 +1021,7 @@ async function boot(plan, poolSize) {
   title.onSetting = applySetting;
   applySetting('look', settings.look);
   applySetting('res', settings.res);
+  applySetting('ticker', settings.ticker);
   if (settings.perf === 'on') hud.setDebug(true);
   input.onPauseChange = (paused) => {
     if (!input.enabled || inventory.open || naming || townUI.open || townUI.book || game.heroTalk?.open || game.party?.open || game.hallUI?.open) return;
@@ -1068,6 +1077,7 @@ async function boot(plan, poolSize) {
   // First person or third: V, the eye by the spell bar, VIEW on a phone.
   // A life bar over every enemy's head (the interface's own is a boss's only: Hud.update).
   game.foeBars = new FoeBars({ renderer, heroCount: () => renderer.heroCast?.length || 0 });
+  game.dmgNums = new DmgNums({ renderer });
   hud.dungeonBoss = () => !!game.party?.boss;
   game.viewSwitch = new ViewSwitch({ input, shared, settings, save: saveSettings, tip: (t, s) => hud.tip(t, s), busy: () => state.paused || naming });
   // Auto-play, the Auto button under the skull or P: the game plays itself (src/ui/autoplay.js, src/ui/autobrain.js).
@@ -1119,11 +1129,19 @@ async function boot(plan, poolSize) {
     b.onclick = () => { closePack(false); game.partyBook.show(); };
   }
   $('bPause').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); input.onPauseChange(true); }, { passive: false });
-  document.addEventListener('visibilitychange', () => {
+  // Out of sight (another tab, the window put down, a phone on another app), the world keeps going, auto-play with it, unless
+  // Settings says to pause (or to keep going only in auto-play). The frames are a worker's beat meanwhile: src/core/beat.js.
+  const awayHeld = () => document.hidden && (settings.background === 'pause' || (settings.background === 'auto' && !game.autoplay?.on));
+  game.awayHeld = awayHeld;
+  function awayChanged() {
     const hidden = document.hidden;
-    if (hidden) input.releaseControls();
-    shared.input[INPUT.PAUSE] = hidden || state.paused || game.upright ? 1 : 0;
-    if (hidden && audio.ctx) audio.ctx.suspend(); else if (audio.ctx && (input.enabled || title.up)) audio.ctx.resume();
+    shared.input[INPUT.PAUSE] = awayHeld() || state.paused || game.upright ? 1 : 0;
+    const mute = hidden && (settings.bgSound === 'off' || awayHeld());
+    if (mute && audio.ctx) audio.ctx.suspend(); else if (audio.ctx && (input.enabled || title.up)) audio.ctx.resume();
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) input.releaseControls();
+    awayChanged();
   });
   // A phone stood upright. The manifest asks for landscape and the lock's asked for too (above, and src/title.js), but an
   // iPhone grants a page neither, so it can still be turned. Upright, the world holds still and nothing's drawn (index.html
@@ -1134,7 +1152,7 @@ async function boot(plan, poolSize) {
     game.upright = up;
     if (!input.enabled) return;     // (under the title, the world's held still already)
     if (up) input.releaseControls();
-    shared.input[INPUT.PAUSE] = up || document.hidden || state.paused ? 1 : 0;
+    shared.input[INPUT.PAUSE] = up || awayHeld() || state.paused ? 1 : 0;
   };
   window.addEventListener('resize', turned);
   window.addEventListener('orientationchange', turned);
@@ -1534,10 +1552,12 @@ class GameView {
 
   updateDrops(dt, snap) {
     this.drops.low = snap[H.HP] / (snap[H.MAX_HP] || 1) < 0.35;
+    this.drops.dry = snap[H.MANA] / (snap[H.MAX_MANA] || 1) < 0.3;
     this.drops.onGrab ||= (g) => {
       if (g.coins) this.pack.gold += g.item.amount;
       else if (g.item.type === 'mat') { this.pack.addMat(g.item.kind, g.item.n); this.townUI?.note(`${g.item.n} ${matName(g.item.kind, g.item.n)}  (${this.pack.mats[g.item.kind]})`, 'mat'); }
-      else this.shared.input[g.item.kind === 'life' ? INPUT.HEAL : INPUT.MANA_UP] += g.item.kind === 'life' ? 32 : 40;
+      // (A life orb is worth more the more life you have to lose; a mana orb is a third of the plain pool.)
+      else this.shared.input[g.item.kind === 'life' ? INPUT.HEAL : INPUT.MANA_UP] += g.item.kind === 'life' ? Math.round(20 + 0.1 * (this.currentSnap()?.[H.MAX_HP] || 160)) : 25;
     };
     if (this.pack && this.input.enabled) this.gemFx?.step(dt, snap, this.cam, this.pack);
     this.nearDrop = this.input.enabled && !this.input.menu ? this.drops.update(dt, snap[H.PX], snap[H.PY], snap[H.PZ]) : null;
@@ -1603,16 +1623,18 @@ class GameView {
     // ?timer=1 keeps the loop alive in an occluded window, for automated review.
     const useTimer = params.has('timer');
     const schedule = useTimer ? (f) => setTimeout(() => f(performance.now()), 16) : requestAnimationFrame.bind(window);
-    const draw = (now) => {
+    // away: a beat while the page is hidden (src/core/beat.js). All of it but the picture, which is drawn once a second (so
+    // what the renderer keeps is let go of) and otherwise only has its day turned.
+    const draw = (now, away = false) => {
       renderDiagnostics.stage = 'input';
-      this.watchRefresh(now);
+      if (away) this.rafLast = 0; else this.watchRefresh(now);
       this.input.update();
       if (!this.buffer) this.sim.postMessage({ input: this.shared.input.slice() });
       // (A phone stood upright draws nothing: see turned.)
       if (this.upright) { this.last = now; return; }
       // A phone on a 120 Hz screen takes every other refresh: a steady 60 is as smooth to the eye, and the battery and the
       // heat are what would slow it down later.
-      if (this.gpu.mobile && this.vsyncMs < 10 && (this.rafSkip++ & 1)) return;
+      if (!away && this.gpu.mobile && this.vsyncMs < 10 && (this.rafSkip++ & 1)) return;
       // Paced (see pace): this frame draws the world the last frame asked for, and then asks for its own frame's time. Taken
       // before asking, so a quick tick can never land in it: every frame is the same one step on from the last.
       renderDiagnostics.stage = 'snapshot';
@@ -1624,7 +1646,7 @@ class GameView {
       // saying when the GPU's done, which mustn't freeze the game: after 5 s of it saying nothing, a frame a second. A GPU
       // that's only slow still says so now and then, and isn't sent more than it can take: frames piled on one that had
       // stalled went with an iPad's GPU being lost in the road's fight.)
-      { const r = this.renderer, t = performance.now();
+      if (!away) { const r = this.renderer, t = performance.now();
         if (r.inFlight >= (this.idle ? 1 : this.maxInFlight) && (t - r.lastDone < 5000 || t - r.lastSent < 1000)) return; }
       const dt = Math.min((now - this.last) / 1000, 0.1);
       this.last = now;
@@ -1651,7 +1673,9 @@ class GameView {
       this.questTrail?.frame(dt, snap);
       renderDiagnostics.stage = 'renderer';
       this.renderer.delveState = this.party?.warrens;   // (which bosses are down: a delve's way out lights when its last is)
-      this.renderer.frame(c, snap, this.sway, dt);
+      if (!away) this.renderer.frame(c, snap, this.sway, dt);
+      else if (now - (this.awayDrawn || 0) > 1000 && this.renderer.inFlight < this.maxInFlight) { this.awayDrawn = now; this.renderer.frame(c, snap, this.sway, dt); }
+      else this.renderer.turnDay(snap[H.TIME]);
       // Who's drawn, body or shadow: the world poses them every tick (if near) and everyone else less often.
       { const seen = this.shared.input, rc = this.renderer.chars; for (let i = 0; i < MAX_CHARS; i++) seen[INPUT.SEEN + i] = rc[i]?.casts ? 1 : 0; }
       // The townsfolk are paced the same way, but asked once the renderer has drawn them: their next poses have until the next
@@ -1671,6 +1695,7 @@ class GameView {
       hs.sim = this.simStats;
       this.hud.update(dt, snap, hs);
       this.foeBars?.update(snap, !this.idle && !this.input.menu && this.input.enabled);
+      this.dmgNums?.update(dt, !this.idle && !this.input.menu);
       this.clock.set(r.hour);
       // (Down a delve there's no sun to tell the hour by, and nothing of the land's to track: the clock is put away.)
       const deep = inDelve(snap[H.PX], snap[H.PZ]);
@@ -1720,6 +1745,13 @@ class GameView {
       }
     };
     schedule(loop);
+    // (Out of sight: twenty beats a second, while the world's running. And the screen's kept on while auto-play plays.)
+    if (!useTimer) beat(50, (now) => {
+      if (this.awayHeld?.()) { this.shared.input[INPUT.PAUSE] = 1; return; }
+      if (this.shared.input[INPUT.PAUSE]) return;
+      try { draw(now, true); } catch (error) { renderDiagnostics.fail(error); }
+    });
+    setInterval(() => keepAwake(!!this.autoplay?.on && !this.idle), 2000);
   }
 
   // Thumbs can't track a moving target the way a mouse can, so the view drifts onto the nearest enemy's chest.
@@ -1985,6 +2017,7 @@ class GameView {
       case EV.SPELL_HIT:
         this.heroTalk?.onSpellHit(f);
         this.spellSound?.hit(a, b, c, d);
+        this.dmgNums?.add(b, c + 0.5, d, e, a, 12 * (this.pack?.level ? 1 + (this.pack.level - 1) * 0.07 : 1) * 3);
         r.emit(16 + a, 16, b, c, d, 0, 0.4, 0, 1.4, 1, 5.5, 0.008, 0.02, 0.2, 0.6);
         if (a !== 0 && a !== 9) this.hud.crossHit();
         break;
@@ -2002,7 +2035,7 @@ class GameView {
         this.spellSound.fizzle();
         // (Yours comes with no place. One with a place is a caster of the dead's working, broken by a blow
         // (src/sim/undead.js interrupt): heard, but it's not your mana that ran out.)
-        if (!a && !b && !c) this.hud.tip('Not enough mana.', 1.2);
+        if (!a && !b && !c) { this.hud.tip('Not enough mana.', 1.2); const m = $('mana'); m.classList.remove('dry'); void m.offsetWidth; m.classList.add('dry'); }
         break;
       case EV.WHOOSH:
         au.play('attack', d === 1 ? null : a, b, c, d === 1 ? 0.8 : 0.9, d === 1 ? 0.92 : 1.05);

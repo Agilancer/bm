@@ -56,7 +56,7 @@ export function installTreeSpells(Casting, { chestOf, radiusOf, hash, smooth, cl
   P.cast_buff = function (def, sim) {
     const p = sim.player;
     const b = this.buffs[def.buff] = { t: 0, life: def.duration, def, x: p.x, z: p.z, tickT: 0.3 };
-    if (def.buff === 'aegis') { b.pool = def.pool; b.taken = 0; }
+    if (def.buff === 'aegis') { b.pool = def.pool + 0.15 * sim.player.maxHp; b.taken = 0; }
     if (def.buff === 'might') b.charges = def.charges;
     if (def.buff === 'still') sim.slowMo(def.duration);
     sim.event(EV.SPELL_BOOM, def.elem, p.x, p.y + 0.6, p.z, def.buff === 'still' || def.buff === 'inferno' ? 4 : 1.5);
@@ -109,7 +109,7 @@ export function installTreeSpells(Casting, { chestOf, radiusOf, hash, smooth, cl
           if (over && def.burstOnEnd && !p.dead) { this.explode(sim, p.x, p.y + 1, p.z, 5, def.burstOnEnd + b.taken, e, 7, 1); }
           break;
         case 'renew': {
-          const rate = def.amount / def.duration;
+          const rate = (def.amount + 0.2 * p.maxHp) / def.duration;
           if (!p.dead) p.hp = Math.min(p.maxHp, p.hp + rate * dt);
           if (def.well) this.mana = Math.min(this.maxMana, this.mana + def.well / def.duration * dt);
           for (let i = 0; i < 4; i++) { const u = (b.t * 0.6 + i / 4) % 1, a = i * 2.4 + b.t * 2; this.fx(FX.FLARE, e, p.x + Math.cos(a) * 0.8, p.y + 0.1 + u * 1.2, p.z + Math.sin(a) * 0.8, 0.08, 0, 1, 0, 0, k * (1 - u) * 0.8, 0, 0, 0.5, i * 0.1); }

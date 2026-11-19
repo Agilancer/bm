@@ -174,6 +174,10 @@ const LINE_SKILLS = new Set(['hammer_throw', 'charge', 'volley', 'strafe', 'rain
 
 // ---- the body -------------------------------------------------------------------------------------------------------
 
+// The most a hired hero's book and gear can add to their blows, their mending and their life: past this they did the
+// fighting for you, and the paladin kept everyone standing through anything (src/core/partytree.js, src/items/partygear.js).
+const HERO_DMG_CAP = 1.5, HERO_GRACE_CAP = 0.6, HERO_HP_CAP = 1.5;
+
 export class Hero extends Knight {
   constructor(slot, rig, bank, person, props) {
     const cls = CLASSES[person.cls];
@@ -974,7 +978,7 @@ export class Hero extends Knight {
 
   // (Your party keeps pace with you, level for level: src/items/levels.js gives you 7% a level.)
   // (And for one of yours, what their book and their gear add: src/core/partytree.js treeMods, src/items/partygear.js.)
-  power() { return (1 + this.person.level * (this.hired ? 0.065 : 0.035)) * (this.buff?.dmg || 1) * (1 + (this.mods?.dmg || 0)) * (this.mods?.moves?.[this.moveKey]?.power || 1); }
+  power() { return (1 + this.person.level * (this.hired ? 0.065 : 0.035)) * (this.buff?.dmg || 1) * (1 + Math.min(this.mods?.dmg || 0, HERO_DMG_CAP)) * (this.mods?.moves?.[this.moveKey]?.power || 1); }
 
   // The ninja's finisher: the kick, then seven strokes of gold across a circle round the foe, point to point in a
   // seven-pointed star, and everything inside it reels.
@@ -2646,7 +2650,7 @@ export class HeroWorld {
         }
       } else if (z.kind === 'song') {
         z.x = z.owner.x; z.z = z.owner.z;
-        if (z.heal) for (const h of z.members) if (!h.dead) h.hp = Math.min(h.maxHp, h.hp + dt * 6 * (1 + (z.owner?.mods?.grace || 0)));
+        if (z.heal) for (const h of z.members) if (!h.dead) h.hp = Math.min(h.maxHp, h.hp + dt * 6 * (1 + Math.min(z.owner?.mods?.grace || 0, HERO_GRACE_CAP)));
       }
     }
     this.zones = this.zones.filter((z) => { const keep = z.t < z.life && !z.owner.dead && !z.done; if (!keep) z.end?.(z); return keep; });
@@ -3540,7 +3544,7 @@ export class HeroWorld {
   setLevel(h, level) {
     h.person.level = Math.max(1, Math.round(level));
     const was = h.maxHp || 1;
-    h.maxHp = Math.round(h.cls.hp * (1 + 0.05 * (h.person.level - 1)) * (1 + (h.mods?.hp || 0)));
+    h.maxHp = Math.round(h.cls.hp * (1 + 0.05 * (h.person.level - 1)) * (1 + Math.min(h.mods?.hp || 0, HERO_HP_CAP)));
     h.opts.hp = h.maxHp;
     h.hp = Math.min(h.maxHp, h.hp * h.maxHp / was);
     this.sim.event(EV.HERO_LEVEL, h.slot, h.person.level);
@@ -3797,7 +3801,7 @@ export class HeroWorld {
     h.yaw = h.faceYaw = Math.atan2(who.x - h.x, who.z - h.z);
     h.startSwing('Spell_Simple_Shoot', big ? 1.0 : 1.5, [0.45], () => {
       if (who.dead) return;
-      const amt = ((big ? 0.38 : 0.15) * who.maxHp + (big ? 14 : 7) * lvl) * (1 + (h.mods?.grace || 0));
+      const amt = ((big ? 0.3 : 0.11) * who.maxHp + (big ? 14 : 7) * lvl) * (1 + Math.min(h.mods?.grace || 0, HERO_GRACE_CAP));
       who.hp = Math.min(who.maxHp, who.hp + amt);
       sim.casting.burst(FX.COLUMN, ELEM.LIGHT, who.x, who.y, who.z, 0.6, 1.1, big ? 1.1 : 0.7, { light: big ? 14 : 8, lightR: 6, len: 3 });
       sim.casting.burst(FX.RING, ELEM.LIGHT, who.x, who.y + 0.05, who.z, 0.3, 1.3, 0.6);

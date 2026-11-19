@@ -151,7 +151,8 @@ fn orb(uv: vec2f, seed: f32, T: f32) -> vec4f {
   return vec4f(ramp(heat) * (0.2 + heat * heat * HOT * 1.4) * body * smoothstep(1.0, 0.72, r) + ramp(0.5) * halo * 1.0, 0.0);
 }
 
-fn beam(uv: vec2f, L: f32, near: f32, far: f32, seed: f32, T: f32) -> vec4f {
+// A thread of light between two things (a tether, a leap, a lash): soft, and round at both ends.
+fn thread(uv: vec2f, L: f32, near: f32, far: f32, seed: f32, T: f32) -> vec4f {
   let d = abs(uv.x);
   let s = uv.y * L;
   let n = cn(fbm(vec2f(s * 0.045 - T * 0.85 + seed, uv.x * 0.1 + seed)));
@@ -165,6 +166,47 @@ fn beam(uv: vec2f, L: f32, near: f32, far: f32, seed: f32, T: f32) -> vec4f {
   let fromStart = uv.y * L / max(near, 0.001);
   let ends = smoothstep(0.0, 1.0, fromStart * 1.6 - d * d) * smoothstep(0.0, 1.3, toEnd - d * d * 0.8);
   return vec4f(ramp(heat) * (0.3 + heat * heat * HOT * 1.3) * body * ends, 0.0);
+}
+
+// A beam that's held (its age says which: 1 fire, 2 frost, 3 force; a thread, above, has none). A white-hot wire down the
+// middle that never blows out wider than itself, a sheath of the element's own colour running away from the hands, and two
+// strands wound round it, the far one dimmer as it passes behind. Fire frays and licks at its edge; frost is hard-edged and
+// glitters; force is clean, and its strands are thin.
+fn beam(uv: vec2f, L: f32, near: f32, far: f32, seed: f32, T: f32, style: f32) -> vec4f {
+  if (style < 0.5) { return thread(uv, L, near, far, seed, T); }
+  let fire = style < 1.5;
+  let frost = style > 1.5 && style < 2.5;
+  let d = abs(uv.x);
+  let s = uv.y * L;
+  let wide = max(mix(near, far, uv.y), 0.001);
+  // What it's made of runs out along it, fast: noise drawn long, and a finer grain over that.
+  let flow = cn(fbm(vec2f(s * 0.028 - T * 2.1 + seed, uv.x * 0.14 + seed)));
+  let grain = cn(fbm(vec2f(s * 0.085 - T * 3.6 - seed, uv.x * 0.42 + seed * 2.0)));
+  let rag = select(0.22, 0.62, fire);
+  let edge = d + (flow - 0.5) * rag;
+  let sheath = smoothstep(1.0, select(0.55, 0.2, fire), edge) * smoothstep(BEAM_ROOM, 0.96, d);
+  // The two strands: one turn about every seven widths, running outward.
+  let ph = s / (max((near + far) * 0.5, 0.01) * select(7.0, 5.0, fire)) * 6.2832 - T * select(13.0, 17.0, fire) + seed * 40.0;
+  // (The strands keep close to the wire, which is dead straight and the brightest thing in it: wide, they made the
+  // whole beam an S, and at a jet's tip a comb.)
+  let amp = 0.3 + (grain - 0.5) * select(0.06, 0.2, fire);
+  let thin = select(34.0, 90.0, frost);
+  let x1 = uv.x - sin(ph) * amp;
+  let x2 = uv.x + sin(ph) * amp;
+  let strands = exp(-x1 * x1 * thin) * (0.58 + 0.42 * cos(ph)) + exp(-x2 * x2 * thin) * (0.58 - 0.42 * cos(ph));
+  let wire = exp(-d * d * 70.0);
+  let glow = exp(-d * d * 6.5);
+  // Beats of it going out, one after another.
+  let beat = pow(0.5 + 0.5 * sin(s * 2.6 - T * 24.0 + seed * 9.0), 5.0);
+  var glint = 0.0;
+  if (frost) { glint = pow(n1(vec2f(s * 0.31 - T * 1.3, uv.x * 0.9 + seed)), 9.0) * 5.0 * sheath; }
+  // It leaves the hands as a point, and is cut off square against whatever it strikes: what's there covers the end.
+  let ends = smoothstep(0.0, 1.0, s / max(near * 5.0, 0.05) - d * d * 0.6) * smoothstep(0.0, 0.5, (1.0 - uv.y) * L / wide);
+  let heat = clamp(glow * (0.3 + grain * 0.5) + strands * 0.55 + sheath * (0.12 + flow * 0.12), 0.0, 1.0);
+  let body = max(sheath, min(strands, 1.0) * smoothstep(BEAM_ROOM, 1.05, d));
+  // (The wire is its element's hottest colour, not white: thin as it is, white is all a blast of twelve of them would be.)
+  let rgb = ramp(heat) * (0.3 + heat * heat * HOT * 1.05) * body + mix(ramp(0.8), ramp(1.0), 0.35 + beat * 0.4) * wire * HOT * (0.75 + beat * 1.1) + ramp(0.7) * (glint + beat * glow * 1.6 + glow * 0.5);
+  return vec4f(rgb * ends, 0.0);
 }
 
 fn bolt(uv: vec2f, L: f32, jag: f32, seed: f32, T: f32) -> vec4f {
@@ -335,9 +377,10 @@ fn shock(uv: vec2f, age: f32, seed: f32, T: f32) -> vec4f {
   if (r >= 1.0) { return vec4f(0.0); }
   let a = atan2(uv.y, uv.x);
   let n = cn(fbm(vec2f(cos(a), sin(a)) * 0.22 + vec2f(seed, r * 0.1)));
-  let w = 0.028 + 0.1 * age;
+  // (A thin bright line that thins as it goes out: a thick band of it read as a hoop.)
+  let w = 0.014 + 0.03 * age;
   let dr = (r - 0.9) / w;
-  let band = exp(-dr * dr) * (0.3 + n * 1.0) * smoothstep(1.0, 0.95, r);
+  let band = exp(-dr * dr) * (0.3 + n * 0.8) * smoothstep(1.0, 0.95, r) * (1.0 - age * 0.5);
   let inner = smoothstep(0.9, 0.3, r) * 0.1 * (1.0 - age);
   return vec4f(ramp(band) * (band * band * HOT * 1.5 + band * 0.9) + ramp(0.5) * inner * n, 0.0);
 }
@@ -540,7 +583,7 @@ fn mark(uv: vec2f, dir: vec2f, A: f32, B: f32, kindF: f32, fill: f32, size: f32,
   var c = vec4f(0.0);
   switch shape {
     case 0u: { c = orb(uv, seed, T); }
-    case 1u: { c = beam(uv, I.a.w, I.p.w, I.x.w, seed, T); }
+    case 1u: { c = beam(uv, I.a.w, I.p.w, I.x.w, seed, T, age); }
     case 2u: { c = bolt(uv, I.a.w, I.x.w, seed, T); }
     case 3u: { c = ring(uv, age, seed, T); }
     case 4u: { c = disc(uv, I.p.w, age, e, seed, T); }
@@ -1013,10 +1056,12 @@ export class SpellFX {
         r.emit(6, n(9 * snap[o + 7] * alpha), x + (Math.random() - 0.5) * snap[o + 7], y + Math.random() * size * 0.7, z + (Math.random() - 0.5) * snap[o + 7], 0, 1, 0, 0.4, 0.5, 2, 0.012, 0.028, 0.7, 1.7);
         break;
       case FX.BEAM: {
-        if (snap[o + 3] > 0.1 && snap[o + 15] > 0) {
+        if (snap[o + 11] >= 1 && snap[o + 15] > 0) {
           const L = snap[o + 7], ax = snap[o + 4], ay = snap[o + 5], az = snap[o + 6], u = Math.random();
-          r.emit(e === ELEM.FIRE ? 6 : kind, n(90), x + ax * L * u, y + ay * L * u, z + az * L * u, ax, ay + 0.2, az, 0.7, 0.8, 4, 0.012, 0.03, 0.2, 0.7);
-          r.emit(2, n(70), x + ax * L, y + ay * L, z + az * L, -ax, 0.5 - ay, -az, 1.1, 1.5, 6, 0.003, 0.008, 0.2, 0.6);
+          // Motes shed along it, fine ones, and a spray thrown back off whatever it's on.
+          r.emit(e === ELEM.FIRE ? 6 : kind, n(26), x + ax * L * u, y + ay * L * u, z + az * L * u, ax, ay + 0.25, az, 0.5, 0.6, 2.6, 0.005, 0.012, 0.25, 0.7);
+          r.emit(kind, n(34), x + ax * L, y + ay * L, z + az * L, -ax, 0.6 - ay, -az, 1.0, 1.5, 5.5, 0.004, 0.009, 0.2, 0.55);
+          if (e === ELEM.FIRE) r.emit(2, n(60), x + ax * L, y + ay * L, z + az * L, -ax, 0.5 - ay, -az, 1.1, 1.5, 6, 0.003, 0.008, 0.2, 0.6);
         }
         break;
       }
