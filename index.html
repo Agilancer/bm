@@ -104,8 +104,10 @@
   #inv .inv-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   #inv .inv-head .menu-x { margin: -3px -4px 0 0; }
   #inv .inv-head-btns { display: flex; align-items: center; gap: 8px; }
-  #invSort, #invParty { font: inherit; font-size: 11px; letter-spacing: .12em; height: 28px; margin-top: -3px; padding: 0 10px; color: var(--bone); background: rgba(8,6,4,.6); border: 1px solid var(--gold-dim); cursor: pointer; }
-  #invSort:hover, #invParty:hover { background: rgba(201,163,92,.2); color: #fff4da; }
+  #invSort, #invParty, #invCombine { font: inherit; font-size: 11px; letter-spacing: .12em; height: 28px; margin-top: -3px; padding: 0 10px; color: var(--bone); background: rgba(8,6,4,.6); border: 1px solid var(--gold-dim); cursor: pointer; }
+  #invSort:hover, #invParty:hover, #invCombine:hover { background: rgba(201,163,92,.2); color: #fff4da; }
+  #invCombine { white-space: nowrap; }
+  #invCombine:disabled { opacity: .4; cursor: default; background: rgba(8,6,4,.6); color: var(--bone); }
   #inv .inv-head .menu-x::after { bottom: 0; }
   #inv .panel { background: rgba(11,9,7,.93); border: 1px solid var(--gold-dim); padding: 8px 10px 10px; }
   #inv .label { color: var(--gold); margin-bottom: 7px; opacity: 1; }
@@ -489,7 +491,7 @@ body.op-handoff #cross{opacity:0;transition:none}
       <div id="invStats"></div>
     </div>
     <div class="panel">
-      <div class="label inv-head">Pack<span class="inv-head-btns"><button id="invSort" title="Sort the pack">SORT</button><button id="invX" class="menu-x" aria-label="Close" title="Close"><svg viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button></span></div>
+      <div class="label inv-head">Pack<span class="inv-head-btns"><button id="invCombine" title="Combine gems: every three of the same kind and cut become one of the next cut" disabled>COMBINE GEMS</button><button id="invSort" title="Sort the pack">SORT</button><button id="invX" class="menu-x" aria-label="Close" title="Close"><svg viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button></span></div>
       <div id="packGrid"><div id="packHover"></div></div>
     </div>
   </div>

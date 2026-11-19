@@ -59,6 +59,7 @@ import { Lands } from './ui/lands.js';
 import { AutoPlay } from './ui/autoplay.js';
 import { FirstSight } from './ui/firstsight.js';
 import { FoeBars, isBoss } from './ui/foebars.js';
+import { DmgNums } from './ui/dmgnums.js';
 import { Arrange } from './ui/arrange.js';
 import { groundAt, setHomes } from './ui/places.js';
 import { HallUI } from './ui/testhall.js';
@@ -699,7 +700,8 @@ async function boot(plan, poolSize) {
       for (const r of tiers) {
         items.push(rollSkull(rng, { rarity: r }), rollWeapon(rng, { rarity: Math.min(r, 4) }), rollShield(rng, { rarity: Math.min(r, 4) }));
         if (Object.keys(ROBES).length) items.push(rollRobe(rng, { rarity: Math.min(r, 4) }));
-        items.push(rollGem(rng, { grade: Math.min(2, r - tiers[0]) }));
+        // (The gods' kit: the three finest cuts, the last two of them only ever made otherwise. rollGem keeps it to a cut there is.)
+        items.push(rollGem(rng, { grade: r - tiers[0] + (kind === 'god' ? 2 : 0) }));
       }
       const snap = game.currentSnap();
       let dropped = 0;
@@ -1068,6 +1070,7 @@ async function boot(plan, poolSize) {
   // First person or third: V, the eye by the spell bar, VIEW on a phone.
   // A life bar over every enemy's head (the interface's own is a boss's only: Hud.update).
   game.foeBars = new FoeBars({ renderer, heroCount: () => renderer.heroCast?.length || 0 });
+  game.dmgNums = new DmgNums({ renderer });
   hud.dungeonBoss = () => !!game.party?.boss;
   game.viewSwitch = new ViewSwitch({ input, shared, settings, save: saveSettings, tip: (t, s) => hud.tip(t, s), busy: () => state.paused || naming });
   // Auto-play, the Auto button under the skull or P: the game plays itself (src/ui/autoplay.js, src/ui/autobrain.js).
@@ -1534,10 +1537,12 @@ class GameView {
 
   updateDrops(dt, snap) {
     this.drops.low = snap[H.HP] / (snap[H.MAX_HP] || 1) < 0.35;
+    this.drops.dry = snap[H.MANA] / (snap[H.MAX_MANA] || 1) < 0.3;
     this.drops.onGrab ||= (g) => {
       if (g.coins) this.pack.gold += g.item.amount;
       else if (g.item.type === 'mat') { this.pack.addMat(g.item.kind, g.item.n); this.townUI?.note(`${g.item.n} ${matName(g.item.kind, g.item.n)}  (${this.pack.mats[g.item.kind]})`, 'mat'); }
-      else this.shared.input[g.item.kind === 'life' ? INPUT.HEAL : INPUT.MANA_UP] += g.item.kind === 'life' ? 32 : 40;
+      // (A life orb is worth more the more life you have to lose; a mana orb is a third of the plain pool.)
+      else this.shared.input[g.item.kind === 'life' ? INPUT.HEAL : INPUT.MANA_UP] += g.item.kind === 'life' ? Math.round(20 + 0.1 * (this.currentSnap()?.[H.MAX_HP] || 160)) : 25;
     };
     if (this.pack && this.input.enabled) this.gemFx?.step(dt, snap, this.cam, this.pack);
     this.nearDrop = this.input.enabled && !this.input.menu ? this.drops.update(dt, snap[H.PX], snap[H.PY], snap[H.PZ]) : null;
@@ -1671,6 +1676,7 @@ class GameView {
       hs.sim = this.simStats;
       this.hud.update(dt, snap, hs);
       this.foeBars?.update(snap, !this.idle && !this.input.menu && this.input.enabled);
+      this.dmgNums?.update(dt, !this.idle && !this.input.menu);
       this.clock.set(r.hour);
       // (Down a delve there's no sun to tell the hour by, and nothing of the land's to track: the clock is put away.)
       const deep = inDelve(snap[H.PX], snap[H.PZ]);
@@ -1985,6 +1991,7 @@ class GameView {
       case EV.SPELL_HIT:
         this.heroTalk?.onSpellHit(f);
         this.spellSound?.hit(a, b, c, d);
+        this.dmgNums?.add(b, c + 0.5, d, e, a, 12 * (this.pack?.level ? 1 + (this.pack.level - 1) * 0.07 : 1) * 3);
         r.emit(16 + a, 16, b, c, d, 0, 0.4, 0, 1.4, 1, 5.5, 0.008, 0.02, 0.2, 0.6);
         if (a !== 0 && a !== 9) this.hud.crossHit();
         break;
@@ -2002,7 +2009,7 @@ class GameView {
         this.spellSound.fizzle();
         // (Yours comes with no place. One with a place is a caster of the dead's working, broken by a blow
         // (src/sim/undead.js interrupt): heard, but it's not your mana that ran out.)
-        if (!a && !b && !c) this.hud.tip('Not enough mana.', 1.2);
+        if (!a && !b && !c) { this.hud.tip('Not enough mana.', 1.2); const m = $('mana'); m.classList.remove('dry'); void m.offsetWidth; m.classList.add('dry'); }
         break;
       case EV.WHOOSH:
         au.play('attack', d === 1 ? null : a, b, c, d === 1 ? 0.8 : 0.9, d === 1 ? 0.92 : 1.05);

@@ -4,7 +4,7 @@ import { WEAPONS } from '../core/layout.js';
 import { settleSkull } from './skins.js';
 import { sizeOfHG } from './partygear.js';
 import { COOLDOWN, beaconStone, isBeacon } from './beacon.js';
-import { GEMS, MAX_SOCKETS, ROBES, SKULLS, makeRng, robeSize, rollGem, rollRobe, rollShield, rollSkull, rollStarterStaff, rollWeapon } from './items.js';
+import { GEMS, GEM_GRADES, MAX_SOCKETS, ROBES, SKULLS, makeRng, gemGrade, robeSize, rollGem, rollRobe, rollShield, rollSkull, rollStarterStaff, rollWeapon } from './items.js';
 
 const freshRng = () => makeRng((Math.random() * 2 ** 32) >>> 0);
 
@@ -137,6 +137,45 @@ export class Pack {
     return true;
   }
 
+  // The loose gems of one kind and cut, as they lie: top row first, left to right. (What's in a socket is there for good.)
+  looseGems(kind, grade) {
+    return this.entries.filter((e) => e.item?.type === 'gem' && e.item.kind === kind && e.item.grade === grade).sort((a, b) => a.y - b.y || a.x - b.x);
+  }
+
+  // What could be combined now: every kind and cut (short of the finest) there are three or more loose of, the finest first.
+  combinable() {
+    const n = new Map();
+    for (const { item } of this.entries) if (item?.type === 'gem' && GEMS[item.kind] && item.grade < GEM_GRADES.length - 1) n.set(`${item.kind}:${item.grade}`, (n.get(`${item.kind}:${item.grade}`) || 0) + 1);
+    return [...n].filter(([, count]) => count >= 3).map(([k, count]) => ({ kind: k.split(':')[0], grade: +k.split(':')[1], count }))
+      .sort((a, b) => b.grade - a.grade || a.kind.localeCompare(b.kind));
+  }
+
+  // Three gems of a kind and a cut into one of the next cut, which lies where the first of the three lay. opts.held: one of
+  // the three that's in the hand, not the pack; opts.at: the entry the new one is to lie at (one of them). The new gem, or
+  // null if there aren't three, or no finer cut.
+  combine(kind, grade, opts = {}) {
+    if (!GEMS[kind] || !Number.isInteger(grade) || grade < 0 || grade >= GEM_GRADES.length - 1) return null;
+    const held = opts.held?.type === 'gem' && opts.held.kind === kind && opts.held.grade === grade ? 1 : 0;
+    const have = this.looseGems(kind, grade);
+    if (have.length + held < 3) return null;
+    const first = opts.at && have.includes(opts.at) ? opts.at : have[0];
+    const used = [first, ...have.filter((e) => e !== first)].slice(0, 3 - held);
+    const made = { type: 'gem', kind, grade: grade + 1 };
+    for (const e of used) if (e !== first) this.remove(e);
+    first.item = made;
+    return made;
+  }
+
+  // Everything that can be combined, and whatever that makes combined in its turn, till there's nothing left that can be.
+  // Every gem made on the way, in order (some of them gone into the next).
+  combineAll() {
+    const made = [];
+    for (let list = this.combinable(); list.length; list = this.combinable()) {
+      for (const c of list) for (let g = this.combine(c.kind, c.grade); g; g = this.combine(c.kind, c.grade)) made.push(g);
+    }
+    return made;
+  }
+
   // What goes in a save. Items are plain data.
   save() { return structuredClone({ slots: this.slots, entries: this.entries, gold: this.gold, copper: this.copper, mats: this.mats, kite: true, xp: this.xp, level: this.level, charms: this.charms, extra: this.extra, beaconCd: this.beaconCd }); }
 
@@ -154,6 +193,10 @@ export class Pack {
     if (!d) { this.startingKit(); return; }
     Object.assign(this.slots, d.slots);
     this.entries = d.entries;
+    // A gem of no kind there is goes; a cut there isn't (a save from another day, or one gone wrong) becomes the nearest there is.
+    const gemOk = (g) => g?.type !== 'gem' || (GEMS[g.kind] ? ((g.grade = gemGrade(g.grade)), true) : false);
+    this.entries = this.entries.filter((e) => e?.item && gemOk(e.item));
+    for (const it of [...Object.values(this.slots), ...this.entries.map((e) => e.item)]) if (Array.isArray(it?.gems)) it.gems = it.gems.filter((g) => g && gemOk(g));
     // (A save from before the beacon stone, or a pack with a second one in it somehow: one, kept.)
     let seen = false;
     this.entries = this.entries.filter((e) => !isBeacon(e.item) || (!seen && (seen = true)));

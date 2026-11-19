@@ -32,7 +32,7 @@ import { struck } from './ragdoll.js';
 import { TOWN_KNIGHTS } from '../core/knights.js';
 import { TownWatch } from './town-watch.js';
 import { Player } from './player.js';
-import { MAX_MANA } from './spells.js';
+import { KILL_MANA, MAX_MANA } from './spells.js';
 import { World } from './world.js';
 import { Hero, HeroWorld, mobKind } from './hero.js';
 import { HeroPlay } from './heroplay.js';
@@ -383,7 +383,7 @@ class Sim {
         this.event(EV.HERO, h.slot, TRIG[h.hp < h.maxHp * 0.35 ? 'saved_by_player' : 'player_steals_kill'], -1, -1, MOB_KEYS.indexOf(mobKind(k)), 0, 0);
       }
       // (d: what it drops, by drops.js; e: 1 + what it is, by KIND, for the heroes' talk.)
-      if (k.dead && !k.looted) { k.looted = true; this.casting.mana = Math.min(this.casting.maxMana, this.casting.mana + 6); this.event(EV.LOOT, k.x, k.opts?.pit ? k.y : this.world.height(k.x, k.z), k.z, k.champion ? 8 : k.opts?.lootKind ?? k.kind, 1 + k.kind); }
+      if (k.dead && !k.looted) { k.looted = true; this.casting.mana = Math.min(this.casting.maxMana, this.casting.mana + KILL_MANA); this.event(EV.LOOT, k.x, k.opts?.pit ? k.y : this.world.height(k.x, k.z), k.z, k.champion ? 8 : k.opts?.lootKind ?? k.kind, 1 + k.kind); }
       if (!k.dead) k.looted = false;
     }
     if (this.watch && !this.frozen && tdt > 0) this.watch.step(tdt);

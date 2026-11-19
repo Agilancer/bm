@@ -12,12 +12,19 @@ const rnd = (a, b) => a + Math.random() * (b - a);
 const smooth = (v) => { const t = clamp(v, 0, 1); return t * t * (3 - 2 * t); };
 const flow = new Float32Array(2);
 
-const work = (sim, step) => { sim.foeWorks.push(step); };
+// (What a caster's spells bite with is its own: a necromancer down a delve or out in the far countries is as much harder
+// than the woods' as its blows are, opts.bite in src/sim/tripo.js. A spell's work keeps the bite of whoever cast it.)
+const biteNow = (sim) => Math.min(3, Math.max(sim.foeBite || 1, sim.foeBiteNow || 1));
+const work = (sim, step) => {
+  const bite = biteNow(sim);
+  sim.foeWorks.push(bite === 1 ? step : (dt) => { sim.foeBiteNow = bite; try { return step(dt); } finally { sim.foeBiteNow = 1; } });
+};
 
 // A blow that can be stood in the way of goes in with block false: ground and beams pass a shield by.
 // p: who it's at, the player or one of the other Tessariels (src/sim/foes.js): sim.foeTarget while a spell is being made.
 function strike(sim, p, dmg, x, z, knock = 0, unblockable = false) {
   if (p.dead || p.iframes) return false;
+  dmg *= biteNow(sim);
   if (p.damage(sim, dmg, x, z, knock, unblockable) === false) return false;
   if (p === sim.player) sim.event(EV.HURT, p.x, p.y + 1.1, p.z, dmg);
   return true;

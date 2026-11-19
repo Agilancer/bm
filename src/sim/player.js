@@ -325,7 +325,7 @@ export class Player {
     this.landKick = damp(this.landKick, 0, 9, dt);
     // Recover from wounds slowly when no one is on top of you.
     this.regenT += dt;
-    if (this.regenT > 6 && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + dt * 1.6);
+    if (this.regenT > 6 && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + dt * Math.max(1.6, this.maxHp * 0.01));
     // The shield's ability, if it has one: Mending, and Aegis coming back.
     if (this.shPower === 2 && !this.dead && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + dt * this.shValue);
     this.aegisT = Math.max(0, (this.aegisT || 0) - dt);

@@ -49,7 +49,7 @@ import { BEYOND } from '../folk/lines/beyond.js';
 import { LISANDRA } from '../folk/lines/lisandra.js';
 import { TUMBLER_SIZES } from '../sim/tumblers.js';
 import { TRADES, offerFor, worth } from '../folk/shops.js';
-import { GEMS, ROBES, gearTotals, matName } from '../items/items.js';
+import { GEMS, GEM_GRADES, ROBES, gearTotals, matName } from '../items/items.js';
 import { BOSSES, DELVES, delveAt, delveByKey, delveOf, inDungeon, toWorld as caveWorld } from '../core/dungeon.js';
 import { caveStep, delveWay, doHire, doWarrens, hireJob, hiring, perilsNear, tactics, warrensCoverage, warrensJob } from './autowarrens.js';
 import { HallNav, STATIONS, hallAt, inArena, inHall } from '../core/testhall.js';
@@ -1170,7 +1170,7 @@ export class Brain {
   // Its mana, less what it has already spent that the snapshot hasn't caught up with: a staff shot on its way out of the
   // staff's head, a spell asked for and not yet begun. (Spent twice, the second fizzles in its hands: "Not enough mana.")
   purse(mana) {
-    if (this.t - (this.staffAt ?? -9) < 0.9) mana -= 13;
+    if (this.t - (this.staffAt ?? -9) < 0.9) mana -= 6;
     const o = this.owed;
     if (o && this.t - o.t < 0.9 && mana > o.from - o.cost * 0.5) mana -= o.cost;
     return mana;
@@ -1191,10 +1191,11 @@ export class Brain {
     // What's kept back for trouble: a Mend when it's been hurt, a Nova when it's alone among several.
     const reserve = (has('mend') && m.hpf < 0.8 ? 25 : 0) + (PANIC.some(has) && c.n >= 3 && !c.party ? 12 : 0);
     const staff = () => {
-      // (A shot costs up to 13 by the staff: with less, the click's wasted on a fizzle.)
-      if (!c.aimed || this.staffCool > 0 || mana < 14 || c.d > IN) return;
+      // (A shot always goes, for nothing and weaker with no mana for it, and one that lands gives mana back: the staff is
+      // what it does when it's dry, and how it earns the next spell. src/sim/spells.js DRY_BITE, STAFF_GIVE.)
+      if (!c.aimed || this.staffCool > 0 || c.d > IN) return;
       // (The last of its mana is for a Mend, when it's low.)
-      if (m.hpf < 0.45 && has('mend') && mana < 31) return;
+      if (m.hpf < 0.45 && has('mend') && mana < 31 && mana >= 24) return;
       // (A spell just asked for and not yet begun: a click now would get in ahead of it, and the spell would be lost.)
       if (this.t - this.tapAt < 0.4 && snap[H.SPELL_RIG] < 0.5) return;
       this.o.shared.input[INPUT.ATTACK] += 1;
@@ -1926,7 +1927,12 @@ export class Brain {
       this.o.event?.('wear', { item: best.item, gain });
       changed = true;
     }
-    // Gems: the best into whatever's worn with an open socket.
+    // Gems: every three of a kind and a cut into one of the next first (Pack.combineAll), then the best into whatever's worn
+    // with an open socket.
+    if (this.allow('aiGems')) {
+      const made = pack.combineAll?.() || [];
+      if (made.length) { changed = true; this.o.event?.('combine', { made: made.filter((g) => pack.entries.some((q) => q.item === g)) }); }
+    }
     if (this.allow('aiGems')) for (const e of [...pack.entries].filter((q) => q.item.type === 'gem').sort((a, b) => this.gemWorth(b.item) - this.gemWorth(a.item))) {
       const into = ['skull', 'main', 'off'].map((s) => pack.slots[s]).find((it) => it && !(it.type === 'shield' && pack.slots.skull) && (it.gems || []).length < Math.min(it.sockets || 0, it.type === 'skull' ? 6 : 4));
       if (!into || !pack.socket(into, e.item)) continue;
@@ -1946,7 +1952,10 @@ export class Brain {
       if (e.item.type === 'hgear') return !this.o.game.party?.wantedBy?.(e.item);
       const slot = SLOT_OF(e.item);
       if (slot) return gearScore({ ...pack.slots, [slot]: e.item }) <= base + 0.5;
-      return e.item.type === 'gem' && !sockets;
+      if (e.item.type !== 'gem' || sockets) return false;
+      // (A gem with another of its kind and cut beside it is on its way to the next cut, three into one: kept, unless it's
+      // Perfect, which nothing is finer than.)
+      return e.item.grade >= GEM_GRADES.length - 1 || pack.entries.filter((q) => q.item.type === 'gem' && q.item.kind === e.item.kind && q.item.grade === e.item.grade).length < 2;
     });
   }
 

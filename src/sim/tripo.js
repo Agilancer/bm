@@ -14,7 +14,7 @@ import { carryMat4 } from '../core/carry.js';
 import { clamp, mat4FromQT, quatMul, quatRotate, quatYaw, wrapAngle } from '../core/math.js';
 import { OPENING } from '../core/opening.js';
 import { inTown } from '../core/town.js';
-import { ARMS, BREATH_ELEM, GROUPS, LAIRS, MODEL_STATS, TRIPO_BASE, armIds, kindOfGroup, lairFor } from '../core/tripo-monsters.js';
+import { ARMS, BREATH_ELEM, GROUPS, LAIRS, MODEL_STATS, TRIPO_BASE, armIds, kindOfGroup, lairFor, lairLevel, levelTough } from '../core/tripo-monsters.js';
 import { ALL_PACKS, BOSSES, delveByKey, roomSpot } from '../core/dungeon.js';
 
 // The party dungeons' packs and bosses, as lairs (src/core/dungeon.js). A pack wakes as you come into its room; a boss only
@@ -588,7 +588,8 @@ export class TripoMonster extends FieldCreature {
     const { wt } = this.rig, h = this.rig.hand;
     const at = h === null ? [this.x, this.y + 1.5, this.z] : [wt[h * 3], wt[h * 3 + 1], wt[h * 3 + 2]];
     sim.foeTarget = p === sim.player ? null : p;
-    try { FOE.bolt.fire(this, sim, p, d, null, at); } finally { sim.foeTarget = null; }
+    sim.foeBite = this.opts.bite || 1;
+    try { FOE.bolt.fire(this, sim, p, d, null, at); } finally { sim.foeTarget = null; sim.foeBite = 1; }
   }
 
   onHit(sim, kind, fx, fz, poise = 20) {
@@ -686,15 +687,17 @@ export class TripoWorld {
     const breath = meta.breath;
     // (What its kind is called down a delve that has its own names for them: the drowned, the sporelings. src/core/dungeon.js)
     const called = lair.delve && !lair.bossLair ? delveByKey(lair.delve)?.names?.[meta.group] : null;
+    // How much harder than its kind in the woods: what the lair says (a delve's packs, a tear's waves), or by the land it's in.
+    const tough = lair.tough || (lair.delve ? null : levelTough(lairLevel(lair)));
     return {
       name: called || s.name, model: id, kind: kindOfGroup(meta.group), scale: 1, spawn: [x, z], yaw: Math.random() * Math.PI * 2,
-      hp: s.hp * (boss ? 1.25 : 1) * (lair.tough?.hp || 1), speed: s.speed, damage: s.damage * (lair.tough?.damage || 1), reach: s.reach,
+      hp: s.hp * (boss ? 1.25 : 1) * (tough?.hp || 1), speed: s.speed, damage: s.damage * (tough?.damage || 1), reach: s.reach, bite: tough?.damage || 1,
       // Its kind's tricks, where the lair has them on (src/sim/moves.js).
       tricks: lair.tricks ? meta.tricks || TRICKS[meta.group] || null : null, ai: lair.ai || (breath && s.ai !== 'caster' ? 'breather' : s.ai),
       radius: clamp(H * (meta.kind === 'dragon' ? 0.22 : meta.kind === 'spider' ? 0.38 : 0.2), 0.35, 1.8), height: H,
       lootKind: s.loot, knock: H > 3 ? 4 : H > 2 ? 2.5 : 1.5, pause: s.ai === 'melee' && H < 1.5 ? 0.7 : 1,
       sight: meta.kind === 'dragon' ? 48 : s.ai === 'stalker' ? 34 : 24, leash: meta.kind === 'dragon' ? 120 : 70, roam: lair.r * 0.6 + 2,
-      breathRange: s.breathRange || 7, breathDps: s.breathDps || 12, breathElem: BREATH_ELEM[breath] ?? ELEM.FIRE,
+      breathRange: s.breathRange || 7, breathDps: (s.breathDps || 12) * Math.min(tough?.damage || 1, 3), breathElem: BREATH_ELEM[breath] ?? ELEM.FIRE,
       breathSpeed: 9 + H * 1.6, breathSize: 0.5 + H * 0.12,
       boltElem: meta.bolt ?? /lord/.test(id) ? ELEM.VOID : pick([ELEM.DRAIN, ELEM.BONE, ELEM.POISON]),
       pal: Math.max(0, this.palNames.indexOf(pal)), modelIndex: this.ids.indexOf(id),

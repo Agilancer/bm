@@ -4,7 +4,7 @@
 import { BEACON_COLOR, beaconLines } from './beacon.js';
 import { SKINS, rollPattern, rollSkin } from './skins.js';
 import { INPUT, WEAPONS } from '../core/layout.js';
-import { SPELLS } from '../sim/spells.js';
+import { POWER_CAP, REGEN_CAP, SPELLS, THRIFT_CAP } from '../sim/spells.js';
 import { SCROLLS } from '../sim/skills.js';
 import { STAFFS2 } from './staffs2.js';
 import { SHIELDS2 } from './shields2.js';
@@ -36,10 +36,10 @@ export const BASES = {
   bluegrip_greatsword: { name: 'Bluegrip Greatsword', dmg: [18, 26], grade: 'retired' },
   fluked_greatsword: { name: 'Fluked Greatsword', dmg: [20, 28], grade: 'retired', innate: { poise: 0.15 } },
   greengrip_greatsword: { name: 'Greengrip Greatsword', dmg: [17, 25], grade: 'retired' },
-  greenwood_staff: { name: 'Greenwood Staff', dmg: [14, 20], grade: 'common' },
-  crystal_staff: { name: 'Crystal Staff', dmg: [14, 20], grade: 'common' },
-  skullhorn_staff: { name: 'Skullhorn Staff', dmg: [14, 20], grade: 'common' },
-  gnarled_crook: { name: 'Gnarled Crook', dmg: [14, 20], grade: 'common' },
+  greenwood_staff: { name: 'Greenwood Staff', dmg: [12, 18], grade: 'common' },
+  crystal_staff: { name: 'Crystal Staff', dmg: [12, 18], grade: 'common' },
+  skullhorn_staff: { name: 'Skullhorn Staff', dmg: [12, 18], grade: 'common' },
+  gnarled_crook: { name: 'Gnarled Crook', dmg: [12, 18], grade: 'common' },
   dark_staff: { name: 'Dark Staff', dmg: [14, 20], grade: 'common', note: 'A shade that hunts from foe to foe, and brings you back mana for each.' },
   death_staff: { name: 'Death Staff', dmg: [14, 20], grade: 'common', note: 'Marks a foe for death. If the mark kills, it leaps to two more.' },
   earth_staff: { name: 'Earth Staff', dmg: [14, 20], grade: 'common', note: 'A boulder that bounces on, throwing up all it lands among.' },
@@ -150,7 +150,7 @@ export const SET_PARTS = ['head', 'shoulders', 'chest', 'legs', 'feet'];
 const SET_WARD = [1, 1.1, 1.2, 1.4, 1.6, 1.8];   // a piece's ward by its set's rarity, where a plain robe has its palette's
 const SET_UNIT = {                               // one measure of each stat, by rarity
   armor: [2, 3, 4, 6, 8, 10], life: [6, 9, 12, 16, 22, 30], power: [0.02, 0.03, 0.04, 0.05, 0.07, 0.09],
-  regen: [0.04, 0.06, 0.08, 0.1, 0.13, 0.16], mana: [6, 9, 12, 16, 22, 30], thrift: [0.01, 0.015, 0.02, 0.03, 0.04, 0.05],
+  regen: [0.02, 0.03, 0.04, 0.05, 0.07, 0.09], mana: [6, 9, 12, 16, 22, 30], thrift: [0.01, 0.01, 0.015, 0.02, 0.025, 0.03],
 };
 const SET_STEPS = [[2, 1], [3, 1.5], [5, 3]];    // pieces worn, and how many measures that's worth
 const SET_INT = new Set(['armor', 'life', 'mana']);
@@ -202,8 +202,8 @@ const GEAR_AFFIXES = [
 // What a staff or a skull can roll, and what a robe can. Everything a caster wants; each is applied in src/sim/casting.js or player.js.
 const WIZ_AFFIXES = [
   { stat: 'power', pos: 'pre', tiers: [['Kindled', 0.06, 0.1], ['Searing', 0.11, 0.17], ['Cataclysmic', 0.18, 0.28]] },
-  { stat: 'thrift', pos: 'pre', tiers: [['Frugal', 0.04, 0.07], ['Spare', 0.08, 0.12], ['Ascetic', 0.13, 0.2]] },
-  { stat: 'regen', pos: 'suf', tiers: [['of Trickling', 0.1, 0.18], ['of the Spring', 0.2, 0.32], ['of the Flood', 0.35, 0.55]] },
+  { stat: 'thrift', pos: 'pre', tiers: [['Frugal', 0.03, 0.05], ['Spare', 0.06, 0.08], ['Ascetic', 0.09, 0.13]] },
+  { stat: 'regen', pos: 'suf', tiers: [['of Trickling', 0.06, 0.1], ['of the Spring', 0.12, 0.18], ['of the Flood', 0.2, 0.3]] },
   { stat: 'mana', pos: 'suf', int: true, tiers: [['of the Well', 12, 20], ['of the Deep Well', 22, 36], ['of the Abyss', 40, 64]] },
   { stat: 'leech', pos: 'suf', int: true, tiers: [['of Thirst', 1, 2], ['of the Red Cup', 2, 3], ['of the Long Drink', 3, 5]] },
   { stat: 'life', pos: 'suf', int: true, tiers: [['of Broth', 10, 16], ['of the Old Oak', 18, 28], ['of the Old Blood', 30, 44]] },
@@ -211,10 +211,10 @@ const WIZ_AFFIXES = [
 const ROBE_AFFIXES = [
   { stat: 'power', pos: 'pre', tiers: [['Whispering', 0.02, 0.04], ['Chanting', 0.05, 0.07], ['Thundering', 0.08, 0.12]] },
   { stat: 'armor', pos: 'pre', int: true, tiers: [['Quilted', 2, 4], ['Warded', 5, 8], ['Hexproof', 9, 14]] },
-  { stat: 'regen', pos: 'suf', tiers: [['of Trickling', 0.04, 0.07], ['of the Spring', 0.08, 0.12], ['of the Flood', 0.13, 0.2]] },
+  { stat: 'regen', pos: 'suf', tiers: [['of Trickling', 0.03, 0.05], ['of the Spring', 0.06, 0.08], ['of the Flood', 0.09, 0.13]] },
   { stat: 'mana', pos: 'suf', int: true, tiers: [['of the Well', 6, 10], ['of the Deep Well', 11, 18], ['of the Abyss', 19, 30]] },
   { stat: 'life', pos: 'suf', int: true, tiers: [['of Broth', 6, 10], ['of the Old Oak', 11, 18], ['of the Old Blood', 19, 30]] },
-  { stat: 'thrift', pos: 'suf', tiers: [['of Ease', 0.02, 0.03], ['of the Long Road', 0.04, 0.05], ['of Scant Words', 0.06, 0.08]] },
+  { stat: 'thrift', pos: 'suf', tiers: [['of Ease', 0.01, 0.02], ['of the Long Road', 0.02, 0.03], ['of Scant Words', 0.04, 0.05]] },
 ];
 // What a shield can roll. Its ward and these count only with no skull in hand: see gearTotals.
 const SHIELD_AFFIXES = [
@@ -222,7 +222,7 @@ const SHIELD_AFFIXES = [
   { stat: 'power', pos: 'pre', tiers: [['Runed', 0.03, 0.05], ['Sigiled', 0.06, 0.09], ['Spellbound', 0.1, 0.15]] },
   { stat: 'life', pos: 'suf', int: true, tiers: [['of Broth', 8, 12], ['of the Old Oak', 14, 22], ['of the Old Blood', 24, 36]] },
   { stat: 'mana', pos: 'suf', int: true, tiers: [['of the Well', 8, 14], ['of the Deep Well', 15, 24], ['of the Abyss', 26, 40]] },
-  { stat: 'regen', pos: 'suf', tiers: [['of Trickling', 0.06, 0.1], ['of the Spring', 0.11, 0.17], ['of the Flood', 0.18, 0.28]] },
+  { stat: 'regen', pos: 'suf', tiers: [['of Trickling', 0.04, 0.07], ['of the Spring', 0.08, 0.12], ['of the Flood', 0.13, 0.2]] },
 ];
 const SHIELD_WARD = [6, 8, 11, 15, 20];   // by rarity, before its quality
 const TOWER_WARD = 1.25;                  // a tower shield's ward, against a kite's of the same rarity
@@ -237,15 +237,19 @@ export const SHIELD_POWERS = [null,
 ];
 const TIER_OF = [[], [0, 0, 1], [0, 1, 1, 2], [1, 1, 2], [1, 2, 2], [2, 2]];   // by rarity, the tiers it picks from
 
-export const GEM_GRADES = [{ name: 'Rough', weight: 70 }, { name: 'Cut', weight: 25 }, { name: 'Flawless', weight: 5 }];
+// Five cuts. The first three are found and sold; Brilliant and Perfect (weight 0) are only ever made, three of a kind and a cut
+// into one of the next (Pack.combine in pack.js).
+export const GEM_GRADES = [{ name: 'Rough', weight: 70 }, { name: 'Cut', weight: 25 }, { name: 'Flawless', weight: 5 }, { name: 'Brilliant', weight: 0 }, { name: 'Perfect', weight: 0 }];
 export const GEMS = {
-  ruby: { name: 'Ruby', color: '#d8362c', stat: 'power', values: [0.06, 0.1, 0.15] },
-  topaz: { name: 'Topaz', color: '#e2a63a', stat: 'regen', values: [0.1, 0.18, 0.28] },
-  emerald: { name: 'Emerald', color: '#3fb56a', stat: 'leech', values: [1, 2, 3] },
-  sapphire: { name: 'Sapphire', color: '#3f7fe0', stat: 'mana', values: [12, 20, 32] },
-  amethyst: { name: 'Amethyst', color: '#a45ad6', stat: 'thrift', values: [0.04, 0.07, 0.11] },
-  diamond: { name: 'Diamond', color: '#cfe6ee', stat: 'life', values: [10, 18, 30] },
+  ruby: { name: 'Ruby', color: '#d8362c', stat: 'power', values: [0.05, 0.08, 0.12, 0.17, 0.24] },
+  topaz: { name: 'Topaz', color: '#e2a63a', stat: 'regen', values: [0.06, 0.10, 0.15, 0.21, 0.30] },
+  emerald: { name: 'Emerald', color: '#3fb56a', stat: 'leech', values: [1, 2, 3, 4, 6] },
+  sapphire: { name: 'Sapphire', color: '#3f7fe0', stat: 'mana', values: [10, 16, 24, 36, 54] },
+  amethyst: { name: 'Amethyst', color: '#a45ad6', stat: 'thrift', values: [0.02, 0.035, 0.05, 0.07, 0.10] },
+  diamond: { name: 'Diamond', color: '#cfe6ee', stat: 'life', values: [10, 18, 30, 46, 70] },
 };
+// A gem's cut, made sure of: a whole number that there is a cut for (a save or a console can hand anything in).
+export const gemGrade = (g) => Math.max(0, Math.min(GEM_GRADES.length - 1, Math.round(+g) || 0));
 
 const pct = (v) => `${Math.round(v * 100)}%`;
 const STAT_TEXT = {
@@ -350,7 +354,7 @@ const shieldsAt = (rarity) => Object.keys(SHIELDS).filter((b) => !SHIELDS[b].sid
 
 // A shield of whatever rarity comes up, or opts.base. A rarity no shield is drawn at rolls as the nearest under it that has one.
 export function rollShield(rng, opts = {}) {
-  let rarity = rollRarity(rng, opts.minRarity || 0);
+  let rarity = opts.rarity ?? rollRarity(rng, opts.minRarity || 0);
   while (rarity > 0 && !shieldsAt(rarity).length) rarity--;
   const base = opts.base || pick(rng, shieldsAt(rarity));
   const shown = SHIELDS[base].rarity;
@@ -359,7 +363,7 @@ export function rollShield(rng, opts = {}) {
     type: 'shield', base, rarity: shown,
     armor: Math.round(SHIELD_WARD[shown] * (SHIELDS[base].kind === 'tower' ? TOWER_WARD : 1) * between(rng, RARITIES[shown].quality[0], RARITIES[shown].quality[1])),
     affixes: rollAffixes(rng, shown, SHIELD_AFFIXES),
-    power: power && { id: power.id, value: power.values[shown > 2 ? 2 : shown > 0 ? 1 : 0] },
+    power: power && { id: power.id, value: power.values[shown > 2 ? 2 : shown > 1 ? 1 : 0] },
     sockets: opts.sockets ?? +weighted(rng, RARITIES[shown].sockets), gems: [],
   };
 }
@@ -413,9 +417,10 @@ export function rollArmor(rng, opts = {}) {
 }
 
 export function rollGem(rng, opts = {}) {
+  // (A cut with no weight is never rolled: it's only made. Danger pays here too: Cut and Flawless come `find` times as often.)
   const kinds = {};
-  GEM_GRADES.forEach((g, i) => { kinds[i] = g.weight; });
-  return { type: 'gem', kind: opts.kind || pick(rng, Object.keys(GEMS)), grade: opts.grade ?? +weighted(rng, kinds) };
+  GEM_GRADES.forEach((g, i) => { if (g.weight > 0) kinds[i] = g.weight * (i ? find : 1); });
+  return { type: 'gem', kind: opts.kind || pick(rng, Object.keys(GEMS)), grade: opts.grade !== undefined && opts.grade !== null ? gemGrade(opts.grade) : +weighted(rng, kinds) };
 }
 
 // What a fallen enemy leaves. kind: 0 the black knight, 1 the silver knight, 2 a crab, 5 a zombie, 7 a necromancer or a wizard, 8 a champion.
@@ -559,7 +564,10 @@ export function linesOf(item, slots) {
   if (item.type === 'hgear') return hgLines(item);
   if (item.type === 'beacon') return beaconLines();
   if (item.type === 'gem') {
-    return [{ text: nameOf(item), kind: 'title' }, { text: 'Gem', kind: 'sub' }, { text: gemLine(item), kind: 'stat' }, { text: GEM_LOOK[item.kind], kind: 'sub' }, { text: 'Goes in an open socket on a staff, a skull or a shield, and stays there.', kind: 'sub' }];
+    return [{ text: nameOf(item), kind: 'title' }, { text: 'Gem', kind: 'sub' }, { text: gemLine(item), kind: 'stat' }, { text: GEM_LOOK[item.kind], kind: 'sub' }, { text: 'Goes in an open socket on a staff, a skull or a shield, and stays there.', kind: 'sub' },
+      ...(item.grade < GEM_GRADES.length - 1 ? [{ text: 'Three of the same cut combine into the next.', kind: 'sub' }] : []),
+      // (What has a most says so, so nobody sockets a tenth of something that stopped counting at the fourth.)
+      ...(STAT_MOST[GEMS[item.kind].stat] ? [{ text: STAT_MOST[GEMS[item.kind].stat], kind: 'sub' }] : [])];
   }
   if (item.type === 'shield') {
     const out = [{ text: nameOf(item), kind: 'title' }, { text: `${RARITIES[item.rarity].name} ${SHIELDS[item.base]?.kind || 'kite'} shield`, kind: 'sub' }, { text: `Ward ${item.armor || 0}`, kind: 'stat' }];
@@ -649,6 +657,13 @@ export function gearTotals(slots) {
   return add;
 }
 
+// What's said on a gem of a stat that has a most (the caps in writeWeapon below; src/sim/spells.js).
+const STAT_MOST = {
+  power: `Everything you wear together adds at most ${POWER_CAP * 100}% spell damage.`,
+  regen: `Everything you wear together adds at most ${REGEN_CAP * 100}% mana regeneration.`,
+  thrift: `Everything you wear together takes at most ${THRIFT_CAP * 100}% off a cast.`,
+};
+
 // Puts the staff, or empty hands, what's worn and what the level comes to, in the shared block for the sim thread to take up.
 export function writeWeapon(input, item, worn = gearTotals({}), lv = { power: 1, life: 0, mana: 0, regen: 1 }) {
   const s = item ? statsOf(item) : null;
@@ -657,9 +672,11 @@ export function writeWeapon(input, item, worn = gearTotals({}), lv = { power: 1,
   input[INPUT.W_PIERCE] = 0; input[INPUT.W_POISE] = 0; input[INPUT.W_STAM] = 0; input[INPUT.W_SPEED] = 0;
   input[INPUT.W_LEECH] = worn.leech; input[INPUT.W_LIFE] = worn.life + lv.life;
   input[INPUT.ARMOR] = worn.armor;
-  input[INPUT.POWER] = (1 + worn.power) * lv.power;
+  // (What's worn adds at most twice your own strength to a spell, as a hired hero's gear is held to: ten rubies aren't the only build.)
+  input[INPUT.POWER] = (1 + Math.min(worn.power, POWER_CAP)) * lv.power;
   input[INPUT.MANA_MAX] = worn.mana + lv.mana;
-  input[INPUT.REGEN] = (1 + worn.regen) * lv.regen;
-  input[INPUT.THRIFT] = Math.min(worn.thrift, 0.5);
+  // (Both have a most: src/sim/spells.js. Mana is meant to run out.)
+  input[INPUT.REGEN] = (1 + Math.min(worn.regen, REGEN_CAP)) * lv.regen;
+  input[INPUT.THRIFT] = Math.min(worn.thrift, THRIFT_CAP);
   input[INPUT.SH_POWER] = worn.shPower; input[INPUT.SH_VALUE] = worn.shValue;
 }

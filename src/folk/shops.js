@@ -10,7 +10,7 @@ import { hgWorth } from '../items/partygear.js';
 
 // What a thing's worth, in gold, by its rarity, before its sockets and gems.
 const WORTH = [24, 60, 150, 400, 950, 2500];
-const GEM_WORTH = [15, 50, 150];
+const GEM_WORTH = [15, 50, 150, 450, 1350];   // (three of a cut make the next: each is worth the three it took)
 const ROBE_PART = { head: 0.7, chest: 1.2, shoulders: 0.7, legs: 0.9, feet: 0.7 };
 export const SCROLL_PRICE = 120;
 
