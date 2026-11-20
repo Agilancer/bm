@@ -1086,7 +1086,45 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
   // A townsperson's palette swap, in the shader (src/gfx/folk.js swapCode): info.x of ten and over is 10 + hue shift (0 to 1)
   // + 2 * saturation (tenths) + 32 * value (tenths). Clothes and hair moved in hue a little, and dulled or darkened; skin, by
   // its colour, left as it is. Never blue: whatever a shift would make blue goes grey instead (no blue beside gold).
-  if (C.info.x >= 10.0) {
+  // A swap dyed (info.x of a thousand and over: src/gfx/folk.js swapCode with a dye): its cloth taken out of the colours it was
+  // made in altogether. The dark of it (coats, breeches, hoods) dyed one colour and the light of it (shirts, aprons, coifs)
+  // another, of sixteen a dyer's vat in Phobos might give and none of them blue; greys and blacks take the dye too, so a black
+  // coat comes out oxblood or moss or plum; how strongly, and how dark it's all worn. Its grain, its folds and its dirt
+  // kept (the value's the cloth's own). Skin left as it is, as in the plainer swap below.
+  if (C.info.x >= 1000.0) {
+    let code = C.info.x - 1000.0;
+    let vq = floor(code / 1024.0);
+    let r1 = code - vq * 1024.0;
+    let aq = floor(r1 / 256.0);
+    let r2 = r1 - aq * 256.0;
+    let lq = floor(r2 / 16.0);
+    let dq = r2 - lq * 16.0;
+    var DYES = array<f32, 16>(0.0, 0.025, 0.05, 0.075, 0.1, 0.125, 0.16, 0.2, 0.26, 0.32, 0.38, 0.8, 0.85, 0.9, 0.94, 0.97);
+    let hd = DYES[u32(dq)];
+    let hl = DYES[u32(lq)];
+    let amt = (aq + 1.0) / 4.0;
+    let vs = 0.55 + vq * 0.05;
+    let mx = max(albedo.r, max(albedo.g, albedo.b));
+    let mn = min(albedo.r, min(albedo.g, albedo.b));
+    let dl = mx - mn;
+    var hh = 0.0;
+    if (dl > 1e-4) {
+      if (mx == albedo.r) { hh = (albedo.g - albedo.b) / dl; } else if (mx == albedo.g) { hh = 2.0 + (albedo.b - albedo.r) / dl; } else { hh = 4.0 + (albedo.r - albedo.g) / dl; }
+      hh = fract(hh / 6.0 + 1.0);
+    }
+    let sat = select(0.0, dl / mx, mx > 1e-4);
+    let skin = (1.0 - smoothstep(0.055, 0.07, hh)) * smoothstep(0.3, 0.42, sat) * (1.0 - smoothstep(0.8, 0.88, sat)) * smoothstep(0.02, 0.07, mx);
+    let light = smoothstep(0.07, 0.2, mx);
+    let ns = clamp(mix(sat, mix(0.62, 0.42, light), amt), 0.0, 0.85);
+    let nv = max(mx, 0.025 + 0.025 * amt) * vs;
+    let kd = vec3f(5.0, 3.0, 1.0) + hd * 6.0;
+    let kl = vec3f(5.0, 3.0, 1.0) + hl * 6.0;
+    let rd = nv - nv * ns * clamp(min(fract(kd / 6.0) * 6.0, 4.0 - fract(kd / 6.0) * 6.0), vec3f(0.0), vec3f(1.0));
+    let rl = nv - nv * ns * clamp(min(fract(kl / 6.0) * 6.0, 4.0 - fract(kl / 6.0) * 6.0), vec3f(0.0), vec3f(1.0));
+    // (Nor the head's own: its hair keeps the colour it grew. Marked in the piece's top bit, src/folk/hats.js HEAD_BIT.)
+    let head = select(0.0, 1.0, (in.piece & 0x8000u) != 0u);
+    albedo = mix(mix(rd, rl, light), albedo, max(skin, head));
+  } else if (C.info.x >= 10.0) {
     let code = C.info.x - 10.0;
     let vi = floor(code / 32.0);
     let rem = code - vi * 32.0;
@@ -1122,7 +1160,7 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
   rough = mix(rough, 0.6, wound.cut);
   var ao = (1.0 - wound.cut * 0.55) * backAO;
   // The hole shows wet dark flesh.
-  let pulse = 0.5 + 0.5 * sin(C.info.x * 6.28318);
+  let pulse = 0.5 + 0.5 * sin(select(C.info.x, 0.0, C.info.x >= 10.0) * 6.28318);
   albedo = mix(albedo, vec3f(0.16, 0.006, 0.006) * (0.7 + 0.5 * pulse), wound.hole);
   rough = mix(rough, 0.09, wound.hole);
   metal = mix(metal, 0.0, wound.hole);
