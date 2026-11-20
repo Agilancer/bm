@@ -15,6 +15,7 @@ import { hash2, vnoise } from './terrain-noise.js';
 import { tileOf } from './sites.js';
 import { dress } from './delve-dress.js';
 import { PROPS_B } from './delve-props-b.js';
+import { PROPS_A } from './delve-props-a.js';
 import { DELVES, DUNGEON_CELL, GRID_UNIT, braziers, caveFloorY, caveRoofY, caveRoom, grid, torches } from './dungeon.js';
 
 const TAU = Math.PI * 2;
@@ -1895,7 +1896,7 @@ export const PROPS = {
   },
 };
 // (And the later castle dungeons' own: src/core/delve-props-b.js.)
-Object.assign(PROPS, PROPS_B);
+Object.assign(PROPS, PROPS_B, PROPS_A);
 export const PROP_KINDS = Object.keys(PROPS);
 
 // ---- all of it -----------------------------------------------------------------------------------------------------------------

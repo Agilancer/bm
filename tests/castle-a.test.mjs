@@ -157,7 +157,9 @@ test('the places their fights stand on are in their rooms', () => {
   const hall = roomOf('da_lectorium');
   for (const [x, z] of ISLES) assert.ok(inRoom(hall, x, z, ISLE_R + 1), `a dry stack at ${x}, ${z}`);
   for (const a of ISLES) for (const b of ISLES) if (a !== b) assert.ok(Math.hypot(a[0] - b[0], a[1] - b[1]) > ISLE_R * 2 + 4);
-  assert.equal(DA.daises.length, ISLES.length);
+  // (Each a step up out of the shallows; the rest of its floor's levels are the flood's: sunk under the water.)
+  assert.equal(DA.daises.filter((s) => s.dy === 0.5).length, ISLES.length);
+  assert.ok(DA.daises.some((s) => s.dy < 0) && DA.props.filter((q) => q.kind === 'flood').length >= 6, 'the Archive is flooded');
   const salon = roomOf('tp_salon'), shop = roomOf('tp_shop'), unf = roomOf('tp_hall');
   for (const [x, z] of FRAMES) assert.ok(inRoom(salon, x, z, 1.5), `a frame at ${x}, ${z}`);
   assert.ok(inRoom(shop, SHOP_MID[0], SHOP_MID[1], 8));
@@ -275,5 +277,30 @@ test('their quests: seven to each, by people who stand somewhere, in step with i
     // (Its secret room is somebody's errand: found by being sent to it.)
     const secret = d.chests.find((c) => c.loot === 3).room;
     assert.ok(mine.some((id) => RULES_A[id].steps.some((st) => (st.visit || []).includes(`room:${secret}`))), `nobody sends you to ${secret}`);
+  }
+});
+
+test('no two rooms one box: sections that differ, a few lamps of its own to each room and the dark between, a noun to each', () => {
+  for (const d of [DA, TP, AU]) {
+    const roofs = d.rooms.map((r) => r.roof);
+    assert.ok(Math.max(...roofs) >= 18 && Math.min(...roofs) <= 6, `${d.key}: roofs from ${Math.min(...roofs)} to ${Math.max(...roofs)}`);
+    assert.ok(d.look.every >= 16 && !d.look.cold, `${d.key}: few torches, and fires that are fires`);
+    for (const r of d.rooms) {
+      assert.equal(r.fires, 0, `${r.id} lights itself`);
+      // (Nothing hung by the room where its own lamps hang: a chain through a ring is a cross from under it.)
+      if (Math.min(r.hx, r.hz) >= 12 && r.roof >= 8) assert.equal(r.hang, 0, `${r.id}: a fire hung by the room itself`);
+      const lamps = d.props.filter((p) => ['chandelier', 'brazier', 'hearth'].includes(p.kind) && inRoom(r, p.x, p.z)).length;
+      assert.ok(lamps >= 1 && lamps <= 8, `${r.id}: ${lamps} lamps`);
+    }
+    assert.ok(!d.props.some((p) => ['circle', 'tools', 'wheel', 'timber'].includes(p.kind)), `${d.key}: a crossed thing`);
+  }
+  const n = (d, kind) => d.props.filter((p) => p.kind === kind).length;
+  assert.ok(n(DA, 'leanshelf') >= 10 && n(DA, 'cardcase') >= 6 && n(DA, 'press') >= 3, 'the Archive: fallen cases, card-cases, presses');
+  assert.ok(n(TP, 'hangwall') >= 12 && n(TP, 'easel') >= 10 && n(TP, 'ringbeam') === 2 && n(TP, 'column') >= 12, 'the Gallery: hung walls, easels, the Rotunda\'s ring');
+  assert.ok(n(AU, 'copper') >= 7 && n(AU, 'pipe') >= 10 && n(AU, 'glassjar') >= 10 && n(AU, 'benchstills') >= 4, 'the Undercroft: coppers, pipes, jars, benches');
+  // (A solid thing stands well clear of its room's walls: one too near shuts the gap and leaves a hole in the wall behind it.)
+  for (const d of [DA, TP, AU]) for (const p of d.props.filter((q) => q.solid)) {
+    const r = d.rooms.find((q) => inRoom(q, p.x, p.z)), rad = p.r ?? Math.max(p.hx, p.hz);
+    assert.ok(r && inRoom(r, p.x, p.z, rad + 2.4), `${d.key}: a solid ${p.kind} at ${p.x}, ${p.z} too near a wall`);
   }
 });

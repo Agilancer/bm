@@ -24,109 +24,135 @@ import { R } from './delve-lay.js';
 
 const PI = Math.PI;
 
+// (Each room its own section: the stair low and close; the Stillroom twelve metres under its pipes; the Hall of Jars and
+// the Retort Room nine; the Green Cellar and the Cold Store low enough to touch; the Feeding Gallery a passage ten wide
+// and seventy long; the Vault twenty-two metres up. No room lights itself (fires: 0, hang: 0): each has two or three
+// lamps of its own, and the dark between them.)
 const rooms = [
-  R('au_door', 'the Undercroft Stair', 0, -12, 5, 20, 0, 9, { rock: 'p2_sooty_plaster', foot: 'soot:block', ground: 'flags', banners: 0, fires: 12 }),
-  R('au_still', 'the Great Stillroom', 8, -56, 22, 26, 0, 14, { rock: 'p2_jar_shelves', foot: 'soot:block', ground: 'flags', banners: 14, cloth: 'forest:cloth_red', fires: 15 }),
-  R('au_jars', 'the Hall of Jars', -56, -48, 16, 16, 0, 10, { rock: 'p2_jar_shelves', foot: 'soot:block', ground: 'slate:flags', banners: 0, fires: 13 }),
-  R('au_retort', 'the Retort Room', 64, -66, 18, 14, 0, 11, { rock: 'p2_fireback', foot: 'soot:block', ground: 'flags', banners: 0, fires: 12 }),
-  R('au_green', 'the Green Cellar', -56, -98, 14, 14, 0, 8, { rock: 'p2_waterline_wall', foot: 'mire:block', ground: 'p2_ash_clay_ground', banners: 0, fires: 14 }),
-  R('au_feed', 'the Feeding Gallery', 18, -108, 6, 30, 0, 12, { rock: 'slate:ashlar', foot: 'soot:block', ground: 'p2_walk_paving', banners: 11, cloth: 'forest:cloth_red', fires: 12 }),
-  R('au_cold', 'the Cold Store', 58, -112, 12, 10, 0, 8, { rock: 'slate:ashlar', foot: 'slate:block', ground: 'slate:flags', banners: 0, fires: 16 }),
-  R('au_hatch', 'the Hatch Stair', 62, -92, 6, 6, 0, 7, { rock: 'p2_sooty_plaster', foot: 'soot:block', ground: 'p2_worn_floorboards', banners: 0, fires: 20 }),
-  R('au_cupboard', 'the Poison Cupboard', -86, -48, 6, 6, 0, 7, { rock: 'p2_jar_shelves', foot: 'soot:block', ground: 'p2_worn_floorboards', banners: 0, fires: 20 }),
-  R('au_vault', 'the Growing Vault', 18, -166, 26, 32, 0, 20, { rock: 'p2_waterline_wall', foot: 'mire:block', ground: 'p2_ash_clay_ground', banners: 18, cloth: 'forest:cloth_red', fires: 14 }),
+  R('au_door', 'the Undercroft Stair', 0, -16, 4, 24, 0, 6, { rock: 'p2_sooty_plaster', foot: 'soot:block', ground: 'flags', banners: 0, fires: 0 }),
+  R('au_still', 'the Great Stillroom', 8, -54, 15, 18, 0, 12, { rock: 'p2_sooty_plaster', foot: 'soot:block', ground: 'flags', banners: 0, fires: 0, hang: 0 }),
+  R('au_jars', 'the Hall of Jars', -56, -48, 16, 16, 0, 9, { rock: 'p2_jar_shelves', foot: 'soot:block', ground: 'slate:flags', banners: 0, fires: 0, hang: 0 }),
+  R('au_retort', 'the Retort Room', 64, -66, 13, 11, 0, 9, { rock: 'p2_fireback', foot: 'soot:block', ground: 'flags', banners: 0, fires: 0 }),
+  R('au_green', 'the Green Cellar', -56, -98, 14, 14, 0, 5, { rock: 'p2_waterline_wall', foot: 'mire:block', ground: 'p2_ash_clay_ground', banners: 0, fires: 0, hang: 0 }),
+  R('au_feed', 'the Feeding Gallery', 16, -104, 5, 34, 0, 10, { rock: 'slate:ashlar', foot: 'soot:block', ground: 'p2_walk_paving', banners: 12, cloth: 'forest:cloth_red', fires: 0 }),
+  R('au_cold', 'the Cold Store', 58, -112, 12, 10, 0, 5, { rock: 'slate:ashlar', foot: 'slate:block', ground: 'slate:flags', banners: 0, fires: 0 }),
+  R('au_hatch', 'the Hatch Stair', 62, -92, 6, 6, 0, 7, { rock: 'p2_sooty_plaster', foot: 'soot:block', ground: 'p2_worn_floorboards', banners: 0, fires: 0 }),
+  R('au_cupboard', 'the Poison Cupboard', -86, -48, 6, 6, 0, 5, { rock: 'p2_jar_shelves', foot: 'soot:block', ground: 'p2_worn_floorboards', banners: 0, fires: 0 }),
+  R('au_vault', 'the Growing Vault', 16, -160, 20, 24, 0, 22, { rock: 'p2_waterline_wall', foot: 'mire:block', ground: 'p2_ash_clay_ground', banners: 20, cloth: 'forest:cloth_red', fires: 0, hang: 0 }),
 ];
 
 // (Each run a little into both rooms. The Stillroom's ways: the stair in at its north, west of its middle; the Feeding
 // Gallery out at its south, east of it; the Hall of Jars north of its middle, the Retort Room south of it.)
 const tunnels = [
-  { pts: [[-12, -46], [-42, -46]], w: 5, h: 5 },                    // the Stillroom to the Hall of Jars
-  { pts: [[28, -66], [48, -66]], w: 5, h: 5 },                      // ... and to the Retort Room
-  { pts: [[-60, -62], [-60, -86]], w: 3, h: 4 },                    // the Hall of Jars down to the Green Cellar
-  { pts: [[-44, -108], [-30, -108], [-30, -150], [-6, -150]], w: 3, h: 4 },   // the Green Cellar round to the Vault's west door
-  { pts: [[22, -114], [48, -114]], w: 4, h: 4.5 },                  // the Feeding Gallery to the Cold Store
-  { pts: [[62, -96], [62, -104]], w: 3, h: 4 },                     // the Cold Store up to the Hatch Stair
+  { pts: [[-5, -46], [-42, -46]], w: 4, h: 4.5 },                   // the Stillroom to the Hall of Jars
+  { pts: [[21, -66], [53, -66]], w: 4, h: 4.5 },                    // ... and to the Retort Room
+  { pts: [[-60, -62], [-60, -86]], w: 3, h: 3.6 },                  // the Hall of Jars down to the Green Cellar
+  { pts: [[-44, -108], [-30, -108], [-30, -150], [-2, -150]], w: 3, h: 3.6 },   // the Green Cellar round to the Vault's west door
+  { pts: [[19, -114], [48, -114]], w: 3.6, h: 4 },                  // the Feeding Gallery to the Cold Store
+  { pts: [[62, -96], [62, -104]], w: 3, h: 3.6 },                   // the Cold Store up to the Hatch Stair
   // The Poison Cupboard: behind the Hall of Jars' west shelves, where one stands a hand out from the wall. On no map.
   { pts: [[-70, -52], [-82, -52]], w: 1.3, h: 3 },
   // Where they come in from: the jar stores, the Retort Room's flues, the Vault's sumps.
   { pts: [[-70, -40], [-78, -40]], w: 2, h: 4, dead: true, door: 'au_jars' },
   { pts: [[-50, -34], [-50, -26]], w: 2, h: 4, dead: true, door: 'au_jars' },
-  { pts: [[80, -60], [88, -60]], w: 2, h: 4, dead: true, door: 'au_retort' },
-  { pts: [[60, -54], [60, -46]], w: 2, h: 4, dead: true, door: 'au_retort' },
-  { pts: [[42, -160], [50, -160]], w: 2, h: 4, dead: true, door: 'au_vault' },
-  { pts: [[-6, -176], [-14, -176]], w: 2, h: 4, dead: true, door: 'au_vault' },
+  { pts: [[75, -62], [83, -62]], w: 2, h: 4, dead: true, door: 'au_retort' },
+  { pts: [[60, -57], [60, -49]], w: 2, h: 4, dead: true, door: 'au_retort' },
+  { pts: [[34, -158], [42, -158]], w: 2, h: 4, dead: true, door: 'au_vault' },
+  { pts: [[-2, -168], [-10, -168]], w: 2, h: 4, dead: true, door: 'au_vault' },
 ];
 
 // The Hall of Jars' four great jars, one in each corner: where the Jar-Mother's brood come out (src/sim/castle-fights-a.js).
 export const JARS = [[-68, -36], [-44, -36], [-68, -60], [-46, -60]];
 // The Retort Room's three vents, and by each the wheel that shuts it. [x, z]
-export const VENTS = [[52, -58], [76, -60], [64, -76]];
-export const WHEELS = [[57.6, -64], [70.4, -66], [64, -68.4]];
+export const VENTS = [[55, -59], [73, -60], [64, -74]];
+export const WHEELS = [[61, -63.5], [67.4, -65], [59.6, -68.6]];
 // The Growing Vault's gallery, across its far end: a step up, its lip at this z (local), from x0 to x1.
-export const GALLERY = { z: -184, z1: -197, x0: -6, x1: 42 };
-const daises = [{ x: 18, z: -191, hx: 24, hz: 7, dy: 0.5 }];
+export const GALLERY = { z: -174, z1: -184, x0: -2, x1: 34 };
+const daises = [{ x: 16, z: -179, hx: 20, hz: 5, dy: 0.5 }];
 
 const props = [];
 {
   const add = (kind, x, z, o = {}) => props.push({ kind, x, z, ...o });
-  // ---- the Undercroft Stair: carboys and crates come down for the stills, a brazier, his mark over the way down.
-  add('lintel', 0, -2, { hx: 5, stone: 'dark:ashlar' }); add('mark', 0, 7.6, { up: 6.6, r: 0.8, back: 1 });
-  add('barrels', -3.6, -8); add('crates', 3.6, -18); add('barrels', 3.4, -26); add('brazier', -3.4, -24); add('brazier', 3.4, 2);
-  add('decal', -4.95, -14, { layer: 'p2_soot_streaks', w: 4, h: 5, up: 3.5, yaw: PI / 2 });
-  // ---- the Great Stillroom: six stills in two rows, their necks to the middle; the vats on their fires down the middle;
-  // benches of glass; jars up every wall; green hangings; soot up the walls over each still.
-  for (const z of [-42, -56, -70]) { add('alembic', -8, z, { yaw: PI / 2 }); add('alembic', 24, z + 4, { yaw: -PI / 2 }); }
-  for (const z of [-44, -58, -72]) add('vat', 8, z, { r: 1.3 });
-  add('table', -4, -78, { hx: 3, hz: 0.8 }); add('candles', -5, -78, { up: 0.85 }); add('jarshelf', 8, -30.3, { yaw: PI, w: 5 });
-  add('jarshelf', -13.7, -62, { yaw: PI / 2, w: 4 }); add('jarshelf', 29.7, -44, { yaw: -PI / 2, w: 4 });
-  add('chandelier', 8, -50, { up: 7, hang: true }); add('chandelier', 8, -66, { up: 7, hang: true });
-  add('barrels', -10, -34); add('crates', 26, -78); add('heap', 26, -34, { r: 1.1, layer: 'dark:rubble' });
-  add('decal', -13.95, -42, { layer: 'p2_soot_streaks', w: 3, h: 5, up: 4, yaw: PI / 2 }); add('decal', 29.95, -66, { layer: 'p2_soot_streaks', w: 3, h: 5, up: 4, yaw: -PI / 2 });
-  add('decal', 2, -64, { layer: 'p2_scorch_mark', w: 2.2, flat: true });
-  // ---- the Hall of Jars: a great vessel of green glass in each corner, floor to roof; rows of lesser jars on the shelves
-  // between; a slab in the middle with what was last taken out; the brine on the flags.
-  for (const [x, z] of JARS) { add('column', x, z, { r: 1.1, solid: true, shaft: 'forest:stone' }); add('pool', x, z, { r: 2.2, up: 0.03, layer: 'mire:water' }); }
-  add('jarshelf', -56, -32.3, { yaw: PI, w: 5 }); add('jarshelf', -56, -63.7, { yaw: 0, w: 3 }); add('jarshelf', -71.7, -44, { yaw: PI / 2, w: 3 });
-  add('table', -56, -38, { hx: 2.6, hz: 1 }); add('bones', -53, -40.4, { r: 0.6 }); add('candles', -58, -38, { up: 0.85 });
-  add('chandelier', -56, -48, { up: 6, hang: true }); add('pool', -50, -54, { r: 3, up: 0.03, layer: 'mire:water' });
+  const pipe = (...pts) => add('pipe', pts[0][0], pts[0][1], { pts });
+  // ---- the Undercroft Stair: low and close; a pipe along its wall the whole way down; carboys and crates; a lamp each end.
+  add('lintel', 0, -2, { hx: 4, stone: 'dark:ashlar' }); add('mark', 0, 7.6, { up: 4.6, r: 0.6, back: 1 });
+  add('barrels', -2.8, -10); add('crates', 2.8, -22); add('brazier', 2.6, 2); add('brazier', 2.6, -33);
+  pipe([-3.6, 6, 4.8], [-3.6, -38, 4.8]); pipe([-3.6, 6, 4.2], [-3.6, -38, 4.2]);
+  add('decal', 3.95, -14, { layer: 'p2_soot_streaks', w: 4, h: 4, up: 2, yaw: -PI / 2 });
+  // ---- the Great Stillroom: four copper stills as tall as two men, a pair against each long wall, each on its firebox;
+  // from each one's neck a pipe up to the roof and away across it, the four of them side by side and none crossing,
+  // two down the south wall into the floor and two on over the Feeding Gallery to the Vault; the small work clustered
+  // on benches between; two lamps. (What's seen from the stair: copper and fire to left and right, pipes overhead.)
+  add('copper', -3.2, -56, { yaw: PI / 2, r: 1.9, h: 3.3 }); add('copper', -3.4, -65, { yaw: PI / 2, r: 1.7, h: 3 });
+  add('copper', 19.2, -42, { yaw: -PI / 2, r: 1.9, h: 3.3 }); add('copper', 19.4, -51, { yaw: -PI / 2, r: 1.7, h: 3 });
+  pipe([-3.2, -56, 5.5], [-3.2, -56, 9.6], [4.5, -56, 9.6], [4.5, -71.5, 9.6], [4.5, -71.5, 0.3]);
+  pipe([-3.4, -65, 5.2], [-3.4, -65, 8.2], [1.5, -65, 8.2], [1.5, -71.5, 8.2], [1.5, -71.5, 0.3]);
+  pipe([19.2, -42, 5.5], [19.2, -42, 9.3], [13, -42, 9.3], [13, -137, 9.3]);
+  pipe([19.4, -51, 5.2], [19.4, -51, 8.4], [15.4, -51, 8.4], [15.4, -137, 8.4]);
+  add('benchstills', 7, -44, { yaw: 0.2, w: 2 }); add('benchstills', 10, -52, { yaw: PI / 2, w: 1.8 }); add('benchstills', 6, -62, { yaw: -0.15, w: 2 });
+  add('vat', 13, -62, { r: 1.1 }); add('barrels', -5, -38.5); add('crates', 21, -70); add('barrels', 21.4, -58); add('heap', -5, -70, { r: 1.1, layer: 'dark:rubble' });
+  add('jarshelf', 8, -36.3, { yaw: PI, w: 4 }); add('jarshelf', 22.7, -62, { yaw: -PI / 2, w: 3 });
+  add('chandelier', 8, -46, { up: 6.2, hang: true }); add('chandelier', 9, -63, { up: 6.2, hang: true });
+  add('decal', -6.95, -56, { layer: 'p2_soot_streaks', w: 3, h: 5, up: 5, yaw: PI / 2 }); add('decal', 22.95, -42, { layer: 'p2_soot_streaks', w: 3, h: 5, up: 5, yaw: -PI / 2 });
+  add('decal', 2, -52, { layer: 'p2_scorch_mark', w: 2.2, flat: true });
+  // ---- the Hall of Jars: a great vessel of banded green glass in each corner, a lamp behind it and what's in it against
+  // the light; lesser ones in rows along the walls between; a slab with what was last taken out; brine on the flags.
+  JARS.forEach(([x, z]) => add('glassjar', x, z, { r: 1.1, h: 3.2, yaw: Math.atan2(-56 - x, -48 - z), solid: true }));
+  for (const x of [-64, -60, -56]) add('glassjar', x, -33.4, { r: 0.6, h: 1.9, yaw: 0 });
+  for (const x of [-56, -52]) add('glassjar', x, -62.6, { r: 0.6, h: 1.9, yaw: PI });
+  for (const z of [-38, -53]) add('glassjar', -41.4, z, { r: 0.6, h: 1.9, yaw: -PI / 2 });
+  add('jarshelf', -71.7, -46, { yaw: PI / 2, w: 3 }); add('table', -56, -40, { hx: 2.6, hz: 1 }); add('bones', -53, -42, { r: 0.6 }); add('candles', -58, -40, { up: 0.85 });
+  add('chandelier', -60, -50, { up: 5.4, hang: true }); add('chandelier', -50, -44, { up: 5.4, hang: true }); add('brazier', -42.6, -58);
+  add('flood', -50, -54, { hx: 3, hz: 2.4, lvl: 0.03, float: 0 }); add('flood', -62, -44, { hx: 2.2, hz: 2.8, lvl: 0.03, float: 0 });
   // (The shelf that stands out from the west wall, and the dark behind it.)
   add('bookcase', -70.6, -54.6, { hx: 0.45, hz: 2, h: 3.4, one: 1 });
-  // ---- the Poison Cupboard: a wall of little drawers, a locked press, one candle.
+  // ---- the Poison Cupboard: a wall of little drawers, a locked press, one lamp.
   add('jarshelf', -91.7, -48, { yaw: PI / 2, w: 4 }); add('jarshelf', -86, -42.3, { yaw: PI, w: 3 }); add('table', -84, -52, { hx: 1.2, hz: 0.7 }); add('candles', -84, -52, { up: 0.85 });
-  // ---- the Retort Room: the great retort in the east wall on its hearth, the three vents in the floor, a wheel by each;
-  // the coal, the flasks.
-  add('hearth', 81.4, -68, { yaw: -PI / 2, great: 1.3 }); add('alembic', 74, -74, { yaw: PI });
-  VENTS.forEach(([x, z], i) => { add('pool', x, z, { r: 1.5, up: 0.04, layer: 'iron' }); add('pool', x, z, { r: 1.0, up: 0.05, layer: 'obsidian' }); add('column', WHEELS[i][0], WHEELS[i][1], { r: 0.34, wood: true, solid: true }); });
-  add('heap', 50, -76, { r: 1.3, layer: 'dark:rubble' }); add('barrels', 48, -54.5); add('crates', 78, -54.5); add('table', 58, -54.6, { hx: 2.6, hz: 0.7 });
-  add('chandelier', 64, -66, { up: 6.4, hang: true }); add('decal', 81.95, -68, { layer: 'p2_soot_streaks', w: 6, h: 5, up: 6.5, yaw: -PI / 2 });
-  add('decal', 62, -62, { layer: 'p2_scorch_mark', w: 2.4, flat: true, yaw: 1 });
-  // ---- the Green Cellar: the beds in rows, what grows in them, roots down from above, black water standing.
+  add('chandelier', -86, -47, { up: 3.2, hang: true });
+  // ---- the Retort Room: the great retort against its east wall, copper, twice a man's height, its pipe up and away across
+  // the roof and down the west wall; the three vents in the floor, a post and a hand-wheel by each; coal; a bench.
+  add('copper', 73.8, -68, { yaw: -PI / 2, r: 2.5, h: 4 });
+  pipe([73.8, -68, 6.2], [73.8, -68, 8.2], [51.6, -68, 8.2], [51.6, -68, 0.3]); pipe([76.4, -56, 3.4], [76.4, -76.4, 3.4]);
+  VENTS.forEach(([x, z], i) => {
+    add('pool', x, z, { r: 1.5, up: 0.04, layer: 'iron' }); add('pool', x, z, { r: 1.0, up: 0.05, layer: 'obsidian' });
+    add('column', WHEELS[i][0], WHEELS[i][1], { r: 0.34, wood: true, solid: true }); add('gear', WHEELS[i][0], WHEELS[i][1], { flat: true, r: 0.55, up: 1.2, h: 0.12, layer: 'iron' });
+  });
+  add('heap', 53.4, -75, { r: 1.3, layer: 'dark:rubble' }); add('barrels', 53, -57); add('crates', 70, -57); add('benchstills', 58, -75.4, { yaw: 0, w: 1.8 });
+  add('chandelier', 63, -62, { up: 5.6, hang: true }); add('brazier', 70.6, -74.6);
+  add('decal', 76.95, -68, { layer: 'p2_soot_streaks', w: 6, h: 4, up: 4.5, yaw: -PI / 2 }); add('decal', 62, -70, { layer: 'p2_scorch_mark', w: 2.4, flat: true, yaw: 1 });
+  // ---- the Green Cellar: low enough to touch; the beds in rows, what grows in them, roots down from above, black water.
   for (const [x, z] of [[-64, -92], [-52, -92], [-64, -104], [-50, -104]]) add('podbed', x, z, { r: 2 });
   add('caps', -46, -88, { n: 4, s: 0.9 }); add('caps', -66, -110, { n: 3, s: 0.7 }); add('roots', -58, -98, { r: 2.4 }); add('roots', -44, -100, { r: 1.6 });
-  add('pool', -57, -98, { r: 2.6, up: 0.03, layer: 'mire:water' }); add('brazier', -68, -86); add('brazier', -44, -110);
-  // ---- the Feeding Gallery: the two pumps (a vat and its wheel-post each), the pipes' channel down the middle to the
-  // Vault; hangings of his green; the Feeders' braziers.
-  add('channel', 18, -84, { to: [18, -134], w: 0.9 });
-  add('vat', 14, -90, { r: 1.1 }); add('column', 22, -90, { r: 0.5, wood: true, solid: true }); add('vat', 22, -126, { r: 1.1 }); add('column', 14, -126, { r: 0.5, wood: true, solid: true });
-  add('brazier', 13.4, -102); add('brazier', 22.6, -116); add('barrels', 22.4, -82); add('crates', 13.6, -134);
-  // ---- the Cold Store: what they've kept, hung from the roof in its sacking, slabs along the walls, ice in the corners.
+  add('flood', -57, -98, { hx: 3, hz: 2.4, lvl: 0.03, float: 0 }); add('brazier', -67.4, -87); add('brazier', -45, -109.6);
+  // ---- the Feeding Gallery: a passage, the two pipes from the Stillroom along under its roof the whole way to the Vault;
+  // a pump at each end (a copper cylinder, its fire, its hand-post), their own pipe along the west wall between them; the
+  // channel down its middle; his green on the walls; a fire at each pump and the dark between.
+  add('channel', 16, -76, { to: [16, -134], w: 0.8 });
+  add('copper', 19.4, -86, { yaw: -PI / 2, r: 0.9, h: 1.7 }); add('column', 13, -84, { r: 0.4, wood: true });
+  add('copper', 12.6, -122, { yaw: PI / 2, r: 0.9, h: 1.7 }); add('column', 19, -124, { r: 0.4, wood: true });
+  pipe([11.5, -74, 3.2], [11.5, -136, 3.2]); pipe([20.5, -86, 3.6], [20.5, -110, 3.6]);
+  add('brazier', 12.6, -90); add('brazier', 19.4, -118); add('barrels', 19.6, -73.4); add('crates', 12.4, -135);
+  // ---- the Cold Store: low; what they've kept, hung from the roof in its sacking, slabs along the walls, ice in the corners.
   for (const [x, z] of [[52, -108], [58, -116], [64, -108], [66, -117]]) add('cocoon', x, z);
-  add('table', 50, -119.6, { hx: 2.6, hz: 0.8, solid: true }); add('bones', 50, -119.6, { r: 0.5, up: 0.9 }); add('heap', 68, -104, { r: 1, layer: 'pale:stone' }); add('heap', 47.5, -104, { r: 0.8, layer: 'pale:stone' });
-  add('barrels', 68.4, -120);
-  // ---- the Hatch Stair: a ladder's foot, sacks; up through the trapdoor is the Alchemists' Wing.
-  add('crates', 57.6, -96.4); add('barrels', 66.6, -96); add('candles', 58, -88.4, { up: 0.1 });
-  // ---- the Growing Vault: the great vat it came out of, split, at the room's middle; the pipes' channel into it; beds
-  // either side; the gallery across the far end with his mark over it; piers; roots through the roof.
-  add('channel', 18, -136, { to: [18, -158], w: 0.9 });
-  add('pit', 18, -164, { r: 4.2 }); add('heap', 24.5, -166, { r: 1.6, layer: 'dark:rubble' }); add('heap', 12, -161, { r: 1.2, layer: 'dark:rubble' });
-  for (const [x, z] of [[-2, -146], [38, -146], [-2, -172], [38, -172]]) add('podbed', x, z, { r: 2.4 });
-  for (const [x, z] of [[4, -180], [32, -180]]) add('column', x, z, { r: 1.3, solid: true });
-  add('roots', 6, -156, { r: 2.6 }); add('roots', 34, -160, { r: 2.2 }); add('roots', 18, -190, { r: 3 });
-  add('mark', 18, -197.6, { up: 11, r: 2.2, back: -1 });
-  for (const x of [0, 12, 24, 36]) add('brazier', x, -185.2);
-  add('chandelier', 18, -150, { up: 9, hang: true }); add('chandelier', 18, -176, { up: 9, hang: true });
-  add('caps', 40, -190, { n: 3, s: 0.8 }); add('caps', -4, -192, { n: 3, s: 0.8 });
-  add('decal', 43.95, -164, { layer: 'p2_damp_rise', w: 8, h: 3, up: 0, yaw: -PI / 2 });
+  add('table', 50, -119.6, { hx: 2.6, hz: 0.8 }); add('bones', 50, -117.6, { r: 0.5 }); add('heap', 68, -104, { r: 1, layer: 'pale:stone' }); add('heap', 47.5, -104, { r: 0.8, layer: 'pale:stone' });
+  add('barrels', 68.4, -120); add('brazier', 48, -110.6);
+  // ---- the Hatch Stair: sacks and crates; up through the trapdoor is the Alchemists' Wing.
+  add('crates', 57.6, -96.4); add('barrels', 66.6, -96); add('brazier', 58, -88.4);
+  // ---- the Growing Vault: twenty-two metres up; the great vat it came out of, copper, as tall as a house, at the room's
+  // north-east corner with the two pipes down into its head; beds either side; the gallery across the far end, a row of fires
+  // along its lip and his mark over it; pipes along both walls; two piers; roots through the roof.
+  // (Off the line from the way in to where it stands: nothing between you and it.)
+  add('copper', 28, -146, { yaw: 0, r: 3, h: 4.6, solid: true });
+  pipe([13, -137, 9.3], [13, -140, 9.3], [26.6, -146, 7.5]); pipe([15.4, -137, 8.4], [15.4, -139, 8.4], [28.4, -144.8, 7.5]);
+  pipe([-3.6, -138, 4], [-3.6, -172, 4]); pipe([35.6, -140, 5], [35.6, -172, 5]);
+  for (const [x, z] of [[2, -146], [31, -156], [1, -164], [31, -166]]) add('podbed', x, z, { r: 2.2 });
+  for (const [x, z] of [[4, -170], [28, -170]]) add('column', x, z, { r: 1.2, solid: true });
+  add('roots', 6, -156, { r: 2.4 }); add('roots', 28, -158, { r: 2 }); add('roots', 16, -181, { r: 2.6 });
+  add('mark', 16, -183.6, { up: 10, r: 2.2, back: -1 });
+  for (const x of [2, 11, 21, 30]) add('brazier', x, -175.2);
+  add('chandelier', 6, -156, { up: 8, hang: true }); add('chandelier', 26, -160, { up: 8, hang: true }); add('chandelier', 16, -170, { up: 9, hang: true });
+  add('caps', 33, -181, { n: 3, s: 0.8 }); add('caps', -1, -182, { n: 3, s: 0.8 });
+  add('decal', 35.95, -160, { layer: 'p2_damp_rise', w: 8, h: 3, up: 0, yaw: -PI / 2 });
 }
 
 // ---- who's in it ----------------------------------------------------------------------------------------------------------
@@ -144,7 +170,7 @@ const packs = [
 const bosses = [
   { key: 'jarmother', room: 'au_jars', name: 'The Jar-Mother', models: ['au_jarmother'], pal: ['Forest'], hp: 84000, damage: 280, reach: 3.6, loot: 8, at: [0, 0] },
   { key: 'distiller', room: 'au_retort', name: 'The Distiller', models: ['au_distiller'], pal: ['Forest'], hp: 88000, damage: 285, reach: 3.2, loot: 8, at: [0, 6] },
-  { key: 'greatwork', room: 'au_vault', name: 'The Great Work', models: ['au_greatwork'], pal: ['Forest'], hp: 114000, damage: 292, reach: 4.6, loot: 0, needs: ['jarmother', 'distiller'], shut: 'gwk_shut', gives: 'key:undercroft', at: [0, -6] },
+  { key: 'greatwork', room: 'au_vault', name: 'The Great Work', models: ['au_greatwork'], pal: ['Forest'], hp: 114000, damage: 292, reach: 4.6, loot: 0, needs: ['jarmother', 'distiller'], shut: 'gwk_shut', gives: 'key:undercroft', at: [0, -2] },
 ];
 const warnings = {
   jar_open: "The Jar-Mother. She cracks her jars for her brood. Where one of them dies it leaves its brine on the flags, and only stood in brine does she take a blow as she should: kill them where you want her, and bring her into it.",
@@ -187,7 +213,7 @@ export const UNDERCROFT = {
   castle: true, dungeon: true,
   rooms, tunnels, daises, props, packs, bosses, warnings,
   turnWarn: { jarmother: 'jar_turn', distiller: 'dst_turn', greatwork: 'gwk_turn' },
-  entry: { x: 0, z: 2.5, yaw: PI }, exitIn: { x: 0, z: 5.4 }, exitOut: { x: 18, z: -194.4 },
+  entry: { x: 0, z: 2.5, yaw: PI }, exitIn: { x: 0, z: 5.4 }, exitOut: { x: 16, z: -180.4 },
   // At the foot of the Alchemists' Wing's north wall, in the Middle Ward: its back to the wall, facing north across the
   // court to the Menagerie (src/core/phobos-build.js phobosCastle: the wing's hall at 11030, 120).
   portal: { x: 11030, z: 145.6, yaw: 0, r: 2.2 },
@@ -199,17 +225,21 @@ export const UNDERCROFT = {
     { id: 'cold', room: 'au_cold', x: 68.4, z: -113, yaw: -PI / 2, loot: 2 },
     { id: 'green', room: 'au_green', x: -68.4, z: -98, yaw: PI / 2, loot: 2 },
   ],
-  vistas: [{ id: 'au_gallery', name: "the Growing Vault's gallery", room: 'au_vault', x: 18, z: -190, up: 0.5, r: 5 }],
+  vistas: [{ id: 'au_gallery', name: "the Growing Vault's gallery", room: 'au_vault', x: 6, z: -179, up: 0.5, r: 4 }],
   auto: { way: ['au_door', 'au_still', 'au_jars', 'au_cupboard', 'au_jars', 'au_green', 'au_jars', 'au_still', 'au_retort', 'au_still', 'au_feed', 'au_cold', 'au_hatch', 'au_cold', 'au_feed', 'au_vault'] },
   shots: [
-    ['au_still', 'au_door', [-10, 3.2, -34], [20, 1.2, -72]],
-    ['au_jars', 'au_door', [-42, 2.6, -40], [-68, 1.4, -58]],
-    ['au_retort', 'au_door', [48, 2.8, -58], [80, 1.6, -70]],
-    ['au_vault', 'au_door', [18, 4.5, -137], [18, 2.5, -196]],
+    ['au_still', 'au_door', [1, 2.6, -38], [11, 3.6, -68]],
+    ['au_jars', 'au_door', [-42.5, 2.4, -46], [-66, 2, -57]],
+    ['au_retort', 'au_door', [52.5, 2.4, -66], [75, 2.6, -68]],
+    ['au_feed', 'au_door', [16, 2, -71.5], [16, 4.5, -136]],
+    ['au_green', 'au_door', [-60, 1.8, -85.6], [-52, 1, -108]],
+    ['au_vault', 'au_door', [-1.5, 3, -150], [26, 5, -168]],
   ],
   last: 'greatwork', tough: { hp: 28, damage: 3.0 }, pay: { xp: 82000, gold: 11200 },
   names: { Kobolds: 'RETORT-BOY', 'Plague Knights': 'FEEDER', 'Plague Giants': 'PUMP-HAND', 'Giant Spiders': 'ROOT-CRAWLER', 'Dead Children': 'THE KEPT', 'The Possessed': 'THE STEEPED' },
-  look: { wall: 'ashlar', foot: 'dark:block', floor: 'flags', banner: 'p2_banner_green', roof: 'dark:stone', flame: 'dark:flame', light: [0.9, 0.62, 0.3], fire: [0.95, 0.62, 0.3], every: 8, high: 3, glow: 2.5, lit: true, beam: 'dark:stone', bays: 'chains' },
+  // (Its wall lights are green, what they burn down here, one every sixteen metres; each room's own two or three lamps are
+  // fire, as the stills' are.)
+  look: { wall: 'ashlar', foot: 'dark:block', floor: 'flags', banner: 'p2_banner_green', roof: 'dark:stone', flame: 'dark:flame', light: [0.5, 1, 0.45], fire: [1, 0.66, 0.34], every: 16, high: 3, glow: 3.2, lit: true, beam: 'dark:stone', bays: 'chains' },
   words: { enter: "Castle Velscour: the Alchemists' Undercroft. Up in the wing they distil. Down here they grow.", clear: 'The Great Work is dead! The Glass Key is yours.', wipe: 'You fall... and wake on the Undercroft Stair.' },
 };
 

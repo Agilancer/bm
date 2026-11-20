@@ -483,7 +483,8 @@ export const FIGHTS_A = {
       W.warn(heavy ? WARN.gwk_heavy : WARN.gwk_light);
       // (A strip the room's whole width: down from its north wall to the gallery's lip, or from the lip to its south wall.)
       const o = { shape: 'line', x: rx, yaw: Math.PI, w: r.hx + 1, fuse: 4.5, dmg: K(m, 1.4), life: 5, dps: K(m, 1.3), elem: POISON, quiet: true };
-      if (heavy) P.mark({ ...o, z: top, r: top - lip - 0.6, tag: 'heavy' });
+      // (And a way back up the Feeding Gallery with it: it's no refuge.)
+      if (heavy) P.mark({ ...o, z: top + 14, r: top + 14 - lip - 0.6, tag: 'heavy' });
       else P.mark({ ...o, z: lip + 0.2, r: lip - (rz - r.hz) + 1, tag: 'light' });
     },
     end(W, f) { f.fume = null; },
