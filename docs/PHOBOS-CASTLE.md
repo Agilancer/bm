@@ -22,6 +22,8 @@ grey-and-gold).
 | A secret way | a narrow tunnel (`w` 1.3, `h` 3) behind a prop that hides its mouth (a bookcase, a portrait ajar, a hanging); a delve's chart only shows what's been walked (`src/ui/undermap.js`), so it's on no map till found | the delve's own `tunnels` |
 | A treasure chest | the delve's `chests: [{ id, room, x, z, yaw, loot (1-4), up }]`, local to the delve | `src/core/castle-finds.js`, `src/items/chests.js` (kept in a save by id) |
 | A lookout | the delve's `vistas: [{ id, name, room, x, z, up, r }]`; the land's in `castleFinds()` (`src/core/phobos-build.js`) | found by standing on it (`src/main.js`), flag `vista:<id>`; a quest's `visit: ['vista:<id>']` |
+| A delve's pictures | the delve's `shots: [[name, room, eye [x, up, z], at [x, up, z]]]`, local to it | `node tools/phobos/castle_shots.mjs <names>` (PORT, WAIT) |
+| A lookout or chest in the city | `cityFinds()` in `src/core/phobos-finds.js` (the Town set's) | `src/core/castle-finds.js` |
 | Auto-play's way through a delve | the delve's `auto: { way: [room ids in order, bosses' rooms last] }` | `src/ui/autowarrens.js` (its packs and bosses are then known to it) |
 | A delve's bodies | `VARIANTS_<set>` in its file: `{ id: { src: '<model>', alt, height, name } }` | `src/core/tripo-monsters.js` |
 | Liveries | palettes `Bloodred`/`Oxblood`, `Royal`, `Skullwhite`, `Forest`, `Greygold` (`assets/monsters/tripo/palettes.json`) | a pack's or boss's `pal` |

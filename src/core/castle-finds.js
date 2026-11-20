@@ -8,6 +8,7 @@
 // 'vista:<id>' (src/folk/quests.js flag), which a quest's visit step can ask for ('vista:<id>': AREAS).
 import { DELVES } from './dungeon.js';
 import { castleFinds } from './phobos-build.js';
+import { cityFinds } from './phobos-finds.js';
 
 let CHESTS = null, VISTAS = null;
 const floorOf = (d, room) => { const r = d.rooms.find((q) => q.id === room); if (!r) throw new Error(`castle-finds: no room ${room} in ${d.key}`); return d.y + r.y; };
@@ -16,7 +17,7 @@ export function castleChests() {
   if (CHESTS) return CHESTS;
   CHESTS = [];
   for (const d of DELVES) for (const c of d.chests || []) CHESTS.push({ type: 'chest', id: `${d.key}:${c.id}`, x: d.x + c.x, y: floorOf(d, c.room) + (c.up || 0), z: d.z + c.z, yaw: c.yaw || 0, loot: c.loot ?? 2 });
-  for (const c of castleFinds().chests) CHESTS.push({ type: 'chest', ...c });
+  for (const c of [...castleFinds().chests, ...cityFinds().chests]) CHESTS.push({ type: 'chest', ...c });
   const ids = new Set();
   for (const c of CHESTS) { if (ids.has(c.id)) throw new Error(`castle-finds: two chests called ${c.id}`); ids.add(c.id); }
   return CHESTS;
@@ -26,7 +27,7 @@ export function castleVistas() {
   if (VISTAS) return VISTAS;
   VISTAS = [];
   for (const d of DELVES) for (const v of d.vistas || []) VISTAS.push({ id: v.id, name: v.name, x: d.x + v.x, y: floorOf(d, v.room) + (v.up || 0), z: d.z + v.z, r: v.r || 5, delve: d.key, xp: v.xp || d.level * 220 });
-  for (const v of castleFinds().vistas) VISTAS.push({ r: 7, xp: 9000, ...v });
+  for (const v of [...castleFinds().vistas, ...cityFinds().vistas]) VISTAS.push({ r: 7, xp: 9000, ...v });
   const ids = new Set();
   for (const v of VISTAS) { if (ids.has(v.id)) throw new Error(`castle-finds: two lookouts called ${v.id}`); ids.add(v.id); }
   return VISTAS;
