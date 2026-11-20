@@ -1532,6 +1532,12 @@ function sorrowhorn(K) {
 }
 
 
+// Where the flattest ground for each site's seal was found (flattest, below). After the land's shape changes, run
+// `node --test tests/sites-apart.test.mjs`: it says which of these have moved, and what to write here.
+const SEAL_AT = { farm: [1683.1, 138], hamlet: [2058, 14], falls: [2576, -130], belltower: [2430.5, -512], sallow: [-132, -3376], chapel: [-898, -4272],
+  abbey: [3975.6, -2864], khel: [-3696, -664.4], stones: [-1900, 4414], frostwatch: [700, 3928], shrine: [-700, 3312], crossroads: [4088, 3212.5],
+  stair: [-1663.1, -1890], crown: [-2496.9, -2996] };
+
 // Every seal's place: the sites that have one, Bellmourn's own beside the south road, and City State Phobos's in its
 // districts (src/core/phobos-seals.js). The Sill's, where the road first shows you Phobos, says so too.
 export const SEALS = [{ key: 'bellmourn', x: 7.6, z: 86, name: 'Bellmourn' }].concat(
@@ -1542,7 +1548,11 @@ export const SEALS = [{ key: 'bellmourn', x: 7.6, z: 86, name: 'Bellmourn' }].co
     // (The two small towns' are inside their walls, on the level, where nothing's built.)
     const set = { thornwick: [2396, 1833], cinderford: [-2088, -162], sill: [8931, 19] }[k];   // (the Sill's: on its shelf, back from the lip)
     const name = k === 'sill' ? `${s.name} - Phobos` : s.name;
-    return set ? { key: k, x: set[0], z: set[1], name } : { key: k, ...flattest(s.x + off[0], s.z + off[1]), name };
+    // (Found once and written down, SEAL_AT below: looking for the flattest ground was three quarters of a second's work
+    // on a PC, several on a phone, in every thread that reads this file, before a line of the game had run. looked: true
+    // makes it look again, for the test that holds the table to the land: tests/sites-apart.test.mjs.)
+    const at = set ? { x: set[0], z: set[1] } : SEAL_AT[k] && !globalThis.__bmSealsLooked ? { x: SEAL_AT[k][0], z: SEAL_AT[k][1] } : flattest(s.x + off[0], s.z + off[1]);
+    return { key: k, ...at, name };
   }), PHOBOS_SEALS.map((s) => ({ key: s.key, x: s.x, z: s.z, name: s.name })));
 
 // The flattest ground for a seal's dais within 16 m of where it was meant to go: how far the land under it rises and falls,
@@ -1603,6 +1613,45 @@ export function buildSites(geometry = false, lean = false) {
   return built;
 }
 
+// ---- built on a thread of its own, for the renderer ----
+// Building the land is three to five seconds of one thread's whole attention on a PC, more on a phone, and where the
+// renderer did it itself the page stood still for that long: the loading bar stopped, and a phone's browser can take a
+// page that doesn't answer for one that's hung. So the renderer has it built apart (src/core/sites.worker.js) and takes
+// what it wants of it. What that thread built and threw away goes with the thread, all of it at once, and the page never
+// holds what stops a body (sixty-six thousand colliders, ten thousand floors): that's the simulation's.
+
+/** What the renderer wants of a land built with its corners, ready to send: [what, its buffers to hand over]. */
+export function packSites(b) {
+  const parts = [...b.parts].map(([name, p]) => [name, p.pos, p.nrm, p.uv, p.idx]);
+  const transfer = [];
+  for (const p of parts) for (let i = 1; i < 5; i++) if (p[i].byteLength) transfer.push(p[i].buffer);
+  return [{ lean: b.lean, parts, spots: b.spots, fires: b.fires, lamps: b.lamps, doors: b.doors, groups: [...b.groups] }, transfer];
+}
+
+/** A land built elsewhere (packSites), taken as this thread's own: buildSites() gives it from here on. Nothing in it stops a body. */
+export function adoptSites(d) {
+  built = { geometry: true, lean: d.lean, apart: true, parts: new Map(d.parts.map(([name, pos, nrm, uv, idx]) => [name, { pos, nrm, uv, idx }])),
+    colliders: [], floors: [], spots: d.spots, fires: d.fires, groups: new Map(d.groups), lamps: d.lamps, doors: d.doors,
+    // (And of Phobos, what the page would else work out for itself as the game began, a second and a half of it on a PC:
+    // which cells have something to build from near, src/gfx/phobos-near.js. Its doors: src/core/phobos-towers.js adoptCityDoors.)
+    phCells: d.phCells || null };
+  return built;
+}
+
+/** The land with its corners, built on a thread of its own and taken (adoptSites). false if it couldn't be: then buildSites builds it here. */
+export function buildSitesApart(lean, opening, onPhobos = null) {
+  if (built?.geometry && built.lean === lean) return Promise.resolve(true);
+  if (typeof Worker === 'undefined') return Promise.resolve(false);
+  return new Promise((resolve) => {
+    let w = null;
+    const done = (ok, why) => { if (why) console.warn('the land, built apart:', why); try { w?.terminate(); } catch { /* gone already */ } resolve(ok); };
+    try { w = new Worker(new URL('./sites.worker.js', import.meta.url), { type: 'module' }); } catch (err) { done(false, err.message); return; }
+    w.onmessage = (e) => { if (e.data.error) done(false, e.data.error); else { adoptSites(e.data); onPhobos?.(e.data); done(true); } };
+    w.onerror = (e) => done(false, e.message || 'its thread failed');
+    w.postMessage({ lean, opening });
+  });
+}
+
 // What's under the world, by the key the renderer asks for it by: each delve's, and the Test Dungeon's hall.
 export const UNDER_KEYS = [...DELVES.map((d) => d.key), 'hall'];
 
@@ -1634,6 +1683,19 @@ export function buildPhobosCell(cell) {
   // (groups: its doors' leaves, each its own, which the renderer folds away while one's open: src/gfx/phobos-near.js.)
   // (smokes: its chimneys that have a fire under them, [x, y, z]: smoke drawn up out of them, src/gfx/phobos-near.js.)
   return { parts: K.parts, lamps: K.lamps || [], groups: K.groups, smokes: K.smokes || [] };
+}
+
+/** A cell of Phobos as buildPhobosCell built it, ready to send to another thread: [what, its buffers to hand over]. */
+export function packCell(cell, b) {
+  const parts = [...b.parts].map(([name, p]) => [name, p.pos, p.nrm, p.uv, p.idx]);
+  const transfer = [];
+  for (const p of parts) for (let i = 1; i < 5; i++) if (p[i].byteLength) transfer.push(p[i].buffer);
+  return [{ cell, parts, lamps: b.lamps, groups: [...b.groups], smokes: b.smokes }, transfer];
+}
+
+/** And as it's taken on the other side: what buildPhobosCell gives. */
+export function unpackCell(d) {
+  return { parts: new Map(d.parts.map(([name, pos, nrm, uv, idx]) => [name, { pos, nrm, uv, idx }])), lamps: d.lamps, groups: new Map(d.groups), smokes: d.smokes };
 }
 
 /** The parts let go, once they're in the renderer's buffer. Everything else stays. */

@@ -1,0 +1,176 @@
+// The game in a plain Chrome with no automation library attached (Playwright's network watching keeps a copy of every file
+// each thread downloads, which is hundreds of MB that a player's browser never holds). Spoken to over the debugger's socket
+// only: the page target for emulation and evaluation; worker threads are attached only when a step asks (ATTACH=1).
+//   node raw.mjs steps.json
+// Env: PORT (8861)  PHONE=pixel|iphone|small|tablet|'' (desk)  Q='&light=1'  NOAUTO=1  TIMEOUT (s, 600)  W,H  DEBUG_PORT
+//      ATTACH=1 (watch worker threads' heaps; a little memory of its own)  CHROME (path)  FLAGS  OUT
+// steps: [{eval}|{wait}|{shot}|{log}|{mem}|{regions}|{dump}|{threads}|{gc}|{top}|{x}|{touch:[type,x,y,id]}|{tap:[x,y]}|{key}]
+import { spawn, execSync } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
+const here = path.dirname(process.argv[1]);
+const steps = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+const port = process.env.PORT || '8861';
+const out = process.env.OUT || path.join(path.dirname(path.resolve(process.argv[2])), 'shots');
+fs.mkdirSync(out, { recursive: true });
+const PHONES = {
+  pixel: { w: 915, h: 412, dpr: 2.625, ua: 'Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36', plat: 'Android' },
+  iphone: { w: 844, h: 390, dpr: 3, ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1', plat: 'iOS' },
+  small: { w: 667, h: 375, dpr: 2, ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1', plat: 'iOS' },
+  tablet: { w: 1180, h: 820, dpr: 2, ua: 'Mozilla/5.0 (iPad; CPU OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1', plat: 'iOS' },
+};
+const ph = PHONES[process.env.PHONE || ''];
+const W = ph ? ph.w : +(process.env.W || 1280), H = ph ? ph.h : +(process.env.H || 720);
+const DEBUG_PORT = +(process.env.DEBUG_PORT || 9351);
+const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'bm-raw-'));
+const tag = path.basename(profile);
+const MB = (x) => Math.round(x / 1048576);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const chromePath = process.env.CHROME || ['C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe'].find((p) => fs.existsSync(p));
+
+const INIT = fs.readFileSync(path.join(here, 'init.js'), 'utf8');
+
+const chrome = spawn(chromePath, [`--user-data-dir=${profile}`, `--remote-debugging-port=${DEBUG_PORT}`, '--enable-unsafe-webgpu', '--ignore-gpu-blocklist', '--no-first-run', '--no-default-browser-check',
+  '--window-position=-3000,0', `--window-size=${Math.max(W + 40, 500)},${H + 160}`, '--autoplay-policy=no-user-gesture-required', '--disable-features=CalculateNativeWinOcclusion',
+  ...(process.env.FLAGS ? process.env.FLAGS.split(' ') : []), 'about:blank'], { stdio: 'ignore' });
+let ver = null;
+for (let i = 0; i < 60 && !ver; i++) { await sleep(250); ver = await fetch(`http://127.0.0.1:${DEBUG_PORT}/json/version`).then((r) => r.json()).catch(() => null); }
+if (!ver) { console.log('chrome did not start'); process.exit(1); }
+const ws = new WebSocket(ver.webSocketDebuggerUrl);
+await new Promise((r) => { ws.onopen = r; });
+let id = 0; const waits = new Map(), threads = new Map(), traced = []; let traceDone = null;
+const send = (method, params = {}, sessionId, timeout = 60000) => new Promise((res, rej) => {
+  const i = ++id;
+  waits.set(i, (m) => (m.error ? rej(new Error(m.error.message)) : res(m.result)));
+  ws.send(JSON.stringify({ id: i, method, params, sessionId }));
+  setTimeout(() => { if (waits.delete(i)) rej(new Error(`${method} timed out`)); }, timeout);
+});
+const logs = [];
+ws.onmessage = (e) => {
+  const m = JSON.parse(e.data);
+  if (m.id && waits.has(m.id)) { const w = waits.get(m.id); waits.delete(m.id); w(m); return; }
+  if (m.method === 'Tracing.dataCollected') traced.push(...m.params.value);
+  else if (m.method === 'Tracing.tracingComplete') traceDone?.();
+  else if (m.method === 'Target.detachedFromTarget') threads.delete(m.params.sessionId);
+  else if (m.method === 'Target.attachedToTarget' && m.params.targetInfo.type === 'worker') {
+    const { sessionId, targetInfo } = m.params;
+    threads.set(sessionId, { name: targetInfo.url.split('/').pop().split('?')[0].slice(0, 40) });
+    send('Target.setAutoAttach', { autoAttach: true, waitForDebuggerOnStart: false, flatten: true }, sessionId).catch(() => {});
+  } else if (m.method === 'Runtime.consoleAPICalled') {
+    const t = m.params.args.map((a) => a.value ?? a.description ?? '').join(' ');
+    if (m.params.type === 'error' || m.params.type === 'warning' || /^graphics:|^memory:|^loader:|^phone:/.test(t)) { if (!/preloaded using link preload|powerPreference/.test(t)) console.log(m.params.type, t.slice(0, 500)); }
+    logs.push(t);
+  } else if (m.method === 'Runtime.exceptionThrown') console.log('PAGE ERROR', (m.params.exceptionDetails.exception?.description || m.params.exceptionDetails.text || '').slice(0, 500));
+  else if (m.method === 'Inspector.targetCrashed') console.log('PAGE CRASHED');
+};
+const targets = (await send('Target.getTargets')).targetInfos.filter((t) => t.type === 'page');
+const { sessionId: S } = await send('Target.attachToTarget', { targetId: targets[0].targetId, flatten: true });
+threads.set(S, { name: 'the page' });
+await send('Page.enable', {}, S); await send('Runtime.enable', {}, S); await send('Inspector.enable', {}, S).catch(() => {});
+if (ph) {
+  await send('Emulation.setUserAgentOverride', { userAgent: ph.ua, platform: ph.plat === 'iOS' ? 'iPhone' : 'Linux armv81', userAgentMetadata: { mobile: true, platform: ph.plat, platformVersion: '14', architecture: '', model: 'Pixel 7', brands: [{ brand: 'Chromium', version: '130' }] } }, S);
+  await send('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: ph.dpr, mobile: true, screenWidth: W, screenHeight: H, screenOrientation: { type: 'landscapePrimary', angle: 90 } }, S);
+  await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 }, S);
+  await send('Emulation.setEmitTouchEventsForMouse', { enabled: false }, S).catch(() => {});
+} else await send('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: +(process.env.DPR || 1), mobile: false }, S);
+if (process.env.DM) await send('Page.addScriptToEvaluateOnNewDocument', { source: `Object.defineProperty(navigator, 'deviceMemory', { get: () => ${+process.env.DM} });` }, S);
+if (process.env.HC) await send('Page.addScriptToEvaluateOnNewDocument', { source: `Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => ${+process.env.HC} });` }, S);
+await send('Page.addScriptToEvaluateOnNewDocument', { source: INIT }, S);
+if (process.env.GFX) await send('Page.addScriptToEvaluateOnNewDocument', { source: `try { const k = 'velscour.settings'; const o = JSON.parse(localStorage.getItem(k) || '{}'); o.gfx = '${process.env.GFX}'; localStorage.setItem(k, JSON.stringify(o)); } catch {}` }, S);
+if (process.env.ATTACH) await send('Target.setAutoAttach', { autoAttach: true, waitForDebuggerOnStart: false, flatten: true }, S);
+
+const ev = async (expr, awaitPromise = true) => {
+  const r = await send('Runtime.evaluate', { expression: expr, awaitPromise, returnByValue: true, userGesture: true }, S, 120000);
+  if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description || r.exceptionDetails.text);
+  return r.result.value;
+};
+const ps = (file) => execSync(`powershell -NoProfile -ExecutionPolicy Bypass -File "${path.join(here, file)}" -tag ${tag}`, { encoding: 'utf8' }).trim();
+const processes = () => {
+  try {
+    const by = {};
+    for (const l of ps('procs.ps1').split(/\n/)) { const [t, ws_, pv] = l.trim().split(' '); if (!by[t] || +pv > by[t][1]) by[t] = [+ws_, +pv]; }
+    return { page: by.renderer?.[1] || 0, gpu: by['gpu-process']?.[1] || 0, text: `page ${by.renderer?.[1]} MB, GPU process ${by['gpu-process']?.[1]} MB` };
+  } catch (e) { return { page: 0, gpu: 0, text: String(e.message).slice(0, 100) }; }
+};
+// The page process's size, read every so often, for its peak.
+let peak = 0, peakGpu = 0, watching = true;
+(async () => { while (watching) { const p = processes(); peak = Math.max(peak, p.page); peakGpu = Math.max(peakGpu, p.gpu); await sleep(+(process.env.POLL || 700)); } })();
+const mem = async (label) => {
+  const g = await ev('({ tex: window.__gpu.tex, buf: window.__gpu.buf, pt: window.__gpu.peakTex, pb: window.__gpu.peakBuf, js: performance.memory?.usedJSHeapSize || 0 })').catch(() => null);
+  const p = processes();
+  console.log(`== ${label}: ${p.text} (peaks so far ${peak} and ${peakGpu}); GPU asked: textures ${g ? MB(g.tex) : '?'} MB, buffers ${g ? MB(g.buf) : '?'} MB; page heap ${g ? MB(g.js) : '?'} MB`);
+};
+const threadMem = async (label) => {
+  const rows = []; let total = 0, committed = 0, bufs = 0;
+  for (const [sid, t] of threads) {
+    const h = await send('Runtime.getHeapUsage', {}, sid, 8000).catch(() => null);
+    if (!h) { rows.push([0, `? ${t.name}`]); continue; }
+    const sum = h.usedSize + (h.backingStorageSize || 0) + (h.embedderHeapUsedSize || 0);
+    total += sum; committed += h.totalSize || 0; bufs += h.backingStorageSize || 0;
+    rows.push([sum, `${MB(sum)} ${t.name} (heap ${MB(h.usedSize)} of ${MB(h.totalSize || 0)}, buffers ${MB(h.backingStorageSize || 0)})`]);
+  }
+  console.log(`== ${label}: script memory ${MB(total)} MB over ${threads.size} threads (heaps committed ${MB(committed)}, buffers ${MB(bufs)}): ${rows.sort((x, y) => y[0] - x[0]).map((r) => r[1]).join(' | ')}`);
+};
+const dump = async (label) => {
+  traced.length = 0;
+  await send('Tracing.start', { traceConfig: { includedCategories: ['disabled-by-default-memory-infra'], excludedCategories: ['*'], memoryDumpConfig: { triggers: [] } } });
+  await send('Tracing.requestMemoryDump', { levelOfDetail: 'detailed' }, undefined, 90000).catch((e) => console.log('dump', e.message));
+  const done = new Promise((r) => { traceDone = r; });
+  await send('Tracing.end');
+  await Promise.race([done, sleep(60000)]);
+  const procs = {};
+  for (const e of traced) {
+    if (e.ph === 'M' && e.name === 'process_name') (procs[e.pid] ||= {}).name = e.args.name;
+    if (e.ph !== 'v' || !e.args?.dumps?.allocators) continue;
+    const P = (procs[e.pid] ||= {}); P.alloc ||= {};
+    for (const [k, v] of Object.entries(e.args.dumps.allocators)) { const sz = v.attrs?.size?.value; if (sz) P.alloc[k] = parseInt(sz, 16); }
+  }
+  let said = false;
+  for (const P of Object.values(procs)) {
+    if (!P.alloc || !(P.alloc.v8 > 30e6)) continue;
+    said = true;
+    const g = (k) => MB(P.alloc[k] || 0);
+    console.log(`== ${label}: by Chrome's account: v8 ${g('v8')} MB (page ${g('v8/main')}, workers ${g('v8/workers')}), array buffers ${g('partition_alloc/partitions/array_buffer')}, buffer pool ${g('partition_alloc/partitions/buffer')}, malloc ${g('malloc')}, blink ${g('blink_gc')}, gpu ${g('gpu')}, shared ${g('shared_memory')}, audio ${g('web_audio') || g('audio')}`);
+    if (process.env.UNDER) console.log(Object.entries(P.alloc).filter(([k]) => k.startsWith(process.env.UNDER) && !k.includes('/__')).sort((a, b) => b[1] - a[1]).slice(0, 40).map(([k, v]) => `${String(MB(v)).padStart(6)}  ${k}`).join('\n'));
+  }
+  if (!said) console.log(`== ${label}: the page's process did not answer the memory dump`);
+};
+
+const t0 = Date.now();
+const url = `http://localhost:${port}/?${process.env.NOAUTO ? 'x' : 'auto&noopening'}${process.env.Q || ''}`;
+await send('Page.navigate', { url }, S);
+if (!process.env.NOAUTO) {
+  const limit = +(process.env.TIMEOUT || 600) * 1000;
+  let up = false;
+  while (Date.now() - t0 < limit) { await sleep(500); up = await ev('!!(window.bm && bm.snap && bm.snap())').catch(() => false); if (up) break; }
+  if (!up) console.log('NOT UP in time');
+  else console.log(`up in ${((Date.now() - t0) / 1000).toFixed(1)} s, tier ${await ev('bm.renderer.tier.name')}, page process peak while loading ${peak} MB (GPU process ${peakGpu})`);
+}
+for (const s of steps) {
+  try {
+    if (s.wait) await sleep(s.wait);
+    if (s.eval) await ev(`(async () => { ${s.eval} })()`);
+    if (s.log) console.log(JSON.stringify(await ev(`(async () => { ${s.log} })()`)));
+    if (s.shot) { const r = await send('Page.captureScreenshot', { format: 'png' }, S); fs.writeFileSync(path.join(out, `${s.shot}.png`), Buffer.from(r.data, 'base64')); console.log('shot', s.shot); }
+    if (s.gc) { for (const sid of threads.keys()) await send('HeapProfiler.collectGarbage', {}, sid, 15000).catch(() => {}); await sleep(2500); }
+    if (s.mem) await mem(s.mem);
+    if (s.threads) await threadMem(s.threads);
+    if (s.regions) console.log(`== ${s.regions}: ${ps('regions.ps1').replace(/\r/g, '')}`);
+    if (s.dump) await dump(s.dump);
+    if (s.x) console.log(`== ${s.x}: ` + await ev('window.__xsum()'));
+    if (s.top) console.log(await ev(`(() => { const f = (o) => Object.entries(o).filter((e) => e[1] > 0).sort((x, y) => y[1] - x[1]).slice(0, ${s.top}).map(([k, v]) => (v / 1048576).toFixed(1).padStart(7) + '  ' + k).join('\\n'); return 'textures (MB):\\n' + f(window.__gpu.texBy) + '\\nbuffers (MB):\\n' + f(window.__gpu.bufBy); })()`));
+    if (s.touch) { const [type, x, y, tid = 1] = s.touch; await send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y, id: tid, radiusX: 8, radiusY: 8, force: 1 }] }, S); }
+    if (s.tap) { await send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: s.tap[0], y: s.tap[1], id: 1 }] }, S); await sleep(60); await send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }, S); }
+    if (s.click) { for (const type of ['mousePressed', 'mouseReleased']) await send('Input.dispatchMouseEvent', { type, x: s.click[0], y: s.click[1], button: 'left', clickCount: 1 }, S); }
+    if (s.key) { for (const type of ['keyDown', 'keyUp']) await send('Input.dispatchKeyEvent', { type, key: s.key, code: s.code || s.key, windowsVirtualKeyCode: s.vk || 0 }, S); }
+    if (s.emulate) await send(s.emulate[0], s.emulate[1], S);
+  } catch (e) { console.log('STEP FAILED', JSON.stringify(s).slice(0, 120), String(e.message).slice(0, 400)); }
+}
+watching = false;
+await send('Browser.close').catch(() => {});
+await sleep(800);
+try { chrome.kill(); } catch { /* */ }
+try { fs.rmSync(profile, { recursive: true, force: true }); } catch { /* */ }
+process.exit(0);

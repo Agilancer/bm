@@ -7,7 +7,7 @@ import { churchAt, churchSite, inChurch, toChurch } from '../core/church.js';
 import { floorAt } from '../core/interior.js';
 import { inTown } from '../core/town.js';
 import { clamp, damp, quatYaw, wrapAngle, quatRotate } from '../core/math.js';
-import { getFile } from '../core/files.js';
+import { dropFile, getFile } from '../core/files.js';
 import { ArmsRig } from './anim.js';
 import { Beast } from './beast.js';
 import { CHILDREN, PART, partOfJoint } from './limbs.js';
@@ -1525,4 +1525,6 @@ export async function addUndead(sim, base) {
       }
     }
   });
+  // (The rigs have copied what they keep: the files, pictures and all, let go now. A file read for two rigs is let go once.)
+  buffers.splice(0).forEach(dropFile);
 }
