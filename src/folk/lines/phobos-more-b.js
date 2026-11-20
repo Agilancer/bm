@@ -17,18 +17,19 @@ export const QUESTS_B = {
     needs: 'the_hornwings',
     offer: [
       "You know why I blow the horns? Because his clock tells me to. Every hour it goes BONG and I go PAAARP. Nobody's ever seen what goes bong. I've asked. Jory says it's none of my business. That means he doesn't know.",
-      "The Clock Tower's door is at the end of my galleries, and it's been locked my whole life. If you ever get it open, go in and look. Just look! Then come and tell me what's in there.",
+      "First go and hear it properly. Not from in here: from down on the Castle Approach, at night, when it strikes and the whole city holds still. Then get the Clock Tower's door open, at the end of my galleries, and go in and look. Just look! And tell me what's in there.",
     ],
-    accept: "I'll go and look inside his clock.",
-    acceptLine: "The door at the far end of the Horn Galleries, with his mark over it. It wants a key. Wynn says the key's painted into a picture somewhere, which is the stupidest place for a key I ever heard of.",
+    accept: "I'll hear it strike, then look inside.",
+    acceptLine: "The Approach, after dark: stand there till it strikes. Then the door at the far end of the Horn Galleries, with his mark over it. It wants a key. Wynn says the key's painted into a picture, which is the stupidest place for a key I ever heard of.",
     decline: 'Not now, Pip.',
     declineLine: "Fine. It'll go bong at you whether you look or not.",
     journal: [
-      "Pip Carrow has blown the castle's horns to the stroke of a clock nobody has ever seen inside. Go into the Clockworks, through the Clock Tower's door at the end of the Horn Galleries (it wants the Painted Key).",
+      'Pip Carrow has blown the castle\'s horns to the stroke of a clock nobody has ever seen inside. First hear it as the city does: stand on the Castle Approach at night.',
+      "Go into the Clockworks, through the Clock Tower's door at the end of the Horn Galleries (it wants the Painted Key).",
       'Go back to Pip Carrow in the Librarian\'s rooms.',
     ],
     progress: [
-      "The Clock Tower's door, at the end of my galleries. Have you got it open yet?",
+      "The Approach, at night, to hear it. Then the Clock Tower's door, at the end of my galleries. Have you got it open yet?",
     ],
     done: [
       "GONGS. Iron gongs! I knew it wasn't a... I knew it was something. And a great lump with a hammer that hits them. That's who I've been taking orders from. A lump!",
@@ -215,21 +216,24 @@ export const QUESTS_B = {
     needs: 'what_is_fed',
     offer: [
       "I kept the Armoury's rolls for nineteen years, and there was a line on them I never understood. 'Hounds, the pit's: forty.' Forty, every year. They eat a hound a week down there and it's always forty. Somebody's breeding them.",
-      "It's the Wolf Runs, east of the Cage Rows. Five fewer, and the number's wrong for the first time in nineteen years. And their Keeper has five fewer to let loose, the day somebody goes for him.",
+      "It's the Wolf Runs, east of the Cage Rows. Five fewer, and the number's wrong for the first time in nineteen years. Then go down into the city and tell Maud Treller at the dye works. It's her people those hounds are loosed on, when they try his walls.",
     ],
-    accept: "Five from the Wolf Runs.",
-    acceptLine: 'East off the Cage Rows. Three long pens. The one in the middle stands open, which I do not like the sound of.',
+    accept: "Five hounds, then word to the dye works.",
+    acceptLine: "East off the Cage Rows. Three long pens. The one in the middle stands open, which I do not like the sound of. Then the Tanners' Steps: tell the captain the wall has five hounds fewer. She'll know which night to use.",
     decline: 'Not yet.',
     declineLine: 'Forty it stays, then.',
     journal: [
       "Jory Tallis's rolls have shown forty pit hounds every year for nineteen years. Put down five in the Wolf Runs, east of the Cage Rows in the Menagerie of Chains.",
-      "Go back to Jory Tallis in the Librarian's rooms.",
+      "Go down into the city, to the dye works on the Tanners' Steps, and tell Maud Treller the wall has five hounds fewer.",
     ],
     progress: [
-      'Five of them, in the Wolf Runs. East off the Cage Rows.',
+      "Five of them, in the Wolf Runs. Then word to Maud Treller at the dye works, on the Tanners' Steps.",
     ],
+    others: {
+      ph_watch: ["Five fewer. ...Then it's thirty-five on the wall, and they run them in sevens. That's a gap of one watch in five, and Jory will have worked out which. Tell him we'll use it. Tell him nothing else: he'll want to count us."],
+    },
     done: [
-      "Thirty-five. I've written it down. Thirty-five! Nineteen years I've wanted to write a different number on that line.",
+      "Thirty-five. I've written it down. Thirty-five! Nineteen years I've wanted to write a different number on that line. And the captain knows which watch is short.",
       "Here. And if you empty the Runs altogether, their Keeper can't loose a single wolf at you. I'd empty them.",
     ],
     after: [
@@ -440,21 +444,21 @@ export const QUESTS_B = {
     needs: 'where_she_sang',
     offer: [
       "Every Prior that ossuary ever had is still on its books. Drawing stores! Wax, wine, cloth. Dead a hundred and fifty years, some of them, and I signed for their candles every quarter. Down in the crypt, the lot of them.",
-      "They get up, when the one upstairs calls. Lay six of them down again, and whatever's with them, and I'll strike them off. And when you go for him, he'll call, and nobody'll come.",
+      "They get up, when the one upstairs calls. Lay six of them down again, and bring me eight of the bones: I'll weigh them against what they've drawn, and strike them off by the pound. And when you go for him, he'll call, and nobody'll come.",
     ],
-    accept: 'Six in the crypt. Struck off.',
-    acceptLine: "Down the Crypt Stair, from the far end of the Charnel Aisle. There's water standing on the floor. Don't ask me whose stores that comes out of.",
+    accept: 'Six in the crypt, and eight bones.',
+    acceptLine: "Down the Crypt Stair, from the far end of the Charnel Aisle. There's water standing on the floor. Don't ask me whose stores that comes out of. Any bones will do me. They none of them kept their own.",
     decline: 'Not yet.',
     declineLine: "Then I go on signing for a dead man's candles.",
     journal: [
       "His Ossuary's dead priors still draw stores on Jory Tallis's books, and rise when the Bone Prior calls. Put down six of what lies in the Under-Crypt, down the stair from the Charnel Aisle.",
-      "Go back to Jory Tallis in the Librarian's rooms.",
+      "Bring eight Bone Shards to Jory Tallis in the Librarian's rooms, to be weighed against what the dead have drawn.",
     ],
     progress: [
-      'Six, in the Under-Crypt. Down the stair from the Charnel Aisle.',
+      'Six, in the Under-Crypt, down the stair from the Charnel Aisle. And eight of the bones, to weigh.',
     ],
     done: [
-      "Six. Struck off. No more candles for those six. That's forty-eight pound of wax a year I've just saved him, and he'll never know to thank me.",
+      "Eight bones. Two pound four. And they drew forty-eight pound of wax a year between them. Struck off, the six of them. He'll never know to thank me.",
       'Here. Out of what I saved.',
     ],
     after: [
@@ -555,25 +559,32 @@ export const QUESTS_B = {
     needs: 'the_silvered_door',
     offer: [
       "The Long Glass is sixty-eight paces. You told me so. The wall it's built against is seventy-eight. Ten paces of wall with nothing behind it? There's a room in there. Somebody's hidden a room behind a mirror, in a hall of mirrors. That's almost funny.",
-      "Find it. It'll be behind a glass that's covered: you don't hide a door behind something people look into. And the maze: there's a middle to it. Stand in the middle and tell me which way you came.",
+      "Find it. It'll be behind a glass that's covered: you don't hide a door behind something people look into. And walk the maze. Then ask Ondine who'd want a room like that. She knows that hall. She won't tell me. She might tell you.",
     ],
-    accept: "I'll find your room.",
+    accept: "I'll find your room, and ask her.",
     acceptLine: "West wall of the Long Glass, near the door end, a draped one. For the maze: it goes round before it goes in. If you find yourself at the Hall's door, you've gone round and not in.",
     decline: 'Not now.',
     declineLine: "Ten paces! It's going to keep me awake.",
     journal: [
       "Wynn Pell's sums say a room is hidden behind the Long Glass's west wall. Find the Covered Room, behind a draped glass in the Long Glass; and stand in the Glass Maze.",
+      "Ask Ondine, in the Librarian's rooms, who sat in the Covered Room.",
       "Go back to Wynn Pell in the Librarian's rooms.",
     ],
     progress: [
-      "A draped glass in the Long Glass's west wall, near the door. And the Glass Maze, west past the Dressing Rooms.",
+      "A draped glass in the Long Glass's west wall, near the door. And the Glass Maze, west past the Dressing Rooms. Then ask Ondine.",
     ],
+    others: {
+      ph_ondine: [
+        "A chair turned to the wall, and every glass covered. ...Yes. A sister of ours was sent to that hall, to sing while the court looked at itself. She would not be looked at. She sat there four years.",
+        "Then one morning the chair was empty and the door was shut from outside. Tell Wynn she got out. I have always told myself she got out.",
+      ],
+    },
     done: [
-      "Every glass in it draped, and a chair turned to the wall. Somebody sat in there so as not to be looked at. In HIS castle. I like them already.",
+      "Four years with her back to them. In HIS castle. And Ondine says she got out? Then there's a way out of that hall that isn't on my plan either. I like her already.",
       "Here's the Hall as I have it now, with your room on it. First plan of that place with no blanks. Don't fold it on the mirrors.",
     ],
     after: [
-      "I've been wondering who sat in that chair. I'm going to decide it was somebody who got out.",
+      "I've started looking for the way she went. Ten paces of wall, a covered glass. If she found one, there's another.",
     ],
   },
 

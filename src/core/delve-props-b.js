@@ -80,14 +80,12 @@ export const PROPS_B = {
     bar(K, 'iron', P(hb, 0, o + 0.1), P(hb, r * 0.52, o + 0.1), Math.max(0.08, r * 0.06));
     round(K, 'iron', F, cy, r * 0.07, o + 0.14, 8);
   },
-  // A gong of iron for striking the hours on: two posts, a head between them (the posts stop at it), the gong hung from
-  // it on two chains, a boss at its middle.
+  // A gong of iron for striking the hours on, hung from the roof on two chains, a boss of bronze at its middle, facing yaw
+  // and the other way. (No frame: a head across two posts is a bar over uprights.)
   gong(K, d, p, x, y, z) {
-    const F = frame(x, y, z, p.yaw || 0), r = p.r || 1.3, h = r * 2 + 1.4;
-    for (const u of [-1, 1]) K.box('dark:wood', ...F(u * (r + 0.45), 0, 0), 0.14, h, 0.14, p.yaw || 0, NO);
-    bar(K, 'dark:wood', F(-(r + 0.45), h + 0.13, 0), F(r + 0.45, h + 0.13, 0), 0.28);
-    for (const u of [-1, 1]) bar(K, 'iron', F(u * r * 0.5, h - 0.1, 0), F(u * r * 0.5, 0.6 + r + Math.sqrt(1 - 0.25) * r, 0), 0.035);
-    for (const s of [-1, 1]) { const G = frame(...F(0, 0, 0), (p.yaw || 0) + (s < 0 ? Math.PI : 0)); round(K, 'iron', G, 0.6 + r, r, 0.03, 16); round(K, 'p2_bronze_plates', G, 0.6 + r, r * 0.28, 0.07, 10); }
+    const F = frame(x, y, z, p.yaw || 0), r = p.r || 1.3, cy = (p.up ?? 0.7) + r;
+    for (const u of [-1, 1]) { const q = F(u * r * 0.5, cy + Math.sqrt(0.75) * r, 0); bar(K, 'iron', q, [q[0], caveRoofY(q[0], q[2]), q[2]], 0.04); }
+    for (const s of [-1, 1]) { const G = frame(...F(0, 0, 0), (p.yaw || 0) + (s < 0 ? Math.PI : 0)); round(K, 'iron', G, cy, r, 0.03, 16); round(K, 'p2_bronze_plates', G, cy, r * 0.28, 0.07, 10); }
   },
   // Clock weights hung in a shaft: so many (n) long drums of iron on chains from the roof, at different heights.
   weights(K, d, p, x, y, z) {
@@ -98,34 +96,48 @@ export const PROPS_B = {
       K.drum('iron', wx, y + up, wz, 0.42, 2.2, 8, NO); K.cone('iron', wx, y + up + 2.2, wz, 0.42, 0.4, 8);
     }
   },
-  // The lift: a round platform of iron plate in a cage of upright bars, a ring round their heads, hung from the roof on one
+  // The lift: a round platform of iron plate in a cage of upright bars under a pointed roof, hung from the roof on one
   // chain; the winding post beside it, a slot in its head for the Winding Key.
   lift(K, d, p, x, y, z) {
     const r = p.r || 2.2, top = caveRoofY(x, z), h = 3.2;
     K.drum('iron', x, y, z, r, 0.16, 12, NO);
     for (let k = 0; k < 9; k++) { const a = (k + 0.5) / 9 * TAU; if (Math.abs(Math.atan2(Math.sin(a - (p.face ?? Math.PI / 2)), Math.cos(a - (p.face ?? Math.PI / 2)))) < 0.5) continue; K.box('iron', x + Math.cos(a) * (r - 0.1), y + 0.16, z + Math.sin(a) * (r - 0.1), 0.04, h, 0.04, 0, NO); }
-    K.drum('iron', x, y + h + 0.1, z, r, 0.12, 12, { open: true, collide: false });
     K.cone('iron', x, y + h + 0.2, z, r, 1.1, 12);
     bar(K, 'iron', [x, y + h + 1.2, z], [x, top, z], 0.09);
     const wx = x + Math.cos(p.face ?? Math.PI / 2) * (r + 1.3) + 1.2, wz = z + Math.sin(p.face ?? Math.PI / 2) * (r + 1.3);
     K.drum('p2_bronze_plates', wx, y, wz, 0.3, 1.3, 8, NO); K.drum('iron', wx, y + 1.3, wz, 0.36, 0.14, 8, NO);
   },
   // ---- the Menagerie of Chains ----
-  // A beast's cage on the floor: bars upright all round it, a plate for a lid, a chain from the lid to the roof. Nothing
-  // across the bars. open: its front (toward +z, or the way `face` says) stands open, the door's bars swung aside.
+  // A beast's pen on the floor: bars upright all round it, each ending in a point, and no lid (a plate over a row of bars
+  // is a rail over posts). open: its front (toward +z, turned by yaw) stands open, the door's bars swung aside.
   beastcage(K, d, p, x, y, z) {
     // (turn: hx and hz are what it takes up of the floor, and it's turned a quarter: its own length lies along z.)
-    const hx = (p.turn ? p.hz : p.hx) || 2, hz = (p.turn ? p.hx : p.hz) || 1.6, h = p.h || 2.8, yaw = p.yaw || 0, F = frame(x, y, z, yaw), gap = 0.32;
-    const post = (u, o) => K.box('iron', ...F(u, 0, o), 0.035, h, 0.035, yaw, NO);
+    const hx = (p.turn ? p.hz : p.hx) || 2, hz = (p.turn ? p.hx : p.hz) || 1.6, h = p.h || 2.8, yaw = p.yaw || 0, F = frame(x, y, z, yaw), gap = p.gap || 0.4;
+    const post = (u, o) => { const q = F(u, 0, o); K.box('iron', q[0], q[1], q[2], 0.035, h, 0.035, yaw, NO); K.cone('iron', q[0], q[1] + h, q[2], 0.06, 0.28, 4); };
     for (let u = -hx; u <= hx + 0.01; u += gap) { post(u, -hz); if (!p.open || Math.abs(u) > hx * 0.55) post(u, hz); }
     for (let o = -hz + gap; o < hz - 0.01; o += gap) { post(-hx, o); post(hx, o); }
-    K.box('iron', ...F(0, h, 0), hx + 0.08, 0.08, hz + 0.08, yaw, NO);
     K.box('dark:stone', ...F(0, -0.02, 0), hx + 0.1, 0.1, hz + 0.1, yaw, NO);
+    // (A thing that stops a body is left out of the room's floor and roof, as rock is: so the roof over it is the cage's own to draw.)
+    if (p.solid) K.box(d.look.roof, x, caveRoofY(x, z) - 0.06, z, hx + 1.2, 0.3, hz + 1.2, yaw, NO);
     if (p.straw !== false) K.box('p2_straw_ground', ...F(0, 0.08, 0), hx - 0.15, 0.06, hz - 0.15, yaw, NO);
-    if (p.open) for (let u = 0; u <= hx * 0.55; u += gap) K.box('iron', ...F(hx * 0.55 + u * 0.3, 0, hz + u), 0.035, h, 0.035, yaw, NO);
-    // (Hung: on two chains, one from each end of its lid. One from its middle was a post under a beam.)
-    if (p.hang) for (const u of [-1, 1]) { const q = F(u * hx, 0, 0); bar(K, 'iron', [q[0], y + h + 0.08, q[2]], [q[0], caveRoofY(q[0], q[2]), q[2]], 0.05); }
+    if (p.open) for (let u = 0; u <= hx * 0.55; u += gap) post(hx * 0.55 + u * 0.3, hz + u);
     if (p.bones) { skull(K, ...F(-hx * 0.4, 0.14, 0.2), 0.16, 1); bar(K, 'pale:stone', F(0.2, 0.2, -0.3), F(0.9, 0.22, 0.2), 0.05); }
+  },
+  // The great cage: a cage for something that flies, hung high on one chain from its head. A round floor of iron, bars up
+  // from its rim that lean in to a point (no hoop round them), bones in it. r: how far round; h: its height; up: its floor
+  // over the room's.
+  greatcage(K, d, p, x, y, z) {
+    const r = p.r || 3, h = p.h || 6, y0 = y + (p.up ?? 8), N = p.n || 18, top = caveRoofY(x, z);
+    K.drum('iron', x, y0 - 0.2, z, r, 0.2, N, NO);
+    for (let k = 0; k < N; k++) {
+      const a = k / N * TAU, c = Math.cos(a), s2 = Math.sin(a);
+      bar(K, 'iron', [x + c * r, y0, z + s2 * r], [x + c * r, y0 + h * 0.55, z + s2 * r], 0.07);
+      bar(K, 'iron', [x + c * r, y0 + h * 0.55, z + s2 * r], [x + c * r * 0.62, y0 + h * 0.84, z + s2 * r * 0.62], 0.07);
+      bar(K, 'iron', [x + c * r * 0.62, y0 + h * 0.84, z + s2 * r * 0.62], [x, y0 + h, z], 0.07);
+    }
+    bar(K, 'iron', [x, y0 + h, z], [x, top, z], 0.12);
+    skull(K, x + r * 0.3, y0, z - r * 0.2, 0.22, 1); skull(K, x - r * 0.4, y0, z + r * 0.3, 0.2, 2.2);
+    for (let k = 0; k < 4; k++) { const a = k * 1.7; bar(K, 'pale:stone', [x + Math.cos(a) * r * 0.2, y0 + 0.06, z + Math.sin(a) * r * 0.2], [x + Math.cos(a + 0.6) * r * 0.7, y0 + 0.08, z + Math.sin(a + 0.6) * r * 0.7], 0.07); }
   },
   // A post the chains are made fast to: a stump of dark stone, an iron ring through its head, a chain off it along the floor.
   chainpost(K, d, p, x, y, z) {
@@ -174,6 +186,18 @@ export const PROPS_B = {
     // (No rail along their heads: a rail over a row of posts is a T at every post. Each post ends in a point of its own.)
     for (let k = 0; k <= n; k++) { const u = -w - 0.05 + (2 * w + 0.1) * k / n, q = F(u, 0.4 + h, 0); bar(K, 'gold', F(u, 0.2, 0), q, 0.1); K.cone('gold', q[0], q[1], q[2], 0.09, 0.3, 4); }
     K.box('char:stone', x, y, z, w + 0.2, 0.25, 0.35, yaw, NO);
+    // (Where it stops a body the room's roof is left out over it: its own strip of it, then.)
+    if (p.solid) K.box(d.look.roof, x, caveRoofY(x, z) - 0.06, z, w + 1.2, 0.3, 1.3, yaw, NO);
+  },
+  // A gown on its form, in the court's own colours: a stand, a bodice of pale silk, a skirt of grey with a band of gold
+  // at its hem. (Its own, not the Playhouse's dress form: that one wears the Playhouse's cloth.)
+  gownform(K, d, p, x, y, z) {
+    const r = p.r || 0.6, skirt = p.skirt || 'dark:cloth_oat', bodice = p.bodice || 'pale:cloth_oat';
+    K.drum('dark:wood', x, y, z, r * 0.5, 0.1, 8, NO); K.drum('dark:wood', x, y + 0.1, z, 0.06, 0.3, 6, NO);
+    K.drum(skirt, x, y + 0.12, z, r * 1.3, 1.0, 10, { r2: r * 0.55, open: true, collide: false });
+    K.drum('gold', x, y + 0.12, z, r * 1.32, 0.09, 10, { r2: r * 1.26, open: true, collide: false });
+    K.drum(bodice, x, y + 1.12, z, r * 0.55, 0.42, 8, { r2: r * 0.72, collide: false }); K.drum(bodice, x, y + 1.54, z, r * 0.72, 0.3, 8, { r2: r * 0.34, collide: false });
+    K.drum('dark:wood', x, y + 1.84, z, 0.08, 0.14, 6, NO);
   },
   // Broken glass on the floor: shards standing out of a scatter of it.
   shards(K, d, p, x, y, z) {
@@ -182,35 +206,33 @@ export const PROPS_B = {
     for (let k = 0; k < 7; k++) { const a = k * 2.4 + x, o = r * (0.25 + 0.7 * ((k * 5) % 7) / 7); K.spike('ice', x + Math.cos(a) * o, y, z + Math.sin(a) * o, 0.1 + (k % 3) * 0.06, 0.25 + (k % 4) * 0.22, 3, k, [Math.cos(a) * 0.3, Math.sin(a) * 0.3]); }
   },
   // ---- the Ossuary Chapel ----
-  // A wall of skulls, facing yaw: rows of them set in pale mortar, w half its width, h its height. A shelf of long bones
-  // along its foot.
+  // A wall of skulls, facing yaw: rows of them set in pale mortar, w half its width, h its height; a shelf of long bones
+  // along its foot. s: how big a skull (0.2: a man's, close to; a great wall wants them bigger, 0.34, to be read down a nave).
   skullwall(K, d, p, x, y, z) {
-    const F = frame(x, y, z, p.yaw || 0), w = p.w || 3, h = p.h || 3.2, yaw = p.yaw || 0;
+    const F = frame(x, y, z, p.yaw || 0), w = p.w || 3, h = p.h || 3.2, yaw = p.yaw || 0, r = p.s || 0.2, st = r * 2.7;
     K.box('p2_bone_plaster', ...F(0, 0, -0.12), w, h, 0.14, yaw, NO);
-    for (let r = 0; r * 0.42 < h - 0.5; r++) for (let u = -w + 0.25 + (r % 2) * 0.2; u <= w - 0.2; u += 0.42) { const q = F(u, 0.3 + r * 0.42, 0.06); skull(K, q[0], q[1], q[2], 0.15, yaw + u); }
-    for (let u = -w + 0.2; u <= w - 0.2; u += 0.22) { const a = F(u, 0.06, 0.1), b = F(u, 0.06, 0.75); bar(K, 'pale:stone', a, b, 0.07); }
+    for (let k = 0; k * st < h - st; k++) for (let u = -w + st * 0.6 + (k % 2) * st * 0.5; u <= w - st * 0.5; u += st) { const q = F(u, 0.3 + k * st, 0.06); skull(K, q[0], q[1], q[2], r, yaw + u); }
+    for (let u = -w + 0.3; u <= w - 0.3; u += 0.5) bar(K, 'pale:stone', F(u, 0.08, 0.1), F(u, 0.08, 0.75), 0.1);
   },
-  // A candle-tree of bone: a tall stem, three arms out of it at different heights (each rising, none level across it),
-  // a red flame on each and one on its head.
+  // A candle-tree of bone: a stem, and from its head three arms fanned up and out to different heights (nothing of the
+  // stem goes on above where they part, and none lies level: an arm part way up a pole is a cross), a red flame on each.
   bonetree(K, d, p, x, y, z) {
-    const h = p.h || 3.2;
+    const h = p.h || 3.2, fork = y + h * 0.62;
     K.drum('pale:stone', x, y, z, 0.3, 0.2, 8, { r2: 0.14, collide: false });
-    bar(K, 'pale:stone', [x, y + 0.2, z], [x, y + h, z], 0.1);
+    bar(K, 'pale:stone', [x, y + 0.2, z], [x, fork, z], 0.1);
     for (let k = 0; k < 3; k++) {
-      const a = k / 3 * TAU + x, hy = y + h * (0.45 + k * 0.14), ex = x + Math.cos(a) * 0.7, ez = z + Math.sin(a) * 0.7;
-      bar(K, 'pale:stone', [x, hy, z], [ex, hy + 0.5, ez], 0.06);
-      skull(K, ex, hy + 0.5, ez, 0.1, a); K.cone('blood:flame', ex, hy + 0.7, ez, 0.06, 0.24, 5);
+      const a = k / 3 * TAU + x, up = h * (0.2 + k * 0.09), ex = x + Math.cos(a) * 0.55, ez = z + Math.sin(a) * 0.55;
+      bar(K, 'pale:stone', [x, fork, z], [ex, fork + up, ez], 0.06);
+      skull(K, ex, fork + up, ez, 0.1, a); K.cone('blood:flame', ex, fork + up + 0.2, ez, 0.06, 0.26, 5);
     }
-    skull(K, x, y + h, z, 0.13); K.cone('blood:flame', x, y + h + 0.24, z, 0.08, 0.3, 5);
   },
-  // A stall for his chapel: a long seat with a high back, in dark boards, facing +z (or, flip, -z). hx: half its length.
+  // A stall for his chapel: a long seat with a high back, in dark boards, facing yaw (0: +z). hx: half its length.
   // (Plain boards: the game's own plank has ironwork painted on it that, a pew's length of it, is a row of small crosses.)
   stall(K, d, p, x, y, z) {
-    const hx = p.hx || 4, s = p.flip ? -1 : 1, L = p.layer || 'dark:p2_worn_floorboards';
-    K.box(L, x, y + 0.42, z, hx, 0.08, 0.34, 0, NO);
-    K.box(L, x, y, z - s * 0.36, hx, 1.5, 0.06, 0, NO);
-    for (const u of [-1, 1]) K.box(L, x + u * (hx - 0.05), y, z, 0.06, 0.9, 0.36, 0, NO);
-    K.box('pale:stone', x, y + 1.5, z - s * 0.36, hx, 0.07, 0.09, 0, NO);
+    const hx = p.hx || 4, yaw = p.yaw || 0, F = frame(x, y, z, yaw), L = p.layer || 'dark:p2_worn_floorboards';
+    K.box(L, ...F(0, 0.42, 0), hx, 0.08, 0.34, yaw, NO);
+    K.box(L, ...F(0, 0, -0.36), hx, p.back || 1.5, 0.06, yaw, NO);
+    for (const u of [-1, 1]) K.box(L, ...F(u * (hx - 0.05), 0, 0), 0.06, 0.9, 0.36, yaw, NO);
   },
   // His font: a bowl of black stone on a stem of stacked skulls, red in it.
   bonefont(K, d, p, x, y, z) {
