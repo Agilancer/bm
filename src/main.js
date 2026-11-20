@@ -23,6 +23,7 @@ import { Drops, boardPose } from './items/drops.js';
 import { settleSkull } from './items/skins.js';
 import { ROBES, ROBE_SETS, SET_PARTS, SHIELDS, SKULLS, colorOf, gearTotals, nameOf, rollGem, rollRobe, rollShield, rollSkull, rollWeapon, makeRng, writeWeapon } from './items/items.js';
 import { MAX_LEVEL, levelPerks, stepXp, xpFor, XP_OF } from './items/levels.js';
+import { OUTSIDE, readyQuests } from './ui/phobos-ready.js';
 import { GemFx } from './gfx/gemfx.js';
 import { Pack } from './items/pack.js';
 import { addPart, capture, restore, saves } from './saves.js';
@@ -710,6 +711,23 @@ async function boot(plan, poolSize) {
       pack.gold += kind === 'god' ? 25000 : 2500;
       inventory.render();
       return `${items.length} things of ${tiers.map((r) => RARITIES[r].name).join(', ')}, and ${kind === 'god' ? '25,000' : '2,500'} gold${dropped ? `; ${dropped} on the ground at your feet, the pack being full` : ''}.`;
+    },
+    // The skull's Ready for Phobos (src/ui/phobos-ready.js): the level, the quests, a full set of kit on you (what you had on,
+    // into the pack or at your feet), and the road outside the Drawbridge Gate.
+    ready: (r) => {
+      pack.level = Math.max(1, Math.min(MAX_LEVEL, r.level)); pack.xp = xpFor(pack.level);
+      const begun = readyQuests(townUI.quests, r);
+      const rng = makeRng((Math.random() * 4294967296) >>> 0), [lo, hi] = r.rarity;
+      const wear = { main: rollWeapon(rng, { rarity: Math.min(hi, 4), sockets: 3 }), off: rollShield(rng, { rarity: Math.min(lo, 4) }), skull: rollSkull(rng, { rarity: hi, sockets: 3 }) };
+      if (Object.keys(ROBES).length) for (const slot of ['head', 'chest', 'shoulders', 'legs', 'feet']) wear[slot] = rollRobe(rng, { rarity: Math.min(lo, 4), slot });
+      const snap = game.currentSnap();
+      const keep = (it) => { if (it && !pack.add(it)) game.drops.fromPlayer(it, snap[H.PX], snap[H.PY], snap[H.PZ], input.yaw); };
+      for (const [slot, it] of Object.entries(wear)) { if (!it) continue; keep(pack.slots[slot]); pack.slots[slot] = it; }
+      for (let k = 0; k < 4; k++) keep(rollGem(rng, { grade: Math.min(4, hi - 1) }));
+      pack.gold += r.level * 250;
+      arm(); game.party?.levelled(); inventory.render();
+      lands.o.cmd(19, 0, OUTSIDE[0], OUTSIDE[1]);
+      return `${r.name}: level ${pack.level}, ${RARITIES[hi].name.toLowerCase()} kit on you${begun.length ? `, and ${begun.length} quest${begun.length > 1 ? 's' : ''} in your log` : ''}. Phobos is through the gate ahead.`;
     },
   });
   lands.load(null);

@@ -53,12 +53,28 @@ export const PHOBOS_RULES = {
   the_quiet_watchs_steel: { needs: 'the_household', steps: [{ visit: ['room:cl_armoury', 'room:cl_forge'] }, { talk: 'ph_watch', say: 'Jory Tallis says the third rack on the left is yours.', end: true }], gold: 3400, xp: 52000 },
   the_hornwings: { needs: 'the_household', steps: [{ kill: 'room:cm_horns', n: 4 }, { back: true, say: 'Your horns are clear, Pip.' }], gold: 3400, xp: 54000, item: 'skull', named: "The Horn-Blower's Skull", seed: 0xc4a11 },
   the_feast_that_walks: { needs: 'dust_in_the_stacks', steps: [{ boss: 'feast' }, { back: true, say: 'The Feast That Walks is dead.' }], gold: 5200, xp: 76000, item: 'robe', named: "The Sister's Grey", seed: 0xc4fea },
+  // ---- the streets (words in src/folk/lines/phobos-streets.js): work from the people of the districts, found in their own ----
+  shoes_for_the_gate: { steps: [{ talk: 'ph_ostler', say: 'Brida Nail says somebody owes her for shoeing.' }, { talk: 'ph_cart', say: 'Dunk Harrow says to ask you about the grey mare.' }, { back: true, say: 'Gil Wainwright paid.' }], gold: 320, xp: 2600 },
+  the_cheese_round: { steps: [{ visit: ['ph:rookeries', 'ph:wharf'] }, { back: true, say: 'Every wheel delivered.' }], gold: 300, xp: 2400 },
+  pawned: { steps: [{ talk: 'ph_fop', say: 'Silas Mote has your grandfather\'s signet.' }, { talk: 'ph_dowager', say: 'Your great-nephew has pawned his grandfather\'s ring.' }, { back: true, say: 'The Dowager paid, and for your silence.' }], gold: 400, xp: 3000 },
+  rivets_from_the_dead: { steps: [{ bring: 'iron', n: 8 }], gold: 380, xp: 3000 },
+  the_old_furnace: { steps: [{ kill: 'lair:phobos_cinder', n: 3 }, { back: true, say: 'The furnace-house is yours.' }], gold: 460, xp: 3800, item: 'gem', seed: 0x91a55 },
+  ink_and_gall: { steps: [{ kill: 'lair:phobos_mages', n: 3 }, { back: true, say: 'The ink-house is empty.' }], gold: 460, xp: 3800 },
+  contraband: { steps: [{ enter: 'ph:tanners', night: true }, { talk: 'ph_adze', say: 'Nan says: go.' }, { back: true, say: 'Nobody was watching the water.' }], gold: 520, xp: 4000 },
+  eels_gone_wrong: { needs: 'the_wharf_web', steps: [{ kill: 'lair:phobos_wharf', n: 3 }, { back: true, say: 'Your traps are safe.' }], gold: 480, xp: 4000 },
+  lamechs_keys: { steps: [{ kill: 'lair:phobos_boneyards', n: 4 }, { back: true, say: 'All four are back where they belong.' }], gold: 500, xp: 4200, item: 'skull', named: "Lamech's Hundred and Fourteenth", seed: 0x1a3c4 },
+  what_the_stars_say: { steps: [{ enter: 'ph:approach', night: true }, { back: true, say: 'Red at its heart, and something paler round it, turning.' }], gold: 520, xp: 4400 },
+  the_dead_watch: { needs: 'still_the_rows', steps: [{ enter: 'ph:bones', night: true }, { kill: 'lair:phobos_boneyards', n: 3 }, { back: true, say: 'Three from the old rows. Sleep tonight.' }], gold: 560, xp: 4800, item: 'robe', named: "Ada's Grey", seed: 0xada07 },
+  fresh_stock: { steps: [{ kill: 'lair:phobos_approach', n: 4 }, { back: true, say: 'Four of them. Fresh stock.' }], gold: 600, xp: 5000 },
 };
 // The level each wants (src/ui/autobrain.js PLAN): you come to Phobos at about twenty.
 export const PHOBOS_LEVELS = [
   ['smoke_in_the_east', 20], ['loaves_for_the_rookeries', 20], ['the_pennyless_word', 21], ['quiet_men', 22], ['asking_around', 22], ['cinder_floors', 22],
   ['wardens_of_ash', 23], ['the_watchs_word', 23], ['still_the_rows', 24], ['bone_tithe', 25], ['the_wharf_web', 25], ['red_purses', 26],
   ['lamps_on_the_rise', 27], ['the_approach_by_night', 28],
+  // (The streets', from the people of the districts.)
+  ['shoes_for_the_gate', 21], ['the_cheese_round', 21], ['pawned', 22], ['rivets_from_the_dead', 22], ['the_old_furnace', 23], ['ink_and_gall', 24],
+  ['contraband', 24], ['eels_gone_wrong', 25], ['lamechs_keys', 25], ['what_the_stars_say', 26], ['the_dead_watch', 27], ['fresh_stock', 28],
   // (The sewers: the West Drains 28-36, the Slough Mains 34-42, the Charnel Runs 40-50, the High Conduits 48-58.)
   ['down_the_drains', 28], ['caps_for_the_keepers', 29], ['the_main_runs_clear', 30], ['the_queens_larder', 33], ['caps_of_the_slough', 36],
   ['the_great_worm', 40], ['letters_for_the_princess', 43], ['the_drowned_abbot', 47], ['lamps_out_in_the_conduits', 54],
