@@ -8,7 +8,7 @@ import { Kit, buildSites, buildUnder, tileOf } from '../src/core/sites.js';
 import { dressLairs, lairKind } from '../src/core/lair-dress.js';
 import { LAIRS } from '../src/core/tripo-monsters.js';
 import { routeDist } from '../src/core/lands.js';
-import { delveOf } from '../src/core/dungeon.js';
+import { DELVES, delveOf } from '../src/core/dungeon.js';
 
 const KINDS = ['camp', 'webs', 'plot', 'ring', 'bed', 'roost', 'den', 'picket'];
 const manifest = JSON.parse(fs.readFileSync(new URL('../assets/game/tex/manifest.json', import.meta.url)));
@@ -76,7 +76,8 @@ test('no one painting is most of a dungeon any more', () => {
       m.set(layer, (m.get(layer) || 0) + ar);
     }
   }
-  assert.equal(area.size, 15);   // (15: the Iron Barracks, the castle's first dungeon)
+  // (Eight, and one for each of Phobos's sewers and the castle's wards and dungeons, as they're made: 15 with the Iron Barracks.)
+  assert.equal(area.size, 8 + DELVES.filter((d) => d.sewer || d.castle).length);
   for (const [key, m] of area) {
     const all = [...m.values()].reduce((s, v) => s + v, 0), [top, most] = [...m].sort((p, q) => q[1] - p[1])[0];
     assert.ok(most / all < 0.56, `${top} is ${Math.round(most / all * 100)}% of the dungeon at ${key}`);
