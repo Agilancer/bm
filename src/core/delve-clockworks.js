@@ -75,6 +75,8 @@ const props = [];
   // ---- the Weight Shaft: three times as tall as it's wide. The great dial of the works high on its far wall, seen as you
   // come in under it; the weights hung down the shaft over their pits; wheels up both walls as big as houses.
   add('clockface', 3, -58.7, { yaw: 0, r: 4.4, up: 21, hands: [0.7, 2.3] });
+  add('catwalk', 0, -37, { hx: 10.6, hz: 0.7, up: 9 }); add('catwalk', 0, -47.5, { hx: 10.6, hz: 0.7, up: 16 });
+  add('basket', -7, -47, { up: 8 }); add('basket', 7.4, -46, { up: 15 }); add('basket', -6, -52, { up: 22 });
   add('weights', -4, -42, { n: 3, r: 1.3, up: 3 }); add('pit', -4, -42, { r: 2.3 });
   add('weights', 5, -53, { n: 3, r: 1.3, up: 7, turn: 1 }); add('pit', 5, -53, { r: 2.3 });
   add('gear', -10.7, -42, { yaw: PI / 2, r: 4.2, up: 9.4 }); add('gear', -10.7, -49, { yaw: PI / 2, r: 2.6, up: 16.6, spokes: 5, turn: 0.2 });
@@ -92,8 +94,10 @@ const props = [];
   // ---- the Striking Floor: two gongs of iron hung from the roof, the hammers hung over the rows they fall along, the
   // release plate in the floor (two rings of black glass), armour on stands. Fire by his mark, and by the plate.
   add('gong', 46, -30, { yaw: 0.3, r: 1.5, solid: true }); add('gong', 64, -50, { yaw: -2.6, r: 1.5, solid: true });
-  for (const z of HAMMER_ROWS) for (const x of [45, 54, 63]) add('pendulum', x, z, { up: 5.6, r: 0.6, lean: (x + z) % 3 - 1 });
-  add('circle', STRIKER_PLATE[0], STRIKER_PLATE[1], { r: 2.4 });
+  for (const z of HAMMER_ROWS) for (const x of [45, 54, 63]) add('dropweight', x, z, { up: 3.6 + ((x + z * 2) % 4) * 0.9, r: 0.36, len: 3 });
+  // (Its own light: two fires hung low over the rows, on the weights and the blocks they come down on.)
+  add('basket', 49.5, -40, { up: 7.4 }); add('basket', 58.5, -40, { up: 7.4 });
+  add('rings', STRIKER_PLATE[0], STRIKER_PLATE[1], { r: 2.4 });
   add('stand', 68.4, -40); add('stand', 40.4, -34); add('rack', 54, -52.4, { yaw: PI, h: 2.4, n: 6, board: true });
   add('mark', 54, -27.4, { up: 6.2, r: 1.3, back: 1 });
   add('brazier', 50, -29); add('brazier', 58, -29); add('brazier', 40.6, -50.4);
@@ -105,6 +109,7 @@ const props = [];
   PENDULUMS.forEach((z, i) => { add('pendulum', -5, z, { up: 2.8, r: 1.8, lean: [-8, 3, 9][i] }); add('sill', -5, z, { hx: 14.6, hz: 0.18 }); });
   add('gear', -12, -145.7, { yaw: 0, r: 4.2, up: 12, spokes: 5 }); add('clockface', -19.7, -124, { yaw: PI / 2, r: 2.4, up: 10, hands: [1.9, 0.2] });
   add('mark', 9.7, -134, { up: 9, r: 1.2, yaw: -PI / 2, back: -1 });
+  add('basket', -5, -123, { up: 7 }); add('basket', -5, -133, { up: 7 });
   for (const [x, z] of [[-17, -113], [6, -113], [-18, -143.4], [8.4, -143.4]]) add('brazier', x, z);
   // ---- the Escapement: low. The escape wheel and its anchor up the west wall, a lesser wheel lying, the oil, the files;
   // and a wheel stood against the west wall with a man's width of dark behind it.
@@ -170,15 +175,15 @@ const warnings = {
   stk_release: 'His spring runs down! He stands stopped: hit him.',
   stk_turn: 'The Striker turns on you! Get behind the tank, or out of his reach, till he lets go.',
   stk_enrage: 'The Striker is enraged!',
-  reg_open: 'The Regulator. The three pendulums swing across the hall in turn: keep off the iron sill of the one that is coming. And when he stops the clock, STAND STILL: whatever moves while it is stopped is cut.',
+  reg_open: 'The Regulator. The three pendulums swing across the hall in turn: keep off the iron sill of the one that is coming. And when he lets the clock run, get into the shadow of the middle pendulum and KEEP PACE with it across the hall and back: the seconds cut whatever is out of it.',
   reg_swing: 'A pendulum comes across! Off its sill.',
   reg_cut: 'The Regulator cuts! Out of the arc.',
   reg_springs: 'Springs fly! Out of their lines.',
   reg_tick: 'He counts the seconds out across the floor! Out of the circles.',
   reg_gears: 'Wheels come off the wall at you! Out of the circles.',
   reg_weights: 'He lets a weight go! Jump the ring as it reaches you.',
-  reg_stop: 'HE STOPS THE CLOCK! STAND STILL!',
-  reg_go: 'The clock goes again. Move.',
+  reg_run: "HE LETS THE CLOCK RUN! Into the pendulum's shadow, and keep pace with it!",
+  reg_go: 'The clock keeps its own time again.',
   reg_turn: 'The Regulator turns on you! Get behind the tank, or out of his reach, till he lets go.',
   reg_enrage: 'The Regulator is enraged!',
   ckm_shut: "The Lift Head is shut. Its doors open to the Clockmaker's two: the Striker and the Regulator.",

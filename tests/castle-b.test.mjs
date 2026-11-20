@@ -15,14 +15,14 @@ import { LOWER_WARD } from '../src/core/delve-castle.js';
 import { PROPS_B } from '../src/core/delve-props-b.js';
 import { PROP_KINDS } from '../src/core/delve-build.js';
 import { STRIKER_PLATE, HAMMER_ROWS, PENDULUMS, WINDERS_AT } from '../src/core/delve-clockworks.js';
-import { AVIARY_TREES, CHAIN_POSTS, PIT_CHAIN, PIT_STAKE } from '../src/core/delve-menagerie.js';
+import { AVIARY_TREES, CHAIN_POSTS, GREAT_CAGE, PIT_CHAIN, PIT_STAKE } from '../src/core/delve-menagerie.js';
 import { BONE_PIERS } from '../src/core/delve-ossuary.js';
 import { GLASS_SPOTS, IMAGE_GLASSES } from '../src/core/delve-mirrors.js';
 import { KEYS } from '../src/core/castle-keys.js';
 import { castleChests, castleVistas } from '../src/core/castle-finds.js';
 import { VARIANTS } from '../src/core/tripo-monsters.js';
 import { FIGHTS } from '../src/sim/delve-fights.js';
-import { FIGHTS_B } from '../src/sim/castle-fights-b.js';
+import { FIGHTS_B, SHADOW } from '../src/sim/castle-fights-b.js';
 import { RULES } from '../src/folk/quests.js';
 import { RULES_B, LEVELS_B } from '../src/folk/phobos-quests-b.js';
 import { QUESTS_B } from '../src/folk/lines/phobos-more-b.js';
@@ -255,7 +255,7 @@ test('the lessons of the first round: sections that differ, light in pools, noth
   assert.match(code, /a plate over a row of bars/);
   for (const d of [CW, MC, OC, HM]) assert.ok(!d.props.some((p) => p.kind === 'coatrail' || p.kind === 'dressform'), `${d.key}: a rail on posts, or the Playhouse's cloth`);
   // (The nave's runner stops either side of its ring of black glass.)
-  const ring = OC.props.find((p) => p.kind === 'circle' && inRoom(roomOf('oc_nave'), p.x, p.z));
+  const ring = OC.props.find((p) => p.kind === 'rings' && inRoom(roomOf('oc_nave'), p.x, p.z));
   for (const c of OC.props.filter((p) => p.kind === 'carpet' && inRoom(roomOf('oc_nave'), p.x, p.z))) assert.ok(Math.abs(c.z - ring.z) - c.hz >= ring.r, 'a runner through the ring');
 });
 
@@ -376,7 +376,7 @@ test("nothing of Tessariel's, nothing that rings, and no cross on any floor or w
   for (const k of Object.keys(PROPS_B)) assert.ok(PROP_KINDS.includes(k), k);
   // (A wheel has three spokes or five: four is a cross in a ring.)
   for (const p of CW.props.filter((q) => q.kind === 'gear')) assert.ok(p.spokes === undefined || p.spokes === 5 || p.spokes === 3, 'a wheel of four spokes');
-  assert.match(src('../src/core/delve-props-b.js'), /p\.spokes === 5 \? 5 : 3/);
+  assert.match(src('../src/core/delve-props-b.js'), /p\.spokes === 3 \? 3 : 5/);
   // (No mark on the floor that's a cross, and none of the stock moves that are: the threads, the wheel of fire.)
   const code = src('../src/sim/castle-fights-b.js');
   assert.doesNotMatch(code, /shape: 'cross'|MOVES\.threads|MOVES\.fireWheel/);
@@ -444,3 +444,62 @@ test('nothing you can see through stands so close to a wall that the wall behind
     assert.ok(gap >= 1, `${d.key}: a ${p.kind} at ${p.x}, ${p.z} is ${gap.toFixed(2)} m off ${r.id}'s wall`);
   }
 });
+
+test('the third round: no star in a ring, no lens on a rod, no square hands; and three fights that are not a lesson told elsewhere', () => {
+  // Nothing drawn inside a ring on any floor; what hangs over the Striking Floor is a weight over its block.
+  for (const d of [CW, MC, OC, HM]) assert.ok(!d.props.some((p) => p.kind === 'circle'), `${d.key}: a star in a ring`);
+  const strike = roomOf('cw_strike');
+  assert.ok(!CW.props.some((p) => p.kind === 'pendulum' && inRoom(strike, p.x, p.z)), 'a lens on a rod over the Striking Floor');
+  assert.equal(CW.props.filter((p) => p.kind === 'dropweight' && inRoom(strike, p.x, p.z)).length, HAMMER_ROWS.length * 3);
+  const code = src('../src/core/delve-props-b.js');
+  assert.match(code, /Never square to one another/); assert.doesNotMatch(code, /bar\(K, 'iron', F\(0, cy, 0\), F\(0, cy, o/);
+  for (const d of [CW, MC, OC, HM]) for (const p of d.props.filter((q) => q.kind === 'gear')) assert.ok(p.spokes === undefined || p.spokes === 3 || p.spokes === 5, 'a wheel of four spokes');
+  // Each dark room has fire hung in it on the thing it's for.
+  for (const id of ['cw_shaft', 'cw_strike', 'cw_pend', 'mc_rows', 'mc_pit', 'mc_ring', 'oc_crypt', 'hm_maze', 'hm_work']) { const r = roomOf(id); assert.ok(r.delve.props.filter((p) => p.kind === 'basket' && inRoom(r, p.x, p.z)).length >= 2, `${id}: no light of its own`); }
+  // The Regulator: the shadow goes across the hall and back; out of it you're cut, in it you aren't; you're sent along with it.
+  {
+    const hurt = [], marks = [], warned = [], [rx, , rz] = roomSpot('cw_pend');
+    const P = { marks, mark: (o) => { marks.push(o); return o; }, hurt: (b) => hurt.push(b) };
+    const inIt = { x: 0, z: 0, y: 0 }, out = { x: rx + 13, z: rz + 15, y: 0 };
+    const W = { delve: CW, sim: { perils: P, casting: { burst() {} }, world: { inside: () => false } }, bodies: () => [inIt, out], warn: (w) => warned.push(w), tank: () => null, clearGround() {} };
+    const m = { hp: 1000, maxHp: 1000, state: 0, opts: { damage: 100 }, perform: () => true, x: rx, z: rz, y: 0 }, f = { boss: CW.bosses[1], runT: 40, swingT: -3 };
+    const spec = FIGHTS_B.regulator;
+    spec.step(W, f, [m], 0.1);
+    assert.ok(f.run && warned.includes(WARN.reg_run), 'he lets the clock run');
+    const xs = [];
+    for (let t = 0; t < 2.4 + SHADOW.secs + 0.5 && f.run; t += 0.1) { const o = spec.order(W, f, inIt, [m]); assert.ok(o?.urgent && o.to); inIt.x = f.run.mk.x; inIt.z = f.run.mk.z; xs.push(f.run.mk.x - CW.x); spec.step(W, f, [m], 0.1); }
+    assert.equal(f.run, null); assert.ok(warned.includes(WARN.reg_go));
+    assert.ok(Math.max(...xs) - Math.min(...xs) > SHADOW.reach * 1.8, 'the shadow crosses the hall and comes back');
+    assert.ok(hurt.includes(out) && !hurt.includes(inIt), 'cut out of the shadow, not in it');
+    const pend = roomOf('cw_pend');
+    assert.ok(SHADOW.reach + SHADOW.r < pend.hx - 1, 'the shadow keeps to the hall');
+    assert.ok(TAU_SPEED(SHADOW) < 6.2, 'no faster than you can run');
+    assert.doesNotMatch(CW.warnings.reg_open, /STAND STILL/);
+  }
+  // The Matron: under the great cage is out of her shriek; behind a tree is not.
+  {
+    const hurt = [], warned = [], [cx, cz] = [MC.x + GREAT_CAGE[0], MC.z + GREAT_CAGE[1]];
+    const under = { x: cx + 1, z: cz, y: 0 }, tree = { x: MC.x + AVIARY_TREES[0][0] - 3, z: MC.z + AVIARY_TREES[0][1], y: 0 };
+    const W = { delve: MC, sim: { perils: { marks: [], mark: (o) => o, hurt: (b) => hurt.push(b) }, casting: { burst() {} }, world: { inside: () => false } }, bodies: () => [under, tree], warn: (w) => warned.push(w), tank: () => null, clearGround() {} };
+    const m = { hp: 1000, maxHp: 1000, state: 0, opts: { damage: 100 }, perform: () => true, x: cx + 8, z: cz, y: 0 }, f = { boss: MC.bosses[1], shriekT: 40 };
+    const spec = FIGHTS_B.matron;
+    spec.step(W, f, [m], 0.1);
+    assert.ok(f.shriek && warned.includes(WARN.mat_shriek));
+    const o = spec.order(W, f, tree, [m]);
+    assert.ok(o.urgent && Math.hypot(o.to[0] - cx, o.to[1] - cz) < GREAT_CAGE[2] - 0.5, 'sent under the cage');
+    for (let t = 0; t < 4.2; t += 0.1) spec.step(W, f, [m], 0.1);
+    assert.equal(f.shriek, null); assert.deepEqual(hurt, [tree]);
+    assert.ok(MC.props.some((p) => p.kind === 'greatcage' && p.x === GREAT_CAGE[0] && p.z === GREAT_CAGE[1] && p.r === GREAT_CAGE[2]), 'the cage hangs where the rule says');
+    assert.match(MC.warnings.mat_open, /GREAT CAGE/);
+  }
+  // The Bone Prior's named: sent running, and it's standing that costs them.
+  {
+    const spec = FIGHTS_B.boneprior, b = { x: OC.x + 18, z: OC.z - 110, y: 0, dead: false };
+    const f = { kneel: { on: b, t: 2, tick: 0, at: [b.x, b.z], goal: 0 } };
+    const o = spec.order({ delve: OC }, f, b);
+    assert.ok(o.urgent && o.to && !o.still);
+    assert.equal(spec.order({ delve: OC }, f, { x: 0, z: 0 }), null);
+    assert.match(OC.warnings.pri_kneel, /RUN/); assert.doesNotMatch(OC.warnings.pri_open, /KNEELS/);
+  }
+});
+const TAU_SPEED = (S) => Math.PI * 2 * S.reach / S.secs;

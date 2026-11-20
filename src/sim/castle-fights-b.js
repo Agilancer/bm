@@ -4,7 +4,7 @@
 //   The Clockworks (src/core/delve-clockworks.js)
 //     the Striker: wound a turn tighter every twenty seconds, and the harder for it, till someone stands on the release
 //       plate and lets his spring down; his hammers fall along their rows, a lane between each.
-//     the Regulator: the three pendulums swing across his hall in turn; and when he stops the clock, whatever moves is cut.
+//     the Regulator (round 3: keep pace with the pendulum's shadow): the three pendulums swing across his hall in turn; and when he stops the clock, whatever moves is cut.
 //     the Clockmaker: the long hand that sweeps round him; and twice he starts to turn back the hour, his winders at the
 //       winding posts: cut them down in time, or he's mended. The Going Train stopped, fewer winders come to him; the
 //       Escapement jammed, he can't turn the hour back at all.
@@ -26,7 +26,7 @@ import { MOVES } from './moves.js';
 import { ELEM, FX } from './spells.js';
 import { WARN, caveClear, roomOf, roomSpot } from '../core/dungeon.js';
 import { HAMMER_ROWS, PENDULUMS, STRIKER_PLATE, WINDERS_AT } from '../core/delve-clockworks.js';
-import { AVIARY_TREES, CHAIN_POSTS, PIT_CHAIN, PIT_STAKE } from '../core/delve-menagerie.js';
+import { CHAIN_POSTS, GREAT_CAGE, PIT_CHAIN, PIT_STAKE } from '../core/delve-menagerie.js';
 import { ALTAR, BONE_PIERS } from '../core/delve-ossuary.js';
 import { GLASS_SPOTS, HALL_AXIS, IMAGE_GLASSES } from '../core/delve-mirrors.js';
 
@@ -64,6 +64,12 @@ const stun = (f, m, secs, share = 1.4) => { m.state = 0; m.act = null; m.perform
 const unstun = (f, m, dt) => { if (!(f.stun > 0)) return false; if ((f.stun -= dt) <= 0) { m.shrug = 1; f.hold = false; } return true; };
 // (Kept in its own room: a boss that follows whoever's holding it out through a doorway takes the fight where nothing of
 // it is laid out, and the room it left lets the fight go.)
+// The middle pendulum's shadow in the Pendulum Hall: a round of the floor that goes across the hall and back, once, in so
+// many seconds (r: how far round; reach: how far each way from the hall's middle).
+export const SHADOW = { r: 4.6, reach: 7.5, secs: 10 };
+const shadowAt = (W, t) => at(W, [-5 + Math.sin(Math.min(t, SHADOW.secs) / SHADOW.secs * TAU) * SHADOW.reach, PENDULUMS[1]]);
+// Where the one the Bone Prior names runs: round the Sanctuary's walls, corner to corner.
+const NAMED_RUN = [[5, -94], [31, -94], [31, -126], [5, -122]];
 const pen = (W, f, m, pad = 2.5) => {
   const r = roomOf(f.boss.room), [rx, , rz] = roomSpot(r.id);
   m.x = Math.max(rx - r.hx + pad, Math.min(rx + r.hx - pad, m.x)); m.z = Math.max(rz - r.hz + pad, Math.min(rz + r.hz - pad, m.z));
@@ -143,25 +149,24 @@ export const FIGHTS_B = {
       weights: { who: 'none', clip: 'jump', at: 0.5, secs: 1.4, warn: 'reg_weights', go: (W, f, m, t, P) => MOVES.quakeWave(P, m, null, K(m, 0.45), { reach: 26, speed: 10 }) },
     },
     // The pendulums: every five seconds and a bit the next of the three comes across the hall along its sill. And every
-    // thirty-four seconds he stops the clock: two seconds' warning with the floor cleared, then three when nothing may
-    // move a step (he stands as stopped as the rest).
+    // thirty-four seconds he lets the clock run: two seconds' warning with the floor cleared, then for ten the middle
+    // pendulum's shadow goes across the hall and back, and whoever is out of it is cut by the seconds as they pass. You
+    // keep pace with it (he stands at the middle of its swing, and is in it only as it passes him).
     step(W, f, [m], dt) {
       if (!m) return;
       pen(W, f, m);
-      const sim = W.sim, P = sim.perils, u = f.stop;
+      const sim = W.sim, P = sim.perils, u = f.run;
       if (u) {
         u.t += dt;
-        if (u.stage === 'call' && u.t >= 2.2) { u.stage = 'stop'; u.t = 0; u.tick = 0; u.at = new Map(W.bodies().map((b) => [b, [b.x, b.z]])); }
-        else if (u.stage === 'stop') {
+        const [x, z] = shadowAt(W, u.stage === 'call' ? 0 : u.t);
+        u.mk.x = x; u.mk.z = z;
+        if (u.stage === 'call' && u.t >= 2.4) { u.stage = 'run'; u.t = 0; u.tick = 0.5; }
+        else if (u.stage === 'run') {
           if ((u.tick -= dt) <= 0) {
-            u.tick = 0.4;
-            for (const b of W.bodies()) {
-              const was = u.at.get(b);
-              if (was && Math.hypot(b.x - was[0], b.z - was[1]) > 0.75) { P.hurt(b, K(m, 0.85), b.x, b.z, null, false, 'moved'); sim.casting.burst(FX.SHOCK, ARCANE, b.x, b.y + 1, b.z, 0.5, 2, 0.4, { light: 6, lightR: 5 }); }
-              u.at.set(b, [b.x, b.z]);
-            }
+            u.tick = 0.5;
+            for (const b of W.bodies()) if (Math.hypot(b.x - x, b.z - z) > SHADOW.r + 0.4) { P.hurt(b, K(m, 0.36), b.x, b.z, null, false, 'seconds'); sim.casting.burst(FX.SHOCK, ARCANE, b.x, b.y + 1, b.z, 0.5, 2, 0.4, { light: 6, lightR: 5 }); }
           }
-          if (u.t >= 3.2) { f.stop = null; f.hold = false; m.script = null; m.state = 0; m.noTurn = false; W.warn(WARN.reg_go, 4); }
+          if (u.t >= SHADOW.secs) { lift(u.mk); f.run = null; f.hold = false; m.script = null; m.state = 0; m.noTurn = false; W.warn(WARN.reg_go, 4); }
         }
         return;
       }
@@ -171,17 +176,24 @@ export const FIGHTS_B = {
         lane(W, f, m, P, z, 1.7, K(m, 1.5), 'pendulum', { fuse: 2.1, knock: 6 });
         W.warn(WARN.reg_swing, 20);
       }
-      if ((f.stopT = (f.stopT ?? 12) + dt) > 34 && m.state === 0 && !m.script && !f.turn) {
-        f.stopT = 0; f.swingT = -4;
-        f.stop = { stage: 'call', t: 0 }; f.hold = true; m.noTurn = true;
+      if ((f.runT = (f.runT ?? 12) + dt) > 34 && m.state === 0 && !m.script && !f.turn) {
+        f.runT = 0; f.swingT = -5;
+        const [x, z] = shadowAt(W, 0);
+        f.run = { stage: 'call', t: 0, mk: show(P, x, z, SHADOW.r, ARCANE, 'shadow') }; f.hold = true; m.noTurn = true;
         W.clearGround();
         m.script = stand;
-        W.warn(WARN.reg_stop, 4);
+        W.warn(WARN.reg_run, 4);
         sim.casting.burst(FX.SHOCK, ARCANE, m.x, m.y + 2, m.z, 1.4, 10, 0.7, { light: 10, lightR: 12 });
       }
     },
-    order: (W, f) => (f.stop ? { still: true } : null),
-    end(W, f, live) { for (const m of live) m.script = null; },
+    // While it runs: into the shadow and along with it (a little ahead of where it is, the way it's going).
+    order(W, f) {
+      const u = f.run;
+      if (!u) return null;
+      const [x, z] = shadowAt(W, u.stage === 'call' ? 0 : u.t + 0.35);
+      return { to: [x, z], urgent: true };
+    },
+    end(W, f, live) { lift(f.run?.mk); for (const m of live) m.script = null; },
   },
 
   // ---- the Clockmaker: the long hand, the cogs, the springs, the gong; his winders; and the hour turned back --------------
@@ -307,33 +319,35 @@ export const FIGHTS_B = {
       dive: { who: 'far', clip: null, warn: 'mat_dive', go: (W, f, m, t, P) => MOVES.ram(P, m, t, K(m, 0.55), { r: 24, w: 1.8 }) },
       gust: { clip: 'atk3', secs: 1.3, warn: 'mat_gust', go: (W, f, m, t, P) => MOVES.boltWall(P, m, t, K(m, 0.5), { elem: STORM, look: 'blade' }) },
     },
-    // The shriek: every thirty seconds she draws breath for four, and what she can see at the end of it takes the whole
-    // of it. A dead tree between you and her, and it breaks on the tree.
+    // The shriek: every thirty seconds she draws breath for four, and everything in the Aviary takes the whole of it but
+    // what stands under the great cage hung in its middle (the ring on the floor): the cage's iron takes it.
     step(W, f, [m], dt) {
       if (!m) return;
       pen(W, f, m);
-      const sim = W.sim, P = sim.perils, u = f.shriek;
+      const sim = W.sim, P = sim.perils, u = f.shriek, [cx, cz] = at(W, GREAT_CAGE);
       if (u) {
         u.t += dt;
         if (u.t < 4) return;
         let hit = 0;
-        for (const b of W.bodies()) if (caveClear(m.x, m.z, b.x, b.z, 0.05)) { P.hurt(b, K(m, 1.7), m.x, m.z, 6, false, 'shriek'); hit++; }
+        for (const b of W.bodies()) if (Math.hypot(b.x - cx, b.z - cz) > GREAT_CAGE[2] + 0.3) { P.hurt(b, K(m, 1.7), m.x, m.z, 6, false, 'shriek'); hit++; }
         sim.casting.burst(FX.SHOCK, STORM, m.x, m.y + 2.4, m.z, 2, 14, 0.9, { light: 10, lightR: 14 });
         if (!hit) W.warn(WARN.mat_shrieked, 6);
-        f.shriek = null; f.hold = false; m.noTurn = false;
+        lift(u.mk); f.shriek = null; f.hold = false; m.noTurn = false;
         return;
       }
       if ((f.shriekT = (f.shriekT ?? 12) + dt) > 30 && m.state === 0 && !m.script && !f.turn && m.perform({ clip: 'roar', secs: 4 })) {
-        f.shriekT = 0; f.shriek = { t: 0 }; f.hold = true; m.noTurn = true;
+        f.shriekT = 0; f.shriek = { t: 0, mk: show(P, cx, cz, GREAT_CAGE[2], STORM, 'cage') }; f.hold = true; m.noTurn = true;
+        W.clearGround();
         W.warn(WARN.mat_shriek, 4);
       }
     },
-    // While she draws breath: round behind the nearest tree from her.
+    // While she draws breath: under the cage, each a little apart from the next.
     order(W, f, b, [m]) {
       if (!m || !f.shriek) return null;
-      const to = W.shelter(b, m.x, m.z, AVIARY_TREES.map(([x, z, r]) => [W.delve.x + x, W.delve.z + z, r]), 70);
-      return to ? { to, urgent: true } : null;
+      const [cx, cz] = at(W, GREAT_CAGE), i = W.bodies().indexOf(b), a = i * 2.4, r = GREAT_CAGE[2] * 0.5;
+      return { to: [cx + Math.cos(a) * r, cz + Math.sin(a) * r], urgent: true };
     },
+    end(W, f) { lift(f.shriek?.mk); },
   },
 
   // ---- the Keeper of Chains: his lash, his flail, the cages, the hooks, the beasts driven; his chain; what he looses ---------
@@ -473,8 +487,8 @@ export const FIGHTS_B = {
       quake: { who: 'none', clip: 'jump', at: 0.5, secs: 1.4, warn: 'pri_quake', go: (W, f, m, t, P) => MOVES.quakeWave(P, m, null, K(m, 0.45), { reach: 28, speed: 10, elem: BONE }) },
     },
     // Weighed once: what you emptied below. At half his life his old priors rise, unless the Under-Crypt's empty. And
-    // every twenty-four seconds he names one of you: a second to stop in, then three and a half when the named may not
-    // take a step (it costs them, and mends him), and bone comes up in a ring round them at everyone else.
+    // every twenty-four seconds he names one of you: a second's warning, then for four the bone comes up wherever the
+    // named has just stood. The named runs, round the walls and away from the rest; standing costs them, and mends him.
     step(W, f, [m], dt) {
       if (!m) return;
       pen(W, f, m);
@@ -492,12 +506,14 @@ export const FIGHTS_B = {
       if (u) {
         const b = u.on;
         u.t += dt;
-        if (b.dead || u.t > 4.6) { f.kneel = null; return; }
+        if (b.dead || u.t > 5.2) { f.kneel = null; return; }
         if (u.t < 1.1) { u.at = [b.x, b.z]; return; }
         if ((u.tick -= dt) > 0) return;
-        u.tick = 0.4;
-        if (Math.hypot(b.x - u.at[0], b.z - u.at[1]) > 0.75) {
-          P.hurt(b, K(m, 0.9), b.x, b.z, null, false, 'stood'); m.hp = Math.min(m.maxHp, m.hp + m.maxHp * 0.01);
+        u.tick = 0.6;
+        // (Bone comes up where the named has just been: for everyone else, and for the named if they're still there.)
+        P.mark({ x: u.at[0], z: u.at[1], r: 2.6, fuse: 1.0, dmg: K(m, 0.8), knock: 2, elem: BONE, from: m, spare: (v) => v === b, tag: 'named' });
+        if (Math.hypot(b.x - u.at[0], b.z - u.at[1]) < 0.8) {
+          P.hurt(b, K(m, 0.4), b.x, b.z, null, false, 'stood'); m.hp = Math.min(m.maxHp, m.hp + m.maxHp * 0.01);
           sim.casting.burst(FX.SHOCK, DRAIN, b.x, b.y + 1, b.z, 0.5, 2, 0.4, { light: 6, lightR: 5 });
           W.warn(WARN.pri_stood, 8);
         }
@@ -507,13 +523,18 @@ export const FIGHTS_B = {
       if ((f.kneelT = (f.kneelT ?? 10) + dt) > 24 && m.state === 0 && !f.turn) {
         const b = W.mark();
         if (!b || b.dead) return;
-        f.kneelT = 0; f.kneel = { on: b, t: 0, tick: 0, at: [b.x, b.z] };
-        P.mark({ shape: 'ring', x: b.x, z: b.z, r: 7.5, r0: 1.8, fuse: 4.6, dmg: K(m, 1.5), knock: 3, elem: BONE, follow: b, lock: 0.24, from: m, spare: (v) => v === b, tag: 'kneel' });
+        f.kneelT = 0; f.kneel = { on: b, t: 0, tick: 0, at: [b.x, b.z], goal: 0 };
         W.warn(WARN.pri_kneel, 4);
       }
     },
-    // The named: not a step, once they've had their moment to stop in.
-    order: (W, f, b) => (f.kneel?.on === b && f.kneel.t > 0.6 ? { still: true } : null),
+    // The named: round the Sanctuary's walls, from one corner of it to the next, away from the rest.
+    order(W, f, b) {
+      const u = f.kneel;
+      if (u?.on !== b) return null;
+      let to = at(W, NAMED_RUN[u.goal % NAMED_RUN.length]);
+      if (Math.hypot(b.x - to[0], b.z - to[1]) < 2.5) to = at(W, NAMED_RUN[++u.goal % NAMED_RUN.length]);
+      return { to, urgent: true };
+    },
   },
 
   // ==== the Hall of Mirrors ===================================================================================================
