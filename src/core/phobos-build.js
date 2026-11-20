@@ -2265,7 +2265,7 @@ function climb(K, t, draw) {
       for (let yy = y0 + 5, j = 0; yy < top; yy += 6, j++) { const i = (j * 5 + 3) % N; if (face(i)) continue; const am = (i + 0.5) / N * TAU, w = 0.16, rr = R * Math.cos(Math.PI / N) + 0.03, cx = t.tx + Math.cos(am) * rr, cz = t.tz + Math.sin(am) * rr, tx = -Math.sin(am) * w, tz = Math.cos(am) * w; K.quad(j % 2 ? 'blood:flame' : 'eve:flame', [cx - tx, yy, cz - tz], [cx + tx, yy, cz + tz], [cx + tx, yy + 1.5, cz + tz], [cx - tx, yy + 1.5, cz - tz], [Math.cos(am), 0, Math.sin(am)]); }
     }
     if (!K.lean) K.drum(G, t.tx, top + 3.4, t.tz, R + 0.5, 0.5, 8, { collide: false });
-    K.cone('p2_fishscale_slate', t.tx, top + (K.lean ? 3.4 : 3.9), t.tz, R + 0.7, R * 2.3, K.lean ? 6 : 8);
+    K.cone('soot:p2_fishscale_slate', t.tx, top + (K.lean ? 3.4 : 3.9), t.tz, R + 0.7, R * 2.3, K.lean ? 6 : 8);
   };
   if (draw) build(); else K.group('ph:' + t.cell, true, build);
   if (!draw) return;
