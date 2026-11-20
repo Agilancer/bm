@@ -2627,7 +2627,11 @@ export class Renderer {
     // (And a fire or a candle indoors, src/core/phobos-build.js houseNear's, counts as further off again from out in the
     // street, where its light is all on the inside of a wall: the street's lanterns are kept before it.)
     for (const e of lit) { const dd = Math.hypot(e.L.p[0] - cam.x, e.L.p[2] - cam.z); e.d = dd - e.L.r * 0.5 + ((e.L.p[0] - cam.x) * cam.fx + (e.L.p[2] - cam.z) * cam.fz < 0 ? 12 : 0) + (e.L.indoor && dd > 9 ? 24 : 0) - (e.L.prio || 0); }
-    if (take < lit.length) lit.sort((a, b) => a.d - b.d);
+    // (A few wanted of thousands, as on a phone in Phobos, two of five thousand: the nearest picked out to the front, not
+    // the lot put in order every frame. The performance critic, 2026-11-20.)
+    if (take < lit.length && take <= 6) {
+      for (let i = 0; i <= take; i++) { let m = i; for (let j = i + 1; j < lit.length; j++) if (lit[j].d < lit[m].d) m = j; if (m !== i) { const t = lit[i]; lit[i] = lit[m]; lit[m] = t; } }
+    } else if (take < lit.length) lit.sort((a, b) => a.d - b.d);
     const nextD = take < lit.length ? lit[take].d : 1e9;
     for (let i = 0; i < take; i++) {
       const L = lit[i].L;
@@ -3486,7 +3490,7 @@ export class Renderer {
       mp.setPipeline(this.pStaticCut);
       mp.drawIndexed(sc[1], 1, sc[0]);
     }
-    if (!U && this.phobosNear?.count) { mp.setPipeline(this.pStatic); this.phobosNear.draw(mp); }
+    if (!U && this.phobosNear?.count) { mp.setPipeline(this.pStatic); this.phobosNear.draw(mp, true); }
     if (!U && this.stairsNear?.count) { mp.setPipeline(this.pStatic); this.stairsNear.draw(mp); }
     if (this.slimeBodies?.count) { mp.setPipeline(this.pStatic); this.slimeBodies.draw(mp); }
     // (Down the Warrens nothing of the land above can be seen: its rock is all there is.)

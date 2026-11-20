@@ -218,11 +218,11 @@ export const PROPS_B = {
     for (let k = 0; k < N; k++) { const a = Math.PI - k / N * Math.PI, b = Math.PI - (k + 1) / N * Math.PI; bar(K, L, F(Math.cos(a) * (w + t / 2), up + h + Math.sin(a) * w * 0.6, 0.06), F(Math.cos(b) * (w + t / 2), up + h + Math.sin(b) * w * 0.6, 0.06), t); }
     bar(K, L, F(-w, up, 0.06), F(w, up, 0.06), t);
     // (Its glass: pale and cold, with one bright streak down an edge of it, so it's a glass and not a dark doorway.)
-    const glass = p.broken ? 'char:stone' : p.draped ? (p.cloth || 'dark:cloth_oat') : 'slate:ice';
+    const glass = p.broken ? 'char:stone' : p.draped ? (p.cloth || 'dark:cloth_oat') : 'slate:ph_grey_plaster';   // (a step down from slate: under the hard lights they were white cards. The critics' last look.)
     K.quad(glass, F(-w, up + 0.08, 0.04), F(w, up + 0.08, 0.04), F(w, up + h, 0.04), F(-w, up + h, 0.04), F.n);
     for (let k = 0; k < N; k++) { const a = Math.PI - k / N * Math.PI, b = Math.PI - (k + 1) / N * Math.PI; K.quad(glass, F(0, up + h, 0.04), F(Math.cos(a) * w, up + h + Math.sin(a) * w * 0.6, 0.04), F(Math.cos(b) * w, up + h + Math.sin(b) * w * 0.6, 0.04), F(Math.cos(b) * w, up + h + Math.sin(b) * w * 0.6, 0.04), F.n); }
     // (Paler toward its head on one side, as a glass is that has a light somewhere before it.)
-    if (!p.broken && !p.draped) K.quad('ice', F(-w * 0.9, up + h * 0.45, 0.045), F(w * 0.1, up + h * 0.97, 0.045), F(-w * 0.9, up + h * 0.97, 0.045), F(-w * 0.9, up + h * 0.97, 0.045), F.n);
+    if (!p.broken && !p.draped) K.quad('frost:ph_grey_plaster', F(-w * 0.9, up + h * 0.45, 0.045), F(w * 0.1, up + h * 0.97, 0.045), F(-w * 0.9, up + h * 0.97, 0.045), F(-w * 0.9, up + h * 0.97, 0.045), F.n);
     if (!p.broken && !p.draped) { K.quad('pale:flame', F(-w * 0.8, up + h * 0.3, 0.05), F(-w * 0.76, up + h * 0.3, 0.05), F(-w * 0.52, up + h * 0.86, 0.05), F(-w * 0.56, up + h * 0.86, 0.05), F.n); K.quad('pale:stone', F(-w * 0.6, up + h * 0.2, 0.05), F(-w * 0.56, up + h * 0.2, 0.05), F(-w * 0.3, up + h * 0.8, 0.05), F(-w * 0.34, up + h * 0.8, 0.05), F.n); }
     if (p.broken) for (let k = 0; k < 5; k++) { const q = F(-w + (k + 0.5) * w * 0.4, 0, 0.5 + (k % 3) * 0.35); K.spike('ice', q[0], q[1], q[2], 0.14 + (k % 2) * 0.08, 0.3 + (k % 3) * 0.2, 3, k); }
     if (p.draped) { K.quad(p.cloth || 'dark:cloth_oat', F(-w - 0.3, up + h * 0.2, 0.2), F(w + 0.3, up + h * 0.2, 0.2), F(w + 0.2, up + h + w * 0.6, 0.12), F(-w - 0.2, up + h + w * 0.6, 0.12), F.n); }
@@ -231,7 +231,7 @@ export const PROPS_B = {
   // (and every two metres of a long run of it).
   pane(K, d, p, x, y, z) {
     const yaw = p.yaw || 0, w = p.w || 0.9, h = p.h || 2.8;
-    for (const s of [0, Math.PI]) { const F = frame(x, y, z, yaw + s); K.quad('slate:ice', F(-w, 0.3, 0.03), F(w, 0.3, 0.03), F(w, 0.3 + h, 0.03), F(-w, 0.3 + h, 0.03), F.n); for (let u = -w + 0.5; u < w - 0.4; u += 2.2) K.quad('pale:flame', F(u, 0.3 + h * 0.4, 0.04), F(u + 0.04, 0.3 + h * 0.4, 0.04), F(u + 0.24, 0.1 + h, 0.04), F(u + 0.2, 0.1 + h, 0.04), F.n); }
+    for (const s of [0, Math.PI]) { const F = frame(x, y, z, yaw + s); K.quad('slate:ph_grey_plaster', F(-w, 0.3, 0.03), F(w, 0.3, 0.03), F(w, 0.3 + h, 0.03), F(-w, 0.3 + h, 0.03), F.n); for (let u = -w + 0.5; u < w - 0.4; u += 2.2) K.quad('pale:flame', F(u, 0.3 + h * 0.4, 0.04), F(u + 0.04, 0.3 + h * 0.4, 0.04), F(u + 0.24, 0.1 + h, 0.04), F(u + 0.2, 0.1 + h, 0.04), F.n); }
     const F = frame(x, y, z, yaw);
     // (A post at each end and every two metres between: a long run of it is a wall of panes.)
     const n = Math.max(1, Math.round(w / 1.1));

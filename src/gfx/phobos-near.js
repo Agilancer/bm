@@ -15,6 +15,10 @@ import { cityTowers } from '../core/phobos-towers.js';
 import { CITY, CRAG } from '../core/east.js';
 
 const NEAR = 150, FAR = 230, KEEP = 30;   // metres to build a cell at, and to let it go at; how many are kept at most
+// A phone's: the cells round you only. Thirteen cells stood still was three to four million corners and 130 to 175 MB of
+// buffers, three or four times what a phone's whole land is held to; twice that after a walk. (The performance critic,
+// 2026-11-20. Measured with src/core/sites.js in Node, not on a phone.)
+const NEAR_LEAN = 45, FAR_LEAN = 95, KEEP_LEAN = 7;
 
 export class PhobosNear {
   constructor(renderer) {
@@ -24,6 +28,8 @@ export class PhobosNear {
     this.have = new Set([...phobosHouses().map((h) => h.cell), ...CASTLE_CELLS, ...towerCells(), ...wallCells(), ...cityTowers().map((t) => t.cell)]);
     this.count = 0;
     this.doors = new Map();       // door id -> { cell, VB, runs, hidden }
+    const lean = !!renderer.tier?.lean;
+    this.near = lean ? NEAR_LEAN : NEAR; this.far = lean ? FAR_LEAN : FAR; this.keep = lean ? KEEP_LEAN : KEEP;
   }
 
   // A door's leaf as its house has it, folded away (hide) or put back. (Nothing if its cell isn't up: when it is, it's
@@ -59,7 +65,8 @@ export class PhobosNear {
 
   // Each frame: the nearest cell that wants building is built (one a frame: a few milliseconds), and any gone far is let go.
   update(cam) {
-    const r = this.r;
+    const r = this.r, NEAR = this.near, FAR = this.far, KEEP = this.keep;
+    this.cam = cam;
     if (!r.landScenery || cam.x < CITY.x - CITY.a - FAR || cam.x > CRAG.x + CRAG.a + FAR || Math.abs(cam.z - CITY.z) > CITY.b + FAR) { if (this.cells.size) this.clear(); return; }
     let want = null, best = NEAR;
     for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) {
@@ -123,9 +130,13 @@ export class PhobosNear {
 
   // Into a pass with the static pipeline (or a shadow's) already set: every cell that's up. cut: the cutout pipeline's
   // turn (nothing of a cell's is a cutout yet).
-  draw(pass) {
+  // view: the eye's own pass, where a cell wholly behind you is left out (by its place on the ground only: a cell's towers
+  // stand hundreds of metres, so nothing's said of its height, and nothing's left out while you look steeply up or down).
+  draw(pass, view) {
+    const cam = view && this.cam, fl = cam ? Math.hypot(cam.fx, cam.fz) : 0, cull = fl > 0.72;
     for (const c of this.cells.values()) {
       if (!c.opaque) continue;
+      if (cull && ((c.x - cam.x) * cam.fx + (c.z - cam.z) * cam.fz) / fl < -CELL * 0.75) continue;
       pass.setVertexBuffer(0, c.VB);
       pass.setIndexBuffer(c.IB, 'uint32');
       pass.drawIndexed(c.opaque);
