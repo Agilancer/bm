@@ -326,8 +326,13 @@ function houseNear(K, h) {
     } else {
       // Shut: the pane, a lamp behind it after dark in some; two bars down the lit ones.
       frame(wz, N, false);
-      K.quad(lit ? 'eve:flame' : 'slate:iron', P(wx + d * ww, wy, wz + q * 0.07), P(wx - d * ww, wy, wz + q * 0.07), P(wx - d * ww, wy + wh, wz + q * 0.07), P(wx + d * ww, wy + wh, wz + q * 0.07), N);
-      if (lit && (st === 0 || big)) for (const bu of [-ww / 3, ww / 3]) K.quad('wood', P(wx + bu + d * 0.025, wy, wz + q * 0.1), P(wx + bu - d * 0.025, wy, wz + q * 0.1), P(wx + bu - d * 0.025, wy + wh, wz + q * 0.1), P(wx + bu + d * 0.025, wy + wh, wz + q * 0.1), N);
+      // (A dark pane is black glass: the slate-tinted iron threw the sky back, a blank grey card on a pale house. A lit one
+      // is one of two warm lights, or dim: only a slit of it between drawn cloths; a mullion dark down every one. The critics.)
+      const lv = hash2(id + st * 5 + sd, 88 + d), pane = (layer, x0, x1, o2) => K.quad(layer, P(wx + d * x1, wy, wz + q * o2), P(wx + d * x0, wy, wz + q * o2), P(wx + d * x0, wy + wh, wz + q * o2), P(wx + d * x1, wy + wh, wz + q * o2), N);
+      pane(lit ? (lv < 0.5 ? 'eve:flame' : 'eve:wood') : 'obsidian', -ww, ww, 0.07);
+      if (lit && lv > 0.3 && lv < 0.62) { pane('dark:cloth_oat', -ww, -ww * 0.25, 0.085); pane('dark:cloth_oat', ww * 0.35, ww, 0.085); }
+      if (lit) pane('dark:wood', -0.035, 0.035, 0.1);
+      if (false) for (const bu of [-ww / 3, ww / 3]) K.quad('wood', P(wx + bu + d * 0.025, wy, wz + q * 0.1), P(wx + bu - d * 0.025, wy, wz + q * 0.1), P(wx + bu - d * 0.025, wy + wh, wz + q * 0.1), P(wx + bu + d * 0.025, wy + wh, wz + q * 0.1), N);
     }
     // (A stone sill out under it, and one leaf of a painted pair hung back at its side, the PH2 pack's.)
     K.quad('stone', P(wx - d * fw, wy - 0.12, wz), P(wx + d * fw, wy - 0.12, wz), P(wx + d * fw, wy - 0.12, wz + q * 0.16), P(wx - d * fw, wy - 0.12, wz + q * 0.16), [0, 1, 0]);
@@ -836,10 +841,10 @@ const LOOK = {
   // the castle the city is ten districts and not one grey sea: the critics, 2026-11-20. Dark slate at the gate; burnt black;
   // the tenements' brown shingle, tall; the market's old clay; moss-green by the water; the dyers' olive; the Bone Yards
   // pale and low; the garrison's blue slate, a third of it his red; the Approach's ox-blood; the Rise's verdigris, tallest; the dukes' lead.)
-  barbican: { lot: [14, 12], h: [9, 13], fill: 0.5, wall: ['ph_basalt', 'dark:block'], roof: ['dark:roof_2', 'dark:p2_slate_roof'], row: 3, alley: 6 },
+  barbican: { lot: [14, 12], h: [9, 13], fill: 0.5, wall: ['ph_basalt', 'dark:block'], roof: ['slate:p2_slate_roof', 'slate:roof_2'], row: 3, alley: 6 },
   cinder: { lot: [9, 10], h: [4, 9], fill: 0.86, wall: ['ph_burnt_wall', 'ph_soot_brick', 'ph_burnt_wall', 'p2_char_planks'], roof: [null, null, 'p2_burnt_roof', 'char:roof_4', 'p2_burnt_roof'] },
-  rookeries: { lot: [7, 9], h: [11, 20], fill: 0.97, wall: ['ph_poor_brick', 'ph_poor_brick', 'ph_soot_brick', 'ph_daub'], roof: ['p2_shingle_roof', 'p2_shingle_roof', 'soot:p2_shingle_roof', 'umber:p2_shingle_roof'], row: 5, alley: 2.4 },
-  market: { lot: [8, 11], h: [9, 14], fill: 0.95, wall: ['ph_market_wall', 'ph_market_wall', 'ph_daub'], roof: ['umber:roof_1', 'umber:roof_2', 'umber:roof_1', 'umber:roof_3'], open: 48 },
+  rookeries: { lot: [7, 9], h: [11, 20], fill: 0.97, wall: ['ph_poor_brick', 'ph_poor_brick', 'ph_soot_brick', 'ph_daub'], roof: ['umber:p2_shingle_roof', 'umber:p2_shingle_roof', 'umber:roof_4', 'p2_shingle_roof'], row: 5, alley: 2.4 },
+  market: { lot: [8, 11], h: [9, 14], fill: 0.95, wall: ['ph_market_wall', 'ph_market_wall', 'ph_daub'], roof: ['blood:roof_1', 'umber:roof_1', 'blood:roof_1', 'umber:roof_2'], open: 48 },
   wharf: { lot: [16, 13], h: [6, 9], fill: 0.9, wall: ['ph_poor_brick', 'rubble', 'p2_tar_boards'], roof: ['moss:p2_shingle_roof', 'moss:roof_4', 'moss:p2_slate_roof'], row: 2 },
   tanners: { lot: [8, 10], h: [7, 11], fill: 0.94, wall: ['ph_daub', 'ph_poor_brick', 'ph_daub'], roof: ['mire:roof_3', 'mire:p2_shingle_roof', 'mire:roof_3', 'umber:roof_3'] },
   bones: { lot: [10, 13], h: [5, 8], fill: 0.3, wall: ['p2_bone_rubble', 'pale:stone', 'p2_bone_rubble'], roof: ['pale:p2_slate_roof', 'pale:roof_2'], row: 3, alley: 7 },
@@ -849,6 +854,13 @@ const LOOK = {
   approach: { lot: [11, 12], h: [10, 15], fill: 0.85, wall: ['ph_granite', 'slate:ph_dressed'], roof: ['blood:p2_blood_tiles', 'dark:roof_2', 'blood:p2_blood_tiles'], row: 3 },
   other: { lot: [8, 10], h: [7, 12], fill: 0.93, wall: ['ph_market_wall', 'ph_poor_brick', 'ph_daub'], roof: ['p2_slate_roof', 'slate:roof_3', 'p2_slate_roof', 'soot:roof_4'] },
 };
+// The roofs of the district nearest (x, z), however far: what a house between districts is roofed in, so the quarters' colours
+// run on to meet each other and there's no grey sea between them (the critics, 2026-11-20).
+function roofsNear(x, z) {
+  let best = null, q = 1e9;
+  for (const d of PHOBOS.districts) { const k = Math.hypot(x - d.x, z - d.z) / d.r; if (k < q) { q = k; best = d.key; } }
+  return LOOK[best].roof.filter(Boolean);
+}
 function districtAt(x, z) {
   let best = 'other', q = 1.3, at = null;
   for (const d of PHOBOS.districts) { const k = Math.hypot(x - d.x, z - d.z) / d.r; if (k < q) { q = k; best = d.key; at = d; } }
@@ -1130,7 +1142,7 @@ export function phobosHouses() {
         // (A spire's door on the alley its row's doors are on: src/core/phobos-towers.js.)
         if (S.spires && hash2(id, 3) < S.spires) { put({ spire: true, x, z, r: Math.min(uw, ud) * 0.42, h: 26 + hsh * 34, wall: S.spireWall || pick(S.wall), yaw: zn.turn, front: row ? 1 : -1 }); continue; }
         // (Its door's in the long side that looks out on the alley, not the one on the yard.)
-        put({ x, z, yaw: zn.turn, hx: uw * 0.5 + 0.02, hz: ud * 0.5, h, wall: pick(S.wall), roof: pick(S.roof), front: row ? 1 : -1, dk: zn.key });
+        put({ x, z, yaw: zn.turn, hx: uw * 0.5 + 0.02, hz: ud * 0.5, h, wall: pick(S.wall), roof: zn.key === 'other' ? pick(roofsNear(x, z)) : pick(S.roof), front: row ? 1 : -1, dk: zn.key });
       }
     }
   }
@@ -1149,7 +1161,7 @@ export function phobosHouses() {
         if (S.open && d && Math.hypot(x - d.x, z - d.z) < S.open) continue;
         const v = hash2(i * 31 + k, sd + 7), h = spine ? 9.5 + 6 * v + 3 * Math.min(1, Math.max(0, (x - 9400) / 1200)) : S.h[0] + (S.h[1] - S.h[0]) * v;
         // (Local +z is (-uz, ux): the house on that side of the street has its door in its -z side, toward the street.)
-        put({ x, z, yaw, hx: uw * 0.5 + 0.02, hz: ud * 0.5, h, wall: S.wall[Math.floor(v * 97) % S.wall.length], roof: S.roof[Math.floor(v * 53) % S.roof.length] || (spine ? 'dark:roof_2' : null), front: -sd, shop: true, spine, dk: key });
+        put({ x, z, yaw, hx: uw * 0.5 + 0.02, hz: ud * 0.5, h, wall: S.wall[Math.floor(v * 97) % S.wall.length], roof: (key === 'other' ? ((a) => a[Math.floor(v * 53) % a.length])(roofsNear(x, z)) : S.roof[Math.floor(v * 53) % S.roof.length]) || (spine ? 'dark:roof_2' : null), front: -sd, shop: true, spine, dk: key });
       }
     }
   }

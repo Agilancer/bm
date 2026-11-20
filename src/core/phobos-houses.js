@@ -238,7 +238,7 @@ function towerStage(K, h, F, top, near) {
   // (The great window's surround and its one mullion; a slit in each side of the stage; a slit lit in the turret.)
   { const [mx, , mz] = P(0, 0, zf + f * 0.03); K.box('dark:wood', mx, gy0, mz, 0.05, gy1 - gy0, 0.03, h.yaw, NC); }
   for (const e of [-1, 1]) { const [qx, , qz] = P(e * 0.7, 0, zf + f * 0.02); K.box('dark:stone', qx, gy0 - 0.15, qz, 0.09, gy1 - gy0 + 0.3, 0.05, h.yaw, NC); }
-  for (const e of [-1, 1]) K.quad('slate:iron', P(e * (ix + 0.03), top + 1.2, -0.18), P(e * (ix + 0.03), top + 1.2, 0.18), P(e * (ix + 0.03), y2 - 1.2, 0.18), P(e * (ix + 0.03), y2 - 1.2, -0.18), [e * c, 0, -e * s]);
+  for (const e of [-1, 1]) K.quad('obsidian', P(e * (ix + 0.03), top + 1.2, -0.18), P(e * (ix + 0.03), top + 1.2, 0.18), P(e * (ix + 0.03), y2 - 1.2, 0.18), P(e * (ix + 0.03), y2 - 1.2, -0.18), [e * c, 0, -e * s]);
   K.quad('eve:flame', P(h.hx - 0.35 - 0.16, top - 2.2, f * (h.hz - 0.35 + 1.32)), P(h.hx - 0.35 + 0.16, top - 2.2, f * (h.hz - 0.35 + 1.32)), P(h.hx - 0.35 + 0.16, top - 0.9, f * (h.hz - 0.35 + 1.32)), P(h.hx - 0.35 - 0.16, top - 0.9, f * (h.hz - 0.35 + 1.32)), NF);
   (K.lamps ||= []).push({ p: P(0, (gy0 + gy1) / 2, zf + f * 1.2), c: [1, 0.6, 0.3], r: 16, i: 9, flicker: 0.3 });
 }
@@ -311,7 +311,19 @@ export function dressHouse(K, h, o) {
     else if (v > 0.5 && v < 0.64 && !poor) {
       lump('dark:wood', w.wx, w.wy - 0.44, off + 0.14, w.ww + 0.1, 0.28, 0.13);
       for (const e of [-0.5, 0.1, 0.6]) { const [bx, , bz] = P(w.wx + e * w.ww, 0, fz + f * (off + 0.14)); K.cone('char:bark', bx, w.wy - 0.18, bz, 0.09, 0.34 + 0.2 * hash2(id + w.st, 550 + Math.round(e * 10)), 4); }
-    } else if (v > 0.8 && !w.open) plate(/^(pale|frost):/.test(h.wall) ? 'dark:p2_shutters' : 'p2_shutters', w.wx - w.ww - 0.03, w.wy, w.wx + w.ww + 0.03, w.wy + w.wh, 0.09 + (w.st >= 2 ? jut : 0), [[0, 1], [1, 1], [1, 0], [0, 0]]);
+    } else if (v > 0.8 && !w.open) {
+      // (Two leaves, each the painting's one leaf, mirrored: the painting's other half is bare, and a whole one was a blank card.)
+      const SH = /^(pale|frost):/.test(h.wall) ? 'dark:p2_shutters' : 'p2_shutters', so = 0.09 + (w.st >= 2 ? jut : 0);
+      plate(SH, w.wx - w.ww - 0.03, w.wy, w.wx, w.wy + w.wh, so, [[0, 1], [0.5, 1], [0.5, 0], [0, 0]]); plate(SH, w.wx, w.wy, w.wx + w.ww + 0.03, w.wy + w.wh, so, [[0.5, 1], [0, 1], [0, 0], [0.5, 0]]);
+    }
+  }
+
+  // Its side walls, where they're tall: a buttress up each in a darker shade of its own stone, stepped in at half its
+  // height, and a slit of black glass to a storey beside it. (A big flat face shows the weathering's bands as stripes: the critics.)
+  if (top - fy > 8.5 && r(70) < 0.75) for (const e of [-1, 1]) {
+    const xf = e * (h.hx + 0.03), zb = (r(71 + e) - 0.5) * h.hz, dk = h.wall.includes(':') ? h.wall.replace(/^\w+:/, 'dark:') : 'soot:' + h.wall, NS = [e * c, 0, -e * s];
+    for (const [w2, y1, o2] of [[0.75, fy + (top - fy) * 0.5, 0.42], [0.55, top - 0.6, 0.22]]) { const [bx, , bz] = P(e * (h.hx + o2 / 2), 0, zb); K.box(dk, bx, lo - 0.4, bz, o2 / 2, y1 - lo + 0.4, w2, h.yaw, NC); }
+    for (let stn = 1; stn < storeys; stn++) { const wy = fy + stn * 3.3 + 1.1, zc = zb + (stn % 2 ? 1 : -1) * Math.min(h.hz - 0.8, 2.2); if (wy + 1.2 < top) K.quad('obsidian', P(xf, wy, zc - 0.16), P(xf, wy, zc + 0.16), P(xf, wy + 1.0, zc + 0.16), P(xf, wy + 1.0, zc - 0.16), NS); }
   }
 
   // An oriel: a bay of dark timber and lit glass corbelled out over the door at the first floor, a little roof of its own.
@@ -373,12 +385,14 @@ export function dressHouse(K, h, o) {
     // over the walk, half again as big as a shop's; a bush hung from an iron arm over the door (from the arm's end); a
     // light each side of the door, and a pool of it on the street.
     const gx = Math.min(h.hx - 1.05, DOOR + 1.6), g0 = Math.min(fy, lo) - 0.3, OAK = 'dark:p2_oak_planks';
-    for (const e of [-1, 1]) plate(OAK, e * (DOOR + 0.1), g0, e * h.hx, fy + 0.86, 0.05);
+    const ST = 'pale:p2_curtain_granite';
+    for (const e of [-1, 1]) plate(ST, e * (DOOR + 0.1), g0, e * h.hx, fy + 0.86, 0.05);
+    for (const [x0, x1] of [[-h.hx, -gx - 0.62], [-gx + 0.62, -DOOR - 0.1], [DOOR + 0.1, gx - 0.9], [gx + 0.9, h.hx]]) if (x1 - x0 > 0.15) plate(ST, x0, fy + 0.86, x1, fy + 2.78, 0.05);
     plate(OAK, -h.hx, fy + 2.78, h.hx, fy + 3.22, 0.08);
     K.quad(OAK, P(-h.hx, fy + 3.22, fz), P(h.hx, fy + 3.22, fz), P(h.hx, fy + 3.22, fz + f * 0.08), P(-h.hx, fy + 3.22, fz + f * 0.08), [0, 1, 0]);
     // (The bay: a sill on a foot of oak, three panes between its own two mullions, a roof of the house's tiles.)
-    lump(OAK, gx, g0, 0.3, 0.82, fy + 0.8 - g0, 0.3);
-    lump('dark:wood', gx, fy + 0.8, 0.3, 0.86, 1.72, 0.3, false);
+    lump(ST, gx, g0, 0.3, 0.82, fy + 0.8 - g0, 0.3);
+    lump('wood', gx, fy + 0.8, 0.3, 0.86, 1.72, 0.3, false);
     for (const e of [-0.54, 0, 0.54]) plate('eve:flame', gx + e - 0.22, fy + 1.0, gx + e + 0.22, fy + 2.36, 0.62);
     for (const e of [-1, 1]) K.quad('eve:flame', P(gx + e * 0.88, fy + 1.0, fz + f * 0.08), P(gx + e * 0.88, fy + 1.0, fz + f * 0.54), P(gx + e * 0.88, fy + 2.36, fz + f * 0.54), P(gx + e * 0.88, fy + 2.36, fz + f * 0.08), [e * c, 0, -e * s]);
     K.quad(h.roof, P(gx - 0.98, fy + 2.76, fz + f * 0.02), P(gx + 0.98, fy + 2.76, fz + f * 0.02), P(gx + 0.98, fy + 2.5, fz + f * 0.74), P(gx - 0.98, fy + 2.5, fz + f * 0.74), [f * s * 0.35, 0.94, f * c * 0.35]);
@@ -432,7 +446,7 @@ export function dressHouse(K, h, o) {
       K.box(h.wall, q[0], q[1], q[2], 0.5, 1.15, 0.5, h.yaw, { collide: false, top: false });
       roofs(K, 'gable', h.roof, h.wall, q[0], q[1] + 1.15, q[2], { yaw: h.yaw + Math.PI / 2, sx: 0.75, sz: 0.68, rh: 0.6 }, 1, true);
       const g = RP(lx, dy + 0.3, zf + f * 0.52), t = [Math.cos(h.yaw) * 0.3, -Math.sin(h.yaw) * 0.3];
-      K.quad(r(13 + k) < 0.5 ? 'eve:flame' : 'slate:iron', [g[0] - t[0], g[1], g[2] - t[1]], [g[0] + t[0], g[1], g[2] + t[1]], [g[0] + t[0], g[1] + 0.7, g[2] + t[1]], [g[0] - t[0], g[1] + 0.7, g[2] - t[1]], NF);
+      K.quad(r(13 + k) < 0.5 ? 'eve:flame' : 'obsidian', [g[0] - t[0], g[1], g[2] - t[1]], [g[0] + t[0], g[1], g[2] + t[1]], [g[0] + t[0], g[1] + 0.7, g[2] + t[1]], [g[0] - t[0], g[1] + 0.7, g[2] - t[1]], NF);
     }
   }
   // A great stack: the dyers' and the smelters', round, of sooted brick, in the yard at the back corner, smoke out of it.
