@@ -401,7 +401,8 @@ function houseNear(K, h) {
     if (up) hearthAt(up.uy, r(9) < 0.8 && r(10) < 0.4);
   }
   // A little of somebody's life: a table and a bench, a barrel or two, a heap of goods, a rack. (Nothing here stops you.)
-  if (!ruin && ix > 1.6 && iz > 1.6) {
+  // (Not on a phone: src/core/sites.js buildPhobosCell lean.)
+  if (!ruin && ix > 1.6 && iz > 1.6 && !K.leanNear) {
     const at = (u, v) => { const q = P(u * ix * 0.7, 0, v * iz * 0.7); return [q[0], q[2]]; };
     const n0 = K.colliders.length;
     // (Each piece lifted from the ground under it to the floor: by the house's middle, on a slope, the downhill end of the
@@ -439,7 +440,7 @@ function upstairsNear(K, h, up, P, r) {
   e(xs, z1, xs, z0); e(xs, z0, xs, z1); e(-ix, z1, xs, z1); e(xs, z1, -ix, z1); e(-ix, z0, xs, z0); e(xs, z0, -ix, z0);
   // Joists under it, across the house every 1.2 m (short of the stair where they'd cross its hole); the upstairs ceiling, on
   // its own, and a tie-beam across under it at each end and the middle.
-  for (let zz = -iz + 0.5; zz < iz - 0.3; zz += 1.2) {
+  if (!K.leanNear) for (let zz = -iz + 0.5; zz < iz - 0.3; zz += 1.2) {
     const inHole = zz > z1 - 0.1 && zz < z0 + 0.1, x0 = inHole ? xs : -ix;
     bx('dark:wood', (x0 + ix) / 2, uy - 0.38, f * zz, (ix - x0) / 2, 0.18, 0.07);
   }
@@ -465,7 +466,7 @@ function upstairsNear(K, h, up, P, r) {
   const rail = (ax, az, bx2, bz) => {
     const L = Math.hypot(bx2 - ax, bz - az), m = Math.max(2, Math.round(L / 0.8));
     for (const hy of [0.95, 0.5]) K.beam('wood', P(ax, uy + hy, f * az), P(bx2, uy + hy, f * bz), hy > 0.9 ? 0.04 : 0.025);
-    for (let k = 0; k <= m; k++) { const u = k / m; bx('dark:wood', ax + (bx2 - ax) * u, uy, f * (az + (bz - az) * u), 0.045, 1.0, 0.045); }
+    for (let k = 0; k <= m; k += K.leanNear ? m : 1) { const u = k / m; bx('dark:wood', ax + (bx2 - ax) * u, uy, f * (az + (bz - az) * u), 0.045, 1.0, 0.045); }
   };
   rail(xs + 0.05, z1, xs + 0.05, z0 + 0.05); rail(-ix + 0.05, z0 + 0.05, xs + 0.05, z0 + 0.05);
   // Skirting along the upstairs walls, dark timber; a post up each corner.

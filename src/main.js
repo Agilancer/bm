@@ -1988,6 +1988,15 @@ class GameView {
     if (this.smokeT > 0.09) {
       this.smokeT = 0;
       for (const s of r.village.smoke) r.emit(4, 1, s.p[0], s.p[1], s.p[2], 0.1, 1, 0.08, 0.22, 0.45, 0.8, 0.09, 0.17, 7, 12);
+      // (And every other town's and farm's chimneys out on the land, within a kilometre: a few of them a tick, in turn, in
+      // fuller wisps than Bellmourn's, to be seen from the road. src/core/sites.js Kit.house. The world once-over.)
+      const ls = this.landSmokes || (this.landSmokes = buildSites().smokes || []), c0 = this.cam;
+      if (c0 && ls.length) for (let k = 0, n = 0; k < 6 && n < ls.length; n++) {
+        const s = ls[(this.smokeAt = ((this.smokeAt || 0) + 1) % ls.length)];
+        const dx = s[0] - c0.x, dz = s[2] - c0.z;
+        if (dx * dx + dz * dz > 1e6 || (Math.abs(s[0]) < 140 && Math.abs(s[2]) < 140)) continue;
+        r.emit(4, 1, s[0], s[1], s[2], 0.12, 1, 0.08, 0.25, 0.5, 0.9, 0.22, 0.5, 9, 14); k++;
+      }
       // (City State Phobos's hub yards: the Ashwardens' pyre, the Pennyless' cookfire, steam off the dye works' madder vat;
       // only near enough to see: src/core/phobos-hubs.js HUB_SMOKE.)
       const cm = this.cam;

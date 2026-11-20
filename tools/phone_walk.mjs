@@ -38,7 +38,7 @@ for (const [name, x, z, tx, tz] of SPOTS) {
   await page.evaluate(`bm.cmd(19, 0, ${x}, ${z}); bm.setTime(15); bm.setCam(${JSON.stringify(look(x, z, tx, tz))});`);
   await page.waitForTimeout(9000);
   for (let k = 0; k < 30; k++) { if (!(await page.evaluate('(() => { const n = bm.view.renderer.phobosNear; return !!n && (!!n.asked || !!n.built); })()'))) break; await page.waitForTimeout(1000); }
-  console.log(name.padEnd(30), JSON.stringify(await frames(6)));
+  console.log(name.padEnd(30), JSON.stringify(await frames(6)), JSON.stringify(await page.evaluate('(() => { const r = bm.view.renderer, s = r.stats; return { land: s.staticTris * 3, eye: s.landDrawn, sh0: s.landShadow0, sh1: s.landShadow1 }; })()')));
 }
 // Moving: down the King's Mile from the gate to the Approach, 12 m a second, the camera with you: near cells come as you go.
 { const x0 = 9360, x1 = 10300, secs = (x1 - x0) / 12;

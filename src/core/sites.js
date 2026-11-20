@@ -186,7 +186,11 @@ export class Kit {
     this.quad(o.door || 'door_1', [d[0] - 0.8 * c, y + 0.3, d[1] + 0.8 * s], [d[0] + 0.8 * c, y + 0.3, d[1] - 0.8 * s], [d[0] + 0.8 * c, y + 2.6, d[1] - 0.8 * s], [d[0] - 0.8 * c, y + 2.6, d[1] + 0.8 * s], [s, 0, c], [[0, 1], [1, 1], [1, 0], [0, 0]]);
     const gd = terrainHeight(d[0] + 0.6 * s, d[1] + 0.6 * c);
     if (o.foot !== false && gd < y) this.box('stone', d[0] + 0.5 * s, gd - 0.4, d[1] + 0.5 * c, 1.0, y + 0.3 - gd + 0.4 - 0.12, 0.5, yaw, { collide: false });
-    if (o.chimney) this.box('stone', x + o.chimney * c, y + h, z - o.chimney * s, 0.6, Math.min(hx, hz) + 1.4, 0.6, yaw, { collide: false });
+    if (o.chimney) {
+      this.box('stone', x + o.chimney * c, y + h, z - o.chimney * s, 0.6, Math.min(hx, hz) + 1.4, 0.6, yaw, { collide: false });
+      // (Its smoke, out on the land: a lived-in town says so from a kilometre off. main.js emitAmbient. The world once-over.)
+      if (!this.deep) (this.smokes ||= []).push([x + o.chimney * c, y + h + Math.min(hx, hz) + 1.6, z - o.chimney * s]);
+    }
     if (o.lamp) this.wallLamp(d[0] + (o.lamp * 1.25) * c, y + 2.6, d[1] - (o.lamp * 1.25) * s, [s, c]);
   }
 
@@ -1324,7 +1328,18 @@ function barrow(K) {
   for (let i = 0; i < 22; i++) {
     const a = i / 22 * TAU, x = b.x + Math.cos(a) * 28.5, z = b.z + Math.sin(a) * 28.5;
     if (Math.abs(((a - 0.4 + Math.PI) % TAU) - Math.PI) < 0.22) continue;
-    K.menhir('rubble', x, z, 0.5 + hash2(i, 3) * 0.25, 1.1 + hash2(i, 5) * 0.9, -a, (hash2(i, 7) - 0.5) * 0.2);
+    // (Taller, and leaning more: at a man's height they were lost in the grass from the track. The world once-over.)
+    K.menhir('rubble', x, z, 0.55 + hash2(i, 3) * 0.3, 1.9 + hash2(i, 5) * 1.6, -a, (hash2(i, 7) - 0.5) * 0.34);
+  }
+  // Two dead trees on the great mound's shoulders, bare against the sky: the mounds read as something from the road.
+  for (const [dx, dz, h] of [[-21, -14, 9], [17, 19, 7.5]]) {
+    const x = b.x + dx, z = b.z + dz, y = Y(x, z), turn = dx * 0.7;
+    K.drum('dark:wood', x, y - 0.4, z, 0.38, h * 0.62, 7, { r2: 0.2, collide: false, turn });
+    for (let k = 0; k < 4; k++) {
+      const a = turn + k * 1.61, up = h * (0.38 + 0.11 * k), o = h * (0.2 + 0.05 * (k % 2));
+      K.beam('dark:wood', [x + Math.cos(a) * 0.15, y + up, z + Math.sin(a) * 0.15], [x + Math.cos(a) * o, y + up + h * 0.3, z + Math.sin(a) * o], 0.09);
+    }
+    K.collide(x, z, 0.45, 0.45, 0, y + 3);
   }
   for (let i = 0; i < 5; i++) for (const side of [-1, 1]) {
     const d = 33 + i * 6.5, x = b.x + Math.cos(0.4) * d - Math.sin(0.4) * side * 3.6, z = b.z + Math.sin(0.4) * d + Math.cos(0.4) * side * 3.6;
@@ -1612,7 +1627,7 @@ export function buildSites(geometry = false, lean = false) {
   dressRoads(K);
   K.finish();
   // (fires: the flames and glows the renderer draws facing you, down the delves: src/core/delve-build.js fire().)
-  built = { geometry, lean, parts: K.parts, colliders: K.colliders, spots: K.spots, floors: K.floors, fires: K.fires, groups: K.groups, lamps: K.lamps || [], doors: K.doors || [] };
+  built = { geometry, lean, parts: K.parts, colliders: K.colliders, spots: K.spots, floors: K.floors, fires: K.fires, groups: K.groups, lamps: K.lamps || [], doors: K.doors || [], smokes: K.smokes || [] };
   return built;
 }
 
@@ -1628,13 +1643,13 @@ export function packSites(b) {
   const parts = [...b.parts].map(([name, p]) => [name, p.pos, p.nrm, p.uv, p.idx]);
   const transfer = [];
   for (const p of parts) for (let i = 1; i < 5; i++) if (p[i].byteLength) transfer.push(p[i].buffer);
-  return [{ lean: b.lean, parts, spots: b.spots, fires: b.fires, lamps: b.lamps, doors: b.doors, groups: [...b.groups] }, transfer];
+  return [{ lean: b.lean, parts, spots: b.spots, fires: b.fires, lamps: b.lamps, doors: b.doors, smokes: b.smokes, groups: [...b.groups] }, transfer];
 }
 
 /** A land built elsewhere (packSites), taken as this thread's own: buildSites() gives it from here on. Nothing in it stops a body. */
 export function adoptSites(d) {
   built = { geometry: true, lean: d.lean, apart: true, parts: new Map(d.parts.map(([name, pos, nrm, uv, idx]) => [name, { pos, nrm, uv, idx }])),
-    colliders: [], floors: [], spots: d.spots, fires: d.fires, groups: new Map(d.groups), lamps: d.lamps, doors: d.doors,
+    colliders: [], floors: [], spots: d.spots, fires: d.fires, groups: new Map(d.groups), lamps: d.lamps, doors: d.doors, smokes: d.smokes || [],
     // (And of Phobos, what the page would else work out for itself as the game began, a second and a half of it on a PC:
     // which cells have something to build from near, src/gfx/phobos-near.js. Its doors: src/core/phobos-towers.js adoptCityDoors.)
     phCells: d.phCells || null };
@@ -1679,10 +1694,14 @@ export function buildUnder(key) {
 
 /** One 100 m cell of Phobos's houses as they are from near (src/core/phobos-build.js phobosCell, src/gfx/phobos-near.js):
  * { parts: Map(layer -> {pos, nrm, uv, idx}), lamps: its lights, as the land's are }. Built afresh each time it's asked for. */
-export function buildPhobosCell(cell) {
+// lean: a phone's (src/gfx/phobos-near.js): no furniture, joists or railing posts in its houses, and none of the lamps
+// that only light their insides (the phone lights two lamps in all, and they were mostly these).
+export function buildPhobosCell(cell, lean = false) {
   const K = new Kit(true);
+  K.leanNear = lean;
   phobosCell(K, cell);
   K.finish();
+  if (lean && K.lamps) K.lamps = K.lamps.filter((l) => !l.indoor);
   // (groups: its doors' leaves, each its own, which the renderer folds away while one's open: src/gfx/phobos-near.js.)
   // (smokes: its chimneys that have a fire under them, [x, y, z]: smoke drawn up out of them, src/gfx/phobos-near.js.)
   return { parts: K.parts, lamps: K.lamps || [], groups: K.groups, smokes: K.smokes || [] };

@@ -51,7 +51,7 @@ export class PhobosNear {
       } catch (err) { this.apart = false; return; }
     }
     this.asked = key; this.askedAt = performance.now();
-    this.builder.postMessage({ cell: key, opening: !!this.r.openingEnabled });
+    this.builder.postMessage({ cell: key, opening: !!this.r.openingEnabled, lean: !!this.r.tier.lean });
   }
 
   // A door's leaf as its house has it, folded away (hide) or put back. (Nothing if its cell isn't up: when it is, it's
@@ -118,7 +118,7 @@ export class PhobosNear {
         if (Math.hypot(cx - cam.x, cz - cam.z) - CELL * 0.7 < FAR) { want = [got[0], cx, cz]; built = got[1]; }
       }
     }
-    if (want && this.apart === false) built = buildPhobosCell(want[0]);
+    if (want && this.apart === false) built = buildPhobosCell(want[0], !!r.tier.lean);
     if (want && built) {
       const set = r.packParts(built.parts, built.groups);
       for (const [k, runs] of set.slices) {

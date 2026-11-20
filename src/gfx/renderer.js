@@ -43,6 +43,7 @@ import { ARMOR, ARMOR_KIT, ARMOR_TRUE, GRASS, GRASS_CULL, ITEM, PROP, SHADOW, SK
 import { AO, BLOOM, COMPOSITE, PARTICLE_DRAW, PARTICLE_SIM, SHAFTS, STAIN, TRAIL } from './post.js';
 import { SpellFX } from './spellfx.js';
 import { bodyRadius, inCascade } from './shadowcull.js';
+import { bucketLand, drawLandInCascade, drawLandInView } from './landcells.js';
 import { buildDelveFires, buildGlowPipeline, drawDelveFires, drawGlow, drawOpaque, loadInterior, visibility } from './interior.js';
 import { TrailFX } from './trail.js';
 import { HomeLights } from './homelights.js';
@@ -984,6 +985,8 @@ export class Renderer {
       });
       this.landScenery.set(k, { gone: false, runs: made });
     }
+    // (Its triangles in order of the ground they stand on, so a pass draws only the squares it sees: src/gfx/landcells.js.)
+    this.landCells = { land: bucketLand(f, indices, 0, runs[0]), landCut: bucketLand(f, indices, runs[0], runs[0] + runs[1]) };
     this.staticVB = makeBuffer(device, new Float32Array(verts), GPUBufferUsage.VERTEX);
     this.staticIB = makeBuffer(device, indices, GPUBufferUsage.INDEX);
     // (The countries' corners are on the GPU now: the lists they were built in are let go.)
@@ -2833,10 +2836,13 @@ export class Renderer {
     this.stairsNear?.draw(sp);
     sp.setVertexBuffer(0, this.staticVB);
     sp.setIndexBuffer(this.staticIB, 'uint32');
-    sp.drawIndexed(this.staticRuns.land[1]);
+    // (Only the land's squares that reach this cascade's square: src/gfx/landcells.js.)
+    const cm = this.frameData, co = O.CASC + c * 16, LC = this.landCells;
+    let drawn = LC ? drawLandInCascade(sp, LC.land, cm, co) : (sp.drawIndexed(this.staticRuns.land[1]), this.staticRuns.land[1]);
     sp.setPipeline(this.pShCut);
     sp.setBindGroup(1, this.shCutBG);
-    sp.drawIndexed(this.staticRuns.landCut[1], 1, this.staticRuns.landCut[0]);
+    drawn += LC ? drawLandInCascade(sp, LC.landCut, cm, co) : (sp.drawIndexed(this.staticRuns.landCut[1], 1, this.staticRuns.landCut[0]), this.staticRuns.landCut[1]);
+    this.stats['landShadow' + c] = drawn;
     if (this.camNow.y > -6) this.pines.drawShadow(sp, c, last, this.shCutBG);
     if (this.camNow.y > -6 && this.rocksOn !== false) this.rocks.drawShadow(sp, last);
     sp.setPipeline(this.pShStatic);
@@ -3503,10 +3509,12 @@ export class Renderer {
     mp.setVertexBuffer(0, U ? U.VB : this.staticVB);
     mp.setIndexBuffer(U ? U.IB : this.staticIB, 'uint32');
     const [so, sc] = U ? [[0, U.opaque], [U.opaque, U.cut]] : [this.staticRuns.land, this.staticRuns.landCut];
-    mp.drawIndexed(so[1], 1, so[0]);
+    // (On the land, only its squares in view: src/gfx/landcells.js.)
+    const LC = !U && this.landCells;
+    if (LC) this.stats.landDrawn = drawLandInView(mp, LC.land, this.planes); else mp.drawIndexed(so[1], 1, so[0]);
     if (sc[1]) {
       mp.setPipeline(this.pStaticCut);
-      mp.drawIndexed(sc[1], 1, sc[0]);
+      if (LC) this.stats.landDrawn += drawLandInView(mp, LC.landCut, this.planes); else mp.drawIndexed(sc[1], 1, sc[0]);
     }
     if (!U && this.phobosNear?.count) { mp.setPipeline(this.pStatic); this.phobosNear.draw(mp, true); }
     if (!U && this.stairsNear?.count) { mp.setPipeline(this.pStatic); this.stairsNear.draw(mp); }

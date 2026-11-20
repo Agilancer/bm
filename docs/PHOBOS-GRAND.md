@@ -120,3 +120,42 @@ two levels on Mobile. `tools/phone_memory.mjs` and `phone_bench.mjs` still never
 After, with main (ac25d115) merged in: 593 tests, 590 pass, the one old failure; corners a PC's 1,728,240 of 1,800,000,
 a phone's 946,691 of 950,000 (a phone's towers have four merlons, not eight, to fit under it beside main's new dungeon
 doors); the phone-sized run holds 16.7 ms everywhere with 10 cells up down the King's Mile (this machine's GPU: nothing about a phone's speed, and no phone has run it).
+
+## Second sitting of the once-over (2026-11-20)
+
+From the three lists, done after the PR was opened:
+
+- **The land drawn a square at a time** (`src/gfx/landcells.js`, the performance critic's biggest): the land's triangles
+  put in order by 128 m square at load, each square with a sphere round every corner in it, and a pass draws only the
+  squares it sees, neighbours run together. Indices drawn, of 1.58 million on a phone (2.67 million on a PC), measured by
+  `node tools/phone_walk.mjs` (which now prints them):
+
+  | Where | Eye's pass | Near shadow | Second shadow |
+  |---|---|---|---|
+  | Bellmourn, the well | 389k | 238k | 245k |
+  | the west road | 152k | 0 | 258 |
+  | Phobos, the Drawbridge Gate | 679k | 25k | 54k |
+  | Phobos, the King's Mile | 502k | 36k | 117k |
+  | the castle yard | 226k | 83k | 215k |
+  | under the Keep, looking west over everything | all of it | 111k | 149k |
+
+  Before, every one of those was the whole 1.58 million. The kept shadow maps (a PC's far cascades) are left drawing it
+  whole: they're drawn once round a box of their own. Frame times on this machine are 16.7 ms before and after (it was
+  never slow here); what a phone gains isn't measured.
+- **A phone's near houses lighter**: no furniture, joists or railing posts, and none of the lamps that only light a
+  house's inside (`buildPhobosCell(cell, lean)`): a fifth fewer corners a cell (263k to 208k, 12 cells measured) and 35
+  lamps a cell, not 330.
+- **Chimney smoke over the land's towns and farms**: 38 chimneys (Thornwick 10, Cinderford 7, Frostwatch 2, the farms),
+  within a kilometre, a few a tick (`Kit.house` keeps them, `main.js emitAmbient`). Bellmourn had its own already.
+- **A fire on Thornwick's gates** (a basket on each post's head) and **on a pole at Cinderford's watchtower** (its beacon
+  stays laid and unlit). Frostwatch's tower and Blackvigil's keep already had theirs.
+- **The Barrows**: the kerb round the great mound half again as tall and leaning more; two dead trees on its shoulders.
+  New shot `wd_barrows_e`.
+
+Corners after: a PC's 1,728,792; a phone's 947,243 of 950,000. 596 tests, 593 pass, the one old failure.
+
+Still not done: a lit thing on Frostwatch that shows against the snow from below; cairns, dead camps and carts within
+sight of the roads; crows over the barrows, fen and Keep; a mist of its own for the fen and the Sill; trodden earth inside
+each palisade; the fen stall; the snow's weave; rocks sunk at their feet; washing, lanterns and a notice post in
+Bellmourn. From the performance critic: near cells packed on the worker; a phone ticking at 60; the corner map at 10 Hz
+on touch; idle pool threads let go; bloom at two levels on Mobile.
