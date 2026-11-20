@@ -297,7 +297,9 @@ function castleShell(K, d) {
     const prof = L.course || footL;
     K.quad(prof, [px + ox, y0, pz + oz], [qx + ox, y0, qz + oz], [qx + ox, pt, qz + oz], [px + ox, pt, pz + oz], [gm[0], 0, gm[1]]);
     K.quad(prof, [px + ox, pt, pz + oz], [qx + ox, pt, qz + oz], [qx, pt + 0.1, qz], [px, pt + 0.1, pz], [gm[0] * 0.5, 0.86, gm[1] * 0.5]);
-    if (c1 < top - 0.4) {
+    // (No string course where piers stand up the walls, src/core/delve-dress.js: a course through a pier is a cross at every
+    // bay. The critics, 2026-11-20; the V and T rule.)
+    if (c1 < top - 0.4 && !L.beam) {
       K.quad(prof, [px + ox, c0, pz + oz], [qx + ox, c0, qz + oz], [qx + ox, c1, qz + oz], [px + ox, c1, pz + oz], [gm[0], 0, gm[1]]);
       K.quad(prof, [px, c0 - 0.1, pz], [qx, c0 - 0.1, qz], [qx + ox, c0, qz + oz], [px + ox, c0, pz + oz], [gm[0] * 0.5, -0.86, gm[1] * 0.5]);
       K.quad(prof, [px + ox, c1, pz + oz], [qx + ox, c1, qz + oz], [qx, c1 + 0.06, qz], [px, c1 + 0.06, pz], [gm[0] * 0.5, 0.86, gm[1] * 0.5]);
@@ -832,11 +834,11 @@ export const PROPS = {
   // A wheel of iron hung on a chain, fires round it.
   chandelier(K, d, p, x, y, z) {
     const top = caveRoofY(x, z), h = y + p.up;
-    K.box('iron', x, h, z, 0.03, top - h, 0.03, 0, NO);
     K.drum('iron', x, h, z, 1.5, 0.14, 12, { open: true, collide: false });
     K.drum('iron', x, h, z, 1.38, 0.14, 12, { open: true, collide: false });
-    // (Three chains, not four: four, from under it, were a cross in a ring. The V and T rule.)
-    for (let k = 0; k < 3; k++) { const a = k * TAU / 3 + 0.5; rod(K, 'iron', x, h + 0.9, z, x + Math.cos(a) * 1.45, h + 0.1, z + Math.sin(a) * 1.45, 0.02); }
+    // (Three chains, each straight up from the ring's rim to the roof: no rod down its middle, nothing meeting over it. A
+    // rod and three spokes, from under it, were a cross in a ring. The critics, 2026-11-20; the V and T rule.)
+    for (let k = 0; k < 3; k++) { const a = k * TAU / 3 + 0.5, cx = x + Math.cos(a) * 1.45, cz = z + Math.sin(a) * 1.45; rod(K, 'iron', cx, h + 0.1, cz, cx, top, cz, 0.02); }
     for (let k = 0; k < 8; k++) { const a = k * TAU / 8, cx = x + Math.cos(a) * 1.44, cz = z + Math.sin(a) * 1.44; K.drum('iron', cx, h + 0.12, cz, 0.05, 0.05, 5, { r2: 0.09, collide: false }); K.drum('white', cx, h + 0.17, cz, 0.04, 0.2, 5, NO); fire(K, d, cx, h + 0.37, cz, 0.1, 0.3); }
     glow(K, d, x, h + 0.5, z, 2.4);
   },

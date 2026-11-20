@@ -104,7 +104,7 @@ test("the Holdout's and the Roost's people: in their rooms, clear of the rock, w
   const { POSTED } = await import('../src/folk/people.js');
   const { LINES } = await import('../src/folk/lines/phobos-hubs.js');
   const own = POSTED.filter((p) => p.id.startsWith('ho_'));
-  assert.equal(own.length, 8);
+  assert.equal(own.length, 12);
   for (const p of own) {
     const d = delveByKey(p.delve), [x, z, y] = p.post;
     assert.ok(p.late, `${p.id}: loaded late`);

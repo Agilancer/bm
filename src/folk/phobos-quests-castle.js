@@ -12,6 +12,7 @@ export const RULES_CASTLE = {
   the_long_count: { needs: 'the_bookcase', steps: [{ visit: ['room:cd_index', 'room:cd_sump', 'room:cl_oub'] }, { back: true, say: "I've been in all three. Your marks are still on the walls." }], gold: 3600, xp: 56000, item: 'gem', seed: 0x9e771 },
   what_the_censor_burns: { needs: 'the_way_they_came', steps: [{ boss: 'censor' }, { back: true, say: 'The Censor is dead. His fire is out.' }], gold: 5200, xp: 78000, item: 'skull', named: 'The Unburnt Page', seed: 0xce450 },
   the_holdout: { needs: 'the_bookcase', steps: [{ talk: 'ho_thole', say: 'Mother Coyle says I should know you.' }, { talk: 'ho_marrow', say: 'Mother Coyle sent me round.' }, { talk: 'ho_nettle', say: 'Mother Coyle says to count my fingers after.' }, { talk: 'ho_bet', say: 'Mother Coyle says you have questions.' }, { back: true, say: "I've met all four." }], gold: 1600, xp: 34000 },
+  thirty_souls: { needs: 'the_holdout', steps: [{ talk: 'ho_dace', say: 'Hesper Vane says I should know who her door keeps.' }, { talk: 'ho_ilse', say: 'Hesper Vane sent me to meet you.' }, { talk: 'ho_quill', say: 'Hesper Vane sent me to you.' }, { talk: 'ho_corry', say: 'Vane said to find you.' }, { back: true, say: "I've seen them. I'll be careful with your door." }], gold: 1800, xp: 36000 },
   bets_lesson: { needs: 'the_bookcase', steps: [{ visit: ['vista:well_of_books'] }, { back: true, say: 'Six storeys. I counted them twice.' }], gold: 600, xp: 30000 },
   // ---- the household's, up the castle's towers (src/core/phobos-build.js castleTowers) ----
   a_view_for_a_princess: { needs: 'the_gate_captain', steps: [{ visit: ['vista:small14', 'vista:small16'] }, { back: true, say: "I've stood on both turrets over his yard." }], gold: 2600, xp: 44000 },
@@ -39,14 +40,14 @@ export const RULES_CASTLE = {
 };
 // Who gives each (their words say so too: src/folk/lines/phobos-more-castle.js).
 export const GIVERS_CASTLE = {
-  the_bookcase: 'ph_librarian', the_nine_keys: 'ph_librarian', the_sky_for_bet: 'ho_bet', the_holdout: 'ho_coyle', the_ledger_keeper: 'ho_wren', mouths_to_feed: 'ho_coyle', the_way_they_came: 'ho_vane', cold_iron: 'ho_thole', the_long_count: 'ho_nettle', what_the_censor_burns: 'ho_marrow', bets_lesson: 'ho_bet',
+  the_bookcase: 'ph_librarian', the_nine_keys: 'ph_librarian', the_sky_for_bet: 'ho_bet', the_holdout: 'ho_coyle', thirty_souls: 'ho_vane', the_ledger_keeper: 'ho_wren', mouths_to_feed: 'ho_coyle', the_way_they_came: 'ho_vane', cold_iron: 'ho_thole', the_long_count: 'ho_nettle', what_the_censor_burns: 'ho_marrow', bets_lesson: 'ho_bet',
   a_view_for_a_princess: 'apricot', wynns_towers: 'ph_wynn', pips_dare: 'ph_pip', jorys_strongboxes: 'ph_jory', the_black_nave: 'ph_ondine',
   up_the_sanctuaries_stair: 'ph_librarian', the_star_reader: 'ph_librarian', the_scriveners_lift: 'ph_librarian', the_sexton: 'ph_librarian',
   the_high_round: 'ho_wren', every_needle: 'ho_wren', rooks_ledger: 'ho_rook', the_reliquary: 'ho_rook',
 };
 // The level each wants (src/ui/autobrain.js PLAN): [id, level].
 export const LEVELS_CASTLE = [
-  ['a_view_for_a_princess', 68], ['the_bookcase', 78], ['the_holdout', 78], ['bets_lesson', 78], ['mouths_to_feed', 78], ['the_way_they_came', 79], ['cold_iron', 80], ['the_long_count', 80], ['the_nine_keys', 80],
+  ['a_view_for_a_princess', 68], ['the_bookcase', 78], ['the_holdout', 78], ['thirty_souls', 78], ['bets_lesson', 78], ['mouths_to_feed', 78], ['the_way_they_came', 79], ['cold_iron', 80], ['the_long_count', 80], ['the_nine_keys', 80],
   ['jorys_strongboxes', 80], ['what_the_censor_burns', 82], ['wynns_towers', 84], ['pips_dare', 86],
   ['up_the_sanctuaries_stair', 95], ['the_black_nave', 96], ['the_scriveners_lift', 97], ['the_ledger_keeper', 97], ['rooks_ledger', 98], ['the_sky_for_bet', 98], ['the_high_round', 99], ['the_star_reader', 100],
   ['every_needle', 102], ['the_reliquary', 103], ['the_sexton', 106],

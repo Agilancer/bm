@@ -490,6 +490,71 @@ export const LINES_CASTLE = {
       "Mind the price of things.",
     ],
   },
+
+  // ---- more of the Holdout's thirty ----
+  ho_dace: {
+    first: ["Mind the tent rope. Dace. I rowed half of these in through the Sump, back when the water was lower and I was younger. Sit, if you can find a dry bit of floor."],
+    greet: {
+      morning: ["Morning, is it? I go by Coyle's pot. Porridge means morning.", "You're up. I heard the bookcase."],
+      day: ["Quiet day. Quiet's good. Quiet means nobody's found the hanging.", "Sit. My knees have done their rowing."],
+      evening: ["Stew tonight. You can tell by the children going quiet.", "Evening. Thole will light his fire soon. I like the sound of it."],
+      night: ["Can't sleep? Nor me. I listen to the Sump. It tells you when the water's coming.", "Night's when I brought them in. Old habit, staying awake for it."],
+    },
+    about: ["I had a boat on the Slough. He wanted a ferryman who asked no questions. I asked one.", "Eleven trips I made through the drains with people under sacking. Never lost one. Lost the boat."],
+    ask: {
+      sump: ["Black water under the Scriptorium, and a grate. It used to be a way in. Something bars it from below now, and I'd leave it barred unless you mean to kill what's down there."],
+      people: ["Cooks, a smith, a copyist, three families out of the Rookeries, two of his own garrison who couldn't stomach it. Pell hid the first of us the year he hid himself."],
+    },
+    topics: { sump: 'The Sump', people: 'Who is down here' },
+    bye: ["Go quiet. Everything down here goes quiet."],
+  },
+  ho_ilse: {
+    first: ["You'll want to keep your voice down, the little one's only just gone off. Ilse Brand. Those two bays are mine, and the washing, all of it, somehow."],
+    greet: {
+      morning: ["Morning. Mind the line, it's wet.", "Up before mine are. That's worth something."],
+      day: ["If you see a boy with ink to his elbows, he's meant to be at his lessons.", "Coyle's short of onions again. We're always short of onions."],
+      evening: ["Supper, then counting them into bed. I count them twice.", "Evening. Sit, if you like. Nobody sits enough."],
+      night: ["Whisper. Please.", "They're asleep. So I mend. There's always mending."],
+    },
+    about: ["We had rooms over a chandler's in the Rookeries. Then his men came for my husband's trade, and then for my husband. Pell's girl found us a week after.", "Six years. My youngest thinks a lamp is the sun. I've stopped correcting her."],
+    ask: {
+      children: ["Nine of them down here. Master Quill teaches them their numbers on the backs of his books. Bet's the quick one. Bet's a trial."],
+      washing: ["You can't hang it up top and you can't dry it by a cold forge. So it hangs here, and everyone ducks. That's a town, I suppose. Everyone ducking the same line."],
+    },
+    topics: { children: 'The children', washing: 'The washing' },
+    bye: ["Softly on the boards."],
+  },
+  ho_corry: {
+    first: ["Are you the one who killed the Gate Captain? Did he fall over or did he sort of sit down? I'm Corry. I'm not allowed past the hanging. I've been past the hanging."],
+    greet: {
+      morning: ["I've already been to the well twice.", "Thole let me hold the tongs. Don't tell my mother."],
+      day: ["I'm meant to be at lessons. This is a different lesson.", "Bet says there's a roof up top you can't see. Bet says a lot."],
+      evening: ["Is it stew? It's always stew.", "I'm not tired."],
+      night: ["I'm not here. You didn't see me.", "Shh. Vane's looking the other way."],
+    },
+    about: ["I'm going to be a roof-runner. Or a smith. Thole says pick one. I said why.", "I know eleven ways round the Well without touching the floor. Nine. Nine that work."],
+    ask: {
+      well: ["It goes down further than the rope does. I dropped a candle once. You could see it for ages."],
+    },
+    topics: { well: 'The Well of Books' },
+    bye: ["If my mother asks, I was at lessons."],
+  },
+  ho_quill: {
+    first: ["Ah. A new face, and an adult one, which is rarer. Ferris Quill. I taught his court's children their letters, once. Now I teach these theirs, with the books he'd burn. I find I prefer it."],
+    greet: {
+      morning: ["Good morning. Lessons at the long table, if you care to learn your numbers again.", "Up with the porridge. Sensible."],
+      day: ["If you see Corry, he is not where he says he is.", "Nine pupils and one slate. We manage."],
+      evening: ["The day's sums are done. Mine never are.", "Evening. I read to them at this hour. They like the ones with wolves in."],
+      night: ["I mark by candle. It is the one hour nobody asks me anything.", "Quietly, please. I have only just got them to sleep by pretending the story was over."],
+    },
+    about: ["A tutor sees what a house is before anyone else does. I saw what his was. I left by the kitchens with a satchel and a lie.", "They'll read, every one of them. Whatever else is taken from them, they'll have that. He can't burn it out of a head."],
+    ask: {
+      lessons: ["Numbers, letters, and where every way out of this room is. Hesper Vane teaches the last. It's the lesson they remember best."],
+      censor: ["Ivo will tell you he copies what the Censor burns. He won't tell you he does it from memory, a page a night. Be kind to him. He is braver than he looks, and he looks terrified."],
+    },
+    topics: { lessons: 'The lessons', censor: 'Ivo and the Censor' },
+    bye: ["Mind how you go. And mind the third shelf."],
+  },
 };
 
 export const QUESTS_CASTLE = {
@@ -1190,6 +1255,44 @@ export const QUESTS_CASTLE = {
     ],
     after: [
       "I told Mother Coyle there are more than the books. She had to sit down. One day I'm going up the lift. I've decided. That's one.",
+    ],
+  },
+
+  // ---- Hesper Vane's: who you're guarding ----
+  thirty_souls: {
+    title: 'Thirty Souls',
+    giver: 'ho_vane',
+    needs: 'the_holdout',
+    offer: [
+      "You come and go through my door now. Then you'll know who's behind it. Not the ones with work for you. The ones who are only here because there's nowhere else.",
+      "Old Dace in the tent by the east wall. Ilse Brand, with the washing. Master Quill at the long table. And a boy called Corry, wherever he isn't meant to be. Go and look at each of them. Then tell me you'll be careful with my door.",
+    ],
+    accept: "I'll meet them.",
+    acceptLine: "Dace's tent is by the Well's hanging. Ilse's bays are along the south wall. Quill teaches at the long table. Corry will find you. He finds everyone.",
+    decline: 'Another time.',
+    declineLine: "Then knock twice when you come back. I like to know who's careless.",
+    journal: [
+      "Hesper Vane wants you to know who the Holdout's door keeps safe. Meet Old Dace, in the tent by the east wall.",
+      "Meet Ilse Brand, in the bays along the Holdout's south wall.",
+      "Meet Master Ferris Quill, at the long table.",
+      "Meet the boy Corry, by the well.",
+      "Go back to Hesper Vane at the Holdout's door.",
+    ],
+    progress: [
+      "Dace, Ilse, Quill, the boy. I'll be here. I'm always here.",
+    ],
+    others: {
+      ho_dace: ["Vane sent you to look at an old ferryman? She does that. She wants you to see what a mistake costs. Well, look. Eleven trips through the drains, and every one of them is asleep in this room."],
+      ho_ilse: ["Hesper sent you. She'd never say it, but she counts my children every night, same as I do. Now you've seen them. Don't bring anything down that stair behind you."],
+      ho_quill: ["Sent by our door, were you? Then here is your lesson, and it is the only one I'll give you: nine children. Say it back to me. Good. Now go and be careful."],
+      ho_corry: ["Vane said to find me? I wasn't doing anything. I was near the hanging, I wasn't past it. Are you going to tell her? You're not going to tell her."],
+    },
+    done: [
+      "Now you've seen them. I held a gate for him for nine years, and never once asked who was behind it. I ask now.",
+      "Take this. It was garrison issue. It's done more good in this room than it ever did on his wall.",
+    ],
+    after: [
+      "You knock twice now. I noticed.",
     ],
   },
 };
