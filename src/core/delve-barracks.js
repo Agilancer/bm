@@ -19,7 +19,8 @@ import { R } from './delve-lay.js';
 const PI = Math.PI;
 
 const rooms = [
-  R('ib_stair', 'the Muster Stair', 0, -17.5, 3.5, 17.5, 0, 9,   // (its foot 3 m into the Muster Hall: rooms that only touch have a wall between)
+  // (From 7 m behind the way in: its door, and where you wake, stood in the rock north of a stair that began at 0.)
+  R('ib_stair', 'the Muster Stair', 0, -14, 3.5, 21, 0, 9,   // (its foot 3 m into the Muster Hall: rooms that only touch have a wall between)
     { rock: 'p2_curtain_granite', foot: 'dark:block', ground: 'p2_bone_joint_flags', fires: 10 }),
   R('ib_muster', 'the Muster Hall', 0, -55, 24, 23, 0, 14, { rock: 'p2_curtain_granite', foot: 'dark:course', ground: 'p2_ward_paving', banners: 16, cloth: 'p2_banner_skull', fires: 14 }),
   R('ib_kennels', 'the Kennels', -62, -50, 18, 16, 0, 9, { rock: 'soot:block', foot: 'dark:rubble', ground: 'p2_straw_ground', banners: 0, fires: 12 }),
@@ -76,9 +77,10 @@ const props = [];
   add('pool', 62, -64, { r: 9, layer: 'rubble', up: 0.02 }); add('pool', 62, -64, { r: 7.4, layer: 'flags', up: 0.03 });
   add('rack', 81, -58, { yaw: -PI / 2 }); add('rack', 81, -70, { yaw: -PI / 2 }); add('shields', 62, -81.4, { yaw: PI });
   // ---- the War Room: the table of the castle's maps, candles on it, his officers' chairs, a brazier each end.
-  add('table', 0, -110, { hx: 4, hz: 1.6, solid: true }); add('candles', -2, -110, { up: 0.85 }); add('candles', 2.4, -109.6, { up: 0.85 });
-  for (const x of [-3, 0, 3]) { add('seat', x, -106.6, { hx: 0.5, hz: 0.5, stone: 'dark:wood' }); add('seat', x, -113.4, { hx: 0.5, hz: 0.5, stone: 'dark:wood', flip: true }); }
-  add('brazier', -10, -110); add('brazier', 10, -110); add('mark', 0, -123.6, { up: 5, r: 1.1, back: -1 });
+  // (East of the room's middle: the middle is where what's sent in to the room stands.)
+  add('table', 6.5, -110, { hx: 4, hz: 1.6, solid: true }); add('candles', 4.5, -110, { up: 0.85 }); add('candles', 8.9, -109.6, { up: 0.85 });
+  for (const x of [3.5, 6.5, 9.5]) { add('seat', x, -106.6, { hx: 0.5, hz: 0.5, stone: 'dark:wood' }); add('seat', x, -113.4, { hx: 0.5, hz: 0.5, stone: 'dark:wood', flip: true }); }
+  add('brazier', -10, -110); add('brazier', 12.6, -106); add('mark', 0, -123.6, { up: 5, r: 1.1, back: -1 });
   // ---- the Defaulters' Cells: cages, chains, the punishment post, straw and what's left in it.
   for (const [x, z] of [[-66, -94], [-66, -106], [-66, -118], [-46, -118]]) { add('cage', x, z, { up: 0 }); add('chain', x, z, { up: 4 }); }
   add('bones', -54, -112, { r: 1.3 }); add('decal', -50, -100, { layer: 'p2_blood_splashes', w: 1.8, flat: true });

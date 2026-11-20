@@ -168,6 +168,8 @@ export class Warrens {
       // (A way barred from its far side: come through it from this one and it's unbarred for good. src/core/dungeon.js LATCHES.)
       if (link.opens && !this.ever.has(link.opens)) { this.ever.add(link.opens); sim.event(EV.DELVE, DELVE.LATCH, LATCHES.indexOf(link.opens)); }
       this.carry(bx + Math.sin(back.yaw) * 4, bz + Math.cos(back.yaw) * 4, back.yaw);
+      // (A door between two rooms of the one delve: nothing's entered.)
+      if (o === d) return;
       this.delve = o;
       sim.event(EV.DELVE, DELVE.ENTER, this.downIn(o), DELVES.indexOf(o));
       return;

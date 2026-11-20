@@ -40,7 +40,8 @@ function cam(ex, ey, ez, tx, ty, tz) {
 }
 
 const asked = process.argv.slice(2), which = asked.length ? SHOTS.filter((s) => asked.includes(s[0])) : SHOTS;
-const b = await chromium.launch({ args: ['--enable-unsafe-webgpu', '--ignore-gpu-blocklist', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--use-angle=swiftshader', '--no-sandbox'] });
+// (On Windows the machine's own GPU by D3D11: the software Vulkan the Linux container wants gives no adapter there.)
+const b = await chromium.launch({ args: process.platform === 'win32' ? ['--enable-unsafe-webgpu', '--ignore-gpu-blocklist', '--use-angle=d3d11', '--enable-features=Vulkan,WebGPU', '--disable-dawn-features=use_dxc'] : ['--enable-unsafe-webgpu', '--ignore-gpu-blocklist', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--use-angle=swiftshader', '--no-sandbox'] });
 const page = await b.newPage({ viewport: { width: 1280, height: 720 } });
 page.on('pageerror', (e) => console.log('PAGE ERROR', String(e).slice(0, 600)));
 await page.goto(`http://localhost:${process.env.PORT || 8481}/?auto&noopening&timer`, { waitUntil: 'load' });

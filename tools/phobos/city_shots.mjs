@@ -4,6 +4,8 @@
 // Needs the server (python tools/serve.py 8481 --no-open) and Playwright's Chromium. Saves tools/build/shots/<name>.png.
 import { createRequire } from 'node:module';
 import { terrainHeight } from '../../src/core/terrain.js';
+import { castleTowers } from '../../src/core/phobos-build.js';
+import { PLAIN } from '../../src/core/east.js';
 
 const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
@@ -63,8 +65,22 @@ function cam(ex, ey, ez, tx, ty, tz) {
   const ux = -rz * fy, uy = rz * fx - rx * fz, uz = rx * fy, s = Math.sign(uy) || 1;
   return { x: ex, y: ey, z: ez, fx, fy, fz, ux: ux * s, uy: uy * s, uz: uz * s };
 }
+// The castle's towers, Needles and bridges (src/core/phobos-build.js castleTowers): eyes at heights over the plain.
+{ const { towers } = castleTowers(), T = Object.fromEntries(towers.map((t) => [t.key, t])), A = (x, h, z) => [x, PLAIN + h - terrainHeight(x, z), z];
+  const deck = (k, dx, dz, to) => { const t = T[k]; return [`kt_deck_${k}`, [t.x, t.z], A(t.x + dx, t.deck + 1.8, t.z + dz), to]; };
+  SHOTS.push(
+    ['kt_north', [11180, -400], A(11150, 330, -470), A(11260, 440, 0)],
+    ['kt_east', [11600, 40], A(11680, 430, 60), A(11300, 470, 0)],
+    ['kt_south', [11150, 330], A(11120, 300, 400), A(11300, 470, 60)],
+    ['kt_yard_up', [10830, 0], [10805, 3.2, 3], A(11215, 430, 0)],
+    deck('gallows', -11, 4, A(11215, 560, 0)), deck('red', -9, -9, A(11215, 600, 0)), deck('sat4', -13, 0, A(10500, 60, 0)), deck('clock', -14, 0, A(10300, 40, 0)),
+    ['kt_bridge', [11419, -142], A(11420, 481, -140), A(11468, 484, -80)],
+    ['kt_turret', [T.sat0.tx, T.sat0.tz + 14], [T.sat0.tx + 3, 2.2, T.sat0.tz + 13], [T.sat0.x, 14, T.sat0.z]],
+    ['kt_patio', [10980, 0], A(10975, 302, 30), A(11215, 420, 0)],
+  ); }
 const asked = process.argv.slice(2), which = asked.length ? SHOTS.filter((s) => asked.includes(s[0])) : SHOTS;
-const b = await chromium.launch({ args: ['--enable-unsafe-webgpu', '--ignore-gpu-blocklist', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--use-angle=swiftshader', '--no-sandbox'] });
+// (On Windows the machine's own GPU by D3D11: the software Vulkan the Linux container wants gives no adapter there.)
+const b = await chromium.launch({ args: process.platform === 'win32' ? ['--enable-unsafe-webgpu', '--ignore-gpu-blocklist', '--use-angle=d3d11', '--enable-features=Vulkan,WebGPU', '--disable-dawn-features=use_dxc'] : ['--enable-unsafe-webgpu', '--ignore-gpu-blocklist', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--use-angle=swiftshader', '--no-sandbox'] });
 const page = await b.newPage({ viewport: { width: 1280, height: 720 } });
 page.on('pageerror', (e) => console.log('PAGE ERROR', String(e).slice(0, 600)));
 if (process.env.CONSOLE) page.on('console', (m) => { if (/error|warn/i.test(m.type()) || /wgsl|shader/i.test(m.text())) console.log('CONSOLE', m.type(), m.text().slice(0, 400)); });

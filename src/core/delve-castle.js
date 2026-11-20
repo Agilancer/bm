@@ -162,6 +162,8 @@ const props = [];
   // them; the gaolers' cots and their table.
   for (const [x, z] of [[-10, -128], [10, -128], [-10, -148], [10, -148]]) { add('pit', x, z, { r: 2 }); add('cage', x, z, { up: 2.2 }); }
   add('bones', 0, -138, { r: 1.6 }); add('bones', -15, -158, { r: 1.2 }); add('chain', 0, -152, { up: 3 });
+  // (And in the far wall, between the last two pits, the Crypt door: black glass in a frame of dark stone, his mark over it.)
+  add('lintel', 4, -163, { hx: 2.6, stone: 'dark:ashlar' }); add('mark', 4, -163.6, { up: 6, r: 0.7, back: -1 }); add('brazier', 8.6, -161.6);
   add('cot', 16, -156); add('cot', 16, -122); add('table', 15, -139, { hx: 0.7, hz: 2 }); add('candles', 15, -139.6, { up: 0.85 });
   // (The days they counted, scratched in the wall; and blood.)
   add('decal', -19.95, -131, { layer: 'p2_gouges', w: 2.4, up: 0.6, yaw: PI / 2 }); add('decal', -19.95, -151, { layer: 'p2_gouges', w: 2.4, up: 0.6, yaw: PI / 2 });
@@ -231,6 +233,7 @@ const warnings = {
   gcp_turn: 'The Gate Captain turns on you! Out of his reach.',
   gcp_enrage: 'The Gate Captain is enraged!',
   cl_mgate_shut: "The Middle Ward Gate is down. Its winch is in the Gate Captain's yard, and nobody turns it while he holds his yard.",
+  cl_crypt_shut: "A door of black glass at the bottom of the pits, with no handle. The alchemists made its key, and keep it under their wing.",
 };
 export const LOWER_WARD = {
   key: 'lowerward', tag: 'cl', name: 'Castle Velscour: the Lower Ward', short: 'the Lower Ward', x: 10760, z: -5700, y: -60, level: 58, style: 'castle',
@@ -243,7 +246,17 @@ export const LOWER_WARD = {
   portal: { x: 10805, z: 22, yaw: PI / 2, r: 2.2 },
   // The Aqueduct Head's gate: down to the Sunk Garden in the High Conduits (and the Aqueduct Foot off it, its other side).
   // And the Middle Ward Gate's arch, up into the Middle Ward: shut till the Gate Captain has died, now or ever.
-  links: [{ x: -100, z: -187.4, yaw: 0, to: 'highconduits', n: 1 }, { x: 49, z: -150.4, yaw: 0, to: 'middleward', n: 0, shut: 'gatecaptain', word: 'cl_mgate_shut' }],
+  // And the Crypt door at the bottom of the Oubliettes: up the dead generals' stair into the High Ward's Crypt, once the
+  // Alchemists' Undercroft's Glass Key is had (src/core/castle-keys.js; src/core/delve-highward.js).
+  links: [{ x: -100, z: -187.4, yaw: 0, to: 'highconduits', n: 1 }, { x: 49, z: -150.4, yaw: 0, to: 'middleward', n: 0, shut: 'gatecaptain', word: 'cl_mgate_shut' },
+    { x: 4, z: -161.4, yaw: 0, to: 'highward', n: 1, shut: 'key:undercroft', word: 'cl_crypt_shut' }],
+  chests: [
+    { id: 'cellar', room: 'cl_cellar', x: -108.4, z: -27, yaw: PI / 2, loot: 2 },
+    { id: 'armoury', room: 'cl_armoury', x: 121.6, z: -131, yaw: -PI / 2, loot: 3 },
+    { id: 'oubliette', room: 'cl_oub', x: -17.6, z: -124, yaw: PI / 2, loot: 3 },
+    { id: 'aqhead', room: 'cl_aqhead', x: -111.6, z: -186, yaw: PI / 2, loot: 2 },
+  ],
+  vistas: [{ id: 'aqueduct_head', name: 'the Aqueduct Head', room: 'cl_aqhead', x: -100, z: -176, r: 5 }],
   last: 'gatecaptain', tough: { hp: 22, damage: 2.5 }, pay: { xp: 36000, gold: 5200 },
   names: { "Velscour's Knights": 'GARRISON KNIGHT', 'Plague Knights': 'GATE WARDEN', 'The Possessed': 'SCULLION', Kobolds: 'TURNSPIT', 'Haunted Mannequins': 'EMPTY HARNESS', 'Night Paralysis Demons': 'FORGE-WRAITH', 'Dead Children': 'THE FORGOTTEN', 'Plague Giants': 'GAOLER' },
   look: { wall: 'ashlar', foot: 'dark:block', floor: 'flags', banner: 'p2_banner_skull', roof: 'dark:stone', flame: 'dark:flame', light: [1, 0.4, 0.16], fire: [1, 0.44, 0.18], every: 8, high: 3, glow: 2.5, lit: true, beam: 'dark:stone', bays: 'chains' },
@@ -371,6 +384,8 @@ const mProps = [];
   add('portrait', 8.9, -114.5, { yaw: PI / 2 + 1.0, sitter: 'blood:cloth_red', sz: 1.3 });
   add('decal', 8.6, -116, { layer: 'p2_gouges', w: 1.8, h: 1.2, flat: true, yaw: 0.6 });
   add('carpet', 12, -101, { hx: 1.3, hz: 30, layer: 'royal:cloth_red' });
+  // (The empty frame in the east wall, taller than a door: the Thousand Portraits' way out.)
+  add('portrait', 16.45, -124.2, { yaw: -PI / 2, sitter: 'char:stone', sz: 1.7 });
   add('stand', 8.6, -80); add('stand', 15.4, -104); add('stand', 8.6, -126);
   add('decal', 16.4, -69.05, { layer: 'p2_cobweb', w: 1.6, up: 8.3 });
   // ---- the Map Room: the great table, the castle on it; chests of maps against the walls; a lectern; two of the charts
@@ -413,7 +428,9 @@ const mProps = [];
   add('table', 40, -159, { hx: 2.2, hz: 0.8 }); add('candles', 39, -159, { up: 0.85 }); add('bench', 40, -157.4, { hx: 1.4, hz: 0.2 });
   for (const x of [37, 40, 43, 46, 49]) add('bunk', x, -168.3, { hx: 0.55, hz: 1.1, cloth: x === 43 ? 'cloth_red' : 'cloth_oat' });
   add('hearth', 52.4, -160, { yaw: -PI / 2 });
-  add('coatrail', 48, -155.2, { hx: 2 }); add('barrels', 51, -166); add('crates', 36.5, -155.5);
+  // (The barrels moved along: the case in the east wall's south corner swings, and behind it is the way down.)
+  add('coatrail', 48, -155.2, { hx: 2 }); add('barrels', 50.5, -156.4); add('crates', 36.5, -155.5);
+  add('bookcase', 52.5, -165.6, { hx: 0.4, hz: 1.6, h: 3, one: -1, yaw: 0.5 });
   add('bookcase', 35.5, -162, { hx: 0.4, hz: 2.2, h: 3, one: 1 });
   add('carpet', 44, -162, { hx: 3.5, hz: 2.5, layer: 'cloth_oat' });
   // ---- the Alchemists' Wing: two stills, a working circle in the floor, the bench of their glass, a vat; their shelves of jars
@@ -468,6 +485,11 @@ const mWarnings = {
   fea_bile: 'He brings it back up! Out of the pools.',
   fea_turn: 'The Feast That Walks turns on you! Out of his reach.',
   fea_enrage: 'The Feast That Walks is enraged!',
+  cm_sanct_shut: 'The Sanctuaries Stair is locked: green bronze, and wet. Its key went down with the Drowned Archive.',
+  cm_clock_shut: "The Clock Tower's door is locked. Its key is painted into a picture somewhere in the Gallery of a Thousand Portraits.",
+  cm_menag_shut: "The Menagerie's door is barred with black iron. The Iron Marshal carries its key.",
+  cm_frame_shut: 'An empty frame taller than a door, and nothing behind its canvas but wall. From this side.',
+  cm_trap_shut: 'A trapdoor in the boards, bolted from below.',
 };
 export const MIDDLE_WARD = {
   key: 'middleward', tag: 'cm', name: 'Castle Velscour: the Middle Ward', short: 'the Middle Ward', x: 11180, z: -5700, y: -60, level: 75, style: 'castle',
@@ -480,7 +502,25 @@ export const MIDDLE_WARD = {
   entry: { x: 0, z: -1.5, yaw: PI }, exitIn: { x: 5.4, z: -14, yaw: -PI / 2 }, exitOut: { x: -88, z: -67.4, yaw: 0 },
   portal: LOWER_WARD.portal,
   // The arch at the Middle Gate's foot: back down to the Lower Ward's Middle Ward Gate.
-  links: [{ x: 0, z: 3.4, yaw: PI, to: 'lowerward', n: 1 }],
+  // And its keyed doors, each a gate (docs/PHOBOS-CASTLE.md; the keys: src/core/castle-keys.js): the Sanctuaries Stair in the
+  // Long Stacks, up to the High Ward; the Clock Tower's door at the end of the Horn Galleries; the Menagerie's in the
+  // Conservatory. The bookcase in the Librarian's Rooms that's the way down to the Deep Stacks and his Holdout. And two
+  // ways barred from their far sides: a frame in the Portrait Gallery the Thousand Portraits let out by, and a trapdoor
+  // in the Alchemists' Wing up from their Undercroft.
+  links: [{ x: 0, z: 3.4, yaw: PI, to: 'lowerward', n: 1 },
+    { x: 12, z: -191.2, yaw: 0, to: 'highward', n: 0, shut: 'key:archive', word: 'cm_sanct_shut' },
+    { x: 64, z: -167.2, yaw: 0, to: 'clockworks', n: 0, shut: 'key:portraits', word: 'cm_clock_shut' },
+    { x: -62, z: -179.2, yaw: 0, to: 'menagerie', n: 0, shut: 'key:barracks', word: 'cm_menag_shut' },
+    { x: 51.4, z: -165.6, yaw: -PI / 2, to: 'deepstacks', n: 0 },
+    { x: 15.3, z: -124.2, yaw: -PI / 2, to: 'thousandportraits', n: 0, shut: 'latch:frame', word: 'cm_frame_shut' },
+    { x: -48, z: -128.4, yaw: 0, to: 'undercroft', n: 0, shut: 'latch:trapdoor', word: 'cm_trap_shut' }],
+  chests: [
+    { id: 'maps', room: 'cm_maps', x: 63.4, z: -103, yaw: -PI / 2, loot: 3 },
+    { id: 'horns', room: 'cm_horns', x: 59.4, z: -166, yaw: PI / 2, loot: 3 },
+    { id: 'conservatory', room: 'cm_conserv', x: -70.4, z: -170, yaw: PI / 2, loot: 3 },
+    { id: 'stacks', room: 'cm_stacks', x: -10.4, z: -191, yaw: PI / 2, loot: 2 },
+  ],
+  vistas: [{ id: 'ancient_library', name: 'the Ancient Library', room: 'cm_library', x: 12, z: -158, r: 5 }, { id: 'horn_walk', name: 'the Horn Galleries', room: 'cm_horns', x: 64, z: -150, r: 5 }],
   last: 'feast', tough: { hp: 27, damage: 2.9 }, pay: { xp: 54000, gold: 7400 },
   names: { "Velscour's Knights": 'COURT KNIGHT', 'Haunted Mannequins': 'EMPTY LIVERY', 'The Possessed': 'SITTER', 'Night Paralysis Demons': 'INKSHADE', Harpies: 'HORNWING', Necromancers: 'ARCHIVIST', 'Plague Knights': 'STILLWARDEN', 'Giant Spiders': 'THORN SPIDER' },
   look: { wall: 'ashlar', foot: 'dark:block', floor: 'flags', banner: 'p2_banner_skull', roof: 'dark:stone', flame: 'dark:flame', light: [1, 0.46, 0.2], fire: [1, 0.5, 0.22], every: 8, high: 3, glow: 2.5, lit: true, beam: 'dark:stone', bays: 'chains' },

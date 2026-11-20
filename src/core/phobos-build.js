@@ -2079,13 +2079,14 @@ function climb(K, t, draw) {
     if (!seen) return;
     // (From far a band; on a phone only the deck's.)
     if (!draw) { if (!K.lean || deck) K.drum(G, t.x, h - 1.1, t.z, s.re, 2.1, K.lean ? 8 : 12, { r2: rOut, open: true, collide: false }); return; }
-    K.drum(G, t.x, h - 1.1, t.z, s.re, 1.1, 16, { r2: rOut, collide: false, lid: 'dark:p2_bridge_ashlar' });
+    K.drum(G, t.x, h - 1.1, t.z, s.re, 1.1, 16, { r2: rOut, collide: false, open: true });
+    for (let k = 0; k < 16; k++) { const b0 = k / 16 * TAU, b1 = (k + 1) / 16 * TAU, F = (b, r) => [t.x + Math.cos(b) * r, h, t.z + Math.sin(b) * r]; K.quad('p2_walk_paving', F(b0, s.re - 0.6), F(b1, s.re - 0.6), F(b1, rOut), F(b0, rOut), [0, 1, 0]); }
     // (Its parapet: a low wall round its edge, his V in every other stretch, left open where the turret stands; corbels under it.)
     const n = Math.max(12, Math.round(rOut * 1.3)), gap = Math.asin(Math.min(1, R / s.dt)) + 0.05;
     for (let k = 0; k < n; k++) {
       const b = (k + 0.5) / n * TAU, px = t.x + Math.cos(b) * (rOut - 0.3), pz = t.z + Math.sin(b) * (rOut - 0.3), half = Math.PI * (rOut - 0.3) / n + 0.04;
       if (Math.abs(((b - t.ta) % TAU + TAU + Math.PI) % TAU - Math.PI) < gap) continue;
-      K.box(G, px, h, pz, 0.3, 1.05, half, -b, { collide: false }); if (k % 2 || deck) K.vee(G, px, h + 1.05, pz, 0.3, 1.1, half * 0.6, -b);
+      K.box(G, px, h, pz, 0.3, 0.95, half, -b, { collide: false }); if (k % 3 === 0) K.vee(G, px, h + 0.95, pz, 0.3, 0.9, half * 0.6, -b);
     }
     for (let k = 0; k < 8; k++) { const b = (k + 0.5) / 8 * TAU; K.spike(G, t.x + Math.cos(b) * (rOut - 1.1), h - 1.1, t.z + Math.sin(b) * (rOut - 1.1), 0.9, -4.5, 4, -b); }
   };
@@ -2094,14 +2095,28 @@ function climb(K, t, draw) {
     for (const h of stops) {
       if (h <= y + 1) continue;
       const turn = Math.max(1, Math.round((h - y) / TURN)) * TAU;
-      spiral(K, draw, t.tx, t.tz, RT, y, h, a0, 1, draw ? { hw: HW, turn, wedge: true, thick: 0.4, reach: 0.4, enclose: G, doors: 3 } : { hw: HW, turn });
+      spiral(K, draw, t.tx, t.tz, RT, y, h, a0, 1, draw ? { hw: HW, turn, wedge: true, thick: 0.4, reach: 0.4 } : { hw: HW, turn });
       gallery(h, h === top ? s.rd : s.rg, h === top);
       y = h;
     }
     if (!seen) return;
     // The turret itself: from far a drum; from near its newel, and over its head on the deck a cap of slate on eight posts.
     if (!draw) K.drum(G, t.tx, y0 - 1.5, t.tz, R, top + 3.4 - y0 + 1.5, 8, { collide: false, open: true });
-    else { K.drum(G, t.tx, y0 - 1, t.tz, RT - HW, top + 3.2 - y0 + 1, 8, { collide: false }); for (let k = 0; k < 8; k++) { const b = (k + 0.5) / 8 * TAU; K.box(G, t.tx + Math.cos(b) * (R - 0.2), top, t.tz + Math.sin(b) * (R - 0.2), 0.22, 3.4, 0.22, -b, { collide: false }); } }
+    else {
+      // From near: its newel; its wall a drum of twelve sides, inside and out, open for a doorway's height toward the tower
+      // at its foot and at every gallery; a slit in it every six metres; a cap of slate on its head.
+      K.drum(G, t.tx, y0 - 1, t.tz, RT - HW, top + 3.4 - y0 + 1, 8, { collide: false });
+      const N = 12, face = (i) => Math.abs((((i + 0.5) / N * TAU - a0) % TAU + TAU + Math.PI) % TAU - Math.PI) < TAU / N * 1.1;
+      const doors = [y0, ...stops], cuts = [y0 - 1.5, ...doors.flatMap((h) => [h, h + 3.1]), top + 3.4].sort((p, q) => p - q);
+      const Q = (i, rr, yy) => { const an = i / N * TAU; return [t.tx + Math.cos(an) * rr, yy, t.tz + Math.sin(an) * rr]; };
+      for (let c = 0; c + 1 < cuts.length; c++) {
+        const lo = cuts[c], hi = cuts[c + 1], door = doors.some((h) => Math.abs(h - lo) < 0.01);
+        if (hi - lo < 0.05) continue;
+        K.drum(G, t.tx, lo, t.tz, R, hi - lo, N, { collide: false, open: true, skip: door ? face : undefined });
+        for (let i = 0; i < N; i++) { if (door && face(i)) continue; const am = (i + 0.5) / N * TAU; K.quad('ph_grey_plaster', Q(i + 1, R - 0.3, lo), Q(i, R - 0.3, lo), Q(i, R - 0.3, hi), Q(i + 1, R - 0.3, hi), [-Math.cos(am), 0, -Math.sin(am)]); }
+      }
+      for (let yy = y0 + 5, j = 0; yy < top; yy += 6, j++) { const i = (j * 5 + 3) % N; if (face(i)) continue; const am = (i + 0.5) / N * TAU, w = 0.16, rr = R * Math.cos(Math.PI / N) + 0.03, cx = t.tx + Math.cos(am) * rr, cz = t.tz + Math.sin(am) * rr, tx = -Math.sin(am) * w, tz = Math.cos(am) * w; K.quad(hash2(Math.round(t.x) + j, Math.round(t.z)) < 0.35 ? 'eve:flame' : 'slate:iron', [cx - tx, yy, cz - tz], [cx + tx, yy, cz + tz], [cx + tx, yy + 1.5, cz + tz], [cx - tx, yy + 1.5, cz - tz], [Math.cos(am), 0, Math.sin(am)]); }
+    }
     if (!K.lean) K.drum(G, t.tx, top + 3.4, t.tz, R + 0.5, 0.5, 8, { collide: false });
     K.cone('p2_fishscale_slate', t.tx, top + (K.lean ? 3.4 : 3.9), t.tz, R + 0.7, R * 2.3, K.lean ? 6 : 8);
   };
