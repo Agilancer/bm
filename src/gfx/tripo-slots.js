@@ -162,7 +162,7 @@ export class TripoSlots {
       const enc = r.device.createCommandEncoder();
       r.mip.generate(tex, fmt, 1, mips, enc);
       r.device.queue.submit([enc.finish()]);
-      return tex;
+      return r.astc.pack(tex);   // (packed on a phone: src/gfx/astc.js)
     })();
     this.skins.set(key, s);
     this.trim(this.skins, KEEP_SKINS, (k) => this.inUse((wk) => { const [mo, pa] = wk.split(':'); return `${this.ids[mo - 1]}:${pa}` === k; }), (t) => t.destroy());

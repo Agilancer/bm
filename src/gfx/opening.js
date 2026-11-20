@@ -700,12 +700,13 @@ const PORTAL_MESH = {
 export async function loadOpeningStage(renderer, base) {
   const scale = renderer.tier.texScale;
   // (Held to a phone's near cap, not its far one: they're the walls and floor the whole way down, and tile across the screen.)
-  const tex = async (name, srgb) => renderer.bitmapTexture(await getFile(base + TEX + name + '.webp', 'blob'), srgb ? 'rgba8unorm-srgb' : 'rgba8unorm', scale, false, true);
+  // (srgb: a colour, packed to ASTC on a phone, src/gfx/astc.js; the detail maps not: each channel's its own.)
+  const tex = async (name, srgb) => renderer.bitmapTexture(await getFile(base + TEX + name + '.webp', 'blob'), srgb ? 'rgba8unorm-srgb' : 'rgba8unorm', scale, false, true, !!srgb);
   const flat = renderer.flatNormal || (renderer.flatNormal = renderer.pixel('rgba8unorm', [128, 128, 255, 255]));
   const rough = (r, m = 0) => renderer.pixel('rgba8unorm', [255, r, m, 255]);
   const book = loadBook(renderer, base);
   book.catch(() => {});
-  const land = async (name, srgb) => renderer.bitmapTexture(await getFile(base + LAND_TEX + name + '.webp', 'blob'), srgb ? 'rgba8unorm-srgb' : 'rgba8unorm', scale, false, true);
+  const land = async (name, srgb) => renderer.bitmapTexture(await getFile(base + LAND_TEX + name + '.webp', 'blob'), srgb ? 'rgba8unorm-srgb' : 'rgba8unorm', scale, false, true, !!srgb);
   const pair = (name, from = tex) => Promise.all([from(name + '_c', true), from(name + '_d')]);
   // The rock is the hill's own granite, inside and out; the floor trodden earth; her steps split limestone, her walls
   // fieldstone. Her things are

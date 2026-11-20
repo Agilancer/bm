@@ -162,12 +162,16 @@ export async function loadInterior(r, base, pool, tier, pictures, steps) {
   const scale = tier.texScale;
   const tileNames = man.layers.map((l) => l.name), atlasNames = man.atlases.map((l) => l.name);
   steps.add((tileNames.length + atlasNames.length) * 2);
-  const px = (s) => Math.max(64, Math.round(s * scale));
+  // (Whole blocks of 4 a side where the colours are packed, src/gfx/astc.js, once its check has said it can.)
+  await r.astc.ready;
+  const step = r.astc.on ? 4 : 1;
+  const px = (s) => Math.max(64, Math.round(s * scale / step) * step);
   const decode = (n, s) => {
     const url = `${dir}${n}.webp`;
     return watched(url, pool.run('decode', { url, ...(scale !== 1 ? { width: px(s), height: px(s) } : {}) })).then((b) => { steps.tick(); return b; });
   };
-  const array = (names, size, kind, format) => loadTextureArray(r.device, r.mip, names, (n) => decode(`${n}_${kind}`, size), format, pictures);
+  // (The colours packed on a phone, src/gfx/astc.js, not the detail maps: as the world's, renderer.js load.)
+  const array = (names, size, kind, format) => loadTextureArray(r.device, r.mip, names, (n) => decode(`${n}_${kind}`, size), format, pictures, kind === 'c' ? r.astc : null);
   const [tc, td, ac, ad, glbBuf] = await Promise.all([
     array(tileNames, man.tile[0], 'c', 'rgba8unorm-srgb'), array(tileNames, man.tile[1], 'd', 'rgba8unorm'),
     array(atlasNames, man.atlas[0], 'c', 'rgba8unorm-srgb'), array(atlasNames, man.atlas[1], 'd', 'rgba8unorm'), glbFile,

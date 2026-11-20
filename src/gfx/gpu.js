@@ -100,7 +100,9 @@ export function isMobileDevice() {
 // (src/core/lastrun.js). A tier the Graphics setting names is kept as it is.
 export async function initGPU(tierOverride = 'auto', { light = 0 } = {}) {
   if (!navigator.gpu) throw new Error('This browser has no WebGPU.');
-  let adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
+  // (?soft=1, for tests: the browser's software GPU, which on a PC is the one that reads a phone's ASTC: src/gfx/astc.js.)
+  const soft = new URLSearchParams(globalThis.location?.search || '').has('soft');
+  let adapter = await navigator.gpu.requestAdapter(soft ? { forceFallbackAdapter: true } : { powerPreference: 'high-performance' });
   if (!adapter) adapter = await navigator.gpu.requestAdapter();
   if (!adapter) throw new Error('No WebGPU adapter is available.');
   const requiredFeatures = WANTED_FEATURES.filter((f) => adapter.features.has(f));
@@ -193,26 +195,37 @@ export const mipCountFor = (w, h) => Math.floor(Math.log2(Math.max(w, h))) + 1;
 // Decode, upload and release each layer before its lane takes the next. Worker count does not bound asynchronous image
 // decodes; queuing the whole manifest exhausts iOS memory. So `run` (src/core/files.js lanes) says how many layers are in
 // hand at once, across however many arrays share it: one lane, the default, is one layer at a time, in order.
-export async function loadTextureArray(device, mipgen, names, decode, format, run = lanes(1)) {
-  let tex, w, h, mips, failed = false;
+// packer (src/gfx/astc.js), on a phone: the array packed to ASTC, a layer at a time as it comes (each drawn with its mips in
+// a plain texture of its own, packed into its layer, and let go), so the whole plain array is never held.
+export async function loadTextureArray(device, mipgen, names, decode, format, run = lanes(1), packer = null) {
+  let tex, w, h, mips, packing = false, failed = false;
+  if (packer) await packer.ready;   // (its check done: it may have turned itself off)
   const layerIn = async (layer) => {
     if (failed) return;
     const bmp = await decode(names[layer]);
+    let plain = null;
     try {
       if (failed) return;   // (another layer failed while this one was decoding)
       if (!tex) {
         w = bmp.width; h = bmp.height; mips = mipCountFor(w, h);
-        tex = device.createTexture({ size: [w, h, names.length], format, mipLevelCount: mips,
+        packing = !!packer?.fits(format, w, h);
+        if (packer?.on && !packing) packer.stats.kept += names.length;   // (a side not a whole number of blocks: plain)
+        tex = packing ? packer.target(w, h, names.length, mips, format) : device.createTexture({ size: [w, h, names.length], format, mipLevelCount: mips,
           usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT });
       }
       if (bmp.width !== w || bmp.height !== h) throw new Error(`Texture layer size mismatch: ${names[layer]}`);
-      device.queue.copyExternalImageToTexture({ source: bmp }, { texture: tex, origin: [0, 0, layer], premultipliedAlpha: false }, [w, h]);
+      if (packing) plain = device.createTexture({ size: [w, h, 1], format, mipLevelCount: mips, usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT });
+      device.queue.copyExternalImageToTexture({ source: bmp }, { texture: plain || tex, origin: [0, 0, plain ? 0 : layer], premultipliedAlpha: false }, [w, h]);
     } finally { bmp.close(); }
     const enc = device.createCommandEncoder();
-    mipgen.generate(tex, format, 1, mips, enc, layer);
+    mipgen.generate(plain || tex, format, 1, mips, enc, plain ? 0 : layer);
+    const { spent } = plain ? packer.encode(enc, plain, tex, 0, layer, 1) : { spent: [] };
     device.queue.submit([enc.finish()]);
     // Bound GPU staging memory as well as decoded bitmaps.
     await device.queue.onSubmittedWorkDone();
+    // (The plain layer and the packing's buffers let go once the GPU's through with them.)
+    for (const b of spent) b.destroy();
+    if (plain) { packer.count(plain, 1); plain.destroy(); }
   };
   // Every layer is seen through, or let go, before a failure is passed on: none is left writing to a texture that's gone.
   const ends = await Promise.allSettled(names.map((_, layer) => run(() => layerIn(layer)).catch((error) => { failed = true; throw error; })));
@@ -221,16 +234,19 @@ export async function loadTextureArray(device, mipgen, names, decode, format, ru
   return tex;
 }
 
-// (cap: no side of what comes back is longer than this, whatever scale says. 0: no cap.)
-export async function decodeScaledBitmap(blob, scale, cap = 0) {
+// (cap: no side of what comes back is longer than this, whatever scale says. 0: no cap. step: each side a whole number of
+// these, as ASTC's 4x4 blocks need (src/gfx/astc.js): rounded to the nearest, a picture's UVs don't mind a pixel or two.)
+export async function decodeScaledBitmap(blob, scale, cap = 0, step = 1) {
   const opts = { premultiplyAlpha: 'none', colorSpaceConversion: 'none' };
   const bmp = await createImageBitmap(blob, opts);
   if (cap) scale = Math.min(scale, cap / Math.max(bmp.width, bmp.height));
-  if (scale >= 1) return bmp;
+  scale = Math.min(scale, 1);
+  const side = (n) => Math.max(step, Math.round(n * scale / step) * step);
+  const w = side(bmp.width), h = side(bmp.height);
+  if (w === bmp.width && h === bmp.height) return bmp;
   try {
     // Resize the decoded pixels instead of decoding the compressed source twice.
-    return await createImageBitmap(bmp, { ...opts, resizeWidth: Math.max(1, Math.round(bmp.width * scale)),
-      resizeHeight: Math.max(1, Math.round(bmp.height * scale)), resizeQuality: 'high' });
+    return await createImageBitmap(bmp, { ...opts, resizeWidth: w, resizeHeight: h, resizeQuality: 'high' });
   } finally { bmp.close(); }
 }
 

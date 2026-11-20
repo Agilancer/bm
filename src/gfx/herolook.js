@@ -417,9 +417,9 @@ export class HeroLooks {
       const enc = device.createCommandEncoder();
       r.mip.generate(t, format, 1, mips, enc);
       device.queue.submit([enc.finish()]);
-      return t;
+      return r.astc.pack(t);   // (packed on a phone: src/gfx/astc.js)
     };
-    const maps = [tex(alb, 'rgba8unorm-srgb'), tex(nrm, 'rgba8unorm'), tex(mr, 'rgba8unorm')];
+    const maps = await Promise.all([tex(alb, 'rgba8unorm-srgb'), tex(nrm, 'rgba8unorm'), tex(mr, 'rgba8unorm')]);
     const sk = r.makeSkinned([prim], A.jc);
     r.addLod(sk, prim, 0.055);
     const ubo = device.createBuffer({ size: CHAR_UBO, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
@@ -436,7 +436,9 @@ export class HeroLooks {
     const mat = glb.json.materials[glb.json.meshes[0].primitives[0].material];
     const img = glb.json.textures[mat.pbrMetallicRoughness.baseColorTexture.index].source;
     const bmp = await createImageBitmap(imageBytes(glb, img), { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
-    const k = this.r.tier.texScale || 1, W = Math.max(64, Math.round(bmp.width * k)), H = Math.max(64, Math.round(bmp.height * k));
+    // (Whole blocks of 4 a side where it's packed, src/gfx/astc.js.)
+    const k = this.r.tier.texScale || 1, q = this.r.astc.on ? 4 : 1, side = (n) => Math.max(64, Math.round(n * k / q) * q);
+    const W = side(bmp.width), H = side(bmp.height);
     const cv = new OffscreenCanvas(W, H), ctx = cv.getContext('2d', { willReadFrequently: true });
     ctx.drawImage(bmp, 0, 0, W, H); bmp.close();
     if (pal && pal !== 'own' && PROP_PALS[pal]) {
@@ -491,12 +493,12 @@ export class HeroLooks {
       this.r.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture), 'rgba8unorm', k, true),
     ]);
     const prim = { pos: accessor(glb, a.POSITION), nrm: accessor(glb, a.NORMAL), uv: accessor(glb, a.TEXCOORD_0), idx: accessor(glb, pr.indices) };
-    s.lying = this.r.lyingModel(prim, this.canvasTexture(pic, 'rgba8unorm-srgb'), nrm, mr, [0, 0, 0, 0]);
+    s.lying = this.r.lyingModel(prim, await this.canvasTexture(pic, 'rgba8unorm-srgb'), nrm, mr, [0, 0, 0, 0]);
     s.tip = 0;
     s.ready = true;
   }
 
-  canvasTexture(pic, format) {
+  async canvasTexture(pic, format) {
     const { device } = this.r, mips = mipCountFor(pic.W, pic.H);
     const t = device.createTexture({ size: [pic.W, pic.H], format, mipLevelCount: mips, usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT });
     if (pic.px) device.queue.writeTexture({ texture: t }, pic.px, { bytesPerRow: pic.W * 4 }, [pic.W, pic.H]);
@@ -504,7 +506,8 @@ export class HeroLooks {
     const enc = device.createCommandEncoder();
     this.r.mip.generate(t, format, 1, mips, enc);
     device.queue.submit([enc.finish()]);
-    return t;
+    // (Packed on a phone, src/gfx/astc.js; not one with its metal in the alpha, which would share the colour's few steps.)
+    return pic.px ? t : this.r.astc.pack(t);
   }
 
   async kitGlb(id) { return parseGLB(await fetch(`${this.base}assets/game/heroes/kit/${id}.glb`).then((res) => { if (!res.ok) throw new Error(`kit ${id}: ${res.status}`); return res.arrayBuffer(); })); }
@@ -518,7 +521,7 @@ export class HeroLooks {
         const glb = await this.kitGlb(id);
         if (!pal || pal === 'own') return this.r.buildProp(glb);
         const made = await this.r.buildProp(glb);
-        const t = this.canvasTexture(await this.propPicture(glb, pal, true), 'rgba8unorm-srgb');
+        const t = await this.canvasTexture(await this.propPicture(glb, pal, true), 'rgba8unorm-srgb');
         made.bg = this.r.device.createBindGroup({ layout: this.r.bglProp, entries: [{ binding: 0, resource: t.createView() }, { binding: 1, resource: { buffer: made.ubo } }] });
         // (Its glint's y: 1, its metal is in its picture's alpha, its own steel's before it was painted.)
         this.r.device.queue.writeBuffer(made.ubo, 0, new Float32Array([0, 1, 0, 0]));
@@ -548,7 +551,7 @@ export class HeroLooks {
     const glb = await this.kitGlb(prop);
     const pr = glb.json.meshes[0].primitives[0], a = pr.attributes;
     const prim = { pos: accessor(glb, a.POSITION), nrm: accessor(glb, a.NORMAL), uv: accessor(glb, a.TEXCOORD_0), idx: accessor(glb, pr.indices) };
-    const alb = this.canvasTexture(await this.propPicture(glb, pal), 'rgba8unorm-srgb');
+    const alb = await this.canvasTexture(await this.propPicture(glb, pal), 'rgba8unorm-srgb');
     // (Its colour is all a hero's prop has: a flat normal, and a matte, half metal finish.)
     const flat = (rgba) => { const t = this.r.device.createTexture({ size: [1, 1], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST }); this.r.device.queue.writeTexture({ texture: t }, new Uint8Array(rgba), { bytesPerRow: 4 }, [1, 1]); return t; };
     s.lying = this.r.lyingModel(prim, alb, flat([128, 128, 255, 255]), flat([255, 150, 90, 255]), [0, 0, 0, 0]);

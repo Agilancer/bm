@@ -2716,6 +2716,53 @@ None of this has run on one, and Chrome made to look like one is not WebKit: its
 own. What's left, biggest first: the GPU's buffers (some 290 MB: the bodies of the undead, the land, the townsfolk, the
 interiors), the land's map papers (21 MB of canvas), and the threads' heaps.
 
+**A phone's pictures packed (November 2026).** On a phone, the game's pictures now take less than half the memory they
+did: in the story, the graphics chip's pictures came to 109 MB where they were 229. Nothing about how it looks was meant to
+change: side by side, the packed pictures are hard to tell from the plain ones; grass and leaves are a little softer up
+close. **It has not run on a real iPhone yet.** On one, look out for pictures gone black, rainbow-coloured or speckled with
+noise: that would be the packing read wrong. To guard against that, the game packs a little test picture of its own
+before it loads anything, reads it back, and if this phone doesn't give it back as it was, it packs nothing and plays on
+plain pictures, as before (the crash line on the title then says "phone pictures left unpacked"). A home-screen app can't
+take an address with `?astc=0` on it, so that check is the way out. A PC's graphics chip can't read packed pictures at
+all, so a PC is just as it was.
+
+For the code (`src/gfx/astc.js`; `tools/astc/README.md` has the working). The format is ASTC, 16 bytes for every 4x4
+block, a quarter of plain 8-bit colour; every iPhone with WebGPU reads it, and so do most Android phones. The files are
+unchanged: each picture is made as before (decoded, shrunk, mips drawn), then a compute pass on the phone's own GPU packs
+it and the plain one is let go once the GPU's done with it; a land array is packed a layer at a time.
+
+- **Packed:** the land's and the interiors' colours, the cave's colours, every model's colour, normal and metal-roughness
+  picture, the heroes' painted pictures, the worn skins and the crowds' tinted skins. In the story, as an iPhone on
+  Chrome's software GPU (the one GPU on a PC that reads ASTC): 568 pictures, 164 MB to 41, and the GPU's textures 229 MB
+  to 109; in the village, 242 to 108, and the GPU process 1015 MB to 801.
+- **Kept plain:** Lisandra's pictures, as the owner made her (`buildCrabs`' `plain`). The detail maps of the land and the
+  cave: their normal, roughness and height are each their own, and one line through a block's four channels kept too
+  little of them. A normal or metal-roughness map with anything in its alpha: a shader may read it as a mask (the
+  possessed knights' eyes), so the packer looks, and keeps it plain if so. Data the game writes as it goes; render targets.
+- **The check** (`check`/`trial` in `src/gfx/astc.js`): a 12x8 picture of six blocks the packing should give back near
+  exactly, sRGB and not, with mips down to 1x1, into the second layer of an array, read back through a draw as the game
+  reads its pictures. Any error the GPU raises, a shader that won't build, or a read-back that's off turns the packing
+  off; tried with the packing broken on purpose, it does. Its error scopes close round its own calls only, so the game's
+  errors still reach the game. It reads through a draw, not a compute pass: Chrome's software GPU reads a packed texture
+  as all zeros in a compute pass, though it draws it right.
+- **How close**, each picture packed and read back by a decoder that isn't the packer's (SwiftShader's), mip by mip
+  (`tools/astc/check.html`), in PSNR, where over 40 dB is hard to see and the low 30s only up close: an archer's colour
+  41.0 dB at 512, its normals 38.3; a possessed knight's colour 41.2; the townsfolk's colour 37.0; the land's colours at
+  a phone's 448x256 37-42 (bark, stone), grass 33.4, leaves 35.0 where they're seen. (Lisandra's, before she was kept
+  plain: 40.6.) The village side by side, from one moment with the clock stopped, packed and plain: the timber, plaster,
+  stone, road and the oak's leaves the same.
+- **Load time:** not measured on a phone. On the software GPU, as an iPhone, the story was up in 13.1 s packed and 16.9 s
+  plain, so the packing at least isn't the slow part there. On a phone, it waits for the GPU after each picture, packed or
+  not, as the load always did.
+- `?astc=0` turns it off; `?astc=1` turns it on for any tier whose GPU reads ASTC. `?soft=1` runs the game on the software
+  GPU (slowly), which is how it's seen on a PC.
+
+**Looked at, left:** the interface's layers in play. Four elements the size of the screen (`#hud`, `#touch`, `#spells`
+and the auto-play banner) hold the buttons and bars at its corners, and each is a picture of the whole screen in Chrome,
+11 MB at an iPhone's 3x. Each cluster given a layer of its own changed nothing: the containers stay screen-sized. Making
+them as small as what's in them means laying out the interface again, the Move Buttons positions with it, and how WebKit
+makes its layers can't be measured here.
+
 ### What has and hasn't been tested
 
 The owner's first session on a phone found the frame rate too low, which led to the phone tier below. **That rework hasn't

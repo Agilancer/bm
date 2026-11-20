@@ -39,6 +39,8 @@ import { BODIES } from '../sim/undead.js';
 import { lerp, mat4Invert, mat4LookTo, mat4Mul, mat4Ortho, mat4Perspective, smoothstep } from '../core/math.js';
 import { shieldPose } from '../core/shield-pose.js';
 import { MipGen, makeBuffer, mipCountFor, loadTextureArray, decodeScaledBitmap } from './gpu.js';
+import { AstcPacker } from './astc.js';
+import { noteEvent } from '../core/lastrun.js';
 import { ARMOR, ARMOR_KIT, ARMOR_TRUE, GRASS, GRASS_CULL, ITEM, PROP, SHADOW, SKY, SKY_BAKE, STATIC, STATIC_SLOTS, TERRAIN, VIEWMODEL, VIEWMODEL_SKULL, staticSoftCut } from './materials.js';
 import { AO, BLOOM, COMPOSITE, PARTICLE_DRAW, PARTICLE_SIM, SHAFTS, STAIN, TRAIL } from './post.js';
 import { SpellFX } from './spellfx.js';
@@ -205,6 +207,12 @@ export class Renderer {
     this.time = 0;
     this.scale = 1;
     this.mip = new MipGen(this.device);
+    // A phone's colour, normal and roughness pictures packed to ASTC on the GPU as they come in, a quarter the memory
+    // (src/gfx/astc.js). Not the land's detail maps, whose four channels are each their own (load, the world's pictures). ?astc=0 off,
+    // ?astc=1 on a PC tier too (where the GPU reads ASTC). It checks itself first (astc.ready), and turns itself off if
+    // this GPU doesn't read its packing back right.
+    const astc = new URLSearchParams(location.search).get('astc');
+    this.astc = new AstcPacker(this.device, astc === '1' || (astc !== '0' && !!gpu.tier.lean));
     this.gashVersions = new Int32Array(MAX_CHARS).fill(-1);
     this.tmpV = new Float32Array(16); this.tmpP = new Float32Array(16); this.tmpVP = new Float32Array(16); this.tmpI = new Float32Array(16);
     this.emitted = [];
@@ -326,10 +334,14 @@ export class Renderer {
     // The PH2 pack, the second array (tools/phobos/textures/wire_ph2.py): square, smaller, its layers 200 on (layerOf).
     const p2 = manifest.ph2;
     this.p2 = { names: p2.layers.map((l) => l.name), layers: p2.layers };
-    const p2w = Math.round(p2.size[0] * tier.texScale), p2d = Math.round(p2.detail[0] * tier.texScale);
-    const tw = Math.round(manifest.size[0] * tier.texScale), th = Math.round(manifest.size[1] * tier.texScale);
+    // (The colours whole blocks of 4 a side where they're packed, src/gfx/astc.js: its check done first, as it may be off.)
+    await this.astc.ready;
+    if (this.astc.why) { console.warn(`graphics: pictures left plain, the ASTC packing turned itself off: ${this.astc.why}`); noteEvent('phone pictures left unpacked'); }
+    const q = this.astc.on ? 4 : 1, sized = (n) => Math.max(q, Math.round(n * tier.texScale / q) * q);
+    const p2w = sized(p2.size[0]), p2d = Math.round(p2.detail[0] * tier.texScale);
+    const tw = sized(manifest.size[0]), th = sized(manifest.size[1]);
     const dw = Math.round(manifest.detail[0] * tier.texScale), dh = Math.round(manifest.detail[1] * tier.texScale);
-    const gs = Math.round(1024 * tier.texScale), gd = Math.round(512 * tier.texScale);
+    const gs = sized(1024), gd = Math.round(512 * tier.texScale);
 
     // ---- the land, in the pool's threads ----
     // Terrain and the ground maps, cut into bands of a few rows: a thread is never long on one, so the pictures it's also
@@ -364,11 +376,14 @@ export class Renderer {
       return watched(url, pool.run('decode', { url, ...(shrink ? { width, height } : {}) })).then((b) => { tick(); return b; });
     };
     const worldPictures = timed('the world\'s pictures', Promise.all([
-      loadTextureArray(device, this.mip, layerNames, (n) => decode(`${n}_c`, tw, th), 'rgba8unorm-srgb', pictures),
+      // (The colours packed on a phone; the detail maps not: their normal, roughness and height are each their own, and
+      // one line through a block's four channels lost too much of them, 19-29 dB against 34-41 for the colours,
+      // tools/astc/check.html.)
+      loadTextureArray(device, this.mip, layerNames, (n) => decode(`${n}_c`, tw, th), 'rgba8unorm-srgb', pictures, this.astc),
       loadTextureArray(device, this.mip, layerNames, (n) => decode(`${n}_d`, dw, dh), 'rgba8unorm', pictures),
-      loadTextureArray(device, this.mip, manifest.ground, (n) => decode(`${n}_c`, gs, gs), 'rgba8unorm-srgb', pictures),
+      loadTextureArray(device, this.mip, manifest.ground, (n) => decode(`${n}_c`, gs, gs), 'rgba8unorm-srgb', pictures, this.astc),
       loadTextureArray(device, this.mip, manifest.ground, (n) => decode(`${n}_d`, gd, gd), 'rgba8unorm', pictures),
-      loadTextureArray(device, this.mip, this.p2.names, (n) => decode(`${p2.dir}${n}_c`, p2w, p2w), 'rgba8unorm-srgb', pictures),
+      loadTextureArray(device, this.mip, this.p2.names, (n) => decode(`${p2.dir}${n}_c`, p2w, p2w), 'rgba8unorm-srgb', pictures, this.astc),
       loadTextureArray(device, this.mip, this.p2.names, (n) => decode(`${p2.dir}${n}_d`, p2d, p2d), 'rgba8unorm', pictures),
     ]));
     worldPictures.catch(() => {});
@@ -405,7 +420,7 @@ export class Renderer {
           skirtDirection[v] = Math.round((angle / (2 * Math.PI) + 0.5) * 65535);
         }
         return { ...prim, flex: Float32Array.from(skirt, (weight) => -weight), skirtDirection };
-      }, SKIRT_PALETTE_JOINTS, true);
+      }, SKIRT_PALETTE_JOINTS, true, true);   // (near; and plain: her pictures as they came, never packed)
       return { form, jaw: glb.json.scenes[0].extras?.jaw };
     }));
     // (Your own body, and its colour picture as it came, for the gear painted onto it: src/gfx/bodyskin.js.)
@@ -1023,8 +1038,8 @@ export class Renderer {
     this.stats.staticTris = ni / 3;
   }
 
-  async imageTexture(glb, imageIndex, format, scale = 1, full = false, near = false) {
-    return this.bitmapTexture(imageBytes(glb, imageIndex), format, scale, full, near);
+  async imageTexture(glb, imageIndex, format, scale = 1, full = false, near = false, pack = true) {
+    return this.bitmapTexture(imageBytes(glb, imageIndex), format, scale, full, near, pack);
   }
 
   // A picture as a texture, shrunk by scale. On a phone, of a model's pictures (those given a scale under 1): none is over
@@ -1032,11 +1047,14 @@ export class Renderer {
   // metal and roughness, the two that aren't colours, are tier.mapScale of that again: there are two of them to every
   // colour picture, uncompressed, and at a phone's size they were a third of all its textures. full: as scale says.
   // near: one seen close (Lisandra, your own body), held to tier.texCapNear instead.
-  async bitmapTexture(blob, format, scale, full = false, near = false) {
+  // Packed to ASTC on a phone (src/gfx/astc.js): its sides made whole blocks of 4 as it's shrunk, which the packing needs.
+  // pack false: kept plain even there (a detail map whose four channels are each their own; Lisandra, as the owner made her).
+  async bitmapTexture(blob, format, scale, full = false, near = false, pack = true) {
+    await this.astc.ready;
     const cap = near ? this.tier.texCapNear || this.tier.texCap : this.tier.texCap;
     const lean = this.tier.lean && scale < 1 && !full && cap;
     const k = lean && format === 'rgba8unorm' ? this.tier.mapScale : 1;
-    const bmp = await decodeScaledBitmap(blob, scale * k, lean ? cap * k : 0);
+    const bmp = await decodeScaledBitmap(blob, scale * k, lean ? cap * k : 0, pack && this.astc.on ? 4 : 1);
     const mips = mipCountFor(bmp.width, bmp.height);
     const tex = this.device.createTexture({ size: [bmp.width, bmp.height], format, mipLevelCount: mips, usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT });
     try {
@@ -1045,6 +1063,8 @@ export class Renderer {
     const enc = this.device.createCommandEncoder();
     this.mip.generate(tex, format, 1, mips, enc);
     this.device.queue.submit([enc.finish()]);
+    // (Packed on a phone, which waits on the GPU as below; elsewhere, or kept plain, the wait that paces the load.)
+    if (pack && this.astc.on) return this.astc.pack(tex);
     await this.device.queue.onSubmittedWorkDone();
     return tex;
   }
@@ -1143,8 +1163,9 @@ export class Renderer {
     return { ...base, outBuf, palette, params, bg };
   }
 
-  // near: seen close, its pictures held to the tier's texCapNear rather than texCap (bitmapTexture).
-  async buildCrabs(glb, count, scale, prepare, paletteExtra = 0, near = false) {
+  // near: seen close, its pictures held to the tier's texCapNear rather than texCap (bitmapTexture). plain: its pictures never
+  // packed to ASTC on a phone (Lisandra: shipped as the owner made her, src/gfx/astc.js).
+  async buildCrabs(glb, count, scale, prepare, paletteExtra = 0, near = false, plain = false) {
     const pr = glb.json.meshes[0].primitives[0];
     const a = pr.attributes;
     const pos = accessor(glb, a.POSITION).slice();
@@ -1157,9 +1178,9 @@ export class Renderer {
     const srcOf = (t) => glb.json.textures[t.index].source;
     const texScale = this.tier.texScale;
     const [alb, nrm, mr] = await Promise.all([
-      this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture), 'rgba8unorm-srgb', texScale, false, near),
-      this.imageTexture(glb, srcOf(mat.normalTexture), 'rgba8unorm', texScale, false, near),
-      this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture), 'rgba8unorm', texScale, false, near),
+      this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture), 'rgba8unorm-srgb', texScale, false, near, !plain),
+      this.imageTexture(glb, srcOf(mat.normalTexture), 'rgba8unorm', texScale, false, near, !plain),
+      this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture), 'rgba8unorm', texScale, false, near, !plain),
     ]);
     const out = [];
     for (let i = 0; i < count; i++) {
@@ -2293,6 +2314,8 @@ export class Renderer {
     this.grassFarArgs = device.createBuffer({ size: 16, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.INDIRECT | GPUBufferUsage.COPY_DST });
     this.grassU = device.createBuffer({ size: 192, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     this.grassData = new Float32Array(48);
+    // (It reads only maps made as the game goes, never packed. A picture packed to ASTC on a phone, src/gfx/astc.js, read in
+    // a compute pass comes back all zeros on Chrome's software GPU, though it draws right: test any such read on it.)
     const cull = this.shader(GRASS_CULL);
     this.pGrassCull = device.createComputePipeline({ layout: 'auto', compute: { module: cull, entryPoint: 'main' } });
     this.grassBG = device.createBindGroup({ layout: this.pGrassCull.getBindGroupLayout(0), entries: [
