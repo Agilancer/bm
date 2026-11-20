@@ -57,13 +57,13 @@ export const KNOLL = { x: 2440, z: -540, r: 80, h: 22 };
 // portalWall; what's on and round each bank, portalDress). [x, z, yaw, how high the bank stands over the land, what it is].
 // (Checked against DELVES in tests/portal-banks.test.mjs.)
 export const PORTAL_BANKS = [
-  [-4914, 200, Math.PI / 2, 8.5, 'keep'],       // Blackvigil Keep: in the keep's fallen outworks, by its gate on the Vigil Road
-  [880, 3990, -Math.PI / 2, 10, 'mine'],        // the Howling Deeps: the Howling Mouth, a drift into the hill
-  [-430, -2717, 0.53, 7.5, 'drowned'],          // the Drowned Vaults: an old embankment gone to reed and water
-  [2861, -4290, 1.82, 9, 'spore'],              // the Sporehold: a knoll grown over with the fungus
-  [3087, 4493, 1.08, 8, 'playhouse'],           // the Hollow Playhouse: the ruin of its tiered bank of seats
-  [-2910, 3439, 0, 7, 'barrow'],                // the Kingsbarrow: the door of a barrow of its own, by the great one
-  [-2577, -2913, Math.PI, 12, 'bones'],         // the Elder Dragon Gods: a ridge of rock with the old bones in it
+  [-4914, 200, Math.PI / 2, 10, 'keep'],       // Blackvigil Keep: in the keep's fallen outworks, by its gate on the Vigil Road
+  [880, 3990, -Math.PI / 2, 13, 'mine'],        // the Howling Deeps: the Howling Mouth, a drift into the hill
+  [-430, -2717, 0.53, 10, 'drowned'],          // the Drowned Vaults: an old embankment gone to reed and water
+  [2861, -4290, 1.82, 11.5, 'spore'],              // the Sporehold: a knoll grown over with the fungus
+  [3087, 4493, 1.08, 10.5, 'playhouse'],           // the Hollow Playhouse: the ruin of its tiered bank of seats
+  [-2910, 3439, 0, 8.5, 'barrow'],                // the Kingsbarrow: the door of a barrow of its own, by the great one
+  [-2577, -2913, Math.PI, 15, 'bones'],         // the Elder Dragon Gods: a ridge of rock with the old bones in it
 ];
 // The terrace these stand at the front of (PORTAL_PAD in src/core/dungeon.js, PLAT.edge in sites.js): half across, half
 // through, and how far behind the portal its middle is.
@@ -79,11 +79,15 @@ export function bankAt(x, z) {
     const c = Math.cos(yaw), s = Math.sin(yaw), dx = dx0 + BANK_PAD.at * s, dz = dz0 + BANK_PAD.at * c;
     const u = Math.abs(dx * c - dz * s), w = dx * s + dz * c, { u: U, w: W } = BANK_PAD;
     // (Blackvigil's stands before the keep's own gate: the keep's behind it, and only its fallen outworks banked either side.)
-    const behind = kind === 'keep' ? 0 : 1 - sstep(-W - 2.2, -W - 0.1, w);
-    const side = sstep(U + 0.4, U + 4.5, u) * (1 - 0.6 * sstep(-W, W, w)) * (1 - sstep(W, W + 5, w));
+    const behind = kind === 'keep' ? 0 : 1 - sstep(-W - 6.5, -W - 0.2, w);
+    // (Over the wall's top behind it, and its cheeks coming forward either side of the terrace past its front, lower there:
+    // the wall's a doorway in the hill's face, not a thing stood up in front of it.)
+    // (Short of the Howling Mouth's camp, out in front of the Deeps' to one side.)
+    const reach = kind === 'mine' ? 3 : 9;
+    const side = sstep(U + 0.4, U + 6, u) * (1 - 0.45 * sstep(-W, W + 2, w)) * (1 - sstep(W + 1, W + reach, w));
     const core = Math.max(behind, side);
     const out = Math.hypot(Math.max(0, u - U - 2), Math.max(0, -w - W - 6), Math.max(0, w - W - 4) * 1.6);
-    const fall = 1 - sstep(4, kind === 'bones' ? 40 : 30, out);
+    const fall = 1 - sstep(6, kind === 'bones' ? 46 : 38, out);
     const rough = 0.85 + 0.3 * fbm(x * 0.09 + bx * 0.01, z * 0.09, 2);
     h = Math.max(h, H * core * fall * rough);
   }
