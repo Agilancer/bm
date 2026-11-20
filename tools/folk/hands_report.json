@@ -1,0 +1,2726 @@
+{
+ "apricot": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 3.8,
+   "bent": 3.8,
+   "roll": 9.0
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 8.9,
+   "bent": 8.9,
+   "roll": 7.2
+  }
+ },
+ "martleboro": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 14.4,
+   "bent": 14.4,
+   "roll": 17.9
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 22.9,
+   "bent": 22.9,
+   "roll": 20.2
+  }
+ },
+ "louis_g": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 17.0,
+   "bent": 17.0,
+   "roll": 12.4
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 13.5,
+   "bent": 13.5,
+   "roll": 12.4
+  }
+ },
+ "sweep": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 13.7,
+   "bent": 13.7,
+   "roll": 3.4
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 13.0,
+   "bent": 13.0,
+   "roll": 3.1
+  }
+ },
+ "fishwife": {
+  "Left": {
+   "fingers": [
+    2,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 12.5,
+   "bent": 12.5,
+   "roll": 8.3
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 9.6,
+   "bent": 9.6,
+   "roll": 8.3
+  }
+ },
+ "bonecarver": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 3.1,
+   "bent": 3.1,
+   "roll": 11.2
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 1.6,
+   "bent": 1.6,
+   "roll": 8.5
+  }
+ },
+ "tanner": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 10.9,
+   "bent": 10.9,
+   "roll": 9.5
+  },
+  "Right": {
+   "fingers": [
+    1,
+    2,
+    1
+   ],
+   "thumb": true,
+   "bend": 9.3,
+   "bent": 9.3,
+   "roll": 8.0
+  }
+ },
+ "watchman": {
+  "Left": {
+   "fingers": [
+    3,
+    1
+   ],
+   "thumb": true,
+   "bend": 15.2,
+   "bent": 15.2,
+   "roll": 75.5
+  },
+  "Right": {
+   "fingers": [
+    3,
+    1
+   ],
+   "thumb": true,
+   "bend": 15.5,
+   "bent": 15.5,
+   "roll": 76.2
+  }
+ },
+ "ragwoman": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 4.1,
+   "bent": 4.1,
+   "roll": 8.6
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 6.6,
+   "bent": 6.6,
+   "roll": 7.8
+  }
+ },
+ "cutpurse": {
+  "Left": {
+   "fingers": [
+    3,
+    1
+   ],
+   "thumb": true,
+   "bend": 11.2,
+   "bent": 11.2,
+   "roll": 4.3
+  },
+  "Right": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 11.3,
+   "bent": 11.3,
+   "roll": 2.2
+  }
+ },
+ "smelter": {
+  "Left": {
+   "fingers": [
+    2,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 19.1,
+   "bent": 19.1,
+   "roll": 21.1
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 21.7,
+   "bent": 21.7,
+   "roll": 21.1
+  }
+ },
+ "apothecary": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    2
+   ],
+   "thumb": true,
+   "bend": 10.7,
+   "bent": 10.7,
+   "roll": 4.6
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    2
+   ],
+   "thumb": true,
+   "bend": 14.0,
+   "bent": 14.0,
+   "roll": 3.0
+  }
+ },
+ "merchant": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 14.9,
+   "bent": 14.9,
+   "roll": 13.6
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 21.5,
+   "bent": 21.5,
+   "roll": 13.0
+  }
+ },
+ "baker": {
+  "Left": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 16.4,
+   "bent": 16.4,
+   "roll": 10.6
+  },
+  "Right": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 13.1,
+   "bent": 13.1,
+   "roll": 9.5
+  }
+ },
+ "butcher": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 17.3,
+   "bent": 17.3,
+   "roll": 14.1
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    2
+   ],
+   "thumb": true,
+   "bend": 17.5,
+   "bent": 17.5,
+   "roll": 15.6
+  }
+ },
+ "gravedigger": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 13.3,
+   "bent": 13.3,
+   "roll": 17.8
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 18.0,
+   "bent": 18.0,
+   "roll": 17.1
+  }
+ },
+ "lamplighter": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 14.8,
+   "bent": 14.8,
+   "roll": 11.5
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 17.4,
+   "bent": 17.4,
+   "roll": 9.5
+  }
+ },
+ "washerwoman": {
+  "Left": {
+   "fingers": [
+    3,
+    1
+   ],
+   "thumb": true,
+   "bend": 10.9,
+   "bent": 10.9,
+   "roll": 8.6
+  },
+  "Right": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 10.1,
+   "bent": 10.1,
+   "roll": 4.9
+  }
+ },
+ "ferryman": {
+  "Left": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 5.9,
+   "bent": 5.9,
+   "roll": 8.6
+  },
+  "Right": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 4.2,
+   "bent": 4.2,
+   "roll": 7.3
+  }
+ },
+ "plaguedoctor": {
+  "Left": {
+   "fingers": [
+    1,
+    2,
+    1
+   ],
+   "thumb": true,
+   "bend": 11.9,
+   "bent": 11.9,
+   "roll": 7.0
+  },
+  "Right": {
+   "fingers": [
+    3,
+    1
+   ],
+   "thumb": true,
+   "bend": 8.2,
+   "bent": 8.2,
+   "roll": 5.2
+  }
+ },
+ "grinder": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 3.6,
+   "bent": 3.6,
+   "roll": 10.8
+  },
+  "Right": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 10.9,
+   "bent": 10.9,
+   "roll": 8.6
+  }
+ },
+ "chandler": {
+  "Left": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 15.9,
+   "bent": 15.9,
+   "roll": 0.4
+  },
+  "Right": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 16.8,
+   "bent": 16.8,
+   "roll": 0.3
+  }
+ },
+ "mason": {
+  "Left": {
+   "fingers": [
+    1,
+    2,
+    1
+   ],
+   "thumb": true,
+   "bend": 15.2,
+   "bent": 15.2,
+   "roll": 5.0
+  },
+  "Right": {
+   "fingers": [
+    1,
+    2,
+    1
+   ],
+   "thumb": true,
+   "bend": 13.0,
+   "bent": 13.0,
+   "roll": 4.7
+  }
+ },
+ "dockhand": {
+  "Left": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 12.3,
+   "bent": 12.3,
+   "roll": 9.5
+  },
+  "Right": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 12.1,
+   "bent": 12.1,
+   "roll": 7.0
+  }
+ },
+ "porter": {
+  "Left": {
+   "fingers": [
+    3,
+    1
+   ],
+   "thumb": true,
+   "bend": 4.5,
+   "bent": 4.5,
+   "roll": 52.9
+  },
+  "Right": {
+   "fingers": [
+    3,
+    1
+   ],
+   "thumb": true,
+   "bend": 5.9,
+   "bent": 5.9,
+   "roll": 53.1
+  }
+ },
+ "moneylender": {
+  "Left": {
+   "fingers": [
+    3,
+    1
+   ],
+   "thumb": true,
+   "bend": 18.4,
+   "bent": 18.4,
+   "roll": 25.7
+  },
+  "Right": {
+   "fingers": [
+    2,
+    2
+   ],
+   "thumb": true,
+   "bend": 19.6,
+   "bent": 19.6,
+   "roll": 26.2
+  }
+ },
+ "acolyte": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 12.6,
+   "bent": 12.6,
+   "roll": 2.7
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 8.0,
+   "bent": 8.0,
+   "roll": 3.9
+  }
+ },
+ "mourner": {
+  "Left": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 8.7,
+   "bent": 8.7,
+   "roll": 10.2
+  },
+  "Right": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 8.9,
+   "bent": 8.9,
+   "roll": 9.6
+  }
+ },
+ "veteran": {
+  "Left": {
+   "fingers": [
+    1,
+    2,
+    1
+   ],
+   "thumb": true,
+   "bend": 12.5,
+   "bent": 12.5,
+   "roll": 1.3
+  },
+  "Right": {
+   "fingers": [
+    1,
+    2,
+    1
+   ],
+   "thumb": true,
+   "bend": 9.0,
+   "bent": 9.0,
+   "roll": 5.7
+  }
+ },
+ "dyer": {
+  "Left": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 15.0,
+   "bent": 15.0,
+   "roll": 13.4
+  },
+  "Right": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 12.9,
+   "bent": 12.9,
+   "roll": 12.7
+  }
+ },
+ "weaver": {
+  "Left": {
+   "fingers": [
+    1,
+    2,
+    1
+   ],
+   "thumb": true,
+   "bend": 12.1,
+   "bent": 12.1,
+   "roll": 0.8
+  },
+  "Right": {
+   "fingers": [
+    1,
+    2,
+    1
+   ],
+   "thumb": true,
+   "bend": 10.9,
+   "bent": 10.9,
+   "roll": 1.0
+  }
+ },
+ "innkeeper": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    2
+   ],
+   "thumb": true,
+   "bend": 23.3,
+   "bent": 23.3,
+   "roll": 3.6
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    2
+   ],
+   "thumb": true,
+   "bend": 13.2,
+   "bent": 13.2,
+   "roll": 1.9
+  }
+ },
+ "noblewoman": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 18.7,
+   "bent": 18.7,
+   "roll": 3.1
+  },
+  "Right": {
+   "fingers": [
+    1,
+    2,
+    1
+   ],
+   "thumb": true,
+   "bend": 24.7,
+   "bent": 24.7,
+   "roll": 18.8
+  }
+ },
+ "fiddler": {
+  "Left": {
+   "fingers": [
+    2,
+    2
+   ],
+   "thumb": true,
+   "bend": 16.5,
+   "bent": 16.5,
+   "roll": 3.7
+  },
+  "Right": {
+   "fingers": [
+    2,
+    2
+   ],
+   "thumb": true,
+   "bend": 11.0,
+   "bent": 11.0,
+   "roll": 3.5
+  }
+ },
+ "scribe": {
+  "Left": {
+   "fingers": [
+    1,
+    3
+   ],
+   "thumb": true,
+   "bend": 11.8,
+   "bent": 11.8,
+   "roll": 7.3
+  },
+  "Right": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 12.5,
+   "bent": 12.5,
+   "roll": 5.8
+  }
+ },
+ "barber": {
+  "Left": {
+   "fingers": [
+    1,
+    3
+   ],
+   "thumb": true,
+   "bend": 10.4,
+   "bent": 10.4,
+   "roll": 15.8
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    2
+   ],
+   "thumb": true,
+   "bend": 9.2,
+   "bent": 9.2,
+   "roll": 12.2
+  }
+ },
+ "beggarwoman": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 10.5,
+   "bent": 10.5,
+   "roll": 13.8
+  },
+  "Right": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 9.7,
+   "bent": 9.7,
+   "roll": 13.3
+  }
+ },
+ "urchingirl": {
+  "Left": {
+   "fingers": [
+    3,
+    1
+   ],
+   "thumb": true,
+   "bend": 8.5,
+   "bent": 8.5,
+   "roll": 14.2
+  },
+  "Right": {
+   "fingers": [
+    2,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 23.3,
+   "bent": 23.3,
+   "roll": 9.4
+  }
+ },
+ "hedgewitch": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 15.7,
+   "bent": 15.7,
+   "roll": 11.8
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 11.9,
+   "bent": 11.9,
+   "roll": 15.6
+  }
+ },
+ "joiner": {
+  "Left": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 19.0,
+   "bent": 19.0,
+   "roll": 4.9
+  },
+  "Right": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 19.0,
+   "bent": 19.0,
+   "roll": 2.5
+  }
+ },
+ "pieseller": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 11.9,
+   "bent": 11.9,
+   "roll": 5.6
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 15.3,
+   "bent": 15.3,
+   "roll": 5.6
+  }
+ },
+ "gaoler": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 15.9,
+   "bent": 15.9,
+   "roll": 7.3
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 8.4,
+   "bent": 8.4,
+   "roll": 5.9
+  }
+ },
+ "dukeservant": {
+  "Left": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 17.8,
+   "bent": 17.8,
+   "roll": 3.0
+  },
+  "Right": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 15.6,
+   "bent": 15.6,
+   "roll": 3.8
+  }
+ },
+ "charcoalburner": {
+  "Left": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 19.8,
+   "bent": 19.8,
+   "roll": 2.8
+  },
+  "Right": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 18.0,
+   "bent": 18.0,
+   "roll": 2.5
+  }
+ },
+ "netmender": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 7.8,
+   "bent": 7.8,
+   "roll": 9.6
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 11.7,
+   "bent": 11.7,
+   "roll": 8.2
+  }
+ },
+ "bargewoman": {
+  "Left": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 10.8,
+   "bent": 10.8,
+   "roll": 7.5
+  },
+  "Right": {
+   "fingers": [
+    2,
+    2
+   ],
+   "thumb": true,
+   "bend": 13.1,
+   "bent": 13.1,
+   "roll": 4.6
+  }
+ },
+ "offduty": {
+  "Left": {
+   "fingers": [
+    3,
+    1
+   ],
+   "thumb": true,
+   "bend": 11.4,
+   "bent": 11.4,
+   "roll": 4.9
+  },
+  "Right": {
+   "fingers": [
+    1,
+    2,
+    1
+   ],
+   "thumb": true,
+   "bend": 8.9,
+   "bent": 8.9,
+   "roll": 3.9
+  }
+ },
+ "magestudent": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 11.0,
+   "bent": 11.0,
+   "roll": 10.8
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 14.5,
+   "bent": 14.5,
+   "roll": 11.3
+  }
+ },
+ "younglord": {
+  "Left": {
+   "fingers": [
+    1,
+    2,
+    1
+   ],
+   "thumb": true,
+   "bend": 11.5,
+   "bent": 11.5,
+   "roll": 5.4
+  },
+  "Right": {
+   "fingers": [
+    1,
+    2,
+    1
+   ],
+   "thumb": true,
+   "bend": 14.7,
+   "bent": 14.7,
+   "roll": 5.3
+  }
+ },
+ "ladysmaid": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 13.4,
+   "bent": 13.4,
+   "roll": 2.0
+  },
+  "Right": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 8.4,
+   "bent": 8.4,
+   "roll": 0.1
+  }
+ },
+ "pilgrim": {
+  "Left": {
+   "fingers": [
+    1,
+    2,
+    1
+   ],
+   "thumb": true,
+   "bend": 14.0,
+   "bent": 14.0,
+   "roll": 11.1
+  },
+  "Right": {
+   "fingers": [
+    1,
+    2,
+    1
+   ],
+   "thumb": true,
+   "bend": 17.2,
+   "bent": 17.2,
+   "roll": 0.5
+  }
+ },
+ "tollkeeper": {
+  "Left": {
+   "fingers": [
+    2,
+    2
+   ],
+   "thumb": true,
+   "bend": 17.5,
+   "bent": 17.5,
+   "roll": 8.4
+  },
+  "Right": {
+   "fingers": [
+    2,
+    2
+   ],
+   "thumb": true,
+   "bend": 17.4,
+   "bent": 17.4,
+   "roll": 8.8
+  }
+ },
+ "spiceseller": {
+  "Left": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 11.6,
+   "bent": 11.6,
+   "roll": 0.5
+  },
+  "Right": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 16.4,
+   "bent": 16.4,
+   "roll": 7.4
+  }
+ },
+ "peddler": {
+  "Left": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 12.3,
+   "bent": 12.3,
+   "roll": 16.9
+  },
+  "Right": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 5.9,
+   "bent": 5.9,
+   "roll": 13.9
+  }
+ },
+ "graverobber": {
+  "Left": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 5.8,
+   "bent": 5.8,
+   "roll": 12.5
+  },
+  "Right": {
+   "fingers": [
+    3,
+    1
+   ],
+   "thumb": true,
+   "bend": 7.1,
+   "bent": 7.1,
+   "roll": 12.6
+  }
+ },
+ "demonsteward": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 10.1,
+   "bent": 10.1,
+   "roll": 14.3
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 7.3,
+   "bent": 7.3,
+   "roll": 12.6
+  }
+ },
+ "bonebutler": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 12.3,
+   "bent": 12.3,
+   "roll": 11.3
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 16.5,
+   "bent": 16.5,
+   "roll": 8.9
+  }
+ },
+ "imppage": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 10.6,
+   "bent": 10.6,
+   "roll": 13.1
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 5.7,
+   "bent": 5.7,
+   "roll": 10.2
+  }
+ },
+ "torturer": {
+  "Left": {
+   "fingers": [
+    1,
+    2,
+    1
+   ],
+   "thumb": true,
+   "bend": 5.7,
+   "bent": 5.7,
+   "roll": 9.5
+  },
+  "Right": {
+   "fingers": [
+    2,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 8.9,
+   "bent": 8.9,
+   "roll": 10.2
+  }
+ },
+ "ghoulscullion": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 1.6,
+   "bent": 1.6,
+   "roll": 2.1
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 15.2,
+   "bent": 15.2,
+   "roll": 2.7
+  }
+ },
+ "archivistghost": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 11.1,
+   "bent": 11.1,
+   "roll": 10.8
+  },
+  "Right": {
+   "fingers": [
+    1,
+    2,
+    1
+   ],
+   "thumb": true,
+   "bend": 4.4,
+   "bent": 4.4,
+   "roll": 13.0
+  }
+ },
+ "hellguard": {
+  "Left": {
+   "fingers": [
+    1,
+    2,
+    1
+   ],
+   "thumb": true,
+   "bend": 7.9,
+   "bent": 7.9,
+   "roll": 16.1
+  },
+  "Right": {
+   "fingers": [
+    1,
+    2,
+    1
+   ],
+   "thumb": true,
+   "bend": 8.6,
+   "bent": 8.6,
+   "roll": 17.8
+  }
+ },
+ "keeppriestess": {
+  "Left": {
+   "fingers": [
+    1,
+    2,
+    1
+   ],
+   "thumb": true,
+   "bend": 10.8,
+   "bent": 10.8,
+   "roll": 7.8
+  },
+  "Right": {
+   "fingers": [
+    1,
+    2,
+    1
+   ],
+   "thumb": true,
+   "bend": 4.7,
+   "bent": 4.7,
+   "roll": 7.3
+  }
+ },
+ "sorrel_b": {
+  "Left": {
+   "fingers": [
+    1,
+    2,
+    1
+   ],
+   "thumb": true,
+   "bend": 14.3,
+   "bent": 14.3,
+   "roll": 11.0
+  },
+  "Right": {
+   "fingers": [
+    1,
+    2,
+    1
+   ],
+   "thumb": true,
+   "bend": 8.2,
+   "bent": 8.2,
+   "roll": 9.6
+  }
+ },
+ "osk_b": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 10.9,
+   "bent": 10.9,
+   "roll": 5.8
+  },
+  "Right": {
+   "fingers": [
+    1,
+    2,
+    1
+   ],
+   "thumb": true,
+   "bend": 12.6,
+   "bent": 12.6,
+   "roll": 4.0
+  }
+ },
+ "corve_b": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 13.6,
+   "bent": 13.6,
+   "roll": 17.8
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 13.6,
+   "bent": 13.6,
+   "roll": 17.0
+  }
+ },
+ "abel_b": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 19.4,
+   "bent": 19.4,
+   "roll": 1.3
+  },
+  "Right": {
+   "fingers": [
+    1,
+    2,
+    1
+   ],
+   "thumb": true,
+   "bend": 16.1,
+   "bent": 16.1,
+   "roll": 1.3
+  }
+ },
+ "greta_b": {
+  "Left": {
+   "fingers": [
+    3,
+    1
+   ],
+   "thumb": true,
+   "bend": 8.8,
+   "bent": 8.8,
+   "roll": 12.4
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 7.9,
+   "bent": 7.9,
+   "roll": 12.5
+  }
+ },
+ "wulf_b": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 4.9,
+   "bent": 4.9,
+   "roll": 10.2
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 6.0,
+   "bent": 6.0,
+   "roll": 6.3
+  }
+ },
+ "astrologer": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 5.4,
+   "bent": 5.4,
+   "roll": 2.8
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 11.9,
+   "bent": 11.9,
+   "roll": 3.4
+  }
+ },
+ "alchemistgirl": {
+  "Left": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 8.4,
+   "bent": 8.4,
+   "roll": 12.8
+  },
+  "Right": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 12.7,
+   "bent": 12.7,
+   "roll": 13.8
+  }
+ },
+ "bookbinder": {
+  "Left": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 11.5,
+   "bent": 11.5,
+   "roll": 6.3
+  },
+  "Right": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 8.1,
+   "bent": 8.1,
+   "roll": 0.7
+  }
+ },
+ "inkmaker": {
+  "Left": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 8.8,
+   "bent": 8.8,
+   "roll": 10.5
+  },
+  "Right": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 14.3,
+   "bent": 14.3,
+   "roll": 7.1
+  }
+ },
+ "herbalist": {
+  "Left": {
+   "fingers": [
+    1,
+    3
+   ],
+   "thumb": true,
+   "bend": 28.9,
+   "bent": 28.9,
+   "roll": 15.8
+  },
+  "Right": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 30.0,
+   "bent": 30.7,
+   "roll": 23.0
+  }
+ },
+ "tutor": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 6.0,
+   "bent": 6.0,
+   "roll": 12.8
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 6.2,
+   "bent": 6.2,
+   "roll": 11.9
+  }
+ },
+ "crossbowman": {
+  "Left": {
+   "fingers": [
+    2,
+    2
+   ],
+   "thumb": true,
+   "bend": 5.6,
+   "bent": 5.6,
+   "roll": 10.7
+  },
+  "Right": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 7.3,
+   "bent": 7.3,
+   "roll": 14.8
+  }
+ },
+ "gateclerk": {
+  "Left": {
+   "fingers": [
+    2,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 5.2,
+   "bent": 5.2,
+   "roll": 9.2
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 8.1,
+   "bent": 8.1,
+   "roll": 7.5
+  }
+ },
+ "ostler": {
+  "Left": {
+   "fingers": [
+    1,
+    2,
+    1
+   ],
+   "thumb": true,
+   "bend": 1.0,
+   "bent": 1.0,
+   "roll": 4.2
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 8.2,
+   "bent": 8.2,
+   "roll": 6.0
+  }
+ },
+ "farrier": {
+  "Left": {
+   "fingers": [
+    1,
+    3
+   ],
+   "thumb": true,
+   "bend": 6.9,
+   "bent": 6.9,
+   "roll": 5.3
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 2.3,
+   "bent": 2.3,
+   "roll": 4.5
+  }
+ },
+ "carter": {
+  "Left": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 15.8,
+   "bent": 15.8,
+   "roll": 3.7
+  },
+  "Right": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 19.2,
+   "bent": 19.2,
+   "roll": 4.7
+  }
+ },
+ "drillsergeant": {
+  "Left": {
+   "fingers": [
+    3,
+    1
+   ],
+   "thumb": true,
+   "bend": 7.1,
+   "bent": 7.1,
+   "roll": 14.9
+  },
+  "Right": {
+   "fingers": [
+    3,
+    1
+   ],
+   "thumb": true,
+   "bend": 8.0,
+   "bent": 8.0,
+   "roll": 13.6
+  }
+ },
+ "armourer": {
+  "Left": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 7.2,
+   "bent": 7.2,
+   "roll": 12.0
+  },
+  "Right": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 9.3,
+   "bent": 9.3,
+   "roll": 12.4
+  }
+ },
+ "fletcher": {
+  "Left": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 14.2,
+   "bent": 14.2,
+   "roll": 7.7
+  },
+  "Right": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 12.9,
+   "bent": 12.9,
+   "roll": 6.9
+  }
+ },
+ "campcook": {
+  "Left": {
+   "fingers": [
+    1,
+    3
+   ],
+   "thumb": true,
+   "bend": 10.8,
+   "bent": 10.8,
+   "roll": 3.8
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    2
+   ],
+   "thumb": true,
+   "bend": 14.3,
+   "bent": 14.3,
+   "roll": 1.8
+  }
+ },
+ "bannerbearer": {
+  "Left": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 5.6,
+   "bent": 5.6,
+   "roll": 14.2
+  },
+  "Right": {
+   "fingers": [
+    1,
+    3
+   ],
+   "thumb": true,
+   "bend": 3.4,
+   "bent": 3.4,
+   "roll": 14.6
+  }
+ },
+ "flagellant": {
+  "Left": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 7.6,
+   "bent": 7.6,
+   "roll": 10.6
+  },
+  "Right": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 8.1,
+   "bent": 8.1,
+   "roll": 10.3
+  }
+ },
+ "relicseller": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 30.0,
+   "bent": 30.4,
+   "roll": 19.1
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 18.6,
+   "bent": 18.6,
+   "roll": 24.9
+  }
+ },
+ "tithecollector": {
+  "Left": {
+   "fingers": [
+    3,
+    1
+   ],
+   "thumb": true,
+   "bend": 20.1,
+   "bent": 20.1,
+   "roll": 2.4
+  },
+  "Right": {
+   "fingers": [
+    3,
+    1
+   ],
+   "thumb": true,
+   "bend": 22.3,
+   "bent": 22.3,
+   "roll": 1.4
+  }
+ },
+ "devotee": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 17.5,
+   "bent": 17.5,
+   "roll": 8.7
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 22.9,
+   "bent": 22.9,
+   "roll": 5.4
+  }
+ },
+ "bellowsboy": {
+  "Left": {
+   "fingers": [
+    1,
+    3
+   ],
+   "thumb": true,
+   "bend": 2.8,
+   "bent": 2.8,
+   "roll": 5.3
+  },
+  "Right": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 6.7,
+   "bent": 6.7,
+   "roll": 5.3
+  }
+ },
+ "furnacewoman": {
+  "Left": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 8.5,
+   "bent": 8.5,
+   "roll": 21.0
+  },
+  "Right": {
+   "fingers": [
+    2,
+    2
+   ],
+   "thumb": true,
+   "bend": 8.2,
+   "bent": 8.2,
+   "roll": 17.5
+  }
+ },
+ "coalheaver": {
+  "Left": {
+   "fingers": [
+    3,
+    1
+   ],
+   "thumb": true,
+   "bend": 19.2,
+   "bent": 19.2,
+   "roll": 8.9
+  },
+  "Right": {
+   "fingers": [
+    2,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 21.8,
+   "bent": 21.8,
+   "roll": 7.5
+  }
+ },
+ "glassblower": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 12.8,
+   "bent": 12.8,
+   "roll": 7.2
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 16.1,
+   "bent": 16.1,
+   "roll": 5.5
+  }
+ },
+ "ashsifter": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 3.7,
+   "bent": 3.7,
+   "roll": 4.4
+  },
+  "Right": {
+   "fingers": [
+    2,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 6.2,
+   "bent": 6.2,
+   "roll": 2.5
+  }
+ },
+ "majordomo": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    2
+   ],
+   "thumb": true,
+   "bend": 22.4,
+   "bent": 22.4,
+   "roll": 12.8
+  },
+  "Right": {
+   "fingers": [
+    1,
+    2,
+    1
+   ],
+   "thumb": true,
+   "bend": 20.0,
+   "bent": 20.0,
+   "roll": 13.6
+  }
+ },
+ "courtesan": {
+  "Left": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 6.7,
+   "bent": 6.7,
+   "roll": 8.1
+  },
+  "Right": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 7.9,
+   "bent": 7.9,
+   "roll": 9.7
+  }
+ },
+ "duelist": {
+  "Left": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 8.0,
+   "bent": 8.0,
+   "roll": 14.8
+  },
+  "Right": {
+   "fingers": [
+    1,
+    3
+   ],
+   "thumb": true,
+   "bend": 14.0,
+   "bent": 14.0,
+   "roll": 11.6
+  }
+ },
+ "dowager": {
+  "Left": {
+   "fingers": [
+    2,
+    2
+   ],
+   "thumb": true,
+   "bend": 21.8,
+   "bent": 21.8,
+   "roll": 8.2
+  },
+  "Right": {
+   "fingers": [
+    1,
+    3
+   ],
+   "thumb": true,
+   "bend": 23.3,
+   "bent": 23.3,
+   "roll": 6.7
+  }
+ },
+ "sexton": {
+  "Left": {
+   "fingers": [
+    1,
+    2,
+    1
+   ],
+   "thumb": true,
+   "bend": 17.2,
+   "bent": 17.2,
+   "roll": 11.6
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 24.3,
+   "bent": 24.3,
+   "roll": 6.6
+  }
+ },
+ "embalmer": {
+  "Left": {
+   "fingers": [
+    1,
+    2,
+    1
+   ],
+   "thumb": true,
+   "bend": 12.7,
+   "bent": 12.7,
+   "roll": 8.8
+  },
+  "Right": {
+   "fingers": [
+    1,
+    2,
+    1
+   ],
+   "thumb": true,
+   "bend": 10.6,
+   "bent": 10.6,
+   "roll": 8.8
+  }
+ },
+ "corpsewasher": {
+  "Left": {
+   "fingers": [
+    3,
+    1
+   ],
+   "thumb": true,
+   "bend": 15.8,
+   "bent": 15.8,
+   "roll": 7.8
+  },
+  "Right": {
+   "fingers": [
+    3,
+    1
+   ],
+   "thumb": true,
+   "bend": 16.9,
+   "bent": 16.9,
+   "roll": 6.9
+  }
+ },
+ "deadwatch": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 0.7,
+   "bent": 0.7,
+   "roll": 9.6
+  },
+  "Right": {
+   "fingers": [
+    3,
+    1
+   ],
+   "thumb": true,
+   "bend": 3.3,
+   "bent": 3.3,
+   "roll": 8.0
+  }
+ },
+ "eelseller": {
+  "Left": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 17.6,
+   "bent": 17.6,
+   "roll": 6.2
+  },
+  "Right": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 18.8,
+   "bent": 18.8,
+   "roll": 2.0
+  }
+ },
+ "shipwright": {
+  "Left": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 10.3,
+   "bent": 10.3,
+   "roll": 5.3
+  },
+  "Right": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 15.2,
+   "bent": 15.2,
+   "roll": 8.3
+  }
+ },
+ "smuggler": {
+  "Left": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 11.2,
+   "bent": 11.2,
+   "roll": 5.7
+  },
+  "Right": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 7.7,
+   "bent": 7.7,
+   "roll": 3.1
+  }
+ },
+ "sailor": {
+  "Left": {
+   "fingers": [
+    1,
+    2,
+    1
+   ],
+   "thumb": true,
+   "bend": 11.5,
+   "bent": 11.5,
+   "roll": 9.4
+  },
+  "Right": {
+   "fingers": [
+    1,
+    2,
+    1
+   ],
+   "thumb": true,
+   "bend": 11.9,
+   "bent": 11.9,
+   "roll": 9.3
+  }
+ },
+ "pawnbroker": {
+  "Left": {
+   "fingers": [
+    3,
+    1
+   ],
+   "thumb": true,
+   "bend": 12.1,
+   "bent": 12.1,
+   "roll": 0.2
+  },
+  "Right": {
+   "fingers": [
+    3,
+    1
+   ],
+   "thumb": true,
+   "bend": 15.5,
+   "bent": 15.5,
+   "roll": 0.5
+  }
+ },
+ "taverncook": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 9.7,
+   "bent": 9.7,
+   "roll": 6.4
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 15.7,
+   "bent": 15.7,
+   "roll": 5.8
+  }
+ },
+ "cardsharp": {
+  "Left": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 20.0,
+   "bent": 20.0,
+   "roll": 5.0
+  },
+  "Right": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 17.5,
+   "bent": 17.5,
+   "roll": 1.9
+  }
+ },
+ "lodginglady": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 11.7,
+   "bent": 11.7,
+   "roll": 3.3
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 9.1,
+   "bent": 9.1,
+   "roll": 1.5
+  }
+ },
+ "cheesemonger": {
+  "Left": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 2.2,
+   "bent": 2.2,
+   "roll": 5.0
+  },
+  "Right": {
+   "fingers": [
+    1,
+    3
+   ],
+   "thumb": true,
+   "bend": 10.3,
+   "bent": 10.3,
+   "roll": 5.4
+  }
+ },
+ "cobbler": {
+  "Left": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 18.6,
+   "bent": 18.6,
+   "roll": 7.4
+  },
+  "Right": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 21.9,
+   "bent": 21.9,
+   "roll": 2.3
+  }
+ },
+ "potter": {
+  "Left": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 14.1,
+   "bent": 14.1,
+   "roll": 6.4
+  },
+  "Right": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 14.8,
+   "bent": 14.8,
+   "roll": 4.0
+  }
+ },
+ "herbwoman": {
+  "Left": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 14.9,
+   "bent": 14.9,
+   "roll": 7.7
+  },
+  "Right": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 7.8,
+   "bent": 7.8,
+   "roll": 6.6
+  }
+ },
+ "currier": {
+  "Left": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 16.3,
+   "bent": 16.3,
+   "roll": 2.8
+  },
+  "Right": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 16.4,
+   "bent": 16.4,
+   "roll": 0.4
+  }
+ },
+ "skinner": {
+  "Left": {
+   "fingers": [
+    4
+   ],
+   "thumb": true,
+   "bend": 16.2,
+   "bent": 16.2,
+   "roll": 10.1
+  },
+  "Right": {
+   "fingers": [
+    1,
+    1,
+    2
+   ],
+   "thumb": true,
+   "bend": 7.2,
+   "bent": 7.2,
+   "roll": 3.7
+  }
+ },
+ "glover": {
+  "Left": {
+   "fingers": [
+    2,
+    2
+   ],
+   "thumb": true,
+   "bend": 11.6,
+   "bent": 11.6,
+   "roll": 6.6
+  },
+  "Right": {
+   "fingers": [
+    2,
+    2
+   ],
+   "thumb": true,
+   "bend": 11.8,
+   "bent": 11.8,
+   "roll": 7.0
+  }
+ },
+ "soapmaker": {
+  "Left": {
+   "fingers": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 3.3,
+   "bent": 3.3,
+   "roll": 5.1
+  },
+  "Right": {
+   "fingers": [
+    2,
+    1,
+    1
+   ],
+   "thumb": true,
+   "bend": 4.2,
+   "bent": 4.2,
+   "roll": 8.7
+  }
+ }
+}

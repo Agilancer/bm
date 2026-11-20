@@ -159,7 +159,7 @@ export class Life {
     me.seatDrop = hips[1] - pelvis;
     me.pose.play(rig.clips.clips[me.walkClip] ? 'idle' : 'idle', { fade: 0 });
     me.stride = {};
-    for (const n of [me.walkClip, 'walk', 'walk_carry', 'jog', 'run', 'flee', 'crouch_walk']) me.stride[n] = rig.stride(rig.clips.clips[n]);
+    for (const n of [me.walkClip, 'walk', 'walk_carry', 'jog', 'run', 'flee', 'crouch_walk']) me.stride[n] = rig.stride(rig.clip(n));
   }
 
   get ready() { return this.folk.every((f) => f.pose); }
@@ -638,7 +638,7 @@ function* walkTo(me, tx, tz, o = {}) {
   if (o.exact) { const last = legs[legs.length - 1]; last.pts[last.pts.length - 1] = [tx, tz]; }
   const gait = o.gait || (me.carrying ? 'walk_carry' : me.walkClip);
   const rate = o.gait ? 1 : me.speed;
-  const v0 = me.stride[gait] ?? me.rig.stride(life.clips.clips[gait]);
+  const v0 = me.stride[gait] ?? me.rig.stride(me.rig.clip(gait));
   const was = me.act;
   me.act = o.act ?? ACT.WALK;
   let prog = 0, win = 0, replans = 0, slip = 0, slipped = 0;

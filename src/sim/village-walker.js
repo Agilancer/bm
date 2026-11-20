@@ -10,6 +10,7 @@ const SPEED = 0.9;
 const RADIUS = 0.48;
 // Which way her finger joints bend to close (src/sim/village-walker.js storyPose: the snap).
 const FINGER_CURL = 1;
+const ARC = 0.08;          // m a hand laid on her chest swings out in front on its way there (reach, face 'in')
 
 export class VillageWalker {
   constructor(buffer, form, opening = false) {
@@ -29,6 +30,10 @@ export class VillageWalker {
     const hipsJoint = this.rig.index.get('mixamorig:Hips');
     for (const clip of Object.values(this.rig.clips)) {
       this.fitArms(clip, form.armClearance);
+      // Clips that put her arms into her own body (measured in Blender: tools/lisandra/self_clip.py): the upper arms turned
+      // further out (radians) and forward, clear of her bust, her gown and her hips.
+      const more = form.clear?.[clip.name];
+      if (more) { if (more[0]) this.fitArms(clip, more[0]); if (more[1]) this.fitArms(clip, more[1], [1, 0, 0], 1); }
       const track = clip.trs[hipsJoint];
       if (!OPENING_CLIPS.includes(clip.name) || OPENING_MOVES.includes(clip.name) || !track) continue;
       // Story blocking places Lisandra on her mark. Keep vertical recoil and
@@ -213,12 +218,14 @@ export class VillageWalker {
 
   // Rotate the upper arms away from the dress in chest space. Recalculate the
   // local axis at each key so the clearance follows the pose through the cycle.
-  fitArms(clip, angle) {
+  // Each upper arm turned by angle about her body's forward (out from her sides), or with about = [1, 0, 0] and same = 1,
+  // about her body's left, both arms the same way (forward, ahead of her).
+  fitArms(clip, angle, about = [0, 0, 1], same = 0) {
     const rig = this.rig;
     const palette = new Float32Array(rig.count * 8);
     const inverse = new Float32Array(4), rotation = new Float32Array(4), axis = new Float32Array(3);
-    const forward = [0, 0, 1];
-    for (const [side, sign] of [['Left', 1], ['Right', -1]]) {
+    const forward = about;
+    for (const [side, sign] of [['Left', 1], ['Right', same ? 1 : -1]]) {
       const arm = rig.index.get(`mixamorig:${side}Arm`);
       const track = clip.rots[arm];
       if (!track) continue;
@@ -294,11 +301,13 @@ export class VillageWalker {
     const unit = (v, fallback) => { const l = len(v); return l > 1e-5 ? [v[0] / l, v[1] / l, v[2] / l] : fallback; };
     // A hand to a point (body space) by the shoulder and the elbow, each turned whole at its joint: the elbow opens or
     // closes to the distance, the shoulder swings the arm onto the point. Out of reach, she leans into it first. face:
-    // 'down' lays the palm flat on something, 'up' turns it up to look into, null leaves the wrist as the clip has it.
+    // 'down' lays the palm flat on something, 'up' turns it up to look into, 'in' lays it on her own chest, null leaves the wrist as the clip has it.
     const reach = (rot, tr, A, T, w, face) => {
       where(rot, tr, A.arm, pS); where(rot, tr, A.fore, pE); where(rot, tr, A.hand, pH);
       const a = len(sub(pE, pS)), b = len(sub(pH, pE));
-      const want = [lerp(pH[0], T[0], w), lerp(pH[1], T[1], w), lerp(pH[2], T[2], w)];
+      // (A palm going to her own chest comes round in front on its way, ARC at the middle of the move, not through her.)
+      const arc = face === 'in' ? ARC * Math.sin(Math.PI * w) : 0;
+      const want = [lerp(pH[0], T[0], w), lerp(pH[1], T[1], w), lerp(pH[2], T[2], w) + arc];
       const short = len(sub(want, pS)) - (a + b) * 0.97;
       if (short > 0) {
         bow(rot, Math.min(0.45, short * 3) * w);
@@ -315,7 +324,7 @@ export class VillageWalker {
       if (face && A.knuckle !== undefined && A.index !== undefined && A.pinky !== undefined) {
         where(rot, tr, A.hand, pH); where(rot, tr, A.knuckle, pE); where(rot, tr, A.index, pA); where(rot, tr, A.pinky, pB);
         const c = cross(sub(pE, pH), sub(pA, pB)), back = unit([c[0] * A.mirror, c[1] * A.mirror, c[2] * A.mirror], null);
-        const to = face === 'up' ? [0, -1, 0] : UP;
+        const to = face === 'up' ? [0, -1, 0] : face === 'in' ? [0, 0, 1] : UP;
         if (back) turnAbout(rot, A.hand, A.upHand, unit(cross(back, to), [1, 0, 0]), angle(back, to) * w);
       }
     };

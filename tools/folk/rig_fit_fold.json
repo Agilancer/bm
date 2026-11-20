@@ -1,0 +1,592 @@
+{
+ "abel_b": {
+  "fold": 0.2,
+  "inside": 11.5,
+  "inside_at_0": 16.4
+ },
+ "acolyte": {
+  "fold": 0.2,
+  "inside": 8.8,
+  "inside_at_0": 17.7
+ },
+ "alchemistgirl": {
+  "fold": 0,
+  "inside": 10.6,
+  "inside_at_0": 10.6
+ },
+ "apothecary": {
+  "fold": 0.3,
+  "inside": 9.7,
+  "inside_at_0": 17.0
+ },
+ "apricot": {
+  "fold": 0,
+  "inside": 7.0,
+  "inside_at_0": 7.0
+ },
+ "archivistghost": {
+  "fold": 0,
+  "inside": 7.2,
+  "inside_at_0": 7.2
+ },
+ "armourer": {
+  "fold": 0.2,
+  "inside": 10.5,
+  "inside_at_0": 17.2
+ },
+ "ashsifter": {
+  "fold": 0,
+  "inside": 11.4,
+  "inside_at_0": 11.4
+ },
+ "astrologer": {
+  "fold": 0,
+  "inside": 8.8,
+  "inside_at_0": 8.8
+ },
+ "baker": {
+  "fold": 0.4,
+  "inside": 12.5,
+  "inside_at_0": 19.4
+ },
+ "bannerbearer": {
+  "fold": 0.1,
+  "inside": 9.8,
+  "inside_at_0": 12.3
+ },
+ "barber": {
+  "fold": 0.2,
+  "inside": 10.8,
+  "inside_at_0": 15.9
+ },
+ "bargewoman": {
+  "fold": 0,
+  "inside": 4.8,
+  "inside_at_0": 4.8
+ },
+ "beggarwoman": {
+  "fold": 0,
+  "inside": 8.1,
+  "inside_at_0": 8.1
+ },
+ "bellowsboy": {
+  "fold": 0.1,
+  "inside": 4.7,
+  "inside_at_0": 12.4
+ },
+ "bonebutler": {
+  "fold": 0,
+  "inside": 10.5,
+  "inside_at_0": 10.5
+ },
+ "bonecarver": {
+  "fold": 0.3,
+  "inside": 17.8,
+  "inside_at_0": 32.0
+ },
+ "bookbinder": {
+  "fold": 0.2,
+  "inside": 9.0,
+  "inside_at_0": 19.2
+ },
+ "butcher": {
+  "fold": 0.4,
+  "inside": 11.9,
+  "inside_at_0": 54.6
+ },
+ "campcook": {
+  "fold": 0.3,
+  "inside": 7.2,
+  "inside_at_0": 21.6
+ },
+ "cardsharp": {
+  "fold": 0.3,
+  "inside": 9.9,
+  "inside_at_0": 24.2
+ },
+ "carter": {
+  "fold": 0.4,
+  "inside": 8.1,
+  "inside_at_0": 31.2
+ },
+ "chandler": {
+  "fold": 0.3,
+  "inside": 9.0,
+  "inside_at_0": 14.2
+ },
+ "charcoalburner": {
+  "fold": 0.3,
+  "inside": 8.9,
+  "inside_at_0": 21.4
+ },
+ "cheesemonger": {
+  "fold": 0.1,
+  "inside": 10.5,
+  "inside_at_0": 14.9
+ },
+ "coalheaver": {
+  "fold": 0.2,
+  "inside": 8.8,
+  "inside_at_0": 23.3
+ },
+ "cobbler": {
+  "fold": 0.2,
+  "inside": 10.2,
+  "inside_at_0": 15.4
+ },
+ "corpsewasher": {
+  "fold": 0.4,
+  "inside": 4.4,
+  "inside_at_0": 32.3
+ },
+ "corve_b": {
+  "fold": 0.1,
+  "inside": 11.7,
+  "inside_at_0": 15.5
+ },
+ "courtesan": {
+  "fold": 0,
+  "inside": 10.5,
+  "inside_at_0": 10.5
+ },
+ "crossbowman": {
+  "fold": 0.2,
+  "inside": 11.3,
+  "inside_at_0": 13.2
+ },
+ "currier": {
+  "fold": 0.2,
+  "inside": 7.7,
+  "inside_at_0": 22.1
+ },
+ "cutpurse": {
+  "fold": 0.1,
+  "inside": 8.3,
+  "inside_at_0": 13.5
+ },
+ "deadwatch": {
+  "fold": 0.3,
+  "inside": 10.7,
+  "inside_at_0": 18.3
+ },
+ "demonsteward": {
+  "fold": 0.2,
+  "inside": 11.0,
+  "inside_at_0": 16.3
+ },
+ "devotee": {
+  "fold": 0.1,
+  "inside": 10.7,
+  "inside_at_0": 12.6
+ },
+ "dockhand": {
+  "fold": 0,
+  "inside": 4.9,
+  "inside_at_0": 4.9
+ },
+ "dowager": {
+  "fold": 0,
+  "inside": 7.5,
+  "inside_at_0": 7.5
+ },
+ "drillsergeant": {
+  "fold": 0.4,
+  "inside": 9.5,
+  "inside_at_0": 20.7
+ },
+ "duelist": {
+  "fold": 0.2,
+  "inside": 7.2,
+  "inside_at_0": 16.6
+ },
+ "dukeservant": {
+  "fold": 0.1,
+  "inside": 10.0,
+  "inside_at_0": 16.7
+ },
+ "dyer": {
+  "fold": 0,
+  "inside": 1.0,
+  "inside_at_0": 1.0
+ },
+ "eelseller": {
+  "fold": 0.2,
+  "inside": 18.9,
+  "inside_at_0": 25.6
+ },
+ "embalmer": {
+  "fold": 0.1,
+  "inside": 11.4,
+  "inside_at_0": 18.3
+ },
+ "farrier": {
+  "fold": 0,
+  "inside": 7.7,
+  "inside_at_0": 7.7
+ },
+ "ferryman": {
+  "fold": 0.4,
+  "inside": 11.3,
+  "inside_at_0": 19.7
+ },
+ "fiddler": {
+  "fold": 0.4,
+  "inside": 10.1,
+  "inside_at_0": 21.7
+ },
+ "fishwife": {
+  "fold": 0.4,
+  "inside": 7.2,
+  "inside_at_0": 24.4
+ },
+ "flagellant": {
+  "fold": 0,
+  "inside": 0,
+  "inside_at_0": 0
+ },
+ "fletcher": {
+  "fold": 0,
+  "inside": 8.2,
+  "inside_at_0": 8.2
+ },
+ "furnacewoman": {
+  "fold": 0.2,
+  "inside": 9.8,
+  "inside_at_0": 20.5
+ },
+ "gaoler": {
+  "fold": 0.4,
+  "inside": 8.5,
+  "inside_at_0": 26.1
+ },
+ "gateclerk": {
+  "fold": 0.4,
+  "inside": 8.6,
+  "inside_at_0": 32.1
+ },
+ "ghoulscullion": {
+  "fold": 0,
+  "inside": 3.2,
+  "inside_at_0": 3.2
+ },
+ "glassblower": {
+  "fold": 0.2,
+  "inside": 10.8,
+  "inside_at_0": 22.0
+ },
+ "glover": {
+  "fold": 0,
+  "inside": 0.3,
+  "inside_at_0": 0.3
+ },
+ "gravedigger": {
+  "fold": 0.2,
+  "inside": 10.5,
+  "inside_at_0": 12.3
+ },
+ "graverobber": {
+  "fold": 0.3,
+  "inside": 10.3,
+  "inside_at_0": 18.3
+ },
+ "greta_b": {
+  "fold": 0,
+  "inside": 1.6,
+  "inside_at_0": 1.6
+ },
+ "grinder": {
+  "fold": 0,
+  "inside": 1.0,
+  "inside_at_0": 1.0
+ },
+ "hedgewitch": {
+  "fold": 0,
+  "inside": 3.6,
+  "inside_at_0": 3.6
+ },
+ "hellguard": {
+  "fold": 0,
+  "inside": 8.6,
+  "inside_at_0": 8.6
+ },
+ "herbalist": {
+  "fold": 0,
+  "inside": 0,
+  "inside_at_0": 0
+ },
+ "herbwoman": {
+  "fold": 0.2,
+  "inside": 9.0,
+  "inside_at_0": 17.4
+ },
+ "imppage": {
+  "fold": 0.1,
+  "inside": 9.1,
+  "inside_at_0": 13.8
+ },
+ "inkmaker": {
+  "fold": 0,
+  "inside": 6.8,
+  "inside_at_0": 6.8
+ },
+ "innkeeper": {
+  "fold": 0,
+  "inside": 0.3,
+  "inside_at_0": 0.3
+ },
+ "joiner": {
+  "fold": 0.1,
+  "inside": 6.4,
+  "inside_at_0": 16.7
+ },
+ "keeppriestess": {
+  "fold": 0,
+  "inside": 0.3,
+  "inside_at_0": 0.3
+ },
+ "ladysmaid": {
+  "fold": 0,
+  "inside": 3.4,
+  "inside_at_0": 3.4
+ },
+ "lamplighter": {
+  "fold": 0,
+  "inside": 7.4,
+  "inside_at_0": 7.4
+ },
+ "lodginglady": {
+  "fold": 0.2,
+  "inside": 8.5,
+  "inside_at_0": 16.0
+ },
+ "louis_g": {
+  "fold": 0.1,
+  "inside": 9.6,
+  "inside_at_0": 12.9
+ },
+ "magestudent": {
+  "fold": 0.1,
+  "inside": 10.4,
+  "inside_at_0": 12.6
+ },
+ "majordomo": {
+  "fold": 0.1,
+  "inside": 9.9,
+  "inside_at_0": 13.6
+ },
+ "martleboro": {
+  "fold": 0.4,
+  "inside": 10.7,
+  "inside_at_0": 27.5
+ },
+ "mason": {
+  "fold": 0.1,
+  "inside": 11.7,
+  "inside_at_0": 16.7
+ },
+ "merchant": {
+  "fold": 0.4,
+  "inside": 11.5,
+  "inside_at_0": 21.5
+ },
+ "moneylender": {
+  "fold": 0,
+  "inside": 6.9,
+  "inside_at_0": 6.9
+ },
+ "mourner": {
+  "fold": 0,
+  "inside": 0.3,
+  "inside_at_0": 0.3
+ },
+ "netmender": {
+  "fold": 0.3,
+  "inside": 11.5,
+  "inside_at_0": 32.9
+ },
+ "noblewoman": {
+  "fold": 0.1,
+  "inside": 11.8,
+  "inside_at_0": 17.5
+ },
+ "offduty": {
+  "fold": 0.3,
+  "inside": 15.4,
+  "inside_at_0": 23.8
+ },
+ "osk_b": {
+  "fold": 0.4,
+  "inside": 15.0,
+  "inside_at_0": 39.3
+ },
+ "ostler": {
+  "fold": 0,
+  "inside": 4.4,
+  "inside_at_0": 4.4
+ },
+ "pawnbroker": {
+  "fold": 0.3,
+  "inside": 9.6,
+  "inside_at_0": 29.6
+ },
+ "peddler": {
+  "fold": 0.4,
+  "inside": 13.9,
+  "inside_at_0": 32.2
+ },
+ "pieseller": {
+  "fold": 0.1,
+  "inside": 11.2,
+  "inside_at_0": 13.5
+ },
+ "pilgrim": {
+  "fold": 0.1,
+  "inside": 8.9,
+  "inside_at_0": 12.8
+ },
+ "plaguedoctor": {
+  "fold": 0,
+  "inside": 9.8,
+  "inside_at_0": 9.8
+ },
+ "porter": {
+  "fold": 0,
+  "inside": 11.2,
+  "inside_at_0": 11.2
+ },
+ "potter": {
+  "fold": 0.1,
+  "inside": 6.9,
+  "inside_at_0": 13.0
+ },
+ "ragwoman": {
+  "fold": 0.2,
+  "inside": 26.5,
+  "inside_at_0": 32.4
+ },
+ "relicseller": {
+  "fold": 0,
+  "inside": 2.8,
+  "inside_at_0": 2.8
+ },
+ "sailor": {
+  "fold": 0,
+  "inside": 6.6,
+  "inside_at_0": 6.6
+ },
+ "scribe": {
+  "fold": 0,
+  "inside": 3.8,
+  "inside_at_0": 3.8
+ },
+ "sexton": {
+  "fold": 0.1,
+  "inside": 8.3,
+  "inside_at_0": 14.2
+ },
+ "shipwright": {
+  "fold": 0.2,
+  "inside": 11.7,
+  "inside_at_0": 24.7
+ },
+ "skinner": {
+  "fold": 0.3,
+  "inside": 6.2,
+  "inside_at_0": 19.7
+ },
+ "smelter": {
+  "fold": 0.4,
+  "inside": 25.3,
+  "inside_at_0": 51.4
+ },
+ "smuggler": {
+  "fold": 0.3,
+  "inside": 10.8,
+  "inside_at_0": 21.9
+ },
+ "soapmaker": {
+  "fold": 0.1,
+  "inside": 11.7,
+  "inside_at_0": 14.0
+ },
+ "sorrel_b": {
+  "fold": 0.2,
+  "inside": 9.6,
+  "inside_at_0": 23.5
+ },
+ "spiceseller": {
+  "fold": 0.1,
+  "inside": 10.8,
+  "inside_at_0": 14.4
+ },
+ "sweep": {
+  "fold": 0.3,
+  "inside": 9.4,
+  "inside_at_0": 21.7
+ },
+ "tanner": {
+  "fold": 0,
+  "inside": 4.4,
+  "inside_at_0": 4.4
+ },
+ "taverncook": {
+  "fold": 0.2,
+  "inside": 10.5,
+  "inside_at_0": 27.7
+ },
+ "tithecollector": {
+  "fold": 0.4,
+  "inside": 7.6,
+  "inside_at_0": 14.1
+ },
+ "tollkeeper": {
+  "fold": 0.4,
+  "inside": 9.6,
+  "inside_at_0": 24.6
+ },
+ "torturer": {
+  "fold": 0,
+  "inside": 7.1,
+  "inside_at_0": 7.1
+ },
+ "tutor": {
+  "fold": 0,
+  "inside": 11.5,
+  "inside_at_0": 11.5
+ },
+ "urchingirl": {
+  "fold": 0.3,
+  "inside": 11.6,
+  "inside_at_0": 23.8
+ },
+ "veteran": {
+  "fold": 0.4,
+  "inside": 12.3,
+  "inside_at_0": 27.1
+ },
+ "washerwoman": {
+  "fold": 0,
+  "inside": 10.5,
+  "inside_at_0": 10.5
+ },
+ "watchman": {
+  "fold": 0.3,
+  "inside": 8.1,
+  "inside_at_0": 26.4
+ },
+ "weaver": {
+  "fold": 0,
+  "inside": 6.2,
+  "inside_at_0": 6.2
+ },
+ "wulf_b": {
+  "fold": 0.4,
+  "inside": 14.9,
+  "inside_at_0": 25.7
+ },
+ "younglord": {
+  "fold": 0.4,
+  "inside": 9.2,
+  "inside_at_0": 20.9
+ }
+}

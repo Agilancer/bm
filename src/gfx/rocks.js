@@ -15,7 +15,7 @@ const RELAY_STONES = 40, RELAY_BOULDERS = 160;
 
 function rng(seed) { let s = seed; return () => { s = Math.imul(s ^ (s >>> 15), 2246822519) + 1 | 0; return ((s ^ (s >>> 13)) >>> 0) / 4294967296; }; }
 
-function icosphere(sub) {
+export function icosphere(sub) {
   const t = (1 + Math.sqrt(5)) / 2;
   let v = [[-1, t, 0], [1, t, 0], [-1, -t, 0], [1, -t, 0], [0, -1, t], [0, 1, t], [0, -1, -t], [0, 1, -t], [t, 0, -1], [t, 0, 1], [-t, 0, -1], [-t, 0, 1]]
     .map((p) => { const l = Math.hypot(...p); return p.map((c) => c / l); });
@@ -39,7 +39,7 @@ function icosphere(sub) {
 
 // The shape of rock number k, as a function of the direction out from its middle: the same at every level of detail. Returns the
 // point, and the face it broke along when it lies on one (so a fractured face is lit flat, and its edges show).
-function shapeOf(k) {
+export function shapeOf(k) {
   const R = rng(1009 + k * 7919);
   const kind = k < 8 ? 'round' : k < 12 ? 'slab' : 'crag';
   const scale = kind === 'round' ? [1, 0.62 + 0.33 * R(), 1.0] : kind === 'slab' ? [1.3, 0.5, 1.05] : [0.85, 1.25, 0.72];

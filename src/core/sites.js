@@ -12,6 +12,7 @@
 import { groundBase, portalFloor, terrainHeight } from './terrain.js';
 import { BARROWS, CLIFF, MOUNT, POOL, PORTAL_BANKS, SITES, WATERS, routeDist, waterLevel } from './lands.js';
 import { hash2, vnoise } from './terrain-noise.js';
+import { offWay } from './rocks.js';
 import { DELVES, PORTAL_PAD, caveFloorY } from './dungeon.js';
 import { buildDelves } from './delve-build.js';
 import { buildHall } from './testhall.js';
@@ -657,8 +658,8 @@ function portalDress(K, [bx, bz, yaw, H, kind]) {
     const side = i % 2 ? 1 : -1, t = r(i, 1);
     const [u, w] = i < 8 ? [(t * 2 - 1) * (U + 6), -W - 2.5 - r(i, 2) * 9] : [side * (U + 1.8 + r(i, 3) * 6), -W + r(i, 4) * (W * 2 + 2)];
     if (!clear(u, w)) continue;
-    const [x, , z] = at(u, w);
-    K.rock(r(i, 5) > 0.5 ? 'dark:rubble' : 'rubble', x, z, 0.7 + r(i, 6) * 1.1, 0.7 + r(i, 7) * 1.2, { collide: false, turn: t * 3 });
+    const rr = 0.7 + r(i, 6) * 1.1, [x, z] = offWay(...P(u, w), rr * 1.3);
+    K.rock(r(i, 5) > 0.5 ? 'dark:rubble' : 'rubble', x, z, rr, 0.7 + r(i, 7) * 1.2, { collide: false, turn: t * 3 });
   }
   if (kind === 'barrow') {
     // A kerb of standing stones round the mound's foot, and two tall ones either side of the way up to its door.
@@ -888,7 +889,8 @@ function downs(K) {
   // The Cairnfield, on the open down west of the Abbey Road: dozens of cairns, some opened, round a great one in its kerb.
   const cf = at('cairnfield');
   K.cairn(cf.x, cf.z, 4.2, 4.4);
-  for (let i = 0; i < 14; i++) { const a = i / 14 * TAU, x = cf.x + Math.cos(a) * 7.5, z = cf.z + Math.sin(a) * 7.5; K.rock('rubble', x, z, 0.7 + hash2(i, 3) * 0.3, 0.7, { turn: a, collide: false }); }
+  // (A kerb a road runs through: those stones rolled to its sides, src/core/rocks.js offWay.)
+  for (let i = 0; i < 14; i++) { const a = i / 14 * TAU, r = 0.7 + hash2(i, 3) * 0.3, [x, z] = offWay(cf.x + Math.cos(a) * 7.5, cf.z + Math.sin(a) * 7.5, r * 1.3); K.rock('rubble', x, z, r, 0.7, { turn: a, collide: false }); }
   K.menhir('rubble', cf.x + 10.5, cf.z - 3, 0.7, 3.6, 0.6, 0.08);
   for (let i = 0; i < 40; i++) {
     const a = hash2(i, 21) * TAU, r = 13 + hash2(i, 22) * 34, x = cf.x + Math.cos(a) * r, z = cf.z + Math.sin(a) * r, s = 0.9 + hash2(i, 23) * 1.1;

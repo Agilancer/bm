@@ -9,6 +9,7 @@
 import { terrainHeight } from './terrain.js';
 import { SITES, routeDist } from './lands.js';
 import { hash2 } from './terrain-noise.js';
+import { offWay } from './rocks.js';
 
 const TAU = Math.PI * 2;
 const Y = (x, z) => terrainHeight(x, z);
@@ -610,7 +611,7 @@ export function cinderford(K) {
   for (let i = -5; i <= 5; i++) {
     const z = c.z + i * 8, x = sx + Math.sin(i * 1.3) * 1.6;
     K.paving('rubble', x, z, 3.1, 4.2, Math.sin(i) * 0.15, 0.04);
-    if (Math.abs(z - fz) > 5 && Math.abs(z - fz - 9) > 3) { K.paving('lake', x + Math.sin(i * 2.1) * 0.8, z, 0.7, 4.3, Math.sin(i) * 0.2, 0.075); for (const sd of [-1, 1]) K.rock('rubble', x + sd * (2.4 + hash2(i, sd + 2)), z + hash2(i, sd + 5) * 5 - 2.5, 0.5 + hash2(i, sd + 7) * 0.6, 0.6, { collide: false }); }
+    if (Math.abs(z - fz) > 5 && Math.abs(z - fz - 9) > 3) { K.paving('lake', x + Math.sin(i * 2.1) * 0.8, z, 0.7, 4.3, Math.sin(i) * 0.2, 0.075); for (const sd of [-1, 1]) { const r = 0.5 + hash2(i, sd + 7) * 0.6, [rx, rz] = offWay(x + sd * (2.4 + hash2(i, sd + 2)), z + hash2(i, sd + 5) * 5 - 2.5, r * 1.3); K.rock('rubble', rx, rz, r, 0.6, { collide: false }); } }
   }
   for (const dx of [-2.2, 0, 2.2]) K.paving('stone', sx + dx, fz + dx * 0.2, 1.0, 2.4, 0.1 + dx * 0.05, 0.085);
   K.bridge(sx - 5, fz + 9, sx + 5, fz + 9.3, 1.0, { up: 0.32 });
