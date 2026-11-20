@@ -105,6 +105,8 @@ export function placeSpot(k) {
   if (k.startsWith('lair:')) { const l = LAIRS.find((q) => q.key === k.slice(5)); return l ? { x: l.x, z: l.z, near: l.r + 12 } : null; }
   if (k === 'phobos') return { x: CITY.x - CITY.a + 40, z: 0, near: 30 };
   if (k.startsWith('ph:')) { const d = PHOBOS.districts.find((q) => q.key === k.slice(3)); return d ? { x: d.x, z: d.z, near: d.r * 0.5 } : null; }
+  // (A lookout, 'vista:<id>', src/core/castle-finds.js: where it is, how near counts, and how high it stands.)
+  if (k.startsWith('vista:')) { const v = castleVistas().find((q) => q.id === k.slice(6)); return v ? { x: v.x, z: v.z, near: v.r, y: v.y } : null; }
   const p = delvePortal(k);
   if (p) return { x: p.x, z: p.z, near: 3, delve: k };
   // A room down one ('room:<id>'): that delve's portal.
