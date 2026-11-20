@@ -29,6 +29,43 @@ export const STONE_REACH = 150, BOULDER_REACH = 640;
 
 const TOWN = 72;
 
+// How far each rock mesh reaches across the ground, at size 1, in sixteen directions round it (its own frame, from +x towards +z):
+// written by tools/world/rock-reach.mjs from src/gfx/rocks.js's shapes. A boulder is kept off a road by this, not by its middle.
+export const REACH = [
+  [0.58, 0.73, 0.77, 0.7, 0.69, 0.75, 0.69, 0.57, 0.62, 0.65, 0.59, 0.61, 0.72, 0.8, 0.75, 0.59],
+  [0.81, 0.74, 0.79, 0.84, 0.94, 1.07, 1.05, 0.99, 0.93, 0.76, 0.57, 0.63, 0.75, 0.89, 0.94, 0.92],
+  [0.68, 0.74, 0.75, 0.74, 0.84, 0.96, 0.96, 0.85, 0.68, 0.67, 0.64, 0.67, 0.88, 0.95, 0.9, 0.72],
+  [1.1, 1.09, 0.93, 0.68, 0.66, 0.69, 0.73, 0.78, 0.9, 0.93, 0.89, 0.8, 0.72, 0.84, 1.02, 1.08],
+  [0.92, 0.85, 0.72, 0.76, 0.8, 0.78, 0.78, 0.7, 0.79, 0.84, 0.77, 0.58, 0.7, 0.94, 1.05, 1.03],
+  [0.87, 0.79, 0.6, 0.65, 0.85, 0.93, 0.87, 0.77, 0.74, 0.66, 0.66, 0.8, 0.88, 0.84, 0.71, 0.81],
+  [0.76, 0.69, 0.67, 0.71, 0.75, 0.82, 0.77, 0.63, 0.72, 0.8, 0.81, 0.7, 0.66, 0.73, 0.83, 0.83],
+  [0.97, 1.11, 1.18, 1.07, 0.81, 0.81, 0.85, 0.85, 0.73, 0.81, 0.81, 0.76, 0.7, 0.7, 0.83, 0.85],
+  [1.07, 1.01, 1.13, 1.13, 1.12, 1.17, 1.19, 1.12, 1.07, 1.07, 0.98, 0.99, 0.92, 0.72, 0.75, 0.97],
+  [1.29, 1.5, 1.49, 1.37, 1.1, 0.8, 1.15, 1.47, 1.62, 1.64, 1.58, 1.4, 1.3, 1.15, 0.9, 0.89],
+  [0.81, 0.88, 0.98, 1.08, 1.11, 1.12, 1.14, 1.12, 1.07, 1.14, 1.19, 1.16, 1.12, 1.13, 0.99, 0.75],
+  [1.15, 1.16, 1.04, 0.95, 0.9, 1.05, 1.18, 1.21, 1.12, 0.99, 0.97, 0.96, 0.83, 0.69, 0.9, 1.05],
+  [0.51, 0.6, 0.6, 0.5, 0.55, 0.64, 0.77, 0.79, 0.75, 0.74, 0.67, 0.71, 0.71, 0.67, 0.6, 0.5],
+  [0.61, 0.57, 0.54, 0.59, 0.56, 0.53, 0.61, 0.7, 0.8, 0.88, 0.87, 0.72, 0.58, 0.64, 0.72, 0.72],
+  [0.85, 0.82, 0.69, 0.49, 0.48, 0.55, 0.54, 0.46, 0.5, 0.49, 0.43, 0.36, 0.38, 0.4, 0.59, 0.77],
+  [0.68, 0.62, 0.53, 0.56, 0.57, 0.71, 0.77, 0.72, 0.64, 0.69, 0.75, 0.76, 0.68, 0.63, 0.64, 0.65],
+];
+// How far a boulder of this variant and turn (cos, sin) reaches towards world direction (dx, dz), at size 1.
+export function reachToward(variant, c, s, dx, dz) {
+  const row = REACH[variant] || REACH[0];
+  const lx = c * dx + s * dz, lz = -s * dx + c * dz;
+  let f = Math.atan2(lz, lx) / (2 * Math.PI) * 16;
+  if (f < 0) f += 16;
+  const i = Math.floor(f) % 16, t = f - Math.floor(f);
+  return row[i] * (1 - t) + row[(i + 1) % 16] * t;
+}
+// The direction (its own frame, radians) a variant reaches furthest along, both ways: its long axis.
+export function longAxis(variant) {
+  const row = REACH[variant] || REACH[0];
+  let best = 0, at = 0;
+  for (let d = 0; d < 8; d++) { const both = row[d] + row[d + 8]; if (both > best) { best = both; at = d; } }
+  return at / 16 * 2 * Math.PI;
+}
+
 // How far outside the nearest road's edge (x, z) is (negative: on it), and that road's half-width.
 const EDGE = { d: 0, w: 0 };
 export function roadEdge(x, z) {
@@ -102,6 +139,74 @@ function stony(x, z) {
   return t;
 }
 
+// How close a boulder's stone may come to a way's edge (or a flight of steps').
+const KERB = 0.3;
+// Whether a boulder at (x, z), turned (c, s), lies over a way or a flight of steps, going round its outline: or, with m, comes
+// within m of one.
+function rockOverWay(x, z, size, variant, c, s, m) {
+  const row = REACH[variant], far = size * Math.max(...row);
+  const e = roadEdge(x, z);
+  if (e.d > far + KERB + m + 1) return false;
+  for (let d = 0; d < 16; d++) {
+    const t = d / 16 * 2 * Math.PI, r = row[d] * size, lx = Math.cos(t) * r, lz = Math.sin(t) * r;
+    const px = x + c * lx - s * lz, pz = z + s * lx + c * lz;
+    if (roadEdge(px, pz).d < KERB + m || nearFlight(px, pz, KERB + m)) return true;
+  }
+  return false;
+}
+// Which way is away from the nearest way at (x, z): the slope of the distance to it.
+function awayFromWay(x, z) {
+  const g = 0.6;
+  const dx = roadEdge(x + g, z).d - roadEdge(x - g, z).d, dz = roadEdge(x, z + g).d - roadEdge(x, z - g).d, l = Math.hypot(dx, dz);
+  return l > 1e-4 ? [dx / l, dz / l] : null;
+}
+// Where a boulder lying over a way goes: turned with its long side along the way, and rolled off the side it mostly lies on
+// till its stone is just clear of the edge (a little further for some); if that side's no good (another way, a house's plot,
+// water), the other side; failing both, a little smaller. { x, z, a, size } or null.
+function clearOfWays(x, z, size0, variant, qi, qj) {
+  const n0 = awayFromWay(x, z) || [Math.cos(hash2(qi + 5, qj - 9) * 6.2832), Math.sin(hash2(qi + 5, qj - 9) * 6.2832)];
+  const flip = hash2(qi - 37, qj + 41) > 0.5 ? Math.PI : 0, wob = (hash2(qi + 43, qj - 47) - 0.5) * 0.3;
+  const gap = hash2(qi - 53, qj + 59) ** 2 * 0.8;
+  const e0 = roadEdge(x, z), across = e0.d + e0.w;
+  for (let shrink = 0; shrink < 4; shrink++) {
+    const size = size0 * 0.85 ** shrink;
+    for (const side of [1, -1]) {
+      // (The other side: from where it lies mirrored across the way.)
+      let px = side > 0 ? x : x - n0[0] * 2 * across, pz = side > 0 ? z : z - n0[1] * 2 * across;
+      for (let it = 0; it < 14; it++) {
+        const n = awayFromWay(px, pz) || n0;
+        const a = Math.atan2(n[0], -n[1]) - longAxis(variant) + flip + wob, c = Math.cos(a), s = Math.sin(a);
+        if (!rockOverWay(px, pz, size, variant, c, s, gap)) {
+          if (barred(px, pz) || huntEdge(px, pz) < 3) break;
+          // (Off the east's cliffs, where it would hang in the air: a little further out.)
+          if (!(px > 7000 && lie(px, pz).slope > 0.42)) return { x: px, z: pz, a, size };
+          px += n[0] * 0.75; pz += n[1] * 0.75;
+          continue;
+        }
+        // Roll it out by what its near side still lies over, from where its stone reaches towards the way.
+        const reach = reachToward(variant, c, s, -n[0], -n[1]) * size, e = roadEdge(px, pz);
+        const step = Math.max(0.25, reach + KERB + gap - e.d);
+        px += n[0] * step; pz += n[1] * step;
+      }
+    }
+  }
+  return null;
+}
+
+// Where a round rock of radius r put down at (x, z) by a place (src/core/places.js PIECES.rock) lies, rolled off any way or
+// flight of steps it would lie over, just clear of the edge: [x, z].
+export function offWay(x, z, r) {
+  for (let it = 0; it < 10; it++) {
+    const e = roadEdge(x, z), need = r + KERB - e.d;
+    if (need <= 0 && !nearFlight(x, z, r + KERB)) break;
+    const n = awayFromWay(x, z);
+    if (!n) break;
+    const step = Math.max(0.25, need);
+    x += n[0] * step; z += n[1] * step;
+  }
+  return [x, z];
+}
+
 const pickOf = (list, u) => list[Math.min(list.length - 1, Math.floor(u * list.length))];
 
 // One cell's stone or boulder, or nothing. big: the boulder grid.
@@ -154,19 +259,24 @@ function rockInCell(i, j, big, out) {
     return;
   }
   // Boulders lie in groups: the big one, and up to four smaller ones round it, more where the land's stonier.
+  let gx = x, gz = z;
   const md = Math.hypot(x - MOUNT.x, z - MOUNT.z), flank = md < MOUNT.R ? sstep(0.15, 0.55, 1 - md / MOUNT.R) : 0;
   const n = 1 + Math.floor(Math.min(flank > 0.25 ? 6 : 4, p * 4) * hash2(i - 211, j + 307));
   let lead = 0;
   for (let q = 0; q < n; q++) {
     const qi = i * 7 + q * 13, qj = j * 3 - q * 5;
-    let bx = x, bz = z, bh = L.h;
+    let bx = gx, bz = gz, bh = L.h, slope = L.slope;
     if (q) {
       const qa = hash2(qi + 17, qj - 31) * 6.2832, qr = lead * (1.3 + 1.6 * hash2(qi - 7, qj + 11));
-      bx = x + Math.cos(qa) * qr; bz = z + Math.sin(qa) * qr;
-      if (barred(bx, bz) || roadEdge(bx, bz).d < 1.5) continue;
+      const ox = x + Math.cos(qa) * qr, oz = z + Math.sin(qa) * qr;
+      if (barred(ox, oz) || roadEdge(ox, oz).d < 1.5) continue;
+      // (Round the big one where it lies now, if it was rolled off a way; or where it would have been, if that's no place.)
+      bx = gx + Math.cos(qa) * qr; bz = gz + Math.sin(qa) * qr;
+      if (barred(bx, bz)) { bx = ox; bz = oz; }
       bh = terrainHeight(bx, bz);
     }
-    const u = hash2(qi - 7, qj + 13), v = hash2(qi + 29, qj - 3), a = hash2(qi + 101, qj + 7) * 6.2832;
+    const u = hash2(qi - 7, qj + 13), v = hash2(qi + 29, qj - 3);
+    let a = hash2(qi + 101, qj + 7) * 6.2832;
     let variant;
     // In open snow and on bare rock: crags and slabs breaking out of it. On the steeps: slabs. In the woods and fields: round boulders.
     if ((L.snow > 0.4 || L.rock > 0.5 || land > 0.4) && u < 0.5) variant = pickOf(CRAG, v);
@@ -180,10 +290,21 @@ function rockInCell(i, j, big, out) {
     if (q) size = Math.max(0.3, lead * (0.3 + 0.45 * hash2(qi + 61, qj + 67)));
     else lead = size;
     const tall = variant >= CRAG[0] ? (size > 2.9 ? 1.1 + 0.4 * hash2(qi + 3, qj + 77) : 0.8 + 0.45 * hash2(qi + 3, qj + 77)) : variant >= SLAB[0] ? 0.75 + 0.35 * hash2(qi + 3, qj + 77) : 0.75 + 0.3 * hash2(qi + 3, qj + 77);
+    // Never across a road, a path or a flight of steps: one whose stone would lie over a way is turned to lie along it and
+    // rolled off to its side, close by the edge, as if it had been levered out of the way when the road was laid.
+    if (rockOverWay(bx, bz, size, variant, Math.cos(a), Math.sin(a), 0)) {
+      const off = clearOfWays(bx, bz, size, variant, qi, qj);
+      if (!off) continue;
+      bx = off.x; bz = off.z; a = off.a; size = off.size;
+      if (q) size = Math.min(size, lead);
+      bh = terrainHeight(bx, bz);
+      slope = lie(bx, bz).slope;
+    }
+    if (!q) { gx = bx; gz = bz; lead = size; }
     // Sunk into the ground, more on a slope, so the uphill side is buried and nothing floats; and never so high that the low side
     // of a big one stands clear of the ground, its earthy underside showing.
     const fr = size * 0.75, lo = Math.min(terrainHeight(bx + fr, bz), terrainHeight(bx - fr, bz), terrainHeight(bx, bz + fr), terrainHeight(bx, bz - fr));
-    const y = Math.min(bh - size * tall * (0.2 + 0.3 * fenAt(bx, bz)) - size * Math.min(0.9, L.slope * 2.2), lo - size * tall * 0.1);
+    const y = Math.min(bh - size * tall * (0.2 + 0.3 * fenAt(bx, bz)) - size * Math.min(0.9, slope * 2.2), lo - size * tall * 0.1);
     out.push(bx, y, bz, size, Math.cos(a), Math.sin(a), tall, hash2(qi + 13, qj + 101), variant);
   }
 }
@@ -193,6 +314,14 @@ function stone(i, j, x, z, h, slope, on, out) {
   const u = hash2(i - 7, j + 13), v = hash2(i + 29, j - 3), a = hash2(i + 101, j + 7) * 6.2832;
   const variant = u < 0.7 ? pickOf(ROUND, v) : pickOf(SLAB, v);
   const size = on ? 0.06 + 0.1 * hash2(i + 5, j + 9) : 0.14 + 0.55 * hash2(i + 5, j + 9) ** 1.7;
+  // (A knee-high one by the road lies on its verge, not out on its stones: nudged back off the edge.)
+  if (!on && size > 0.3) {
+    const e = roadEdge(x, z), need = size * 1.1 - 0.1 - e.d;
+    if (need > 0) {
+      const n = awayFromWay(x, z);
+      if (n) { x += n[0] * need; z += n[1] * need; h = terrainHeight(x, z); }
+    }
+  }
   const tall = variant >= SLAB[0] ? 0.7 + 0.4 * hash2(i + 3, j + 77) : 0.7 + 0.35 * hash2(i + 3, j + 77);
   const y = h - size * tall * (0.22 + 0.3 * fenAt(x, z)) - size * Math.min(0.9, slope * 2.2);
   out.push(x, y, z, size, Math.cos(a), Math.sin(a), tall, hash2(i + 13, j + 101), variant);
