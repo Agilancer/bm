@@ -351,7 +351,8 @@ export function landHeight(x, z, level, raw = false) {
   // (And the bare knolls the Marches' two towers stand on, to be seen from the roads.)
   if (x > 6600 && x < 7250) for (const [kx, kz, kr, kh] of TOWER_KNOLLS) { const d = Math.hypot(x - kx, z - kz); if (d < kr) h += kh * Math.pow(1 - d / kr, 1.5); }
   if (raw) return h;
-  // Roads: smoothed, so they don't climb every hummock (blended toward the land's own lie a little way off).
+  // Roads: smoothed, so they don't climb every hummock (blended toward the land's own lie a little way off). (Then they're laid
+  // level into that: src/core/roadbed.js, from src/core/terrain.js terrainHeight.)
   const rd = routeDist(x, z);
   if (rd.road && rd.d < rd.road.w + 14) {
     const s = 6, avg = (h + baseNear(x + s, z) + baseNear(x - s, z) + baseNear(x, z + s) + baseNear(x, z - s)) / 5;

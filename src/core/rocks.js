@@ -5,6 +5,7 @@
 // Where: a scatter everywhere, thicker in outcrops. Lining every road and path, kerb stones and broken bits along its edges
 // and a little gravel on it. In the woods, mossy boulders between the trunks. On the steeps and the far map's bare rock,
 // slabs and scree. In open snow, crags and slabs jutting out of it. Never in the town, on a place, in water, or on a road.
+import { nearFlight } from './roadbed.js';
 import { oldChurchGround } from './town.js';
 import { CAVE_PATH, PATHS, PLOTS, ROADS, fbm, hash2, nearest, openingTerrain, segDist2, sstep, terrainHeight } from './terrain.js';
 import { forestAmount } from './forest.js';
@@ -116,6 +117,8 @@ function rockInCell(i, j, big, out) {
   if (big && (e.d < 2 || huntEdge(x, z) < 3)) return;
   const on = e.d < -0.35;
   if (on && e.d < -e.w * 0.55) return;
+  // (Nor on a flight of steps, nor against its cheeks or up its banks, a boulder well back: src/core/stairs.js.)
+  if (e.d < 6 && nearFlight(x, z, big ? 6 : 2)) return;
   const L = lie(x, z);
   // (Nothing lies on the east's cliffs, the Chasm's walls and the basin's: it would hang in the air off them.)
   if (x > 7000 && L.slope > 0.42) return;
@@ -209,6 +212,7 @@ function roadBits(i, j, plants, out) {
   for (let q = 0; q < 12; q++) {
     const x = (i + hash2(i * 13 + q * 7, j - q * 3)) * STONE_CELL, z = (j + hash2(i - q * 11, j * 17 + q * 5)) * STONE_CELL;
     const e = roadEdge(x, z);
+    if (e.d < 1.4 && nearFlight(x, z, 1.4)) continue;   // (a flight's swept, and edged in its own stone)
     const u = hash2(i + q * 29, j - q * 37), v = hash2(i - q * 41, j + q * 43), a = hash2(i + q * 3, j + q * 53) * 6.2832;
     if (e.d < -0.3 && e.d > -e.w * 0.9) {
       if (u > 0.7) continue;

@@ -8,6 +8,7 @@ import { CHURCH_GUARD, CHURCH_SITE, churchSite } from './church.js';
 import { OLD_CHURCH_GROUND, oldChurchGround } from './town.js';
 import { PORTAL, PORTAL_PAD } from './dungeon.js';
 import { HUNT_PATHS } from './hunts.js';
+import { bedHeight } from './roadbed.js';
 
 export let openingTerrain = false;
 export function setOpeningTerrain(enabled) { openingTerrain = !!enabled; }
@@ -103,8 +104,12 @@ export function nearest(road, x, z) {
 
 setLandBase(wild);
 
+// The land as it lies, before the ways are laid into it (tools/roads/bed.mjs lays them from this).
+export function groundBase(x, z) { return landHeight(x, z, wild(x, z)); }
+
 export function terrainHeight(x, z) {
-  let level = landHeight(x, z, wild(x, z));
+  // The land, and every way out in it laid level across and eased along (src/core/roadbed.js).
+  let level = bedHeight(x, z, landHeight(x, z, wild(x, z)));
   // The hill's top levelled, and its roads cut and banked into it, on over that.
   if (x < -20) {
     const top = Math.hypot(x - SUMMIT.x, z - SUMMIT.z);
