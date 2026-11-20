@@ -24,7 +24,8 @@ export class ClipBank {
         tracks[j] = sameHemisphere(q);
       }
       // travel: how far a clip that goes somewhere has carried the body forward, frame by frame (master units).
-      this.clips[name] = { name, frames: c.frames, dur: c.dur, loop: c.loop, tracks, pelvis: pel.subarray(c.pelvis, c.pelvis + c.frames * 3), travel: c.travel ? Float32Array.from(c.travel) : null };
+      // stride: for a gait made for its own pace (tools/anim/gait.py): how far a loop of it goes, the pace it's for and its steps.
+      this.clips[name] = { name, frames: c.frames, dur: c.dur, loop: c.loop, tracks, pelvis: pel.subarray(c.pelvis, c.pelvis + c.frames * 3), travel: c.travel ? Float32Array.from(c.travel) : null, stride: c.stride || null };
     }
   }
 
