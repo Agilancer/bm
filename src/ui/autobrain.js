@@ -45,7 +45,8 @@ import { AMBUSH_AT } from '../sim/opening.js';
 import { NODES, UTILITY, blocked, pointsAt, spent, startFree, startRanks } from '../sim/skills.js';
 import { RULES, isNight, placeSpot } from '../folk/quests.js';
 import { QUESTS } from '../folk/lines/quests.js';
-import { PEOPLE, POSTED } from '../folk/people.js';
+import { CROWD, PEOPLE, POSTED } from '../folk/people.js';
+import { PHOBOS } from '../core/phobos-data.js';
 import { BEYOND } from '../folk/lines/beyond.js';
 import { LISANDRA } from '../folk/lines/lisandra.js';
 import { TUMBLER_SIZES } from '../sim/tumblers.js';
@@ -430,7 +431,8 @@ const CASTS = ['firebolt', 'mend', 'wisp', 'blink', ...PANIC, ...SKY];
 const FARMS = new Set(['bone', 'iron', 'silk', 'wax', 'cap']);
 const STOCKS = new Set(['staffs', 'robes', 'skulls', 'curios', 'scrolls']);
 export function coverage(foeNames = null) {
-  const out = [], people = new Set([...PEOPLE, ...POSTED, ...BEYOND, LISANDRA].map((p) => p.id));
+  // (And Phobos's people who keep to a district of their own: it goes there for them, crowdSpot.)
+  const out = [], people = new Set([...PEOPLE, ...POSTED, ...BEYOND, LISANDRA, ...CROWD.filter((p) => p.area)].map((p) => p.id));
   for (const id of Object.keys(RULES)) {
     const R = RULES[id];
     if (!(id in LEVEL_OF)) out.push(`quest ${id}: not in PLAN, so it's taken on last, at a guessed level (${guessLevel(id)})`);
@@ -2247,8 +2249,23 @@ export class Brain {
   }
 
   talkJob(i, why, say) {
-    if (i < 0 || this.skipping(`p:${i}`) || !this.reachable(i)) return null;
+    if (i < 0 || this.skipping(`p:${i}`)) return null;
+    if (!this.reachable(i)) {
+      // (One of Phobos's people who keeps to a district, not about while you're far from it: to the district, where they
+      // come out as you near it, src/folk/brain.js AREA_REACH.)
+      const at = this.crowdSpot(i);
+      return at ? { kind: 'go', why, x: at.x, z: at.z, r: 30, say: `${say} (to ${at.name})` } : null;
+    }
     return { kind: 'talk', why, who: i, say };
+  }
+
+  // Where to go for someone of Phobos's who keeps to a district and isn't about: its middle. Null for anyone else, or
+  // anyone who's about.
+  crowdSpot(i) {
+    const p = this.o.townUI.people[i];
+    if (!p?.area || this.o.townUI.whereOf(i)) return null;
+    const d = PHOBOS.districts.find((q) => q.key === p.area);
+    return d ? { x: d.x, z: d.z, name: d.name || p.area } : null;
   }
 
   // Someone it can walk up to now: on the ground floor (it doesn't take stairs), awake or easily woken, and not running from something.
@@ -2266,10 +2283,10 @@ export class Brain {
     for (const [id, lvl] of PLAN_ALL) {
       if (Q.state(id) || (RULES[id].needs && !Q.done(RULES[id].needs))) continue;
       const giver = this.personIndex(QUESTS[id].giver);
-      if (giver < 0 || this.skipping(`p:${giver}`) || !this.reachable(giver)) continue;
+      if (giver < 0 || this.skipping(`p:${giver}`) || (!this.reachable(giver) && !this.crowdSpot(giver))) continue;
       // (Far-off work can wait till it's nearly ready for it.)
       if (m.lvl + 3 < lvl) continue;
-      const w = townUI.whereOf(giver);
+      const w = townUI.whereOf(giver) || this.crowdSpot(giver);
       if (!w) continue;
       const d = dist(m.x, m.z, w.x, w.z);
       // (Someone out past the town, like the Bellwright: only on the way.)

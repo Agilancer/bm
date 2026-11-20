@@ -12,7 +12,7 @@ import { OPENING } from '../core/opening.js';
 import { BOSSES, DELVES, PORTAL } from '../core/dungeon.js';
 import { RULES, placeSpot } from '../folk/quests.js';
 import { QUESTS } from '../folk/lines/quests.js';
-import { PEOPLE, POSTED } from '../folk/people.js';
+import { CROWD, PEOPLE, POSTED } from '../folk/people.js';
 import { BEYOND } from '../folk/lines/beyond.js';
 import { LISANDRA } from '../folk/lines/lisandra.js';
 import { CAMPS } from '../sim/slimes.js';
@@ -25,7 +25,8 @@ export const START = 'You came down into Bellmourn with nothing: no coin, no bed
 // Or, before that, till Lisandra's said her piece.
 export const LIS_START = 'You came down into Bellmourn with nothing: no coin, no bed. Lisandra is waiting where the Long Road comes into town, with something to say. She always has something to say.';
 
-const WHO = Object.fromEntries([...PEOPLE, ...POSTED, ...BEYOND, LISANDRA].map((p) => [p.id, p]));
+// (And Phobos's people of the districts, who give work of their own: src/folk/lines/phobos-streets.js.)
+const WHO = Object.fromEntries([...PEOPLE, ...POSTED, ...BEYOND, LISANDRA, ...CROWD.filter((p) => p.area && !p.swapOf)].map((p) => [p.id, p]));
 // Someone by name and what they are: "Silas Crane, the undertaker"; "Jory Pell, the night watchman"; "Ser Anselm Toller, the
 // Bellwright, at the Tower ...". (A title's own names keep their capitals: the reeve of Bellmourn, the cook at the Bell.)
 const PROPER = new Set(['Bellmourn', 'Bell', 'Watch', 'Ashby', 'Halloway']);
