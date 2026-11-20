@@ -318,7 +318,7 @@ export class Opening {
       return { clip: 'Idle_Talking_Loop', rate: 0.6, face, look: eye, blend: 2.5 };
     }
     // Who she is. Her hand to her heart, and a slow, stiff bow; then she talks.
-    if (t < C.bow + 0.9) return { clip: 'idle', face, look: eye, reach: HEART, blend: 3 };
+    if (t < C.bow + 0.9) return { clip: 'Idle_Talking_Loop', rate: 0.6, face, look: eye, reach: HEART, blend: 3 };
     if (t < C.named + 1.3) return { clip: 'bow', from: 0.4, rate: 0.62, hold: 3.4, face, look: eye, reach: HEART, blend: 3 };
     if (t < C.toHearth) return { clip: 'Idle_Talking_Loop', rate: 0.6, face, look: eye, blend: 2 };
     // The old story, at her hearth: across to it, her hands held to the fire, telling it into the flames.

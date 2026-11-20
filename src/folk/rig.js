@@ -22,7 +22,8 @@ const FIST = [[0.5, 0.35, 0.2], [1.2, 1.3, 0.9], [1.2, 1.3, 0.9], [1.2, 1.3, 0.9
 // Looked at in Blender on the Phobos bodies (tools/folk/rig_fit.py show(..., curl=...)).
 const WALK_CLIPS = new Set(['walk', 'walk_ual', 'walk_formal', 'walk_proud', 'swagger', 'crouch_walk']);
 // (The middle and ring fingers bend more at the base knuckle, the tips less: a fist's curl at the tips reads as a claw.)
-const RELAX = [[0.5, 0.42, 0.28], [0.6, 0.6, 0.36], [0.88, 0.72, 0.42], [0.98, 0.84, 0.48], [1.02, 0.98, 0.54]];
+// (The index and middle bend most at the base, the index being the finger the eye reads first, and the thumb tucks in.)
+const RELAX = [[0.67, 0.45, 0.28], [0.8, 0.62, 0.36], [1.06, 0.72, 0.42], [0.98, 0.84, 0.48], [1.02, 0.98, 0.54]];
 const FQ = new Float32Array(4);
 const conj = (q, i = 0) => [-q[i], -q[i + 1], -q[i + 2], q[i + 3]];
 

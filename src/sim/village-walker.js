@@ -10,6 +10,7 @@ const SPEED = 0.9;
 const RADIUS = 0.48;
 // Which way her finger joints bend to close (src/sim/village-walker.js storyPose: the snap).
 const FINGER_CURL = 1;
+const ARC = 0.08;          // m a hand laid on her chest swings out in front on its way there (reach, face 'in')
 
 export class VillageWalker {
   constructor(buffer, form, opening = false) {
@@ -304,7 +305,9 @@ export class VillageWalker {
     const reach = (rot, tr, A, T, w, face) => {
       where(rot, tr, A.arm, pS); where(rot, tr, A.fore, pE); where(rot, tr, A.hand, pH);
       const a = len(sub(pE, pS)), b = len(sub(pH, pE));
-      const want = [lerp(pH[0], T[0], w), lerp(pH[1], T[1], w), lerp(pH[2], T[2], w)];
+      // (A palm going to her own chest comes round in front on its way, ARC at the middle of the move, not through her.)
+      const arc = face === 'in' ? ARC * Math.sin(Math.PI * w) : 0;
+      const want = [lerp(pH[0], T[0], w), lerp(pH[1], T[1], w), lerp(pH[2], T[2], w) + arc];
       const short = len(sub(want, pS)) - (a + b) * 0.97;
       if (short > 0) {
         bow(rot, Math.min(0.45, short * 3) * w);

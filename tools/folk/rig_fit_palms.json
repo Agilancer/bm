@@ -4,7 +4,7 @@
  },
  "porter": {
   "Left": 55.0,
-  "Right": -55.0
+  "Right": -65.6
  },
  "moneylender": {
   "Left": -11.7,
@@ -57,5 +57,9 @@
  },
  "currier": {
   "Right": -11.1
+ },
+ "watchman": {
+  "Left": 87.6,
+  "Right": -81.7
  }
 }

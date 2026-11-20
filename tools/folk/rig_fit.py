@@ -630,7 +630,7 @@ def _palm(P, idx, side):
 PALM_BIAS = {"Left": -11.5, "Right": 11.5}
 
 
-def palms(k, write=True, min_deg=10.0, max_deg=55.0, junk_deg=100.0):
+def palms(k, write=True, min_deg=10.0, max_deg=90.0, junk_deg=100.0, gate=80.0):
     B = body(k); js = B["js"]
     ex = js.setdefault("asset", {}).setdefault("extras", {}).setdefault("rigfit", {})
     if "palm" in ex: return None
@@ -654,11 +654,12 @@ def palms(k, write=True, min_deg=10.0, max_deg=55.0, junk_deg=100.0):
         m = np.isin(B["jo"][:, 0], hj) & (B["we"][:, 0] > 0.5)
         V = B["pos"][m].astype(np.float64)
         if len(V) < 30: continue
-        c = V - V.mean(0); pn = np.linalg.eigh(c.T @ c)[1][:, 0]
+        c = V - V.mean(0); ev, U = np.linalg.eigh(c.T @ c); pn = U[:, 0]
+        if ev[0] / ev.sum() > 0.12: continue    # (not a flat hand: a fist, a mitten, a hand round a thing)
         j0 = idx[side + "Hand"]
         pn = qmat(WR[j0]) @ B["W"][j0, :3, :3].T @ pn
         pn -= ax * (pn @ ax); pn /= np.linalg.norm(pn)
-        if np.degrees(np.arccos(min(abs(pn @ n), 1.0))) > 60: continue
+        if np.degrees(np.arccos(min(abs(pn @ n), 1.0))) > gate: continue
         n = pn if pn @ n > 0 else -pn
         _, hn = _palm(HP, Hi, side)
         want = F.T @ (HF @ hn); want -= ax * (want @ ax); want /= np.linalg.norm(want)
