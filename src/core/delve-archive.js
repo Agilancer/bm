@@ -23,113 +23,137 @@ import { R } from './delve-lay.js';
 
 const PI = Math.PI;
 
+// (Each room its own section: the stair low and close, the Reading Room's stacks eighteen metres to their roof, the
+// Catalogue and the Scriptorium low cellars, the Long Flood a nave twice as high as it's wide, the sluices shafts. No
+// room lights itself (fires: 0, hang: 0): each has two or three lamps of its own, and the dark between them.)
 const rooms = [
-  R('da_door', 'the Sunk Door', 0, -12, 5, 20, 0, 9, { rock: 'p2_waterline_wall', foot: 'dark:block', ground: 'p2_bone_joint_flags', fires: 12 }),
-  R('da_reading', 'the Drowned Reading Room', 8, -54, 20, 24, 0, 14, { rock: 'p2_book_spines', foot: 'mire:block', ground: 'p2_worn_floorboards', banners: 14, cloth: 'royal:cloth_red', fires: 16 }),
-  R('da_catalogue', 'the Catalogue', -56, -42, 16, 14, 0, 10, { rock: 'p2_black_panelling', foot: 'dark:block', ground: 'p2_worn_floorboards', banners: 0, fires: 12 }),
-  R('da_bindery', 'the Bindery', 58, -66, 18, 14, 0, 11, { rock: 'p2_sooty_plaster', foot: 'mire:block', ground: 'flags', banners: 0, fires: 12 }),
-  R('da_script', 'the Scriptorium', -56, -82, 12, 12, 0, 8, { rock: 'p2_waterline_wall', foot: 'mire:block', ground: 'p2_worn_floorboards', banners: 9, cloth: 'royal:cloth_red', fires: 12 }),
-  R('da_flood', 'the Long Flood', 18, -108, 8, 34, 0, 16, { rock: 'p2_book_spines', foot: 'mire:block', ground: 'slate:flags', banners: 0, fires: 14 }),
-  R('da_sluice_w', 'the West Sluice', -40, -114, 12, 12, 0, 10, { rock: 'slate:ashlar', foot: 'slate:block', ground: 'slate:flags', banners: 0, fires: 12 }),
-  R('da_sluice_e', 'the East Sluice', 56, -126, 12, 12, 0, 10, { rock: 'slate:ashlar', foot: 'slate:block', ground: 'slate:flags', banners: 0, fires: 12 }),
-  R('da_sump', 'the Sump', -84, -114, 8, 8, 0, 8, { rock: 'p2_waterline_wall', foot: 'mire:block', ground: 'p2_bones_ground', banners: 0, fires: 14 }),
-  R('da_sealed', 'the Sealed Stack', 90, -68, 6, 6, 0, 7, { rock: 'p2_book_spines', foot: 'dark:block', ground: 'p2_worn_floorboards', banners: 0, fires: 20 }),
-  R('da_lectorium', 'the Lectorium', 18, -168, 24, 30, 0, 20, { rock: 'p2_book_spines', foot: 'mire:block', ground: 'slate:flags', banners: 18, cloth: 'royal:cloth_red', fires: 14 }),
+  R('da_door', 'the Sunk Door', 0, -16, 4, 24, 0, 6, { rock: 'p2_waterline_wall', foot: 'dark:block', ground: 'p2_bone_joint_flags', fires: 0 }),
+  R('da_reading', 'the Drowned Reading Room', 8, -54, 16, 18, 0, 18, { rock: 'p2_book_spines', foot: 'mire:block', ground: 'p2_worn_floorboards', banners: 0, fires: 0, hang: 0 }),
+  R('da_catalogue', 'the Catalogue', -56, -42, 16, 14, 0, 7, { rock: 'p2_black_panelling', foot: 'dark:block', ground: 'p2_worn_floorboards', banners: 0, fires: 0, hang: 0 }),
+  R('da_bindery', 'the Bindery', 58, -66, 16, 14, 0, 10, { rock: 'p2_sooty_plaster', foot: 'mire:block', ground: 'flags', banners: 0, fires: 0, hang: 0 }),
+  R('da_script', 'the Scriptorium', -56, -82, 12, 12, 0, 5.5, { rock: 'p2_waterline_wall', foot: 'mire:block', ground: 'p2_worn_floorboards', banners: 0, fires: 0, hang: 0 }),
+  R('da_flood', 'the Long Flood', 18, -106, 6, 38, 0, 20, { rock: 'p2_book_spines', foot: 'mire:block', ground: 'slate:flags', banners: 0, fires: 0 }),
+  R('da_sluice_w', 'the West Sluice', -40, -114, 10, 10, 0, 16, { rock: 'slate:ashlar', foot: 'slate:block', ground: 'slate:flags', banners: 0, fires: 0, hang: 0 }),
+  R('da_sluice_e', 'the East Sluice', 56, -126, 10, 10, 0, 16, { rock: 'slate:ashlar', foot: 'slate:block', ground: 'slate:flags', banners: 0, fires: 0, hang: 0 }),
+  R('da_sump', 'the Sump', -84, -116, 7, 7, 0, 6, { rock: 'p2_waterline_wall', foot: 'mire:block', ground: 'p2_bones_ground', banners: 0, fires: 0 }),
+  R('da_sealed', 'the Sealed Stack', 90, -68, 6, 6, 0, 9, { rock: 'p2_book_spines', foot: 'dark:block', ground: 'p2_worn_floorboards', banners: 0, fires: 0 }),
+  R('da_lectorium', 'the Lectorium', 18, -166, 20, 26, 0, 24, { rock: 'p2_book_spines', foot: 'mire:block', ground: 'slate:flags', banners: 20, cloth: 'royal:cloth_red', fires: 0, hang: 0 }),
 ];
 
 // (Each run a little into both rooms, so it opens a doorway in each wall. None across a room from another: the Reading
 // Room's door is west of its middle, its way on to the Flood east of it; its west way north of its middle, its east south.)
 const tunnels = [
-  { pts: [[-10, -42], [-42, -42]], w: 5, h: 5 },                    // the Reading Room to the Catalogue
-  { pts: [[26, -66], [42, -66]], w: 5, h: 5 },                      // ... and to the Bindery
-  { pts: [[-60, -54], [-60, -72]], w: 3, h: 4 },                    // the Catalogue down to the Scriptorium
-  { pts: [[-48, -92], [-48, -104]], w: 3, h: 4 },                   // the Scriptorium down to the West Sluice
-  { pts: [[-30, -112], [12, -112]], w: 4, h: 4.5 },                 // the West Sluice's race to the Flood
-  { pts: [[24, -126], [46, -126]], w: 4, h: 4.5 },                  // the Flood to the East Sluice
-  { pts: [[-50, -118], [-78, -118]], w: 3, h: 4 },                  // the West Sluice to the Sump
+  { pts: [[-6, -42], [-42, -42]], w: 4, h: 4.5 },                   // the Reading Room to the Catalogue
+  { pts: [[22, -66], [44, -66]], w: 4, h: 4.5 },                    // ... and to the Bindery
+  { pts: [[-60, -54], [-60, -72]], w: 3, h: 3.6 },                  // the Catalogue down to the Scriptorium
+  { pts: [[-48, -92], [-48, -106]], w: 3, h: 3.6 },                 // the Scriptorium down to the West Sluice
+  { pts: [[-32, -112], [14, -112]], w: 3.6, h: 4 },                 // the West Sluice's race to the Flood
+  { pts: [[22, -126], [48, -126]], w: 3.6, h: 4 },                  // the Flood to the East Sluice
+  { pts: [[-48, -118], [-80, -118]], w: 3, h: 3.6 },                // the West Sluice to the Sump
   // The Sealed Stack: behind the Bindery's last case, a way a man goes through sideways. On no map.
-  { pts: [[74, -70], [86, -70]], w: 1.3, h: 3 },
+  { pts: [[72, -70], [86, -70]], w: 1.3, h: 3 },
   // Where they come in from: the Catalogue's back stacks, the Bindery's stores, the Lectorium's side aisles.
   { pts: [[-70, -36], [-78, -36]], w: 2, h: 4, dead: true, door: 'da_catalogue' },
   { pts: [[-52, -30], [-52, -22]], w: 2, h: 4, dead: true, door: 'da_catalogue' },
   { pts: [[52, -54], [52, -46]], w: 2, h: 4, dead: true, door: 'da_bindery' },
-  { pts: [[74, -60], [82, -60]], w: 2, h: 4, dead: true, door: 'da_bindery' },
-  { pts: [[-4, -158], [-12, -158]], w: 2, h: 4, dead: true, door: 'da_lectorium' },
-  { pts: [[40, -180], [48, -180]], w: 2, h: 4, dead: true, door: 'da_lectorium' },
+  { pts: [[72, -60], [80, -60]], w: 2, h: 4, dead: true, door: 'da_bindery' },
+  { pts: [[0, -158], [-8, -158]], w: 2, h: 4, dead: true, door: 'da_lectorium' },
+  { pts: [[36, -180], [44, -180]], w: 2, h: 4, dead: true, door: 'da_lectorium' },
 ];
 
 // The three dry stacks in the Lectorium, each a reading floor a step out of the water: when the Drowned Lector calls the
 // tide, one of them stays dry (src/sim/castle-fights-a.js lector). [x, z], each 4.5 m about.
 export const ISLES = [[8, -158], [30, -164], [14, -182]];
 export const ISLE_R = 4.5;
-const daises = ISLES.map(([x, z]) => ({ x, z, hx: 3.6, hz: 3.6, dy: 0.5 }));
+// The floor's levels: the Reading Room's south and east gone down a step and a half under the water, and the Long Flood's
+// whole nave with it (waded, knee deep); two tables' worth of floor left standing in the Reading Room; the Lectorium's
+// three dry stacks a step up out of its shallows.
+const SUNK = 0.55;
+const daises = [
+  { x: 13, z: -57, hx: 11, hz: 13, dy: -SUNK },
+  { x: 11, z: -50, hx: 2.4, hz: 1.5, dy: SUNK }, { x: 17, z: -62, hx: 2.4, hz: 1.5, dy: SUNK },
+  { x: 18, z: -106.2, hx: 5, hz: 35.8, dy: -SUNK },
+  ...ISLES.map(([x, z]) => ({ x, z, hx: 3.6, hz: 3.6, dy: 0.5 })),
+];
 
 const props = [];
 {
   const add = (kind, x, z, o = {}) => props.push({ kind, x, z, ...o });
-  const water = (x, z, r, up = 0.05) => add('pool', x, z, { r, up, layer: 'mire:water' });
-  // ---- the Sunk Door: the last dry steps, a rack of the archivists' poles, the tide-line up the wall.
-  add('lintel', 0, -2, { hx: 5, stone: 'dark:ashlar' }); add('mark', 0, 7.6, { up: 6.6, r: 0.8, back: 1 });
-  add('rack', -4.2, -8, { yaw: PI / 2 }); add('barrels', 3.6, -20); add('brazier', -3.4, -24); add('brazier', 3.4, 2);
-  add('decal', 4.95, -12, { layer: 'p2_damp_rise', w: 6, h: 2.4, up: 0, yaw: -PI / 2 });
-  // ---- the Drowned Reading Room: four long tables stood in the water, benches, lecterns; lamps hung low over each table;
-  // cases out from the walls; a runner of his blue from the door, gone under at its far end; the oculus, its light on the water.
-  water(8, -56, 13); water(-2, -70, 6.5); water(20, -42, 6);
-  for (const [x, z] of [[0, -46], [16, -46], [0, -64], [16, -64]]) {
-    add('table', x, z, { hx: 3.2, hz: 0.8, cloth: 'royal:cloth_oat' }); add('bench', x, z + 1.4, { hx: 2.8, hz: 0.2 });
-    add('candles', x - 1.4, z, { up: 0.85 }); add('chandelier', x, z, { up: 5, hang: true });
-  }
-  add('daylight', 8, -55, { r: 3, pool: false });
-  for (const z of [-38, -50, -62, -72]) add('bookcase', 25.5, z, { hx: 2.2, hz: 0.45, h: 5 });
-  for (const z of [-52, -62, -72]) add('bookcase', -9.6, z, { hx: 2.2, hz: 0.45, h: 5 });
-  add('carpet', 0, -38, { hx: 1.4, hz: 7, layer: 'royal:cloth_red' });
-  add('lectern', 8, -34); add('lectern', 22, -74); add('heap', -8, -76, { r: 1.2, layer: 'p2_book_spines' });
-  add('decal', -11.95, -34, { layer: 'p2_cobweb', w: 2, up: 11.9, yaw: PI / 2 });
-  // ---- the Catalogue: the card-cases in rows, shoulder high, a lane between each; her desk at the far end, the great
-  // book on its lectern; drawers pulled and cards over the floor.
-  for (const z of [-34, -42, -50]) { add('bookcase', -50, z, { hx: 5, hz: 0.5, h: 1.7 }); add('bookcase', -64, z, { hx: 3.5, hz: 0.5, h: 1.7 }); }
-  add('table', -68, -44, { hx: 0.8, hz: 2.4, cloth: 'royal:cloth_oat' }); add('lectern', -66, -38); add('candles', -68, -43, { up: 0.85 }); add('candles', -68, -46, { up: 0.85 });
-  add('chandelier', -56, -42, { up: 5.4, hang: true }); add('carpet', -56, -42, { hx: 12, hz: 1.4, layer: 'royal:cloth_red' });
-  add('heap', -44, -52, { r: 0.9, layer: 'pale:cloth_oat' }); add('heap', -60, -31, { r: 0.7, layer: 'pale:cloth_oat' });
-  // ---- the Bindery: the presses in a row (each a bed of oak and a block over it on two screws), the glue vats, hides on
-  // rails, the sewing frames; the cases along the east wall, the last of them stood a hand out from it.
-  for (const x of [48, 58, 68]) { add('table', x, -74, { hx: 1.6, hz: 1.1, solid: true }); add('crates', x, -76.4); }
-  add('vat', 46, -58, { r: 1.1 }); add('vat', 50.5, -56.5, { r: 0.8 }); add('coatrail', 62, -54.4, { hx: 3 }); add('coatrail', 70, -54.4, { hx: 2 });
-  add('table', 58, -64, { hx: 3, hz: 0.8 }); add('candles', 57, -64, { up: 0.85 }); add('candles', 60, -64.2, { up: 0.85 });
-  add('bookcase', 75.4, -60, { hx: 0.45, hz: 3, h: 4.4, one: -1 }); add('bookcase', 74.6, -72.4, { hx: 0.45, hz: 2.2, h: 4.4, one: -1 });
-  add('chandelier', 58, -66, { up: 6, hang: true }); add('brazier', 44, -76); water(66, -62, 4.5, 0.04);
-  add('decal', 60, -70, { layer: 'p2_blood_splashes', w: 2, flat: true, yaw: 0.8 });
+  // ---- the Sunk Door: the last dry steps, low and close; the tide-line up both walls; one lamp at each end.
+  add('lintel', 0, -2, { hx: 4, stone: 'dark:ashlar' }); add('mark', 0, 7.6, { up: 4.6, r: 0.6, back: 1 });
+  add('rack', -3.3, -10, { yaw: PI / 2 }); add('barrels', 2.8, -22); add('brazier', 2.6, 2); add('brazier', -2.6, -33);
+  add('decal', 3.95, -14, { layer: 'p2_damp_rise', w: 6, h: 2.4, up: 0, yaw: -PI / 2 }); add('decal', -3.95, -26, { layer: 'p2_damp_rise', w: 6, h: 2.4, up: 0, yaw: PI / 2 });
+  // ---- the Drowned Reading Room: the stacks up every wall to a roof eighteen metres over; its south and east floor gone
+  // down under black water, the great cases gone over in it and lying half sunk; two tables still standing on their own
+  // floor, islands; the dry end by the door, a table and its lamp. (What's seen from the door: the fallen cases in the water.)
+  add('flood', 13, -57, { hx: 11.4, hz: 13.4, lvl: -0.08, float: 16, glints: [[14, -57], [11.5, -60]] });
+  add('leanshelf', 8, -49, { yaw: 1.3, w: 2.4, h: 7, lean: 0.55, sink: 1.2 });
+  add('leanshelf', 20, -55, { yaw: -0.7, w: 2.2, h: 6.4, lean: 0.8, sink: 1.2, roll: 0.12 });
+  add('leanshelf', 6, -65, { yaw: 2.3, w: 2.4, h: 7.4, lean: 0.38, sink: 1.2 });
+  add('leanshelf', 20, -68, { yaw: 3.0, w: 2.2, h: 6, lean: 1.05, sink: 1.0, roll: -0.1 });
+  for (const [x, z] of [[11, -50], [17, -62]]) { add('table', x, z, { hx: 1.9, hz: 0.8, cloth: 'royal:cloth_oat' }); add('candles', x - 0.8, z, { up: 0.85 }); }
+  for (const z of [-42, -50, -58, -66]) add('bookcase', -7.4, z, { hx: 0.45, hz: 3.2, h: 8, one: 1 });
+  add('table', -2, -40, { hx: 2.6, hz: 0.8, cloth: 'royal:cloth_oat' }); add('bench', -2, -38.6, { hx: 2.2, hz: 0.2 }); add('candles', -3, -40, { up: 0.85 });
+  add('carpet', 0, -42, { hx: 1.4, hz: 5, layer: 'royal:cloth_red' }); add('lectern', -4, -56); add('heap', -5, -68, { r: 1.2, layer: 'p2_book_spines' });
+  add('chandelier', -1, -44, { up: 5.5, hang: true }); add('chandelier', 14, -58, { up: 7, hang: true }); add('chandelier', -2, -62, { up: 8, hang: true });
+  add('decal', -7.95, -37, { layer: 'p2_cobweb', w: 2, up: 15.9, yaw: PI / 2 });
+  // ---- the Catalogue: low, and all card-cases: three rows of them shoulder high, a lane between each; her desk at the
+  // far end, the great book on its lectern; drawers pulled and cards over the floor.
+  for (const z of [-34, -42, -50]) { add('cardcase', -49, z, { hx: 5 }); add('cardcase', -64.5, z, { hx: 3 }); }
+  add('cardcase', -71.5, -45, { hz: 5 }); add('cardcase', -40.5, -33, { hz: 3 });
+  add('table', -69, -37, { hx: 0.8, hz: 2, cloth: 'royal:cloth_oat' }); add('lectern', -66, -31); add('candles', -69, -36.4, { up: 0.85 }); add('candles', -69, -38, { up: 0.85 });
+  add('chandelier', -57, -38, { up: 4.2, hang: true }); add('brazier', -43, -53); add('carpet', -56, -38, { hx: 12, hz: 1.2, layer: 'royal:cloth_red' });
+  add('heap', -44, -46, { r: 0.8, layer: 'pale:cloth_oat' }); add('heap', -60, -31, { r: 0.6, layer: 'pale:cloth_oat' });
+  // ---- the Bindery: the presses in a row along its south wall, each wound down on a book; the glue vats on their fires;
+  // hides on rails; the sewing table; the cases along the east wall, the last of them stood a hand out from it.
+  for (const x of [47, 55, 63]) { add('press', x, -77, { yaw: 0, down: 0.3 + (x % 3) * 0.2 }); add('crates', x + 3.4, -78); }
+  add('vat', 46, -57, { r: 1.1 }); add('vat', 50.5, -55.5, { r: 0.8 });
+  add('table', 58, -65, { hx: 3, hz: 0.8 }); add('candles', 57, -65, { up: 0.85 }); add('candles', 60, -65.2, { up: 0.85 });
+  // (Hides on rails in rows across its north end, a way between them; books stacked for the presses.)
+  for (const z of [-56.5, -59.5]) { add('coatrail', 57, z, { hx: 2.6 }); add('coatrail', 65, z, { hx: 2.6 }); }
+  add('heap', 51, -70, { r: 1.1, layer: 'p2_book_spines' }); add('heap', 67, -72, { r: 0.9, layer: 'p2_book_spines' }); add('press', 69.5, -76.6, { yaw: 0, down: 0.7 });
+  add('bookcase', 73.4, -60, { hx: 0.45, hz: 2.4, h: 4.4, one: -1 }); add('bookcase', 72.6, -72.4, { hx: 0.45, hz: 2.2, h: 4.4, one: -1 });
+  add('chandelier', 57, -68, { up: 5.4, hang: true }); add('brazier', 44, -76);
+  add('flood', 66, -61, { hx: 4.2, hz: 3.2, lvl: 0.03, float: 3 }); add('decal', 60, -71, { layer: 'p2_blood_splashes', w: 2, flat: true, yaw: 0.8 });
   // ---- the Sealed Stack: what the old Librarians wouldn't let him have, shelved to the roof; a reading chair; a lamp.
-  add('bookcase', 95.4, -68, { hx: 0.45, hz: 4.6, h: 5, one: -1 }); add('bookcase', 90, -73.4, { hx: 4, hz: 0.45, h: 5, one: 1 });
-  add('seat', 88, -64, { hx: 0.5, hz: 0.5, stone: 'dark:wood' }); add('candles', 89.4, -64, { up: 0.1 }); add('carpet', 90, -67, { hx: 3, hz: 3, layer: 'royal:cloth_red' });
-  // ---- the Scriptorium: the copyists' desks in two rows, each its candle; what they were copying when the water came.
+  add('bookcase', 95.4, -68, { hx: 0.45, hz: 4.6, h: 7.5, one: -1 }); add('bookcase', 90, -73.4, { hx: 4, hz: 0.45, h: 7.5, one: 1 });
+  add('seat', 88, -64, { hx: 0.5, hz: 0.5, stone: 'dark:wood' }); add('carpet', 90, -67, { hx: 3, hz: 3, layer: 'royal:cloth_red' }); add('chandelier', 90, -68, { up: 4, hang: true });
+  // ---- the Scriptorium: low; the copyists' desks in two rows, each its candle; what they were copying when the water came.
   for (const x of [-62, -56, -50]) for (const z of [-78, -86]) { add('lectern', x, z); add('candles', x + 0.9, z, { up: 0.1 }); }
-  add('bookcase', -67.4, -82, { hx: 0.45, hz: 5, h: 3.6, one: 1 }); water(-54, -90, 4, 0.04); add('chandelier', -56, -82, { up: 4.4, hang: true });
+  add('bookcase', -67.4, -82, { hx: 0.45, hz: 5, h: 3.6, one: 1 }); add('flood', -54, -90, { hx: 5, hz: 3, lvl: 0.03, float: 5 }); add('chandelier', -56, -80, { up: 3.2, hang: true });
   add('decal', -44.05, -76, { layer: 'p2_damp_rise', w: 5, h: 2, up: 0, yaw: -PI / 2 });
-  // ---- the Long Flood: the nave of the stacks, knee deep end to end; cases fallen across it, their tops out of the water;
-  // piers down both sides; lamps on chains; the light on the water.
-  for (const z of [-84, -100, -116, -132]) water(18, z, 8.6, 0.07);
-  for (const z of [-86, -104, -122, -138]) { add('column', 11.4, z, { r: 0.9, solid: true }); add('column', 24.6, z + 8, { r: 0.9, solid: true }); }
-  add('bookcase', 15, -94, { hx: 3, hz: 0.5, h: 1.1 }); add('bookcase', 21.5, -110, { hx: 0.5, hz: 3, h: 1.1 }); add('bookcase', 16, -130, { hx: 2.4, hz: 0.5, h: 1.1 });
-  for (const z of [-90, -112, -134]) add('chandelier', 18, z, { up: 7, hang: true });
-  add('heap', 22, -98, { r: 1, layer: 'p2_book_spines' }); add('bones', 14, -120, { r: 1.1 });
-  // ---- the sluices: each its gate in the far wall, its wheel, the race down its middle; the wardens' brazier.
-  add('sluicegate', -51.4, -114, { yaw: PI / 2, w: 3 }); add('wheel', -46, -124.6, { up: 1.9, r: 1.5 }); add('channel', -50, -114, { to: [-30, -112], w: 1.6 });
-  add('brazier', -32, -122); add('barrels', -31, -104.5); add('crates', -49, -104.5);
-  add('sluicegate', 67.4, -126, { yaw: -PI / 2, w: 3 }); add('wheel', 62, -136.6, { up: 1.9, r: 1.5 }); add('channel', 66, -126, { to: [46, -126], w: 1.6 });
-  add('brazier', 48, -134); add('barrels', 47, -116.5); add('heap', 64, -117, { r: 1, layer: 'dark:rubble' });
-  // ---- the Sump: the drain down, black water round it, what's washed up against its grating.
-  water(-84, -114, 5, 0.04); add('pit', -84, -112, { r: 1.8 }); add('bones', -79, -119, { r: 1 }); add('heap', -89, -108.5, { r: 0.9, layer: 'p2_book_spines' });
-  add('chain', -84, -112, { up: 3 });
-  // ---- the Lectorium: the water over all of it but the three dry stacks, a lectern and candles on each; cases up the
-  // walls to the roof; piers; his own lectern at the far end under his mark, the great book chained to it.
-  water(18, -152, 13, 0.07); water(4, -178, 11, 0.07); water(32, -184, 11, 0.07); water(36, -150, 7, 0.07); water(18, -170, 9, 0.07);
-  for (const [x, z] of ISLES) { add('lectern', x + 2.4, z - 2.4); add('candles', x - 2.6, z + 2.6, { up: 0.5 }); add('candles', x + 2.6, z + 2.6, { up: 0.5 }); }
-  for (const [x, z] of [[-2, -170], [38, -152], [26, -190]]) add('column', x, z, { r: 1.3, solid: true });
-  add('mark', 18, -197.6, { up: 11, r: 2.2, back: -1 });
-  add('chandelier', 18, -150, { up: 9, hang: true }); for (const [x, z] of ISLES) add('chandelier', x, z, { up: 6, hang: true });
-  add('brazier', -3, -142); add('brazier', 39, -194);
-  add('decal', 41.95, -160, { layer: 'p2_damp_rise', w: 8, h: 3, up: 0, yaw: -PI / 2 }); add('decal', -5.95, -186, { layer: 'p2_damp_rise', w: 8, h: 3, up: 0, yaw: PI / 2 });
+  // ---- the Long Flood: the nave of the stacks, twenty metres high and twelve wide, knee deep end to end; the great cases
+  // gone over across it, leaning on each other out of the water; piers up both walls; three lamps hung low over the
+  // water, each with its glint, and the dark between them.
+  add('flood', 18, -106.2, { hx: 5.9, hz: 36.4, lvl: -0.08, float: 30, glints: [[18, -82], [17, -106], [19, -130]] });
+  for (const z of [-76, -88, -100, -120, -134]) { add('column', 12.7, z, { r: 0.7 }); add('column', 23.3, z, { r: 0.7 }); }
+  add('leanshelf', 15.5, -80, { yaw: 1.2, w: 2.2, h: 8, lean: 0.62, sink: 1.2 });
+  add('leanshelf', 21, -92, { yaw: -1.9, w: 2.2, h: 7.4, lean: 0.5, sink: 1.2, roll: 0.1 });
+  add('leanshelf', 15, -102, { yaw: 0.9, w: 2.4, h: 8.4, lean: 0.75, sink: 1.2 });
+  add('leanshelf', 20.5, -119, { yaw: -2.2, w: 2.2, h: 7, lean: 0.95, sink: 1.0, roll: -0.12 });
+  add('leanshelf', 16, -136, { yaw: 1.6, w: 2.4, h: 8, lean: 0.55, sink: 1.2 });
+  for (const z of [-82, -106, -130]) add('chandelier', 18, z, { up: 6.5, hang: true });
+  add('bones', 14.5, -124, { r: 1.1 });
+  // ---- the sluices: shafts, sixteen metres up; each its gate in the far wall, its wheel on the wall beside (five spokes),
+  // the water coming down from the old cistern's pipe into a pool, and its race out to the Flood; the wardens' fire.
+  add('sluicegate', -49.4, -114, { yaw: PI / 2, w: 2.6 }); add('gear', -40, -104.3, { yaw: PI, r: 1.5, up: 2.3, spokes: 5, layer: 'dark:wood' });
+  add('spout', -46, -123.4, { up: 11, w: 1.6, layer: 'lake' }); add('flood', -45, -120, { hx: 3.4, hz: 3, lvl: 0.04, float: 2 }); add('channel', -42, -119, { to: [-32, -112], w: 1.1 });
+  add('brazier', -33, -121); add('barrels', -31.5, -106); add('crates', -47.5, -106);
+  add('sluicegate', 65.4, -126, { yaw: -PI / 2, w: 2.6 }); add('gear', 56, -116.3, { yaw: PI, r: 1.5, up: 2.3, spokes: 5, layer: 'dark:wood' });
+  add('spout', 62, -135.4, { up: 11, w: 1.6, layer: 'lake' }); add('flood', 61, -132, { hx: 3.4, hz: 3, lvl: 0.04, float: 2 }); add('channel', 58, -130, { to: [48, -126], w: 1.1 });
+  add('brazier', 49, -133); add('barrels', 47.5, -118); add('heap', 63, -118.5, { r: 1, layer: 'dark:rubble' });
+  // ---- the Sump: the drain down, black water round it, what's washed up against its grating; one fire.
+  add('flood', -84, -116, { hx: 5.4, hz: 5.4, lvl: 0.04, float: 6 }); add('pit', -84, -114, { r: 1.6 }); add('bones', -80, -121, { r: 1 }); add('heap', -89, -111, { r: 0.9, layer: 'p2_book_spines' });
+  add('chain', -84, -114, { up: 3 }); add('brazier', -79.4, -111);
+  // ---- the Lectorium: the stacks up its walls twenty-four metres into the dark; black water over all its floor but the
+  // three dry stacks, a lamp hung low over each and nothing else lit but his own lectern at the far end, under his mark;
+  // cases gone over in the shallows round the walls; three piers.
+  add('flood', 18, -166, { hx: 19.6, hz: 25.6, lvl: 0.1, float: 34, glints: ISLES.map(([x, z]) => [x + 5.4, z + 2]) });
+  for (const [x, z] of ISLES) { add('carpet', x, z, { hx: 3, hz: 3, layer: 'royal:cloth_red' }); add('lectern', x + 2.4, z - 2.4); add('chandelier', x, z, { up: 5.5, hang: true }); }
+  for (const [x, z] of [[2.5, -172], [33.5, -150], [26, -187]]) add('column', x, z, { r: 1.2, solid: true });
+  add('leanshelf', 2, -148, { yaw: 1.0, w: 2.4, h: 8, lean: 0.6, sink: 0.5 }); add('leanshelf', 35, -178, { yaw: -1.9, w: 2.4, h: 8.5, lean: 0.5, sink: 0.5 }); add('leanshelf', 3, -186, { yaw: 2.2, w: 2.2, h: 7, lean: 0.9, sink: 0.4 });
+  add('mark', 18, -191.6, { up: 9, r: 2.2, back: -1 }); add('lectern', 11.5, -187); add('brazier', 8, -189.4); add('brazier', 28, -189.4);
+  add('chandelier', 20, -150, { up: 10, hang: true }); add('chandelier', 22, -178, { up: 10, hang: true });
 }
 
 // ---- who's in it ----------------------------------------------------------------------------------------------------------
@@ -149,7 +173,7 @@ const packs = [
   { key: 'da_leaves', room: 'da_sump', pick: ['da_leaf'], n: 4, pal: ['Bone-white'], at: [0, 0], r: 3 },
 ];
 const bosses = [
-  { key: 'indexer', room: 'da_catalogue', name: 'The Indexer', models: ['da_indexer'], pal: ['Royal'], hp: 70000, damage: 245, reach: 3.0, loot: 8, at: [-6, 0] },
+  { key: 'indexer', room: 'da_catalogue', name: 'The Indexer', models: ['da_indexer'], pal: ['Royal'], hp: 70000, damage: 245, reach: 3.0, loot: 8, at: [-6, 4] },
   { key: 'binder', room: 'da_bindery', name: 'The Binder', models: ['da_binder'], pal: ['Drowned'], hp: 78000, damage: 255, reach: 4.0, loot: 8, at: [4, 2] },
   { key: 'lector', room: 'da_lectorium', name: 'The Drowned Lector', models: ['da_lector'], pal: ['Drowned'], hp: 96000, damage: 260, reach: 3.4, loot: 0, needs: ['indexer', 'binder'], shut: 'lec_shut', gives: 'key:archive', at: [0, -8] },
 ];
@@ -196,30 +220,33 @@ export const DROWNED_ARCHIVE = {
   castle: true, dungeon: true,
   rooms, tunnels, daises, props, packs, bosses, warnings,
   turnWarn: { indexer: 'idx_turn', binder: 'bnd_turn', lector: 'lec_turn' },
-  entry: { x: 0, z: 2.5, yaw: PI }, exitIn: { x: 0, z: 5.4 }, exitOut: { x: 18, z: -194.4 },
+  entry: { x: 0, z: 2.5, yaw: PI }, exitIn: { x: 0, z: 5.4 }, exitOut: { x: 18, z: -188.4 },
   // At the foot of the Ancient Library's south wall, in the Middle Ward: its back to the wall, facing out toward the
   // curtain (src/core/phobos-build.js phobosCastle: the Library's hall at 11050, -150).
   portal: { x: 11030, z: -191, yaw: PI, r: 2.2 },
   // The Sump's drain: down into the Deep Stacks (src/core/delve-highward.js), which is barred from below till it's been
   // come down from here.
-  links: [{ x: -90.6, z: -112, yaw: PI / 2, to: 'deepstacks', n: 2, opens: 'latch:sump' }],
+  links: [{ x: -89.6, z: -116, yaw: PI / 2, to: 'deepstacks', n: 2, opens: 'latch:sump' }],
   // What's off the way: the Sealed Stack behind the Bindery's last case; the copyists' strongbox; the East Sluice's.
   chests: [
     { id: 'sealed', room: 'da_sealed', x: 92, z: -64.4, yaw: PI, loot: 3 },
     { id: 'script', room: 'da_script', x: -46, z: -73, yaw: -PI / 2, loot: 2 },
-    { id: 'sluice', room: 'da_sluice_e', x: 65, z: -116.5, yaw: PI, loot: 2 },
+    { id: 'sluice', room: 'da_sluice_e', x: 51, z: -117.2, yaw: PI, loot: 2 },
   ],
-  vistas: [{ id: 'da_flood', name: 'the Long Flood', room: 'da_flood', x: 18, z: -80, r: 5 }],
+  vistas: [{ id: 'da_flood', name: 'the Long Flood', room: 'da_flood', x: 18, z: -74, r: 5 }],
   auto: { way: ['da_door', 'da_reading', 'da_catalogue', 'da_script', 'da_sluice_w', 'da_sump', 'da_sluice_w', 'da_flood', 'da_sluice_e', 'da_flood', 'da_reading', 'da_bindery', 'da_sealed', 'da_bindery', 'da_reading', 'da_flood', 'da_lectorium'] },
   shots: [
-    ['da_reading', 'da_reading', [-6, 3.2, -34], [18, 1.2, -66]],
-    ['da_catalogue', 'da_door', [-42, 2.6, -36], [-68, 1.2, -46]],
-    ['da_flood', 'da_door', [18, 2.4, -86], [18, 2.2, -138]],
-    ['da_lectorium', 'da_door', [18, 4.5, -141], [18, 2.5, -196]],
+    ['da_reading', 'da_door', [-3, 3.2, -38], [17, 1, -66]],
+    ['da_catalogue', 'da_door', [-41.5, 2.4, -38], [-70, 1.2, -44]],
+    ['da_bindery', 'da_door', [45, 2.6, -57], [64, 1, -77]],
+    ['da_flood', 'da_door', [19.5, 2.2, -70.5], [17, 4, -140]],
+    ['da_sluice', 'da_door', [-32.5, 2.4, -106.5], [-47, 5, -121]],
+    ['da_lectorium', 'da_door', [18, 3, -142.5], [18, 3, -192]],
   ],
   last: 'lector', tough: { hp: 26, damage: 2.8 }, pay: { xp: 70000, gold: 9600 },
   names: { "Velscour's Knights": 'SODDEN KNIGHT', 'The Possessed': 'DROWNED READER', Necromancers: 'ARCHIVIST', 'Plague Knights': 'SLUICE WARDEN', Kobolds: 'BILGE-RAT', 'Plague Giants': 'SLUICE-KEEPER', 'Giant Worms': 'INK-EEL', Harpies: 'LOOSE LEAF' },
-  look: { wall: 'ashlar', foot: 'dark:block', floor: 'flags', banner: 'p2_banner_blue', roof: 'dark:stone', flame: 'dark:flame', light: [0.78, 0.6, 0.42], fire: [0.9, 0.6, 0.36], every: 8, high: 3, glow: 2.5, lit: true, beam: 'dark:stone', bays: 'chains' },
+  // (Its lamps burn cold, the drowned's blue-white, and few: a torch every twenty metres of wall, and each room's own two or three.)
+  look: { wall: 'ashlar', foot: 'dark:block', floor: 'flags', banner: 'p2_banner_blue', roof: 'dark:stone', flame: 'frost:flame', light: [0.55, 0.8, 1.1], fire: [0.8, 0.95, 1.15], every: 18, high: 3, glow: 3.6, lit: true, beam: 'dark:stone', bays: 'chains' },
   words: { enter: "Castle Velscour: the Drowned Archive. He had the cistern broken over the books he couldn't have unwritten. The archivists stayed.", clear: 'The Drowned Lector is dead! The Drowned Key is yours.', wipe: 'You fall... and wake at the Sunk Door.' },
 };
 

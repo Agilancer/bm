@@ -9,7 +9,8 @@ export const RULES_A = {
   the_drowned_archive: { needs: 'dust_in_the_stacks', steps: [{ enter: 'drownedarchive' }, { back: true, say: 'I went down the Sunk Door. The lamps are still lit.' }], gold: 3400, xp: 54000 },
   what_the_water_kept: { needs: 'the_drowned_archive', steps: [{ visit: ['room:da_script', 'room:da_sealed'] }, { back: true, say: 'The Sealed Stack is dry. Every book of it.' }], gold: 3800, xp: 60000, item: 'scroll' },
   the_sluice_wardens: { needs: 'the_drowned_archive', steps: [{ kill: 'room:da_sluice_w', n: 4 }, { kill: 'room:da_sluice_e', n: 4 }, { back: true, say: 'Both sluices are ours. The wheels still turn.' }], gold: 4000, xp: 62000 },
-  where_the_flood_goes: { needs: 'the_drowned_archive', steps: [{ visit: ['room:da_flood', 'room:da_sump'] }, { back: true, say: "It goes down a drain in the Sump. I didn't fall in." }], gold: 3600, xp: 56000 },
+  // (Pip's bet with Wynn: he can't bring himself to tell her he's lost it, so you do. It ends with her.)
+  where_the_flood_goes: { needs: 'the_drowned_archive', steps: [{ visit: ['room:da_flood', 'room:da_sump'] }, { talk: 'ph_wynn', say: 'Pip says to tell you: it drains. He owes you a horn.', end: true }], gold: 3600, xp: 56000 },
   struck_from_the_index: { needs: 'the_drowned_archive', steps: [{ boss: 'indexer' }, { back: true, say: 'The Indexer is dead. Nobody reads the names now.' }], gold: 4600, xp: 68000, item: 'robe', named: "The Reader's Blue", seed: 0xda1dc },
   bound_in_calf: { needs: 'the_drowned_archive', steps: [{ boss: 'binder' }, { back: true, say: 'The Binder is dead, and his press with him.' }], gold: 4600, xp: 70000, item: 'staff', named: "The Binder's Bodkin", seed: 0xdab1d },
   the_drowned_lector: { needs: 'struck_from_the_index', steps: [{ boss: 'lector' }, { back: true, say: 'The Drowned Lector is dead. I have his key.' }], gold: 6000, xp: 88000, item: 'skull', named: "The Lector's Last Word", seed: 0xda1ec },
@@ -18,12 +19,14 @@ export const RULES_A = {
   the_frame_that_isnt: { needs: 'a_thousand_faces', steps: [{ visit: ['room:tp_cabinet'] }, { back: true, say: 'Behind the one that stands out. A room of little ones.' }], gold: 3800, xp: 60000, item: 'gem', seed: 0x7fca6 },
   sitters_down: { needs: 'a_thousand_faces', steps: [{ kill: 'thousandportraits', n: 12 }, { back: true, say: 'Twelve of them are back to being paint.' }], gold: 4400, xp: 66000 },
   through_the_frame: { needs: 'a_thousand_faces', steps: [{ visit: ['room:tp_restore'] }, { enter: 'middleward' }, { back: true, say: 'It comes out in the Portrait Gallery. Mark it.' }], gold: 4200, xp: 64000 },
-  the_dowager_in_oils: { needs: 'a_thousand_faces', steps: [{ boss: 'dowager' }, { back: true, say: 'The Dowager in Oils is scraped down to the canvas.' }], gold: 5000, xp: 74000, item: 'robe', named: "The Dowager's Mourning", seed: 0x7fd09 },
+  // (First from outside, after dark: her salon's the one lit window in the Gallery wing, seen from the Approach.)
+  the_dowager_in_oils: { needs: 'a_thousand_faces', steps: [{ enter: 'ph:approach', night: true }, { boss: 'dowager' }, { back: true, say: 'The Dowager in Oils is scraped down to the canvas.' }], gold: 5000, xp: 74000, item: 'robe', named: "The Dowager's Mourning", seed: 0x7fd09 },
   the_framer: { needs: 'a_thousand_faces', steps: [{ boss: 'framer' }, { back: true, say: 'The Framer is dead. Your count can stop.' }], gold: 5000, xp: 76000, item: 'staff', named: 'The Mitre Rod', seed: 0x7ff4a },
   the_unfinished_sitting: { needs: 'the_dowager_in_oils', steps: [{ boss: 'painter' }, { back: true, say: 'The Painter is dead. Your portrait was never finished.' }], gold: 6400, xp: 94000, item: 'skull', named: 'The Unfinished Sitting', seed: 0x7f9a1 },
   // ---- the Alchemists' Undercroft (86 to 90): what they grow under the stills, and the key to the Crypt door ----
   under_the_stills: { needs: 'the_quiet_watchs_steel', steps: [{ enter: 'undercroft' }, { back: true, say: 'There is a floor under the stills. They grow things.' }], gold: 4000, xp: 64000 },
-  the_poison_cupboard: { needs: 'under_the_stills', steps: [{ visit: ['room:au_cupboard'] }, { back: true, say: "It's behind the west shelves. It's all labelled for the city." }], gold: 4400, xp: 68000, item: 'scroll' },
+  // (The labels say which wells; drain caps, out of the sewers, are what the dyers test a well with.)
+  the_poison_cupboard: { needs: 'under_the_stills', steps: [{ visit: ['room:au_cupboard'] }, { bring: 'cap', n: 8, at: 'westdrains' }], gold: 4400, xp: 68000, item: 'scroll' },
   stop_the_pumps: { needs: 'under_the_stills', steps: [{ kill: 'room:au_feed', n: 8 }, { back: true, say: 'Both pumps are stopped. Nothing goes down the pipes.' }], gold: 4600, xp: 70000 },
   up_the_hatch: { needs: 'under_the_stills', steps: [{ visit: ['room:au_hatch'] }, { enter: 'middleward' }, { back: true, say: "It comes up under the Alchemists' Wing. I left it open." }], gold: 4400, xp: 68000 },
   the_jar_mother: { needs: 'under_the_stills', steps: [{ boss: 'jarmother' }, { back: true, say: 'The Jar-Mother is dead. The jars are quiet.' }], gold: 5200, xp: 80000, item: 'robe', named: 'The Brine-Stiff Apron', seed: 0xa07a2 },

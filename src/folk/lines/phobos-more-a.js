@@ -95,7 +95,7 @@ export const QUESTS_A = {
     needs: 'the_drowned_archive',
     offer: [
       "Is it true there's a whole room under us full of water? With books in? Wynn says it has to go somewhere or it'd come up through the floor. She says water always goes somewhere.",
-      "I bet her my second-best horn it just stays. Will you go and see? The big long flooded bit, and then wherever it drains. If it drains. Which it doesn't. Probably.",
+      "I bet her my second-best horn it just stays. Will you go and see? The long flooded bit, and wherever it drains. If it drains. And if it does... you tell her. I'm not telling her. I'll be at my horns. All day.",
     ],
     accept: "I'll see where it goes.",
     acceptLine: "It's called the Long Flood. Wynn drew it from the old plans. And she's drawn a little room past the west sluice with a question mark in. Go there. Don't fall in anything!",
@@ -103,14 +103,17 @@ export const QUESTS_A = {
     declineLine: "Aw. Well, I'm not giving her the horn till somebody's looked.",
     journal: [
       "Pip Carrow has bet Wynn the Archive's water doesn't drain. Walk the Long Flood, south of the Drowned Reading Room, and find where it goes: past the West Sluice.",
-      "Go back to Pip Carrow in the Librarian's rooms.",
+      "It drains. Pip won't tell her himself: go and tell Wynn Pell, in the Librarian's rooms, that he owes her a horn.",
     ],
     progress: [
-      'The Long Flood, and then the little room past the West Sluice.',
+      'The Long Flood, and then the little room past the West Sluice. Then you tell Wynn. Not me.',
     ],
+    others: {
+      ph_wynn: ["Down. Of course it goes down. Water always goes somewhere, I TOLD him. Under the under-library... there's another floor. There's another floor, and nobody's drawn it. ...He sent you to tell me? Coward. Here: that's for carrying it. The horn I'll collect myself."],
+    },
     done: [
-      "A drain? A real one? Going DOWN? What's under under-the-library? ...I've lost my second-best horn, haven't I.",
-      "Here, you have this, I found it. Don't tell Wynn where the drain goes. No, do. No. Let me tell her. I want to see her face.",
+      "You told her? What did her face do? Did it do the thing? ...It did the thing. I knew it would do the thing.",
+      "A drain. A real one. Going DOWN. What's under under-the-library? She's going to make me carry the chain and pegs, isn't she.",
     ],
     after: [
       "Wynn's got my horn on her shelf. She can't even blow it. She just looks at it and smiles. It's the worst thing that's ever happened.",
@@ -315,18 +318,19 @@ export const QUESTS_A = {
     needs: 'a_thousand_faces',
     offer: [
       "There was an old lady of his house who came to hear us sing, and died, and went on coming. I thought I'd imagined it. Then one of the sisters curtsied to her, and she inclined her head, and she was still wet. Paint doesn't dry quickly in the cold.",
-      "She holds a salon, in that gallery. She steps into one frame and out of another. While she's in the paint, nothing you do reaches her. The frame she'll step down from is the lit one. Don't be standing by it.",
+      "She receives at night. Go and stand on the Castle Approach after dark and look up at the Gallery wing: one window lit, and her in it. Then go in. She steps into one frame and out of another; nothing reaches her in the paint. Keep clear of the lit frame.",
     ],
     accept: "I'll scrape her down.",
-    acceptLine: "The Salon is west off the Rotunda. Four great frames round the walls. When she goes in, save your strength; watch which frame lights; be across the room from it.",
+    acceptLine: "The Approach first, after dark: see her at her window, so you know her when she turns. Then the Salon, west off the Rotunda. When she goes into the paint, save your strength; watch which frame lights; be across the room from it.",
     decline: 'Not yet.',
     declineLine: "No. She'll receive you whenever you call. She never did turn anyone away. That was the worst of her.",
     journal: [
-      "The Dowager in Oils holds the Salon of the Dowagers, west of the Rotunda. Kill her. When she steps into the paint nothing touches her: stand clear of the lit frame, where she'll step down.",
+      "The Dowager in Oils receives at night. Stand on the Castle Approach after dark and look up at the Gallery wing: hers is the one lit window.",
+      "She holds the Salon of the Dowagers, west of the Rotunda. Kill her. When she steps into the paint nothing touches her: stand clear of the lit frame, where she'll step down.",
       "Go back to Ondine in the Librarian's rooms.",
     ],
     progress: [
-      'The Salon, west off the Rotunda. Stand clear of the lit frame.',
+      'The Approach, after dark, to see her at her window. Then the Salon, west off the Rotunda. Stand clear of the lit frame.',
     ],
     done: [
       "Then she's only a picture. That's all she ever ought to have been. I hope whoever she was is somewhere that isn't a wall.",
@@ -425,22 +429,22 @@ export const QUESTS_A = {
     needs: 'under_the_stills',
     offer: [
       "Every works keeps its worst stuff apart, under lock, where the hands can't get at it by mistake. I do. They will. And a locked cupboard in a place like that has labels on it, and labels say where a thing's going.",
-      "Find it. It won't be on the main floor. Look where the jars are thickest and one shelf doesn't sit true to the wall. Read me the labels. I want to know which wells are next.",
+      "Find it: where the jars are thickest and one shelf doesn't sit true to the wall. Read the labels. Then bring me eight drain caps out of the sewers. Steeped, a cap turns black in bad water. With the labels and the caps, I can prove a well before anyone drinks.",
     ],
-    accept: "I'll read you the labels.",
-    acceptLine: "West side, the Hall of Jars. There's a thing lives in that hall: go round it or through it, I don't mind which. A shelf standing out from the west wall. Behind that.",
+    accept: 'The labels, and eight caps.',
+    acceptLine: "The Hall of Jars, west side: a shelf standing out from the west wall, and behind that. Go round what lives in that hall or through it. The caps grow on whatever dies in the drains; the West Drains are nearest. Eight.",
     decline: 'Not now.',
     declineLine: "Then I guess which wells. I've a street of people who'd rather I didn't guess.",
     journal: [
-      "The Alchemists keep their worst apart, behind a shelf that stands out from the west wall of the Hall of Jars. Find the Poison Cupboard.",
-      'Go back to Maud Treller at the dye works.',
+      "The Alchemists keep their worst apart, behind a shelf that stands out from the west wall of the Hall of Jars. Find the Poison Cupboard, and read what its labels say.",
+      "The labels name the city's wells. Bring Maud Treller eight Drain Caps from the sewers, at the dye works on the Tanners' Steps: steeped, they show a bad well.",
     ],
     progress: [
-      'The Hall of Jars, west off the Great Stillroom. Behind the shelf that stands out from the west wall.',
+      'The cupboard behind the west shelf of the Hall of Jars. Then eight drain caps, out of the sewers.',
     ],
     done: [
-      "Labelled for the city. By well. By street. Chainmarket, the Rookeries, the Steps. Mine's on there. My own yard's well is on there.",
-      "Take this, it's from the cupboard's own shelf by the look: you may as well have the use of it. I've wells to nail and people to walk to the far pumps. Go.",
+      "Labelled for the city. By well. By street. Chainmarket, the Rookeries, the Steps. Mine's on there. My own yard's well is on there. ...Give me the caps.",
+      "Black. Look at that. Black as a boot, and that's my own well. Take this, with the Watch's thanks. I've wells to nail and people to walk to the far pumps.",
     ],
     after: [
       "Eleven wells shut, on your labels. Folk are carrying water half a mile and cursing me for it. Good. Cursing's a thing the quiet ones couldn't do.",
