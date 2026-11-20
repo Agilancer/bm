@@ -6,7 +6,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { BOSSES, DELVES, LATCHES, WARN, caveFloorY, caveRoom, delveByKey } from '../src/core/dungeon.js';
-import { DEEP_STACKS, GRAVES, HIGH_WARD, LANTERN_AT, VAULT_DAISES } from '../src/core/delve-highward.js';
+import { DEEP_STACKS, GRAVES, HIGH_WARD, LANTERN_AT, VAULT_RANKS } from '../src/core/delve-highward.js';
 import { KEYS } from '../src/core/castle-keys.js';
 import { castleChests, castleVistas } from '../src/core/castle-finds.js';
 import { FIGHTS_H } from '../src/sim/castle-fights-h.js';
@@ -94,7 +94,7 @@ test('the High Ward and the Deep Stacks: gone into from the Middle Ward, their r
   // (Liveries: royal blue never in a delve with grey and gold beside it; the High Ward has none of the blue.)
   assert.ok(!HIGH_WARD.packs.some((p) => p.pal.includes('Royal') || p.pal.includes('Abyssal')));
   assert.ok(!DEEP_STACKS.packs.some((p) => p.pal.includes('Greygold')));
-  for (const [x, z] of VAULT_DAISES) assert.ok(inRoom(DEEP_STACKS, 'cd_vault', x, z, 2));
+  for (const [x, z] of VAULT_RANKS) assert.ok(inRoom(DEEP_STACKS, 'cd_vault', x, z, 2));
   for (const [x, z] of [...GRAVES, ...LANTERN_AT]) { assert.ok(inRoom(HIGH_WARD, 'ch_ante', x, z, 1)); assert.ok(caveRoom(HIGH_WARD.x + x, HIGH_WARD.z + z) > 0.8); }
   for (const k of ['censor', 'starreader', 'sexton']) { const s = FIGHTS_H[k]; assert.ok(s && s.step && s.order && WARN[s.open] !== undefined, k); for (const m of Object.values(s.moves)) assert.ok(WARN[m.warn] !== undefined, `${k}: ${m.warn}`); }
   assert.equal(BOSSES.find((b) => b.key === 'sexton').gives, 'key:sexton');

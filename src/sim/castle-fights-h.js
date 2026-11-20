@@ -1,14 +1,15 @@
 // The fights in Castle Velscour's High Ward and the Deep Stacks (src/core/delve-highward.js), in the manner of
 // src/sim/castle-fights.js: a deck of called-out moves, a turn on you, an enrage, and one thing of its own:
-//   the Censor, in the Restricted Vault: he breaks the ink wells, and the floor floods but for the four reading daises;
+//   the Censor, in the Restricted Vault: he reads the Index out, and whoever he can see when he shuts it is struck: the
+//     four ranks of cases are what to stand behind;
 //   the Star-Reader, in the Observatory: his eclipse burns three quarters of the room, and one quarter is dark;
 //   the Sexton of the High Ward, in the Throne Antechambers: while his grave-lantern burns the graves give up their dead,
 //     two at a time, without end; he lights it twice.
 // Both delves are gone into alone or not, so their calls speak to one: you. Taken into src/sim/delve-fights.js FIGHTS.
 import { MOVES } from './moves.js';
-import { ELEM } from './spells.js';
-import { WARN, roomOf, roomSpot } from '../core/dungeon.js';
-import { GRAVES, LANTERN_AT, VAULT_DAISES } from '../core/delve-highward.js';
+import { ELEM, FX } from './spells.js';
+import { WARN, caveClear, roomOf, roomSpot } from '../core/dungeon.js';
+import { GRAVES, LANTERN_AT, VAULT_RANKS } from '../core/delve-highward.js';
 
 const { DRAIN, STONE, FIRE, BONE, VOID } = ELEM;
 const gap = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -21,7 +22,7 @@ const follow = (W, P, m, dmg, elem, tag) => { for (const b of W.bodies()) P.mark
 const EXHUMED = ['possessed_man_1', 'possessed_man_2', 'possessed_woman_1', 'possessed_woman_2'];
 
 export const FIGHTS_H = {
-  // ---- the Censor: his brand, his pyre, his iron, the black that follows, the rows fired; and the ink -----------------------
+  // ---- the Censor: his brand, his pyre, his iron, the black that follows, the rows fired; and the Index ---------------------
   censor: {
     open: 'cen_open', pace: [4.2, 3.2, 0.35], turn: [22, 4], enrage: [300, 2, 'cen_enrage'],
     deck: ['brand', 'pyre', 'strike', 'redact', 'rows', 'strike'],
@@ -37,24 +38,31 @@ export const FIGHTS_H = {
         for (const dz of [-8 + off, 0 + off, 8 + off]) P.mark({ shape: 'line', x: rx - r.hx, z: rz + dz - 2, yaw: Math.PI / 2, r: r.hx * 2, w: 1.5, fuse: 1.9, dmg: K(m, 1.2), knock: 3, elem: FIRE, from: m, tag: 'rows' });
       } },
     },
-    // The ink: twenty seconds in and every thirty-four after, the wells broken and the whole floor flooded, all but the four
-    // reading daises. (A grid of pools, none within a dais's reach of one: what's left dry is the daises.)
+    // The Index read out: every thirty-two seconds he opens it and reads for three and a half, and every one of you he can
+    // see when he shuts it is struck out. A rank of cases between you and him, and your name isn't read.
     step(W, f, [m], dt) {
       if (!m) return;
-      if ((f.ink = (f.ink ?? 14) + dt) < 34) return;
-      f.ink = 0; f.inkT = W.sim.time + 4.6; W.warn(WARN.cen_ink, 5);
-      const r = roomOf(f.boss.room), [rx, , rz] = roomSpot(r.id), P = W.sim.perils, dry = VAULT_DAISES.map((d) => at(W, d));
-      for (let x = -r.hx + 3; x <= r.hx - 3; x += 5) for (let z = -r.hz + 3; z <= r.hz - 3; z += 5) {
-        const px = rx + x, pz = rz + z;
-        if (dry.some(([dx, dz]) => Math.hypot(px - dx, pz - dz) < 5.4)) continue;
-        P.mark({ x: px, z: pz, r: 3.7, fuse: 4.4, dmg: K(m, 1.5), knock: 1, elem: VOID, from: m, tag: 'ink' });
+      const sim = W.sim, P = sim.perils, u = f.read;
+      if (u) {
+        u.t += dt;
+        if (u.t < 3.5) return;
+        let hit = 0;
+        for (const b of W.bodies()) if (caveClear(m.x, m.z, b.x, b.z, 0.05)) { P.hurt(b, K(m, 1.7), m.x, m.z, 5, false, 'index'); hit++; }
+        sim.casting.burst(FX.SHOCK, VOID, m.x, m.y + 2.4, m.z, 2, 14, 0.9, { light: 9, lightR: 14 });
+        if (!hit) W.warn(WARN.cen_unread, 5);
+        f.read = null; f.hold = false; m.noTurn = false;
+        return;
+      }
+      if ((f.readT = (f.readT ?? 14) + dt) > 32 && m.state === 0 && !m.script && !f.turn && m.perform({ clip: 'roar', secs: 3.5 })) {
+        f.readT = 0; f.read = { t: 0 }; f.hold = true; m.noTurn = true;
+        W.warn(WARN.cen_read, 4);
       }
     },
-    // While the ink's coming: everyone to the nearest dais.
-    order(W, f, b) {
-      if (!(f.inkT > W.sim.time)) return null;
-      const d = VAULT_DAISES.map((q) => at(W, q)).reduce((p, q) => (Math.hypot(q[0] - b.x, q[1] - b.z) < Math.hypot(p[0] - b.x, p[1] - b.z) ? q : p));
-      return { to: d, urgent: true };
+    // While he reads: round behind the nearest rank from him.
+    order(W, f, b, [m]) {
+      if (!m || !f.read) return null;
+      const to = W.shelter(b, m.x, m.z, VAULT_RANKS.map(([x, z, r]) => [W.delve.x + x, W.delve.z + z, r]), 60);
+      return to ? { to, urgent: true } : null;
     },
   },
 

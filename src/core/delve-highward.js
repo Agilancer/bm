@@ -59,9 +59,10 @@ const dTunnels = [
   // And behind a case in the Well's south-east corner, the Index Room.
   { pts: [[17, -89], [25, -97]], w: 1.3, h: 3 },
 ];
-// The Censor's reading daises in the Restricted Vault: where the ink doesn't reach (src/sim/castle-fights-h.js censor).
-export const VAULT_DAISES = [[48, -100], [64, -100], [48, -116], [64, -116]];
-const dDaises = VAULT_DAISES.map(([x, z]) => ({ x, z, hx: 2.2, hz: 2.2, dy: 0.45 }));
+// The four ranks of cases in the Restricted Vault, stone-backed, a man and a half across: what stands between you and the
+// Censor when he reads the Index out (src/sim/castle-fights-h.js censor). [x, z, half its width]
+export const VAULT_RANKS = [[48.5, -102.5, 1.5], [63.5, -102.5, 1.5], [48.5, -113.5, 1.5], [63.5, -113.5, 1.5]];
+const dDaises = [];
 
 const dProps = [];
 {
@@ -120,7 +121,8 @@ const dProps = [];
   add('decal', 34.05, -80.95, { layer: 'p2_cobweb', w: 2, up: 9.8, yaw: PI / 2 });
   // ---- the Restricted Vault: the Censor's. Four reading daises; his brazier in the middle, where what's not to be read is
   // burnt; ash heaped against the walls; ink wells the height of a man in the corners; his mark over the far wall.
-  for (const [x, z] of VAULT_DAISES) { add('lectern', x, z); add('candles', x + 1.2, z + 1.2, { up: 0.5 }); }
+  for (const [x, z, r] of VAULT_RANKS) add('column', x, z, { r, solid: true, shaft: 'p2_book_spines', square: true });
+  for (const [x, z] of [[45, -108], [67, -105]]) { add('lectern', x, z); add('candles', x + 0.9, z + 0.9, { up: 0.1 }); }
   add('castpit', 56, -108, { r: 2 }); add('chain', 56, -108, { up: 5 });
   for (const [x, z] of [[45, -97], [67, -97], [45, -119], [67, -119]]) add('vat', x, z, { r: 1.1 });
   add('heap', 60, -119, { r: 1.6, layer: 'p2_ash_street' }); add('heap', 50, -97, { r: 1.2, layer: 'p2_ash_street' });
@@ -162,13 +164,14 @@ const dBosses = [
   { key: 'censor', room: 'cd_vault', name: 'The Censor', models: ['cd_censor'], pal: ['Royal'], hp: 78000, damage: 240, reach: 3.2, loot: 8 },
 ];
 const dWarnings = {
-  cen_open: 'The Censor. He burns what is not to be read, and drowns the rest: when he breaks the ink wells, the floor floods. Get up on a reading dais before it reaches you.',
+  cen_open: 'The Censor. He burns what is not to be read, and strikes out who read it: when he opens the Index and reads, every name he can see is struck. Put a rank of cases between you and him before he finishes.',
   cen_brand: 'The Censor brands the air! Out of the fan.',
   cen_pyre: 'He throws his pyre! Out of the circles.',
   cen_strike: 'He sweeps his iron! Out of the arc.',
   cen_redact: 'He strikes you out! Keep moving: the black follows.',
   cen_rows: 'He fires the rows! Out of the lanes.',
-  cen_ink: 'HE BREAKS THE INK WELLS! The floor floods: up on a reading dais, now!',
+  cen_read: 'THE CENSOR READS THE INDEX! Every name he can see is struck out: behind a rank of cases, out of his sight!',
+  cen_unread: 'He reads to an empty room.',
   cen_turn: 'The Censor turns on you! Out of his reach.',
   cen_enrage: 'The Censor is enraged!',
   cd_lift_shut: "The Scriveners' Lift is chained at the top. Somebody up in the High Ward would have to let it down.",
