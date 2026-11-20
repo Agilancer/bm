@@ -1058,4 +1058,73 @@ export const QUESTS_CASTLE = {
       "The Reliquary's line is full now. Sixteen years I looked at that gap. I don't know what I'll look at instead.",
     ],
   },
+
+  // ---- Mother Coyle's: who's who down here ----
+  the_holdout: {
+    title: 'The Holdout',
+    giver: 'ho_coyle',
+    needs: 'the_bookcase',
+    offer: [
+      "Thirty of us down here, and you'll want four of them by name before you want anything else. Nobody down here does anything for a stranger. They'll do a good deal for somebody I've fed.",
+      "Garrick Thole at the cold forge. Ivo Marrow, who'll be writing. Old Nettle behind her counter, and count your fingers after. And Little Bet, in the Sleeping Shelves, who'll ask you about the sky.",
+    ],
+    accept: "I'll go round them.",
+    acceptLine: "Thole's by the east door. Marrow's at the short table. Nettle's stall is against the west wall. Bet's through the south door, at her lessons. Then come back and eat.",
+    decline: 'Later.',
+    declineLine: "Suit yourself. The pot's on either way.",
+    journal: [
+      "Mother Coyle wants you known in Pell's Holdout. Meet Garrick Thole, the armourer, at the cold forge by the east door.",
+      "Meet Ivo Marrow, the copyist, at the short table by the fire.",
+      "Meet Old Nettle at her counter against the west wall.",
+      "Meet Little Bet in the Sleeping Shelves, through the Holdout's south door.",
+      "Go back to Mother Coyle by the hearth.",
+    ],
+    progress: [
+      "Thole, Marrow, Nettle and Bet. Then you eat.",
+    ],
+    others: {
+      ho_thole: ["Coyle sent you. Then you've eaten her stew and lived, which is more than his garrison can say of mine. Garrick Thole. I made his plate for twenty years. I don't now. Come back when you want iron that's honest."],
+      ho_marrow: ["Oh. Yes. Sorry, I was in the middle of a line. Ivo Marrow. I copy what he burns. If you're going near the Vault, come and talk to me first. Please."],
+      ho_nettle: ["Coyle's feeding you, is she. Then you'll be worth my time in a week or so. Nettle. I buy what the castle loses and sell what it's looking for. Don't touch that."],
+      ho_bet: ["You're from up top. Is it true the roof up there is so high you can't see it? Mother Coyle says it's called the sky. How many of you are there? I've counted thirty of us. I count every night."],
+    },
+    done: [
+      "There. Now they'll nod to you, and Nettle will only rob you a little. Sit. Nobody leaves my fire hungry, not even the ones I don't like, and I haven't decided about you.",
+      "Take this. It isn't much, but it's ours to give, which is more than he can say of anything in his larder.",
+    ],
+    after: [
+      "Bet's told everyone about the sky. She has it wrong in four places, and I'm not correcting one of them.",
+    ],
+  },
+
+  // ---- Sable Wren's: the man with the ledger ----
+  the_ledger_keeper: {
+    title: 'The Ledger-Keeper',
+    giver: 'ho_wren',
+    needs: 'the_scriveners_lift',
+    offer: [
+      "You want to run the roofs with us, you square it with Rook first. He keeps the ledger: which guard walks which bridge, and when, and who owes what to whom. Mostly who owes him.",
+      "He's the sour one by the crates, doing sums. Go and let him look at you. He'll take against you. He takes against everybody. It passes.",
+    ],
+    accept: "I'll talk to him.",
+    acceptLine: "By the crates at the back of the Roost. Don't lean on anything. He's counted it.",
+    decline: 'Not now.',
+    declineLine: "Then stay off the bridges till you have. I'm not paying his fines for you.",
+    journal: [
+      "Sable Wren says nobody runs the castle's roofs without Dunmore Rook's leave. Speak to him at the back of the Gargoyles' Roost.",
+    ],
+    progress: [
+      "Rook. By the crates. Go on.",
+    ],
+    others: {
+      ho_rook: ["Wren sent you. Wren sends me everything she can't be bothered to judge herself. Dunmore Rook. I was a clerk of his Treasury till I learned what it was paying for. Here, for your trouble in climbing this far. Now: I've work, if you can count past ten."],
+    },
+    done: [
+      "He didn't throw anything? Then he likes you.",
+      "That's as warm as Rook gets. Don't spoil it by thanking him.",
+    ],
+    after: [
+      "Rook's put you in the ledger. Black ink. Most of us are in red.",
+    ],
+  },
 };

@@ -1609,7 +1609,9 @@ class GameView {
       const v = vistaAt(snap[H.PX], snap[H.PY], snap[H.PZ]);
       if (v && this.townUI.quests.flag(`vista:${v.id}`)) {
         const n = castleVistas().filter((q) => fl.has(`vista:${q.id}`)).length;
-        this.hud.tip(`Lookout found: ${v.name}. (${n} of ${castleVistas().length})`, 7); this.chatLog?.system(`Lookout found: ${v.name}.`);
+        // (Down a delve it's a place found, not a view.)
+        const what = v.delve ? 'Found' : 'Lookout found';
+        this.hud.tip(`${what}: ${v.name}. (${n} of ${castleVistas().length})`, 7); this.chatLog?.system(`${what}: ${v.name}.`);
         this.addXp?.(v.xp); this.music?.stinger?.('triumph');
       }
     }
