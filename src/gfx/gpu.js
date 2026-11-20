@@ -25,8 +25,13 @@ export const TIERS = {
 
 // A phone's tier made lighter still, for one whose browser has closed the game for want of memory (src/core/lastrun.js):
 // level 1 and up, no model's picture over 256 a side (its normals 128).
+// Level 2, for one closed again after that: smaller still, and less of everything the GPU holds or draws that isn't the
+// game itself: a quarter fewer pixels, shadows a quarter the size, half the grass and the sparks.
 export function lighten(tier, level) {
-  return level > 0 ? { ...tier, texCap: Math.min(tier.texCap || 256, 256) } : tier;
+  if (level <= 0) return tier;
+  if (level === 1) return { ...tier, texCap: Math.min(tier.texCap || 256, 256) };
+  return { ...tier, texCap: Math.min(tier.texCap || 192, 192), shadowSize: Math.min(tier.shadowSize, 512), maxPixels: Math.round((tier.maxPixels || 750000) * 0.75),
+    grassCap: Math.round(tier.grassCap / 2), particles: Math.round(tier.particles / 2), bloodSize: Math.min(tier.bloodSize, 512) };
 }
 
 // The PC tiers by what they ask of memory: Ultra and High the same pictures, Medium a quarter of them, Low less again.

@@ -78,6 +78,7 @@ if (ph) {
 if (process.env.DM) await send('Page.addScriptToEvaluateOnNewDocument', { source: `Object.defineProperty(navigator, 'deviceMemory', { get: () => ${+process.env.DM} });` }, S);
 if (process.env.HC) await send('Page.addScriptToEvaluateOnNewDocument', { source: `Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => ${+process.env.HC} });` }, S);
 await send('Page.addScriptToEvaluateOnNewDocument', { source: INIT }, S);
+if (process.env.GFX) await send('Page.addScriptToEvaluateOnNewDocument', { source: `try { const k = 'velscour.settings'; const o = JSON.parse(localStorage.getItem(k) || '{}'); o.gfx = '${process.env.GFX}'; localStorage.setItem(k, JSON.stringify(o)); } catch {}` }, S);
 if (process.env.ATTACH) await send('Target.setAutoAttach', { autoAttach: true, waitForDebuggerOnStart: false, flatten: true }, S);
 
 const ev = async (expr, awaitPromise = true) => {

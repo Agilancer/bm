@@ -182,7 +182,7 @@ export class Input {
       const el = pressed(e);
       if (!el) return;
       el.classList.add('down');
-      try { if (this.buzz !== false) navigator.vibrate?.(8); } catch { /* not allowed yet */ }
+      try { if (this.buzz !== false) navigator.vibrate?.(12); } catch { /* not allowed yet */ }
     }, { capture: true, passive: true });
     // (An iPhone's pinch and its double-tap zoom, which it gives a page whatever the page's viewport says.)
     for (const t of ['gesturestart', 'gesturechange']) document.addEventListener(t, (e) => e.preventDefault(), { passive: false });

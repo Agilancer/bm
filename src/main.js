@@ -361,7 +361,15 @@ async function boot(plan, poolSize) {
     renderDiagnostics.fail(new Error(info.message || 'no message'), `device lost (${info.reason})`);
     let last = 0;
     try { last = +sessionStorage.getItem(GPU_LOST_AT) || 0; } catch { /* no storage */ }
-    if (Date.now() - last < 60000) { failOnTitle('The graphics reset again. Reload the page to carry on: your game is kept for Continue.'); return; }
+    // (Nor a third time in ten minutes, however far apart: a device that keeps taking its GPU back isn't going to stop.)
+    let times = [];
+    try { times = JSON.parse(sessionStorage.getItem(GPU_LOST_AT + 's') || '[]').filter((t) => Date.now() - t < 600000); } catch { /* no storage */ }
+    if (Date.now() - last < 60000 || times.length >= 2) {
+      noteRun({ ended: 'gpu', gpu: gpuNote?.() || '' });
+      await Promise.race([keepForReset?.(), new Promise((r) => setTimeout(r, 3000))]).catch(() => {});
+      failOnTitle('The graphics reset again. Reload the page to carry on: your game is kept for Continue.'); return;
+    }
+    try { sessionStorage.setItem(GPU_LOST_AT + 's', JSON.stringify([...times, Date.now()])); } catch { /* no storage */ }
     try {
       sessionStorage.setItem(GPU_LOST_AT, String(Date.now())); sessionStorage.setItem(GPU_LOST_OFFER, '1'); sessionStorage.setItem('velscour.skipSplash', '1');
       sessionStorage.setItem(GPU_LOST_NOTE, gpuNote?.() || '');
@@ -369,6 +377,9 @@ async function boot(plan, poolSize) {
     noteRun({ ended: 'gpu', gpu: gpuNote?.() || '' });
     failOnTitle('The graphics reset. Keeping your game, and starting again...');
     await Promise.race([keepForReset?.(), new Promise((r) => setTimeout(r, 3000))]).catch(() => {});
+    // (Out of sight, it waits to be looked at again: loading the whole game where nobody's watching is the surest way to
+    // have the browser let the page go, and a phone often takes the GPU back just because the page was put away.)
+    if (document.hidden) await new Promise((r) => document.addEventListener('visibilitychange', () => { if (!document.hidden) r(); }));
     leaving = true;
     location.reload();
   });
@@ -945,7 +956,7 @@ async function boot(plan, poolSize) {
     await new Promise((r) => setTimeout(r, 700));
     const kept = !!saves.newest();
     const text = `The browser closed the game last time, ${deathWords(RUN.died)}. It does that when a page wants more memory than the device has to give.`
-      + `${gpu.mobile && RUN.light ? ' This time the game is using less: bodies are painted smaller.' : ''}`
+      + `${gpu.mobile && RUN.light ? ' This time the game is using less memory: smaller pictures on the models.' : ''}`
       + `${lighterWords()}`
       + `${kept ? ' Continue picks up from where the game was last kept.' : ''}`;
     if (await title.confirm({ title: 'The game was closed', text, yes: kept ? 'Continue' : 'Back', no: kept ? 'Main Menu' : false }) && kept) {

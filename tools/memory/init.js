@@ -54,5 +54,5 @@
   window.__long = [];
   try { new PerformanceObserver((l) => { for (const e of l.getEntries()) window.__long.push([Math.round(e.startTime), Math.round(e.duration)]); }).observe({ type: 'longtask', buffered: true }); } catch { /* */ }
   window.__laf = [];
-  try { new PerformanceObserver((l) => { for (const e of l.getEntries()) window.__laf.push([Math.round(e.startTime), Math.round(e.duration), Math.round(e.blockingDuration)]); }).observe({ type: 'long-animation-frame', buffered: true }); } catch { /* */ }
+  try { new PerformanceObserver((l) => { for (const e of l.getEntries()) window.__laf.push([Math.round(e.startTime), Math.round(e.duration), Math.round(e.blockingDuration), (e.scripts || []).filter((x) => x.duration > 30).map((x) => `${Math.round(x.duration)}ms ${x.invokerType} ${x.sourceFunctionName || ''} ${(x.sourceURL || '').split('/').slice(-2).join('/')}:${x.sourceCharPosition}`).join(' ; ')]); }).observe({ type: 'long-animation-frame', buffered: true }); } catch { /* */ }
 })();
