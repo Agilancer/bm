@@ -11,6 +11,7 @@
 import { terrainHeight } from './terrain.js';
 import { inLand, routeDist, waterAt } from './lands.js';
 import { hash2 } from './terrain-noise.js';
+import { offWay } from './rocks.js';
 import { LAIRS } from './tripo-monsters.js';
 
 const TAU = Math.PI * 2;
@@ -66,7 +67,7 @@ export function dressLairs(K, seals = []) {
       K.spike(layer, x, y - 0.3, z, 0.09, hh + 0.3, 4, h(k) * 3, [Math.cos(a) * lean, Math.sin(a) * lean]);
       if (h(k + 2) > 0.62) K.spike('pale:stone', x + Math.cos(a) * lean * hh * 0.86, y + hh * 0.82, z + Math.sin(a) * lean * hh * 0.86, 0.13, 0.22, 4, k);
     };
-    const stone = (x, z, k, layer, r = 0.5, tall = 0.5) => { if (free(x, z, r)) K.rock(layer, x, z, r * (0.7 + h(k) * 0.6), tall * (0.7 + h(k + 1) * 0.6), { collide: false, turn: h(k + 2) * 6 }); };
+    const stone = (x, z, k, layer, r = 0.5, tall = 0.5) => { if (!free(x, z, r)) return; const rr = r * (0.7 + h(k) * 0.6); [x, z] = offWay(x, z, rr * 1.3); K.rock(layer, x, z, rr, tall * (0.7 + h(k + 1) * 0.6), { collide: false, turn: h(k + 2) * 6 }); };
     const fire = (x, z, lit) => { if (free(x, z, 0.8)) { K.campfire(x, z, lit); return true; } return false; };
     const mound = (x, z, k, layer, r = 0.8, tall = 0.4) => { if (free(x, z, r)) K.heap(layer, x, z, r * (0.8 + h(k) * 0.4), tall, 5, { collide: false }); };
 
