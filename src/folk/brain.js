@@ -95,6 +95,14 @@ export class Folk {
 
   // A gesture from the talk: the whole body if they're standing about, the top half over anything else.
   gesture(name) {
+    // (Phobos's street crowd: the talk's gestures from the chest up, at two thirds, over how they're standing; and none that
+    // puts the hands to the face or wants another body to do it to, which went through faces and coats. The owner,
+    // 2026-11-20: 'fix their awful looking animations'.)
+    if (this.crowd) {
+      const c = this.life.clips.clips[CROWD_SOFT[name] || name] || this.life.clips.clips.talk;
+      this.layer(c.name, { from: 'Spine2', weight: 0.65, fade: 0.45, dur: Math.min(c.loop ? 3.2 : c.dur, 5) });
+      return;
+    }
     const c = this.life.clips.clips[name] || this.life.clips.clips.talk;
     const dur = Math.min(c.loop ? 3.2 : c.dur, 6);
     if (this.posture === 'stand' && this.idling && !this.moving) {
@@ -108,6 +116,9 @@ export class Folk {
   // Still in the block that script was started for?
   alive(key) { return this.key === key && !this.alarm; }
 }
+
+// What the crowd does for a gesture of the talk's it shouldn't: hands to the mouth or the eyes, a hug or a dance at nobody.
+const CROWD_SOFT = { afraid: 'look_around', scared: 'look_around', scared_2: 'look_around', frightened: 'look_around', sob: 'depressed', cry: 'depressed', hug: 'agree', heart: 'nod', flip: 'cheer', dance_1: 'wave', dance_2: 'wave', dance_3: 'wave', laugh_2: 'laugh', rant: 'complain', angry_3: 'angry' };
 
 export class Life {
   // ground: src/folk/ground.js; town: src/folk/town.js; clips: FolkClips; emit(event) tells the main thread things (doors).
