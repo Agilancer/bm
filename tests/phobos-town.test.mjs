@@ -43,6 +43,13 @@ test('every house has a style by its district, and the roofs are of many shapes'
   // (No two of these roofed alike: what each has most of, with the next, isn't the other's pair.)
   const top = (k) => { const n = {}; for (const h of H) if (h.dk === k && h.roof) n[h.st.roof] = (n[h.st.roof] || 0) + 1; return Object.entries(n).sort((a, b) => b[1] - a[1]).slice(0, 2).map((e) => e[0]).join('+'); };
   assert.notEqual(top('dukes'), top('rookeries')); assert.notEqual(top('cinder'), top('market')); assert.notEqual(top('wharf'), top('barracks'));
+  // (And from over the roofs each district is its own: the stuff most of its houses are roofed in is no other district's,
+  // and the tall quarters stand over the low ones. The critics, 2026-11-20.)
+  const most = (k, f) => { const n = {}; for (const h of H) if (h.dk === k && h.roof && !h.shop) n[f(h)] = (n[f(h)] || 0) + 1; return Object.entries(n).sort((a, b) => b[1] - a[1])[0][0]; };
+  const tiles = PHOBOS.districts.map((d) => most(d.key, (h) => h.roof));
+  assert.equal(new Set(tiles).size, tiles.length, `each district's commonest roof its own: ${tiles}`);
+  const mean = (k) => { const hs = H.filter((h) => h.dk === k && h.roof && !h.shop && !h.mark).map((h) => h.h); return hs.reduce((a, b) => a + b, 0) / hs.length; };
+  assert.ok(mean('rookeries') > mean('wharf') + 5 && mean('mages') > mean('bones') + 6 && mean('cinder') < mean('market') - 3, 'heights by district');
 });
 
 test('the one-off houses are houses that stood there already, one to a kind and district', () => {
@@ -131,6 +138,9 @@ test("the town's quests: given by people of the city, to places that are there, 
   assert.ok(givers.size >= 20, `${givers.size} givers`);
   assert.ok(kinds.vista >= 10 && kinds.room >= 12 && kinds.district >= 4 && kinds.castle >= 8, JSON.stringify(kinds));
   assert.deepEqual([...down].sort(), ['charnelruns', 'highconduits', 'lowerward', 'sloughmains', 'westdrains'], 'down every sector, and up into the castle');
+  // (No two neighbours ask the same thing of you: what each has you do, in order, isn't what the one before it had. The critics.)
+  const verbs = (id) => RULES_TOWN[id].steps.map((st) => (st.night ? 'night-' : '') + Object.keys(st).find((k) => ['talk', 'enter', 'kill', 'visit', 'bring', 'boss', 'back'].includes(k)) + (st.kill?.startsWith('lair:') ? '-lair' : st.visit?.[0]?.startsWith('vista:') ? '-lookout' : st.visit?.[0]?.startsWith('ph:') ? '-streets' : '')).join(' ');
+  LEVELS_TOWN.forEach(([id], i) => { if (i) assert.notEqual(verbs(id), verbs(LEVELS_TOWN[i - 1][0]), `${LEVELS_TOWN[i - 1][0]} and ${id} are the same errand`); });
   // (They climb: the first of them are the street's, and the last the castle's.)
   const order = LEVELS_TOWN.map((l) => l[1]), streets = LEVELS_TOWN.slice(0, 10).map((l) => l[1]);
   assert.ok(Math.max(...streets) <= 28 && order.at(-1) >= 60 && order.slice(10).every((v, i, a) => !i || v >= a[i - 1]), 'in order of level, once they go down');

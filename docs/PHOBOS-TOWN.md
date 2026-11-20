@@ -62,3 +62,33 @@ the High Conduits, and five up the Approach and in the Lower Ward (58 to 64).
 - A lookout's toast says "Lookout found" for the sewers' halls too (the main session's wording, `src/main.js`).
 - From across the city the far houses differ in roof shape and wall shade only; jetties, oriels, galleries and timbering are
   the near cells'. The districts' street props are light on Dukes' Row and the Mages' Rise.
+
+## Round 2 (the critics rejected round 1: 5.5 and 6; docs/PHOBOS-CRITICS-R1.md)
+
+- **Rule breaks.** The tall washing on two posts before the poor houses is gone (end on it was a pole with a yard and two
+  flags, red and buff: a T); washing is over sills and galleries now, in buff, hessian and grey, never red beside buff. An
+  open window's inner surround is its two jambs only (its head and sill, seen from the street, lay across the mullion as a
+  transom). No quoin and no post on a shop's front (they crossed its stone courses); a post elsewhere stops short of the
+  floor under it and the one over. The tavern's ale-stake is a bush hung from the end of an iron arm. Shutters: the pack's
+  painting is a Z brace on each leaf (looked at close in tn_shell); dark on pale walls.
+- **From far.** Each district is roofed in a stuff and colour of its own (`LOOK`, tints and layers only): dark slate (the
+  Barbican), burnt black (Cinder), brown shingle (the Rookeries), old clay (Chainmarket), moss green (the Wharf), olive (the
+  Tanners), pale (the Bone Yards), blue slate with a third red (the Barracks), verdigris (the Rise), lead (Dukes' Row),
+  ox-blood (the Approach), grey slate between. Heights differ more (the Rookeries 11 to 20 m, the Rise 12 to 19, the Wharf 6
+  to 9, the Bone Yards 5 to 8). Sixteen tower-houses now, each a main block under a parapet, a narrower stage with one
+  great lit window, a steep cap and a coned corner turret (`towerStage`, far and near); guildhalls a storey over their rows
+  under steep stepped gables.
+- **The toll-houses**: a boarded room jettied out all round on brackets, windows on every side, a stack, a pointed head to
+  the way through, a brighter lantern, struts down to the bridge's piers.
+- **Night**: more upper windows lit; a pool of light at each tavern's door and bay; tn_night retaken on the street.
+- **Windows**: a V of braces under one timbered window in three; the rest a cloth over the sill, a box of dead stalks, shut
+  shutters, or nothing.
+- **The tavern**: its ground floor in dark oak under a fascia, a bay of lit glass, a bench, casks, a board half again a
+  shop's size (the brewer's or its own: three taverns are named for the boards the city has), the bush, two door lamps.
+- **Bugs**: a stone stoop under every door on a slope (no more voids under houses); the hoist's bale on a rope as thick
+  as a wrist; cold-fire braziers on the Rise and urns on Dukes' Row, and more of what stands along both.
+- **Quests**: nine re-cut so no two neighbours are the same errand: night watches and a word (the Long Watch), a hunt at a
+  lair (the Sweep's Eye, the Scrying Room), a talk on from the lookouts (the Toll on the Water, the Market Cistern),
+  things brought back (the Castle from the Wall, the Soot Cistern, Rivets for the Watch), a boss (Under the Rise).
+- **Not done**: the banding on big blank fronts is the wall shader's own (its soot and tone bands in the world's metres),
+  not the houses' build: left. Far houses still carry no jetties or oriels (the land's corners).
