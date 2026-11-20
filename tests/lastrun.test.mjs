@@ -82,3 +82,17 @@ test('on a PC only a run that went soon after it loaded counts, and a GPU lost t
   heard.win.pagehide();
   beginRun(new URLSearchParams('light=0'));
 });
+
+test('the GPU out of memory: the next start is lighter, on a phone or a PC, however the page went', () => {
+  beginRun(new URLSearchParams('light=0'));
+  noteRun({ stage: 'playing', mins: 40, oom: true });
+  heard.win.pagehide();   // (left in the ordinary way, long into play: neither would count on its own)
+  assert.deepEqual(beginRun(undefined, { pc: true }), { died: null, light: 1 });
+  heard.win.pagehide();
+  assert.equal(beginRun(undefined, { pc: true }).light, 1, 'and no lighter again for the one time');
+  noteRun({ stage: 'playing', mins: 2, oom: true });
+  heard.win.pagehide();
+  assert.equal(beginRun().light, 2, 'a phone too');
+  heard.win.pagehide();
+  beginRun(new URLSearchParams('light=0'));
+});

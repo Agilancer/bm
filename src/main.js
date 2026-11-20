@@ -372,13 +372,30 @@ async function boot(plan, poolSize) {
     leaving = true;
     location.reload();
   });
-  let gpuErrors = 0;
-  gpu.device.addEventListener('uncapturederror', (e) => { window.__gpuErrors = ++gpuErrors; renderDiagnostics.fail(e.error, 'GPU validation'); if (gpuErrors < 6) console.error('GPU error:', e.error.message); });
+  let gpuErrors = 0, outOfMemory = false;
+  gpu.device.addEventListener('uncapturederror', (e) => {
+    window.__gpuErrors = ++gpuErrors; renderDiagnostics.fail(e.error, 'GPU validation'); if (gpuErrors < 6) console.error('GPU error:', e.error.message);
+    // The GPU saying it has no memory left for something asked of it: what's drawn with that is missing or black from here
+    // on, and the next thing may be the device lost. Noted, so the next start loads lighter (src/core/lastrun.js), and the
+    // game kept now, while it can be.
+    if (!outOfMemory && typeof GPUOutOfMemoryError !== 'undefined' && e.error instanceof GPUOutOfMemoryError) {
+      outOfMemory = true;
+      noteRun({ oom: true });
+      console.warn('memory: the GPU is out of memory; the next start loads lighter');
+      keepForReset?.().catch(() => {});
+    }
+  });
   const canvas = $('view');
+  // Each thread of the load holds some 100 MB while it works and a good part of it after (measured at the Medium setting,
+  // November 2026: fifteen threads loaded in 11 s and left the page at 2.6 GB, five in 14 s and left it at 1.6). So a
+  // computer whose GPU shares its memory, or that has little, or is on a lighter setting, loads with three; any other with
+  // eight at most, past which the load is no quicker.
+  const tight = gpu.shared || (gpu.mem && gpu.mem <= 8) || gpu.tier.texScale < 1;
+  if (!gpu.mobile) poolSize = Math.min(poolSize, tight ? 3 : 8);
   const pool = new Pool(poolSize);
   // While the game loads, the threads kept back for the simulation and the drawing work on it too (not on a phone, where
-  // every thread is memory and heat, nor when fewer threads were asked for).
-  const lent = !gpu.mobile && poolSize === plan.pool ? pool.lend(Math.max(0, Math.min(2, plan.cores - 1 - poolSize))) : 0;
+  // every thread is memory and heat, nor on a computer short of memory, nor when fewer threads were asked for).
+  const lent = !gpu.mobile && !tight && poolSize === Math.min(plan.pool, 8) ? pool.lend(Math.max(0, Math.min(2, plan.cores - 1 - poolSize))) : 0;
   const isolated = window.crossOriginIsolated && typeof SharedArrayBuffer !== 'undefined' && !params.has('nosab');
   const buffer = isolated ? new SharedArrayBuffer(TOTAL_BYTES) : null;
   const shared = buffer ? mapShared(buffer) : mapShared(new ArrayBuffer(TOTAL_BYTES));
@@ -1181,7 +1198,12 @@ async function boot(plan, poolSize) {
     if (mute && audio.ctx) audio.ctx.suspend(); else if (audio.ctx && (input.enabled || title.up)) audio.ctx.resume();
   }
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) input.releaseControls();
+    if (document.hidden) {
+      input.releaseControls();
+      // (Put away, a phone's page may never be heard from again: the browser lets go of pages it can't see when it wants
+      // their memory, with nothing said. So the game is kept now, not at the next twenty seconds' turn.)
+      if (input.enabled && !AUTO) autosave().catch(() => {});
+    }
     awayChanged();
   });
   // A phone stood upright. The manifest asks for landscape and the lock's asked for too (above, and src/title.js), but an
