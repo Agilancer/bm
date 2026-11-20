@@ -23,8 +23,10 @@ const AWAY_TURN = 0.8;       // turned to the rubble, how far round toward you s
 // Hands put somewhere, in her body's space (x to her left, y up, z ahead): src/sim/village-walker.js act's b.reach.
 const GUARD = [['L', [0.16, 1.0, 0.3], null], ['R', [-0.16, 1.02, 0.3], null]];
 const PALMS_UP = [['L', [0.12, 1.06, 0.32], 'up'], ['R', [-0.12, 1.06, 0.32], 'up']];
-const HEART = [['R', [0.04, 1.25, 0.17], null]];
-const CHEEK = [['R', [-0.08, 1.46, 0.13], null]];
+// (Palm laid flat on her breastbone, a little to her left, the wrist turned so the fingers lie along her and not into her.)
+const HEART = [['R', [0.02, 1.22, 0.225], 'in']];
+// (The wrist off the cheek, so the palm lies against her face and the fingers don't sink into it.)
+const CHEEK = [['R', [-0.14, 1.42, 0.2], null]];
 // Both hands held out to her fire, palms down.
 const WARM = [['L', [0.17, 0.98, 0.42], 'down'], ['R', [-0.17, 0.98, 0.42], 'down']];
 // (Her right palm braced on her raised knee: the kneel's too upright for a hand to reach the ground without folding her up.)
@@ -316,7 +318,7 @@ export class Opening {
       return { clip: 'Idle_Talking_Loop', rate: 0.6, face, look: eye, blend: 2.5 };
     }
     // Who she is. Her hand to her heart, and a slow, stiff bow; then she talks.
-    if (t < C.bow + 0.9) return { clip: 'idle', face, look: eye, reach: HEART, blend: 3 };
+    if (t < C.bow + 0.9) return { clip: 'Idle_Talking_Loop', rate: 0.6, face, look: eye, reach: HEART, blend: 3 };
     if (t < C.named + 1.3) return { clip: 'bow', from: 0.4, rate: 0.62, hold: 3.4, face, look: eye, reach: HEART, blend: 3 };
     if (t < C.toHearth) return { clip: 'Idle_Talking_Loop', rate: 0.6, face, look: eye, blend: 2 };
     // The old story, at her hearth: across to it, her hands held to the fire, telling it into the flames.

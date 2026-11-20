@@ -13,7 +13,7 @@ export const SCRIPT = {
   [OPENING.WAKE]: [
     { at: 0.2, dur: 6.0, text: 'By the light that does not set, I call you back. Cross over. Come home.', vo: true },
     // Your eyes open on her, lovely, and she comes to you across the cave, taking her time over you: the glamour, before
-    // it breaks. She's giving you the charm's usual story when the flash cuts her off.
+    // it breaks. She's giving you the story she gave the forty-three when the flash cuts her off.
     { at: 7.4, dur: 4.0, text: 'Shh. There you are, little star. Don’t be afraid.' },
     { at: 11.8, dur: 4.6, text: 'Look at me. Only at me. I’m going to tell you who you are.' },
     { at: SWAP_AT - 5.2, dur: 6.4, text: 'You are Tessariel. And I have waited two hundred years for you to—', words: true, from: SWAP_AT - 4.9, land: SWAP_AT },
