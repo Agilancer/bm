@@ -13,6 +13,7 @@ import { roadSegments } from '../core/roads.js';
 import { terrainHeight } from '../core/terrain.js';
 import { PORTAL_MODELS, buildSites, buildUnder, dropSiteGeometry } from '../core/sites.js';
 import { PhobosNear } from './phobos-near.js';
+import { StairsNear } from './stairs-near.js';
 import { DELVES, PORTAL_SPOTS, braziers, caveFloorY, caveRoofY, delveAt, inDungeon, torches } from '../core/dungeon.js';
 import { DOOR, HALL, hallLights, inHall } from '../core/testhall.js';
 import { SlimeBodies } from './slimes.js';
@@ -2541,6 +2542,8 @@ export class Renderer {
     // (Phobos's houses near the eye, as they are from near: src/gfx/phobos-near.js.)
     (this.phobosNear ||= new PhobosNear(this)).update(cam);
     this.phobosNear.smoke(this.frameDt || 1 / 60, cam);
+    // (The ways' flights of steps near the eye: src/gfx/stairs-near.js.)
+    (this.stairsNear ||= new StairsNear(this)).update(cam);
     this.crows(cam);
     this.ash(cam);
     this.slimeBodies?.update(snap, snap[H.TIME], cam);
@@ -2805,6 +2808,7 @@ export class Renderer {
     sp.setPipeline(this.pShStatic);
     this.drawUnderShadow(sp);
     this.phobosNear?.draw(sp);
+    this.stairsNear?.draw(sp);
     sp.setVertexBuffer(0, this.staticVB);
     sp.setIndexBuffer(this.staticIB, 'uint32');
     sp.drawIndexed(this.staticRuns.land[1]);
@@ -2833,6 +2837,7 @@ export class Renderer {
       sp.setPipeline(this.pShStatic);
       this.drawUnderShadow(sp);
       this.phobosNear?.draw(sp);
+      this.stairsNear?.draw(sp);
       sp.setVertexBuffer(0, this.staticVB);
       sp.setIndexBuffer(this.staticIB, 'uint32');
       sp.drawIndexed(this.staticRuns.land[1]);
@@ -3482,6 +3487,7 @@ export class Renderer {
       mp.drawIndexed(sc[1], 1, sc[0]);
     }
     if (!U && this.phobosNear?.count) { mp.setPipeline(this.pStatic); this.phobosNear.draw(mp); }
+    if (!U && this.stairsNear?.count) { mp.setPipeline(this.pStatic); this.stairsNear.draw(mp); }
     if (this.slimeBodies?.count) { mp.setPipeline(this.pStatic); this.slimeBodies.draw(mp); }
     // (Down the Warrens nothing of the land above can be seen: its rock is all there is.)
     if (!vis.warrens) {

@@ -9,6 +9,7 @@ import { HERE_STEP, groundPatches } from '../src/core/ground-patches.js';
 import { HUNT_GROUNDS, HUNT_PATHS } from '../src/core/hunts.js';
 import { PORTAL } from '../src/core/dungeon.js';
 import { terrainHeight } from '../src/core/terrain.js';
+import { stairDip } from '../src/core/roadbed.js';
 
 // The job worker, run here: its one listener, handed a job.
 let listener = null, reply = null;
@@ -56,12 +57,15 @@ const paths = HUNT_PATHS.flatMap((p) => p.pts.slice(1).flatMap(([bx, bz], i) => 
   return o;
 }));
 const worst = (mesh, pts) => {
-  let w = 0;
+  let w = 0, wx = 0, wz = 0;
   for (const [x, z] of pts) {
     const { top, layers } = mesh.at(x, z);
     assert.ok(layers >= 1, `no ground drawn at ${x.toFixed(1)}, ${z.toFixed(1)}`);
-    w = Math.max(w, Math.abs(top - terrainHeight(x, z)));
+    // (Under a road's flight of steps the ground's drawn sunk, on purpose: the steps stand over it. src/core/roadbed.js stairDip.)
+    const e = Math.abs(top - (terrainHeight(x, z) - stairDip(x, z)));
+    if (e > w) { w = e; wx = x; wz = z; }
   }
+  if (process.env.WORST) console.log(`worst ${w.toFixed(2)} at ${wx.toFixed(1)}, ${wz.toFixed(1)}`);
   return w;
 };
 
@@ -106,8 +110,12 @@ for (const [name, n, cell, times, reach] of [['a PC (High)', 384, 2, 1, 250], ['
       const here = [Math.round((x - HERE_STEP * 1.5) / HERE_STEP) * HERE_STEP, Math.round((z + HERE_STEP * 1.5) / HERE_STEP) * HERE_STEP];
       const mesh = await terrain(n, cell, { here, cx, cz, ox: x, oz: z });
       const near = worst(mesh, round(x, z, 100, 1.3)), far = worst(mesh, round(x, z, reach, 3.7));
-      assert.ok(near < (craggy ? 2 : 0.4) * times, `${where}: the ground round you is drawn ${near.toFixed(2)} m off`);
-      assert.ok(far < (craggy ? 5.5 : 1.2) * times, `${where}: the ground as far as you can make anyone out is drawn ${far.toFixed(2)} m off`);
+      if (process.env.WORST) console.log(`${name} ${where}: near ${near.toFixed(2)} far ${far.toFixed(2)}`);
+      // (Near, 0.5: a footpath's bed edges its level ground with a crease the grid's cells round off by a few centimetres more.)
+      assert.ok(near < (craggy ? 2 : 0.5) * times, `${where}: the ground round you is drawn ${near.toFixed(2)} m off`);
+      // (Far out, 1.8: the roads' beds (src/core/roadbed.js), banked up a metre or two over a dip and only a few metres wide, are
+      // narrower than the great grid's cells out there, which can step over one.)
+      assert.ok(far < (craggy ? 5.5 : 1.8) * times, `${where}: the ground as far as you can make anyone out is drawn ${far.toFixed(2)} m off`);
     }
   });
 }
