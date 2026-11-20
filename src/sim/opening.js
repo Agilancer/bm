@@ -23,8 +23,9 @@ const AWAY_TURN = 0.8;       // turned to the rubble, how far round toward you s
 // Hands put somewhere, in her body's space (x to her left, y up, z ahead): src/sim/village-walker.js act's b.reach.
 const GUARD = [['L', [0.16, 1.0, 0.3], null], ['R', [-0.16, 1.02, 0.3], null]];
 const PALMS_UP = [['L', [0.12, 1.06, 0.32], 'up'], ['R', [-0.12, 1.06, 0.32], 'up']];
-const HEART = [['R', [0.04, 1.25, 0.17], null]];
-const CHEEK = [['R', [-0.08, 1.46, 0.13], null]];
+const HEART = [['R', [-0.05, 1.24, 0.19], null]];
+// (The wrist off the cheek, so the palm lies against her face and the fingers don't sink into it.)
+const CHEEK = [['R', [-0.14, 1.42, 0.2], null]];
 // Both hands held out to her fire, palms down.
 const WARM = [['L', [0.17, 0.98, 0.42], 'down'], ['R', [-0.17, 0.98, 0.42], 'down']];
 // (Her right palm braced on her raised knee: the kneel's too upright for a hand to reach the ground without folding her up.)

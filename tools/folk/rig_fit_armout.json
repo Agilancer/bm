@@ -1,0 +1,592 @@
+{
+"apricot": {
+"armOut": 0.0,
+"inside": 1.4,
+"inside_at_0": 1.4
+},
+"martleboro": {
+"armOut": 0.0,
+"inside": 0.3,
+"inside_at_0": 0.3
+},
+"louis_g": {
+"armOut": 0.18,
+"inside": 0.9,
+"inside_at_0": 1.6
+},
+"sweep": {
+"armOut": 0.12,
+"inside": 0.6,
+"inside_at_0": 1.5
+},
+"fishwife": {
+"armOut": 0.0,
+"inside": 0.4,
+"inside_at_0": 0.4
+},
+"bonecarver": {
+"armOut": 0.0,
+"inside": 0.5,
+"inside_at_0": 0.5
+},
+"tanner": {
+"armOut": 0.0,
+"inside": 0,
+"inside_at_0": 0
+},
+"watchman": {
+"armOut": 0.18,
+"inside": 0.8,
+"inside_at_0": 3.1
+},
+"ragwoman": {
+"armOut": 0.06,
+"inside": 0,
+"inside_at_0": 1.1
+},
+"cutpurse": {
+"armOut": 0.0,
+"inside": 0.2,
+"inside_at_0": 0.2
+},
+"smelter": {
+"armOut": 0.0,
+"inside": 0,
+"inside_at_0": 0
+},
+"apothecary": {
+"armOut": 0.0,
+"inside": 0.3,
+"inside_at_0": 0.3
+},
+"merchant": {
+"armOut": 0.0,
+"inside": 0.7,
+"inside_at_0": 0.7
+},
+"baker": {
+"armOut": 0.0,
+"inside": 0.4,
+"inside_at_0": 0.4
+},
+"butcher": {
+"armOut": 0.0,
+"inside": 0.4,
+"inside_at_0": 0.4
+},
+"gravedigger": {
+"armOut": 0.0,
+"inside": 0,
+"inside_at_0": 0
+},
+"lamplighter": {
+"armOut": 0.0,
+"inside": 0.2,
+"inside_at_0": 0.2
+},
+"washerwoman": {
+"armOut": 0.06,
+"inside": 0.4,
+"inside_at_0": 0.8
+},
+"ferryman": {
+"armOut": 0.0,
+"inside": 0.3,
+"inside_at_0": 0.3
+},
+"plaguedoctor": {
+"armOut": 0.0,
+"inside": 0,
+"inside_at_0": 0
+},
+"grinder": {
+"armOut": 0.18,
+"inside": 1.5,
+"inside_at_0": 2.6
+},
+"chandler": {
+"armOut": 0.06,
+"inside": 1.0,
+"inside_at_0": 1.1
+},
+"mason": {
+"armOut": 0.12,
+"inside": 0.2,
+"inside_at_0": 1.5
+},
+"dockhand": {
+"armOut": 0.0,
+"inside": 0,
+"inside_at_0": 0
+},
+"porter": {
+"armOut": 0.06,
+"inside": 0.4,
+"inside_at_0": 0.8
+},
+"moneylender": {
+"armOut": 0.0,
+"inside": 0.2,
+"inside_at_0": 0.2
+},
+"acolyte": {
+"armOut": 0.0,
+"inside": 0.4,
+"inside_at_0": 0.4
+},
+"mourner": {
+"armOut": 0.0,
+"inside": 0,
+"inside_at_0": 0
+},
+"veteran": {
+"armOut": 0.06,
+"inside": 0.3,
+"inside_at_0": 0.9
+},
+"dyer": {
+"armOut": 0.0,
+"inside": 0.5,
+"inside_at_0": 0.5
+},
+"weaver": {
+"armOut": 0.18,
+"inside": 1.1,
+"inside_at_0": 1.5
+},
+"innkeeper": {
+"armOut": 0.0,
+"inside": 0.7,
+"inside_at_0": 0.7
+},
+"noblewoman": {
+"armOut": 0.0,
+"inside": 0,
+"inside_at_0": 0
+},
+"fiddler": {
+"armOut": 0.12,
+"inside": 0,
+"inside_at_0": 0.8
+},
+"scribe": {
+"armOut": 0.12,
+"inside": 1.1,
+"inside_at_0": 2.3
+},
+"barber": {
+"armOut": 0.0,
+"inside": 0,
+"inside_at_0": 0
+},
+"beggarwoman": {
+"armOut": 0.06,
+"inside": 2.1,
+"inside_at_0": 2.8
+},
+"urchingirl": {
+"armOut": 0.18,
+"inside": 1.1,
+"inside_at_0": 3.6
+},
+"hedgewitch": {
+"armOut": 0.18,
+"inside": 0.6,
+"inside_at_0": 1.2
+},
+"joiner": {
+"armOut": 0.0,
+"inside": 0,
+"inside_at_0": 0
+},
+"pieseller": {
+"armOut": 0.06,
+"inside": 0.3,
+"inside_at_0": 0.7
+},
+"gaoler": {
+"armOut": 0.0,
+"inside": 0,
+"inside_at_0": 0
+},
+"dukeservant": {
+"armOut": 0.06,
+"inside": 0.4,
+"inside_at_0": 0.8
+},
+"charcoalburner": {
+"armOut": 0.18,
+"inside": 0.4,
+"inside_at_0": 2.9
+},
+"netmender": {
+"armOut": 0.06,
+"inside": 0.5,
+"inside_at_0": 1.2
+},
+"bargewoman": {
+"armOut": 0.0,
+"inside": 0,
+"inside_at_0": 0
+},
+"offduty": {
+"armOut": 0.0,
+"inside": 1.0,
+"inside_at_0": 1.0
+},
+"magestudent": {
+"armOut": 0.12,
+"inside": 0.4,
+"inside_at_0": 1.2
+},
+"younglord": {
+"armOut": 0.06,
+"inside": 0.8,
+"inside_at_0": 1.3
+},
+"ladysmaid": {
+"armOut": 0.06,
+"inside": 2.3,
+"inside_at_0": 3.0
+},
+"pilgrim": {
+"armOut": 0.06,
+"inside": 0.7,
+"inside_at_0": 1.1
+},
+"tollkeeper": {
+"armOut": 0.0,
+"inside": 0,
+"inside_at_0": 0
+},
+"spiceseller": {
+"armOut": 0.12,
+"inside": 0.2,
+"inside_at_0": 0.6
+},
+"peddler": {
+"armOut": 0.0,
+"inside": 0.9,
+"inside_at_0": 0.9
+},
+"graverobber": {
+"armOut": 0.0,
+"inside": 0,
+"inside_at_0": 0
+},
+"demonsteward": {
+"armOut": 0.0,
+"inside": 0,
+"inside_at_0": 0
+},
+"bonebutler": {
+"armOut": 0.0,
+"inside": 0,
+"inside_at_0": 0
+},
+"imppage": {
+"armOut": 0.0,
+"inside": 6.1,
+"inside_at_0": 6.1
+},
+"torturer": {
+"armOut": 0.0,
+"inside": 0,
+"inside_at_0": 0
+},
+"ghoulscullion": {
+"armOut": 0.12,
+"inside": 0,
+"inside_at_0": 1.1
+},
+"archivistghost": {
+"armOut": 0.12,
+"inside": 1.5,
+"inside_at_0": 1.8
+},
+"hellguard": {
+"armOut": 0.06,
+"inside": 0.2,
+"inside_at_0": 0.6
+},
+"keeppriestess": {
+"armOut": 0.12,
+"inside": 0.9,
+"inside_at_0": 1.2
+},
+"sorrel_b": {
+"armOut": 0.0,
+"inside": 0,
+"inside_at_0": 0
+},
+"osk_b": {
+"armOut": 0.06,
+"inside": 0.5,
+"inside_at_0": 1.5
+},
+"corve_b": {
+"armOut": 0.0,
+"inside": 1.3,
+"inside_at_0": 1.3
+},
+"abel_b": {
+"armOut": 0.12,
+"inside": 1.0,
+"inside_at_0": 2.6
+},
+"greta_b": {
+"armOut": 0.0,
+"inside": 0.3,
+"inside_at_0": 0.3
+},
+"wulf_b": {
+"armOut": 0.0,
+"inside": 0.4,
+"inside_at_0": 0.4
+},
+"astrologer": {
+"armOut": 0.0,
+"inside": 0.7,
+"inside_at_0": 0.7
+},
+"alchemistgirl": {
+"armOut": 0.06,
+"inside": 0.6,
+"inside_at_0": 1.2
+},
+"bookbinder": {
+"armOut": 0.0,
+"inside": 0.7,
+"inside_at_0": 0.7
+},
+"inkmaker": {
+"armOut": 0.0,
+"inside": 0,
+"inside_at_0": 0
+},
+"herbalist": {
+"armOut": 0.12,
+"inside": 0.3,
+"inside_at_0": 1.2
+},
+"tutor": {
+"armOut": 0.0,
+"inside": 0.7,
+"inside_at_0": 0.7
+},
+"crossbowman": {
+"armOut": 0.18,
+"inside": 2.2,
+"inside_at_0": 7.1
+},
+"gateclerk": {
+"armOut": 0.12,
+"inside": 0.2,
+"inside_at_0": 1.0
+},
+"ostler": {
+"armOut": 0.0,
+"inside": 0,
+"inside_at_0": 0
+},
+"farrier": {
+"armOut": 0.0,
+"inside": 0.4,
+"inside_at_0": 0.4
+},
+"carter": {
+"armOut": 0.06,
+"inside": 0.6,
+"inside_at_0": 1.1
+},
+"drillsergeant": {
+"armOut": 0.0,
+"inside": 1.4,
+"inside_at_0": 1.4
+},
+"armourer": {
+"armOut": 0.0,
+"inside": 0,
+"inside_at_0": 0
+},
+"fletcher": {
+"armOut": 0.06,
+"inside": 0,
+"inside_at_0": 0.7
+},
+"campcook": {
+"armOut": 0.12,
+"inside": 0.7,
+"inside_at_0": 3.5
+},
+"bannerbearer": {
+"armOut": 0.12,
+"inside": 0.5,
+"inside_at_0": 2.2
+},
+"flagellant": {
+"armOut": 0.0,
+"inside": 0,
+"inside_at_0": 0
+},
+"relicseller": {
+"armOut": 0.0,
+"inside": 0,
+"inside_at_0": 0
+},
+"tithecollector": {
+"armOut": 0.0,
+"inside": 0.2,
+"inside_at_0": 0.2
+},
+"devotee": {
+"armOut": 0.18,
+"inside": 5.1,
+"inside_at_0": 6.7
+},
+"bellowsboy": {
+"armOut": 0.0,
+"inside": 0.4,
+"inside_at_0": 0.4
+},
+"furnacewoman": {
+"armOut": 0.0,
+"inside": 0,
+"inside_at_0": 0
+},
+"coalheaver": {
+"armOut": 0.06,
+"inside": 0,
+"inside_at_0": 1.2
+},
+"glassblower": {
+"armOut": 0.12,
+"inside": 0.6,
+"inside_at_0": 1.7
+},
+"ashsifter": {
+"armOut": 0.0,
+"inside": 0,
+"inside_at_0": 0
+},
+"majordomo": {
+"armOut": 0.0,
+"inside": 0,
+"inside_at_0": 0
+},
+"courtesan": {
+"armOut": 0.0,
+"inside": 0,
+"inside_at_0": 0
+},
+"duelist": {
+"armOut": 0.0,
+"inside": 0.5,
+"inside_at_0": 0.5
+},
+"dowager": {
+"armOut": 0.0,
+"inside": 0.5,
+"inside_at_0": 0.5
+},
+"sexton": {
+"armOut": 0.12,
+"inside": 0.5,
+"inside_at_0": 0.9
+},
+"embalmer": {
+"armOut": 0.0,
+"inside": 0,
+"inside_at_0": 0
+},
+"corpsewasher": {
+"armOut": 0.0,
+"inside": 0.2,
+"inside_at_0": 0.2
+},
+"deadwatch": {
+"armOut": 0.0,
+"inside": 0,
+"inside_at_0": 0
+},
+"eelseller": {
+"armOut": 0.0,
+"inside": 1.1,
+"inside_at_0": 1.1
+},
+"shipwright": {
+"armOut": 0.12,
+"inside": 1.4,
+"inside_at_0": 4.2
+},
+"smuggler": {
+"armOut": 0.0,
+"inside": 0,
+"inside_at_0": 0
+},
+"sailor": {
+"armOut": 0.0,
+"inside": 0.2,
+"inside_at_0": 0.2
+},
+"pawnbroker": {
+"armOut": 0.0,
+"inside": 0.4,
+"inside_at_0": 0.4
+},
+"taverncook": {
+"armOut": 0.0,
+"inside": 0,
+"inside_at_0": 0
+},
+"cardsharp": {
+"armOut": 0.06,
+"inside": 0.5,
+"inside_at_0": 1.2
+},
+"lodginglady": {
+"armOut": 0.06,
+"inside": 0.4,
+"inside_at_0": 0.8
+},
+"cheesemonger": {
+"armOut": 0.12,
+"inside": 0.5,
+"inside_at_0": 1.6
+},
+"cobbler": {
+"armOut": 0.06,
+"inside": 0.2,
+"inside_at_0": 0.7
+},
+"potter": {
+"armOut": 0.06,
+"inside": 4.0,
+"inside_at_0": 7.4
+},
+"herbwoman": {
+"armOut": 0.06,
+"inside": 1.9,
+"inside_at_0": 2.2
+},
+"currier": {
+"armOut": 0.0,
+"inside": 0.4,
+"inside_at_0": 0.4
+},
+"skinner": {
+"armOut": 0.06,
+"inside": 1.1,
+"inside_at_0": 1.6
+},
+"glover": {
+"armOut": 0.0,
+"inside": 0.3,
+"inside_at_0": 0.3
+},
+"soapmaker": {
+"armOut": 0.0,
+"inside": 0.5,
+"inside_at_0": 0.5
+}
+}

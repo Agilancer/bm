@@ -12,11 +12,11 @@ ledge), `src/core/opening-script.js` (the summons, and everything said on the wa
 2. He rose, slowly, and for forty years has had his throne back. She has kept the door, calling Tessariel home.
 3. A season ago the door began to answer: forty-three times, with the wrong people, dropped in ditches all over the
    country. Twelve of them got as far as Bellmourn.
-4. She met each one wearing her old face, snapped her fingers (a charm: whoever it touches believes the next thing she
-   says), told them they were Tessariel, put a sword in their hand and sent them off to fight him. She had stopped
-   believing the real one would come.
-5. You are different, by three proofs: the door put you in her own circle; the charm ran off you and you saw her real
-   face (the old songs say nothing false gets past Tessariel's eyes); and you came through with fire in your hand.
+4. She met each one wearing her glamour, the girl she once was, told them they were Tessariel, put a sword in their
+   hand and sent them off to fight him. Every one of them saw only the girl. She had stopped believing the real one
+   would come.
+5. You are different, by three proofs: the door put you in her own circle; the glamour doesn't hold on you and you see
+   her real face (the old songs say nothing false gets past Tessariel's eyes); and you came through with fire in your hand.
 6. Nobody has been born with magic since Velscour drank every spark of it to live through his defeat. Every spark you
    throw is one he has lost, and he will feel it. He is already hunting forty-three of you, which buys a little time.
 7. He was a healer who lost a child and shut the door of death. When he was broken it swung open; now he's back and
@@ -37,7 +37,7 @@ Everyone else sees only her glamours: the crone they call Old Lis by day, and a 
   reviewed by two critics (see "The cut, and the two critics" at the end). The cave came to the name prompt at 4:51,
   with your first cast at about 3:07; now it's 2:28, and you cast at about 1:00. Fifteen of the cave's thirty-four lines went,
   and the three proofs became one thing you do: she sees fire in your hand, and you throw it.
-- **Order.** She starts her usual speech, is caught, tries the charm, sees your hand, and then tells it straight: who
+- **Order.** She starts her usual speech, is caught, lights the cave to look at you, sees your hand, and then tells it straight: who
   she is, the door, the forty-three, who you are, what to do. Her own past with Velscour is kept for the road.
 - **Time.** Her words are read, not heard (her recordings aren't played), so every line is up as long as it takes to
   read, at 15 characters a second and a moment to find it (`readSecs` in `src/core/opening-cave.js`), and the next
@@ -71,13 +71,13 @@ Everyone else sees only her glamours: the crone they call Old Lis by day, and a 
 
 ### 3 · The snap (0:30 – 0:54)
 
-*She backs away among her things, working her cold fingers, raises her right hand at you, and snaps. The hum cuts dead. A breath of silence. Then the candles catch in a wave from her hand, across the cave and past you, and the fire in her hearth with them. She comes back, watching your eyes the whole way, and leans in.*
+*She backs away among her things, working her cold fingers, raises her right hand at you, and snaps. The hum cuts dead. A breath of silence. Then the candles catch in a wave from her hand, across the cave and past you, and the fire in her hearth with them: light, to see you by. She comes back, watching your eyes the whole way, and leans in.*
 
-**LISANDRA**: Hold still. It doesn’t hurt. It never hurts.
+**LISANDRA**: Stay where you are. I want a proper look at you.
 
-**LISANDRA**: That was a charm. Whoever it touches believes the next thing I say.
+**LISANDRA**: Forty-three came through that door before you. Every one of them saw the girl.
 
-**LISANDRA**: It has worked on forty-three people. It hasn’t worked on you.
+**LISANDRA**: You’re the first who’s seen the old woman under her.
 
 ### 4 · Your hand (0:54 – 1:09)
 

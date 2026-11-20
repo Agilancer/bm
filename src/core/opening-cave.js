@@ -39,15 +39,15 @@ const STORY = [
   { w: 0.5, m: 'drop', text: 'Not at the girl. At me.', emote: 'sweat', feel: 2.2 },
   // The snap. She backs away among her things, working her cold fingers, and raises the right hand at you.
   { w: 0.5, m: 'backOff', hold: 2.4 },
-  { m: 'aim', text: 'Hold still. It doesn’t hurt. It never hurts.' },
+  { m: 'aim', text: 'Stay where you are. I want a proper look at you.' },
   // SNAP. The door's hum cuts dead; a breath of silence; the candles catch in a wave from her hand, past you, and the
-  // fire in her hearth with them.
+  // fire in her hearth with them: light, to see you by.
   { w: 0.3, m: 'snap', hold: 1.0 },
   { m: 'candles', hold: 1.8 },
   // She comes back through her things, watching your eyes the whole way, stops close, and leans in.
   { m: 'comeBack', hold: 3.0 },
-  { m: 'lean', text: 'That was a charm. Whoever it touches believes the next thing I say.', eye: true },
-  { text: 'It has worked on forty-three people. It hasn’t worked on you.' },
+  { m: 'lean', text: 'Forty-three came through that door before you. Every one of them saw the girl.', eye: true },
+  { text: 'You’re the first who’s seen the old woman under her.' },
   // And then she sees your hand: embers on your knuckles.
   { w: 0.6, m: 'steps', text: '…And what is that in your hand? Look down.', eye: true, emote: 'question', feel: 1.8 },
   // The view tips down to your staff. Cast, and a spark leaps to the nearest candle; or it goes on its own after the wait.

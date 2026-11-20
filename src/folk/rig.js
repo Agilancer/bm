@@ -15,8 +15,13 @@ const I = [0, 0, 0, 1];
 // On the run (these clips), the hands are fists, as anyone's are: her clips' hands are open. How far each finger's three
 // joints turn in at a full fist, thumb first: her own fist (src/sim/village-walker.js grip), the same rig her clips are
 // from, so the same turns: a finger about its joint's own z, a thumb about its y, the other way and a little less.
-const RUN_CLIPS = new Set(['run', 'jog', 'flee']);
+const RUN_CLIPS = new Set(['run', 'jog', 'flee', 'jog_up']);
 const FIST = [[0.5, 0.35, 0.2], [1.2, 1.3, 0.9], [1.2, 1.3, 0.9], [1.2, 1.3, 0.9], [1.2, 1.3, 0.9]];
+// Walking, the hands hang loose: her clips' fingers are held straight and together, a karate chop on every passer-by. A
+// relaxed hand curls a little at each joint, more toward the little finger (thumb first; the same turns as the fist's).
+// Looked at in Blender on the Phobos bodies (tools/folk/rig_fit.py show(..., curl=...)).
+const WALK_CLIPS = new Set(['walk', 'walk_ual', 'walk_formal', 'walk_proud', 'swagger', 'crouch_walk']);
+const RELAX = [[0.5, 0.42, 0.28], [0.5, 0.63, 0.42], [0.63, 0.77, 0.5], [0.77, 0.9, 0.56], [0.9, 1.05, 0.63]];
 const FQ = new Float32Array(4);
 const conj = (q, i = 0) => [-q[i], -q[i + 1], -q[i + 2], q[i + 3]];
 
@@ -47,11 +52,11 @@ export class FolkClips {
     sk.forEach((j, i) => { this.restT.set(j.t, i * 3); this.restR.set(j.r, i * 4); });
     for (let j = 0; j < this.count; j++) if (this.parent[j] >= j) throw new Error('clips: joints must come parents first');
     // The fingers' joints, for that fist (FolkPose.solve): joint, its turn at a full fist, 1 for a thumb's.
-    this.fist = [];
+    this.fist = []; this.relax = [];
     for (const side of ['Left', 'Right']) {
       ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky'].forEach((f, fi) => [1, 2, 3].forEach((i) => {
         const j = this.index.get(`mixamorig:${side}Hand${f}${i}`);
-        if (j !== undefined) this.fist.push(j, FIST[fi][i - 1], fi === 0 ? 1 : 0);
+        if (j !== undefined) { this.fist.push(j, FIST[fi][i - 1], fi === 0 ? 1 : 0); this.relax.push(RELAX[fi][i - 1]); }
       }));
     }
     this.hips = this.index.get('mixamorig:Hips');
@@ -172,7 +177,14 @@ export class FolkRig {
     // thick-gloved (the Phobos three, from Meshy) tears at a full fist, so it runs with a loose half fist.
     this.fistAmount = opts.fist ?? 1;
     this.skirt = opts.skirt || null;
+    // Phobos's people (folk.json "upright", tools/folk/rig_fit.py): their skeletons fitted to their bodies and her rest, and
+    // their jog and run her jog stood up (hips lifted, legs reaching for the ground, trunk straighter), not her own
+    // crouching jog or her hunched old-witch run.
+    this.alias = opts.upright ? UPRIGHT : null;
   }
+
+  // A clip by name, as this body plays it.
+  clip(name) { return this.clips.clips[this.alias?.[name] || name]; }
 
   // How fast this body covers the ground in a moving clip played at rate 1, in metres a second.
   stride(clip) { return clip.travel * this.hipsScale / clip.dur; }
@@ -180,6 +192,7 @@ export class FolkRig {
 
 // The joints in the palette past a body's own: the skirt's six leg points and the facing (see SKIN in src/gfx/shaders.js).
 export const SKIRT_JOINTS = 4;
+const UPRIGHT = { jog: 'jog_up', run: 'jog_up' };
 // Abed, everything below the neck is sunk this far, into the mattress: the blanket over them (src/gfx/blankets.js) is shaped
 // like a body, and nothing of one pokes through it, a gown's knee or a squire's plate.
 const TUCK = 0.3;
@@ -214,7 +227,7 @@ export class FolkPose {
   // Start a clip. It takes over from what's playing over `fade` seconds. `sync`: a loop picks up at the same point of its
   // cycle as the loop it replaces (a walk into a jog keeps its feet). A negative speed plays it backwards from its end.
   play(name, { fade = 0.3, speed = 1, t = null, sync = false, restart = false } = {}) {
-    const clip = this.rig.clips.clips[name];
+    const clip = this.rig.clip(name);
     if (!clip) throw new Error(`folk: no clip ${name}`);
     if (this.a.clip === clip && !restart) { this.a.speed = speed; return; }
     const old = this.a;
@@ -232,7 +245,7 @@ export class FolkPose {
   layer(name, { fade = 0.3, speed = 1, from = 'Spine1', weight = 1 } = {}) {
     const o = this.o;
     if (!name) { o.to = 0; o.fade = fade; return; }
-    const clip = this.rig.clips.clips[name];
+    const clip = this.rig.clip(name);
     if (!clip) throw new Error(`folk: no clip ${name}`);
     const key = `${from}`;
     if (o.clip !== clip) { o.clip = clip; o.t = 0; if (o.w < 0.01) o.w = 0; }
@@ -281,10 +294,14 @@ export class FolkPose {
     // Running, fists (eased across a change of clip, as the clips are).
     const runA = RUN_CLIPS.has(this.a.clip?.name) ? 1 : 0, runB = this.w < 1 && RUN_CLIPS.has(this.b.clip?.name) ? 1 : 0;
     const run = this.w < 1 ? runB + (runA - runB) * smooth(this.w) : runA;
-    if (run > 0.01) {
-      const F = C.fist;
+    // Walking, loose hands (the same easing).
+    const walkA = WALK_CLIPS.has(this.a.clip?.name) ? 1 : 0;
+    const walkB = this.w < 1 && WALK_CLIPS.has(this.b.clip?.name) ? 1 : 0;
+    const walk = this.w < 1 ? walkB + (walkA - walkB) * smooth(this.w) : walkA;
+    if (run > 0.01 || walk > 0.01) {
+      const F = C.fist, Rl = C.relax;
       for (let i = 0; i < F.length; i += 3) {
-        const a = F[i + 1] * run * rig.fistAmount * (F[i + 2] ? -0.8 : 1) * 0.5;
+        const a = Math.max(F[i + 1] * run * rig.fistAmount, Rl[i / 3] * walk) * (F[i + 2] ? -0.8 : 1) * 0.5;
         FQ[0] = 0; FQ[1] = F[i + 2] ? Math.sin(a) : 0; FQ[2] = F[i + 2] ? 0 : Math.sin(a); FQ[3] = Math.cos(a);
         quatMul(sa, F[i] * 4, sa, F[i] * 4, FQ, 0);
       }

@@ -29,6 +29,10 @@ export class VillageWalker {
     const hipsJoint = this.rig.index.get('mixamorig:Hips');
     for (const clip of Object.values(this.rig.clips)) {
       this.fitArms(clip, form.armClearance);
+      // Clips that put her arms into her own body (measured in Blender: tools/lisandra/self_clip.py): the upper arms turned
+      // further out (radians) and forward, clear of her bust, her gown and her hips.
+      const more = form.clear?.[clip.name];
+      if (more) { if (more[0]) this.fitArms(clip, more[0]); if (more[1]) this.fitArms(clip, more[1], [1, 0, 0], 1); }
       const track = clip.trs[hipsJoint];
       if (!OPENING_CLIPS.includes(clip.name) || OPENING_MOVES.includes(clip.name) || !track) continue;
       // Story blocking places Lisandra on her mark. Keep vertical recoil and
@@ -213,12 +217,14 @@ export class VillageWalker {
 
   // Rotate the upper arms away from the dress in chest space. Recalculate the
   // local axis at each key so the clearance follows the pose through the cycle.
-  fitArms(clip, angle) {
+  // Each upper arm turned by angle about her body's forward (out from her sides), or with about = [1, 0, 0] and same = 1,
+  // about her body's left, both arms the same way (forward, ahead of her).
+  fitArms(clip, angle, about = [0, 0, 1], same = 0) {
     const rig = this.rig;
     const palette = new Float32Array(rig.count * 8);
     const inverse = new Float32Array(4), rotation = new Float32Array(4), axis = new Float32Array(3);
-    const forward = [0, 0, 1];
-    for (const [side, sign] of [['Left', 1], ['Right', -1]]) {
+    const forward = about;
+    for (const [side, sign] of [['Left', 1], ['Right', same ? 1 : -1]]) {
       const arm = rig.index.get(`mixamorig:${side}Arm`);
       const track = clip.rots[arm];
       if (!track) continue;

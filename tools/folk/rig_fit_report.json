@@ -1,0 +1,3578 @@
+{
+"apricot": {
+"moved": {
+"LeftForeArm": [
+3.7,
+"centre"
+],
+"LeftLeg": [
+1.7,
+"centre"
+],
+"RightLeg": [
+3.5,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 12.3,
+"LeftForeArm": 19.9,
+"RightArm": 6.8,
+"LeftLeg": 4.9
+},
+"lift": 0.0,
+"drift": 0.0
+},
+"martleboro": {
+"moved": {
+"LeftForeArm": [
+2.7,
+"centre"
+],
+"RightForeArm": [
+4.5,
+"centre"
+],
+"LeftLeg": [
+5.8,
+"centre"
+],
+"RightLeg": [
+3.8,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 6.4,
+"LeftForeArm": 14.3,
+"RightArm": 5.2,
+"RightForeArm": 16.8,
+"LeftUpLeg": 6.5,
+"LeftLeg": 18.1,
+"RightUpLeg": 4.3,
+"RightLeg": 9.8
+},
+"lift": 1.6,
+"drift": 0.0
+},
+"louis_g": {
+"moved": {
+"LeftForeArm": [
+3.5,
+"centre"
+],
+"RightForeArm": [
+2.2,
+"centre"
+],
+"LeftLeg": [
+5.6,
+"centre"
+],
+"RightLeg": [
+4.9,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 9.2,
+"LeftForeArm": 4.0,
+"RightArm": 11.4,
+"RightForeArm": 10.1,
+"LeftLeg": 5.9,
+"RightLeg": 4.5
+},
+"lift": -0.4,
+"drift": 0.0
+},
+"sweep": {
+"moved": {
+"LeftForeArm": [
+1.6,
+"centre"
+],
+"RightForeArm": [
+2.4,
+"centre"
+],
+"LeftLeg": [
+2.1,
+"centre"
+],
+"RightLeg": [
+2.3,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 5.4,
+"LeftForeArm": 4.3,
+"RightForeArm": 7.3,
+"LeftUpLeg": 9.3,
+"LeftLeg": 18.3,
+"RightUpLeg": 10.2,
+"RightLeg": 11.7
+},
+"lift": -0.4,
+"drift": 0.0
+},
+"fishwife": {
+"moved": {
+"LeftForeArm": [
+2.5,
+"centre"
+],
+"RightForeArm": [
+1.0,
+"centre"
+],
+"LeftLeg": [
+8.7,
+"line"
+],
+"RightLeg": [
+7.3,
+"line"
+]
+},
+"swing": {
+"LeftArm": 10.2,
+"LeftForeArm": 24.1,
+"RightArm": 11.6,
+"RightForeArm": 24.5,
+"LeftUpLeg": 4.1
+},
+"lift": 0.0,
+"drift": 0.0
+},
+"bonecarver": {
+"moved": {
+"LeftForeArm": [
+2.3,
+"centre"
+],
+"RightForeArm": [
+3.1,
+"centre"
+],
+"LeftLeg": [
+9.5,
+"centre"
+],
+"RightLeg": [
+5.3,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 11.9,
+"LeftForeArm": 11.3,
+"RightArm": 8.8,
+"RightForeArm": 4.9,
+"LeftUpLeg": 9.5,
+"LeftLeg": 19.9,
+"RightUpLeg": 6.4
+},
+"lift": 0.9,
+"drift": 0.0
+},
+"tanner": {
+"moved": {
+"LeftForeArm": [
+1.5,
+"centre"
+],
+"RightForeArm": [
+1.2,
+"centre"
+],
+"LeftLeg": [
+4.9,
+"centre"
+],
+"RightLeg": [
+5.1,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 9.4,
+"LeftForeArm": 7.9,
+"RightArm": 11.0,
+"RightForeArm": 16.1,
+"LeftLeg": 8.3,
+"RightUpLeg": 5.5,
+"RightLeg": 10.6
+},
+"lift": 0.9,
+"drift": 0.0
+},
+"watchman": {
+"moved": {
+"LeftForeArm": [
+1.5,
+"centre"
+],
+"RightForeArm": [
+1.0,
+"centre"
+],
+"LeftLeg": [
+2.4,
+"centre"
+],
+"RightLeg": [
+4.4,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 10.9,
+"LeftForeArm": 18.9,
+"RightArm": 9.3,
+"RightForeArm": 15.8,
+"LeftLeg": 4.9,
+"RightUpLeg": 4.3
+},
+"lift": -0.2,
+"drift": 0.0
+},
+"ragwoman": {
+"moved": {
+"LeftForeArm": [
+1.8,
+"centre"
+],
+"RightForeArm": [
+1.8,
+"centre"
+],
+"LeftLeg": [
+15.3,
+"centre"
+],
+"RightLeg": [
+17.0,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 6.4,
+"LeftForeArm": 11.0,
+"RightArm": 8.8,
+"RightForeArm": 11.4,
+"LeftLeg": 4.0,
+"RightUpLeg": 4.0,
+"RightLeg": 13.6
+},
+"lift": 0.4,
+"drift": 0.0
+},
+"cutpurse": {
+"moved": {
+"LeftForeArm": [
+2.2,
+"centre"
+],
+"RightForeArm": [
+2.1,
+"centre"
+],
+"LeftLeg": [
+5.0,
+"centre"
+],
+"RightLeg": [
+4.7,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 10.1,
+"LeftForeArm": 7.1,
+"RightArm": 10.3,
+"RightForeArm": 11.0,
+"LeftUpLeg": 4.7,
+"LeftLeg": 9.2,
+"RightUpLeg": 5.2,
+"RightLeg": 8.7
+},
+"lift": 0.3,
+"drift": 0.0
+},
+"smelter": {
+"moved": {
+"LeftForeArm": [
+2.7,
+"centre"
+],
+"RightForeArm": [
+4.3,
+"centre"
+],
+"LeftLeg": [
+6.1,
+"centre"
+],
+"RightLeg": [
+2.2,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 22.1,
+"LeftForeArm": 17.7,
+"RightArm": 27.7,
+"RightForeArm": 28.9,
+"LeftUpLeg": 7.1,
+"LeftLeg": 5.8,
+"RightLeg": 7.6
+},
+"lift": -0.9,
+"drift": 0.0
+},
+"apothecary": {
+"moved": {
+"LeftForeArm": [
+0.6,
+"centre"
+],
+"LeftLeg": [
+5.3,
+"centre"
+],
+"RightLeg": [
+4.7,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 10.9,
+"LeftForeArm": 15.9,
+"RightArm": 9.2,
+"RightForeArm": 13.7,
+"LeftUpLeg": 6.9,
+"LeftLeg": 11.0,
+"RightUpLeg": 4.9,
+"RightLeg": 10.7
+},
+"lift": 0.1,
+"drift": 0.0
+},
+"merchant": {
+"moved": {
+"LeftForeArm": [
+3.0,
+"centre"
+],
+"RightForeArm": [
+1.7,
+"centre"
+],
+"LeftLeg": [
+18.6,
+"centre"
+],
+"RightLeg": [
+19.4,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 18.4,
+"LeftForeArm": 19.9,
+"RightArm": 17.8,
+"RightForeArm": 23.5,
+"LeftUpLeg": 12.6,
+"LeftLeg": 11.6,
+"RightUpLeg": 13.9,
+"RightLeg": 16.5
+},
+"lift": 0.3,
+"drift": 0.0
+},
+"baker": {
+"moved": {
+"LeftForeArm": [
+2.7,
+"centre"
+],
+"RightForeArm": [
+1.7,
+"centre"
+],
+"LeftLeg": [
+8.9,
+"centre"
+],
+"RightLeg": [
+10.0,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 9.2,
+"LeftForeArm": 8.5,
+"RightArm": 8.7,
+"RightForeArm": 5.9,
+"LeftUpLeg": 6.0,
+"LeftLeg": 14.9,
+"RightUpLeg": 4.5,
+"RightLeg": 8.0
+},
+"lift": -0.5,
+"drift": 0.0
+},
+"butcher": {
+"moved": {
+"LeftForeArm": [
+2.2,
+"centre"
+],
+"RightForeArm": [
+1.2,
+"centre"
+],
+"LeftLeg": [
+8.2,
+"centre"
+],
+"RightLeg": [
+18.1,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 18.5,
+"LeftForeArm": 9.9,
+"RightArm": 19.6,
+"RightForeArm": 22.2,
+"LeftLeg": 10.3,
+"RightUpLeg": 11.1,
+"RightLeg": 16.3
+},
+"lift": 0.2,
+"drift": 0.0
+},
+"gravedigger": {
+"moved": {
+"LeftForeArm": [
+1.6,
+"centre"
+],
+"RightForeArm": [
+1.1,
+"centre"
+],
+"LeftLeg": [
+7.5,
+"centre"
+],
+"RightLeg": [
+5.4,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 41.4,
+"LeftForeArm": 14.4,
+"RightArm": 44.6,
+"RightForeArm": 18.2,
+"LeftUpLeg": 4.3,
+"LeftLeg": 15.8,
+"RightUpLeg": 5.1,
+"RightLeg": 9.8
+},
+"lift": -0.6,
+"drift": 0.0
+},
+"lamplighter": {
+"moved": {
+"LeftForeArm": [
+2.3,
+"centre"
+],
+"RightForeArm": [
+2.3,
+"centre"
+],
+"LeftLeg": [
+3.3,
+"centre"
+],
+"RightLeg": [
+5.9,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 8.8,
+"LeftForeArm": 13.9,
+"RightArm": 7.7,
+"RightForeArm": 14.1,
+"LeftUpLeg": 4.9,
+"RightUpLeg": 5.9,
+"RightLeg": 6.0
+},
+"lift": -0.2,
+"drift": 0.0
+},
+"washerwoman": {
+"moved": {
+"LeftForeArm": [
+0.7,
+"centre"
+],
+"RightForeArm": [
+1.7,
+"centre"
+],
+"LeftLeg": [
+5.2,
+"centre"
+],
+"RightLeg": [
+8.9,
+"centre"
+]
+},
+"swing": {
+"LeftForeArm": 9.0,
+"RightForeArm": 7.2,
+"LeftUpLeg": 6.8,
+"LeftLeg": 18.3,
+"RightUpLeg": 4.1,
+"RightLeg": 4.9
+},
+"lift": -0.5,
+"drift": 0.0
+},
+"ferryman": {
+"moved": {
+"LeftForeArm": [
+1.7,
+"centre"
+],
+"RightForeArm": [
+1.3,
+"centre"
+],
+"LeftLeg": [
+8.7,
+"centre"
+],
+"RightLeg": [
+4.6,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 10.6,
+"LeftForeArm": 11.7,
+"RightArm": 9.1,
+"RightForeArm": 11.2,
+"LeftUpLeg": 6.9,
+"LeftLeg": 18.5,
+"RightLeg": 5.8
+},
+"lift": 1.9,
+"drift": 0.0
+},
+"plaguedoctor": {
+"moved": {
+"LeftForeArm": [
+3.0,
+"centre"
+],
+"RightForeArm": [
+1.4,
+"centre"
+],
+"LeftLeg": [
+4.0,
+"centre"
+],
+"RightLeg": [
+5.2,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 6.5,
+"LeftForeArm": 8.6,
+"RightArm": 11.1,
+"RightForeArm": 16.1,
+"LeftUpLeg": 4.6,
+"LeftLeg": 10.5,
+"RightLeg": 6.6
+},
+"lift": 0.3,
+"drift": 0.0
+},
+"grinder": {
+"moved": {
+"LeftForeArm": [
+0.7,
+"centre"
+],
+"RightForeArm": [
+1.8,
+"centre"
+],
+"LeftLeg": [
+5.3,
+"centre"
+],
+"RightLeg": [
+4.6,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 8.3,
+"LeftForeArm": 13.8,
+"RightForeArm": 10.1,
+"LeftLeg": 4.4,
+"RightUpLeg": 4.8,
+"RightLeg": 8.2
+},
+"lift": 0.3,
+"drift": 0.0
+},
+"chandler": {
+"moved": {
+"LeftForeArm": [
+3.6,
+"centre"
+],
+"RightForeArm": [
+2.3,
+"centre"
+],
+"LeftLeg": [
+13.0,
+"centre"
+],
+"RightLeg": [
+10.0,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 4.4,
+"LeftForeArm": 5.9,
+"RightArm": 4.0,
+"LeftUpLeg": 4.9,
+"LeftLeg": 22.5,
+"RightUpLeg": 4.0,
+"RightLeg": 20.6
+},
+"lift": 1.3,
+"drift": 0.0
+},
+"mason": {
+"moved": {
+"LeftForeArm": [
+2.4,
+"centre"
+],
+"RightForeArm": [
+1.8,
+"centre"
+],
+"LeftLeg": [
+4.0,
+"centre"
+],
+"RightLeg": [
+6.0,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 10.8,
+"LeftForeArm": 5.4,
+"RightArm": 12.4,
+"RightForeArm": 8.1,
+"LeftLeg": 7.6,
+"RightLeg": 9.7
+},
+"lift": 0.8,
+"drift": 0.0
+},
+"dockhand": {
+"moved": {
+"LeftForeArm": [
+1.8,
+"centre"
+],
+"RightForeArm": [
+2.0,
+"centre"
+],
+"LeftLeg": [
+6.7,
+"centre"
+],
+"RightLeg": [
+6.6,
+"centre"
+]
+},
+"swing": {
+"RightForeArm": 4.6,
+"LeftLeg": 9.4,
+"RightLeg": 8.4
+},
+"lift": 0.6,
+"drift": 0.0
+},
+"porter": {
+"moved": {
+"LeftForeArm": [
+0.7,
+"centre"
+],
+"RightForeArm": [
+0.9,
+"centre"
+],
+"LeftLeg": [
+9.3,
+"centre"
+],
+"RightLeg": [
+7.4,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 10.5,
+"LeftForeArm": 21.3,
+"RightArm": 12.1,
+"RightForeArm": 27.5,
+"LeftUpLeg": 14.3,
+"LeftLeg": 13.8,
+"RightUpLeg": 11.5,
+"RightLeg": 13.6
+},
+"lift": 0.4,
+"drift": 0.0
+},
+"moneylender": {
+"moved": {
+"LeftForeArm": [
+2.0,
+"centre"
+],
+"RightForeArm": [
+2.5,
+"centre"
+],
+"LeftLeg": [
+4.1,
+"centre"
+],
+"RightLeg": [
+6.6,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 14.9,
+"LeftForeArm": 22.1,
+"RightArm": 17.7,
+"RightForeArm": 23.6,
+"LeftUpLeg": 5.5,
+"LeftLeg": 10.3,
+"RightUpLeg": 6.7
+},
+"lift": -0.9,
+"drift": 0.0
+},
+"acolyte": {
+"moved": {
+"LeftForeArm": [
+4.0,
+"centre"
+],
+"RightForeArm": [
+3.3,
+"centre"
+],
+"LeftLeg": [
+5.8,
+"line"
+],
+"RightLeg": [
+5.7,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 5.1,
+"LeftForeArm": 10.1,
+"RightUpLeg": 14.4,
+"RightLeg": 30.9
+},
+"lift": 0.3,
+"drift": 0.0
+},
+"mourner": {
+"moved": {
+"LeftForeArm": [
+2.4,
+"centre"
+],
+"RightForeArm": [
+3.9,
+"centre"
+],
+"LeftLeg": [
+1.1,
+"centre"
+],
+"RightLeg": [
+6.3,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 23.8,
+"LeftForeArm": 28.9,
+"RightArm": 19.1,
+"RightForeArm": 22.2,
+"LeftUpLeg": 7.0,
+"LeftLeg": 8.4,
+"RightUpLeg": 6.7,
+"RightLeg": 16.7
+},
+"lift": 0.6,
+"drift": 0.0
+},
+"veteran": {
+"moved": {
+"LeftForeArm": [
+1.9,
+"centre"
+],
+"RightForeArm": [
+0.6,
+"centre"
+],
+"LeftLeg": [
+7.4,
+"centre"
+],
+"RightLeg": [
+3.4,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 5.1,
+"LeftForeArm": 5.2,
+"RightArm": 7.3,
+"RightForeArm": 8.2,
+"LeftLeg": 12.3,
+"RightUpLeg": 8.8,
+"RightLeg": 15.8
+},
+"lift": 0.2,
+"drift": 0.0
+},
+"dyer": {
+"moved": {
+"LeftForeArm": [
+2.4,
+"centre"
+],
+"RightForeArm": [
+1.0,
+"centre"
+],
+"LeftLeg": [
+4.0,
+"centre"
+],
+"RightLeg": [
+1.5,
+"centre"
+]
+},
+"swing": {
+"LeftForeArm": 5.1,
+"RightArm": 4.4,
+"RightForeArm": 5.4,
+"LeftLeg": 14.1,
+"RightUpLeg": 6.8,
+"RightLeg": 6.3
+},
+"lift": -0.6,
+"drift": 0.0
+},
+"weaver": {
+"moved": {
+"LeftForeArm": [
+1.1,
+"centre"
+],
+"LeftLeg": [
+5.2,
+"centre"
+],
+"RightLeg": [
+7.9,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 4.7,
+"LeftForeArm": 11.6,
+"RightArm": 5.9,
+"RightForeArm": 11.4,
+"LeftLeg": 12.4,
+"RightUpLeg": 4.5,
+"RightLeg": 16.5
+},
+"lift": 0.2,
+"drift": 0.0
+},
+"innkeeper": {
+"moved": {
+"LeftForeArm": [
+3.0,
+"centre"
+],
+"RightForeArm": [
+5.0,
+"centre"
+],
+"LeftLeg": [
+1.6,
+"centre"
+],
+"RightLeg": [
+5.1,
+"line"
+]
+},
+"swing": {
+"LeftArm": 13.3,
+"LeftForeArm": 11.4,
+"RightArm": 15.0,
+"RightForeArm": 19.3,
+"LeftUpLeg": 7.5,
+"LeftLeg": 17.5,
+"RightUpLeg": 15.8
+},
+"lift": -0.5,
+"drift": 0.0
+},
+"noblewoman": {
+"moved": {
+"LeftForeArm": [
+2.3,
+"centre"
+],
+"RightForeArm": [
+3.1,
+"centre"
+],
+"LeftLeg": [
+5.5,
+"centre"
+],
+"RightLeg": [
+8.1,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 21.0,
+"LeftForeArm": 28.2,
+"RightArm": 21.9,
+"RightForeArm": 33.3,
+"LeftUpLeg": 6.8,
+"LeftLeg": 8.1,
+"RightUpLeg": 5.8,
+"RightLeg": 13.9
+},
+"lift": -0.4,
+"drift": 0.0
+},
+"fiddler": {
+"moved": {
+"LeftForeArm": [
+1.1,
+"centre"
+],
+"RightForeArm": [
+1.7,
+"centre"
+],
+"LeftLeg": [
+5.0,
+"centre"
+],
+"RightLeg": [
+5.5,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 8.7,
+"LeftForeArm": 19.0,
+"RightForeArm": 4.7,
+"LeftLeg": 7.2,
+"RightUpLeg": 6.3,
+"RightLeg": 5.1
+},
+"lift": -0.3,
+"drift": 0.0
+},
+"scribe": {
+"moved": {
+"LeftForeArm": [
+3.0,
+"centre"
+],
+"RightForeArm": [
+2.5,
+"centre"
+],
+"LeftLeg": [
+11.9,
+"centre"
+],
+"RightLeg": [
+10.5,
+"centre"
+]
+},
+"swing": {
+"LeftUpLeg": 4.1,
+"LeftLeg": 14.1,
+"RightLeg": 12.2
+},
+"lift": -1.1,
+"drift": 0.0
+},
+"barber": {
+"moved": {
+"LeftForeArm": [
+3.4,
+"centre"
+],
+"RightForeArm": [
+3.8,
+"centre"
+],
+"LeftLeg": [
+4.7,
+"centre"
+],
+"RightLeg": [
+5.8,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 32.8,
+"LeftForeArm": 20.7,
+"RightArm": 32.2,
+"RightForeArm": 24.0,
+"LeftUpLeg": 7.0,
+"LeftLeg": 4.1,
+"RightUpLeg": 7.6,
+"RightLeg": 11.6
+},
+"lift": -0.6,
+"drift": 0.0
+},
+"beggarwoman": {
+"moved": {
+"LeftForeArm": [
+1.3,
+"centre"
+],
+"RightForeArm": [
+1.4,
+"centre"
+],
+"LeftLeg": [
+4.5,
+"centre"
+],
+"RightLeg": [
+4.1,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 5.1,
+"LeftForeArm": 9.3,
+"LeftLeg": 10.7,
+"RightLeg": 10.2
+},
+"lift": -0.7,
+"drift": 0.0
+},
+"urchingirl": {
+"moved": {
+"RightForeArm": [
+0.5,
+"centre"
+],
+"LeftLeg": [
+3.1,
+"centre"
+],
+"RightLeg": [
+3.3,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 10.5,
+"LeftForeArm": 16.5,
+"RightArm": 9.4,
+"RightForeArm": 19.4,
+"LeftUpLeg": 8.7,
+"LeftLeg": 13.0,
+"RightUpLeg": 10.0,
+"RightLeg": 13.8
+},
+"lift": 0.3,
+"drift": 0.0
+},
+"hedgewitch": {
+"moved": {
+"LeftForeArm": [
+3.2,
+"centre"
+],
+"RightForeArm": [
+2.4,
+"centre"
+],
+"LeftLeg": [
+7.0,
+"centre"
+],
+"RightLeg": [
+6.2,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 24.6,
+"LeftForeArm": 36.0,
+"RightArm": 21.5,
+"RightForeArm": 31.6,
+"LeftLeg": 6.9,
+"RightLeg": 6.2
+},
+"lift": 0.2,
+"drift": 0.0
+},
+"joiner": {
+"moved": {
+"LeftForeArm": [
+2.4,
+"centre"
+],
+"RightForeArm": [
+1.5,
+"centre"
+],
+"LeftLeg": [
+6.0,
+"centre"
+],
+"RightLeg": [
+7.1,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 11.3,
+"LeftForeArm": 16.5,
+"RightArm": 7.3,
+"RightForeArm": 11.8,
+"LeftUpLeg": 6.1,
+"LeftLeg": 12.6,
+"RightUpLeg": 7.3,
+"RightLeg": 16.2
+},
+"lift": 1.2,
+"drift": 0.0
+},
+"pieseller": {
+"moved": {
+"RightForeArm": [
+0.6,
+"centre"
+],
+"LeftLeg": [
+13.1,
+"centre"
+],
+"RightLeg": [
+9.4,
+"line"
+]
+},
+"swing": {
+"LeftArm": 10.2,
+"LeftForeArm": 11.2,
+"RightArm": 10.2,
+"RightForeArm": 14.0,
+"LeftUpLeg": 14.1,
+"LeftLeg": 35.4,
+"RightUpLeg": 5.8
+},
+"lift": 2.4,
+"drift": 0.0
+},
+"gaoler": {
+"moved": {
+"LeftForeArm": [
+2.9,
+"centre"
+],
+"RightForeArm": [
+1.7,
+"centre"
+],
+"LeftLeg": [
+3.2,
+"centre"
+],
+"RightLeg": [
+5.1,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 22.3,
+"LeftForeArm": 25.3,
+"RightArm": 20.9,
+"RightForeArm": 24.0,
+"LeftUpLeg": 4.2,
+"LeftLeg": 4.9,
+"RightLeg": 7.9
+},
+"lift": -0.8,
+"drift": 0.0
+},
+"dukeservant": {
+"moved": {
+"LeftForeArm": [
+2.6,
+"centre"
+],
+"RightForeArm": [
+2.2,
+"centre"
+],
+"LeftLeg": [
+6.1,
+"centre"
+],
+"RightLeg": [
+7.1,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 9.7,
+"LeftForeArm": 7.1,
+"RightArm": 10.4,
+"RightForeArm": 9.1,
+"LeftLeg": 7.6,
+"RightUpLeg": 5.6,
+"RightLeg": 10.5
+},
+"lift": 0.9,
+"drift": 0.0
+},
+"charcoalburner": {
+"moved": {
+"LeftForeArm": [
+3.1,
+"centre"
+],
+"RightForeArm": [
+2.3,
+"centre"
+],
+"LeftLeg": [
+6.1,
+"centre"
+],
+"RightLeg": [
+7.2,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 10.4,
+"LeftForeArm": 5.2,
+"RightArm": 12.0,
+"RightForeArm": 9.6,
+"LeftUpLeg": 4.2,
+"LeftLeg": 10.6,
+"RightUpLeg": 6.0,
+"RightLeg": 13.4
+},
+"lift": 0.9,
+"drift": 0.0
+},
+"netmender": {
+"moved": {
+"LeftForeArm": [
+1.3,
+"centre"
+],
+"RightForeArm": [
+1.2,
+"centre"
+],
+"LeftLeg": [
+3.4,
+"centre"
+],
+"RightLeg": [
+5.7,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 11.1,
+"LeftForeArm": 12.5,
+"RightArm": 10.7,
+"RightForeArm": 11.4,
+"LeftUpLeg": 6.6,
+"LeftLeg": 8.7,
+"RightLeg": 9.9
+},
+"lift": -0.6,
+"drift": 0.0
+},
+"bargewoman": {
+"moved": {
+"LeftForeArm": [
+1.7,
+"centre"
+],
+"RightForeArm": [
+1.3,
+"centre"
+],
+"LeftLeg": [
+5.6,
+"centre"
+],
+"RightLeg": [
+2.6,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 6.1,
+"LeftForeArm": 6.0,
+"RightArm": 6.1,
+"RightForeArm": 6.0,
+"LeftLeg": 12.2,
+"RightUpLeg": 5.0,
+"RightLeg": 6.3
+},
+"lift": 0.1,
+"drift": 0.0
+},
+"offduty": {
+"moved": {
+"LeftForeArm": [
+2.0,
+"centre"
+],
+"RightForeArm": [
+1.4,
+"centre"
+],
+"LeftLeg": [
+5.0,
+"centre"
+],
+"RightLeg": [
+4.9,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 15.7,
+"LeftForeArm": 20.1,
+"RightArm": 10.8,
+"RightForeArm": 13.7,
+"LeftLeg": 8.7,
+"RightLeg": 10.8
+},
+"lift": 0.5,
+"drift": 0.0
+},
+"magestudent": {
+"moved": {
+"LeftForeArm": [
+4.1,
+"centre"
+],
+"RightForeArm": [
+2.5,
+"centre"
+],
+"LeftLeg": [
+3.8,
+"centre"
+],
+"RightLeg": [
+7.0,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 5.3,
+"LeftForeArm": 14.1,
+"RightArm": 5.7,
+"RightForeArm": 17.0,
+"LeftLeg": 11.2,
+"RightUpLeg": 4.2,
+"RightLeg": 20.7
+},
+"lift": 0.7,
+"drift": 0.0
+},
+"younglord": {
+"moved": {
+"LeftForeArm": [
+3.2,
+"centre"
+],
+"RightForeArm": [
+2.0,
+"centre"
+],
+"LeftLeg": [
+5.8,
+"centre"
+],
+"RightLeg": [
+4.9,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 10.1,
+"LeftForeArm": 26.3,
+"RightArm": 9.9,
+"RightForeArm": 19.5,
+"LeftUpLeg": 5.4,
+"LeftLeg": 13.1,
+"RightUpLeg": 5.5,
+"RightLeg": 9.3
+},
+"lift": 0.6,
+"drift": 0.0
+},
+"ladysmaid": {
+"moved": {
+"LeftForeArm": [
+0.7,
+"centre"
+],
+"RightForeArm": [
+0.7,
+"centre"
+],
+"LeftLeg": [
+9.3,
+"centre"
+],
+"RightLeg": [
+11.3,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 7.8,
+"LeftForeArm": 16.2,
+"RightArm": 5.0,
+"RightForeArm": 8.1,
+"LeftUpLeg": 6.0,
+"LeftLeg": 16.2,
+"RightLeg": 9.2
+},
+"lift": -0.9,
+"drift": 0.0
+},
+"pilgrim": {
+"moved": {
+"LeftForeArm": [
+1.0,
+"centre"
+],
+"RightForeArm": [
+2.4,
+"centre"
+],
+"LeftLeg": [
+3.8,
+"centre"
+],
+"RightLeg": [
+3.5,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 6.8,
+"LeftForeArm": 12.3,
+"RightForeArm": 6.5,
+"LeftLeg": 5.7,
+"RightUpLeg": 5.8
+},
+"lift": -0.3,
+"drift": 0.0
+},
+"tollkeeper": {
+"moved": {
+"LeftForeArm": [
+3.2,
+"centre"
+],
+"RightForeArm": [
+4.6,
+"centre"
+],
+"LeftLeg": [
+13.8,
+"centre"
+],
+"RightLeg": [
+14.2,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 15.5,
+"LeftForeArm": 19.6,
+"RightArm": 16.5,
+"RightForeArm": 21.6,
+"LeftLeg": 11.0,
+"RightUpLeg": 9.1,
+"RightLeg": 8.2
+},
+"lift": -0.6,
+"drift": 0.0
+},
+"spiceseller": {
+"moved": {
+"LeftForeArm": [
+1.5,
+"centre"
+],
+"RightForeArm": [
+1.5,
+"centre"
+],
+"LeftLeg": [
+5.9,
+"centre"
+],
+"RightLeg": [
+6.6,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 7.6,
+"LeftForeArm": 12.7,
+"RightArm": 8.9,
+"RightForeArm": 21.2,
+"LeftUpLeg": 9.8,
+"LeftLeg": 20.5,
+"RightUpLeg": 4.7,
+"RightLeg": 10.2
+},
+"lift": -1.2,
+"drift": 0.0
+},
+"peddler": {
+"moved": {
+"LeftForeArm": [
+1.9,
+"centre"
+],
+"RightForeArm": [
+1.4,
+"centre"
+],
+"LeftLeg": [
+5.7,
+"centre"
+],
+"RightLeg": [
+4.2,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 19.5,
+"LeftForeArm": 25.6,
+"RightArm": 19.6,
+"RightForeArm": 25.7,
+"LeftUpLeg": 8.5,
+"LeftLeg": 16.2,
+"RightUpLeg": 5.4,
+"RightLeg": 8.7
+},
+"lift": 0.9,
+"drift": 0.0
+},
+"graverobber": {
+"moved": {
+"LeftForeArm": [
+1.4,
+"centre"
+],
+"RightForeArm": [
+2.1,
+"centre"
+],
+"LeftLeg": [
+6.6,
+"centre"
+],
+"RightLeg": [
+10.5,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 9.6,
+"LeftForeArm": 13.5,
+"RightArm": 11.6,
+"RightForeArm": 17.1,
+"LeftUpLeg": 8.0,
+"LeftLeg": 11.6,
+"RightUpLeg": 8.7,
+"RightLeg": 20.7
+},
+"lift": 2.1,
+"drift": 0.0
+},
+"demonsteward": {
+"moved": {
+"LeftForeArm": [
+0.7,
+"centre"
+],
+"RightForeArm": [
+1.7,
+"centre"
+],
+"LeftLeg": [
+4.9,
+"centre"
+],
+"RightLeg": [
+5.9,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 10.6,
+"LeftForeArm": 15.7,
+"RightArm": 9.4,
+"RightForeArm": 12.8,
+"LeftLeg": 11.1,
+"RightUpLeg": 4.3,
+"RightLeg": 10.8
+},
+"lift": 0.4,
+"drift": 0.0
+},
+"bonebutler": {
+"moved": {
+"LeftForeArm": [
+3.1,
+"centre"
+],
+"RightForeArm": [
+2.4,
+"centre"
+],
+"LeftLeg": [
+1.1,
+"centre"
+],
+"RightLeg": [
+0.7,
+"centre"
+]
+},
+"swing": {
+"RightForeArm": 6.5,
+"LeftUpLeg": 11.3,
+"LeftLeg": 25.3,
+"RightUpLeg": 10.2,
+"RightLeg": 22.7
+},
+"lift": -1.5,
+"drift": 0.0
+},
+"imppage": {
+"moved": {
+"LeftForeArm": [
+1.1,
+"centre"
+],
+"RightForeArm": [
+0.9,
+"centre"
+],
+"LeftLeg": [
+2.1,
+"centre"
+],
+"RightLeg": [
+3.7,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 9.7,
+"LeftForeArm": 16.7,
+"RightArm": 5.6,
+"RightForeArm": 11.2,
+"LeftLeg": 6.7,
+"RightUpLeg": 5.9,
+"RightLeg": 8.9
+},
+"lift": 0.4,
+"drift": 0.0
+},
+"torturer": {
+"moved": {
+"LeftForeArm": [
+1.6,
+"centre"
+],
+"RightForeArm": [
+2.1,
+"centre"
+],
+"LeftLeg": [
+6.6,
+"centre"
+],
+"RightLeg": [
+7.9,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 7.2,
+"LeftForeArm": 12.7,
+"RightArm": 10.5,
+"RightForeArm": 18.5,
+"LeftUpLeg": 7.1,
+"LeftLeg": 12.4,
+"RightUpLeg": 9.1,
+"RightLeg": 16.5
+},
+"lift": 1.2,
+"drift": 0.0
+},
+"ghoulscullion": {
+"moved": {
+"LeftForeArm": [
+1.7,
+"centre"
+],
+"RightForeArm": [
+0.8,
+"centre"
+],
+"LeftLeg": [
+7.8,
+"centre"
+],
+"RightLeg": [
+7.7,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 8.3,
+"LeftForeArm": 6.8,
+"RightArm": 7.1,
+"RightForeArm": 9.0,
+"LeftUpLeg": 5.0,
+"LeftLeg": 6.8,
+"RightUpLeg": 4.4,
+"RightLeg": 10.1
+},
+"lift": -0.5,
+"drift": 0.0
+},
+"archivistghost": {
+"moved": {
+"LeftForeArm": [
+3.0,
+"centre"
+],
+"RightForeArm": [
+3.8,
+"centre"
+],
+"LeftLeg": [
+4.0,
+"centre"
+],
+"RightLeg": [
+3.6,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 5.9,
+"LeftForeArm": 10.6,
+"RightForeArm": 9.8,
+"LeftUpLeg": 8.6,
+"LeftLeg": 25.4,
+"RightUpLeg": 5.2,
+"RightLeg": 15.9
+},
+"lift": -1.0,
+"drift": 0.0
+},
+"hellguard": {
+"moved": {
+"LeftForeArm": [
+4.5,
+"centre"
+],
+"RightForeArm": [
+6.3,
+"centre"
+],
+"LeftLeg": [
+9.1,
+"centre"
+],
+"RightLeg": [
+11.2,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 20.7,
+"LeftForeArm": 11.3,
+"RightArm": 14.7,
+"LeftUpLeg": 4.6,
+"LeftLeg": 4.8,
+"RightLeg": 8.4
+},
+"lift": 2.3,
+"drift": 0.0
+},
+"keeppriestess": {
+"moved": {
+"LeftForeArm": [
+4.1,
+"centre"
+],
+"RightForeArm": [
+4.4,
+"centre"
+],
+"LeftLeg": [
+9.4,
+"centre"
+],
+"RightLeg": [
+12.1,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 19.0,
+"LeftForeArm": 16.1,
+"RightArm": 20.9,
+"RightForeArm": 21.0,
+"RightUpLeg": 6.2,
+"RightLeg": 12.5
+},
+"lift": 0.6,
+"drift": 0.0
+},
+"sorrel_b": {
+"moved": {
+"LeftForeArm": [
+1.0,
+"centre"
+],
+"RightForeArm": [
+1.4,
+"centre"
+],
+"LeftLeg": [
+3.9,
+"centre"
+],
+"RightLeg": [
+4.0,
+"centre"
+]
+},
+"swing": {
+"LeftForeArm": 8.9,
+"RightForeArm": 6.4,
+"LeftLeg": 9.4,
+"RightLeg": 8.1
+},
+"lift": 0.7,
+"drift": 0.0
+},
+"osk_b": {
+"moved": {
+"LeftForeArm": [
+0.9,
+"centre"
+],
+"RightForeArm": [
+1.4,
+"centre"
+],
+"LeftLeg": [
+6.3,
+"centre"
+],
+"RightLeg": [
+5.6,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 8.5,
+"LeftForeArm": 12.4,
+"RightArm": 7.5,
+"RightForeArm": 9.0,
+"LeftLeg": 10.0
+},
+"lift": 0.8,
+"drift": 0.0
+},
+"corve_b": {
+"moved": {
+"LeftForeArm": [
+4.5,
+"centre"
+],
+"RightForeArm": [
+5.0,
+"centre"
+],
+"LeftLeg": [
+5.8,
+"centre"
+],
+"RightLeg": [
+6.8,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 17.0,
+"LeftForeArm": 16.4,
+"RightArm": 9.9,
+"RightForeArm": 10.4,
+"RightUpLeg": 4.1,
+"RightLeg": 5.4
+},
+"lift": 0.4,
+"drift": 0.0
+},
+"abel_b": {
+"moved": {
+"LeftForeArm": [
+3.4,
+"centre"
+],
+"RightForeArm": [
+3.5,
+"centre"
+],
+"LeftLeg": [
+9.1,
+"line"
+],
+"RightLeg": [
+14.7,
+"centre"
+]
+},
+"swing": {
+"RightForeArm": 4.4,
+"LeftUpLeg": 4.5,
+"RightUpLeg": 14.4,
+"RightLeg": 33.7
+},
+"lift": 0.3,
+"drift": 0.0
+},
+"greta_b": {
+"moved": {
+"LeftForeArm": [
+1.1,
+"centre"
+],
+"RightForeArm": [
+1.1,
+"centre"
+],
+"LeftLeg": [
+3.9,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 10.3,
+"LeftForeArm": 13.2,
+"RightArm": 9.3,
+"RightForeArm": 10.5,
+"LeftUpLeg": 8.8,
+"LeftLeg": 6.8,
+"RightUpLeg": 4.2
+},
+"lift": -0.4,
+"drift": 0.0
+},
+"wulf_b": {
+"moved": {
+"LeftForeArm": [
+1.9,
+"centre"
+],
+"RightForeArm": [
+0.5,
+"centre"
+],
+"LeftLeg": [
+16.3,
+"centre"
+],
+"RightLeg": [
+17.6,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 4.2,
+"LeftForeArm": 14.9,
+"RightArm": 10.4,
+"RightForeArm": 18.6,
+"LeftUpLeg": 4.7,
+"LeftLeg": 10.1,
+"RightUpLeg": 10.2,
+"RightLeg": 11.3
+},
+"lift": 1.0,
+"drift": 0.0
+},
+"astrologer": {
+"moved": {
+"LeftForeArm": [
+1.5,
+"centre"
+],
+"RightForeArm": [
+2.9,
+"centre"
+],
+"LeftLeg": [
+15.3,
+"line"
+],
+"RightLeg": [
+3.5,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 12.1,
+"LeftForeArm": 19.5,
+"RightArm": 8.5,
+"RightForeArm": 15.2,
+"LeftUpLeg": 5.3,
+"RightUpLeg": 15.2,
+"RightLeg": 37.1
+},
+"lift": -1.2,
+"drift": 0.0
+},
+"alchemistgirl": {
+"moved": {
+"LeftForeArm": [
+0.6,
+"centre"
+],
+"RightForeArm": [
+1.2,
+"centre"
+],
+"LeftLeg": [
+9.4,
+"centre"
+],
+"RightLeg": [
+9.9,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 6.0,
+"LeftForeArm": 13.1,
+"RightForeArm": 7.4,
+"LeftLeg": 8.6,
+"RightLeg": 11.2
+},
+"lift": -0.2,
+"drift": 0.0
+},
+"bookbinder": {
+"moved": {
+"LeftForeArm": [
+1.3,
+"centre"
+],
+"RightForeArm": [
+1.9,
+"centre"
+],
+"LeftLeg": [
+7.0,
+"centre"
+],
+"RightLeg": [
+5.0,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 8.0,
+"LeftForeArm": 13.6,
+"RightArm": 4.5,
+"RightForeArm": 10.5,
+"LeftUpLeg": 7.2,
+"LeftLeg": 13.5,
+"RightUpLeg": 6.2,
+"RightLeg": 7.2
+},
+"lift": 0.2,
+"drift": 0.0
+},
+"inkmaker": {
+"moved": {
+"LeftForeArm": [
+1.5,
+"centre"
+],
+"RightForeArm": [
+2.2,
+"centre"
+],
+"LeftLeg": [
+11.5,
+"centre"
+],
+"RightLeg": [
+13.4,
+"centre"
+]
+},
+"swing": {
+"LeftForeArm": 4.1,
+"RightForeArm": 8.3,
+"LeftLeg": 12.5,
+"RightLeg": 13.7
+},
+"lift": 0.4,
+"drift": 0.0
+},
+"herbalist": {
+"moved": {
+"LeftForeArm": [
+8.2,
+"centre"
+],
+"RightForeArm": [
+8.6,
+"centre"
+],
+"LeftLeg": [
+4.1,
+"centre"
+],
+"RightLeg": [
+11.4,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 17.0,
+"LeftForeArm": 41.9,
+"RightArm": 17.8,
+"RightForeArm": 46.2,
+"LeftLeg": 16.3,
+"RightUpLeg": 13.4,
+"RightLeg": 16.4
+},
+"lift": 0.5,
+"drift": 0.0
+},
+"tutor": {
+"moved": {
+"LeftForeArm": [
+1.4,
+"centre"
+],
+"RightForeArm": [
+0.8,
+"centre"
+],
+"LeftLeg": [
+4.3,
+"centre"
+],
+"RightLeg": [
+6.5,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 14.1,
+"LeftForeArm": 24.0,
+"RightArm": 11.6,
+"RightForeArm": 20.9,
+"LeftUpLeg": 4.2,
+"LeftLeg": 10.9,
+"RightUpLeg": 7.4,
+"RightLeg": 16.2
+},
+"lift": 0.5,
+"drift": 0.0
+},
+"crossbowman": {
+"moved": {
+"LeftLeg": [
+5.1,
+"centre"
+],
+"RightLeg": [
+6.2,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 14.1,
+"LeftForeArm": 19.0,
+"RightArm": 13.2,
+"RightForeArm": 16.2,
+"LeftUpLeg": 6.7,
+"RightUpLeg": 6.9
+},
+"lift": 0.6,
+"drift": 0.0
+},
+"gateclerk": {
+"moved": {
+"LeftForeArm": [
+2.1,
+"centre"
+],
+"RightForeArm": [
+1.4,
+"centre"
+],
+"LeftLeg": [
+5.0,
+"centre"
+],
+"RightLeg": [
+4.4,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 12.1,
+"LeftForeArm": 14.2,
+"RightArm": 12.6,
+"RightForeArm": 12.9,
+"LeftUpLeg": 5.0,
+"LeftLeg": 11.2,
+"RightLeg": 11.0
+},
+"lift": 0.3,
+"drift": 0.0
+},
+"ostler": {
+"moved": {
+"LeftForeArm": [
+1.0,
+"centre"
+],
+"RightForeArm": [
+3.3,
+"centre"
+],
+"LeftLeg": [
+3.4,
+"centre"
+],
+"RightLeg": [
+4.2,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 7.8,
+"LeftForeArm": 13.2,
+"RightArm": 12.0,
+"RightForeArm": 18.5,
+"LeftUpLeg": 7.5,
+"LeftLeg": 9.2,
+"RightUpLeg": 4.4,
+"RightLeg": 7.8
+},
+"lift": -0.6,
+"drift": 0.0
+},
+"farrier": {
+"moved": {
+"LeftForeArm": [
+2.0,
+"centre"
+],
+"RightForeArm": [
+0.8,
+"centre"
+],
+"LeftLeg": [
+10.3,
+"centre"
+],
+"RightLeg": [
+12.7,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 16.1,
+"LeftForeArm": 20.7,
+"RightArm": 13.4,
+"RightForeArm": 13.3,
+"LeftUpLeg": 7.7,
+"LeftLeg": 6.4,
+"RightUpLeg": 9.7,
+"RightLeg": 4.6
+},
+"lift": -0.9,
+"drift": 0.0
+},
+"carter": {
+"moved": {
+"LeftForeArm": [
+2.3,
+"centre"
+],
+"RightForeArm": [
+1.3,
+"centre"
+],
+"LeftLeg": [
+2.5,
+"centre"
+],
+"RightLeg": [
+6.1,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 10.6,
+"LeftForeArm": 10.9,
+"RightArm": 7.6,
+"RightForeArm": 7.2,
+"LeftLeg": 11.3,
+"RightUpLeg": 4.2
+},
+"lift": -0.9,
+"drift": 0.0
+},
+"drillsergeant": {
+"moved": {
+"LeftForeArm": [
+3.2,
+"centre"
+],
+"RightForeArm": [
+4.3,
+"centre"
+],
+"LeftLeg": [
+5.4,
+"centre"
+],
+"RightLeg": [
+4.4,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 23.4,
+"LeftForeArm": 20.8,
+"RightArm": 17.3,
+"RightForeArm": 9.5,
+"LeftLeg": 6.0,
+"RightUpLeg": 5.5,
+"RightLeg": 7.6
+},
+"lift": 0.5,
+"drift": 0.0
+},
+"armourer": {
+"moved": {
+"LeftForeArm": [
+1.3,
+"centre"
+],
+"RightForeArm": [
+1.4,
+"centre"
+],
+"LeftLeg": [
+2.3,
+"centre"
+],
+"RightLeg": [
+6.8,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 9.7,
+"LeftForeArm": 9.3,
+"RightArm": 6.5,
+"RightForeArm": 5.1,
+"LeftUpLeg": 4.6,
+"LeftLeg": 4.4,
+"RightLeg": 8.5
+},
+"lift": 0.9,
+"drift": 0.0
+},
+"fletcher": {
+"moved": {
+"LeftForeArm": [
+1.6,
+"centre"
+],
+"RightForeArm": [
+1.2,
+"centre"
+],
+"LeftLeg": [
+2.9,
+"centre"
+],
+"RightLeg": [
+3.3,
+"centre"
+]
+},
+"swing": {
+"RightArm": 5.8,
+"RightForeArm": 6.8,
+"LeftUpLeg": 4.1,
+"LeftLeg": 8.5,
+"RightUpLeg": 8.0,
+"RightLeg": 8.0
+},
+"lift": 0.5,
+"drift": 0.0
+},
+"campcook": {
+"moved": {
+"LeftForeArm": [
+2.6,
+"centre"
+],
+"RightForeArm": [
+1.9,
+"centre"
+],
+"RightLeg": [
+8.0,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 5.8,
+"LeftForeArm": 7.0,
+"RightArm": 5.7,
+"LeftUpLeg": 29.5,
+"LeftLeg": 50.0,
+"RightLeg": 7.8
+},
+"lift": 4.8,
+"drift": 0.0
+},
+"bannerbearer": {
+"moved": {
+"LeftForeArm": [
+1.1,
+"centre"
+],
+"RightForeArm": [
+1.9,
+"centre"
+],
+"LeftLeg": [
+2.0,
+"centre"
+],
+"RightLeg": [
+5.6,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 13.2,
+"LeftForeArm": 15.2,
+"RightArm": 10.8,
+"RightForeArm": 12.8,
+"LeftLeg": 4.0,
+"RightLeg": 6.8
+},
+"lift": -0.0,
+"drift": 0.0
+},
+"flagellant": {
+"moved": {
+"LeftForeArm": [
+2.0,
+"centre"
+],
+"RightForeArm": [
+1.6,
+"centre"
+],
+"LeftLeg": [
+6.3,
+"centre"
+],
+"RightLeg": [
+10.6,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 8.7,
+"LeftForeArm": 12.8,
+"RightArm": 7.1,
+"RightForeArm": 8.8,
+"LeftLeg": 9.4,
+"RightUpLeg": 9.4,
+"RightLeg": 18.7
+},
+"lift": 1.5,
+"drift": 0.0
+},
+"relicseller": {
+"moved": {
+"LeftForeArm": [
+8.0,
+"centre"
+],
+"RightForeArm": [
+3.7,
+"centre"
+],
+"LeftLeg": [
+6.4,
+"centre"
+],
+"RightLeg": [
+6.0,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 50.0,
+"LeftForeArm": 29.4,
+"RightArm": 39.0,
+"RightForeArm": 11.1,
+"LeftUpLeg": 9.0,
+"LeftLeg": 22.1,
+"RightUpLeg": 5.0,
+"RightLeg": 14.1
+},
+"lift": -0.1,
+"drift": 0.0
+},
+"tithecollector": {
+"moved": {
+"LeftForeArm": [
+3.2,
+"centre"
+],
+"RightForeArm": [
+2.1,
+"centre"
+],
+"LeftLeg": [
+7.0,
+"centre"
+],
+"RightLeg": [
+6.1,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 8.6,
+"LeftForeArm": 17.7,
+"RightForeArm": 9.3,
+"LeftLeg": 11.7,
+"RightLeg": 10.1
+},
+"lift": 1.4,
+"drift": 0.0
+},
+"devotee": {
+"moved": {
+"LeftForeArm": [
+8.9,
+"centre"
+],
+"RightForeArm": [
+7.5,
+"centre"
+],
+"LeftLeg": [
+14.1,
+"centre"
+],
+"RightLeg": [
+15.0,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 9.1,
+"LeftForeArm": 9.6,
+"RightArm": 8.2,
+"RightForeArm": 10.0,
+"LeftUpLeg": 5.3,
+"LeftLeg": 15.6,
+"RightUpLeg": 5.2,
+"RightLeg": 14.1
+},
+"lift": -0.4,
+"drift": 0.0
+},
+"bellowsboy": {
+"moved": {
+"LeftForeArm": [
+1.3,
+"centre"
+],
+"RightForeArm": [
+0.9,
+"centre"
+],
+"LeftLeg": [
+1.9,
+"centre"
+],
+"RightLeg": [
+2.3,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 7.5,
+"LeftForeArm": 12.4,
+"RightArm": 7.4,
+"RightForeArm": 12.4,
+"LeftUpLeg": 5.8,
+"LeftLeg": 8.8,
+"RightUpLeg": 6.2,
+"RightLeg": 10.0
+},
+"lift": 0.1,
+"drift": 0.0
+},
+"furnacewoman": {
+"moved": {
+"LeftForeArm": [
+1.6,
+"centre"
+],
+"RightForeArm": [
+1.8,
+"centre"
+],
+"LeftLeg": [
+4.6,
+"centre"
+],
+"RightLeg": [
+6.2,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 11.1,
+"LeftForeArm": 10.5,
+"RightArm": 9.7,
+"RightForeArm": 8.9,
+"LeftLeg": 6.5,
+"RightUpLeg": 5.9,
+"RightLeg": 14.1
+},
+"lift": 1.2,
+"drift": 0.0
+},
+"coalheaver": {
+"moved": {
+"LeftForeArm": [
+2.8,
+"centre"
+],
+"RightForeArm": [
+2.4,
+"centre"
+],
+"LeftLeg": [
+5.3,
+"centre"
+],
+"RightLeg": [
+8.4,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 7.6,
+"LeftForeArm": 8.3,
+"RightArm": 8.3,
+"RightForeArm": 10.2,
+"LeftLeg": 6.7,
+"RightUpLeg": 6.6,
+"RightLeg": 14.7
+},
+"lift": 0.2,
+"drift": 0.0
+},
+"glassblower": {
+"moved": {
+"LeftForeArm": [
+1.4,
+"centre"
+],
+"RightForeArm": [
+1.7,
+"centre"
+],
+"LeftLeg": [
+8.9,
+"centre"
+],
+"RightLeg": [
+6.3,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 6.0,
+"LeftForeArm": 10.1,
+"RightArm": 9.7,
+"RightForeArm": 17.1,
+"LeftUpLeg": 5.2,
+"LeftLeg": 6.0,
+"RightLeg": 11.7
+},
+"lift": -1.0,
+"drift": 0.0
+},
+"ashsifter": {
+"moved": {
+"LeftForeArm": [
+0.8,
+"centre"
+],
+"RightForeArm": [
+1.3,
+"centre"
+],
+"LeftLeg": [
+17.6,
+"centre"
+],
+"RightLeg": [
+10.7,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 9.1,
+"LeftForeArm": 14.1,
+"RightForeArm": 4.6,
+"LeftUpLeg": 9.6,
+"LeftLeg": 21.4,
+"RightUpLeg": 4.7,
+"RightLeg": 19.4
+},
+"lift": 0.9,
+"drift": 0.0
+},
+"majordomo": {
+"moved": {
+"LeftForeArm": [
+4.5,
+"centre"
+],
+"RightForeArm": [
+2.2,
+"centre"
+],
+"LeftLeg": [
+8.6,
+"centre"
+],
+"RightLeg": [
+7.9,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 23.1,
+"LeftForeArm": 10.8,
+"RightArm": 23.9,
+"RightForeArm": 15.3,
+"LeftUpLeg": 7.8,
+"LeftLeg": 12.5,
+"RightUpLeg": 6.8,
+"RightLeg": 13.8
+},
+"lift": 0.7,
+"drift": 0.0
+},
+"courtesan": {
+"moved": {
+"LeftForeArm": [
+1.5,
+"centre"
+],
+"RightForeArm": [
+1.1,
+"centre"
+],
+"LeftLeg": [
+17.9,
+"centre"
+],
+"RightLeg": [
+8.6,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 18.5,
+"LeftForeArm": 23.2,
+"RightArm": 15.9,
+"RightForeArm": 19.1,
+"LeftUpLeg": 19.2,
+"LeftLeg": 30.9,
+"RightUpLeg": 10.3,
+"RightLeg": 26.6
+},
+"lift": 2.8,
+"drift": 0.0
+},
+"duelist": {
+"moved": {
+"RightForeArm": [
+0.9,
+"centre"
+],
+"LeftLeg": [
+4.9,
+"centre"
+],
+"RightLeg": [
+4.5,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 13.1,
+"LeftForeArm": 16.4,
+"RightArm": 12.2,
+"RightForeArm": 16.5,
+"LeftLeg": 9.1,
+"RightUpLeg": 5.8,
+"RightLeg": 4.5
+},
+"lift": 0.2,
+"drift": 0.0
+},
+"dowager": {
+"moved": {
+"LeftForeArm": [
+4.2,
+"centre"
+],
+"RightForeArm": [
+4.4,
+"centre"
+],
+"LeftLeg": [
+9.5,
+"line"
+],
+"RightLeg": [
+6.8,
+"line"
+]
+},
+"swing": {
+"LeftArm": 18.0,
+"LeftForeArm": 22.3,
+"RightArm": 19.8,
+"RightForeArm": 24.0,
+"LeftUpLeg": 4.9,
+"RightUpLeg": 8.1
+},
+"lift": 0.5,
+"drift": 0.0
+},
+"sexton": {
+"moved": {
+"LeftForeArm": [
+3.0,
+"centre"
+],
+"RightForeArm": [
+1.5,
+"centre"
+],
+"LeftLeg": [
+5.7,
+"centre"
+],
+"RightLeg": [
+6.7,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 6.3,
+"LeftForeArm": 8.5,
+"RightArm": 10.0,
+"RightForeArm": 15.9,
+"LeftUpLeg": 5.0,
+"LeftLeg": 10.7,
+"RightUpLeg": 6.5,
+"RightLeg": 10.7
+},
+"lift": 0.6,
+"drift": 0.0
+},
+"embalmer": {
+"moved": {
+"LeftForeArm": [
+2.2,
+"centre"
+],
+"RightForeArm": [
+1.5,
+"centre"
+],
+"LeftLeg": [
+3.3,
+"centre"
+],
+"RightLeg": [
+4.6,
+"centre"
+]
+},
+"swing": {
+"LeftForeArm": 16.5,
+"RightArm": 5.2,
+"RightForeArm": 16.3,
+"LeftUpLeg": 11.7,
+"LeftLeg": 14.6,
+"RightUpLeg": 6.6,
+"RightLeg": 5.9
+},
+"lift": 0.0,
+"drift": 0.0
+},
+"corpsewasher": {
+"moved": {
+"LeftForeArm": [
+3.4,
+"centre"
+],
+"RightForeArm": [
+2.0,
+"centre"
+],
+"LeftLeg": [
+5.4,
+"centre"
+],
+"RightLeg": [
+6.4,
+"centre"
+]
+},
+"swing": {
+"LeftForeArm": 4.0,
+"RightForeArm": 7.1,
+"LeftLeg": 13.9,
+"RightUpLeg": 7.5,
+"RightLeg": 22.3
+},
+"lift": 0.7,
+"drift": 0.0
+},
+"deadwatch": {
+"moved": {
+"LeftForeArm": [
+1.6,
+"centre"
+],
+"RightForeArm": [
+1.2,
+"centre"
+],
+"LeftLeg": [
+16.6,
+"centre"
+],
+"RightLeg": [
+10.0,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 11.8,
+"LeftForeArm": 19.1,
+"RightArm": 9.9,
+"RightForeArm": 16.5,
+"LeftUpLeg": 6.1,
+"LeftLeg": 9.8,
+"RightUpLeg": 4.5,
+"RightLeg": 5.8
+},
+"lift": -1.0,
+"drift": 0.0
+},
+"eelseller": {
+"moved": {
+"LeftForeArm": [
+2.3,
+"centre"
+],
+"RightForeArm": [
+3.0,
+"centre"
+],
+"LeftLeg": [
+12.2,
+"centre"
+],
+"RightLeg": [
+13.4,
+"centre"
+]
+},
+"swing": {
+"LeftForeArm": 4.5,
+"RightForeArm": 8.1,
+"LeftUpLeg": 4.1,
+"LeftLeg": 5.3,
+"RightLeg": 12.3
+},
+"lift": 0.2,
+"drift": 0.0
+},
+"shipwright": {
+"moved": {
+"LeftForeArm": [
+1.3,
+"centre"
+],
+"RightForeArm": [
+2.4,
+"centre"
+],
+"LeftLeg": [
+7.7,
+"centre"
+],
+"RightLeg": [
+3.5,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 12.4,
+"LeftForeArm": 20.6,
+"LeftLeg": 11.6,
+"RightUpLeg": 6.6,
+"RightLeg": 4.6
+},
+"lift": 0.4,
+"drift": 0.0
+},
+"smuggler": {
+"moved": {
+"LeftForeArm": [
+1.1,
+"centre"
+],
+"RightForeArm": [
+1.4,
+"centre"
+],
+"LeftLeg": [
+9.3,
+"centre"
+],
+"RightLeg": [
+9.2,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 13.7,
+"LeftForeArm": 20.5,
+"RightArm": 11.5,
+"RightForeArm": 14.4,
+"LeftUpLeg": 7.6,
+"LeftLeg": 22.1,
+"RightUpLeg": 7.3,
+"RightLeg": 18.1
+},
+"lift": 1.3,
+"drift": 0.0
+},
+"sailor": {
+"moved": {
+"LeftForeArm": [
+2.4,
+"centre"
+],
+"RightForeArm": [
+2.6,
+"centre"
+],
+"LeftLeg": [
+4.9,
+"centre"
+],
+"RightLeg": [
+5.2,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 22.6,
+"LeftForeArm": 27.3,
+"RightArm": 22.4,
+"RightForeArm": 26.8,
+"LeftUpLeg": 5.5,
+"LeftLeg": 17.8,
+"RightUpLeg": 4.9,
+"RightLeg": 9.2
+},
+"lift": -1.1,
+"drift": 0.0
+},
+"pawnbroker": {
+"moved": {
+"LeftForeArm": [
+1.7,
+"centre"
+],
+"RightForeArm": [
+1.3,
+"centre"
+],
+"LeftLeg": [
+6.3,
+"centre"
+],
+"RightLeg": [
+9.0,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 9.6,
+"LeftForeArm": 11.5,
+"RightArm": 10.6,
+"RightForeArm": 16.7,
+"LeftUpLeg": 5.5,
+"LeftLeg": 7.1,
+"RightUpLeg": 6.3,
+"RightLeg": 7.5
+},
+"lift": -0.7,
+"drift": 0.0
+},
+"taverncook": {
+"moved": {
+"LeftForeArm": [
+2.7,
+"centre"
+],
+"RightForeArm": [
+3.2,
+"centre"
+],
+"LeftLeg": [
+5.9,
+"centre"
+],
+"RightLeg": [
+8.2,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 7.5,
+"LeftForeArm": 25.7,
+"RightArm": 16.9,
+"RightForeArm": 31.5,
+"LeftUpLeg": 7.6,
+"LeftLeg": 14.6,
+"RightUpLeg": 5.8,
+"RightLeg": 11.0
+},
+"lift": -0.8,
+"drift": 0.0
+},
+"cardsharp": {
+"moved": {
+"LeftForeArm": [
+2.9,
+"centre"
+],
+"RightForeArm": [
+1.1,
+"centre"
+],
+"LeftLeg": [
+2.8,
+"centre"
+],
+"RightLeg": [
+5.0,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 10.5,
+"LeftForeArm": 21.7,
+"RightArm": 8.5,
+"RightForeArm": 13.2,
+"LeftLeg": 6.8
+},
+"lift": 1.1,
+"drift": 0.0
+},
+"lodginglady": {
+"moved": {
+"LeftForeArm": [
+1.8,
+"centre"
+],
+"LeftLeg": [
+3.7,
+"centre"
+],
+"RightLeg": [
+1.3,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 7.0,
+"LeftForeArm": 7.0,
+"RightArm": 10.1,
+"RightForeArm": 11.0,
+"LeftLeg": 9.4,
+"RightUpLeg": 5.4
+},
+"lift": 0.6,
+"drift": 0.0
+},
+"cheesemonger": {
+"moved": {
+"LeftForeArm": [
+2.3,
+"centre"
+],
+"RightForeArm": [
+1.3,
+"centre"
+],
+"LeftLeg": [
+18.3,
+"centre"
+],
+"RightLeg": [
+17.6,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 6.9,
+"LeftForeArm": 9.9,
+"RightArm": 7.5,
+"RightForeArm": 15.6,
+"LeftUpLeg": 8.1,
+"LeftLeg": 22.2,
+"RightUpLeg": 7.9,
+"RightLeg": 21.9
+},
+"lift": 0.5,
+"drift": 0.0
+},
+"cobbler": {
+"moved": {
+"LeftForeArm": [
+2.9,
+"centre"
+],
+"RightForeArm": [
+3.1,
+"centre"
+],
+"LeftLeg": [
+7.7,
+"centre"
+],
+"RightLeg": [
+6.5,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 5.6,
+"LeftForeArm": 16.7,
+"RightForeArm": 10.0,
+"LeftLeg": 13.7,
+"RightLeg": 13.5
+},
+"lift": 0.9,
+"drift": 0.0
+},
+"potter": {
+"moved": {
+"LeftForeArm": [
+0.9,
+"centre"
+],
+"RightForeArm": [
+0.9,
+"centre"
+],
+"LeftLeg": [
+6.1,
+"centre"
+],
+"RightLeg": [
+7.9,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 4.9,
+"LeftForeArm": 5.8,
+"RightArm": 5.7,
+"RightForeArm": 6.9,
+"LeftUpLeg": 4.8,
+"LeftLeg": 10.0,
+"RightUpLeg": 7.2,
+"RightLeg": 7.0
+},
+"lift": 0.4,
+"drift": 0.0
+},
+"herbwoman": {
+"moved": {
+"LeftForeArm": [
+4.3,
+"centre"
+],
+"RightForeArm": [
+1.7,
+"centre"
+],
+"LeftLeg": [
+3.0,
+"centre"
+],
+"RightLeg": [
+2.0,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 10.9,
+"LeftForeArm": 11.9,
+"RightForeArm": 8.6,
+"LeftLeg": 12.6,
+"RightLeg": 11.7
+},
+"lift": -0.8,
+"drift": 0.0
+},
+"currier": {
+"moved": {
+"LeftForeArm": [
+1.5,
+"centre"
+],
+"RightForeArm": [
+2.4,
+"centre"
+],
+"LeftLeg": [
+6.3,
+"centre"
+],
+"RightLeg": [
+5.7,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 12.7,
+"LeftForeArm": 15.9,
+"RightArm": 9.7,
+"RightForeArm": 5.9,
+"LeftLeg": 7.8
+},
+"lift": 1.6,
+"drift": 0.0
+},
+"skinner": {
+"moved": {
+"LeftForeArm": [
+7.8,
+"centre"
+],
+"RightForeArm": [
+1.5,
+"centre"
+],
+"LeftLeg": [
+3.4,
+"centre"
+],
+"RightLeg": [
+10.5,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 6.5,
+"LeftForeArm": 31.8,
+"RightArm": 21.8,
+"RightForeArm": 24.0,
+"LeftUpLeg": 9.4,
+"LeftLeg": 8.7,
+"RightUpLeg": 12.7,
+"RightLeg": 12.5
+},
+"lift": 0.7,
+"drift": 0.0
+},
+"glover": {
+"moved": {
+"LeftForeArm": [
+1.8,
+"centre"
+],
+"LeftLeg": [
+11.3,
+"centre"
+],
+"RightLeg": [
+6.5,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 5.2,
+"LeftForeArm": 10.8,
+"RightForeArm": 5.1,
+"LeftUpLeg": 6.1,
+"LeftLeg": 17.8,
+"RightLeg": 13.7
+},
+"lift": 0.2,
+"drift": 0.0
+},
+"soapmaker": {
+"moved": {
+"LeftForeArm": [
+2.5,
+"centre"
+],
+"RightForeArm": [
+2.4,
+"centre"
+],
+"LeftLeg": [
+4.4,
+"centre"
+],
+"RightLeg": [
+3.0,
+"centre"
+]
+},
+"swing": {
+"LeftArm": 9.6,
+"LeftForeArm": 15.7,
+"RightArm": 7.2,
+"RightForeArm": 13.7,
+"LeftUpLeg": 9.7,
+"LeftLeg": 5.6,
+"RightLeg": 12.7
+},
+"lift": -0.5,
+"drift": 0.0
+}
+}
