@@ -20,17 +20,21 @@ export const TIERS = {
   // GPU pays dearly for. Also the Low setting on a PC.
   // Start without MSAA: dropping it after warmup rebuilds pipelines, shadows,
   // particles and grass while the original GPU resources are still resident.
-  mobile: { name: 'Mobile', lean: true, scaleMax: 1.0, maxPixels: 750000, shadowSize: 1024, cascades: 2, splits: [20, 80, 80], msaa: 1, grassSpacing: 0.2, grassRadius: 20, grassCap: 16000, particles: 18000, ao: false, shafts: false, pom: 0, texScale: 0.25, mapScale: 0.5, texCap: 512, terrainN: 128, bloom: 3, sim: 90, aniso: 2, lights: 2, bloodSize: 1024, emit: 0.4 },
+  mobile: { name: 'Mobile', lean: true, scaleMax: 1.0, maxPixels: 750000, shadowSize: 1024, cascades: 2, splits: [20, 80, 80], msaa: 1, grassSpacing: 0.2, grassRadius: 20, grassCap: 16000, particles: 18000, ao: false, shafts: false, pom: 0, texScale: 0.25, mapScale: 0.5, texCap: 256, texCapNear: 512, terrainN: 128, bloom: 3, sim: 90, aniso: 2, lights: 2, bloodSize: 1024, emit: 0.4 },
 };
 
+// (On a phone, a model's picture is at most texCap a side, 256: the crowds, the beasts, the townsfolk, the heroes. Those seen
+// close, Lisandra and your own body, texCapNear: 512. At 512 the lot was 120 MB of an iPhone's memory, which counts the GPU's.)
 // A phone's tier made lighter still, for one whose browser has closed the game for want of memory (src/core/lastrun.js):
-// level 1 and up, no model's picture over 256 a side (its normals 128).
+// level 1 and up, no model's picture over 192 a side (256 close; their normals half that); level 2, 160 (192 close). (Never
+// sharper close than the level before this pass had them all: 256, then 192.)
 // Level 2, for one closed again after that: smaller still, and less of everything the GPU holds or draws that isn't the
 // game itself: a quarter fewer pixels, shadows a quarter the size, half the grass and the sparks.
 export function lighten(tier, level) {
   if (level <= 0) return tier;
-  if (level === 1) return { ...tier, texCap: Math.min(tier.texCap || 256, 256) };
-  return { ...tier, texCap: Math.min(tier.texCap || 192, 192), shadowSize: Math.min(tier.shadowSize, 512), maxPixels: Math.round((tier.maxPixels || 750000) * 0.75),
+  const near = (n) => Math.min(tier.texCapNear || tier.texCap || n, n);
+  if (level === 1) return { ...tier, texCap: Math.min(tier.texCap || 192, 192), texCapNear: near(256) };
+  return { ...tier, texCap: Math.min(tier.texCap || 160, 160), texCapNear: near(192), shadowSize: Math.min(tier.shadowSize, 512), maxPixels: Math.round((tier.maxPixels || 750000) * 0.75),
     grassCap: Math.round(tier.grassCap / 2), particles: Math.round(tier.particles / 2), bloodSize: Math.min(tier.bloodSize, 512) };
 }
 

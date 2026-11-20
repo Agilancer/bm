@@ -21,7 +21,11 @@ export class SpeechBubble {
     this.tail.setAttribute('class', 'op-tail');
     this.tail.innerHTML = '<polygon/><polyline/>';
     this.fill = this.tail.firstChild; this.ink = this.tail.lastChild;
-    parent.append(this.el, this.tail);   // (the tail over the bubble's edge, so no border shows across its root)
+    // (The tail over the bubble's edge, so no border shows across its root; and in the box, so it moves and pops with it.
+    // Over it from outside, it needed a layer of its own over the box's while that popped, which the compositor made as big
+    // as the screen: 11 MB on an iPhone. The box is at the bubble's corner, so the tail's place is the same from either.)
+    this.el.firstElementChild.append(this.tail);
+    parent.append(this.el);
     this.shown = false; this.key = null; this.w = 0; this.h = 0;
     this.hide();
   }
@@ -159,7 +163,14 @@ export class SpeechBubble {
     this.el.style.transform = `translate(${x.toFixed(1)}px,${y.toFixed(1)}px)`;
     if (!tail) { this.tail.style.display = 'none'; return; }
     this.tail.style.display = '';
-    const [a, b] = tail.base, t = tail.tip, pt = (q) => `${q[0].toFixed(1)},${q[1].toFixed(1)}`;
+    // (The svg is put where the tail is, from the bubble's corner, and made its size, the points inside it from its own
+    // corner: a tail of a few pixels is drawn in a box of a few pixels.)
+    const [a, b] = tail.base, t = tail.tip;
+    const x0 = Math.floor(Math.min(a[0], b[0], t[0])) - 2, y0 = Math.floor(Math.min(a[1], b[1], t[1])) - 2;
+    const x1 = Math.ceil(Math.max(a[0], b[0], t[0])) + 2, y1 = Math.ceil(Math.max(a[1], b[1], t[1])) + 2;
+    const pt = (q) => `${(q[0] - x0).toFixed(1)},${(q[1] - y0).toFixed(1)}`;
+    this.tail.style.transform = `translate(${(x0 - x).toFixed(1)}px,${(y0 - y).toFixed(1)}px)`;
+    this.tail.style.width = `${x1 - x0}px`; this.tail.style.height = `${y1 - y0}px`;
     this.fill.setAttribute('points', `${pt(a)} ${pt(t)} ${pt(b)}`);
     this.ink.setAttribute('points', `${pt(a)} ${pt(t)} ${pt(b)}`);
   }

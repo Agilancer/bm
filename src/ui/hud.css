@@ -382,6 +382,11 @@ html.art-rule .t-rule::after { display: none; }
 
 /* (the upright notice's own picture and words) */
 #rotate > .lb { position: static; transform: none; font: inherit; letter-spacing: inherit; text-transform: none; white-space: normal; text-shadow: none; }
+/* (The kit's painted picture in the drawn one's place, over the words and clear of them: laid over the whole notice, as
+   over a button, it sat on them. A phone played from its home screen is never held sideways by iOS, so it's seen often.) */
+html.art-icons #rotate::before { position: static; flex: none; width: min(190px, 52vw); height: min(150px, 30vh); background-size: contain; animation: rot-nudge 2.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { #rotate svg, html.art-icons #rotate::before { animation: none; } }
+html.art-icons #rotate > svg { display: none; }
 
 /* The living land (src/ui/wilds.js): a banner for what's begun or done, a tracker under it while something's on. */
 #wildBanner { position: absolute; left: 50%; top: 21%; transform: translate(-50%, -8px); max-width: min(620px, 86vw); text-align: center; pointer-events: none; opacity: 0; transition: opacity .5s, transform .5s; z-index: 6; }

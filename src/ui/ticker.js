@@ -37,11 +37,15 @@ const CSS = `
     font: 900 calc(17px * var(--tk-k, 1))/1 Cinzel, Georgia, serif; letter-spacing: .07em; color: #fff;
     background: linear-gradient(#c0170f, #8a0a07 42%, #5c0505 100%);
     box-shadow: inset 0 1px 0 #ff6a4c, inset 0 -1px 0 #ff3b24, 0 2px 0 rgba(20,0,0,.85), 0 0 22px rgba(255,36,14,.45);
-    transform: translateY(-115%); transition: transform .22s cubic-bezier(.2,.9,.3,1.15); }
-  #ticker.on { transform: none; animation: tkThrob 1.8s ease-in-out infinite; }
-  /* (A faint diagonal grain that keeps running, so the bar looks alive even between calls.) */
+    transform: translateY(-115%); visibility: hidden; transition: transform .22s cubic-bezier(.2,.9,.3,1.15), visibility 0s .22s; }
+  #ticker.on { transform: none; visibility: visible; transition: transform .22s cubic-bezier(.2,.9,.3,1.15), visibility 0s;
+    animation: tkThrob 1.8s ease-in-out infinite; }
+  /* (A faint diagonal grain that keeps running while the bar is down, so it looks alive even between calls. Not while it's up
+     out of sight: an animation that never stops is a layer the compositor keeps, and on a phone every layer is memory. The
+     bar itself isn't painted once it's away, for the same reason.) */
   #ticker::before { content: ''; position: absolute; top: 0; bottom: 0; left: 0; right: -2.2em; opacity: .14;
-    background: repeating-linear-gradient(-45deg, #000 0 .5em, transparent .5em 1em); animation: tkGrain 1.1s linear infinite; }
+    background: repeating-linear-gradient(-45deg, #000 0 .5em, transparent .5em 1em); }
+  #ticker.on::before { animation: tkGrain 1.1s linear infinite; }
   /* (The flash as a call comes in: a hot white-red wash over the whole bar, three beats.) */
   #ticker::after { content: ''; position: absolute; inset: 0; opacity: 0; background: linear-gradient(#fff3d8, #ff5a2a 60%, #ff2a10); mix-blend-mode: screen; }
   #ticker.flash::after { animation: tkFlash .95s ease-out; }
@@ -68,7 +72,7 @@ const CSS = `
   body.touch { --st: calc(env(safe-area-inset-top, 0px) + var(--tk-dy, 0px)); }
   body.touch #ticker { top: env(safe-area-inset-top, 0px); font-size: calc(12.5 * var(--u, 1px) * var(--tk-k, 1)); }
   body.ui-bare #ticker { visibility: hidden !important; }
-  @media (prefers-reduced-motion: reduce) { #ticker::before, #ticker.on, #ticker.on .tk-tag svg { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { #ticker.on::before, #ticker.on, #ticker.on .tk-tag svg { animation: none; } }
 `;
 
 export class Ticker {

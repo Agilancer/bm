@@ -40,6 +40,7 @@ for (let i = 0; i < 60 && !ver; i++) { await sleep(250); ver = await fetch(`http
 if (!ver) { console.log('chrome did not start'); process.exit(1); }
 const ws = new WebSocket(ver.webSocketDebuggerUrl);
 await new Promise((r) => { ws.onopen = r; });
+let snapChunks = null, lastLayers = null;
 let id = 0; const waits = new Map(), threads = new Map(), traced = []; let traceDone = null;
 const send = (method, params = {}, sessionId, timeout = 60000) => new Promise((res, rej) => {
   const i = ++id;
@@ -64,6 +65,8 @@ ws.onmessage = (e) => {
     logs.push(t);
   } else if (m.method === 'Runtime.exceptionThrown') console.log('PAGE ERROR', (m.params.exceptionDetails.exception?.description || m.params.exceptionDetails.text || '').slice(0, 500));
   else if (m.method === 'Inspector.targetCrashed') console.log('PAGE CRASHED');
+  else if (m.method === 'LayerTree.layerTreeDidChange' && m.params.layers) lastLayers = m.params.layers;
+  else if (m.method === 'HeapProfiler.addHeapSnapshotChunk') snapChunks?.push(m.params.chunk);
 };
 const targets = (await send('Target.getTargets')).targetInfos.filter((t) => t.type === 'page');
 const { sessionId: S } = await send('Target.attachToTarget', { targetId: targets[0].targetId, flatten: true });
@@ -79,6 +82,8 @@ if (process.env.DM) await send('Page.addScriptToEvaluateOnNewDocument', { source
 if (process.env.HC) await send('Page.addScriptToEvaluateOnNewDocument', { source: `Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => ${+process.env.HC} });` }, S);
 await send('Page.addScriptToEvaluateOnNewDocument', { source: INIT }, S);
 if (process.env.GFX) await send('Page.addScriptToEvaluateOnNewDocument', { source: `try { const k = 'velscour.settings'; const o = JSON.parse(localStorage.getItem(k) || '{}'); o.gfx = '${process.env.GFX}'; localStorage.setItem(k, JSON.stringify(o)); } catch {}` }, S);
+// LS='{"key":"value"}': put in the page's storage before it starts (the threads' consent, the keep question...).
+if (process.env.LS) await send('Page.addScriptToEvaluateOnNewDocument', { source: `try { for (const [k, v] of Object.entries(${process.env.LS})) if (localStorage.getItem(k) === null) localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v)); } catch {}` }, S);
 if (process.env.ATTACH) await send('Target.setAutoAttach', { autoAttach: true, waitForDebuggerOnStart: false, flatten: true }, S);
 
 const ev = async (expr, awaitPromise = true) => {
@@ -136,10 +141,16 @@ const dump = async (label) => {
     if (process.env.UNDER) console.log(Object.entries(P.alloc).filter(([k]) => k.startsWith(process.env.UNDER) && !k.includes('/__')).sort((a, b) => b[1] - a[1]).slice(0, 40).map(([k, v]) => `${String(MB(v)).padStart(6)}  ${k}`).join('\n'));
   }
   if (!said) console.log(`== ${label}: the page's process did not answer the memory dump`);
+  // (GPUDUMP=1: the GPU process's own account as well, its allocators two deep, the biggest first.)
+  if (process.env.GPUDUMP) for (const P of Object.values(procs)) {
+    if (!P.alloc || !/gpu/i.test(P.name || '')) continue;
+    const two = Object.entries(P.alloc).filter(([k]) => k.split('/').length <= 2 && !k.includes('/__')).sort((a, b) => b[1] - a[1]).slice(0, 18);
+    console.log(`== ${label}: the GPU process by Chrome's account: ${two.map(([k, v]) => `${k} ${MB(v)}`).join(', ')}`);
+  }
 };
 
 const t0 = Date.now();
-const url = `http://localhost:${port}/?${process.env.NOAUTO ? 'x' : 'auto&noopening'}${process.env.Q || ''}`;
+const url = `http://localhost:${port}/?${process.env.NOAUTO ? 'x' : process.env.OPENING ? 'auto' : 'auto&noopening'}${process.env.Q || ''}`;
 await send('Page.navigate', { url }, S);
 if (!process.env.NOAUTO) {
   const limit = +(process.env.TIMEOUT || 600) * 1000;
@@ -163,9 +174,57 @@ for (const s of steps) {
     if (s.top) console.log(await ev(`(() => { const f = (o) => Object.entries(o).filter((e) => e[1] > 0).sort((x, y) => y[1] - x[1]).slice(0, ${s.top}).map(([k, v]) => (v / 1048576).toFixed(1).padStart(7) + '  ' + k).join('\\n'); return 'textures (MB):\\n' + f(window.__gpu.texBy) + '\\nbuffers (MB):\\n' + f(window.__gpu.bufBy); })()`));
     if (s.touch) { const [type, x, y, tid = 1] = s.touch; await send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y, id: tid, radiusX: 8, radiusY: 8, force: 1 }] }, S); }
     if (s.tap) { await send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: s.tap[0], y: s.tap[1], id: 1 }] }, S); await sleep(60); await send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }, S); }
+    // {"tapOn": "css selector", "text": "words in it"}: a finger on the middle of the first that's shown (waits up to 60 s for it).
+    // "hold": ms the finger stays down (60 if not said: a tap).
+    if (s.tapOn) {
+      let at = null;
+      for (let i = 0; i < 120 && !at; i++) {
+        at = await ev(`(() => { for (const e of document.querySelectorAll(${JSON.stringify(s.tapOn)})) { const r = e.getBoundingClientRect(); if (r.width && e.offsetParent !== null && (!${JSON.stringify(s.text || '')} || e.textContent.includes(${JSON.stringify(s.text || '')}))) return [r.x + r.width / 2, r.y + r.height / 2]; } return null; })()`).catch(() => null);
+        if (!at) await sleep(500);
+      }
+      if (!at) console.log('nothing to tap', s.tapOn, s.text || '');
+      else { await send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: at[0], y: at[1], id: 1 }] }, S); await sleep(s.hold || 60); await send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }, S); console.log(s.hold ? `held ${s.hold} ms on` : 'tapped', s.tapOn, s.text || '', at.map(Math.round)); }
+    }
     if (s.click) { for (const type of ['mousePressed', 'mouseReleased']) await send('Input.dispatchMouseEvent', { type, x: s.click[0], y: s.click[1], button: 'left', clickCount: 1 }, S); }
     if (s.key) { for (const type of ['keyDown', 'keyUp']) await send('Input.dispatchKeyEvent', { type, key: s.key, code: s.code || s.key, windowsVirtualKeyCode: s.vk || 0 }, S); }
     if (s.emulate) await send(s.emulate[0], s.emulate[1], S);
+    // {"layers": "label"}: the compositor's layers that paint, and what their pictures weigh at the screen's pixel ratio (as an
+    // iPhone keeps one for each), the biggest named.
+    if (s.layers) {
+      lastLayers = null;
+      await send('LayerTree.enable', {}, S).catch(() => {});
+      for (let i = 0; i < 20 && !lastLayers; i++) await sleep(150);
+      await sleep(400);
+      const dpr = ph ? ph.dpr : +(process.env.DPR || 1);
+      const L = (lastLayers || []).filter((l) => l.drawsContent && !l.invisible);
+      const nodeName = async (l) => { if (!l.backendNodeId) return ''; try { const d = await send('DOM.describeNode', { backendNodeId: l.backendNodeId }, S); const n = d.node; return (n.localName || n.nodeName) + (n.attributes ? (() => { const a = n.attributes; const i = a.indexOf('id'), c = a.indexOf('class'); return (i >= 0 ? '#' + a[i + 1] : '') + (c >= 0 ? '.' + a[c + 1].split(' ')[0] : ''); })() : ''); } catch { return ''; } };
+      await send('DOM.enable', {}, S).catch(() => {});
+      await send('DOM.getDocument', { depth: 0 }, S).catch(() => {});
+      const rows = [];
+      let total = 0;
+      for (const l of L) { const b = l.width * l.height * dpr * dpr * 4; total += b; rows.push([b, l]); }
+      rows.sort((a, b) => b[0] - a[0]);
+      const named = [];
+      // (WHY=1: and why the compositor gave it a layer of its own, as it says.)
+      const why = async (l) => { if (!process.env.WHY) return ''; try { const r = await send('LayerTree.compositingReasons', { layerId: l.layerId }, S); return ` [${(r.compositingReasonIds || r.compositingReasons || []).join(',')}]`; } catch { return ''; } };
+      for (const [b, l] of rows.slice(0, 12)) named.push(`${MB(b)} MB ${Math.round(l.width)}x${Math.round(l.height)} ${await nodeName(l)}${await why(l)}`);
+      console.log(`== ${s.layers}: ${L.length} painted layers of ${(lastLayers || []).length}, ${MB(total)} MB at x${dpr}: ${named.join(' | ')}`);
+      await send('LayerTree.disable', {}, S).catch(() => {});
+    }
+    // {"snap": "sim"}: a heap snapshot of the thread whose script's name has that in it ('page' for the page), to OUT/<name>.heapsnapshot.
+    if (s.snap) {
+      const sid = s.snap === 'page' ? S : [...threads].find(([, t]) => t.name.includes(s.snap))?.[0];
+      if (!sid) console.log('no thread', s.snap);
+      else {
+        snapChunks = [];
+        await send('HeapProfiler.enable', {}, sid);
+        await send('HeapProfiler.takeHeapSnapshot', { reportProgress: false, captureNumericValue: false }, sid, 300000);
+        const file = path.join(out, s.snap.replace(/\W/g, '_') + '.heapsnapshot');
+        fs.writeFileSync(file, snapChunks.join(''));
+        snapChunks = null;
+        console.log('snapshot', file);
+      }
+    }
   } catch (e) { console.log('STEP FAILED', JSON.stringify(s).slice(0, 120), String(e.message).slice(0, 400)); }
 }
 watching = false;
