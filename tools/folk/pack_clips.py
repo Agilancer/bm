@@ -13,6 +13,9 @@ game retargets these at run time (src/sim/folk/rig.js), from her rest pose, whic
 
 Writes assets/game/folk/clips.json and clips.bin.   python tools/folk/pack_clips.py [SRC_GLB]
 Then run `node tools/folk/smith_clips.mjs`, which adds the smith's own clips at his anvil: they're made, not hers.
+And then, in Blender: tools/folk/rig_fit.py upright() + add_clip() (jog_up and run_up, her jog stood up, for the fitted
+bodies) and tools/folk/hands.py bake_hands() (the library clips' clenched fists and a few dead-straight hands given her
+walk's loose fingers; running and fighting keep fists).
 """
 import json
 import os

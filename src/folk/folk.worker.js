@@ -9,6 +9,7 @@
 // here -> main:  { type: 'ready', count }, { type: 'events', list: [...] } (say, scene, door, stall, trade),
 //                and without shared memory { type: 'slot', slot, bodies } every tick.
 import { parseGLB } from '../core/glb.js';
+import { dropFile, lanes } from '../core/files.js';
 import { FolkClips, FolkRig, SKIRT_JOINTS } from './rig.js';
 import { Ground } from './ground.js';
 import { Town } from './town.js';
@@ -59,24 +60,27 @@ async function boot({ buffer, base, lean }) {
   talk = new Talk(life, { lines: { ...LA, ...LB, ...LC, ...LLAND, ...LPHOBOS, ...LHUBS }, scenes: SCENES, smalltalk: SMALLTALK }, emit);
   // (Phobos's street crowd: fewer of them on a phone.)
   if (lean) life.crowdCap = Math.min(life.crowdCap, CROWD_LEAN);
-  // Each body's skeleton out of its model (the mesh is the renderer's), one fetch a model.
-  const glbs = new Map();
-  const glbOf = (m) => {
-    if (!glbs.has(m)) glbs.set(m, get(`assets/game/folk/${folk.models[m].glb}`).then((r) => r.arrayBuffer()).then(parseGLB));
-    return glbs.get(m);
-  };
-  await Promise.all(life.folk.map(async (me) => {
-    const m = modelOf(folk, me.p.body);
-    const rig = new FolkRig(await glbOf(m), clips, { armOut: me.p.armOut, skirt: folk.models[m].skirt || null, fist: folk.models[m].fist, upright: folk.models[m].upright });
-    life.setRig(me.i, rig);
-    me.joints = rig.count + (rig.skirt ? SKIRT_JOINTS : 0);
-    me.pal = new Float32Array(me.joints * 8);
-    me.posedAt = -1;
-    // (Whose face they wear: a swap's worn head's, else their body's own. Two of the crowd with the one face are kept apart
-    // as two on the one body are: src/folk/brain.js kin.)
-    me.faceOf = folk.swaps?.[me.p.body]?.head || m;
-  }));
-  glbs.clear();
+  // Each body's skeleton out of its model (the mesh is the renderer's), one fetch a model. A few models at a time, and each
+  // file let go as soon as its skeletons are read: there are 153 of them, 185 MB with their pictures, and asked for all at
+  // once they were all held at once, by a thread that wants a few kilobytes of each (src/core/files.js dropFile).
+  const wearers = new Map();
+  for (const me of life.folk) { const m = modelOf(folk, me.p.body); if (!wearers.has(m)) wearers.set(m, []); wearers.get(m).push(me); }
+  const few = lanes(lean ? 2 : 6);
+  await Promise.all([...wearers].map(([m, who]) => few(async () => {
+    const file = await get(`assets/game/folk/${folk.models[m].glb}`).then((r) => r.arrayBuffer());
+    const glb = parseGLB(file);
+    for (const me of who) {
+      const rig = new FolkRig(glb, clips, { armOut: me.p.armOut, skirt: folk.models[m].skirt || null, upright: folk.models[m].upright, fold: folk.models[m].fold });
+      life.setRig(me.i, rig);
+      me.joints = rig.count + (rig.skirt ? SKIRT_JOINTS : 0);
+      me.pal = new Float32Array(me.joints * 8);
+      me.posedAt = -1;
+      // (Whose face they wear: a swap's worn head's, else their body's own. Two of the crowd with the one face are kept apart
+      // as two on the one body are: src/folk/brain.js kin.)
+      me.faceOf = folk.swaps?.[me.p.body]?.head || m;
+    }
+    dropFile(file);
+  })));
   // The smith's kit (his tools, the bellows, the grindstone, the axe on its rack): more joints after his own in the slot, for
   // the renderer to hang them on (src/gfx/folktools.js). Each in his hand as his rig holds it, or where it lies.
   const smith = life.byId.homunculus;

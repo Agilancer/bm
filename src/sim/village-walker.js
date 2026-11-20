@@ -1,4 +1,4 @@
-import { OPENING_CLIPS, OPENING_MOVES, OPENING_RUN } from '../core/opening.js';
+import { OPENING_CLIPS, OPENING_GAITS, OPENING_MOVES } from '../core/opening.js';
 import { LISANDRA_SCALE } from '../core/lisandra.js';
 import { C, C_PALETTE, C_PROPS } from '../core/layout.js';
 import { clamp, lerp, quatAxisAngle, quatMul, quatNormalize, quatRotate, quatYaw, wrapAngle } from '../core/math.js';
@@ -53,8 +53,10 @@ export class VillageWalker {
       for (const name of OPENING_MOVES) {
         const c = this.rig.clips[name], tr = c?.trs[hipsJoint];
         if (!tr) continue;
-        const travel = tr[tr.length - 1] - tr[2];
-        for (let i = 0; i < c.frames; i++) tr[i * 3 + 2] -= travel * i / (c.frames - 1);
+        // (A gait made in place says how far a loop of it goes, in the file's own units: tools/anim/write.py.)
+        const made = this.rig.extras.clips?.[name]?.travel;
+        const travel = made ? made * LISANDRA_SCALE : tr[tr.length - 1] - tr[2];
+        if (!made) for (let i = 0; i < c.frames; i++) tr[i * 3 + 2] -= travel * i / (c.frames - 1);
         // In a gown she runs with the knees kept low and the stride short (quicker steps for the same speed), her arms
         // closer in; the witch bent over a little even running.
         let stride = 1;
@@ -473,6 +475,17 @@ export class VillageWalker {
     }
     return { at: at / N, n: Math.max(1, n) };
   }
+  // Which of her running gaits a pace is: the one she's in, until the pace is well past where the next takes over (or
+  // well under where this one did), so a pace on the line doesn't flick between two.
+  gaitFor(pace) {
+    const G = OPENING_GAITS;
+    let i = Math.max(0, OPENING_MOVES.indexOf(this.clip));
+    while (i + 1 < G.length && pace > G[i + 1][1] + 0.35) i++;
+    while (i > 0 && pace < G[i][1] - 0.35) i--;
+    while (i > 0 && !this.moveRate[G[i][0]]) i--;
+    return G[i][0];
+  }
+
   act(dt, world, b) {
     let pace = 0;
     if (b.to && b.speed > 0) {
@@ -492,8 +505,8 @@ export class VillageWalker {
     const moving = pace && !b.keepFace;
     // Walk or run by pace (b.gaits: where the run begins), a little either side of the change so a pace on the line doesn't
     // flick between them. Faster, the run only quickens.
-    const ran = this.clip === OPENING_RUN, [toRun] = b.gaits || [2.1];
-    const clip = moving ? (pace < (ran ? toRun - 0.4 : toRun) ? this.walk : OPENING_RUN) : (b.clip || 'idle');
+    const ran = OPENING_MOVES.includes(this.clip), [toRun] = b.gaits || [2.1];
+    const clip = moving ? (pace < (ran ? toRun - 0.4 : toRun) || !this.moveRate ? this.walk : this.gaitFor(pace)) : (b.clip || 'idle');
     if (clip !== this.clip) {
       // From one way of moving to another, her step carries on: the new clip picks up at the same point in her stride
       // (left heel down, right, ...) as the one she was in, rather than at its first frame, so her feet don't skip.
@@ -530,7 +543,7 @@ export class VillageWalker {
     }
     this.pointW += ((b.point ? 1 : 0) - this.pointW) * Math.min(1, dt * 9);
     // (And on the run her hands are fists, as anyone's are: her clip's are open.)
-    this.fistW += ((b.fists || this.clip === OPENING_RUN ? 1 : 0) - this.fistW) * Math.min(1, dt * 10);
+    this.fistW += ((b.fists || OPENING_MOVES.includes(this.clip) ? 1 : 0) - this.fistW) * Math.min(1, dt * 10);
     this.leanNow += ((b.lean || 0) - this.leanNow) * Math.min(1, dt * 6);
     const k = Math.min(1, dt * (b.whip ? 18 : 5));
     this.lookW += ((b.look ? 1 : 0) - this.lookW) * Math.min(1, dt * 4);

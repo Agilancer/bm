@@ -18,6 +18,7 @@
 // runs, drawn with three.js. Serve the repo (python tools/serve.py) and open /tools/player/view.html.
 //   ?do=run&staff=amethyst_staff&skull=skull_01&shield=kite_tree    what he's doing and holding
 //   ?sheet=idle,run,throw2,raise2_run&views=front,side,back&t=0.3  a sheet of stills, for review (window.ready when it's drawn)
+//   &t=0,1,2,3&step=0.06                                             four moments of a stride, 0.06 s apart
 //   &views=behind,-1.2:1.4:1.6:0:1:0.3                              a view by name, or written out: the camera's place, then what it looks at
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -71,10 +72,15 @@ const CAST = { shot: cast('shot', 1, 0.24, 0.4, 1), throw1: cast('throw', 1, 0.2
 const DO = {
   idle: () => ({}),
   walk: () => ({ vz: 1.3 }),
-  jog: () => ({ vz: 2.6 }),
+  jog: () => ({ vz: 3.1 }),
   run: () => ({ vz: 5.6 }),
   sprint: () => ({ vz: 8.6, sprinting: true }),
   back: () => ({ vz: -3 }),
+  // A sidestep (0.3 s at 13 m/s, then the run again), forward and to each side; setting off and pulling up; a run round a bend.
+  dash: (t) => { const u = t % 1.5; return u < 0.3 ? { vz: 13, dodge: 1 - u / 0.3 } : { vz: 5.6 }; },
+  dash_left: (t) => { const u = t % 1.5; return u < 0.3 ? { vx: 13, dodge: 1 - u / 0.3 } : { vz: 5.6 }; },
+  start_stop: (t) => { const u = t % 4; return u < 1.6 ? { vz: 5.6 } : u < 2.6 ? { vz: 8.6, sprinting: true } : {}; },
+  bend: (t) => { const yaw = Math.sin(t * 1.3) * 1.6; return { yaw, vx: Math.sin(yaw) * 5.6, vz: Math.cos(yaw) * 5.6 }; },
   left: () => ({ vx: 5.6 }),
   right: () => ({ vx: -5.6 }),
   jump: () => ({ vz: 4, onGround: false }),
@@ -121,7 +127,7 @@ function pose(name, t, dt) {
   return s;
 }
 // Settle into a pose: a second or so of ticks, so the eases have run.
-function settle(name, t) { body.reset(); const n = 90; for (let i = 0; i < n; i++) pose(name, Math.max(0, t - (n - 1 - i) / 60), 1 / 60); }
+function settle(name, t, more = 0) { body.reset(); const n = 90 + more; for (let i = 0; i < n; i++) pose(name, Math.max(0, t - (n - 1 - i) / 60), 1 / 60); }
 
 const VIEWS = { front: [0, 1.15, 3.6], side: [-3.6, 1.15, 0], left: [3.6, 1.15, 0], back: [0, 1.25, -3.6], q: [-2.3, 1.6, 2.6], qb: [2.2, 1.8, -2.8], hand: [-0.9, 1.3, 1.1], lhand: [0.9, 1.3, 1.1], top: [0.01, 4.6, 0.01], behind: [-0.5, 1.9, -3.2] };
 const camera = new THREE.PerspectiveCamera(32, 1, 0.05, 100);
@@ -134,8 +140,10 @@ if (q.has('sheet')) {
   const W = innerWidth, H = innerHeight, cw = Math.floor(W / cols), ch = Math.floor(H / rows);
   renderer.setPixelRatio(1); renderer.setSize(W, H); renderer.setScissorTest(true); renderer.autoClear = false;
   const zoom = +(q.get('zoom') || 1);
+  // (&step=0.05: each time after the first is that many seconds further through the stride, for a strip of a gait.)
+  const step = +(q.get('step') || 0);
   cells.forEach(([n, t, v], i) => {
-    settle(n, t);
+    settle(n, t, Math.round(times.indexOf(t) * step * 60));
     // (A view can be written out too: where the camera stands and what it looks at, x:y:z:x:y:z.)
     const own = v.includes(':') ? v.split(':').map(Number) : null;
     const at = own || VIEWS[v] || VIEWS.front, lookY = v === 'hand' || v === 'lhand' ? 1.1 : +(q.get('y') || 0.95);

@@ -101,10 +101,12 @@ test('the witch is the owner\'s model with no cloth bones, and her gown has no c
   for (const k of ['y0', 'k', 'mid', 'half', 'z', 'rise', 'perRad']) assert.ok(Number.isFinite(jaw.lip[k]), k);
   assert.deepEqual(joints.filter((n) => n.startsWith('cloth')), []);
   assert.equal(json.extras?.cloth, undefined);
-  assert.equal(json.animations.length, 176);
-  // Her walk and run are the ones the owner's model came with (Tripo's walk.001 and run.001); the old walk is kept aside.
+  assert.equal(json.animations.length, 179);
+  // Her walk is the one the owner's model came with (Tripo's walk.001); the old walk is kept aside. Her jog, run and
+  // sprint are made for her in Blender (tools/anim/gait.py), and the run the model came with is kept aside as run_old.
   const clips = json.animations.map((a) => a.name);
-  for (const name of ['walk', 'run', 'walk_gown']) assert.ok(clips.includes(name), name);
+  for (const name of ['walk', 'jog', 'run', 'sprint', 'run_old', 'walk_gown']) assert.ok(clips.includes(name), name);
+  for (const name of ['jog', 'run', 'sprint']) assert.ok(json.scenes[0].extras.clips[name].travel > 4, name);
   assert.deepEqual(clips.filter((n) => /^(walk|run)\.\d{3}$/.test(n)), []);
   // (Her gown keeps the _SKIRT mask, which only pushes it out of a leg that would cut through it.)
   assert.ok(json.meshes[0].primitives[0].attributes._SKIRT !== undefined);

@@ -187,7 +187,10 @@ function threadPlan(mobile) {
   // Leave one logical core for the OS and browser, two on a phone where heat is the real limit.
   const spare = mobile ? 2 : 1;
   const usable = Math.max(2, cores - spare);
-  const pool = Math.max(1, Math.min(usable - 2, mobile ? 4 : 30));
+  // (A phone: two, and no more. Every thread is a copy of the land's code and data and a heap of its own, 25 to 95 MB
+  // apiece measured, and four of them working through the land at once was 400 MB of a load that a phone's browser ends
+  // the page for. README.md, "When the browser closes the game".)
+  const pool = Math.max(1, Math.min(usable - 2, mobile ? 2 : 30));
   return { cores, usable: pool + 2, pool };
 }
 
@@ -364,24 +367,55 @@ async function boot(plan, poolSize) {
     renderDiagnostics.fail(new Error(info.message || 'no message'), `device lost (${info.reason})`);
     let last = 0;
     try { last = +sessionStorage.getItem(GPU_LOST_AT) || 0; } catch { /* no storage */ }
-    if (Date.now() - last < 60000) { failOnTitle('The graphics reset again. Reload the page to carry on: your game is kept for Continue.'); return; }
+    // (Nor a third time in ten minutes, however far apart: a device that keeps taking its GPU back isn't going to stop.)
+    let times = [];
+    try { times = JSON.parse(sessionStorage.getItem(GPU_LOST_AT + 's') || '[]').filter((t) => Date.now() - t < 600000); } catch { /* no storage */ }
+    if (Date.now() - last < 60000 || times.length >= 2) {
+      noteRun({ ended: document.hidden ? 'hidden' : 'gpu', gpu: gpuNote?.() || '' });
+      failOnTitle('The graphics reset again. Reload the page to carry on: your game is kept for Continue.');
+      await Promise.race([keepForReset?.(), new Promise((r) => setTimeout(r, 3000))]).catch(() => {});
+      return;
+    }
+    try { sessionStorage.setItem(GPU_LOST_AT + 's', JSON.stringify([...times, Date.now()])); } catch { /* no storage */ }
     try {
       sessionStorage.setItem(GPU_LOST_AT, String(Date.now())); sessionStorage.setItem(GPU_LOST_OFFER, '1'); sessionStorage.setItem('velscour.skipSplash', '1');
       sessionStorage.setItem(GPU_LOST_NOTE, gpuNote?.() || '');
     } catch { /* no storage */ }
-    noteRun({ ended: 'gpu', gpu: gpuNote?.() || '' });
+    // (Taken back while the page was put away, as a phone does to any page: no sign the game was too much for it, so not
+    // noted as a loss, which would load the next start lighter for good.)
+    noteRun({ ended: document.hidden ? 'hidden' : 'gpu', gpu: gpuNote?.() || '' });
     failOnTitle('The graphics reset. Keeping your game, and starting again...');
     await Promise.race([keepForReset?.(), new Promise((r) => setTimeout(r, 3000))]).catch(() => {});
+    // (Out of sight, it waits to be looked at again: loading the whole game where nobody's watching is the surest way to
+    // have the browser let the page go, and a phone often takes the GPU back just because the page was put away.)
+    if (document.hidden) await new Promise((r) => document.addEventListener('visibilitychange', () => { if (!document.hidden) r(); }));
     leaving = true;
     location.reload();
   });
-  let gpuErrors = 0;
-  gpu.device.addEventListener('uncapturederror', (e) => { window.__gpuErrors = ++gpuErrors; renderDiagnostics.fail(e.error, 'GPU validation'); if (gpuErrors < 6) console.error('GPU error:', e.error.message); });
+  let gpuErrors = 0, outOfMemory = false;
+  gpu.device.addEventListener('uncapturederror', (e) => {
+    window.__gpuErrors = ++gpuErrors; renderDiagnostics.fail(e.error, 'GPU validation'); if (gpuErrors < 6) console.error('GPU error:', e.error.message);
+    // The GPU saying it has no memory left for something asked of it: what's drawn with that is missing or black from here
+    // on, and the next thing may be the device lost. Noted, so the next start loads lighter (src/core/lastrun.js), and the
+    // game kept now, while it can be.
+    if (!outOfMemory && typeof GPUOutOfMemoryError !== 'undefined' && e.error instanceof GPUOutOfMemoryError) {
+      outOfMemory = true;
+      noteRun({ oom: true });
+      console.warn('memory: the GPU is out of memory; the next start loads lighter');
+      keepForReset?.().catch(() => {});
+    }
+  });
   const canvas = $('view');
+  // Each thread of the load holds some 100 MB while it works and a good part of it after (measured at the Medium setting,
+  // November 2026: fifteen threads loaded in 11 s and left the page at 2.6 GB, five in 14 s and left it at 1.6). So a
+  // computer whose GPU shares its memory, or that has little, or is on a lighter setting, loads with three; any other with
+  // eight at most, past which the load is no quicker.
+  const tight = gpu.shared || (gpu.mem && gpu.mem <= 8) || gpu.tier.texScale < 1;
+  if (!gpu.mobile) poolSize = Math.min(poolSize, tight ? 3 : 8);
   const pool = new Pool(poolSize);
   // While the game loads, the threads kept back for the simulation and the drawing work on it too (not on a phone, where
-  // every thread is memory and heat, nor when fewer threads were asked for).
-  const lent = !gpu.mobile && poolSize === plan.pool ? pool.lend(Math.max(0, Math.min(2, plan.cores - 1 - poolSize))) : 0;
+  // every thread is memory and heat, nor on a computer short of memory, nor when fewer threads were asked for).
+  const lent = !gpu.mobile && !tight && poolSize === Math.min(plan.pool, 8) ? pool.lend(Math.max(0, Math.min(2, plan.cores - 1 - poolSize))) : 0;
   const isolated = window.crossOriginIsolated && typeof SharedArrayBuffer !== 'undefined' && !params.has('nosab');
   const buffer = isolated ? new SharedArrayBuffer(TOTAL_BYTES) : null;
   const shared = buffer ? mapShared(buffer) : mapShared(new ArrayBuffer(TOTAL_BYTES));
@@ -483,11 +517,21 @@ async function boot(plan, poolSize) {
     shared.ctrl[CTRL.PLAN_RUN] = 1;
     // On a phone every thread awake is heat the GPU then can't spend, so the planners take far less: the fight doesn't
     // need many rollouts to read, and they never slowed the frame on a PC.
-    if (gpu.mobile) pool.startPlanners(buffer, 2, 80, 2);
-    else pool.startPlanners(buffer, 4, 40);
-    // (The planners keep their threads for good, so the land laid again round you out in the countries has one of its own.)
-    renderer.landPool = renderer.landPool || new Pool(1);
-  }
+    // (And every thread kept is memory: each holds its own copy of the land's code and data, 25 MB at rest and up to 95 after
+    // working. So the load's threads are let go once it's done. A phone, or the Low setting, keeps one, for the land laid
+    // again round you, and plans nothing: the one knight whose tactics the planners weigh fights as well on even weights.
+    // A PC keeps four for planning, however many cores it loaded with, and one more for the land.)
+    if (gpu.tier.lean) {
+      shared.ctrl[CTRL.PLAN_RUN] = 0;
+      pool.takeBack(pool.size - 1);
+      renderer.landPool = pool;
+    } else {
+      pool.takeBack(Math.max(0, pool.size - 4));
+      pool.startPlanners(buffer, 4, 40);
+      // (The planners keep their threads for good, so the land laid again round you out in the countries has one of its own.)
+      renderer.landPool = renderer.landPool || new Pool(1);
+    }
+  } else pool.takeBack(pool.size - 1);   // (no shared memory, so no planners: one thread, for the land)
 
   // ---- the render thread's loop --------------------------------------------------------------------------------------
 
@@ -921,7 +965,7 @@ async function boot(plan, poolSize) {
     await new Promise((r) => setTimeout(r, 700));
     const kept = !!saves.newest();
     const text = `The browser closed the game last time, ${deathWords(RUN.died)}. It does that when a page wants more memory than the device has to give.`
-      + `${gpu.mobile && RUN.light ? ' This time the game is using less: bodies are painted smaller.' : ''}`
+      + `${gpu.mobile && RUN.light ? ' This time the game is using less memory: smaller pictures on the models.' : ''}`
       + `${lighterWords()}`
       + `${kept ? ' Continue picks up from where the game was last kept.' : ''}`;
     if (await title.confirm({ title: 'The game was closed', text, yes: kept ? 'Continue' : 'Back', no: kept ? 'Main Menu' : false }) && kept) {
@@ -1174,7 +1218,12 @@ async function boot(plan, poolSize) {
     if (mute && audio.ctx) audio.ctx.suspend(); else if (audio.ctx && (input.enabled || title.up)) audio.ctx.resume();
   }
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) input.releaseControls();
+    if (document.hidden) {
+      input.releaseControls();
+      // (Put away, a phone's page may never be heard from again: the browser lets go of pages it can't see when it wants
+      // their memory, with nothing said. So the game is kept now, not at the next twenty seconds' turn.)
+      if (input.enabled && !AUTO) autosave().catch(() => {});
+    }
     awayChanged();
   });
   // A phone stood upright. The manifest asks for landscape and the lock's asked for too (above, and src/title.js), but an

@@ -16,7 +16,7 @@ first round in full in [PHOBOS-CRITICS-R1.md](PHOBOS-CRITICS-R1.md). Branch `pho
 | The castle's own ground | five haunts (the kitchens' yard, the drill yard, under the Crown Court, the Sally road, the Ash Terrace) | `src/core/tripo-monsters.js` (`castle_*`) |
 | The town | houses styled by district (roofs, heights, jetties, galleries), 28 landmark houses and more tower-houses, 16 city lookouts, sewer finds | `src/core/phobos-houses.js`, `phobos-finds.js` |
 | Quests | 27 in the streets and sewers; 21 + 22 through the dungeons; 28 of the castle's own (the Holdout's, the household's, the Librarian's Nine Keys, the roof-runners') | `src/folk/phobos-quests-town.js`, `-a.js`, `-b.js`, `-castle.js`; words in `src/folk/lines/phobos-more-*.js` |
-| Speed | Phobos's near cells built on the land's pool thread, not the one that draws | `src/gfx/phobos-near.js`, `src/sim/job.worker.js`; `node tools/phone_walk.mjs` |
+| Speed | near cells behind the eye not drawn; lamps picked, not sorted; a bench at a phone's size | `src/gfx/phobos-near.js`, `src/gfx/renderer.js`; `node tools/phone_walk.mjs` |
 
 Also found and fixed on the way: the Iron Barracks' way in stood in the rock; a prop set down without what it needs made
 corners that weren't numbers (a test holds it now); a spike's collider stood from the ground to itself under every bridge.
@@ -66,8 +66,8 @@ test a stride at a time, not by a player), the seven dungeons (fights played out
 hired party and kill a player who stands still, on their last runs), the keys and gates end to end, the shortcuts, the
 lookouts' toasts and the chests on decks, the Holdout, the wall towers' doors on sloping ground, the haunts on the castle's
 ground. A phone has not run it: the phone-sized run on this machine's GPU shows no stall while moving through Phobos, which
-proves the stall is gone and nothing about a phone's speed. Corners: a PC's land 1,722,840 of 1,800,000; a phone's 944,891
-of 950,000 (nothing more fits on a phone's land without taking something off).
+proves the stall is gone and nothing about a phone's speed. Corners: see the end of this page (nothing more fits
+on a phone's land without taking something off).
 
 ## Recipes
 
@@ -98,9 +98,10 @@ Done:
 - A road's verge trodden brown, on a phone too.
 - The air between: what's far loses colour and goes a little blue before the haze has it (`applyFog`, every tier).
 - Every tree on Blackvigil's hill dead (`treeCode`).
-- A phone's Phobos: the city's near cells built within 45 m and let go at 95 m, seven kept at most (a PC's: 150, 230,
-  thirty). The critic measured thirteen cells stood still at 3.1 to 4.2 million corners and 130 to 175 MB, three to four
-  times a phone's whole land, and twice that after a walk: the likeliest thing to kill the page on a phone in the city.
+- A phone's Phobos: main got there first while this was built (PR 232: near cells on a thread of their own, a phone's
+  built within 105 m, fourteen kept). The merge takes main's; this branch's own version of both is gone. The critic's
+  measure stands as a warning: a cell from near is 220,000 to 430,000 corners, and he'd have a phone's nearer still
+  (45 m, seven kept) and built lean.
 - Near cells wholly behind the eye are not drawn in the eye's pass.
 - Lamps: the nearest few picked out, not five thousand put in order every frame to choose two.
 
@@ -116,5 +117,6 @@ indices are drawn whole twice a frame: his biggest gain after the phone's Phobos
 the worker; a phone ticking at 60, not 90; the corner map at 10 Hz on touch; idle pool threads let go on a phone; bloom at
 two levels on Mobile. `tools/phone_memory.mjs` and `phone_bench.mjs` still never go to Phobos.
 
-After: 589 tests, 586 pass, the one old failure; the phone-sized run holds 16.7 ms everywhere with 7 cells up down the
-King's Mile (this machine's GPU: nothing about a phone's speed, and no phone has run it).
+After, with main (ac25d115) merged in: 593 tests, 590 pass, the one old failure; corners a PC's 1,728,240 of 1,800,000,
+a phone's 946,691 of 950,000 (a phone's towers have four merlons, not eight, to fit under it beside main's new dungeon
+doors); the phone-sized run holds 16.7 ms everywhere with 10 cells up down the King's Mile (this machine's GPU: nothing about a phone's speed, and no phone has run it).

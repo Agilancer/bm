@@ -316,6 +316,8 @@ export function cityDoors() {
   for (const t of cityTowers()) if (t.door !== undefined) DOORS.push(towerDoor(t));
   return DOORS;
 }
+/** The city's doors as another thread worked them out (src/core/sites.worker.js): this thread's from here on. */
+export function adoptCityDoors(list) { if (!DOORS && Array.isArray(list)) DOORS = list; }
 
 // ---------------------------------------------------------------- faces
 

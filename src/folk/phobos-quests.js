@@ -71,6 +71,19 @@ export const PHOBOS_RULES = {
   what_the_stars_say: { steps: [{ enter: 'ph:approach', night: true }, { back: true, say: 'Red at its heart, and something paler round it, turning.' }], gold: 520, xp: 4400 },
   the_dead_watch: { needs: 'still_the_rows', steps: [{ enter: 'ph:bones', night: true }, { kill: 'lair:phobos_boneyards', n: 3 }, { back: true, say: 'Three from the old rows. Sleep tonight.' }], gold: 560, xp: 4800, item: 'robe', named: "Ada's Grey", seed: 0xada07 },
   fresh_stock: { steps: [{ kill: 'lair:phobos_approach', n: 4 }, { back: true, say: 'Four of them. Fresh stock.' }], gold: 600, xp: 5000 },
+  // (The second dozen.)
+  bitter_caps: { needs: 'down_the_drains', steps: [{ bring: 'cap', n: 6, at: 'westdrains' }], gold: 560, xp: 6400 },
+  the_burnt_binding: { steps: [{ visit: ['ph:mages', 'ph:dukes'] }, { talk: 'ph_tutor', say: 'Your treatise is on the house of Vell\'s shelves.' }, { back: true, say: 'Pell will pay.' }], gold: 360, xp: 2800 },
+  grave_wax: { steps: [{ bring: 'wax', n: 6 }], gold: 400, xp: 3000 },
+  silk_for_the_shafts: { steps: [{ bring: 'silk', n: 4 }], gold: 380, xp: 2900 },
+  the_garrison_round: { steps: [{ talk: 'ph_rind', say: 'Mother Gruel is waiting. With her ladle.' }, { talk: 'ph_eel', say: 'Mother Gruel is waiting, and she does not like to wait.' }, { back: true, say: 'Cheese and eels, on their way.' }], gold: 320, xp: 2500 },
+  the_warm_heaps: { steps: [{ kill: 'lair:phobos_cinder', n: 4 }, { back: true, say: 'The heaps are still.' }], gold: 480, xp: 4000 },
+  coal_by_night: { steps: [{ enter: 'ph:cinder', night: true }, { talk: 'ph_brann', say: 'The lanes are only dark. Big Ottar can bring the coal.' }, { back: true, say: 'Two loads, Brann says.' }], gold: 440, xp: 3600 },
+  a_duel_at_dawn: { steps: [{ talk: 'ph_silk', say: 'Lord Peregrine needs out of a duel, with his honour.' }, { talk: 'ph_major', say: 'He withdraws: he cannot harm the only man on the Row with taste.' }, { back: true, say: 'A forgivable damson.' }], gold: 420, xp: 3200 },
+  the_slab_walkers: { needs: 'still_the_rows', steps: [{ kill: 'lair:phobos_boneyards', n: 5 }, { back: true, say: 'All five are down.' }], gold: 520, xp: 4400 },
+  a_sailors_tale: { steps: [{ visit: ['ph:wharf', 'ph:tanners', 'ph:rookeries'] }, { back: true, say: 'They laughed, all three.' }], gold: 300, xp: 2400 },
+  the_glovers_order: { steps: [{ talk: 'ph_curry', say: 'Clemence Fyne is waiting on her leather.' }, { talk: 'ph_flay', say: 'Clemence Fyne is waiting on her hides.' }, { back: true, say: 'Tonight and by morning.' }], gold: 320, xp: 2500 },
+  a_room_for_the_night: { steps: [{ talk: 'ph_knave', say: 'Widow Crake wants her rent tonight. All of it.' }, { back: true, say: 'All of it, and a bit over.' }], gold: 300, xp: 2300 },
   // (More of the town's, the castle's and its dungeons': their own files.)
   ...RULES_TOWN, ...RULES_CASTLE, ...RULES_A, ...RULES_B,
 };
@@ -82,6 +95,8 @@ export const PHOBOS_LEVELS = [
   // (The streets', from the people of the districts.)
   ['shoes_for_the_gate', 21], ['the_cheese_round', 21], ['pawned', 22], ['rivets_from_the_dead', 22], ['the_old_furnace', 23], ['ink_and_gall', 24],
   ['contraband', 24], ['eels_gone_wrong', 25], ['lamechs_keys', 25], ['what_the_stars_say', 26], ['the_dead_watch', 27], ['fresh_stock', 28],
+  ['the_garrison_round', 21], ['a_sailors_tale', 21], ['the_glovers_order', 21], ['a_room_for_the_night', 21], ['the_burnt_binding', 22], ['a_duel_at_dawn', 22],
+  ['silk_for_the_shafts', 22], ['grave_wax', 23], ['coal_by_night', 23], ['the_warm_heaps', 24], ['the_slab_walkers', 26], ['bitter_caps', 30],
   // (The sewers: the West Drains 28-36, the Slough Mains 34-42, the Charnel Runs 40-50, the High Conduits 48-58.)
   ['down_the_drains', 28], ['caps_for_the_keepers', 29], ['the_main_runs_clear', 30], ['the_queens_larder', 33], ['caps_of_the_slough', 36],
   ['the_great_worm', 40], ['letters_for_the_princess', 43], ['the_drowned_abbot', 47], ['lamps_out_in_the_conduits', 54],

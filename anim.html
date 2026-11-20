@@ -1,0 +1,364 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Third-Person Gaits</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* The third-person gaits, before and after: you, the other Tessariels and Lisandra, each on a floor that runs under them at
+   the pace the game would be moving them, so a sliding or pattering foot shows. What's new is posed by the game's own code
+   (src/sim/playerbody.js, src/sim/anim.js, src/sim/village-walker.js); what's old is the old clip at the rate the game
+   played it. Serve the repo (python tools/serve.py) and open /anim.html. */
+:root{color-scheme:dark;--bench:#1d2628;--panel:#253033;--panel-hi:#2f3d40;--line:#3d4d50;--bone:#e7dfcd;--dim:#9fada9;--gold:#d6a24e;--blood:#b9553f;--moss:#6f9a52;
+  --display:"Familjen Grotesk","Segoe UI",system-ui,sans-serif;--mono:"IBM Plex Mono",Consolas,monospace}
+html,body{height:100%}*{box-sizing:border-box}
+body{margin:0;background:var(--bench);color:var(--bone);font:14px/1.4 var(--display);overflow:hidden}
+#app{display:grid;grid-template-columns:310px minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;height:100%}
+#rack{grid-row:1/3;background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;display:flex;flex-direction:column;padding:16px;gap:6px}
+h1{font-size:20px;font-weight:700;margin:0;line-height:1.15}
+.sub{color:var(--dim);font-size:12.5px;line-height:1.4}
+h2{font:500 11px var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--dim);margin:12px 0 2px}
+.scene{all:unset;box-sizing:border-box;cursor:pointer;display:block;padding:7px 9px;border-radius:5px;border:1px solid transparent}
+.scene:hover{background:var(--panel-hi)}
+.scene[aria-pressed=true]{border-color:var(--gold);background:var(--panel-hi)}
+.scene .nm{font-weight:700;display:block}.scene .ds{font-size:12px;color:var(--dim);line-height:1.35;display:block}
+.scene:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+#stage{position:relative;min-width:0;min-height:0;background:#56646a}
+#stage canvas{display:block;width:100%;height:100%}
+#labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.lab{position:absolute;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;gap:3px;white-space:nowrap}
+.lab .t{font:700 13px var(--display);color:#fff;text-shadow:0 1px 3px #000c;background:#1d2628c0;padding:2px 8px;border-radius:4px}
+.lab .t.old{background:#b9553fd0}.lab .t.new{background:#56803cd8}
+.lab .s{font:500 11px var(--mono);color:#e7dfcd;text-shadow:0 1px 2px #000c}
+#hud{position:absolute;left:12px;bottom:10px;font:500 12px var(--mono);color:#fff;text-shadow:0 1px 2px #000a;pointer-events:none;max-width:calc(100% - 24px)}
+#cams{position:absolute;right:10px;top:10px;display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+#status[hidden]{display:none}
+#status{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:500 14px var(--mono);color:#fff;padding-inline:16px;text-align:center;background:#56646acc}
+button,select{font:500 12.5px var(--display);color:var(--bone);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:5px 9px;cursor:pointer;min-height:30px}
+button:hover,select:hover{background:var(--panel-hi)}
+button[aria-pressed=true]{background:var(--gold);border-color:var(--gold);color:#231a0a}
+#transport{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 12px;background:var(--panel);border-top:1px solid var(--line)}
+#play{min-width:68px;font-weight:700}
+label.sel{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--dim)}
+@media (max-width:760px){body{overflow:auto}#app{display:flex;flex-direction:column;height:auto}#stage{height:58vh;order:1;flex:none;position:sticky;top:0;z-index:2}#transport{order:2;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}#rack{order:3;border-right:0;overflow:visible;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}#tip{display:none}.lab .s{display:none}.lab .t{font-size:11px}}
+</style>
+<div id="app">
+  <aside id="rack">
+    <div>
+      <h1>Third-Person Gaits</h1>
+      <div class="sub" style="margin-top:4px">Old beside new, each on a floor running at the game's pace. Red is how it was; green is how it is now. A floor that keeps pace with the feet means no sliding.</div>
+    </div>
+    <div id="scenes" style="display:flex;flex-direction:column;gap:2px"></div>
+    <div class="sub" style="margin-top:auto;padding-top:10px">The game moves you at 5.6 m/s and 8.6 m/s holding Shift. The old run was made for 4.2 m/s, so it was played too fast and slid. Each new gait is made in Blender for its own pace (tools/anim/gait.py), a loop of eight steps with no two the same.</div>
+  </aside>
+  <main id="stage">
+    <div id="status">Loading…</div>
+    <div id="labels"></div>
+    <div id="hud"></div>
+    <div id="cams"></div>
+  </main>
+  <div id="transport">
+    <button id="play" aria-label="Play or pause">Pause</button>
+    <label class="sel" for="rate">Speed
+      <select id="rate"><option value="1">1×</option><option value="0.5">½×</option><option value="0.25">¼×</option><option value="0.1">⅒×</option></select>
+    </label>
+    <label class="sel" for="hero">Hero
+      <select id="hero"></select>
+    </label>
+    <span class="sub" id="tip">Drag to orbit, wheel to zoom. Space pauses.</span>
+  </div>
+</div>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
+import { PlayerBody } from './src/sim/playerbody.js';
+import { ClipBank, Rig, Pose, solveFK } from './src/sim/anim.js';
+import { VillageWalker } from './src/sim/village-walker.js';
+import { LISANDRA_FORMS, LISANDRA_SCALE } from './src/core/lisandra.js';
+import { parseGLB } from './src/core/glb.js';
+import { lerp, quatNlerp, smoothstep } from './src/core/math.js';
+
+const $ = (id) => document.getElementById(id);
+const q = new URLSearchParams(location.search);
+const YAW = Math.PI / 2;            // everyone runs toward +x
+const LANE = 1.9;
+const HEROES = ['lancer_m1', 'paladin_f1', 'archer_f1', 'bard_m1', 'dragoon_f1', 'ninja_m1', 'rogue_m1', 'boomerang_f1'];
+
+// ---- the stage ----
+const stage = $('stage');
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+stage.prepend(renderer.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x56646a); scene.fog = new THREE.Fog(0x56646a, 22, 55);
+scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+const camera = new THREE.PerspectiveCamera(32, 1, 0.05, 120);
+const controls = new OrbitControls(camera, renderer.domElement); controls.enableDamping = true; controls.maxPolarAngle = Math.PI * 0.54;
+scene.add(new THREE.HemisphereLight(0xdfe8ee, 0x4a4038, 0.75));
+const key = new THREE.DirectionalLight(0xfff0dc, 2.2); key.position.set(-3, 9, 6); key.castShadow = true; key.shadow.mapSize.set(4096, 4096);
+Object.assign(key.shadow.camera, { left: -9, right: 9, top: 9, bottom: -9, near: 1, far: 40 }); key.shadow.bias = -0.0005; key.shadow.normalBias = 0.02; scene.add(key);
+// A floor of 25 cm squares with a heavy line each metre.
+const cv = document.createElement('canvas'); cv.width = cv.height = 512; const g2 = cv.getContext('2d');
+g2.fillStyle = '#6d7a7d'; g2.fillRect(0, 0, 512, 512);
+g2.fillStyle = '#627073'; for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) if ((i + j) % 2) g2.fillRect(i * 128, j * 128, 128, 128);
+g2.strokeStyle = '#323e42'; g2.lineWidth = 8; g2.strokeRect(0, 0, 512, 512);
+function resize() { const w = stage.clientWidth, h = stage.clientHeight; if (!w || !h) return; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+new ResizeObserver(resize).observe(stage); resize();
+
+// ---- what's loaded ----
+const loader = new GLTFLoader();
+const got = new Map();
+const once = (k, f) => { if (!got.has(k)) got.set(k, f()); return got.get(k); };
+const buf = (url) => once('b:' + url, () => fetch(url).then((r) => { if (!r.ok) throw new Error(`${url}: ${r.status}`); return r.arrayBuffer(); }));
+const gltf = (url) => once('g:' + url, async () => { const b = await buf(url); return new Promise((ok, no) => loader.parse(b.slice(0), '', ok, no)); });
+const bank = () => once('bank', async () => new ClipBank(await fetch('assets/game/clips.json').then((r) => r.json()), await buf('assets/game/clips.bin')));
+const shade = (o) => o.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; } });
+
+// A body the game's own code poses: its meshes at the scene's root, its bones set from the pose each frame.
+function driven(g, scale = 1) {
+  const root = SkeletonUtils.clone(g.scene); shade(root);
+  const meshes = []; root.traverse((o) => { if (o.isSkinnedMesh) meshes.push(o); });
+  const bones = meshes[0].skeleton.bones;
+  for (const m of meshes) { m.removeFromParent(); m.bindMode = 'detached'; m.bindMatrix.identity(); m.bindMatrixInverse.identity(); m.matrixAutoUpdate = false; m.matrix.identity(); m.matrixWorld.identity(); scene.add(m); }
+  for (const b of bones) b.removeFromParent();
+  const p = new THREE.Vector3(), r = new THREE.Quaternion(), s = new THREE.Vector3(scale, scale, scale);
+  return {
+    meshes,
+    set(wq, wt) { for (let j = 0; j < bones.length; j++) bones[j].matrixWorld.compose(p.set(wt[j * 3], wt[j * 3 + 1], wt[j * 3 + 2]), r.set(wq[j * 4], wq[j * 4 + 1], wq[j * 4 + 2], wq[j * 4 + 3]), s); },
+    show(v) { for (const m of meshes) m.visible = v; },
+    gone() { for (const m of meshes) scene.remove(m); },
+  };
+}
+
+// What he does in the lanes that aren't a steady pace: v (m/s), turn (rad from straight on), dodge (1 down to 0), side.
+const SCRIPTS = {
+  start_stop: (t) => { const u = t % 5; return u < 1.8 ? { v: 5.6 } : u < 3.2 ? { v: 8.6 } : { v: 0 }; },
+  bend: (t) => ({ v: 5.6, turn: Math.sin(t * 1.3) * 1.5 }),
+  dash: (t) => { const u = t % 1.6; return u < 0.3 ? { v: 13, dodge: 1 - u / 0.3 } : { v: 5.6 }; },
+  dash_side: (t) => { const u = t % 1.6; return u < 0.3 ? { v: 13, dodge: 1 - u / 0.3, side: 1 } : { v: 5.6 }; },
+};
+
+// ---- the lanes ----
+const LANES = {
+  // You, as you were: the old run clip at the rate the game played it (it was made for 4.2 m/s: past 1.22 times that the
+  // legs only quickened a little more and the feet slid). Your hands empty: with something in one it was held still.
+  async wizOld({ v }) {
+    const g = await gltf('assets/game/player/wizard.glb');
+    const m = SkeletonUtils.clone(g.scene); shade(m); m.rotation.y = YAW; scene.add(m);
+    const clip = g.animations.find((a) => a.name === 'run_old');
+    const mixer = new THREE.AnimationMixer(m); mixer.clipAction(clip).play();
+    const own = 5.2212 / 1.25, over = v / own, k = over > 1.22 ? 1.22 + (over - 1.22) * 0.22 : over;
+    return { kind: 'old', name: 'Before', pace: () => v, sub: () => `old clip at ${k.toFixed(2)}× · ${Math.round(4 / 1.25 * k * 60)} steps/min · feet slide ${Math.round((1 - k * own / v) * 100)}%`,
+      place(x, z) { m.position.set(x, 0, z); }, update(dt) { mixer.update(dt * k); }, gone() { scene.remove(m); } };
+  },
+  // You, now: src/sim/playerbody.js, as the game runs it.
+  async wizNew({ v = 0, armed = false, script, label }) {
+    const [g, wb, staff, skull, shield] = await Promise.all([gltf('assets/game/player/wizard.glb'), buf('assets/game/player/wizard.glb'),
+      gltf('assets/game/items/amethyst_staff.glb'), gltf('assets/game/items/skull_01.glb'), gltf('assets/game/items/kite_tree.glb')]);
+    const body = new PlayerBody(wb.slice(0)), d = driven(g), snap = new Float32Array(4096 + body.count * 8);
+    const held = [staff, skull, shield].map((i) => { const o = i.scene.clone(true); shade(o); o.matrixAutoUpdate = false; o.visible = false; scene.add(o); return o; });
+    const m4 = new THREE.Matrix4();
+    let x = 0, z = 0, t = 0, now = { v };
+    const put = (o, at) => { m4.fromArray(body.props, at); o.visible = body.props[at + 15] > 0; o.matrix.copy(m4); o.matrixWorld.copy(m4); for (const c of o.children) c.updateMatrixWorld(true); };
+    return { kind: 'new', name: label || (armed ? 'Now, staff and skull in hand' : 'Now, weapons put away'), pace: () => now.v,
+      sub: () => `${now.v.toFixed(1)} m/s` + (now.v > 0.5 ? ` · ${Math.round(body.rate * 8 * 60)} steps/min` : ''),
+      place(a, b) { x = a; z = b; },
+      update(dt) {
+        t += dt;
+        if (script) now = { v: 0, ...SCRIPTS[script](t) };
+        const yaw = YAW + (now.turn || 0), go = now.side ? yaw + Math.PI / 2 : yaw;
+        const s = { x, y: 0, z, yaw, pitch: 0, vx: Math.sin(go) * now.v, vz: Math.cos(go) * now.v, onGround: true, sprinting: now.v > 7 && !now.dodge, dodge: now.dodge || 0, dead: false, deadT: 0, guard: 0, surf: null, cast: null, stow: armed ? 0 : 1, staff: true, skull: true, shield: true };
+        if (dt > 0) body.update(dt, s);
+        const was = body.phase;
+        body.write(snap, 0, true);
+        d.set(body.rig.wq, body.rig.wt);
+        for (const o of held) o.visible = false;
+        put(held[0], 0); put(held[1], 16); put(held[2], 32);
+        void was;
+      },
+      gone() { d.gone(); for (const o of held) scene.remove(o); } };
+  },
+  // One of the other Tessariels, as they were: the library's sprint stretched onto its jog's cycle (src/sim/knight.js as it was).
+  async heroOld({ v, body: who }) { return hero(who, v, false); },
+  async heroNew({ v, body: who, label }) { return hero(who, v, true, label); },
+  // Lisandra, as she was: her one run clip, sped up or slowed to the pace.
+  async lisOld({ v }) {
+    const g = await gltf(LISANDRA_FORMS[0].asset);
+    const m = SkeletonUtils.clone(g.scene); shade(m); m.scale.setScalar(LISANDRA_SCALE); m.rotation.y = YAW; scene.add(m);
+    const raw = g.animations.find((a) => a.name === 'run_old'), clip = raw.clone();
+    // (Its travel taken out of the hips, as the game did.)
+    const tr = clip.tracks.find((k) => /Hips\.position$/.test(k.name)), n = tr.values.length / 3, d = [0, 1, 2].map((a) => tr.values[(n - 1) * 3 + a] - tr.values[a]);
+    // (The axis the hips stand up along: of the two they end the loop about where they began on, the one they're highest on.)
+    const mean = (a) => { let s = 0; for (let i = 0; i < n; i++) s += tr.values[i * 3 + a]; return Math.abs(s / n); };
+    const still = [0, 1, 2].sort((a, b) => Math.abs(d[a]) - Math.abs(d[b])).slice(0, 2), up = mean(still[0]) > mean(still[1]) ? still[0] : still[1];
+    d[up] = 0;
+    for (let i = 0; i < n; i++) for (let a = 0; a < 3; a++) if (a !== up) tr.values[i * 3 + a] -= d[a] * tr.times[i] / clip.duration;
+    let hips = null; m.traverse((o) => { if (o.isBone && /Hips$/.test(o.name) && !hips) hips = o; });
+    m.updateMatrixWorld(true);
+    const own = Math.hypot(...d) * hips.parent.getWorldScale(new THREE.Vector3()).x / clip.duration, k = v / own;
+    const mixer = new THREE.AnimationMixer(m); mixer.clipAction(clip).play();
+    return { kind: 'old', name: 'Before', pace: () => v, sub: () => `her one run at ${k.toFixed(2)}× · ${Math.round(4 / clip.duration * k * 60)} steps/min`,
+      place(x, z) { m.position.set(x, 0, z); }, update(dt) { mixer.update(dt * k); }, gone() { scene.remove(m); } };
+  },
+  // Lisandra, now: src/sim/village-walker.js, as the game runs her (form 0 as she is at the start, 1 the witch).
+  async lisNew({ v, form = 0 }) {
+    const F = LISANDRA_FORMS[form];
+    const [g, b] = await Promise.all([gltf(F.asset), buf(F.asset)]);
+    const w = new VillageWalker(b.slice(0), F, true), d = driven(g, LISANDRA_SCALE), snap = new Float32Array(8192 + w.rig.count * 8);
+    const world = { height: () => 0 };
+    let x = 0, z = 0;
+    w.reset(); w.yaw = YAW;
+    return { kind: 'new', name: form ? 'Now, as the witch' : 'Now', pace: () => v,
+      sub: () => `${v.toFixed(1)} m/s · "${w.clip}" · ${Math.round((w.moveRate?.[w.clip] ?? 0) * v * 8 / (w.rig.clips[w.clip]?.dur || 1) * 60)} steps/min`,
+      place(a, c) { x = a; z = c; },
+      update(dt) {
+        w.x = x; w.z = z;
+        if (dt > 0) w.act(dt, world, { to: [x + 50, z], speed: v, pace: v });
+        w.x = x; w.z = z; w.yaw = YAW;
+        w.write(snap, 0);
+        d.set(w.rig.wq, w.rig.wt);
+      },
+      gone() { d.gone(); } };
+  },
+};
+
+const HERO_GAITS = ['A_walk', 'A_jog', 'A_run', 'A_sprint'];
+async function hero(who, v, now, label) {
+  who = who || $('hero').value;
+  const url = `assets/game/heroes/${who}.glb`;
+  const [g, b, B] = await Promise.all([gltf(url), buf(url), bank()]);
+  const rig = new Rig(parseGLB(b.slice(0)), B), pose = new Pose(rig), d = driven(g), n = rig.count, C = B.clips, ms = rig.motionScale;
+  const rA = new Float32Array(n * 4), rB = new Float32Array(n * 4), pA = new Float32Array(3), pB = new Float32Array(3), own = new Float32Array(4);
+  const over = (clip, t, w) => { B.sample(clip, t, rB, pB); for (let j = 0; j < n; j++) quatNlerp(rA, j * 4, rA, j * 4, rB, j * 4, w); for (let k = 0; k < 3; k++) pA[k] += (pB[k] - pA[k]) * w; };
+  let x = 0, z = 0, phase = Math.random() * 4, steps = 0;
+  return { kind: now ? 'new' : 'old', name: label || (now ? 'Now' : 'Before'), pace: () => v, sub: () => `${v.toFixed(1)} m/s · ${Math.round(steps)} steps/min`,
+    place(a, c) { x = a; z = c; },
+    update(dt) {
+      rA.set(rig.restR); pA.set(B.pelvisRest);
+      if (now) {
+        // (src/sim/knight.js animate: the gaits by the pace, each stride as long as the ground it covers.)
+        const pace = (i) => C[HERO_GAITS[i]].stride.pace * ms;
+        const a = smoothstep(pace(0) * 1.15, pace(1) * 0.8, v), bb = smoothstep(pace(1) * 1.065, pace(2) * 0.946, v), c = smoothstep(pace(2) * 1.07, pace(3) * 0.953, v);
+        own[0] = 1 - a; own[1] = a * (1 - bb); own[2] = bb * (1 - c); own[3] = c;
+        let travel = 0, rate = 0;
+        for (let i = 0; i < 4; i++) { travel += own[i] * C[HERO_GAITS[i]].stride.travel * ms; rate += own[i] / C[HERO_GAITS[i]].dur; }
+        const loops = Math.min(v / travel, rate * 1.2);
+        phase += dt * loops * 4; steps = loops * 8 * 60;
+        const at = (phase / 4) % 1;
+        let had = 0;
+        for (let i = 0; i < 4; i++) { const w = own[i], cl = C[HERO_GAITS[i]]; if (w < 0.002) continue; if (!had) { B.sample(cl, at * cl.dur, rA, pA); had = w; continue; } had += w; over(cl, at * cl.dur, w / had); }
+      } else {
+        const WALK = 1.45 * ms, JOG = 3.1 * ms, RUN = 5.6 * ms;
+        const jog = smoothstep(1.9 * ms, 2.35 * ms, v), run = smoothstep(JOG * 1.05, RUN * 0.85, v);
+        const per = lerp(lerp(WALK * C.Walk_Loop.dur, JOG * C.Jog_Fwd_Loop.dur, jog), RUN * C.Jog_Fwd_Loop.dur, run);
+        phase += dt * v / per; steps = v / per * 2 * 60;
+        const ph = phase % 1;
+        B.sample(C.Walk_Formal_Loop, ph * C.Walk_Formal_Loop.dur, rA, pA);
+        if (jog > 0.001) over(C.Jog_Fwd_Loop, ph * C.Jog_Fwd_Loop.dur, jog);
+        if (run > 0.001) over(C.Sprint_Loop, ph * C.Sprint_Loop.dur, run);
+      }
+      pose.rot.set(rA); pose.pelvis.set(pA);
+      solveFK(pose, x, 0, z, YAW);
+      d.set(pose.wq, pose.wt);
+    },
+    gone() { d.gone(); } };
+}
+
+// ---- the scenes ----
+const SCENES = [
+  { group: 'You', name: 'Run (5.6 m/s)', ds: 'Old beside new: weapons put away, and with the staff and skull in hand.', lanes: [['wizOld', { v: 5.6 }], ['wizNew', { v: 5.6 }], ['wizNew', { v: 5.6, armed: true }]] },
+  { group: 'You', name: 'Sprint (8.6 m/s, Shift)', ds: 'The dash: its own gait now, leaned in, the staff trailed low.', lanes: [['wizOld', { v: 8.6 }], ['wizNew', { v: 8.6 }], ['wizNew', { v: 8.6, armed: true }]] },
+  { group: 'You', name: 'Walk, jog, run, sprint', ds: 'The four gaits, each at its own pace.', lanes: [['wizNew', { v: 1.3, label: 'Walk' }], ['wizNew', { v: 3.1, label: 'Jog' }], ['wizNew', { v: 5.6, label: 'Run' }], ['wizNew', { v: 8.6, label: 'Sprint' }]] },
+  { group: 'You', name: 'Setting off, a bend, a sidestep', ds: 'The lean as he gains and loses pace, the bank into a turn, and the dodge (Q) as a leap.', lanes: [['wizNew', { script: 'start_stop', armed: true, label: 'Run, sprint, stop' }], ['wizNew', { script: 'bend', label: 'Round a bend' }], ['wizNew', { script: 'dash', armed: true, label: 'Sidestep forward' }], ['wizNew', { script: 'dash_side', label: 'Sidestep left' }]] },
+  { group: 'You', name: 'Standing', ds: 'His weight shifts over planted feet, he breathes, his head looks about.', lanes: [['wizNew', { v: 0, armed: true, label: 'Standing, armed' }], ['wizNew', { v: 0, label: 'Standing, weapons away' }]] },
+  { group: 'The other Tessariels', name: 'Run (5.6 m/s)', ds: 'The hero picked below: old beside new.', lanes: [['heroOld', { v: 5.6 }], ['heroNew', { v: 5.6 }]] },
+  { group: 'The other Tessariels', name: 'Sprint (8.6 m/s)', ds: 'Keeping up with your sprint.', lanes: [['heroOld', { v: 8.6 }], ['heroNew', { v: 8.6 }]] },
+  { group: 'The other Tessariels', name: 'Walk, jog, run, sprint', ds: 'The four gaits on the hero picked below.', lanes: [['heroNew', { v: 1.4, label: 'Walk' }], ['heroNew', { v: 3.1, label: 'Jog' }], ['heroNew', { v: 5.6, label: 'Run' }], ['heroNew', { v: 8.6, label: 'Sprint' }]] },
+  { group: 'The other Tessariels', name: 'A party on the run', ds: 'Four bodies at the same pace: bigger ones take longer strides, so they are never in step.', lanes: [['heroNew', { v: 5.6, body: 'lancer_m1', label: 'Lancer' }], ['heroNew', { v: 5.6, body: 'paladin_f1', label: 'Paladin' }], ['heroNew', { v: 5.6, body: 'archer_f1', label: 'Archer' }], ['heroNew', { v: 5.6, body: 'bard_m1', label: 'Bard' }]] },
+  { group: 'Lisandra', name: 'Run (5.6 m/s)', ds: 'Old beside new, and as the witch. Her files are 25 MB each: a moment to load.', lanes: [['lisOld', { v: 5.6 }], ['lisNew', { v: 5.6 }], ['lisNew', { v: 5.6, form: 1 }]] },
+  { group: 'Lisandra', name: 'Flat out (8.6 m/s)', ds: 'Staying ahead of your sprint: a sprint of her own now, where the old run was only played faster.', lanes: [['lisOld', { v: 8.6 }], ['lisNew', { v: 8.6 }], ['lisNew', { v: 8.6, form: 1 }]] },
+  { group: 'Lisandra', name: 'An easy run (3.5 m/s)', ds: 'Catching you up.', lanes: [['lisOld', { v: 3.5 }], ['lisNew', { v: 3.5 }]] },
+];
+
+let lanes = [], current = -1, building = 0, playing = true, rate = 1, cam = 'Side';
+const CAMS = { Side: [0, 0.1, 1], Behind: [-1, 0.42, 0.12], '3/4': [-0.7, 0.3, 0.75], Front: [1, 0.18, 0.1] };
+function layout() {
+  // Seen from the side they stand in a row along the way they run; from behind or in front, abreast.
+  const along = cam === 'Side', mid = (lanes.length - 1) / 2;
+  lanes.forEach((l, i) => { l.x = along ? (i - mid) * LANE * 1.25 : 0; l.z = along ? 0 : (i - mid) * LANE; l.place(l.x, l.z); l.floor.position.set(l.x, 0, l.z); });
+  const v = CAMS[cam], wide = Math.max(1, lanes.length) * LANE * (along ? 1.25 : 1), half = Math.tan(Math.PI * 16 / 180) * Math.max(0.4, camera.aspect), dist = Math.max(6.5, (wide / 2 + 0.9) / half, 1.6 / Math.tan(Math.PI * 16 / 180));
+  controls.target.set(0, 0.95, 0);
+  camera.position.set(v[0] * dist, 0.95 + v[1] * dist, v[2] * dist);
+  controls.update();
+  document.querySelectorAll('#cams button').forEach((b) => b.setAttribute('aria-pressed', b.textContent === cam));
+}
+Object.keys(CAMS).forEach((n) => { const b = document.createElement('button'); b.textContent = n; b.title = n === 'Behind' ? 'Where the game\'s camera stands' : ''; b.onclick = () => { cam = n; layout(); }; $('cams').append(b); });
+
+async function show(i) {
+  const mine = ++building;
+  current = i;
+  document.querySelectorAll('.scene').forEach((b, k) => b.setAttribute('aria-pressed', k === i));
+  $('status').hidden = false; $('status').textContent = 'Loading…';
+  for (const l of lanes) { l.gone(); scene.remove(l.floor); l.lab.remove(); }
+  lanes = [];
+  try {
+    const made = [];
+    for (const [kind, opts] of SCENES[i].lanes) made.push(await LANES[kind]({ ...opts }));
+    if (mine !== building) { for (const l of made) l.gone(); return; }
+    for (const l of made) {
+      const tex = new THREE.CanvasTexture(cv); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8; tex.repeat.set(LANE * 0.9, 5);
+      l.tex = tex;
+      l.floor = new THREE.Mesh(new THREE.PlaneGeometry(LANE * 0.9, 5), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95 }));
+      l.floor.rotation.x = -Math.PI / 2; l.floor.rotation.z = Math.PI / 2; l.floor.receiveShadow = true; scene.add(l.floor);
+      l.lab = document.createElement('div'); l.lab.className = 'lab';
+      l.lab.innerHTML = `<span class="t ${l.kind}"></span><span class="s"></span>`;
+      l.lab.querySelector('.t').textContent = l.name;
+      $('labels').append(l.lab);
+    }
+    lanes = made;
+    layout();
+    for (const l of lanes) l.update(0);
+    $('status').hidden = true;
+  } catch (e) { $('status').textContent = 'That did not load: ' + e.message + '. Is the page served from the repo (python tools/serve.py)?'; console.error(e); }
+}
+
+let group = '';
+SCENES.forEach((s, i) => {
+  if (s.group !== group) { group = s.group; const h = document.createElement('h2'); h.textContent = group; $('scenes').append(h); }
+  const b = document.createElement('button'); b.className = 'scene'; b.setAttribute('aria-pressed', 'false');
+  b.innerHTML = '<span class="nm"></span><span class="ds"></span>'; b.querySelector('.nm').textContent = s.name; b.querySelector('.ds').textContent = s.ds;
+  b.onclick = () => show(i);
+  $('scenes').append(b);
+});
+for (const h of HEROES) { const o = document.createElement('option'); o.value = h; o.textContent = h.replace(/_([mf])(\d)/, (m, a, n) => ` (${a === 'm' ? 'man' : 'woman'} ${n})`); $('hero').append(o); }
+$('hero').onchange = () => { if (SCENES[current]?.group === 'The other Tessariels') show(current); };
+$('play').onclick = () => { playing = !playing; $('play').textContent = playing ? 'Pause' : 'Play'; };
+$('rate').onchange = (e) => { rate = +e.target.value; };
+addEventListener('keydown', (e) => { if (e.code === 'Space' && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'SELECT') { e.preventDefault(); $('play').click(); } });
+
+const clock = new THREE.Clock(), v3 = new THREE.Vector3();
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(0.05, clock.getDelta()) * (playing ? rate : 0);
+  controls.update();
+  const w = stage.clientWidth, h = stage.clientHeight;
+  for (const l of lanes) {
+    // (The game's bodies are stepped as the game steps them, 120 times a second.)
+    let left = dt; while (left > 1e-6) { const d = Math.min(left, 1 / 120); l.update(d); left -= d; }
+    if (dt <= 0) l.update(0);
+    l.tex.offset.y = (l.tex.offset.y - l.pace() * dt) % 1;
+    v3.set(l.x, 2.25, l.z).project(camera);
+    l.lab.style.left = ((v3.x + 1) / 2 * w) + 'px'; l.lab.style.top = ((1 - v3.y) / 2 * h) + 'px';
+    l.lab.querySelector('.s').textContent = l.sub();
+  }
+  $('hud').textContent = current >= 0 ? `${SCENES[current].group} · ${SCENES[current].name}` : '';
+  renderer.render(scene, camera);
+});
+window.__anim = { show, lanes: () => lanes, setCam: (n) => { cam = n; layout(); }, pause: (p) => { playing = !p; $('play').textContent = playing ? 'Pause' : 'Play'; } };
+if (q.get('cam') && CAMS[q.get('cam')]) cam = q.get('cam');
+show(+(q.get('scene') || 0));
+</script>

@@ -2584,6 +2584,54 @@ hired from them (four, with a tank and a healer), so a cast cut down would leave
 level is kept in this browser (`velscour.light`); `?light=0` puts it back, `?light=2` tries the lightest. If it still
 happens, what the title says is what to pass on: whether it died loading or playing, and after how long.
 
+**Measured again, honestly (November 2026, the second pass).** The owner said it was still crashing, on phones and on
+laptops whose GPU is on the processor. Two things were wrong with the numbers above. The game had grown (Phobos, the
+monsters, the townsfolk of the city); and the tool that measured it was holding some 600 MB of its own: Playwright keeps a
+copy of every file each thread downloads, which a player's browser never does. `tools/memory/raw.mjs` drives a plain
+Chrome over the debugger's socket with nothing else attached (`PHONE=pixel node tools/memory/raw.mjs steps.json`, the
+server up; steps `mem`, `threads` with `ATTACH=1`, `dump` for Chrome's own account by allocator, `regions`, `top`, `shot`,
+`eval`, `log`). By it, the page's process, and what's asked of the GPU:
+
+| | Before | After |
+| --- | --- | --- |
+| A phone's settings: most while loading | 1,946 MB | 1,250 to 1,400 MB |
+| A phone's settings: settled (and once garbage is collected) | 1,378 MB | about 1,100 MB (870) |
+| A phone's settings: threads | 9 | 5 |
+| Medium, a laptop's (1920 x 1080): settled | 3,300 MB | 1,740 MB (1,140 collected) |
+| Ultra: settled | 3,360 MB | 1,960 MB |
+| The longest the page stood still while loading | 4.9 s | 0.4 s, and one of 1.1 to 1.3 s as the game begins (not yet found) |
+| Asked of the GPU on a phone's settings | 570 MB | the same |
+| Asked of the GPU at Medium, and at Ultra | 1.85 GB, 5.8 GB | the same |
+
+What it was, biggest first:
+
+- **Threads.** Every thread is its own copy of the land's code and data and a heap of its own: 25 MB at rest, up to 95
+  after working, and some 100 MB each while the load runs. A phone loaded with four and kept them all, two of them
+  planning one knight's duel for good; a 16-thread PC loaded with fifteen. Now a phone loads with two and keeps one, with
+  no planners; a PC keeps four planners; and a computer whose GPU shares its memory, or with 8 GB or less, or on a lighter
+  setting, loads with three (eight at most anywhere: `threadPlan` and `boot` in `src/main.js`).
+- **Whole files held for a skeleton.** The simulation and the townsfolk's thread read every model's file, pictures and
+  all, for its bones: a dozen at once in the one, all 153 (185 MB) at once in the other, and each held till the collector
+  came round. `dropFile` (`src/core/files.js`) gives a file's bytes back the moment it's been read
+  (`ArrayBuffer.transfer(0)`): only once nothing reads it through a view, so what's kept of a file is copied out first.
+  The renderer does the same as each model is built, and the arms keep copies of their meshes, not their files.
+- **The land built on the page.** `buildSites` was five seconds of the main thread on a PC, and left the page holding
+  sixty-six thousand colliders it never asks for. It's built on a thread of its own now and handed over
+  (`buildSitesApart`, `src/core/sites.worker.js`), and that thread ended, which gives back all it used at once. Phobos's
+  near cells are built the same way, one asked for at a time (`src/gfx/phobos-near.js`): each was a tenth to a fifth of a
+  second's stop on a PC. A phone keeps ten of them up, not thirty.
+- **A function that keeps what it named.** A function that makes others which live on keeps every variable any of them
+  names: the road bed's build list, 6.5 MB, in every thread. Emptied by hand (`src/core/roadbed.js`).
+- **What's found at start, found once.** Each seal's flattest ground was searched for as the file was read, 0.75 s in
+  every thread before a line of the game ran; it's written down (`SEAL_AT` in `src/core/sites.js`; the test says when the
+  land has moved under it).
+- **GPU buffers** are written with the queue, a few megabytes at a time, not mapped as they're made (`makeBuffer`).
+
+**What's left, and the next cut.** The GPU's share is untouched, and it's the bigger one everywhere but on a phone: every
+picture is held uncompressed, four bytes a pixel. Compressed pictures (KTX2, transcoded to BC on a PC and ASTC or ETC2 on
+a phone) would be a quarter to an eighth of it, and are the one change that would move a laptop's whole game under 2 GB.
+After that: the skinned bodies' buffers (100 bytes a corner), the interiors (36 MB), and what the simulation's rigs hold.
+
 **Not known:** which of these the owner's phone was dying of, or how much it allows. Nothing here has been run on a phone:
 the pictures looked at were the town and three delves in headless Chromium at a phone's settings.
 

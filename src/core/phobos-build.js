@@ -617,7 +617,7 @@ export function tower(K, layer, x, z, r, h, roof, o = {}) {
   else {
     if (o.shell) cap();
     // (His V cut in each: swallowtail merlons round its head, the notch along the wall. On a phone, plain.)
-    for (let i = 0; i < 8; i++) { const a = i / 8 * TAU, mx = x + Math.cos(a) * (r - 0.5), mz = z + Math.sin(a) * (r - 0.5); if (K.lean) K.box(layer, mx, y + h, mz, 0.8, 1.6, 0.5, -a, { collide: false }); else K.vee(layer, mx, y + h, mz, Math.min(1.4, r * 0.18), 2.0, 0.5, -a + Math.PI / 2, 0.5); }
+    for (let i = 0; i < 8; i++) { const a = i / 8 * TAU, mx = x + Math.cos(a) * (r - 0.5), mz = z + Math.sin(a) * (r - 0.5); if (K.lean) { if (i % 2 === 0) K.box(layer, mx, y + h, mz, 0.8, 1.6, 0.5, -a, { collide: false }); } else K.vee(layer, mx, y + h, mz, Math.min(1.4, r * 0.18), 2.0, 0.5, -a + Math.PI / 2, 0.5); }
     if (hash2(id, 12) < 0.45) { K.drum('iron', x, y + h, z, r * 0.22, 1.2, 8, { r2: r * 0.34, open: true, collide: false }); fire(K, x, y + h + 0.6, z, r * 0.24, r * 0.62); }
   }
   if (K.lean || o.plain) return y + h;

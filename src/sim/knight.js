@@ -44,6 +44,9 @@ const PAD = (a) => (a.limb ? 0.35 : a.shield ? 0.9 : 0.3);
 const GAP_KNIGHT = 1.3, GAP_PLAYER = 1.5;
 // How much harder a town guard's blow falls on a beast or one of the dead than on plate (Knight.hitBeast).
 const GUARD_BITE = 2.2;
+// A hero's gaits, slowest first (assets/game/clips.*, packed by tools/anim/write.py), and how far past a gait's own
+// cadence the legs are let quicken: past it the feet slide rather than patter.
+const HERO_GAITS = ['A_walk', 'A_jog', 'A_run', 'A_sprint'], HERO_QUICKEN = 1.2;
 // Clips the shield arm keeps its guard through, besides the blows marked hold.
 const HOLD_CLIPS = new Set(['Roll', 'L_HitHead', 'L_HitBody', 'L_HitGut', 'Hit_Head', 'Hit_Chest']);
 // What can follow what, once a blow is past its link point. Read in chainNext by how the last one went.
@@ -282,13 +285,29 @@ export class Knight {
     const heroJog = hero ? smoothstep(1.9 * rig.motionScale, 2.35 * rig.motionScale, sp) : 0;
     const heroRun = hero ? smoothstep(JOG * 1.05, RUN * 0.85, sp) : 0;
     const before = this.phase;
+    // A hero's own gaits (tools/anim/gait.py, made in Blender: a walk, a jog, a run and a sprint, each a loop of eight
+    // steps for its own pace), mixed by the pace he's going, each stride as long as the ground it covers.
+    const own = hero && HERO_GAITS.every((n) => clips[n]?.stride) ? this.gaitMix || (this.gaitMix = new Float32Array(HERO_GAITS.length).fill(0)) : null;
+    if (own) {
+      const k = rig.motionScale, pace = (i) => clips[HERO_GAITS[i]].stride.pace * k;
+      // (Backwards he's never past a jog's stride.)
+      const v = this.backward ? Math.min(sp, pace(1)) : sp;
+      const a = smoothstep(pace(0) * 1.15, pace(1) * 0.8, v), b = smoothstep(pace(1) * 1.065, pace(2) * 0.946, v), c = smoothstep(pace(2) * 1.07, pace(3) * 0.953, v);
+      const to = [1 - a, a * (1 - b), b * (1 - c), c], e = own[0] + own[1] + own[2] + own[3] < 0.5 ? 1 : 1 - Math.exp(-9 * dt);
+      for (let i = 0; i < own.length; i++) own[i] += (to[i] - own[i]) * e;
+    }
     // A knight's own fighting gait (Velscour's stalk and run) when he's going where he faces.
     const along = sp > 0.25 ? Math.cos(wrapAngle(Math.atan2(this.vx, this.vz) - this.yaw)) : 0;
     const wantGait = inFight > 0.5 && this.hostile && !this.backward && along > 0.82 && !this.action ? 1 : 0;
     const gait = sp > (this.gaits.jog ? (this.gaits.walk ? WALK * 1.5 : 0) : Infinity) ? this.gaits.jog : this.gaits.walk;
     if (gait !== this.gaitClip) { this.gaitClip = gait; this.gaitW = Math.min(this.gaitW, 0.3); }
     this.gaitW = gait ? damp(this.gaitW, wantGait, 5, dt) : 0;
-    if (hero && sp > 0.02) {
+    if (own && sp > 0.02) {
+      // (this.phase counts strides, two steps each: a loop of a gait is four of them.)
+      let travel = 0, rate = 0;
+      for (let i = 0; i < own.length; i++) { const c = clips[HERO_GAITS[i]]; travel += own[i] * c.stride.travel * rig.motionScale; rate += own[i] / c.dur; }
+      this.phase += (this.backward ? -1 : 1) * dt * Math.min(Math.max(sp, 0.08) / travel, rate * HERO_QUICKEN) * (clips[HERO_GAITS[0]].stride.steps / 2);
+    } else if (hero && sp > 0.02) {
       // Metres per cycle: a walk's, a jog's, a run's (the run is played on the jog's cycle, as below).
       const per = lerp(lerp(WALK * clips.Walk_Loop.dur, JOG * clips.Jog_Fwd_Loop.dur, heroJog), RUN * clips.Jog_Fwd_Loop.dur, heroRun);
       this.phase += (this.backward ? -1 : 1) * dt * Math.max(sp, 0.08) / per;
@@ -311,8 +330,27 @@ export class Knight {
     // (A hero's legs are walking from the first step: a slow walk is a slow walk, never a slide on standing legs.)
     const moveW = hero ? smoothstep(0.02, 0.16, sp) : smoothstep(0.06, 0.7, sp);
     // (How far a hero is running, past a brisk walk: their empty hands are fists for it, src/sim/hero.js afterPose.)
-    if (hero) this.runK = heroJog * moveW;
-    if (moveW > 0.001) {
+    if (hero) this.runK = (own ? 1 - own[0] : heroJog) * moveW;
+    if (moveW > 0.001 && own) {
+      // The gaits at the same place in their loops: the first there is, and the rest over it.
+      const lp = this.phase / (clips[HERO_GAITS[0]].stride.steps / 2), at = lp - Math.floor(lp);
+      let had = 0;
+      for (let i = 0; i < own.length; i++) {
+        const w = own[i], c = clips[HERO_GAITS[i]];
+        if (w < 0.002) continue;
+        if (!had) { bank.sample(c, at * c.dur, rA, pA); had = w; continue; }
+        bank.sample(c, at * c.dur, rB, pB);
+        had += w;
+        blend(rA, rA, rB, w / had, rig.count);
+        lerp3(pA, pA, pB, w / had);
+      }
+      const limp = smoothstep(0.4, 0.75, wounded);
+      if (limp > 0.005) {
+        bank.sample(clips.Zombie_Walk_Fwd_Loop, ph * clips.Zombie_Walk_Fwd_Loop.dur, rB, pB);
+        blend(rA, rA, rB, limp, rig.count);
+        lerp3(pA, pA, pB, limp);
+      }
+    } else if (moveW > 0.001) {
       bank.sample(clips.Walk_Formal_Loop, ph * clips.Walk_Formal_Loop.dur, rA, pA);
       if (inFight > 0.005) {
         bank.sample(clips.Walk_Loop, ph * clips.Walk_Loop.dur, rB, pB);
@@ -342,6 +380,8 @@ export class Knight {
         blend(rA, rA, rB, this.gaitW, rig.count);
         lerp3(pA, pA, pB, this.gaitW);
       }
+    }
+    if (moveW > 0.001) {
       blend(rot, rot, rA, moveW, rig.count);
       lerp3(pel, pel, pA, moveW);
       // Footfalls.

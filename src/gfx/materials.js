@@ -1189,6 +1189,14 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
   albedo = mix(albedo, albedo * vec3f(0.78, 0.5, 0.48), wound.streak * (1.0 - blood));
   // Plate that turns within one of a phone's pixels can't hold a sharp highlight: it would only sparkle.
   if (LEAN) { rough = max(rough, min(length(fwidth(n0)) * 1.1, 0.7)); }
+  else {
+    // (And on a PC, the same trouble at its own size: a body far off, or a plate's rim, turns through more than a pixel can
+    // show, and its highlight flickers on and off from frame to frame, which no smoothing of edges mends. The highlight is
+    // widened by how far the surface turns across the pixel, and no further than a little: Tokuyoshi and Kaplanyan's
+    // filter. Up close, where a plate is many pixels of one facing, it changes nothing.)
+    let nx = dpdx(n0); let ny = dpdy(n0);
+    rough = sqrt(min(rough * rough + min(0.5 * (dot(nx, nx) + dot(ny, ny)), 0.18), 1.0));
+  }
   let shadow = shadowAt(p, n0, in.viewZ, ign(in.pos.xy));
   var c = shadePBR(p, n, v, albedo, rough, metal, ao, shadow);
   // Bright torn lips stay findable at fighting range, and flash for an instant as the blade goes by.

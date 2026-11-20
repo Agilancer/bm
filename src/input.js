@@ -176,7 +176,16 @@ export class Input {
     root.addEventListener('touchcancel', end);
     // What's under a thumb shows it: pressed in as it lands, let out as it lifts (src/ui/hud.css .down).
     const pressed = (e) => e.target.closest?.('.tbtn, .spell');
-    root.addEventListener('touchstart', (e) => { if (this.enabled && !this.menu) pressed(e)?.classList.add('down'); }, { capture: true, passive: true });
+    // (And felt: the shortest buzz a phone will give, where it gives one. An iPhone's browser has none to give.)
+    root.addEventListener('touchstart', (e) => {
+      if (!this.enabled || this.menu) return;
+      const el = pressed(e);
+      if (!el) return;
+      el.classList.add('down');
+      try { if (this.buzz !== false) navigator.vibrate?.(12); } catch { /* not allowed yet */ }
+    }, { capture: true, passive: true });
+    // (An iPhone's pinch and its double-tap zoom, which it gives a page whatever the page's viewport says.)
+    for (const t of ['gesturestart', 'gesturechange']) document.addEventListener(t, (e) => e.preventDefault(), { passive: false });
     for (const t of ['touchend', 'touchcancel']) root.addEventListener(t, (e) => pressed(e)?.classList.remove('down'), { capture: true, passive: true });
     // A spell's slot (src/ui/spellbar.js) steers as any button does: the thumb that cast it can go on looking.
     this.steerFrom = (t) => { if (this.lookId === null) { this.lookId = t.identifier; this.lx = t.clientX; this.ly = t.clientY; } };

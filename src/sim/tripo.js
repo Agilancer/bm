@@ -9,6 +9,7 @@ import { FOE } from './foespells.js';
 import { TRICKS, tryTrick } from './moves.js';
 import { ELEM, FX } from './spells.js';
 import { parseGLB } from '../core/glb.js';
+import { dropFile } from '../core/files.js';
 import { C, C_HERO, C_PROPS, EV } from '../core/layout.js';
 import { carryMat4 } from '../core/carry.js';
 import { clamp, mat4FromQT, quatMul, quatRotate, quatYaw, wrapAngle } from '../core/math.js';
@@ -184,7 +185,7 @@ function rigFor(id, meta, base) {
   r = fetch(`${base}${TRIPO_BASE}${meta?.src || id}.glb`).then((res) => {
     if (!res.ok) throw new Error(`${id}: ${res.status}`);
     return res.arrayBuffer();
-  }).then((b) => prepareRig(id, meta, b));
+  }).then((b) => { const rig = prepareRig(id, meta, b); dropFile(b); return rig; });
   rigs.set(id, r);
   while (rigs.size > RIGS_KEPT) rigs.delete(rigs.keys().next().value);
   return r;
