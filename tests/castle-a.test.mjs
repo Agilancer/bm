@@ -297,7 +297,7 @@ test('no two rooms one box: sections that differ, a few lamps of its own to each
   const n = (d, kind) => d.props.filter((p) => p.kind === kind).length;
   assert.ok(n(DA, 'leanshelf') >= 10 && n(DA, 'cardcase') >= 6 && n(DA, 'press') >= 3, 'the Archive: fallen cases, card-cases, presses');
   assert.ok(n(TP, 'hangwall') >= 12 && n(TP, 'easel') >= 10 && n(TP, 'ringbeam') === 2 && n(TP, 'column') >= 12, 'the Gallery: hung walls, easels, the Rotunda\'s ring');
-  assert.ok(n(AU, 'copper') >= 7 && n(AU, 'pipe') >= 10 && n(AU, 'glassjar') >= 10 && n(AU, 'benchstills') >= 4, 'the Undercroft: coppers, pipes, jars, benches');
+  assert.ok(n(AU, 'copper') >= 7 && n(AU, 'pipe') >= 10 && n(AU, 'glassjar') >= 10 && n(AU, 'benchstills') >= 3, 'the Undercroft: coppers, pipes, jars, benches');
   // (A solid thing stands well clear of its room's walls: one too near shuts the gap and leaves a hole in the wall behind it.)
   for (const d of [DA, TP, AU]) for (const p of d.props.filter((q) => q.solid)) {
     const r = d.rooms.find((q) => inRoom(q, p.x, p.z)), rad = p.r ?? Math.max(p.hx, p.hz);

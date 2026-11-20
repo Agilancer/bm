@@ -40,6 +40,20 @@ function slab(K, layer, edge, x, y, z, yaw, w, h, t, lean = 0, roll = 0) {
   K.quad(edge, P(-w, h, t), P(w, h, t), P(w, h, -t), P(-w, h, -t), up);
 }
 
+// A sitter, head and shoulders, in a frame's own plane: um its middle, sw half its shoulders, from v up sh. One of six: plain,
+// hatted, hooded, crowned, horned, a child (drawn lower by who calls it).
+function bust(K, F, um, sw, v, sh, liv, kind, t) {
+  const o = 0.065, Q = (layer, a, b, c, e, oo = o) => K.quad(layer, F(a[0], a[1], oo), F(b[0], b[1], oo), F(c[0], c[1], oo), F(e[0], e[1], oo), F.n);
+  Q(liv, [um - sw, v], [um + sw, v], [um + sw * 0.45 + t, v + sh * 0.45], [um - sw * 0.45 + t, v + sh * 0.45]);
+  const fx = um + t, f0 = v + sh * 0.5, f1 = v + sh * 0.8, fw = sw * 0.32;
+  if (kind === 2) Q(liv, [fx - fw * 1.7, f0 - sh * 0.08], [fx + fw * 1.7, f0 - sh * 0.08], [fx + fw * 1.2, f1 + sh * 0.1], [fx - fw * 1.2, f1 + sh * 0.1], 0.068);   // (a hood round the face)
+  Q('pale:cloth_oat', [fx - fw, f0], [fx + fw, f0], [fx + fw * 1.1, f1], [fx - fw * 1.1, f1], 0.07);
+  if (kind === 1) { Q('char:wood', [fx - fw * 2.2, f1 - sh * 0.02], [fx + fw * 2.2, f1 - sh * 0.02], [fx + fw * 2.2, f1 + sh * 0.03], [fx - fw * 2.2, f1 + sh * 0.03], 0.072); Q('char:wood', [fx - fw * 1.1, f1 + sh * 0.03], [fx + fw * 1.1, f1 + sh * 0.03], [fx + fw * 0.9, f1 + sh * 0.14], [fx - fw * 0.9, f1 + sh * 0.14], 0.072); }
+  if (kind === 3) Q('p2_bronze_plates', [fx - fw * 1.1, f1], [fx + fw * 1.1, f1], [fx + fw * 1.4, f1 + sh * 0.09], [fx - fw * 1.4, f1 + sh * 0.09], 0.072);
+  // (Horned: two, rising apart from the brow, his own V.)
+  if (kind === 4) for (const e of [-1, 1]) Q('char:wood', [fx + e * fw * 0.5, f1], [fx + e * fw * 1.0, f1], [fx + e * fw * 1.9, f1 + sh * 0.16], [fx + e * fw * 1.7, f1 + sh * 0.16], 0.072);
+}
+
 export const PROPS_A = {
   // ---- the Drowned Archive ----
   // A sheet of standing water, hx by hz, lying `lvl` over the delve's own floor height (so it lies level over floor
@@ -120,18 +134,21 @@ export const PROPS_A = {
     for (let h0 = lo; h0 < top - 0.7 * S; row++) {
       const rh = Math.min(top - h0, (1.25 + 0.75 * hash2(row * 13 + x, z + row * 5)) * S);
       for (let u = -w + 0.1 + 0.5 * S * hash2(row, x + z); u < w - 0.6 * S;) {
-        const k = hash2(Math.round(u * 7) + row * 17, x * 5 + z * 3), cw = Math.min(w - u - 0.05, (0.75 + 0.75 * k) * S);
+        const k = hash2(Math.round(u * 7) + row * 17, x * 5 + z * 3), cw = Math.min(w - u - 0.05, ((k * 19) % 1 < 0.62 ? 0.8 + 0.2 * k : 1.5 + 0.3 * k) * S);
         if (cw < 0.5 * S) break;
         const g = 0.07 * Math.min(1, S * 1.4), u0 = u + g, u1 = u + cw - g, v0 = h0 + g, v1 = h0 + rh - g, um = (u0 + u1) / 2;
         u += cw;
         if (skip.some(([a, b]) => u1 > a && u0 < b) || k > 0.94) continue;   // (and now and then a gap: one's been taken down)
         face(K, FR[Math.floor(k * 37) % 4], F, u0, u1, v0, v1, 0.04);
         const m = Math.min(0.11, (u1 - u0) * 0.14);
+        // (Now and then an empty frame, the wall through it; or a canvas slashed corner to corner, its sitter gone.)
+        const fate = (k * 29) % 1;
+        if (fate < 0.04) { face(K, 'char:stone', F, u0 + m, u1 - m, v0 + m, v1 - m, 0.045); continue; }
         face(K, 'char:cloth_oat', F, u0 + m, u1 - m, v0 + m, v1 - m, 0.055);
-        // (The sitter: shoulders, a neck, a face; turned a little one way or the other.)
-        const sw = (u1 - u0 - 2 * m) * 0.36, sh = (v1 - v0 - 2 * m), t = (k * 11 % 1 - 0.5) * 0.12, liv = LIV[Math.floor(k * 53) % 6];
-        K.quad(liv, F(um - sw, v0 + m, 0.065), F(um + sw, v0 + m, 0.065), F(um + sw * 0.45 + t, v0 + m + sh * 0.45, 0.065), F(um - sw * 0.45 + t, v0 + m + sh * 0.45, 0.065), F.n);
-        K.quad('pale:cloth_oat', F(um - sw * 0.3 + t, v0 + m + sh * 0.5, 0.07), F(um + sw * 0.3 + t, v0 + m + sh * 0.5, 0.07), F(um + sw * 0.34 + t, v0 + m + sh * 0.8, 0.07), F(um - sw * 0.34 + t, v0 + m + sh * 0.8, 0.07), F.n);
+        if (fate < 0.06) { K.quad('pale:cloth_oat', F(u0 + m, v0 + m, 0.062), F(u0 + m + 0.09, v0 + m, 0.062), F(u1 - m, v1 - m, 0.062), F(u1 - m - 0.09, v1 - m, 0.062), F.n); continue; }
+        const iw = u1 - u0 - 2 * m, sh = v1 - v0 - 2 * m, t = (k * 11 % 1 - 0.5) * 0.12, liv = LIV[Math.floor(k * 53) % 6], kind = Math.floor(k * 71) % 7;
+        if (kind === 6) { bust(K, F, um - iw * 0.22, iw * 0.21, v0 + m, sh, liv, 0, t); bust(K, F, um + iw * 0.22, iw * 0.21, v0 + m, sh * 0.9, LIV[(Math.floor(k * 53) + 2) % 6], 2, -t); }
+        else bust(K, F, um, iw * 0.36, v0 + m, kind === 5 ? sh * 0.62 : sh, liv, kind, t);
       }
       h0 += rh;
     }
@@ -162,6 +179,41 @@ export const PROPS_A = {
     K.quad('char:cloth_oat', F(-0.13 * k, 1.55 * k, 0.1), F(0.13 * k, 1.55 * k, 0.1), F(0.15 * k, 1.95 * k, 0.1), F(-0.15 * k, 1.95 * k, 0.1), F.n);
   },
 
+  // Frames stacked against a wall, facing yaw out from it: n of them one inside another's lean, each four lengths of
+  // moulding mitred at its corners, the wall seen through them.
+  framestack(K, d, p, x, y, z) {
+    const F = frame(x, y, z, p.yaw || 0), n = p.n || 4;
+    for (let i = 0; i < n; i++) {
+      const k = hash2(i * 7 + x, z * 3 + i), w = (p.w || 1.3) * (1 - i * 0.13) * (0.9 + 0.2 * k), h = (p.h || 2.2) * (1 - i * 0.1), o = 0.12 + i * 0.16, u = (k - 0.5) * 0.5, t = 0.09;
+      const L = ['dark:wood', 'p2_bronze_plates', 'char:wood', 'wood'][(i + Math.floor(k * 4)) % 4], B = (a, b) => bar(K, L, F(a[0], a[1], o + a[1] * -0.06), F(b[0], b[1], o + b[1] * -0.06), t);
+      B([u - w, 0.05], [u + w, 0.05]); B([u - w, h], [u + w, h]); B([u - w, 0.05], [u - w, h]); B([u + w, 0.05], [u + w, h]);
+    }
+  },
+  // A canvas the size of a wall, stretched on it and half painted: w either way from (x, z), from lo up to h, facing yaw.
+  // Primed and bare at one end; at the other his house in rows, done; between, figures blocked in and not yet faced.
+  canvaswall(K, d, p, x, y, z) {
+    const F = frame(x, y, z, p.yaw || 0), w = p.w, lo = p.lo ?? 0.8, top = p.h || 10;
+    face(K, 'dark:wood', F, -w - 0.2, w + 0.2, lo - 0.2, top + 0.2, 0.03); face(K, 'pale:cloth_oat', F, -w, w, lo, top, 0.05);
+    const LIV = ['royal:cloth_red', 'cloth_red', 'dark:cloth_oat', 'blood:cloth_red'];
+    for (let row = 0, v = lo + 0.3; v + 2.6 < top; row++, v += 3) for (let u = -w + 1.2; u < w * 0.45; u += 2.3) {
+      const k = hash2(Math.round(u * 3) + row * 11, x + z), done = u < -w * 0.25;
+      // (Done: a sitter whole. Begun: the shoulders laid in and a ground behind, no face yet.)
+      face(K, 'char:cloth_oat', F, u - 0.95, u + 0.95, v, v + 2.5, 0.055);
+      if (done) bust(K, F, u, 0.7, v, 2.5, LIV[Math.floor(k * 4)], Math.floor(k * 23) % 5, (k - 0.5) * 0.1);
+      else K.quad(LIV[Math.floor(k * 4)], F(u - 0.7, v, 0.065), F(u + 0.7, v, 0.065), F(u + 0.3, v + 1.1, 0.065), F(u - 0.3, v + 1.1, 0.065), F.n);
+    }
+  },
+  // Sheets hung to dry on a line between two posts (the line from the posts' heads, the sheets under it), along yaw.
+  sheets(K, d, p, x, y, z) {
+    const yaw = p.yaw || 0, F = frame(x, y, z, yaw), w = p.w || 3, h = p.h || 2.6;
+    for (const u of [-w, w]) { const q = F(u, 0, 0); K.box('dark:wood', q[0], q[1], q[2], 0.06, h, 0.06, yaw, NO); }
+    bar(K, 'dark:wood', F(-w, h, 0), F(w, h, 0), 0.04);
+    for (let u = -w + 0.3; u < w - 0.6; u += 0.85) {
+      const k = hash2(Math.round(u * 5) + x, z), len = 1.0 + 0.9 * k;
+      for (const sd of [-1, 1]) K.quad(k > 0.8 ? 'cloth_oat' : 'pale:cloth_oat', F(u, h - 0.04 - len, sd * 0.012), F(u + 0.7, h - 0.04 - len, sd * 0.012), F(u + 0.7, h - 0.04, sd * 0.012), F(u, h - 0.04, sd * 0.012), F.n.map((q) => q * sd));
+    }
+  },
+
   // ---- the Alchemists' Undercroft ----
   // A copper still as tall as two men: a firebox of block with its fire in it, the drum on that, banded, its head drawn
   // up to a neck. (Its neck's pipe is a `pipe` of its own, from neck: where that starts.) r: its radius; h: the drum's height.
@@ -169,9 +221,9 @@ export const PROPS_A = {
     const r = p.r || 1.2, h = p.h || 2.4, yaw = p.yaw || 0, F = frame(x, y, z, yaw);
     K.box('soot:block', x, y, z, r + 0.2, 0.9, r + 0.2, yaw, NO);
     face(K, 'char:stone', F, -0.36, 0.36, 0.14, 0.7, r + 0.21); face(K, 'flame', F, -0.26, 0.26, 0.2, 0.5, r + 0.22);
-    K.drum('umber:p2_bronze_plates', x, y + 0.9, z, r, h, 14, NO);
-    for (const f of [0.08, 0.5, 0.92]) K.drum('iron', x, y + 0.9 + h * f - 0.05, z, r + 0.03, 0.1, 14, { open: true, collide: false });
-    K.drum('umber:p2_bronze_plates', x, y + 0.9 + h, z, r, 0.7, 14, { r2: 0.34, collide: false });
+    K.drum(p.layer || 'p2_bronze_plates', x, y + 0.9, z, r, h, 14, NO);
+    for (const f of [0.08, 0.5, 0.92]) K.drum('umber:p2_bronze_plates', x, y + 0.9 + h * f - 0.07, z, r + 0.04, 0.14, 14, { open: true, collide: false });
+    K.drum('p2_bronze_plates', x, y + 0.9 + h, z, r, 0.7, 14, { r2: 0.34, collide: false });
     K.drum('umber:p2_bronze_plates', x, y + 1.6 + h, z, 0.3, 0.5, 8, NO);
     // (A row of rivets' worth of shadow down its seam, and a tap.)
     { const q = F(0, 1.3, r + 0.02); K.drum('iron', q[0], q[1], q[2], 0.07, 0.07, 6, NO); const t = F(0.5, 0.9 + h * 0.3, r * 0.9); bar(K, 'iron', t, F(0.5, 0.9 + h * 0.3, r + 0.4), 0.06); }
@@ -179,7 +231,7 @@ export const PROPS_A = {
   // A run of copper pipe through pts: [[x, z, up], ...] (local to the delve; up over the floor under each). It turns at
   // each and never branches; a collar at each turn.
   pipe(K, d, p) {
-    const t = p.t || 0.34, L = p.layer || 'umber:p2_bronze_plates';
+    const t = p.t || 0.34, L = p.layer || 'p2_bronze_plates';
     const W = p.pts.map(([px, pz, up]) => [d.x + px, caveFloorY(d.x + px, d.z + pz) + up, d.z + pz]);
     for (let k = 1; k < W.length; k++) {
       bar(K, L, W[k - 1], W[k], t);
@@ -212,10 +264,12 @@ export const PROPS_A = {
     // (And the glass's shine: a pale stave up each shoulder of it.)
     for (const sd of [-1, 1]) { const a = yaw + sd * 1.25, sx = x + Math.sin(a) * (r + 0.012), sz = z + Math.cos(a) * (r + 0.012), tx = Math.cos(a) * 0.07, tz = -Math.sin(a) * 0.07; K.quad('pale:lake', [sx - tx, y0 + h * 0.12, sz - tz], [sx + tx, y0 + h * 0.12, sz + tz], [sx + tx, y0 + h * 0.88, sz + tz], [sx - tx, y0 + h * 0.88, sz - tz], [Math.sin(a), 0, Math.cos(a)]); }
     const P = (u, v) => F(u * r, v * h, o + 0.012), Q = (a, b, c, e) => K.quad('char:stone', P(...a), P(...b), P(...c), P(...e), F.n);
-    const k = hash2(x * 3, z * 5) - 0.5;
-    // (Curled: a back, a head bowed to its knees, a hand against the glass.)
-    Q([-0.3 + k * 0.2, 0.26], [0.26 + k * 0.2, 0.2], [0.34 + k * 0.2, 0.56], [-0.2 + k * 0.2, 0.62]);
-    Q([0.02 + k * 0.2, 0.56], [0.36 + k * 0.2, 0.52], [0.3 + k * 0.2, 0.72], [0.06 + k * 0.2, 0.74]);
-    Q([-0.46 + k * 0.2, 0.44], [-0.34 + k * 0.2, 0.42], [-0.4 + k * 0.2, 0.6], [-0.5 + k * 0.2, 0.58]);
+    const k = (hash2(x * 3, z * 5) - 0.5) * 0.2;
+    // (A body hung in it: a trunk, round at both ends, and a head bowed on it. Nothing thin, nothing crossed, no limb out.)
+    Q([-0.2 + k, 0.24], [0.2 + k, 0.24], [0.32 + k, 0.36], [-0.32 + k, 0.36]);
+    Q([-0.32 + k, 0.36], [0.32 + k, 0.36], [0.3 + k, 0.56], [-0.3 + k, 0.56]);
+    Q([-0.3 + k, 0.56], [0.3 + k, 0.56], [0.14 + k, 0.64], [-0.14 + k, 0.64]);
+    Q([-0.1 + k * 1.6, 0.64], [0.16 + k * 1.6, 0.64], [0.2 + k * 1.6, 0.72], [-0.14 + k * 1.6, 0.72]);
+    Q([-0.14 + k * 1.6, 0.72], [0.2 + k * 1.6, 0.72], [0.12 + k * 1.6, 0.79], [-0.06 + k * 1.6, 0.79]);
   },
 };

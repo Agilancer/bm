@@ -31,11 +31,11 @@ const rooms = [
   R('tp_long', 'the Long Gallery', 0, -62, 5, 36, 0, 14, { rock: 'royal:p2_thorn_brocade', foot: 'dark:block', ground: 'p2_worn_floorboards', banners: 0, fires: 0 }),
   R('tp_rotunda', 'the Rotunda of the House', 6, -110, 14, 14, 0, 22, { rock: 'royal:p2_thorn_brocade', foot: 'dark:block', ground: 'p2_oxblood_marble', banners: 0, fires: 0, hang: 0 }),
   R('tp_salon', 'the Salon of the Dowagers', -52, -104, 18, 14, 0, 9, { rock: 'royal:p2_thorn_brocade', foot: 'dark:block', ground: 'p2_worn_floorboards', banners: 0, fires: 0, hang: 0 }),
-  R('tp_shop', "the Framers' Shop", 62, -120, 18, 14, 0, 7.5, { rock: 'p2_sooty_plaster', foot: 'dark:block', ground: 'p2_worn_floorboards', banners: 0, fires: 0, hang: 0 }),
-  R('tp_restore', "the Restorers' Room", -52, -146, 12, 10, 0, 6, { rock: 'p2_sooty_plaster', foot: 'dark:block', ground: 'p2_worn_floorboards', banners: 0, fires: 0, hang: 0 }),
+  R('tp_shop', "the Framers' Shop", 62, -120, 18, 14, 0, 7.5, { rock: 'ph_grey_plaster', foot: 'dark:block', ground: 'p2_worn_floorboards', banners: 0, fires: 0, hang: 0 }),
+  R('tp_restore', "the Restorers' Room", -52, -146, 12, 10, 0, 6, { rock: 'ph_grey_plaster', foot: 'dark:block', ground: 'p2_worn_floorboards', banners: 0, fires: 0, hang: 0 }),
   R('tp_eyes', 'the Gallery of Eyes', 14, -148, 5, 26, 0, 8, { rock: 'royal:p2_thorn_brocade', foot: 'dark:block', ground: 'p2_worn_floorboards', banners: 0, fires: 0 }),
   R('tp_cabinet', 'the Cabinet of Miniatures', 30, -52, 6, 6, 0, 5, { rock: 'p2_black_panelling', foot: 'dark:block', ground: 'p2_worn_floorboards', banners: 0, fires: 0 }),
-  R('tp_hall', 'the Unfinished Hall', 14, -196, 19, 24, 0, 20, { rock: 'p2_sooty_plaster', foot: 'dark:block', ground: 'p2_worn_floorboards', banners: 0, fires: 0, hang: 0 }),
+  R('tp_hall', 'the Unfinished Hall', 14, -196, 19, 24, 0, 20, { rock: 'ph_grey_plaster', foot: 'dark:block', ground: 'p2_worn_floorboards', banners: 0, fires: 0, hang: 0 }),
 ];
 
 // (Each run a little into both rooms. The Rotunda's four ways: the Long Gallery in at its north, west of its middle; the
@@ -109,6 +109,9 @@ const props = [];
     add('carpet', x, z, { hx: 1.6, hz: 1.6, layer: 'royal:cloth_red' });
   }
   add('hangwall', -52, -90.06, { yaw: PI, w: 17.6, h: 8.4, lo: 0.9, skip: [[-7.6, -4.4]] }); add('hangwall', -52, -117.94, { yaw: 0, w: 17.6, h: 8.4, lo: 0.9, skip: [[-7.8, -4.2], [-2.4, 2.4]] });
+  add('hangwall', -69.94, -104, { yaw: PI / 2, w: 13.6, h: 8.4, lo: 0.9, skip: [[-7.6, -4.4]] }); add('hangwall', -34.06, -104, { yaw: -PI / 2, w: 13.6, h: 8.4, lo: 0.9, skip: [[-2.6, 2.6]] });
+  for (let i = 0; i < 7; i++) { const a = 0.5 + i * 0.36; add('seat', -52 + Math.cos(a) * 7.5, -107 + Math.sin(a) * 6, { hx: 0.45, hz: 0.45, stone: 'dark:wood', yaw: -a - PI / 2 }); }
+  add('table', -46, -110, { hx: 1.2, hz: 0.7, cloth: 'royal:cloth_oat' }); add('table', -59, -110, { hx: 1.2, hz: 0.7, cloth: 'royal:cloth_oat' }); add('framestack', -69.6, -107, { yaw: PI / 2, n: 3 });
   add('seat', -52, -93.4, { hx: 0.9, hz: 0.7, stone: 'dark:wood' }); add('table', -52, -99, { hx: 1.4, hz: 0.8, cloth: 'royal:cloth_oat' }); add('candles', -52, -99, { up: 0.85 });
   add('hearth', -52, -117.4, { yaw: 0 });
   add('chandelier', -58, -101, { up: 5.4, hang: true }); add('chandelier', -44, -108, { up: 5.4, hang: true }); add('carpet', -52, -105, { hx: 8, hz: 4, layer: 'royal:cloth_red' });
@@ -118,6 +121,11 @@ const props = [];
   for (const [x, z, yaw] of [[79.75, -124, -PI / 2], [79.75, -120, -PI / 2], [79.75, -128, -PI / 2], [56, -133.75, 0], [52, -133.75, 0], [60, -133.75, 0], [72, -106.25, PI], [76, -106.25, PI], [44.25, -128, PI / 2], [44.25, -124, PI / 2]]) {
     add('portrait', x, z, { yaw, sz: 1.2, up: -0.9 }); add('portrait', x + Math.sin(yaw) * 0.14, z + Math.cos(yaw) * 0.14, { yaw, sz: 0.9, up: -0.9 });
   }
+  for (const x of [48, 53, 58, 70, 75]) add('framestack', x, -106.3, { yaw: PI, n: 3 + (x % 3), h: 2 + (x % 4) * 0.4 });
+  for (const x of [64, 68, 72]) add('framestack', x, -133.7, { yaw: 0, n: 4, h: 2.6 });
+  for (const z of [-112, -116, -130]) add('framestack', 79.7, z, { yaw: -PI / 2, n: 4, h: 2.4 });
+  for (const z of [-116, -120, -132]) add('framestack', 44.3, z, { yaw: PI / 2, n: 3, h: 2.8 });
+  add('easel', 50, -128, { yaw: 0.8, sitter: 'royal:cloth_red' }); add('easel', 53.5, -131, { yaw: 0.4 }); add('easel', 75, -113, { yaw: -2.2, sitter: 'dark:cloth_oat' }); add('easel', 72, -110.5, { yaw: -2.6, sz: 1.3 });
   add('vat', 48, -131, { r: 0.9 }); add('vat', 77, -110, { r: 0.8 }); add('crates', 46.5, -113); add('barrels', 77.5, -132);
   add('chandelier', 55, -117, { up: 5, hang: true }); add('chandelier', 70, -124, { up: 5, hang: true }); add('brazier', 47, -108.4);
   add('pool', 62, -120, { r: 2.6, layer: 'p2_bronze_plates', up: 0.02 }); add('pool', 62, -120, { r: 2.1, layer: 'p2_worn_floorboards', up: 0.03 }); add('decal', 66, -124, { layer: 'p2_scorch_mark', w: 2, flat: true });
@@ -136,8 +144,12 @@ const props = [];
   add('easel', -2, -199, { yaw: PI / 2, sz: 4, sitter: 'blood:cloth_red' }); add('brazier', -1.6, -192.4); add('brazier', -1.6, -205.6);
   for (const [x, z] of EASELS) add('easel', x + (x < 14 ? -1.6 : 1.6), z, { yaw: x < 14 ? PI / 2 : -PI / 2, sz: 1.2 });
   // (And what he's begun and left: canvases stood against the east wall, face out, each a sitter half there; more on easels about the floor.)
-  for (const [z, sz, liv] of [[-180, 2.2, 'royal:cloth_red'], [-188, 1.7, null], [-198, 2.5, 'dark:cloth_oat'], [-206, 1.9, 'royal:cloth_red'], [-214, 2.2, null]]) add('easel', 31.6, z, { yaw: -PI / 2, sz, sitter: liv });
-  add('easel', 9, -178, { yaw: 0.4, sz: 1.5, sitter: 'cloth_red' }); add('easel', 20, -200, { yaw: -2.4, sz: 1.6 }); add('easel', 8, -206, { yaw: 2.0, sz: 1.4, sitter: 'pale:cloth_oat' });
+  add('canvaswall', 32.9, -193, { yaw: -PI / 2, w: 13, h: 15, lo: 1 });
+  add('canvaswall', 14, -172.1, { yaw: PI, w: 4, h: 15, lo: 6 });
+  // (His pupils' easels in two ranks down the north end, each a sitter at a different stage; frames stacked for what's done.)
+  for (const z of [-177.5, -181.5]) for (const x of [4, 8, 20, 24, 28]) add('easel', x, z, { yaw: PI + (x % 3 - 1) * 0.3, sz: 1.1 + (x % 4) * 0.08, sitter: [null, 'royal:cloth_red', 'cloth_red', 'dark:cloth_oat'][(x + Math.round(z)) % 4 | 0] || undefined });
+  for (const z of [-182, -190, -212]) add('framestack', -4.7, z, { yaw: PI / 2, n: 4, h: 2.6 });
+  add('easel', 22, -198, { yaw: -2.4, sz: 1.6 }); add('easel', 8, -206, { yaw: 2.0, sz: 1.4, sitter: 'pale:cloth_oat' });
   add('table', 22, -216.6, { hx: 3, hz: 0.9 }); add('candles', 21, -216.6, { up: 0.85 }); add('candles', 24, -216.4, { up: 0.85 }); add('seat', 27, -217, { hx: 0.6, hz: 0.6, stone: 'dark:wood', flip: true });
   add('mark', 14, -219.6, { up: 10, r: 2, back: -1 });
   for (const [x, z] of [[3, -206], [27, -192]]) add('column', x, z, { r: 1.2, solid: true });

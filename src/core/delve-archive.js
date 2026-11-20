@@ -30,7 +30,7 @@ const rooms = [
   R('da_door', 'the Sunk Door', 0, -16, 4, 24, 0, 6, { rock: 'p2_waterline_wall', foot: 'dark:block', ground: 'p2_bone_joint_flags', fires: 0 }),
   R('da_reading', 'the Drowned Reading Room', 8, -54, 16, 18, 0, 18, { rock: 'p2_book_spines', foot: 'mire:block', ground: 'p2_worn_floorboards', banners: 0, fires: 0, hang: 0 }),
   R('da_catalogue', 'the Catalogue', -56, -42, 16, 14, 0, 7, { rock: 'p2_black_panelling', foot: 'dark:block', ground: 'p2_worn_floorboards', banners: 0, fires: 0, hang: 0 }),
-  R('da_bindery', 'the Bindery', 58, -66, 16, 14, 0, 10, { rock: 'p2_sooty_plaster', foot: 'mire:block', ground: 'flags', banners: 0, fires: 0, hang: 0 }),
+  R('da_bindery', 'the Bindery', 58, -66, 16, 14, 0, 10, { rock: 'ph_grey_plaster', foot: 'mire:block', ground: 'flags', banners: 0, fires: 0, hang: 0 }),
   R('da_script', 'the Scriptorium', -56, -82, 12, 12, 0, 5.5, { rock: 'p2_waterline_wall', foot: 'mire:block', ground: 'p2_worn_floorboards', banners: 0, fires: 0, hang: 0 }),
   R('da_flood', 'the Long Flood', 18, -106, 6, 38, 0, 20, { rock: 'p2_book_spines', foot: 'mire:block', ground: 'slate:flags', banners: 0, fires: 0 }),
   R('da_sluice_w', 'the West Sluice', -40, -114, 10, 10, 0, 16, { rock: 'slate:ashlar', foot: 'slate:block', ground: 'slate:flags', banners: 0, fires: 0, hang: 0 }),
@@ -111,6 +111,9 @@ const props = [];
   add('table', 58, -65, { hx: 3, hz: 0.8 }); add('candles', 57, -65, { up: 0.85 }); add('candles', 60, -65.2, { up: 0.85 });
   // (Hides on rails in rows across its north end, a way between them; books stacked for the presses.)
   for (const z of [-56.5, -59.5]) { add('coatrail', 57, z, { hx: 2.6 }); add('coatrail', 65, z, { hx: 2.6 }); }
+  // (The printed sheets hung to dry on lines down the room, a way between; two more presses against the west wall.)
+  add('sheets', 50, -62.5, { yaw: 0, w: 3.4 }); add('sheets', 50, -68, { yaw: 0, w: 3.4 }); add('sheets', 66, -68.5, { yaw: 0, w: 3 });
+  add('press', 43.2, -64, { yaw: PI / 2, h: 2.8, w: 1.1, down: 0.6 }); add('press', 43.2, -70, { yaw: PI / 2, h: 2.8, w: 1.1, down: 0.3 });
   add('heap', 51, -70, { r: 1.1, layer: 'p2_book_spines' }); add('heap', 67, -72, { r: 0.9, layer: 'p2_book_spines' }); add('press', 69.5, -76.6, { yaw: 0, down: 0.7 });
   add('bookcase', 73.4, -60, { hx: 0.45, hz: 2.4, h: 4.4, one: -1 }); add('bookcase', 72.6, -72.4, { hx: 0.45, hz: 2.2, h: 4.4, one: -1 });
   add('chandelier', 57, -68, { up: 5.4, hang: true }); add('brazier', 44, -76);
@@ -136,10 +139,10 @@ const props = [];
   add('bones', 14.5, -124, { r: 1.1 });
   // ---- the sluices: shafts, sixteen metres up; each its gate in the far wall, its wheel on the wall beside (five spokes),
   // the water coming down from the old cistern's pipe into a pool, and its race out to the Flood; the wardens' fire.
-  add('sluicegate', -49.4, -114, { yaw: PI / 2, w: 2.6 }); add('gear', -40, -104.3, { yaw: PI, r: 1.5, up: 2.3, spokes: 5, layer: 'dark:wood' });
+  add('sluicegate', -49.4, -114, { yaw: PI / 2, w: 2.6 }); add('gear', -37.5, -123.7, { yaw: 0, r: 3, up: 4.2, spokes: 5, layer: 'wood' }); add('gear', -32.6, -123.7, { yaw: 0, r: 1.2, up: 7.8, spokes: 5, layer: 'iron' }); add('chain', -36, -110, { up: 5 }); add('chandelier', -41, -112, { up: 7, hang: true });
   add('spout', -46, -123.4, { up: 11, w: 1.6, layer: 'lake' }); add('flood', -45, -120, { hx: 3.4, hz: 3, lvl: 0.04, float: 2 }); add('channel', -42, -119, { to: [-32, -112], w: 1.1 });
   add('brazier', -33, -121); add('barrels', -31.5, -106); add('crates', -47.5, -106);
-  add('sluicegate', 65.4, -126, { yaw: -PI / 2, w: 2.6 }); add('gear', 56, -116.3, { yaw: PI, r: 1.5, up: 2.3, spokes: 5, layer: 'dark:wood' });
+  add('sluicegate', 65.4, -126, { yaw: -PI / 2, w: 2.6 }); add('gear', 53.5, -135.7, { yaw: 0, r: 3, up: 4.2, spokes: 5, layer: 'wood' }); add('gear', 48.6, -135.7, { yaw: 0, r: 1.2, up: 7.8, spokes: 5, layer: 'iron' }); add('chain', 52, -122, { up: 5 }); add('chandelier', 55, -124, { up: 7, hang: true });
   add('spout', 62, -135.4, { up: 11, w: 1.6, layer: 'lake' }); add('flood', 61, -132, { hx: 3.4, hz: 3, lvl: 0.04, float: 2 }); add('channel', 58, -130, { to: [48, -126], w: 1.1 });
   add('brazier', 49, -133); add('barrels', 47.5, -118); add('heap', 63, -118.5, { r: 1, layer: 'dark:rubble' });
   // ---- the Sump: the drain down, black water round it, what's washed up against its grating; one fire.
