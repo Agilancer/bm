@@ -1150,7 +1150,8 @@ const knows = (a, b) => !!(MEETS[`${a.id}|${b.id}`] || MEETS[`${b.id}|${a.id}`])
 // Two of the crowd on the one body (a swap and the one it's made on, or two swaps of it): kept apart, never a knot of them,
 // never stopped talking together. The owner, 2026-11-20: 'don't put a bunch of the same model with palette swaps next to
 // each other'.
-const kin = (a, b) => (a.p.swapOf || a.p.id) === (b.p.swapOf || b.p.id);
+// (And two with the one face, a swap's worn head's or a body's own: folk.worker.js faceOf.)
+const kin = (a, b) => (a.p.swapOf || a.p.id) === (b.p.swapOf || b.p.id) || (!!a.faceOf && a.faceOf === b.faceOf);
 function partnerFor(me) {
   let best = null, bd = 28;
   for (const o of me.life.crowd) {

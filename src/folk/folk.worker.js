@@ -72,6 +72,9 @@ async function boot({ buffer, base, lean }) {
     me.joints = rig.count + (rig.skirt ? SKIRT_JOINTS : 0);
     me.pal = new Float32Array(me.joints * 8);
     me.posedAt = -1;
+    // (Whose face they wear: a swap's worn head's, else their body's own. Two of the crowd with the one face are kept apart
+    // as two on the one body are: src/folk/brain.js kin.)
+    me.faceOf = folk.swaps?.[me.p.body]?.head || m;
   }));
   glbs.clear();
   // The smith's kit (his tools, the bellows, the grindstone, the axe on its rack): more joints after his own in the slot, for

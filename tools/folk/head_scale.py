@@ -20,7 +20,7 @@ FOLK = os.path.join(ROOT, "assets", "game", "folk")
 # How big each head's to be, of what Meshy made it (judged by eye against the body, chest up, all at one scale).
 HEADS = {
     "alchemistgirl": 0.72, "astrologer": 0.82, "campcook": 0.85, "taverncook": 0.85, "armourer": 0.86, "eelseller": 0.88,
-    "innkeeper": 0.85, "pieseller": 0.86, "fishwife": 0.9, "washerwoman": 0.92, "joiner": 0.93,
+    "innkeeper": 0.85, "pieseller": 0.86, "merchant": 0.92, "fishwife": 0.9, "washerwoman": 0.92, "joiner": 0.93,
     "herbalist": 0.9, "soapmaker": 0.9, "pawnbroker": 0.9, "relicseller": 0.92, "cobbler": 0.92, "sorrel_b": 0.92,
 }
 SIZES = {5120: 1, 5121: 1, 5122: 2, 5123: 2, 5125: 4, 5126: 4}

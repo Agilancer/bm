@@ -1092,7 +1092,9 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
   // coat comes out oxblood or moss or plum; how strongly, and how dark it's all worn. Its grain, its folds and its dirt
   // kept (the value's the cloth's own). Skin left as it is, as in the plainer swap below.
   if (C.info.x >= 1000.0) {
-    let code = C.info.x - 1000.0;
+    let code0 = C.info.x - 1000.0;
+    let hq = floor(code0 / 131072.0);
+    let code = code0 - hq * 131072.0;
     let vq = floor(code / 1024.0);
     let r1 = code - vq * 1024.0;
     let aq = floor(r1 / 256.0);
@@ -1123,7 +1125,13 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
     let rl = nv - nv * ns * clamp(min(fract(kl / 6.0) * 6.0, 4.0 - fract(kl / 6.0) * 6.0), vec3f(0.0), vec3f(1.0));
     // (Nor the head's own: its hair keeps the colour it grew. Marked in the piece's top bit, src/folk/hats.js HEAD_BIT.)
     let head = select(0.0, 1.0, (in.piece & 0x8000u) != 0u);
-    albedo = mix(mix(rd, rl, light), albedo, max(skin, head));
+    // (Unless it's to be another colour: hq, one of seven a head of hair comes in. Its own light and dark kept as the grain
+    // of it; not its skin, nor anything pale on it, the whites of the eyes, teeth, a white beard's own white.)
+    var HAIR = array<vec3f, 8>(vec3f(0.0), vec3f(0.012, 0.010, 0.009), vec3f(0.035, 0.019, 0.011), vec3f(0.085, 0.036, 0.016),
+      vec3f(0.15, 0.045, 0.018), vec3f(0.26, 0.19, 0.095), vec3f(0.17, 0.165, 0.16), vec3f(0.42, 0.41, 0.39));
+    let hairTo = HAIR[u32(hq)] * clamp(sqrt(mx / 0.06), 0.45, 1.7);
+    let hairK = head * (1.0 - skin) * select(0.0, 1.0, hq > 0.5) * (1.0 - smoothstep(0.22, 0.38, mx));
+    albedo = mix(mix(mix(rd, rl, light), albedo, max(skin, head)), hairTo, hairK);
   } else if (C.info.x >= 10.0) {
     let code = C.info.x - 10.0;
     let vi = floor(code / 32.0);

@@ -394,7 +394,9 @@ struct Out { @location(0) color: vec4f, @location(1) depth: f32 };
 
 // The skinning compute shader: dual quaternions, so a plate blended across two joints stays rigid.
 export const SKIN = /* wgsl */ `
-struct Params { count: u32, flexAmp: f32, time: f32, cut: u32, wind: vec4f };
+// (head: a townsperson wearing another's head, src/folk/headswap.js: the bind-pose Head joint, and w 1 to fold their own
+// head's vertices, those marked HEAD_SRC in piece, down onto it, inside the head they wear.)
+struct Params { count: u32, flexAmp: f32, time: f32, cut: u32, wind: vec4f, head: vec4f };
 struct In { pos: vec3f, flex: f32, normal: vec3f, piece: u32, joints: u32, weights: u32, u: f32, v: f32 };
 @group(0) @binding(0) var<uniform> P: Params;
 @group(0) @binding(1) var<storage, read> palette: array<vec4f>;
@@ -458,7 +460,9 @@ fn main(@builtin(global_invocation_id) id: vec3u) {
   let il = 1.0 / length(r);
   r *= il; d *= il;
   let t = 2.0 * (r.w * d.xyz - d.w * r.xyz + cross(r.xyz, d.xyz));
-  var p = v.pos + 2.0 * cross(r.xyz, cross(r.xyz, v.pos) + r.w * v.pos);
+  let fold = P.head.w > 0.5 && (v.piece & 0x100000u) != 0u;
+  let bp = select(v.pos, P.head.xyz + (v.pos - P.head.xyz) * 0.03, fold);
+  var p = bp + 2.0 * cross(r.xyz, cross(r.xyz, bp) + r.w * bp);
   p += t;
   let n = v.normal + 2.0 * cross(r.xyz, cross(r.xyz, v.normal) + r.w * v.normal);
   if (v.flex > 0.0) {
@@ -469,7 +473,7 @@ fn main(@builtin(global_invocation_id) id: vec3u) {
   }
   if (v.flex < 0.0) {
     let start = arrayLength(&palette) - 8u;
-    let angle = (f32(v.piece) / 65535.0 - 0.5) * 6.2831853 + palette[start + 6u].x;
+    let angle = (f32(v.piece & 0xFFFFu) / 65535.0 - 0.5) * 6.2831853 + palette[start + 6u].x;
     let direction = vec2f(sin(angle), cos(angle));
     let flex = -v.flex;
     // A skirt ripples a little as it hangs (the townsfolk's). Not the witch's gown: on the owner's word it moves with her

@@ -8,7 +8,8 @@ import { F, F_PALETTE, FIN, FOLK_STRIDE, SLOT_HEAD, readFolk } from '../folk/lay
 import { SKIRT_JOINTS } from '../folk/rig.js';
 import { CROWD_LEAN, FOLK as PEOPLE } from '../folk/people.js';
 import { CITY } from '../core/east.js';   // (the town's people and those posted out in the land)
-import { headFit, hatPrim, headPieces } from '../folk/hats.js';
+import { HEAD_BIT, headFit, hatPrim, headPieces } from '../folk/hats.js';
+import { cutHead, headOf, wornHead } from '../folk/headswap.js';
 import { Blankets } from './blankets.js';
 import { FolkTools } from './folktools.js';
 import { bodyRadius, inCascade } from './shadowcull.js';
@@ -20,7 +21,8 @@ const UBO_BYTES = 24 * 64 + 256 + 16;
 export const swapCode = ([dh, sat, val]) => 10 + ((dh % 1) + 1) % 1 + 2 * Math.round(Math.min(15, sat * 10)) + 32 * Math.round(Math.min(15, val * 10));
 // A dyed swap (src/gfx/materials.js, info.x of a thousand and over): dye [dark cloth's dye, light cloth's (each of the sixteen
 // in the shader's DYES), how strongly (0 to 3), how dark it's worn (0 to 15: 0.55 to 1.3)].
-export const dyeCode = ([d, l, a, v]) => 1000 + (d & 15) + 16 * (l & 15) + 256 * (a & 3) + 1024 * (v & 15);
+// And a fifth: its hair (0 as it grew; 1 to 7 black, dark brown, chestnut, auburn, flaxen, grey, white).
+export const dyeCode = ([d, l, a, v, hair = 0]) => 1000 + (d & 15) + 16 * (l & 15) + 256 * (a & 3) + 1024 * (v & 15) + 131072 * (hair & 7);
 const infoOf = (swap) => (swap.dye ? dyeCode(swap.dye) : swapCode(swap.tint));
 
 export class FolkBodies {
@@ -46,8 +48,10 @@ export class FolkBodies {
       if (!tex.has(f)) tex.set(f, file(f).then((res) => res.blob()).then((b) => r.bitmapTexture(b, format, r.tier.texScale)));
       return tex.get(f);
     };
+    // (Whose heads the swaps wear: theirs are cut out and kept as they're built, src/folk/headswap.js.)
+    const donors = new Set(Object.values(folk.swaps || {}).map((w) => w.head).filter(Boolean));
     const model = (m) => {
-      if (!geo.has(m)) geo.set(m, file(folk.models[m].glb).then((res) => res.arrayBuffer()).then((buf) => this.mesh(parseGLB(buf), folk.models[m])));
+      if (!geo.has(m)) geo.set(m, file(folk.models[m].glb).then((res) => res.arrayBuffer()).then((buf) => this.mesh(parseGLB(buf), folk.models[m], donors.has(m))));
       return geo.get(m);
     };
     // (Whoever's nearest you next, each time: the town's, when you start in it; a small town's own people when you've come
@@ -91,22 +95,38 @@ export class FolkBodies {
           { binding: 0, resource: { buffer: ubo } }, { binding: 1, resource: alb.createView() }, { binding: 2, resource: nrm.createView() }, { binding: 3, resource: mr.createView() },
         ] });
         this.bodies[i] = { ...sk, ubo, matBG, floats: sk.jointCount * 8, posed: -1, seen: false, casts: false, far: false };
-        // (A swap's hat: skinned from the same palette as the body, on its head joint; dyed as the body is, by the same info.)
-        if (swap?.hat && g.fit) {
-          const H = await hatsFor(), tmpl = H.T[swap.hat];
-          if (tmpl) {
-            const hs = r.makeSkinned([hatPrim(tmpl, g.fit, swap.hat)], sk.jointCount);
-            const bg = r.device.createBindGroup({ layout: r.bglSkin, entries: [
-              { binding: 0, resource: { buffer: hs.params } }, { binding: 1, resource: { buffer: sk.palette } },
-              { binding: 2, resource: { buffer: hs.srcBuf } }, { binding: 3, resource: { buffer: hs.outBuf } },
-            ] });
-            const hubo = r.device.createBuffer({ size: UBO_BYTES, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
-            r.device.queue.writeBuffer(hubo, UBO_BYTES - 16, new Float32Array([infoOf(swap), 1, 0, 1]));
-            const hmat = r.device.createBindGroup({ layout: r.bglArmor, entries: [
-              { binding: 0, resource: { buffer: hubo } }, { binding: 1, resource: H.alb.createView() }, { binding: 2, resource: H.flatN.createView() }, { binding: 3, resource: H.flatM.createView() },
-            ] });
-            this.bodies[i].hat = { ...hs, bg, ubo: hubo, matBG: hmat };
+        // (What a swap wears that its body hasn't: another's head, and a hat. Each skinned from the body's own palette and
+        // drawn with it: part().)
+        const part = (prim, alb, nrmT, mrT) => {
+          const hs = r.makeSkinned([prim], sk.jointCount);
+          const bg = r.device.createBindGroup({ layout: r.bglSkin, entries: [
+            { binding: 0, resource: { buffer: hs.params } }, { binding: 1, resource: { buffer: sk.palette } },
+            { binding: 2, resource: { buffer: hs.srcBuf } }, { binding: 3, resource: { buffer: hs.outBuf } },
+          ] });
+          const pubo = r.device.createBuffer({ size: UBO_BYTES, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+          r.device.queue.writeBuffer(pubo, UBO_BYTES - 16, new Float32Array([infoOf(swap), 1, 0, 1]));
+          const pmat = r.device.createBindGroup({ layout: r.bglArmor, entries: [
+            { binding: 0, resource: { buffer: pubo } }, { binding: 1, resource: alb.createView() }, { binding: 2, resource: nrmT.createView() }, { binding: 3, resource: mrT.createView() },
+          ] });
+          this.bodies[i].parts.push({ ...hs, bg, ubo: pubo, matBG: pmat });
+        };
+        this.bodies[i].parts = [];
+        let fit = g.fit;
+        // Another's head (src/folk/headswap.js): its own folded away in the skinning pass (the parameters' last four
+        // numbers: its Head joint, and 1), the donor's worn on its neck in the donor's own paint.
+        if (swap?.head && g.head && folk.models[swap.head]) {
+          const dm = folk.models[swap.head], dg = await model(swap.head);
+          if (dg.cut) {
+            const worn = wornHead(dg.cut, g.head, HEAD_BIT);
+            const [da, dn, dr] = await Promise.all([texture(dm.c, 'rgba8unorm-srgb'), texture(dm.n, 'rgba8unorm'), texture(dm.m, 'rgba8unorm')]);
+            part(worn.prim, da, dn, dr);
+            r.device.queue.writeBuffer(sk.params, 32, new Float32Array([...g.head.J, 1]));
+            fit = worn.fit || fit;
           }
+        }
+        if (swap?.hat && fit) {
+          const H = await hatsFor(), tmpl = H.T[swap.hat];
+          if (tmpl) part(hatPrim(tmpl, fit, swap.hat), H.alb, H.flatN, H.flatM);
         }
       } catch (e) { console.warn('folk body', PEOPLE[i].id, e); }
     }
@@ -115,7 +135,7 @@ export class FolkBodies {
 
   // The mesh, as the skinning pass takes it. A skirt's hem is pushed clear of the legs (SKIN in src/gfx/shaders.js): each
   // vertex keeps which way round the body it faces, and how much of it is skirt.
-  mesh(glb, m) {
+  mesh(glb, m, donor = false) {
     const pr = glb.json.meshes[0].primitives[0], a = pr.attributes;
     const prim = { pos: accessor(glb, a.POSITION), nrm: accessor(glb, a.NORMAL), uv: accessor(glb, a.TEXCOORD_0), idx: accessor(glb, pr.indices), joints: accessor(glb, a.JOINTS_0), weights: accessor(glb, a.WEIGHTS_0) };
     let joints = glb.json.skins[0].joints.length;
@@ -134,9 +154,15 @@ export class FolkBodies {
     const names = glb.json.skins[0].joints.map((j) => glb.json.nodes[j].name || '');
     const fit = headFit(names, prim);
     if (fit) prim.piece = headPieces(names, prim);
+    // (And its own head marked for folding away, should a swap of it wear another's; and if a swap wears its head, that cut
+    // out and kept: src/folk/headswap.js.)
+    const head = fit ? headOf(glb, prim) : null;
+    if (head) prim.srcFlag = head.srcFlag;
+    const cut = head && donor ? cutHead(glb, prim, head) : null;
+    if (head) head.srcFlag = null;
     const base = this.r.makeSkinned([prim], joints);
     this.r.addLod(base, prim, 0.06);
-    return { base, used: 0, fit };
+    return { base, used: 0, fit, head, cut };
   }
 
   // Who's on screen, and whose shadow could be. The slot is held for the frame.
@@ -206,7 +232,7 @@ export class FolkBodies {
       params[1] = 1; params[2] = time; paramsU[3] = 0;
       params[4] = 0.05; params[5] = 0; params[6] = 0.035;
       q.writeBuffer(b.params, 0, params);
-      if (b.hat) { paramsU[0] = b.hat.count; q.writeBuffer(b.hat.params, 0, params); }
+      for (const h of b.parts || []) { paramsU[0] = h.count; q.writeBuffer(h.params, 0, params); }
     }
   }
 
@@ -217,7 +243,7 @@ export class FolkBodies {
       if (!b || !b.skin || b.posed < 0) continue;
       cp.setBindGroup(0, b.bg);
       cp.dispatchWorkgroups(Math.ceil(b.count / 128));
-      if (b.hat) { cp.setBindGroup(0, b.hat.bg); cp.dispatchWorkgroups(Math.ceil(b.hat.count / 128)); }
+      for (const h of b.parts || []) { cp.setBindGroup(0, h.bg); cp.dispatchWorkgroups(Math.ceil(h.count / 128)); }
     }
   }
 
@@ -231,7 +257,7 @@ export class FolkBodies {
       if (m && !inCascade(m, o, b.bx, b.by, b.bz, b.br)) continue;
       sp.setVertexBuffer(0, b.outBuf);
       if (coarse) { sp.setIndexBuffer(b.lodIB, 'uint32'); sp.drawIndexed(b.lodCount); } else { sp.setIndexBuffer(b.IB, 'uint32'); sp.drawIndexed(b.indices); }
-      if (b.hat) { sp.setVertexBuffer(0, b.hat.outBuf); sp.setIndexBuffer(b.hat.IB, 'uint32'); sp.drawIndexed(b.hat.indices); }
+      for (const h of b.parts || []) { sp.setVertexBuffer(0, h.outBuf); sp.setIndexBuffer(h.IB, 'uint32'); sp.drawIndexed(h.indices); }
     }
   }
 
@@ -244,7 +270,7 @@ export class FolkBodies {
       mp.setVertexBuffer(0, b.outBuf);
       mp.setVertexBuffer(1, b.sideVB);
       if (lean ? b.far : b.detail) { mp.setIndexBuffer(b.lodIB, 'uint32'); mp.drawIndexed(b.lodCount); } else { mp.setIndexBuffer(b.IB, 'uint32'); mp.drawIndexed(b.indices); }
-      if (b.hat) { mp.setBindGroup(1, b.hat.matBG); mp.setVertexBuffer(0, b.hat.outBuf); mp.setVertexBuffer(1, b.hat.sideVB); mp.setIndexBuffer(b.hat.IB, 'uint32'); mp.drawIndexed(b.hat.indices); }
+      for (const h of b.parts || []) { mp.setBindGroup(1, h.matBG); mp.setVertexBuffer(0, h.outBuf); mp.setVertexBuffer(1, h.sideVB); mp.setIndexBuffer(h.IB, 'uint32'); mp.drawIndexed(h.indices); }
     }
   }
 
