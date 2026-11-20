@@ -24,13 +24,14 @@ globalThis.localStorage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v
 const { FreshViews, wantFreshViews } = await import('../src/gfx/freshviews.js');
 const { beginRun } = await import('../src/core/lastrun.js');
 
-// errors: what each scope pair says, in turn: [out-of-memory, validation].
+// errors: what each round's scopes say, in turn, by filter: { validation, 'out-of-memory', internal }.
 const device = () => ({
-  errors: [], scopes: 0, groupsMade: 0,
+  errors: [], open: [], groupsMade: 0,
+  get scopes() { return this.open.length; },
   createBindGroup(desc) { this.groupsMade++; return new GPUBindGroup(desc); },
   createCommandEncoder() { return new GPUCommandEncoder(); },
-  pushErrorScope() { this.scopes++; },
-  popErrorScope() { this.scopes--; const pair = this.errors[0]; const e = pair ? pair[this.scopes % 2 ? 0 : 1] : null; if (pair && this.scopes % 2 === 0) this.errors.shift(); return Promise.resolve(e || null); },
+  pushErrorScope(filter) { this.open.push(filter); },
+  popErrorScope() { const f = this.open.pop(), said = this.errors[0]; if (said && !this.open.length) this.errors.shift(); return Promise.resolve(said?.[f] || null); },
 });
 // Seconds on a clock the test turns (and, with `step`, that moves on a little each time it's read, for the budget).
 const clock = () => { const c = { t: 0, step: 0, now: () => { const t = c.t; c.t += c.step; return t; } }; return c; };
@@ -150,7 +151,7 @@ test('an objection from the GPU puts everything back as the game made it, and no
   const d = device(), c = clock(), fv = new FreshViews(d, { every: 20, now: c.now });
   const g = d.createBindGroup({ entries: [{ binding: 0, resource: new GPUTexture('t').createView() }] });
   frame(d, g);
-  d.errors.push([null, { message: 'Invalid BindGroupLayout' }]);
+  d.errors.push({ validation: { message: 'Invalid BindGroupLayout' } });
   c.t = 21;
   assert.equal(frame(d, g), g);
   await answered();
@@ -160,12 +161,55 @@ test('an objection from the GPU puts everything back as the game made it, and no
   c.t = 60; assert.equal(frame(d, g), g, 'and stays off');
 });
 
+test('an internal error is an objection too: nothing it made is handed out', async () => {
+  const d = device(), c = clock(), fv = new FreshViews(d, { every: 20, now: c.now });
+  const g = d.createBindGroup({ entries: [{ binding: 0, resource: new GPUTexture('t').createView() }] });
+  frame(d, g);
+  d.errors.push({ internal: { message: 'Device internal error' } });
+  c.t = 21; frame(d, g); await answered();
+  assert.equal(fv.on, false);
+  assert.match(fv.why, /internal/);
+  assert.equal(frame(d, g), g);
+  assert.equal(d.scopes, 0);
+});
+
+test('a round that throws stops it, and the game\'s encoder is still made', async () => {
+  const d = device(), c = clock(), fv = new FreshViews(d, { every: 20, now: c.now });
+  const g = d.createBindGroup({ entries: [{ binding: 0, resource: new GPUTexture('t').createView() }] });
+  frame(d, g);
+  fv.nativeGroup = () => { throw new Error('no'); };
+  c.t = 21;
+  assert.ok(d.createCommandEncoder() instanceof GPUCommandEncoder);
+  assert.equal(fv.on, false);
+  assert.match(fv.why, /went wrong: no/);
+  assert.equal(d.scopes, 0, 'its scopes popped all the same');
+  await answered();
+  assert.equal(frame(d, g), g);
+});
+
+test('a GPU error just after stand-ins are handed out stops it; one long after, or before any, doesn\'t', async () => {
+  const d = device(), c = clock(), fv = new FreshViews(d, { every: 20, now: c.now });
+  const g = d.createBindGroup({ entries: [{ binding: 0, resource: new GPUTexture('t').createView() }] });
+  frame(d, g);
+  fv.suspect({ message: 'before any round' });
+  assert.equal(fv.on, true);
+  c.t = 21; frame(d, g); await answered();
+  c.t = 30; fv.suspect({ message: 'nine seconds on' });
+  assert.equal(fv.on, true);
+  assert.notEqual(frame(d, g), g);
+  c.t = 41; frame(d, g); await answered();
+  c.t = 42; fv.suspect({ message: 'Invalid TextureView' });
+  assert.equal(fv.on, false);
+  assert.match(fv.why, /just after a round: Invalid TextureView/);
+  assert.equal(frame(d, g), g);
+});
+
 test('out of memory: off, and the next start loads lighter as for any out-of-memory', async () => {
   beginRun(new URLSearchParams('light=0'));
   const d = device(), c = clock(), fv = new FreshViews(d, { every: 20, now: c.now });
   const g = d.createBindGroup({ entries: [{ binding: 0, resource: new GPUTexture('t').createView() }] });
   frame(d, g);
-  d.errors.push([{ message: 'Not enough memory left' }, null]);
+  d.errors.push({ 'out-of-memory': { message: 'Not enough memory left' } });
   c.t = 21; frame(d, g); await answered();
   assert.equal(fv.on, false);
   assert.match(fv.why, /out of memory/);

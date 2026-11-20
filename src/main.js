@@ -389,6 +389,7 @@ async function boot(plan, poolSize) {
   let gpuErrors = 0, outOfMemory = false;
   gpu.device.addEventListener('uncapturederror', (e) => {
     window.__gpuErrors = ++gpuErrors; renderDiagnostics.fail(e.error, 'GPU validation'); if (gpuErrors < 6) console.error('GPU error:', e.error.message);
+    gpu.fresh?.suspect(e.error);   // (just after views were made fresh: theirs, likely, so that stops: src/gfx/freshviews.js)
     // The GPU saying it has no memory left for something asked of it: what's drawn with that is missing or black from here
     // on, and the next thing may be the device lost. Noted, so the next start loads lighter (src/core/lastrun.js), and the
     // game kept now, while it can be.

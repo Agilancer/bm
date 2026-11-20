@@ -84,36 +84,54 @@ export function noteEvent(what) {
   write(KEY, note);
 }
 
-/** The trail as the player reads it: "touched (x3), then 4 s later turned upright". '' if there's none. (The time between
- *  one and the next, as that's all it knows: nothing notes the kill itself.) The picture's size stepping, noted as
- *  'picture x0.66', reads as its sharpness, and steps one after another as one: "the picture's sharpness eased back up, 66%
- *  to 100% over 12 s" (the game does that after a slowdown: src/gfx/governor.js). */
-export function trailWords(d) {
+/** The trail as the player reads it, each thing in words with the time since the one before: "touched (x3), then 4 s later
+ *  turned upright". (The time between one and the next, as that's all it knows: nothing notes the kill itself.) The
+ *  picture's size stepping, noted as 'picture x0.66', reads as its sharpness, and steps one after another the same way, no
+ *  more than ten seconds apart, as one: "the picture's sharpness eased back up, 66% to 100% over 12 s" (the game does that
+ *  after a slowdown: src/gfx/governor.js); a turn the other way starts another, from where the last one ended. */
+function trailItems(d) {
   const items = [];
+  const way = (a, b) => Math.sign(b - a);
   for (const x of d?.trail || []) {
     const m = /^picture x([\d.]+)$/.exec(x.e), prev = items[items.length - 1];
-    if (m && prev?.pics) { prev.pics.push(+m[1]); prev.s1 = x.s; continue; }
+    if (m && prev?.pics && x.s - prev.s1 <= 10) {
+      const v = +m[1], p = prev.pics, last = p[p.length - 1];
+      const run = p.length > 1 ? way(p[0], last) : 0, step = way(last, v);
+      if (!run || !step || run === step) { p.push(v); prev.s1 = x.s; continue; }
+      items.push({ s: prev.s1, s1: x.s, pics: [last, v], turn: true });
+      continue;
+    }
     items.push(m ? { s: x.s, s1: x.s, pics: [+m[1]] } : { s: x.s, s1: x.s, e: x.e, n: x.n });
   }
-  const words = (t) => {
+  // (A turn reads on from the run before it, "..., then back up, 76% to 100%", unless it's the first said.)
+  const words = (t, i) => {
     if (!t.pics) return `${t.e}${t.n > 1 ? ` (x${t.n})` : ''}`;
     const p = t.pics.map((v) => `${Math.round(v * 100)}%`);
-    if (p.length === 1) return `the picture's sharpness to ${p[0]}`;
-    return `the picture's sharpness ${t.pics[t.pics.length - 1] > t.pics[0] ? 'eased back up' : 'stepped down'}, ${p[0]} to ${p[p.length - 1]} over ${t.s1 - t.s} s`;
+    if (p.length === 1) return `the picture's sharpness went to ${p[0]}`;
+    const up = t.pics[t.pics.length - 1] > t.pics[0], on = t.turn && i > 0;
+    return `${on ? '' : 'the picture\'s sharpness '}${up ? (on ? 'back up' : 'eased back up') : (on ? 'back down' : 'stepped down')}, `
+      + `${p[0]} to ${p[p.length - 1]}${t.s1 > t.s ? ` over ${t.s1 - t.s} s` : ''}`;
   };
+  const later = (g) => (g >= 90 ? `about ${Math.round(g / 60)} minutes later ` : `${g} s later `);
   const tr = items.slice(-4);
-  return tr.map((t, i) => `${i && t.s > tr[i - 1].s1 ? `${t.s - tr[i - 1].s1} s later ` : ''}${words(t)}`).join(', then ');
+  return tr.map((t, i) => `${i && t.s > tr[i - 1].s1 ? later(t.s - tr[i - 1].s1) : ''}${words(t, i)}`);
+}
+
+/** The trail as one line: "touched (x3), then 4 s later turned upright". '' if there's none. */
+export function trailWords(d) {
+  return trailItems(d).join(', then ');
 }
 
 /** The trail as the title says it: "Just before: ...", or, when the game kept going a while after the last of it (the note
- *  being kept every 8 s while the page is seen: `after`), "The last things it noted: .... It kept going about 3 more minutes
- *  after that." '' if there's no trail. */
+ *  being kept every 8 s while the page is seen: `after`), "The last things the game noted: .... It kept going about 3 more
+ *  minutes after that." '' if there's no trail. */
 export function trailSentence(d) {
-  const w = trailWords(d);
-  if (!w) return '';
-  const a = d.after || 0;
+  const items = trailItems(d);
+  if (!items.length) return '';
+  const w = items.join(', then '), a = d.after || 0;
   if (a < 10) return `Just before: ${w}.`;
-  return `The last things it noted: ${w}. It kept going about ${a >= 90 ? `${Math.round(a / 60)} more minutes` : `${a} more seconds`} after that.`;
+  return `The last ${items.length > 1 ? 'things' : 'thing'} the game noted: ${w}. `
+    + `It kept going about ${a >= 90 ? `${Math.round(a / 60)} more minutes` : `${a} more seconds`} after that.`;
 }
 
 /** How a death reads to the player: "while it was loading", "12 minutes into play, at (-40, 212)". */

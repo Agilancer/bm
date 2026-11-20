@@ -2,8 +2,8 @@
 // id of every command encoder that view was ever used in: as a pass's attachment, or in a bind group set in one of its passes.
 // Nothing takes an id out again while the view lives. The game makes its views once and draws with them every frame, one
 // encoder a frame, so each frame added an id to each of some hundreds of views, for as long as the game ran: hundreds of MB
-// after twenty minutes, held by the GPU's process and counted by iOS against the page, which is the likeliest reading of
-// the crash the owner saw 21 minutes in (November 2026).
+// after twenty minutes (about 30 bytes an id, as the bug's reporter measured), held in WebKit's GPU process: the likeliest
+// reading, not proven, of the crash the owner saw 21 minutes in (November 2026).
 //
 // So where that WebKit runs, the views are made again every so often, and the bind groups that hold them. The game keeps the
 // view and the bind group it made and goes on handing them to passes; a pass is given the newest made from them instead
@@ -13,7 +13,7 @@
 //
 // A round makes again only what was used since the last began (a bind group made for one pass at the load, and not yet
 // collected, is left be), a millisecond's worth before each encoder, so a round of some hundreds of bind groups is spread
-// over a dozen frames or so.
+// over a few frames (five, on a PC with its processor slowed four times).
 //
 // ?fresh=1 turns it on anywhere (Chrome, to test it), ?fresh=0 off. tools/memory/init.js models the bug (`__leak()`).
 
@@ -21,6 +21,7 @@ import { noteEvent, noteRun } from '../core/lastrun.js';
 
 const AGE = 5;          // s: a view or bind group younger than this is left as it is till the next round
 const BUDGET = 0.001;   // s: of making again before each encoder (at least one thing each time)
+const SUSPECT = 3;      // s: a GPU error this soon after stand-ins are handed out is taken to be theirs
 
 export function wantFreshViews(params = new URLSearchParams(globalThis.location?.search || '')) {
   if (params.has('fresh')) return params.get('fresh') !== '0';
@@ -141,32 +142,48 @@ export class FreshViews {
       this.rounds++;
       this.queue = this.used; this.used = [];
     }
-    this.scoped((staged) => {
-      do {
-        const x = this.queue.pop()?.deref();
-        if (!x) continue;
-        const g = this.groupOf.get(x);
-        if (g) this.regroup(g, t, staged);
-        else if (t - (this.viewOf.get(x)?.at ?? t) >= AGE) this.fresh(x, staged);
-      } while (this.queue.length && this.clock() - t < BUDGET);
-    });
+    try {
+      this.scoped((staged) => {
+        do {
+          const x = this.queue.pop()?.deref();
+          if (!x) continue;
+          const g = this.groupOf.get(x);
+          if (g) this.regroup(g, t, staged);
+          else if (t - (this.viewOf.get(x)?.at ?? t) >= AGE) this.fresh(x, staged);
+        } while (this.queue.length && this.clock() - t < BUDGET);
+      });
+    } catch (e) {
+      // (Never out of the game's own createCommandEncoder: it stops, and the game goes on as without it.)
+      this.off(`a round went wrong: ${e?.message || e}`);
+      return;
+    }
     if (!this.queue.length) this.queue = null;
   }
 
   // Its own calls, with the GPU's objections caught round them and nothing else's (pushed and popped with no await between).
-  // What they made is handed out only once both scopes come back empty (on WebKit, a trip to the GPU's process and back:
-  // till then the last round's stand-ins go on). Any objection and it stops for good, and the passes are given what the game
-  // made, as without it. Out of memory is noted for the next start as the game's own handler would have (src/main.js), which
-  // never hears of an error a scope caught.
+  // What they made is handed out only once all three scopes come back empty (on WebKit, a trip to the GPU's process and
+  // back: till then the last round's stand-ins go on). Any objection and it stops for good, and the passes are given what
+  // the game made, as without it. Out of memory is noted for the next start as the game's own handler would have
+  // (src/main.js), which never hears of an error a scope caught.
   scoped(fn) {
     const d = this.device, staged = [];
-    d.pushErrorScope('validation'); d.pushErrorScope('out-of-memory');
+    d.pushErrorScope('validation'); d.pushErrorScope('out-of-memory'); d.pushErrorScope('internal');
     try { fn(staged); } finally {
-      Promise.all([d.popErrorScope(), d.popErrorScope()]).then(([oom, invalid]) => {
-        if (oom) { noteRun({ oom: true }); this.off(`out of memory: ${oom.message}`); } else if (invalid) this.off(invalid.message);
-        else if (this.on) for (const [i, x] of staged) if (i.next === x) i.now = x;
+      Promise.all([d.popErrorScope(), d.popErrorScope(), d.popErrorScope()]).then(([internal, oom, invalid]) => {
+        if (oom) { noteRun({ oom: true }); this.off(`out of memory: ${oom.message}`); }
+        else if (internal || invalid) this.off((internal || invalid).message);
+        else if (this.on && staged.length) {
+          for (const [i, x] of staged) if (i.next === x) i.now = x;
+          this.handedAt = this.clock();
+        }
       }, (e) => this.off(String(e?.message || e)));
     }
+  }
+
+  // An objection from the GPU that no scope caught, as the game's handler hears it (src/main.js): one that only shows when
+  // what's handed out is used. Within a few seconds of stand-ins being handed out, they're the likeliest cause, so it stops.
+  suspect(e) {
+    if (this.on && this.handedAt != null && this.clock() - this.handedAt < SUSPECT) this.off(`a GPU error just after a round: ${e?.message || e}`);
   }
 
   off(why) {

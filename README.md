@@ -2767,23 +2767,30 @@ makes its layers can't be measured here.
 
 *For the owner, in short.* The likeliest reason the phone closed the game at 21 minutes is a fault in the iPhone's
 browser: it keeps a small note of every frame the game draws and never throws them away, so after twenty minutes or so
-they fill the phone. The game now clears those notes itself every twenty seconds, on an iPhone or iPad (and Safari on a
-Mac) only. Nothing on screen should change; a stutter or the picture going soft every twenty seconds, or black flashes,
-would mean it's costing something it shouldn't. **It hasn't run on an iPhone yet**: everything below was measured on a PC
-acting as one. The home-screen app has no switch to turn it off; it turns itself off if the phone's graphics ever object
-to it.
+they use up the memory the phone allows the game. The game now clears those notes itself every twenty seconds, on an
+iPhone or iPad (and Safari on a Mac) only. Nothing on screen should change; a stutter or the picture going soft every
+twenty seconds, or black flashes, would mean it's costing something it shouldn't. **It hasn't run on an iPhone yet**:
+everything below was measured on a PC acting as one. The home-screen app has no switch to turn it off; it turns itself
+off if the phone's graphics ever object to it.
 
-To try it: close the app fully (swipe it away) and open it again, so it loads the new game, and play for 30 minutes or
-more. If it lasts, say so. If it closes again, keep a picture of the title it shows and note how long you'd played,
-whether the phone was hot, and the iOS version (Settings > General > About). And if you can, the phone's own record of
-it: Settings > Privacy & Security > Analytics & Improvements > Analytics Data, the newest file whose name begins
-`JetsamEvent`. That says which part of the browser was too big, which settles whether this was the cause.
+To try it: close the app fully (swipe it away) and open it again, so it loads the new game. In the game's Settings, under
+Everything else, set Frame rate readout to On: its second line should say "views made fresh" with a count that goes up
+every 20 seconds (if it says "off", take a screenshot). Then play for 30 minutes or more. If it lasts, say so. If it
+closes again, take a screenshot of the message the game shows when it opens again, and note how long you'd played,
+whether the phone was hot, and the iOS version (Settings > General > About).
+
+And if you can, the phone's own record of a crash: Settings > Privacy & Security > Analytics & Improvements > Analytics
+Data, the newest file whose name begins `JetsamEvent`. Tap it, then the share button, and send it. (If the list is
+empty, turn on Share iPhone Analytics on the page before it; it only keeps what happens after.) That says which part of
+the browser was too big, which settles whether this was the cause. The one from the 21-minute crash may still be there.
 
 *What was found.* With the pictures packed, the owner played 21 minutes before the phone closed the game, where it had
 been three to five. The title said what came just before: the picture's size stepping back up, x0.66 to x1, four seconds
 a step. That step is real, but small: the picture's targets and the canvas are some 9 MB more at x1 than at x0.66 on a
-phone. And nothing the game holds grows as it's played: as an iPhone in Chrome, ten minutes in, it asked the GPU for the
-same 246 MB of textures and 301 of buffers as at the start.
+phone. Standing in the town, nothing the game holds grows: as an iPhone in Chrome, ten minutes in, it asked the GPU for
+the same 246 MB of textures and 301 of buffers as at the start. Out questing it does grow, as new places and what's in
+them load: over 25 minutes of auto-play, from 245 to 276 MB of textures and 298 to 348 of buffers, some 80 MB, against
+the hundreds the bug below adds. Whether that levels off over a longer journey hasn't been looked at yet.
 
 What likely grows is in WebKit, the engine of Safari and of every browser on an iPhone. A bug in its WebGPU
 (bugs.webkit.org 329399, reported on iOS 27.2 in October 2026, fixed in WebKit's code on 4 November; in no iOS yet that
@@ -2794,19 +2801,22 @@ about 277 views an encoder in the town, at 66 encoders a second, some 18,000 num
 about 650 MB that the game never asked for. That is the likeliest reading, **not proven**: the numbers are kept in
 WebKit's GPU process, not the page, and had iOS closed only that, the game would have lost its GPU and said "the
 graphics reset", where it said the browser had closed it. iOS may have closed the page with it, or the cause is
-elsewhere. The `JetsamEvent` file above would say. Chrome on a PC or an Android phone has its own engine, no such bug,
+elsewhere. The `JetsamEvent` file above would say. The reporter also had runs with no growth at all: it doesn't happen
+every time, which may be why one session lasts longer than another. Chrome on a PC or an Android phone has its own engine, no such bug,
 and doesn't run what follows; Chrome on an iPhone is WebKit, and does.
 
 *What the game does now* (`src/gfx/freshviews.js`, on WebKit only). Every 20 seconds it makes again the views and bind
-groups used since the last round, and hands passes the new ones; the old ones are let go, and WebKit's numbers with them.
-A view made again is the same texture seen the same way, so nothing looks different. The game itself goes on holding
+groups used since the last round, and hands passes the new ones; the old ones are let go, and WebKit's numbers with them
+once the browser tidies them away (the bug's reporter saw the memory come back that way). A view made again is the same texture seen the same way, so nothing looks different. The game itself goes on holding
 and using what it made, untouched; bind groups it makes after a round are made with the newest views.
 
 - A round is spread over frames: at most a millisecond's work before each frame's encoder.
 - What's under five seconds old, destroyed, or the canvas's own is left alone.
-- Nothing made is handed out until the GPU has said it was made without error. If it says it is out of memory, the next
-  start loads lighter, as any other time it does; any objection at all puts everything back as the game made it, for
-  good, and the crash title then says "views no longer made fresh".
+- Nothing made is handed out until the GPU has said it was made without error (no validation, out-of-memory or internal
+  error). If it says it is out of memory, the next start loads lighter, as any other time it does; any objection at all
+  puts everything back as the game made it, for good, and the crash title then says "views no longer made fresh". So
+  does an error in a round's own code, and any GPU error in the three seconds after stand-ins are handed out (one that
+  shows only when they're used).
 - `?fresh=0` turns it off, `?fresh=1` on anywhere (as with `?light`, a home-screen app can't be given either).
 - The Frame rate readout's first line gives the worst frame of the last 20 seconds; its second says how many rounds have
   run, or why it stopped.
@@ -2816,9 +2826,9 @@ collected; `__leak()` counts them):
 
 | | Without | With |
 | --- | --- | --- |
-| Numbers held after 45 s, in the town | 2.2 million (63 MB at 30 bytes) | 0.6 million (17 MB) |
-| After 5 minutes, in the town | 7.1 million (203 MB), rising 19,500 a second | 0.3 to 0.55 million (9 to 16 MB), level |
-| 25 minutes of auto-play questing, no collection forced | | LONG2 |
+| Numbers held after 45 s, in the town (collection forced) | 2.2 million (63 MB at 30 bytes) | 0.6 million (17 MB) |
+| After 5 minutes, in the town (collection forced) | 7.1 million (203 MB), rising 19,500 a second | 0.3 to 0.55 million (9 to 16 MB) |
+| 25 minutes of auto-play questing, no collection forced | some 27 million (770 MB), at that rate | 0.24 to 0.44 million (7 to 13 MB), no climb: 0.41 million at the end, 75 rounds |
 | Encoders a second | 66 | 65 |
 | GPU errors | 0 | 0 |
 
@@ -2826,12 +2836,17 @@ With the PC's processor slowed four times, a round's work came to about 5 ms in 
 frames (the first round, with everything made since the load, takes longer). The worst frames around the rounds were
 23.5 and 8.1 ms, where the game's own worst elsewhere in the same minute were 38 and 275 ms. The story's opening and the
 village look as they did, and `node --test tests/freshviews.test.mjs` holds the swapping on a stand-in WebGPU. **Not
-tried on an iPhone**: Chrome can't show WebKit's numbers, only the model of them.
+tried on an iPhone**: Chrome can't show WebKit's numbers, only the model of them. And the 25-minute run counts on
+Chrome's collector letting the old views and bind groups go; on an iPhone it's Safari's, and WebKit's numbers go only when
+it collects them. If it does that seldom, a round's worth (some 10 MB) gathers for each 20 seconds between its
+collections. That is the main thing left to see on a phone.
 
-The crash title now says the picture's size as its sharpness, and steps one after another as one: "the picture's
-sharpness eased back up, 66% to 100% over 12 s". And from the note kept every eight seconds while the game is seen, it
-says whether the game kept going after the last thing it noted: "Just before: ..." if not, else "The last things it
-noted: ... It kept going about 3 more minutes after that." So the last thing noted reads as the cause only when it was.
+The crash title now says the picture's size as its sharpness, and steps the same way, no more than ten seconds apart, as
+one: "the picture's sharpness eased back up, 66% to 100% over 12 s" (a turn the other way reads on, "..., then back up,
+76% to 100% over 8 s"; a gap of a minute and a half or more is said in minutes). And from the note kept every eight
+seconds while the game is seen, it says whether the game kept going after the last thing it noted: "Just before: ..." if
+not, else "The last things the game noted: ... It kept going about 3 more minutes after that." So the last thing noted
+reads as the cause only when it was.
 
 **Looked at, left:** the picture's size climbing back. Each step makes the picture's targets again, at most about 9 MB
 more on a phone. The way to make it nothing would be targets made once at the full size and drawn into smaller, which
