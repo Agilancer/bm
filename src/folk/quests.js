@@ -31,6 +31,7 @@ import { LAND_RULES } from './land-quests.js';
 import { PHOBOS_RULES } from './phobos-quests.js';
 import { CITY, cityIn } from '../core/east.js';
 import { PHOBOS } from '../core/phobos-data.js';
+import { castleVistas } from '../core/castle-finds.js';
 
 export const RULES = {
   // Lisandra's, at the edge of town once she's walked you down: go round everyone with work and start each of their quests.
@@ -85,6 +86,8 @@ for (const l of LAIRS) AREAS[`lair:${l.key}`] = (x, y, z) => Math.hypot(x - l.x,
 // City State Phobos: anywhere inside its wall ('phobos'), and each of its districts ('ph:<key>', src/core/phobos-data.js).
 AREAS.phobos = (x, y, z) => y > -30 && cityIn(x, z) < 1;
 for (const d of PHOBOS.districts) AREAS[`ph:${d.key}`] = (x, y, z) => y > -30 && Math.hypot(x - d.x, z - d.z) < d.r * 0.8;
+// A lookout of the castle's or the city's ('vista:<id>', src/core/castle-finds.js): stood on it.
+for (const v of castleVistas()) AREAS[`vista:${v.id}`] = (x, y, z) => Math.abs(y - v.y) < 4 && Math.hypot(x - v.x, z - v.z) < v.r;
 export const areaAt = (k, x, y, z) => !!AREAS[k]?.(x, y, z);
 export const hasArea = (k) => !!AREAS[k];
 
@@ -278,9 +281,15 @@ export class QuestBook {
   boss(key) {
     if (!key) return;
     this.flags.add(`boss:${key}`);
+    // (And the key it kept, if it kept one: src/core/castle-keys.js.)
+    const gives = DELVE.BOSSES?.find((b) => b.key === key)?.gives;
+    if (gives) this.flags.add(gives);
     for (const id of this.active()) if (this.step(id)?.boss === key) this.advance(id);
     this.on.change();
   }
+
+  // Something the castle remembers of you: a way unbarred ('latch:<id>'), a lookout found ('vista:<id>').
+  flag(k) { if (!k || this.flags.has(k)) return false; this.flags.add(k); this.on.change(); return true; }
 
   // Where the player is, every so often.
   where(x, y, z, hour) {

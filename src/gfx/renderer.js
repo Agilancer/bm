@@ -1822,7 +1822,7 @@ export class Renderer {
   portalOpen(d) { const W = this.delveState; return !!W && W.delve === d.key && !!W.down?.includes(d.last); }
   // A gate between delves shut till a boss has died: open once it has, now (the sim's word) or ever (the quests': bossFlags,
   // from src/main.js). As src/sim/dungeon.js open.
-  gateOpen(key) { return !!this.bossFlags?.has(`boss:${key}`) || !!this.delveState?.down?.includes(key); }
+  gateOpen(key) { return !!this.bossFlags?.has(key.includes(':') ? key : `boss:${key}`) || !!this.delveState?.down?.includes(key); }
 
   makePortals() {
     const { spots } = buildSites(), out = [];

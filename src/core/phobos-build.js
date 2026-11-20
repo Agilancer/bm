@@ -1923,4 +1923,7 @@ export function phobosKeep(K) {
   for (const [i, s] of [[0, 0], [1, 1], [3, 2], [5, 3], [7, 4], [2, 1], [6, 4]]) { const t = tops[s]; link(sat[i], [t[0], t[1], t[2], sat[i][3] + 10], 30); }
 }
 
+// What's found on the land castle's towers (src/core/castle-finds.js): a chest on a deck, a lookout with a name.
+export function castleFinds() { return { chests: [], vistas: [] }; }
+
 export function phobos(K) { phobosCity(K); phobosCastle(K); phobosKeep(K); }

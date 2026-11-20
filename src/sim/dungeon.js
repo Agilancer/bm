@@ -13,7 +13,7 @@
 // goes off, a patch that burns while you stand in it, a ring to jump, shots to step between; most of it by the named moves
 // of src/sim/moves.js. The hired party (src/sim/hero.js companion) reads the same marks and the same calls: out of the
 // shapes, at the dragon's sides, behind a pillar.
-import { ADDS, BOSSES, DELVE, DELVES, HOLES, PARTY, PERCH, PILLARS, TURN_WARN, WARN, caveClear, caveFloorY, caveRoom, delveByKey, delveOf, roomOf, roomSpot, toWorld } from '../core/dungeon.js';
+import { ADDS, BOSSES, DELVE, DELVES, HOLES, LATCHES, PARTY, PERCH, PILLARS, TURN_WARN, WARN, caveClear, caveFloorY, caveRoom, delveByKey, delveOf, roomOf, roomSpot, toWorld } from '../core/dungeon.js';
 import { FIGHTS } from './delve-fights.js';
 import { markOut } from '../core/perils.js';
 import { MOVES, tipBody } from './moves.js';
@@ -148,6 +148,8 @@ export class Warrens {
       // (Not a ward gone into only from another: its portal is that one's, src/core/delve-castle.js within.)
       const d = DELVES.find((q) => !q.within && (near(q.portal.x, q.portal.z, q.portal.r) || (way = (q.ways || []).find((w) => near(w.x, w.z, q.portal.r)))));
       if (!d) return;
+      // (A dungeon's own door out on the land, locked till its key's had: src/core/castle-keys.js; a delve's shutBy.)
+      if (d.shutBy && !this.ever.has(d.shutBy)) { this.portalCd = 3; this.warn(WARN[d.shutWord], 12); return; }
       const r = this.ready();
       this.portalCd = 3;
       if (!r.ok && d.party !== false) { sim.event(EV.DELVE, DELVE.NEED, r.n, r.tanks, r.heals); return; }
@@ -163,6 +165,8 @@ export class Warrens {
     if (link) {
       const o = delveByKey(link.to), back = o.links[link.n], [bx, bz] = toWorld(back.x, back.z, o);
       this.portalCd = 3; this.leftAt[d.key] = sim.time;
+      // (A way barred from its far side: come through it from this one and it's unbarred for good. src/core/dungeon.js LATCHES.)
+      if (link.opens && !this.ever.has(link.opens)) { this.ever.add(link.opens); sim.event(EV.DELVE, DELVE.LATCH, LATCHES.indexOf(link.opens)); }
       this.carry(bx + Math.sin(back.yaw) * 4, bz + Math.cos(back.yaw) * 4, back.yaw);
       this.delve = o;
       sim.event(EV.DELVE, DELVE.ENTER, this.downIn(o), DELVES.indexOf(o));

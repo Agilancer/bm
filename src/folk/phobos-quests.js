@@ -3,6 +3,11 @@
 // quests out in the land that send you to them, one from each of the people who'd know (docs/PHOBOS-TODO.md, "Quests").
 // Places: 'phobos' (inside the city's wall), 'ph:<district>' (src/core/phobos-data.js districts), and the city's lairs
 // ('lair:phobos_*', src/core/tripo-monsters.js). Levels: src/ui/autobrain.js PLAN (the quest log suggests the same).
+import { RULES_A, LEVELS_A } from './phobos-quests-a.js';
+import { RULES_B, LEVELS_B } from './phobos-quests-b.js';
+import { RULES_CASTLE, LEVELS_CASTLE } from './phobos-quests-castle.js';
+import { RULES_TOWN, LEVELS_TOWN } from './phobos-quests-town.js';
+
 export const PHOBOS_RULES = {
   // ---- the way in: from the people who'd know ----
   smoke_in_the_east: { steps: [{ enter: 'phobos' }, { talk: 'ph_penny', say: 'Brenna Hasket of Cinderford sent me to see if you were real.', end: true }], gold: 300, xp: 2400 },
@@ -66,6 +71,8 @@ export const PHOBOS_RULES = {
   what_the_stars_say: { steps: [{ enter: 'ph:approach', night: true }, { back: true, say: 'Red at its heart, and something paler round it, turning.' }], gold: 520, xp: 4400 },
   the_dead_watch: { needs: 'still_the_rows', steps: [{ enter: 'ph:bones', night: true }, { kill: 'lair:phobos_boneyards', n: 3 }, { back: true, say: 'Three from the old rows. Sleep tonight.' }], gold: 560, xp: 4800, item: 'robe', named: "Ada's Grey", seed: 0xada07 },
   fresh_stock: { steps: [{ kill: 'lair:phobos_approach', n: 4 }, { back: true, say: 'Four of them. Fresh stock.' }], gold: 600, xp: 5000 },
+  // (More of the town's, the castle's and its dungeons': their own files.)
+  ...RULES_TOWN, ...RULES_CASTLE, ...RULES_A, ...RULES_B,
 };
 // The level each wants (src/ui/autobrain.js PLAN): you come to Phobos at about twenty.
 export const PHOBOS_LEVELS = [
@@ -82,4 +89,5 @@ export const PHOBOS_LEVELS = [
   ['up_the_aqueduct', 58], ['the_gate_captain', 66], ['the_iron_muster', 68],
   // (The Middle Ward, 75-95: up through its gate at 75, the household's work 76 to 82, the Feast That Walks at 88.)
   ['the_librarians_letters', 75], ['the_household', 75], ['his_servants', 76], ['dust_in_the_stacks', 76], ['wynns_map', 78], ['the_quiet_watchs_steel', 80], ['the_hornwings', 82], ['the_feast_that_walks', 88],
+  ...LEVELS_TOWN, ...LEVELS_CASTLE, ...LEVELS_A, ...LEVELS_B,
 ];

@@ -51,6 +51,8 @@ export const WAYS = {
   // Hall, the War Room, the Cells and the Stores off it, and the Iron Marshal in his hall last.
   ironbarracks: ['ib_stair', 'ib_muster', 'ib_kennels', 'ib_muster', 'ib_yard', 'ib_muster', 'ib_war', 'ib_cells', 'ib_war', 'ib_stores', 'ib_war', 'ib_iron'],
 };
+// (A later delve carries its own: auto: { way: [...] }, written with it. src/core/delve-castle-a.js and the rest.)
+for (const d of DELVES) if (d.auto?.way) WAYS[d.key] = d.auto.way;
 export const WAY = WAYS.warrens;
 // The level it wants before it goes down each the first time (its own, from the delve: the Warrens 7, the Deeps 10,
 // Blackvigil 14), raised two each time that dungeon beats it three times over.
@@ -86,6 +88,9 @@ export const KNOWN = new Set([
   // the Marshal's standard are orders (to them), the rest marks, rings and adds, as any.)
   'ib_stairguard', 'ib_rank_w', 'ib_rank_e', 'ib_drill', 'ib_officers', 'ib_defaulters', 'kennelmaster', 'quartermaster', 'ironmarshal',
 ]);
+// (And every pack and boss of a delve that carries its own way: fought as any are, their calls marks, shots, rings, adds
+// and orders.)
+for (const d of DELVES) if (d.auto?.way) { for (const p of d.packs) KNOWN.add(p.key); for (const b of d.bosses) KNOWN.add(b.key); }
 export function warrensCoverage() {
   const out = [];
   for (const d of DELVES) {
@@ -114,11 +119,18 @@ const dist = (ax, az, bx, bz) => Math.hypot(ax - bx, az - bz);
 // within; else out by the way in. null if the gate it wants is shut (open: the bosses that have ever died, 'boss:<key>').
 export function delveWay(here, d, open = () => true) {
   if (!d || here?.key === d.key) return null;
-  if (!here) return [d.portal.x, d.portal.z];
-  const links = here.links || [];
-  const l = links.find((q) => q.to === d.key) || (d.within && links.find((q) => q.to === d.within)) || (here.within && links.find((q) => q.to === here.within));
-  if (l) return !l.shut || open(l.shut) ? toWorld(l.x, l.z, here) : null;
-  return toWorld(here.exitIn.x, here.exitIn.z, here);
+  // (Out on the land: to its door, or to the door of the ward it's gone into from; nowhere, if that door's locked.)
+  if (!here) return d.shutBy && !open(d.shutBy) ? null : [d.portal.x, d.portal.z];
+  // The gates between delves, as far as they go: the first of the way through them to it, every one of them open.
+  const from = new Map([[here.key, null]]), q = [here];
+  while (q.length && !from.has(d.key)) {
+    const c = q.shift();
+    for (const l of c.links || []) { if (from.has(l.to) || (l.shut && !open(l.shut))) continue; from.set(l.to, c === here ? l : from.get(c.key)); const o = delveByKey(l.to); if (o) q.push(o); }
+  }
+  const l = from.get(d.key);
+  if (l) return toWorld(l.x, l.z, here);
+  // (No way through from here: a ward gone into only from another can't be reached; anything else, out and round.)
+  return d.within ? null : toWorld(here.exitIn.x, here.exitIn.z, here);
 }
 // (A flow field for each dungeon, made when it first walks there.)
 const navs = new Map();

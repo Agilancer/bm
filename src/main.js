@@ -1,7 +1,9 @@
 // Boot: the permission gate, threads, GPU, assets, and the render thread's loop.
 import { setOpeningTerrain } from './core/terrain.js';
 import { GROUPS, GROUP_KEYS, TRIPO_KIND } from './core/tripo-monsters.js';
-import { BOSSES as DELVE_BOSSES, DELVE as DELVE_CODE, delveOf, inDungeon as inDelve } from './core/dungeon.js';
+import { BOSSES as DELVE_BOSSES, DELVE as DELVE_CODE, LATCHES as DELVE_LATCHES, delveOf, inDungeon as inDelve } from './core/dungeon.js';
+import { KEYS as CASTLE_KEYS, latchWord } from './core/castle-keys.js';
+import { castleVistas, vistaAt } from './core/castle-finds.js';
 import { OPENING, OPENING_REVISION } from './core/opening.js';
 import { OpeningHUD } from './ui/opening.js';
 import { ChatLog } from './ui/chatlog.js';
@@ -1599,7 +1601,18 @@ class GameView {
     // (Which bosses have ever died, told to the sim when it changes: Castle Velscour's gates that a death opens. src/sim/dungeon.js open.)
     const fl = this.townUI?.quests.flags;
     this.renderer.bossFlags = fl;
-    if (fl && (fl !== this.flagsSent || fl.size !== this.flagsN)) { this.flagsSent = fl; this.flagsN = fl.size; this.sim?.postMessage({ type: 'bossesDown', keys: [...fl].filter((f) => f.startsWith('boss:')).map((f) => f.slice(5)) }); }
+    if (fl && (fl !== this.flagsSent || fl.size !== this.flagsN)) { this.flagsSent = fl; this.flagsN = fl.size; this.sim?.postMessage({ type: 'bossesDown', keys: [...fl].flatMap((f) => (f.startsWith('boss:') ? [f.slice(5)] : /^(key|latch):/.test(f) ? [f] : [])) }); }
+    // (A lookout of the castle's or the city's, stood on for the first time: its name, and what the sight's worth.
+    // src/core/castle-finds.js.)
+    if (fl && (this.vistaT = (this.vistaT || 0) - dt) <= 0) {
+      this.vistaT = 0.5;
+      const v = vistaAt(snap[H.PX], snap[H.PY], snap[H.PZ]);
+      if (v && this.townUI.quests.flag(`vista:${v.id}`)) {
+        const n = castleVistas().filter((q) => fl.has(`vista:${q.id}`)).length;
+        this.hud.tip(`Lookout found: ${v.name}. (${n} of ${castleVistas().length})`, 7); this.chatLog?.system(`Lookout found: ${v.name}.`);
+        this.addXp?.(v.xp); this.music?.stinger?.('triumph');
+      }
+    }
     const rope = this.bells.update(dt, snap[H.PX], snap[H.PY], snap[H.PZ], this.input.yaw);
     // Someone to talk to, if there's nothing to take or open first.
     const free = this.input.enabled && !this.input.menu && !d && !this.nearChest;
@@ -1991,6 +2004,13 @@ class GameView {
   }
 
   // What one of the other Tessariels' moves does that only this thread can (HFX in src/sim/heroskills.js): at (x, y, z).
+  // A boss's key, the first time it's had (src/core/castle-keys.js; the quests keep it: src/folk/quests.js boss).
+  castleKey(k) {
+    const q = this.townUI?.quests;
+    if (!k || !q || q.flags.has(k) || !CASTLE_KEYS[k]) return;
+    this.hud.tip(CASTLE_KEYS[k].got, 9); this.chatLog?.system(CASTLE_KEYS[k].got);
+  }
+
   heroFx(code, x, y, z, a, b, c) {
     const r = this.renderer, au = this.audio;
     switch (code) {
@@ -2025,7 +2045,10 @@ class GameView {
       case EV.WILD: this.wilds?.on(a, b, c, d, e, f, g); break;
       case EV.DELVE:
         if ((a | 0) === DELVE_CODE.ENTER) this.wantEntry = true;
-        this.party?.onDelve(a, b, c, d); if ((a | 0) === DELVE_CODE.BOSS_DOWN) { this.townUI?.quests.boss(DELVE_BOSSES[b | 0]?.key); this.music?.stinger('triumph'); } break;
+        this.party?.onDelve(a, b, c, d); if ((a | 0) === DELVE_CODE.BOSS_DOWN) { this.castleKey(DELVE_BOSSES[b | 0]?.gives); this.townUI?.quests.boss(DELVE_BOSSES[b | 0]?.key); this.music?.stinger('triumph'); }
+        // (A way unbarred from its far side, for good: src/core/castle-keys.js.)
+        if ((a | 0) === DELVE_CODE.LATCH && DELVE_LATCHES[b | 0]) { this.townUI?.quests.flag(DELVE_LATCHES[b | 0]); this.hud.tip(latchWord(DELVE_LATCHES[b | 0].slice(6)), 6); this.chatLog?.system(latchWord(DELVE_LATCHES[b | 0].slice(6))); }
+        break;
       case EV.HERO_LEVEL: case EV.HERO_DUEL: break;
       case EV.SPELL_CAST:
         this.heroTalk?.onSpell(b);

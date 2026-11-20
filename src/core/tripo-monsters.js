@@ -9,6 +9,9 @@
 import { WILD_VARIANTS, battleLairs, outpostLair } from './wilds.js';
 import { BATTLES, OUTPOSTS } from './wilds-data.js';
 import { HAUNTS } from './east.js';
+import { VARIANTS_H } from './delve-highward.js';
+import { VARIANTS_A } from './delve-castle-a.js';
+import { VARIANTS_B } from './delve-castle-b.js';
 
 export const TRIPO_BASE = 'assets/monsters/tripo/';
 export const TRIPO_SLOTS = 12;
@@ -144,6 +147,8 @@ export const VARIANTS = {
 };
 // And the land's new kinds (src/core/wilds.js): a palette, a size, a name and tricks of their own on the old bodies.
 Object.assign(VARIANTS, WILD_VARIANTS);
+// And Castle Velscour's later delves' (src/core/delve-highward.js, delve-castle-a.js, delve-castle-b.js).
+Object.assign(VARIANTS, VARIANTS_H, VARIANTS_A, VARIANTS_B);
 export function withVariants(roster) {
   for (const [id, v] of Object.entries(VARIANTS)) {
     const src = roster[v.src] ? v.src : v.alt;
