@@ -99,15 +99,20 @@ const props = [];
   // panes leant on the wall, shards swept into heaps. Fire at the way in and at the table; a hung fire over the middle.
   add('bigmirror', 22.1, -79, { yaw: PI / 2, w: 1.5, h: 4.2 }); add('bigmirror', 49.9, -78.2, { yaw: -PI / 2, w: 1.4, h: 4.2 }); add('bigmirror', 49.9, -95, { yaw: -PI / 2, w: 1.5, h: 4.2 });
   add('bigmirror', 22.1, -96, { yaw: PI / 2, w: 1.5, h: 4.2 }); add('bigmirror', 37, -99.9, { yaw: 0, w: 1.8, h: 4.8 });
-  add('table', 30, -92, { hx: 2.6, hz: 1.1, solid: true }); add('vat', 40, -78.4, { r: 0.9 }); add('tools', 23, -89.6, { yaw: PI / 2 });
+  add('table', 30, -92, { hx: 2.6, hz: 1.1, solid: true });
+  // (Benches of glass and frames; two fires hung over them.)
+  add('glassbench', 41, -84, { hx: 2.4, yaw: 0.2 }); add('glassbench', 43, -93, { hx: 2.2, yaw: -1.2 }); add('glassbench', 27, -97.4, { hx: 2.2, yaw: 0 }); add('glassbench', 31, -82, { hx: 2, yaw: PI });
+  add('basket', 33, -88, { up: 6 }); add('basket', 41.5, -89, { up: 6 }); add('vat', 40, -78.4, { r: 0.9 }); add('tools', 23, -89.6, { yaw: PI / 2 });
   add('pane', 42.4, -98.6, { yaw: 0.15, w: 1, h: 2.2 }); add('shards', 45, -90, { r: 1.5 }); add('shards', 28.4, -86.4, { r: 1.1 }); add('crates', 48.2, -88.4);
   add('brazier', 28.6, -78.4); add('brazier', 35.4, -78.4); add('brazier', 33.8, -95.6);
   // ---- the Glass Maze: low. Its walls of panes (they stop a body), a great glass uncovered at its heart. A fire at two
   // corners; the heart is dark but for what the glass gives back.
   for (const [x, z, hx, hz] of MAZE) add('pane', x, z, { yaw: hx > hz ? 0 : PI / 2, w: Math.max(hx, hz), h: 3.2, hx, hz, solid: true });
-  add('bigmirror', -36, -105.7, { yaw: PI, w: 2, h: 3.6 }); add('circle', -34, -112, { r: 2 });
+  add('bigmirror', -36, -105.7, { yaw: PI, w: 2, h: 3.6 }); add('rings', -34, -112, { r: 2 });
   add('shards', -43.6, -121.4, { r: 1.2 }); add('shards', -24.6, -107, { r: 1 });
   add('brazier', -43.8, -102.4); add('brazier', -43.8, -121.8);
+  // (Fire hung low in its ways: the panes take it and give it back.)
+  add('basket', -32, -108.4, { up: 3.4 }); add('basket', -36.4, -114.6, { up: 3.4 }); add('basket', -25, -118, { up: 3.4 });
   // ---- the Hall of Mirrors: one glass the height of the hall in its far wall, what you see from each way in; great
   // glasses down both long walls, none square to another; her chair turned to face the great glass. Two rings of candles,
   // a fire each side of the great glass.

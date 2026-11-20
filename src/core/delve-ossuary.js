@@ -66,15 +66,15 @@ const props = [];
   [-36, -48, -62, -74, -86].forEach((z, i) => add('bonepier', i % 2 ? 7 : -7, z, { hx: 1.4, hz: 0.7, solid: true }));
   for (const z of [-38, -42]) add('stall', 3.6, z, { hx: 2.2, yaw: PI });
   for (const z of [-80, -84]) add('stall', -3.6, z, { hx: 2.2, yaw: PI });
-  add('daylight', 0, -60, { r: 3 }); add('circle', 0, -60, { r: 4 });
+  add('daylight', 0, -60, { r: 3 }); add('rings', 0, -60, { r: 4 });
   // (The runner stops either side of the ring of black glass: a strip through a ring is a bar across it.)
   add('carpet', 0, -43, { hx: 1.2, hz: 11.4, layer: 'blood:cloth_red' }); add('carpet', 0, -78, { hx: 1.2, hz: 12.4, layer: 'blood:cloth_red' });
   add('bonetree', -8, -41, { h: 3.6 }); add('bonetree', 8, -66, { h: 3.6 }); add('bonetree', -8, -80, { h: 3.6 });
   add('brazier', -3.4, -30.6); add('brazier', 3.4, -30.6); add('brazier', -5, -90.4);
   add('decal', -9.95, -88, { layer: 'p2_wax_drips', w: 2, h: 2, up: 1, yaw: PI / 2 });
   // ---- the Charnel Aisle: low. Bones in stacks down both walls, biers, a heap not yet sorted, the sorters' table. One fire.
-  for (const z of [-44, -58, -72]) add('bonestack', -36.3, z, { yaw: PI / 2 });
-  add('bonestack', -23.7, -58, { yaw: -PI / 2 });
+  for (const z of [-44, -58, -72]) add('charnel', -36.3, z, { yaw: PI / 2 });
+  add('charnel', -23.7, -58, { yaw: -PI / 2 });
   add('bier', -30, -50, { hx: 1, hz: 2.2 }); add('bier', -31, -66, { hx: 1, hz: 2.2 });
   add('bones', -28, -58, { r: 1.4 }); add('bones', -33, -75, { r: 1.2 }); add('heap', -27, -40.6, { r: 1.3, layer: 'pale:rubble' });
   add('table', -33.4, -40.2, { hx: 2, hz: 0.7 }); add('candles', -33.4, -40.2, { up: 0.85 }); add('urn', -25, -64); add('urn', -35.6, -65);
@@ -96,6 +96,10 @@ const props = [];
   add('deadguard', -42.6, -125, { yaw: PI / 2 }); add('deadguard', -42.6, -135, { yaw: PI / 2 }); add('deadguard', -17.4, -129, { yaw: -PI / 2 });
   add('pool', -30, -130, { r: 3, up: 0.03, layer: 'mire:water' }); add('bones', -35, -141, { r: 1.2 }); add('gravegoods', -26, -116.4, { r: 1.2 });
   add('brazier', -33.4, -117); add('brazier', -27, -140.6);
+  // (Stacked to the vault along its walls, as a charnel house stacks them; two fires hung low over the water.)
+  for (const z of [-118, -127.5, -137]) { add('charnel', -42.9, z, { yaw: PI / 2, w: 2.6, h: 4.4 }); add('charnel', -17.1, z, { yaw: -PI / 2, w: 2.6, h: 4.4 }); }
+  add('charnel', -36, -142.9, { yaw: 0, w: 3.4, h: 4.4 }); add('charnel', -24, -142.9, { yaw: 0, w: 3.4, h: 3 });
+  add('basket', -33, -127, { up: 3.6 }); add('basket', -27, -135, { up: 3.6 });
   add('decal', -42.95, -130, { layer: 'p2_damp_rise', w: 4, h: 3, up: 0.1, yaw: PI / 2 });
   // ---- the Vestry: the tithe box, the plate.
   add('table', 43, -94.4, { hx: 2, hz: 0.6 }); add('candles', 42, -94.4, { up: 0.85 }); add('gold', 44.6, -94.2, { r: 0.5 });
@@ -142,7 +146,7 @@ const warnings = {
   can_turn: 'The Cantor of Jaws turns on you! Get behind the tank, or out of her reach, till she lets go.',
   can_enrage: 'The Cantor of Jaws is enraged!',
   pri_shut: "The Sanctuary is shut. Its doors open when his Cantor's voice is stopped.",
-  pri_open: 'The Bone Prior. When he names one of you, the named KNEELS: not a step till the bone has come up round them. Everyone else gets clear of the one kneeling. (What you emptied below tells here: the Under-Crypt empty, his old priors lie still when he calls; the Charnel Aisle empty, he has no piers of bone to pull down.)',
+  pri_open: 'The Bone Prior. When he names one of you, the named RUNS, round the walls and away from the rest: bone comes up wherever the named has just stood. (What you emptied below tells here: the Under-Crypt empty, his old priors lie still when he calls; the Charnel Aisle empty, he has no piers of bone to pull down.)',
   pri_less_priors: 'The Under-Crypt is empty: his old priors lie still when he calls them.',
   pri_less_piers: 'The Charnel Aisle is empty: he has no bone to build his piers up again, and cannot pull them down.',
   pri_crozier: 'The Prior swings his crozier! Out of the arc.',
@@ -150,8 +154,8 @@ const warnings = {
   pri_litany: 'His litany comes after you! Keep moving.',
   pri_ash: 'Ash of the dead! Out of the pools.',
   pri_quake: 'He strikes the floor! Jump the ring as it reaches you.',
-  pri_kneel: 'HE NAMES ONE OF YOU: KNEEL! The named stands still; everyone else, clear of them!',
-  pri_stood: 'The named moved: he drinks what it cost them.',
+  pri_kneel: 'HE NAMES ONE OF YOU: RUN! Round the walls, away from the rest; everyone else, out of the circles behind them!',
+  pri_stood: 'The named stood: he drinks what it cost them.',
   pri_priors: 'His old priors rise from the Under-Crypt!',
   pri_turn: 'The Bone Prior turns on you! Get behind the tank, or out of his reach, till he lets go.',
   pri_enrage: 'The Bone Prior is enraged!',

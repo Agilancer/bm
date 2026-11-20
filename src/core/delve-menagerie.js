@@ -58,6 +58,8 @@ const tunnels = [
 // oldhunger): what dies inside its reach, he eats.
 export const PIT_STAKE = [-60, -50];
 export const PIT_CHAIN = 10.5;
+// The great cage hung in the Aviary: where it hangs, and how far round its floor is. Under it is out of her shriek.
+export const GREAT_CAGE = [-52, -112, 4];
 // The Aviary's dead trees: what the Matron's shriek doesn't reach behind. [x, z, how far round]
 export const AVIARY_TREES = [[-64, -102, 1.8], [-41, -104, 1.8], [-61, -123, 1.8], [-43, -121, 1.8], [-52, -98.4, 1.6]];
 // The chain posts of the Ring of Chains: what the Keeper's chain snags on. [x, z, how far round]
@@ -76,15 +78,20 @@ const props = [];
   // ---- the Cage Rows: a long low hall, cages down both walls with a way between, some standing open; cages hung over the
   // way; what's been thrown out of them. Its light is hung down its middle.
   // (turn: a cage's own length lies along z; hx and hz are what it takes up of the floor. None before a doorway.)
-  [-37, -56, -65, -74].forEach((z, i) => add('beastcage', -8.6, z, { hx: 2.6, hz: 3.4, h: 3, yaw: PI / 2, turn: true, solid: true, open: i === 1, bones: i % 2 === 0 }));
-  [-48, -57].forEach((z, i) => add('beastcage', 8.6, z, { hx: 2.6, hz: 3.4, h: 3, yaw: -PI / 2, turn: true, solid: true, open: i === 1, bones: i === 0 }));
+  // (Out in the room, a way behind them along each wall: something lying in three, bones in the rest, one forced open.)
+  [-39, -56, -65, -74].forEach((z, i) => add('beastcage', -6.4, z, { hx: 2.6, hz: 3.4, h: 3.4, gap: 0.3, yaw: PI / 2, turn: true, solid: true, open: i === 1, bones: i % 2 === 0, beast: i === 0 || i === 3, bent: i === 2 }));
+  [-48, -57, -76].forEach((z, i) => add('beastcage', 6.4, z, { hx: 2.6, hz: 3.4, h: 3.4, gap: 0.3, yaw: -PI / 2, turn: true, solid: true, open: i === 1, bones: i !== 1, beast: i === 2 }));
+  for (const [x, z, up] of [[-2.4, -44, 3.4], [2, -52, 4.4], [-1, -66, 3], [2.6, -78, 4], [-10.6, -50, 2.6], [10.8, -70, 3]]) add('chain', x, z, { up });
+  add('basket', -1.5, -47, { up: 5.6 }); add('basket', 1.5, -61, { up: 5.6 }); add('basket', -1.5, -75, { up: 5.6 });
   add('cage', -2, -62, { up: 4.6 }); add('cage', 3, -40, { up: 5 }); add('chain', 4, -70, { up: 4 });
   add('bones', 1, -50, { r: 1.2 }); add('heap', -3, -71, { r: 1.2, layer: 'p2_straw_ground' }); add('barrels', 10.4, -75); add('crates', 10.6, -65);
   add('decal', 2, -60, { layer: 'p2_blood_splashes', w: 2.4, flat: true, yaw: 0.8 }); add('decal', -12.95, -62, { layer: 'p2_gouges', w: 2.6, up: 0.8, yaw: PI / 2 });
   add('brazier', -4, -35.4); add('brazier', 4, -35.4);
   // ---- the Baiting Pit: sunk in its floor. His stake in the middle and the chain off it, the bait's cage hung over it,
   // the watchers' walk round two walls over the pit, the drain, old kills. Fire at the way down, fire on the walk.
-  add('chainpost', PIT_STAKE[0], PIT_STAKE[1], { r: 0.7, h: 1.6 });
+  add('chainpost', PIT_STAKE[0], PIT_STAKE[1], { r: 1.3, h: 3.6, run: [PIT_CHAIN - 1, 3.4, 0.36] });
+  add('rings', PIT_STAKE[0], PIT_STAKE[1], { r: 2.6, n: 1 });
+  add('basket', PIT_STAKE[0] + 3, PIT_STAKE[1] + 2.4, { up: 6 }); add('basket', PIT_STAKE[0] - 3, PIT_STAKE[1] - 2.4, { up: 6 });
   add('cage', PIT_STAKE[0] - 2, PIT_STAKE[1] - 1, { up: 5.4 });
   add('walk', -60, -34.25, { hx: 16, hz: 1.25, up: 6.5, side: -1 }); add('walk', -75.75, -50, { hx: 1.25, hz: 16, up: 6.5, side: 1 });
   add('pool', -70, -42, { r: 2, up: 0.03, layer: 'mire:water' }); add('bones', -50, -60, { r: 1.5 }); add('bones', -70, -62, { r: 1.2 }); add('bones', -58, -38, { r: 1 });
@@ -105,7 +112,7 @@ const props = [];
   add('decal', 69.95, -97, { layer: 'p2_damp_rise', w: 4, h: 3, up: 0.2, yaw: -PI / 2 });
   // ---- the Aviary: a drum as tall as the tower over it, open to the sky far up. The great cage hung in the middle of it;
   // dead trees (they stop a body, and a shriek); lesser cages; nests. Fire round the walls, so she's seen against it.
-  add('greatcage', -52, -112, { r: 3.4, h: 7, up: 9.5 }); add('daylight', -52, -112, { r: 5 });
+  add('greatcage', GREAT_CAGE[0], GREAT_CAGE[1], { r: GREAT_CAGE[2], h: 7, up: 7.5 }); add('rings', GREAT_CAGE[0], GREAT_CAGE[1], { r: GREAT_CAGE[2], n: 1 }); add('daylight', -52, -112, { r: 5 });
   for (const [x, z, r] of AVIARY_TREES) add('deadtree', x, z, { h: r > 1.7 ? 14 : 11, r, solid: true });
   for (const [x, z, up] of [[-60, -108, 7], [-45, -116, 13], [-58, -126, 9]]) add('cage', x, z, { up });
   add('nest', -66, -126, { r: 1.4 }); add('nest', -38, -126, { r: 1.2 }); add('eggs', -66, -125, { s: 0.7 }); add('bones', -54, -118, { r: 1.4 });
@@ -126,7 +133,8 @@ const props = [];
   add('carpet', 40, -132, { hx: 4, hz: 2.4, layer: 'forest:cloth_red' });
   // ---- the Ring of Chains: the chain posts, cages hung over it, his mark on the far wall. Fire under his mark, fire at
   // the two ways in; the hung fires over the middle.
-  for (const [x, z, r] of CHAIN_POSTS) add('chainpost', x, z, { r, h: 3, solid: true });
+  CHAIN_POSTS.forEach(([x, z, r], i) => add('chainpost', x, z, { r, h: 3.4, solid: true, run: [(i % 2 ? -1 : 1) * 3.4, 2.6 - i, 0.22] }));
+  add('basket', -6, -160, { up: 7.5 }); add('basket', 6, -164, { up: 7.5 }); add('basket', 0, -171, { up: 7.5 });
   for (const [x, z, up] of [[-14, -164, 7], [14, -160, 9], [7, -172, 10]]) add('cage', x, z, { up });
   add('mark', 0, -177.6, { up: 8, r: 2, back: 1 });
   for (const [x, z] of [[-6, -176], [10, -176], [15.4, -153], [-15.4, -152]]) add('brazier', x, z);
@@ -165,14 +173,14 @@ const warnings = {
   hun_fed: 'A HOUND DEAD INSIDE HIS CHAIN: he eats! He is mended, and the stronger for it. Kill them out past the ring!',
   hun_turn: 'Old Hunger turns on you! Get behind the tank, or out of his reach, till he lets go.',
   hun_enrage: 'Old Hunger is enraged!',
-  mat_open: 'The Matron of Wings. When she draws breath to shriek, get a dead tree between you and her: the shriek takes everything she can see.',
+  mat_open: 'The Matron of Wings. When she draws breath to shriek, get UNDER THE GREAT CAGE, inside the ring on the floor: its iron takes the shriek. The trees are no help: she is above them.',
   mat_talons: 'The Matron strikes! Out of the arc.',
   mat_feathers: 'Feathers, flung all round! Stand between two.',
   mat_dive: 'She stoops! Out of the line.',
   mat_gust: 'She beats her wings! Through the gap.',
   mat_brood: 'Her brood comes down out of the cages!',
-  mat_shriek: 'SHE DRAWS BREATH TO SHRIEK! Behind a tree, out of her sight!',
-  mat_shrieked: 'The shriek breaks on the trees.',
+  mat_shriek: 'SHE DRAWS BREATH TO SHRIEK! Under the great cage, inside its ring!',
+  mat_shrieked: 'The shriek breaks on the iron of the cage.',
   mat_turn: 'The Matron turns on you! Get behind the tank, or out of her reach, till she lets go.',
   mat_enrage: 'The Matron of Wings is enraged!',
   kpr_shut: "The Ring of Chains is shut. Its gate opens to the Keeper's two: Old Hunger and the Matron of Wings.",
