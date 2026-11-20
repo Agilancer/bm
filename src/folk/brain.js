@@ -95,6 +95,14 @@ export class Folk {
 
   // A gesture from the talk: the whole body if they're standing about, the top half over anything else.
   gesture(name) {
+    // (Phobos's street crowd: the talk's gestures from the chest up, at two thirds, over how they're standing; and none that
+    // puts the hands to the face or wants another body to do it to, which went through faces and coats. The owner,
+    // 2026-11-20: 'fix their awful looking animations'.)
+    if (this.crowd) {
+      const c = this.life.clips.clips[CROWD_SOFT[name] || name] || this.life.clips.clips.talk;
+      this.layer(c.name, { from: 'Spine2', weight: 0.65, fade: 0.45, dur: Math.min(c.loop ? 3.2 : c.dur, 5) });
+      return;
+    }
     const c = this.life.clips.clips[name] || this.life.clips.clips.talk;
     const dur = Math.min(c.loop ? 3.2 : c.dur, 6);
     if (this.posture === 'stand' && this.idling && !this.moving) {
@@ -108,6 +116,9 @@ export class Folk {
   // Still in the block that script was started for?
   alive(key) { return this.key === key && !this.alarm; }
 }
+
+// What the crowd does for a gesture of the talk's it shouldn't: hands to the mouth or the eyes, a hug or a dance at nobody.
+const CROWD_SOFT = { afraid: 'look_around', scared: 'look_around', scared_2: 'look_around', frightened: 'look_around', sob: 'depressed', cry: 'depressed', hug: 'agree', heart: 'nod', flip: 'cheer', dance_1: 'wave', dance_2: 'wave', dance_3: 'wave', laugh_2: 'laugh', rant: 'complain', angry_3: 'angry' };
 
 export class Life {
   // ground: src/folk/ground.js; town: src/folk/town.js; clips: FolkClips; emit(event) tells the main thread things (doors).
@@ -1018,7 +1029,8 @@ function setDown(me, near) {
     for (const o of life.crowd) {
       if (o === me || o.parked) continue;
       const od = Math.hypot(o.x - x, o.z - z);
-      if (od < 2) s -= 2; else if (od < 7) { by++; if (!o.moving) s += 0.7; }
+      if (kin(me, o) && od < 45) s -= 6;
+      else if (od < 2) s -= 2; else if (od < 7) { by++; if (!o.moving) s += 0.7; }
     }
     if (by > 3) s -= 2;
     s += me.rng() * 0.6;
@@ -1043,7 +1055,7 @@ function setDownIn(me) {
     const [li, k] = pts[Math.floor(me.rng() * pts.length)], [x, z] = L[li].pts[k], d = Math.hypot(x - px, z - pz);
     let s = me.rng() * 0.8;
     if (d < 14) s -= 3; else if (d < 34 && ((x - px) * fx + (z - pz) * fz) / d > 0.3) s -= 1.5;
-    for (const o of life.crowd) { if (o === me || o.parked) continue; const od = Math.hypot(o.x - x, o.z - z); if (od < 2) s -= 2; else if (od < 7 && !o.moving) s += 0.5; }
+    for (const o of life.crowd) { if (o === me || o.parked) continue; const od = Math.hypot(o.x - x, o.z - z); if (kin(me, o) && od < 45) s -= 6; else if (od < 2) s -= 2; else if (od < 7 && !o.moving) s += 0.5; }
     if (s > bs) { bs = s; best = [li, k]; }
   }
   const [li, k] = best, [x, z] = L[li].pts[k];
@@ -1135,10 +1147,15 @@ function* loiter(me, key) {
 // Someone of the crowd stood about not far off, and free to be talked to.
 // (Someone they know before a stranger a little nearer: src/folk/lines/crowd/meets.js.)
 const knows = (a, b) => !!(MEETS[`${a.id}|${b.id}`] || MEETS[`${b.id}|${a.id}`]);
+// Two of the crowd on the one body (a swap and the one it's made on, or two swaps of it): kept apart, never a knot of them,
+// never stopped talking together. The owner, 2026-11-20: 'don't put a bunch of the same model with palette swaps next to
+// each other'.
+// (And two with the one face, a swap's worn head's or a body's own: folk.worker.js faceOf.)
+const kin = (a, b) => (a.p.swapOf || a.p.id) === (b.p.swapOf || b.p.id) || (!!a.faceOf && a.faceOf === b.faceOf);
 function partnerFor(me) {
   let best = null, bd = 28;
   for (const o of me.life.crowd) {
-    if (o === me || o.parked || o.pairWith || o.moving || o.act !== ACT.IDLE || o.inScene || o.talking) continue;
+    if (o === me || o.parked || o.pairWith || o.moving || o.act !== ACT.IDLE || o.inScene || o.talking || kin(me, o)) continue;
     // (No further than ever, straight over open street; among those, someone they know first.)
     const d0 = Math.hypot(o.x - me.x, o.z - me.z), d = d0 - (knows(me, o) ? 8 : 0);
     if (d0 < 28 && d < bd) { bd = d; best = o; }

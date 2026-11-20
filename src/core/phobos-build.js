@@ -173,11 +173,12 @@ function hangBanner(K, x, y, z, face, w, len, rep) {
 // down it, painted both sides with the shop's name and a picture of its trade, one of twenty (p2_signs, painted by
 // tools/phobos/textures/signs.py, a cell of four across and five down). (The owner, 2026-11-19: "put words on the signs".)
 const SIGNS = 20;
-function shopSign(K, h, P, fy, fz, i) {
+function shopSign(K, h, P, fy, fz, i, at = null) {
   // (Its chains from the bracket's two ends, by the wall and at its tip, never from along it: a cord hung from the middle of
   // a bar is a T. The V/T rule.)
   // (Half again as big as it was: its name read from across the street, the critics.)
-  const f = h.front, lx = -DOOR - 0.9, hw = 0.56, zc = fz + f * (0.08 + hw), y0 = fy + 2.35, y1 = fy + 3.23, t = 0.05, tip = fz + f * (0.1 + 2 * hw);
+  // (at: where along the front it hangs, past the end of an awning; else by the door.)
+  const f = h.front, lx = at ?? -DOOR - 0.9, hw = 0.56, zc = fz + f * (0.08 + hw), y0 = fy + 2.35, y1 = fy + 3.23, t = 0.05, tip = fz + f * (0.1 + 2 * hw);
   K.beam('iron', P(lx, fy + 3.3, fz), P(lx, fy + 3.3, tip), 0.05);
   for (const zz of [fz + f * 0.1, tip]) K.beam('iron', P(lx, fy + 3.3, zz), P(lx, y1, zz), 0.012);
   const [bx, , bz] = P(lx, 0, zc); K.box('dark:wood', bx, y0 - 0.03, bz, t + 0.01, y1 - y0 + 0.06, hw + 0.03, h.yaw, { collide: false });
@@ -339,9 +340,12 @@ function houseNear(K, h) {
   // A shop's front, on the named streets: an awning over the door, a board hung out on an iron bracket, goods by the step.
   if (h.shop && !ruin) {
     // (The red, or oat sooted to hessian: the plain oat cloth was butter yellow down the streets, the critics.)
-    const cloth = r(21) < 0.5 ? 'cloth_red' : 'umber:cloth_oat', aw = Math.min(h.hx - 0.3, 2.2), ay = fy + 2.75;
-    if (r(22) < 0.75) { K.quad(cloth, P(aw * f, ay, fz + f * 0.02), P(-aw * f, ay, fz + f * 0.02), P(-aw * f, ay - 0.5, fz + f * 1.5), P(aw * f, ay - 0.5, fz + f * 1.5)); K.quad(cloth, P(-aw * f, ay, fz + f * 0.02), P(aw * f, ay, fz + f * 0.02), P(aw * f, ay - 0.5, fz + f * 1.5), P(-aw * f, ay - 0.5, fz + f * 1.5)); }
-    if (r(23) < 0.9) shopSign(K, h, P, fy, fz, Math.floor(r(24) * SIGNS));
+    // (The awning stops short of the sign, and the sign hangs just past its end: they met before, the board through the
+    // cloth. The owner, 2026-11-20.)
+    const sign = r(23) < 0.9, cloth = r(21) < 0.5 ? 'cloth_red' : 'umber:cloth_oat', ay = fy + 2.75;
+    let aw = Math.min(h.hx - (sign ? 0.85 : 0.3), 2.2);
+    if (r(22) < 0.75 && aw > DOOR + 0.35) { K.quad(cloth, P(aw * f, ay, fz + f * 0.02), P(-aw * f, ay, fz + f * 0.02), P(-aw * f, ay - 0.5, fz + f * 1.5), P(aw * f, ay - 0.5, fz + f * 1.5)); K.quad(cloth, P(-aw * f, ay, fz + f * 0.02), P(aw * f, ay, fz + f * 0.02), P(aw * f, ay - 0.5, fz + f * 1.5), P(-aw * f, ay - 0.5, fz + f * 1.5)); } else aw = 0;
+    if (sign) shopSign(K, h, P, fy, fz, Math.floor(r(24) * SIGNS), aw ? -(aw + 0.45) : null);
     if (r(24) < 0.45) { const g = P(DOOR + 1.6, 0, fz + f * 0.8); K.goods(g[0], g[2], 4, 0.7); }
   }
   if (!ruin) backyard(K, h, P, fy, r);

@@ -254,6 +254,10 @@ export const CROWD = [
   roam({ id: 'ph_glove', area: 'tanners', name: 'Clemence Fyne', title: 'a glover', kind: 'tanner', body: 'glover', sex: 'f', age: 35, walk: 'walk', speed: 1.05, idles: ['talk',  'idle',  'laugh'] }),
   roam({ id: 'ph_lye', area: 'tanners', name: 'Gert Lather', title: 'a soap-boiler', kind: 'washer', body: 'soapmaker', sex: 'f', age: 51, walk: 'walk', speed: 0.9, idles: ['fold_arms',  'look_around',  'idle'] }),
 ];
+// The broad of the crowd: their upper arms held a little out from them (radians), or they pass through their own coats and
+// bellies (FolkRig armOut). By their shoulders' width against their height, and what Meshy was asked to make them.
+const ARM_OUT = {'sweep':  0.1,  'fishwife':  0.13,  'watchman':  0.1,  'ragwoman':  0.13,  'smelter':  0.15,  'apothecary':  0.1,  'merchant':  0.1,  'baker':  0.1,  'butcher':  0.16,  'ferryman':  0.11,  'plaguedoctor':  0.1,  'grinder':  0.1,  'mason':  0.16,  'dockhand':  0.1,  'porter':  0.14,  'moneylender':  0.14,  'innkeeper':  0.12,  'scribe':  0.11,  'urchingirl':  0.1,  'joiner':  0.1,  'pieseller':  0.1,  'gaoler':  0.15,  'charcoalburner':  0.13,  'tollkeeper':  0.13,  'peddler':  0.1,  'corve_b':  0.14,  'abel_b':  0.13,  'wulf_b':  0.14,  'alchemistgirl':  0.1,  'herbalist':  0.11,  'tutor':  0.13,  'crossbowman':  0.14,  'gateclerk':  0.14,  'ostler':  0.1,  'farrier':  0.1,  'drillsergeant':  0.16,  'armourer':  0.1,  'campcook':  0.15,  'bannerbearer':  0.1,  'relicseller':  0.1,  'tithecollector':  0.1,  'bellowsboy':  0.1,  'furnacewoman':  0.1,  'coalheaver':  0.12,  'ashsifter':  0.13,  'dowager':  0.14,  'shipwright':  0.12,  'sailor':  0.11,  'pawnbroker':  0.1,  'taverncook':  0.11,  'lodginglady':  0.1,  'cheesemonger':  0.1,  'currier':  0.12,  'soapmaker':  0.11};
+for (const p of CROWD) if (p.armOut === undefined && ARM_OUT[p.body]) p.armOut = ARM_OUT[p.body];
 export const CROWD_LEAN = 8;
 
 // Palette swaps (the owner, 2026-11-19: "create 5 palette swapped versions of each of the models"): five more of each of
@@ -267,11 +271,15 @@ const SWAP_LAST = ['Ashby', 'Blackwater', 'Cole', 'Dunn', 'Ember', 'Flint', 'Gal
 const MESHY = new Set(['sweep', 'fishwife', 'bonecarver', 'tanner', 'watchman', 'ragwoman', 'cutpurse', 'smelter', 'apothecary', 'merchant', 'baker', 'butcher', 'gravedigger', 'lamplighter', 'washerwoman', 'ferryman', 'plaguedoctor', 'grinder', 'chandler', 'mason', 'dockhand', 'porter', 'moneylender', 'acolyte', 'mourner', 'veteran', 'dyer', 'weaver', 'innkeeper', 'noblewoman', 'fiddler', 'scribe', 'barber', 'beggarwoman', 'urchingirl', 'hedgewitch', 'joiner', 'pieseller', 'gaoler', 'dukeservant', 'charcoalburner', 'netmender', 'bargewoman', 'offduty', 'magestudent', 'younglord', 'ladysmaid', 'pilgrim', 'tollkeeper', 'spiceseller', 'peddler', 'graverobber']);
 // (Four of each since the forty-nine more came: they're in the fifth's place.)
 export const SWAPS_PER = 4;
+// (Each of a body's swaps in a district of its own, never the one it's made on's nor another of them's: four of one body
+// walking a street together looked like what it is. The owner, 2026-11-20.)
+const DISTRICTS = ['barbican', 'cinder', 'rookeries', 'market', 'wharf', 'tanners', 'bones', 'barracks', 'mages', 'dukes', 'approach'];
+const areaOf = (p, n, k) => { const i = DISTRICTS.indexOf(p.area); return i < 0 ? p.area : DISTRICTS[(i + 1 + ((n + 3 * k) % 10)) % DISTRICTS.length]; };
 const swapsOf = (p, n) => {
   const out = [];
   for (let k = 1; k <= SWAPS_PER; k++) {
     const h = (n * 7 + k * 13) % 997, first = SWAP_FIRST[p.sex === 'f' ? 'f' : 'm'][h % 30], last = SWAP_LAST[(h * 3 + k) % SWAP_LAST.length];
-    out.push(roam({ ...p, id: `${p.id}_${k}`, name: p.age < 15 ? first : `${first} ${last}`, title: p.title.replace(/^the /, 'a '), body: `${p.body}_s${k}`, age: Math.max(9, p.age + ((h % 21) - 10)), speed: (p.speed || 1) * (0.9 + (h % 5) * 0.05), swapOf: p.id }));
+    out.push(roam({ ...p, id: `${p.id}_${k}`, name: p.age < 15 ? first : `${first} ${last}`, title: p.title.replace(/^the /, 'a '), body: `${p.body}_s${k}`, area: areaOf(p, n, k), age: Math.max(9, p.age + ((h % 21) - 10)), speed: (p.speed || 1) * (0.9 + (h % 5) * 0.05), swapOf: p.id }));
   }
   return out;
 };

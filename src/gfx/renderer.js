@@ -108,6 +108,8 @@ const FOLLOW_AT = 420;
 const GROUND_SIZE = 1024, GROUND_HALF = 128, BLOOD_HALF = 64;
 const LINEAR_DEPTH = 'r16float';
 const DEPTH = 'depth32float';
+// The skinning pass's parameters (src/gfx/shaders.js SKIN Params): 48 bytes, the last 16 a head worn from another body.
+export const SKIN_PARAMS = 48;
 const FLAT = { iron: 100, flame: 101, water: 102, fruit: 103, fruit2: 104, white: 106, tile: 107, glow: 108, lake: 110, falls: 111, ice: 112, seal: 113, obsidian: 114, gold: 115, voidglass: 116, magma: 117, rune: 118, storm: 119 };
 // A painting in another light (src/core/sites.js): its layer plus a thousand times which (materials.js STATIC).
 const TINTS = { dark: 1, pale: 2, frost: 3, mire: 4, spore: 5, void: 6, slate: 7, blood: 8, moss: 9, umber: 10, soot: 11, eve: 12, char: 13, royal: 14, forest: 15 };
@@ -1049,7 +1051,7 @@ export class Renderer {
         const o = vo * 12, s = vo * 9;
         f[o] = p.pos[i * 3]; f[o + 1] = p.pos[i * 3 + 1]; f[o + 2] = p.pos[i * 3 + 2]; f[o + 3] = p.flex ? p.flex[i] : 0;
         f[o + 4] = p.nrm[i * 3]; f[o + 5] = p.nrm[i * 3 + 1]; f[o + 6] = p.nrm[i * 3 + 2];
-        u[o + 7] = p.skirtDirection?.[i] ?? p.skinTag?.[i] ?? p.piece?.[i] ?? 0;
+        u[o + 7] = (p.skirtDirection?.[i] ?? p.skinTag?.[i] ?? p.piece?.[i] ?? 0) | (p.srcFlag?.[i] ?? 0);
         let j0 = p.fixedJoint ?? 0, j1 = 0, j2 = 0, j3 = 0, w0 = 255, w1 = 0, w2 = 0, w3 = 0;
         if (p.joints) {
           j0 = p.joints[i * 4]; j1 = p.joints[i * 4 + 1]; j2 = p.joints[i * 4 + 2]; j3 = p.joints[i * 4 + 3];
@@ -1077,7 +1079,7 @@ export class Renderer {
     const IB = makeBuffer(device, indices, GPUBufferUsage.INDEX);
     const outBuf = device.createBuffer({ size: nv * 16, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX });
     const palette = device.createBuffer({ size: jointCount * 32, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
-    const params = device.createBuffer({ size: 32, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    const params = device.createBuffer({ size: SKIN_PARAMS, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     const bg = device.createBindGroup({ layout: this.bglSkin, entries: [
       { binding: 0, resource: { buffer: params } }, { binding: 1, resource: { buffer: palette } },
       { binding: 2, resource: { buffer: srcBuf } }, { binding: 3, resource: { buffer: outBuf } },
@@ -1115,7 +1117,7 @@ export class Renderer {
     const { device } = this;
     const outBuf = device.createBuffer({ size: base.count * 16, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX });
     const palette = device.createBuffer({ size: base.jointCount * 32, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
-    const params = device.createBuffer({ size: 32, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    const params = device.createBuffer({ size: SKIN_PARAMS, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     const bg = device.createBindGroup({ layout: this.bglSkin, entries: [
       { binding: 0, resource: { buffer: params } }, { binding: 1, resource: { buffer: palette } },
       { binding: 2, resource: { buffer: base.srcBuf } }, { binding: 3, resource: { buffer: outBuf } },

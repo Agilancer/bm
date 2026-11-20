@@ -122,7 +122,7 @@ const TAGS = { god: 'GOD', fly: 'NO-CLIP', noDamage: 'NO DMG', doubleJump: '2X J
 
 export class Lands {
   /** o: { shared, input, hud, audio, pack, worldMap, cmd(code, a, b, c), snap(), hour(), opened(), closed(), canMenu(), arm(),
-   * level(+1|-1), gear('god'|'peasant') -> line, ready(READY entry) -> line, bells() } */
+   * level(+1|-1), gear('god'|'peasant') -> line, ready(READY entry) -> line, summon() -> line, bells() } */
   constructor(o) {
     this.o = o;
     this.cheats = { noDamage: false, fly: false, god: false, doubleJump: false };
@@ -219,6 +219,10 @@ export class Lands {
     M.append(port, bells, travel, dun);
     // (Straight to the road outside Phobos, ready for one stretch of it: src/ui/phobos-ready.js.)
     M.append(el('h3', null, 'Ready for Phobos'));
+    // (Everything at once: src/ui/phobos-ready.js summon.)
+    const sum = el('button', 'row god', '<span><b>PHOBOS SUMMONS ME</b><em>To the gate of Phobos, level 100, you and a full party in legendary and mythical gear, every socket and pack cell, and every quest into the city and the castle</em></span>');
+    sum.onclick = () => { this.close(); this.o.hud.tip(this.o.summon(), 8); };
+    M.append(sum);
     for (const r of READY) {
       const b = el('button', 'row', `<span><b>${esc(r.name)}</b><em>Level ${r.level}: ${esc(r.what)}. The quests before it done, its own begun, kit to match, at the gate</em></span>`);
       b.onclick = () => { this.close(); this.o.hud.tip(this.o.ready(r), 6); };

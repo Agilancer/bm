@@ -23,7 +23,7 @@ import { Drops, boardPose } from './items/drops.js';
 import { settleSkull } from './items/skins.js';
 import { ROBES, ROBE_SETS, SET_PARTS, SHIELDS, SKULLS, colorOf, gearTotals, nameOf, rollGem, rollRobe, rollShield, rollSkull, rollWeapon, makeRng, writeWeapon } from './items/items.js';
 import { MAX_LEVEL, levelPerks, stepXp, xpFor, XP_OF } from './items/levels.js';
-import { OUTSIDE, readyQuests } from './ui/phobos-ready.js';
+import { OUTSIDE, readyQuests, summon } from './ui/phobos-ready.js';
 import { GemFx } from './gfx/gemfx.js';
 import { Pack } from './items/pack.js';
 import { addPart, capture, restore, saves } from './saves.js';
@@ -728,6 +728,16 @@ async function boot(plan, poolSize) {
       arm(); game.party?.levelled(); inventory.render();
       lands.o.cmd(19, 0, OUTSIDE[0], OUTSIDE[1]);
       return `${r.name}: level ${pack.level}, ${RARITIES[hi].name.toLowerCase()} kit on you${begun.length ? `, and ${begun.length} quest${begun.length > 1 ? 's' : ''} in your log` : ''}. Phobos is through the gate ahead.`;
+    },
+    // PHOBOS SUMMONS ME (src/ui/phobos-ready.js summon): everything at once, you and your party, outside the Drawbridge Gate.
+    summon: () => {
+      const snap = game.currentSnap();
+      const keep = (it) => game.drops.fromPlayer(it, snap[H.PX], snap[H.PY], snap[H.PZ], input.yaw);
+      const r = summon({ pack, party: game.party, book: townUI.quests, rng: makeRng((Math.random() * 4294967296) >>> 0), keep });
+      pack.xp = xpFor(pack.level);
+      arm(); game.party?.levelled(); inventory.render();
+      lands.o.cmd(19, 0, OUTSIDE[0], OUTSIDE[1]);
+      return `Phobos summons you. Level ${pack.level}, in legendary gear and a mythical skull, every socket full, every cell of your pack let out${r.hired ? `; ${r.hired} of the Free Company hired` : ''}${r.dressed ? `; ${r.dressed} of your party dressed as well` : ''}${r.begun.length ? `; ${r.begun.length} quests into the city in your log` : ''}. The gate's ahead. Velscour waits.`;
     },
   });
   lands.load(null);

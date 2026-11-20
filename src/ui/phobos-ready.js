@@ -4,6 +4,10 @@
 // PHOBOS_LEVELS): the city, the sewers under it, Castle Velscour's Lower Ward, its Middle Ward.
 import { PHOBOS_LEVELS, PHOBOS_RULES } from '../folk/phobos-quests.js';
 import { PHOBOS } from '../core/phobos-data.js';
+import { MAX_EXTRA } from '../items/pack.js';
+import { ROBES, rollGem, rollRobe, rollShield, rollSkull, rollWeapon, GEMS } from '../items/items.js';
+import { rollPartyGear } from '../items/partygear.js';
+import { roleOf } from '../core/dungeon.js';
 
 const ALL = PHOBOS_LEVELS.map(([id]) => id);
 const upTo = (last) => ALL.slice(0, ALL.indexOf(last) + 1);
@@ -39,4 +43,68 @@ export function readyQuests(book, r) {
   if (begun.length) book.follow = begun[0];
   book.on.change();
   return begun;
+}
+
+// ---- PHOBOS SUMMONS ME (the owner, 2026-11-20): everything at once, ready to take down Velscour. -----------------------
+// Outside the Drawbridge Gate; every quest that leads into the city or the castle from a hub out in the land begun (the
+// three that do: Hasket's at Cinderford, Ser Hale's, Garrick's at Frostwatch); you and your party at a level for every
+// encounter and every dungeon in Phobos and Castle Velscour (the Feast That Walks, the last of them, wants 88: SUMMON_LEVEL
+// is past it); legendary gear on you in every slot there's gear for (staff, shield, robes), a mythical skull, every socket
+// filled with the finest gems, a second set and more gems in the pack, and every cell of the pack let out; and a full
+// party, each of them in legendary gear in all eight of their slots and a spare set in their bag.
+
+export const SUMMON_LEVEL = 100;
+export const SUMMON_QUESTS = ['smoke_in_the_east', 'quiet_men', 'wardens_of_ash'];
+const ROBE_SLOTS = ['head', 'chest', 'shoulders', 'legs', 'feet'];
+const TOP_GEM = 4;   // Perfect (items.js GEM_GRADES)
+
+// What you'd wear: a legendary staff and shield, a mythical skull, legendary robes, their sockets full of perfect gems.
+function kitOf(rng) {
+  const gemOf = (i) => rollGem(rng, { kind: Object.keys(GEMS)[i % Object.keys(GEMS).length], grade: TOP_GEM });
+  const kit = { main: rollWeapon(rng, { rarity: 4, sockets: 4 }), off: rollShield(rng, { rarity: 4 }), skull: rollSkull(rng, { rarity: 5, sockets: 4 }) };
+  if (Object.keys(ROBES).length) for (const slot of ROBE_SLOTS) kit[slot] = rollRobe(rng, { rarity: 4, slot });
+  let g = 0;
+  for (const it of [kit.main, kit.skull, kit.off]) for (let k = 0; k < (it.sockets || 0); k++) (it.gems ||= []).push(gemOf(g++));
+  return kit;
+}
+
+// pack, party (src/ui/party.js), the quest book, an rng, and keep(item) for what won't fit the pack. Says what it did.
+export function summon({ pack, party, book, rng, keep }) {
+  pack.level = SUMMON_LEVEL;
+  pack.extra = MAX_EXTRA;
+  // On you: the old into the pack, the new on.
+  const kit = kitOf(rng);
+  for (const [slot, it] of Object.entries(kit)) { const was = pack.slots[slot]; pack.slots[slot] = it; if (was && !pack.add(was)) keep(was); }
+  // And a second set, and a pouch of perfect gems, in the pack.
+  for (const it of Object.values(kitOf(rng))) if (!pack.add(it)) keep(it);
+  for (let i = 0; i < 12; i++) { const gem = rollGem(rng, { kind: Object.keys(GEMS)[i % Object.keys(GEMS).length], grade: TOP_GEM }); if (!pack.add(gem)) keep(gem); }
+  pack.gold += 100000;
+  const begun = readyQuests(book, { done: [], begin: SUMMON_QUESTS });
+  // A full party: a tank and a healer first, the rest to do the damage, from those the Company has free; hired free.
+  let hired = 0;
+  if (party && !party.full()) {
+    party.makeOffers();
+    const want = ['tank', 'heal', 'dps', 'dps'];
+    const have = party.members.map((m) => roleOf(m.cls));
+    for (const r of have) { const i = want.indexOf(r); if (i >= 0) want.splice(i, 1); }
+    for (const r of want) {
+      if (party.full()) break;
+      const o = (party.offers || []).find((x) => roleOf(x.cls) === r) || (party.offers || [])[0];
+      if (o && party.hire(o, true)) hired++;
+    }
+  }
+  // Each of them: legendary in every slot they can wear, a spare set in their bag.
+  let dressed = 0;
+  for (const m of party?.members || []) {
+    const e = party.entryOf(m), who = party.whoOf(m);
+    if (!e) continue;
+    for (const slot of ['weapon', 'off', 'helm', 'shoulders', 'chest', 'arms', 'legs', 'boots']) {
+      const it = rollPartyGear(rng, { who, slot, ilvl: SUMMON_LEVEL, rarity: 4 });
+      if (it.slot !== slot) continue;
+      e.gear[slot] = it;
+      (e.bag ||= []).push(rollPartyGear(rng, { who, slot, ilvl: SUMMON_LEVEL, rarity: 4 }));
+    }
+    party.dress(m); dressed++;
+  }
+  return { begun, hired, dressed };
 }
