@@ -246,15 +246,16 @@ export function textureArrayFromBitmaps(device, mipgen, bitmaps, format) {
 // A buffer holding `data`. Written with the queue, not mapped as it's made: the browser keeps the memory a mapped buffer was
 // filled through for the next one, as big as the biggest ever made (a 64 MB buffer left 68 MB held in both the page and the
 // GPU's process for good, measured in Chrome, November 2026; the same bytes through writeBuffer left 8).
+const WRITE_AT_MOST = 4 << 20;
 export function makeBuffer(device, data, usage) {
   const size = (data.byteLength + 3) & ~3;
   const buf = device.createBuffer({ size, usage: usage | GPUBufferUsage.COPY_DST });
   if (!data.byteLength) return buf;
-  if (data.byteLength === size) device.queue.writeBuffer(buf, 0, data.buffer, data.byteOffset, size);
-  else {
-    // (A length that isn't a multiple of four bytes: its whole words, then its last few in a word of their own.)
-    const whole = size - 4;
-    if (whole) device.queue.writeBuffer(buf, 0, data.buffer, data.byteOffset, whole);
+  // (A few megabytes at a time: what a write is carried over in is kept by the browser too, as big as the biggest write.)
+  const whole = data.byteLength === size ? size : size - 4;
+  for (let at = 0; at < whole; at += WRITE_AT_MOST) device.queue.writeBuffer(buf, at, data.buffer, data.byteOffset + at, Math.min(WRITE_AT_MOST, whole - at));
+  if (whole !== size) {
+    // (A length that isn't a multiple of four bytes: its whole words above, then its last few in a word of their own.)
     const tail = new Uint8Array(4);
     tail.set(new Uint8Array(data.buffer, data.byteOffset + whole, data.byteLength - whole));
     device.queue.writeBuffer(buf, whole, tail);

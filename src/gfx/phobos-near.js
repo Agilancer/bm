@@ -9,12 +9,15 @@
 // Its doors: each shut one's leaf is drawn with its house; opened, that's folded away (hideDoor) and the leaf's swung as a
 // thing of its own (src/items/phobos-doors.js).
 
-import { buildPhobosCell } from '../core/sites.js';
+import { buildPhobosCell, unpackCell } from '../core/sites.js';
 import { CASTLE_CELLS, CELL, cellOf, phobosHouses, wallCells } from '../core/phobos-build.js';
 import { cityTowers } from '../core/phobos-towers.js';
 import { CITY, CRAG } from '../core/east.js';
 
 const NEAR = 150, FAR = 230, KEEP = 30;   // metres to build a cell at, and to let it go at; how many are kept at most
+// (A phone's: nearer, and fewer kept. A cell from near is 150,000 to 380,000 corners, 5 to 14 MB on the GPU, and thirty of
+// them were 130 MB more than the land a phone already holds.)
+const LEAN = { near: 105, far: 165, keep: 10 };
 
 export class PhobosNear {
   constructor(renderer) {
@@ -24,6 +27,26 @@ export class PhobosNear {
     this.have = new Set([...phobosHouses().map((h) => h.cell), ...CASTLE_CELLS, ...wallCells(), ...cityTowers().map((t) => t.cell)]);
     this.count = 0;
     this.doors = new Map();       // door id -> { cell, VB, runs, hidden }
+    const lean = !!renderer.tier.lean;
+    this.near = lean ? LEAN.near : NEAR; this.far = lean ? LEAN.far : FAR; this.keep = lean ? LEAN.keep : KEEP;
+    // Cells are built on a thread of their own (src/core/sites.worker.js), one asked for at a time, and put up when they
+    // come back: built here each was a tenth to a fifth of a second's stop on a PC, and you come into the city to twenty
+    // of them wanting building. apart: false once that thread's failed, and they're built here as they used to be.
+    this.builder = null; this.asked = null; this.ready = []; this.apart = typeof Worker !== 'undefined';
+  }
+
+  /** The cell asked of the builder's thread (started the first time, ended when the city's left: clear). */
+  ask(key) {
+    if (!this.builder) {
+      try {
+        this.builder = new Worker(new URL('../core/sites.worker.js', import.meta.url), { type: 'module' });
+        const fail = (why) => { console.warn('Phobos, built apart:', why); this.apart = false; this.asked = null; try { this.builder?.terminate(); } catch { /* gone */ } this.builder = null; };
+        this.builder.onmessage = (e) => { this.asked = null; if (e.data.error) fail(e.data.error); else this.ready.push([e.data.cell, unpackCell(e.data)]); };
+        this.builder.onerror = (e) => fail(e.message || 'its thread failed');
+      } catch (err) { this.apart = false; return; }
+    }
+    this.asked = key;
+    this.builder.postMessage({ cell: key, opening: !!this.r.openingEnabled });
   }
 
   // A door's leaf as its house has it, folded away (hide) or put back. (Nothing if its cell isn't up: when it is, it's
@@ -60,7 +83,8 @@ export class PhobosNear {
   // Each frame: the nearest cell that wants building is built (one a frame: a few milliseconds), and any gone far is let go.
   update(cam) {
     const r = this.r;
-    if (!r.landScenery || cam.x < CITY.x - CITY.a - FAR || cam.x > CRAG.x + CRAG.a + FAR || Math.abs(cam.z - CITY.z) > CITY.b + FAR) { if (this.cells.size) this.clear(); return; }
+    const NEAR = this.near, FAR = this.far, KEEP = this.keep;
+    if (!r.landScenery || cam.x < CITY.x - CITY.a - FAR || cam.x > CRAG.x + CRAG.a + FAR || Math.abs(cam.z - CITY.z) > CITY.b + FAR) { if (this.cells.size || this.builder) this.clear(); return; }
     let want = null, best = NEAR;
     for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) {
       const x = cam.x + i * CELL, z = cam.z + j * CELL, key = cellOf(x, z);
@@ -69,9 +93,20 @@ export class PhobosNear {
       const d = Math.max(0, Math.hypot(cx - cam.x, cz - cam.z) - CELL * 0.7);
       if (d < best) { best = d; want = [key, cx, cz]; }
     }
-    let changed = false;
-    if (want) {
-      const built = buildPhobosCell(want[0]), set = r.packParts(built.parts, built.groups);
+    let changed = false, built = null;
+    if (this.apart) {
+      // (What's come back is put up, if it's still wanted: you may have gone on past it. Then the nearest wanting is asked for.)
+      const got = this.ready.shift();
+      if (want && !this.asked && !(got && got[0] === want[0])) this.ask(want[0]);
+      want = null;
+      if (got && !this.cells.has(got[0])) {
+        const [ci, cj] = got[0].split('_').map(Number), cx = 9300 + (ci + 0.5) * CELL, cz = -850 + (cj + 0.5) * CELL;
+        if (Math.hypot(cx - cam.x, cz - cam.z) - CELL * 0.7 < FAR) { want = [got[0], cx, cz]; built = got[1]; }
+      }
+    }
+    if (want && this.apart === false) built = buildPhobosCell(want[0]);
+    if (want && built) {
+      const set = r.packParts(built.parts, built.groups);
       for (const [k, runs] of set.slices) {
         const id = Number(k.slice(5));
         this.doors.set(id, { cell: want[0], VB: set.VB, runs, hidden: false });
@@ -103,7 +138,13 @@ export class PhobosNear {
     setTimeout(() => { c.VB.destroy(); c.IB.destroy(); }, 500);
   }
 
-  clear() { for (const [key, c] of [...this.cells]) this.drop(key, c); this.r.shadowEpoch = (this.r.shadowEpoch || 0) + 1; }
+  clear() {
+    for (const [key, c] of [...this.cells]) this.drop(key, c);
+    this.r.shadowEpoch = (this.r.shadowEpoch || 0) + 1;
+    // (And the builder's thread with the city: its copy of Phobos is tens of megabytes.)
+    try { this.builder?.terminate(); } catch { /* gone */ }
+    this.builder = null; this.asked = null; this.ready.length = 0; this.count = 0;
+  }
 
   // Into a pass with the static pipeline (or a shadow's) already set: every cell that's up. cut: the cutout pipeline's
   // turn (nothing of a cell's is a cutout yet).

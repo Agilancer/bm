@@ -11,7 +11,7 @@ import { FOREST_REACH } from '../core/forest.js';
 import { WORLD_EAST, WORLD_EDGE } from '../core/lands.js';
 import { roadSegments } from '../core/roads.js';
 import { terrainHeight } from '../core/terrain.js';
-import { PORTAL_MODELS, buildSites, buildUnder, dropSiteGeometry } from '../core/sites.js';
+import { PORTAL_MODELS, buildSites, buildSitesApart, buildUnder, dropSiteGeometry } from '../core/sites.js';
 import { PhobosNear } from './phobos-near.js';
 import { StairsNear } from './stairs-near.js';
 import { DELVES, PORTAL_SPOTS, braziers, caveFloorY, caveRoofY, delveAt, inDungeon, torches } from '../core/dungeon.js';
@@ -25,7 +25,7 @@ import { DAWN_HOUR, DUSK_HOUR, secondsPerHour, daylight } from './daylight.js';
 import { Pines } from './pines.js';
 import { Rocks } from './rocks.js';
 import { accessor, imageBytes, parseGLB } from '../core/glb.js';
-import { getFile, lanes, watched } from '../core/files.js';
+import { dropFile, getFile, lanes, watched } from '../core/files.js';
 import { C, C_BLEEDS, C_MASKS, C_GASH, C_PALETTE, C_PROPS, C_SIZE, CHARS_START, H, MAX_CHARS, SLIMES_START, SPELL_PALETTE, VM_PALETTE, WEAPONS } from '../core/layout.js';
 import { addStumps } from './stumps.js';
 import { GEAR, ROBES, SKULLS } from '../items/items.js';
@@ -298,12 +298,19 @@ export class Renderer {
       if (wanted.get(path) < 1) twice.delete(path);
       return glb;
     };
-    const model = (path, make) => {
+    // (And its file let go as soon as it's built, pictures and all: each builder copies what it keeps. Not one read for two
+    // models, which the second still wants; nor one the caller keeps, which it lets go itself. src/core/files.js dropFile.)
+    const readTwice = new Set([...wanted].filter(([, n]) => n > 1).map(([path]) => path));
+    const model = (path, make, keep = false) => {
       steps.add();
       const made = ahead(async () => {
         const glb = await read(path);
         tick();
-        return building(() => make(glb));
+        return building(async () => {
+          const built = await make(glb);
+          if (!keep && !readTwice.has(path)) dropFile(glb.buffer);
+          return built;
+        });
       });
       made.catch(() => {});
       return made;
@@ -342,6 +349,12 @@ export class Renderer {
     const landJobs = timed('the land worked out', Promise.all([terrainJob, forestJob, Promise.all(farJobs), Promise.all(groundJobs)]));
     landJobs.catch(() => {});
 
+    // ---- the countries' scenery, on a thread of its own (src/core/sites.js buildSitesApart) ----
+    // (Built here it was the load's one long stop: five seconds with the bar still. If it can't be had that way,
+    // buildStatics builds it here as it used to.)
+    steps.add();
+    const landBuilt = timed('the countries built', buildSitesApart(lean, this.openingEnabled).then((ok) => { tick(); return ok; }));
+
     // ---- the pictures ----
     steps.add(manifest.layers.length * 2 + manifest.ground.length * 2 + p2.layers.length * 2);
     const shrink = tier.texScale !== 1;
@@ -362,7 +375,7 @@ export class Renderer {
     interior.catch(() => {});
 
     // ---- the models, in the order they're wanted ----
-    const villageGlb = model(models[0], (glb) => glb);
+    const villageGlb = model(models[0], (glb) => glb, true);
     const character = (i) => model(models[i], (glb) => this.buildCharacter(glb));
     const crabs = (i, count, scale, prepare, extra) => model(models[i], (glb) => this.buildCrabs(glb, count, scale, prepare, extra));
     const first = [character(1), character(2), crabs(8, 3, CRAB_SCALE), crabs(10, 1, GRAVEHART_SCALE), crabs(11, 1, HYDRA_SCALE)];
@@ -446,7 +459,9 @@ export class Renderer {
     this.terrainCount = terrain.idx.length;
     this.buildLandBindings();
 
+    await landBuilt;
     this.buildStatics(await villageGlb, layerNames, manifest.layers, village.trees);
+    dropFile((await villageGlb).buffer);
     this.pines = new Pines(this, forest.trees, layerNames);
     this.farSpan = FAR_SPAN_WGSL; this.farOrg = FAR_ORG_WGSL;
     this.rocks = new Rocks(this);
@@ -1221,6 +1236,8 @@ export class Renderer {
       ] });
       parts.push({ range: sk.ranges[i], bg, ubo, name, isSword: name === 'greatsword', nrm });
     }
+    // (What's kept of the mesh, for the gauntlets' under-layer later (armsUnder): copies, so the file can be let go.)
+    for (const p of prims) for (const k of ['pos', 'nrm', 'uv', 'idx', 'joints', 'weights']) if (ArrayBuffer.isView(p[k])) p[k] = p[k].slice();
     const shieldJoint = skin.joints.findIndex((j) => glb.json.nodes[j].name === 'shield');
     const shieldBind = shieldJoint < 0 ? null : mat4Invert(new Float32Array(16), accessor(glb, skin.inverseBindMatrices).subarray(shieldJoint * 16, shieldJoint * 16 + 16));
     return { ...sk, parts, weaponJoint, weaponBind, shieldJoint, shieldBind, prims, jointNames: skin.joints.map((j) => glb.json.nodes[j].name) };
