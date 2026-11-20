@@ -15,5 +15,10 @@ export const KEYS = {
   'key:sexton': { name: "the Sexton's Ring", got: "The Sexton's Ring: every door of the High Ward that he kept. The way up into Velscour's Keep is open." },
 };
 // What's said when a latch is first lifted (by its id).
-export const LATCH_WORDS = {};
+export const LATCH_WORDS = {
+  scriveners: "The Scriveners' Lift is unchained. It runs now, between the Gargoyles' Roost and the Deep Stacks: Pell's Holdout is one stair from the top of the castle.",
+  sump: "The Sump's grate is unbarred from below. The Deep Stacks and the Drowned Archive are joined.",
+  frame: "The empty frame swings out into the Portrait Gallery. The Thousand Portraits let out into the Middle Ward now.",
+  trapdoor: "The trapdoor's bolt is drawn. The Alchemists' Undercroft comes up into their wing.",
+};
 export const latchWord = (id) => LATCH_WORDS[id] || 'A way is unbarred behind you: it will stay open.';

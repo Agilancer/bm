@@ -835,7 +835,7 @@ export const QUESTS_CASTLE = {
   up_the_sanctuaries_stair: {
     title: 'Up the Sanctuaries Stair',
     giver: 'ph_librarian',
-    needs: 'the_bookcase',
+    needs: 'the_drowned_lector',
     offer: [
       "I told you the stair in the Long Stacks was locked, and that its key was nowhere in this ward. Both true. The key is under this ward: in the Drowned Archive, in the keeping of whatever keeps that.",
       "Bring up the Drowned Key, turn the Sanctuaries Stair, and go up. Only look. The High Ward is his own. I have kept this library forty years and never once seen what is over my head.",
@@ -924,7 +924,7 @@ export const QUESTS_CASTLE = {
   the_sexton: {
     title: 'The Sexton of the High Ward',
     giver: 'ph_librarian',
-    needs: 'the_star_reader',
+    needs: 'the_duchess_and_her_glass',
     offer: [
       "One door left. Behind the silvered door are the Throne Antechambers, and in them the Sexton of the High Ward. He buries whoever comes that far. Then he digs them up, to serve.",
       "The door wants the Silvered Key, out of the Hall of Mirrors. When you stand before him he will set his grave-lantern down, and while it burns the graves give up their dead, two at a time, without end. Don't fight the dead. Put the lantern out.",
@@ -1007,7 +1007,7 @@ export const QUESTS_CASTLE = {
   rooks_ledger: {
     title: "Rook's Ledger",
     giver: 'ho_rook',
-    needs: 'the_scriveners_lift',
+    needs: 'the_ledger_keeper',
     offer: [
       "I keep the ledger. Who guards what, and when, and for how long he looks the other way. It's the only thing in this Roost worth more than the roof.",
       "Four lines of it I haven't had checked since the thaw. The Clock Tower's head. The North Belvedere. The South Belvedere. The Crown Court. Go and stand at each. See if the guards are where I say. If I'm wrong, I'd sooner hear it from you than from a rope.",
@@ -1034,7 +1034,7 @@ export const QUESTS_CASTLE = {
   the_reliquary: {
     title: 'The Reliquary',
     giver: 'ho_rook',
-    needs: 'rooks_ledger',
+    needs: 'the_bone_prior',
     offer: [
       "There's a line in my ledger with nothing against it. The Reliquary. Off the open court west of his nave, behind a lock like a hand of bone with a finger missing. Sixteen years, and not one of mine has been inside.",
       "The lock wants the Bone Key, and the Bone Key's in the Ossuary, off the same court. Get in. Tell me what's guarding it. What's in the chest is yours. What goes in my ledger is mine.",
@@ -1125,6 +1125,71 @@ export const QUESTS_CASTLE = {
     ],
     after: [
       "Rook's put you in the ledger. Black ink. Most of us are in red.",
+    ],
+  },
+
+  // ---- the Librarian's: every key in the castle ----
+  the_nine_keys: {
+    title: 'The Nine Keys',
+    giver: 'ph_librarian',
+    needs: 'the_bookcase',
+    offer: [
+      "This castle is locked nine times over, and each key is kept by the worst thing in its wing. I have known where every one of them hangs for thirty years. Knowing is not the same as holding.",
+      "The Marshal's, the Lector's, the Painter's, the Great Work's. Then the Clockmaker's, the Keeper's, the Bone Prior's, the Duchess's. Bring me word of each, and the ninth, the Sexton's, will open the way up to him.",
+    ],
+    accept: 'All nine. I will bring word of each.',
+    acceptLine: "Start under the yard, with the Iron Marshal: his key opens the Menagerie. The Drowned Archive's door is on the ground behind this library. The rest follow from the doors those open.",
+    decline: 'Not yet.',
+    declineLine: "No. It is a great deal to ask. It will still be nine tomorrow.",
+    journal: [
+      "The Iron Marshal, in the Iron Barracks under the castle's yard, keeps the Marshal's Key: it opens the Menagerie of Chains.",
+      "The Drowned Lector, in the Drowned Archive (its door stands on the ground behind the Ancient Library), keeps the Drowned Key: it opens the Sanctuaries Stair.",
+      "The Painter, in the Gallery of a Thousand Portraits (its door is by the Portrait Gallery's wing), keeps the Painted Key: it opens the Clock Tower.",
+      "The Great Work, in the Alchemists' Undercroft (its door is by the Alchemists' Wing), keeps the Glass Key: it opens the Crypt door in the Oubliettes.",
+      "The Clockmaker, in the Clockworks, keeps the Winding Key: it winds the Clock Tower's lift up to the High Ward.",
+      "The Keeper of Chains, in the Menagerie, keeps the Keeper's Key: it opens the Hall of Mirrors.",
+      "The Bone Prior, in the Ossuary off the High Ward's open court, keeps the Bone Key: it opens the Reliquary.",
+      "The Duchess, in the Hall of Mirrors, keeps the Silvered Key: it opens the Throne Antechambers.",
+      "Go back to Master Aldric Pell in his rooms off the Ancient Library.",
+    ],
+    progress: [
+      "Nine locks, and each key kept by the worst thing in its wing. The Marshal first.",
+    ],
+    done: [
+      "Eight. In my lifetime nobody has held two. Sit down. No, sit. I want to look at somebody who has walked through every door in this castle and come back to tell an old man about it.",
+      "This was my master's, and his master's. It was meant for whoever opened the last lock. I had begun to think I would be buried with it.",
+    ],
+    after: [
+      "One lock left, and the Sexton's ring opens it. After that there is only the stair, and him at the top of it.",
+    ],
+  },
+
+  // ---- Little Bet's: the sky ----
+  the_sky_for_bet: {
+    title: 'The Sky for Bet',
+    giver: 'ho_bet',
+    needs: 'the_scriveners_lift',
+    offer: [
+      "Mother Coyle says the lift goes all the way up now. All the way to the outside. I'm not allowed. I asked eleven times.",
+      "So you go. At night, when the lights are out up there. Stand on the highest thing and count them for me. The little lights. Mother Coyle says nobody can, but nobody's tried properly.",
+    ],
+    accept: "I'll count them for you.",
+    acceptLine: "The Gallows Needle is the tallest. Wren told me. Go up by the lift, out over the roofs and the long bridges, and up its stair to the deck. At night. It has to be night.",
+    decline: 'Not tonight.',
+    declineLine: "That's what they all say. That's twelve.",
+    journal: [
+      "Little Bet has never seen the sky. Stand on the Gallows Needle's deck, out past the castle's rim, at night, and count the stars for her.",
+      "Go back to Little Bet in the Sleeping Shelves.",
+    ],
+    progress: [
+      "The Gallows Needle. At night. You have to stand still to count.",
+    ],
+    done: [
+      "More than you could count? More than thirty? More than the books? ...I'm going to write that down. I'm going to write down 'more than the books'.",
+      "This is my counting stone. I don't need it now. You can't count them anyway. You said.",
+    ],
+    after: [
+      "I told Mother Coyle there are more than the books. She had to sit down. One day I'm going up the lift. I've decided. That's one.",
     ],
   },
 };
