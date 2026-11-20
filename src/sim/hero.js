@@ -1223,6 +1223,7 @@ export class Hero extends Knight {
     this.x = x; this.z = z;
     // (Riding high enough that the board shows over the drawn ground, which can sit a hand above the sampled height.)
     this.y = sim.world.height(x, z) + boardLift(s.age);
+    boardLie(sim, s, x, z, dt);
     this.speed = 0;
     // (The road's a line of straight pitches: its heading, eased round each bend, so neither he nor the board turns in a tick.)
     const travel = Math.atan2(dirx, dirz);
@@ -1369,6 +1370,7 @@ export class Hero extends Knight {
     this.vx = gx / dt * gk; this.vz = gz / dt * gk;
     this.x += gx; this.z += gz;
     this.y = sim.world.height(this.x, this.z) + boardLift(s.age);
+    boardLie(sim, s, this.x, this.z, dt);
     this.speed = 0;
     this.yaw = this.faceYaw = sideOn(this.yaw, s, dt);
     // (Wanting by: a leader not yet well out ahead of you. Auto-play eases off for them: src/ui/autobrain.js letPass.)
@@ -1483,9 +1485,9 @@ export class Hero extends Knight {
     const bo = off + 32;
     if (this.surf) {
       const t = this.surf.travel ?? this.yaw;
-      // Long axis down the road, its painted face up under the boots (the boards are one-sided: face down, they vanish).
-      const fx = Math.sin(t), fz = Math.cos(t);
-      const y = [fx, 0, fz], z = [0, -1, 0], x = cross(y, z);
+      // Ridden as you ride yours (src/sim/playerbody.js): on the ground's lie, face down, its point the way it's going.
+      const n = this.surf.n || [0, 1, 0], h = [Math.sin(t), 0, Math.cos(t)], a = h[0] * n[0] + h[2] * n[2];
+      const y = norm([n[0] * a - h[0], n[1] * a, n[2] * a - h[2]]), z = n, x = cross(y, z);
       propQ.set(matToQuat(x, y, z));
       propT[0] = this.x; propT[1] = this.y - 0.1; propT[2] = this.z;
       mat4FromQT(propM, propQ, 0, propT, 0);
@@ -2230,6 +2232,15 @@ const rideQ = new Float32Array(4), IDQ = new Float32Array([0, 0, 0, 1]);
 const ease = (k) => { k = clamp(k, 0, 1); return k * k * (3 - 2 * k); };
 // Up onto the board, age seconds into the ride: a small hop to its height (BOARD_HOP), then its height.
 const boardLift = (age = 1) => BOARD_RIDE_Y * ease((age ?? 1) / (BOARD_HOP * 0.6)) + (age < BOARD_HOP ? BOARD_HOP_UP * Math.sin(Math.PI * age / BOARD_HOP) : 0);
+// The lie of the ground under a rider's board (s.n, its up), eased so a bump doesn't flick it: Hero.writeProps lays the
+// board on it as your own lies on yours.
+function boardLie(sim, s, x, z, dt) {
+  const e = 0.3, h = (a, b) => sim.world.height(a, b);
+  const nx = h(x - e, z) - h(x + e, z), nz = h(x, z - e) - h(x, z + e), ny = 2 * e, l = 1 / Math.hypot(nx, ny, nz);
+  if (!s.n) { s.n = [nx * l, ny * l, nz * l]; return; }
+  const k = Math.min(1, dt * 12);
+  s.n = norm([s.n[0] + (nx * l - s.n[0]) * k, s.n[1] + (ny * l - s.n[1]) * k, s.n[2] + (nz * l - s.n[2]) * k]);
+}
 // Side on to the board's way (s.foot: which foot leads): a quarter turn over the hop, eased in and out (s.yaw0: how far off
 // it the body was at the start), then held to it. (Chased exponentially it was most of the turn in the first tenth of a
 // second, a snap round.)
