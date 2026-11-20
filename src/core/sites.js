@@ -9,7 +9,7 @@
 // The two letters: the keep, the obelisks and the bone field are Velscour's and carry his red; the bell tower, the abbey, the
 // chapel and the frozen shrine are Tessariel's and carry his T. tools/lands/check.mjs keeps them 1.5 km apart.
 
-import { portalFloor, terrainHeight } from './terrain.js';
+import { groundBase, portalFloor, terrainHeight } from './terrain.js';
 import { BARROWS, CLIFF, MOUNT, POOL, SITES, WATERS, routeDist, waterLevel } from './lands.js';
 import { hash2, vnoise } from './terrain-noise.js';
 import { DELVES, PORTAL_PAD, caveFloorY } from './dungeon.js';
@@ -1415,7 +1415,8 @@ export const SEALS = [{ key: 'bellmourn', x: 7.6, z: 86, name: 'Bellmourn' }].co
   }), PHOBOS_SEALS.map((s) => ({ key: s.key, x: s.x, z: s.z, name: s.name })));
 
 // The flattest ground for a seal's dais within 16 m of where it was meant to go: how far the land under it rises and falls,
-// and a little for going further.
+// and a little for going further. (The land as it lies, before the roads are laid level into it: src/core/roadbed.js. A road's
+// bed is the flattest ground there is, and a seal isn't set down in a road.)
 function flattest(x0, z0) {
   const R = 0.5 * PORTAL_MODELS.ground.scale;
   let best = null;
@@ -1423,7 +1424,7 @@ function flattest(x0, z0) {
     const x = x0 + Math.cos(k / 12 * TAU) * r, z = z0 + Math.sin(k / 12 * TAU) * r;
     let hi = -Infinity, lo = Infinity;
     for (let i = 0; i < 16; i++) for (const q of [0, R * 0.5, R]) {
-      const g = terrainHeight(x + Math.cos(i / 16 * TAU) * q, z + Math.sin(i / 16 * TAU) * q);
+      const g = groundBase(x + Math.cos(i / 16 * TAU) * q, z + Math.sin(i / 16 * TAU) * q);
       hi = Math.max(hi, g); lo = Math.min(lo, g);
     }
     const score = hi - lo + r * 0.02;

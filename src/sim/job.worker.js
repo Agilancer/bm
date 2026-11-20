@@ -6,6 +6,7 @@ import { TREE_FLOATS, TRIMMED, forestAmount, forestTrees } from '../core/forest.
 import { openingTerrain, setOpeningTerrain, ROADS, SUMMIT, fbm, footprintDirt, hash2, nearest, pathAmount, sstep, terrainHeight } from '../core/terrain.js';
 import { CHURCH_FOOTPRINT, CHURCH_WING } from '../core/church.js';
 import { WAY_BOX, caveCuts, wayDip } from '../core/opening.js';
+import { stairDip } from '../core/roadbed.js';
 import { roadEdge, rocksAround } from '../core/rocks.js';
 import { COUNTRIES, COUNTRY_KEYS, MOUNT, SITES, SITE_KEYS, countryWeights, groundCover, routeDist } from '../core/lands.js';
 import { cityIn } from '../core/east.js';
@@ -45,7 +46,8 @@ function buildTerrain({ n, extent, patches, cx = 0, cz = 0 }) {
   const xs = new Float32Array(n + 1), zs = new Float32Array(n + 1);
   for (let i = 0; i <= n; i++) { xs[i] = cx + warp(i / n * 2 - 1); zs[i] = cz + warp(i / n * 2 - 1); }
   const hs = new Float32Array((n + 1) * (n + 1));
-  for (let j = 0; j <= n; j++) for (let i = 0; i <= n; i++) hs[j * (n + 1) + i] = terrainHeight(xs[i], zs[j]);
+  // (Sunk a little under the ways' flights of steps, which stand over it: src/core/roadbed.js stairDip.)
+  for (let j = 0; j <= n; j++) for (let i = 0; i <= n; i++) hs[j * (n + 1) + i] = terrainHeight(xs[i], zs[j]) - stairDip(xs[i], zs[j]);
   for (let j = 0; j <= n; j++) {
     for (let i = 0; i <= n; i++) {
       const il = Math.max(i - 1, 0), ir = Math.min(i + 1, n), jl = Math.max(j - 1, 0), jr = Math.min(j + 1, n);
@@ -86,7 +88,7 @@ function buildTerrain({ n, extent, patches, cx = 0, cz = 0 }) {
     // (Its heights worked out once each, with a row more all round for the slopes: the same sums as vertex(), a fifth of the
     // work. The patches that go with you are laid again every few dozen metres.)
     const W = px + 3, hp = new Float64Array(W * (pz + 3));
-    for (let j = 0; j < pz + 3; j++) for (let i = 0; i < W; i++) hp[j * W + i] = terrainHeight(patch.x0 + (i - 1) * e, patch.z0 + (j - 1) * e);
+    for (let j = 0; j < pz + 3; j++) for (let i = 0; i < W; i++) { const x = patch.x0 + (i - 1) * e, z = patch.z0 + (j - 1) * e; hp[j * W + i] = terrainHeight(x, z) - stairDip(x, z); }
     for (let j = 0; j <= pz; j++) {
       for (let i = 0; i <= px; i++) {
         const k = (first + j * (px + 1) + i) * 6, h = (j + 1) * W + i + 1;
