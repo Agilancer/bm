@@ -67,7 +67,7 @@ async function boot({ buffer, base, lean }) {
   };
   await Promise.all(life.folk.map(async (me) => {
     const m = modelOf(folk, me.p.body);
-    const rig = new FolkRig(await glbOf(m), clips, { armOut: me.p.armOut, skirt: folk.models[m].skirt || null, fist: folk.models[m].fist, upright: folk.models[m].upright });
+    const rig = new FolkRig(await glbOf(m), clips, { armOut: me.p.armOut, skirt: folk.models[m].skirt || null, upright: folk.models[m].upright, fold: folk.models[m].fold });
     life.setRig(me.i, rig);
     me.joints = rig.count + (rig.skirt ? SKIRT_JOINTS : 0);
     me.pal = new Float32Array(me.joints * 8);

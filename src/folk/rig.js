@@ -12,19 +12,10 @@ import { readSkeleton } from '../core/glb.js';
 import { quatFromMat3, quatMul, quatNormalize, quatRotate, quatYaw } from '../core/math.js';
 
 const I = [0, 0, 0, 1];
-// On the run (these clips), the hands are fists, as anyone's are: her clips' hands are open. How far each finger's three
-// joints turn in at a full fist, thumb first: her own fist (src/sim/village-walker.js grip), the same rig her clips are
-// from, so the same turns: a finger about its joint's own z, a thumb about its y, the other way and a little less.
-const RUN_CLIPS = new Set(['run', 'jog', 'flee', 'jog_up', 'run_up']);
-const FIST = [[0.5, 0.35, 0.2], [1.2, 1.3, 0.9], [1.2, 1.3, 0.9], [1.2, 1.3, 0.9], [1.2, 1.3, 0.9]];
-// Walking, the hands hang loose: her clips' fingers are held straight and together, a karate chop on every passer-by. A
-// relaxed hand curls a little at each joint, more toward the little finger (thumb first; the same turns as the fist's).
-// Looked at in Blender on the Phobos bodies (tools/folk/rig_fit.py show(..., curl=...)).
-const WALK_CLIPS = new Set(['walk', 'walk_ual', 'walk_formal', 'walk_proud', 'swagger', 'crouch_walk']);
-// (The middle and ring fingers bend more at the base knuckle, the tips less: a fist's curl at the tips reads as a claw.)
-// (The index and middle bend most at the base, the index being the finger the eye reads first, and the thumb tucks in.)
-const RELAX = [[0.67, 0.45, 0.28], [0.8, 0.62, 0.36], [1.06, 0.72, 0.42], [0.98, 0.84, 0.48], [1.02, 0.98, 0.54]];
-const FQ = new Float32Array(4);
+// Hands are the clips' own: a loose curl walking and standing, fists on the run and in a fight (her clips' fingers, with
+// the library's ever-clenched fists and a few dead-straight hands put right in the clips themselves: tools/folk/hands.py
+// bake_hands). Nothing is added here. (A curl was, once, about each of her finger joints' own z: but on her skeleton
+// that axis is the knuckle's hinge on some joints and the palm's normal on others, so fingers fanned sideways.)
 const conj = (q, i = 0) => [-q[i], -q[i + 1], -q[i + 2], q[i + 3]];
 
 // Parents-first forward kinematics of a rest pose: world rotations and positions.
@@ -53,14 +44,6 @@ export class FolkClips {
     this.restR = new Float32Array(this.count * 4);
     sk.forEach((j, i) => { this.restT.set(j.t, i * 3); this.restR.set(j.r, i * 4); });
     for (let j = 0; j < this.count; j++) if (this.parent[j] >= j) throw new Error('clips: joints must come parents first');
-    // The fingers' joints, for that fist (FolkPose.solve): joint, its turn at a full fist, 1 for a thumb's.
-    this.fist = []; this.relax = [];
-    for (const side of ['Left', 'Right']) {
-      ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky'].forEach((f, fi) => [1, 2, 3].forEach((i) => {
-        const j = this.index.get(`mixamorig:${side}Hand${f}${i}`);
-        if (j !== undefined) { this.fist.push(j, FIST[fi][i - 1], fi === 0 ? 1 : 0); this.relax.push(RELAX[fi][i - 1]); }
-      }));
-    }
     this.hips = this.index.get('mixamorig:Hips');
     this.rest = restWorld(this.parent, this.restT, this.restR);
     const rot = new Int16Array(bin, 0, meta.hipsByteOffset >> 1);
@@ -168,6 +151,7 @@ export class FolkRig {
     this.above = new Uint8Array(this.count);
     for (let k = 0; k < this.count; k++) for (let a = k; a >= 0; a = this.parent[a]) if (a === this.neck || a === this.head) { this.above[k] = 1; break; }
     this.arms = [j('LeftArm'), j('RightArm')];
+    this.armSrc = this.arms[0] >= 0 ? this.src[this.arms[0]] : -1;   // (her joint an arm follows: a laid-over clip's mask is in her terms)
     this.hands = [j('LeftHand'), j('RightHand')];
     this.fore = [j('LeftForeArm'), j('RightForeArm')];
     this.toes = [j('LeftToeBase'), j('RightToeBase')];
@@ -175,13 +159,14 @@ export class FolkRig {
     this.headTop = theirs.t[this.head * 3 + 1];
     // Per body: how far the upper arms are drawn out from the body, for a gown or a big frame (radians), and the skirt.
     this.armOut = opts.armOut || 0;
-    // How far this body closes its fists on the run, 0..1 (folk.json's "fist"): a body whose fingers are coarse or
-    // thick-gloved (the Phobos three, from Meshy) tears at a full fist, so it runs with a loose half fist.
-    this.fistAmount = opts.fist ?? 1;
+    // And how far the upper arms come forward when the arms are folded (radians; folk.json "fold"): on a deep chest or a
+    // belly her fold lays the forearms inside the body, so they're brought out to rest on it. Measured in Blender, body by
+    // body (tools/folk/rig_fit_fold.json).
+    this.fold = opts.fold || 0;
     this.skirt = opts.skirt || null;
     // Phobos's people (folk.json "upright", tools/folk/rig_fit.py): their skeletons fitted to their bodies and her rest, and
-    // their jog and run her jog stood up (hips lifted, legs reaching for the ground, trunk straighter), not her own
-    // crouching jog or her hunched old-witch run.
+    // the library's clips stood up for them (hips lifted, legs reaching for the ground, feet brought in under them, trunk
+    // straighter): its jog and run, which crouch, and its standing, talking and strolling, which stand like a brawler.
     this.alias = opts.upright ? UPRIGHT : null;
   }
 
@@ -194,8 +179,16 @@ export class FolkRig {
 
 // The joints in the palette past a body's own: the skirt's six leg points and the facing (see SKIN in src/gfx/shaders.js).
 export const SKIRT_JOINTS = 4;
-// The fitted bodies' gaits (tools/folk/rig_fit.py upright): a jog with a foot always down, a run with a moment in the air.
-const UPRIGHT = { jog: 'jog_up', run: 'run_up' };
+// The fitted bodies' clips (tools/folk/rig_fit.py upright): a jog with a foot always down, a run with a moment in the air,
+// and the library's standing and strolling clips upright on a narrower stance.
+// (And they fold their arms her way, not the library's: its fold tucks the forearms in so close that on a broad body
+// they sink into the chest whatever is done with the upper arms; hers comes clear, by each body's own "fold".)
+const UPRIGHT = {
+  jog: 'jog_up', run: 'run_up', walk_ual: 'walk_ual_up', walk_formal: 'walk_formal_up', idle_ual: 'idle_ual_up',
+  fold_arms_ual: 'fold_arms', talk: 'talk_up', nod: 'nod_up', lantern: 'lantern_up', water: 'water_up',
+};
+// Arms folded, her way (FolkRig.fold).
+const FOLD_CLIPS = new Set(['fold_arms']);
 // Abed, everything below the neck is sunk this far, into the mattress: the blanket over them (src/gfx/blankets.js) is shaped
 // like a body, and nothing of one pokes through it, a gown's knee or a squire's plate.
 const TUCK = 0.3;
@@ -213,6 +206,7 @@ export class FolkPose {
     this.pq = new Float32Array(rig.count * 4); this.pt = new Float32Array(rig.count * 3);
     this.rootQ = new Float32Array(4);
     this.tuck = 0;            // 1 abed and under the blanket (src/folk/folk.worker.js), 0 otherwise
+    this.foldNow = 0;         // how far the upper arms are brought forward now, for folded arms (FolkRig.fold)
     this.a = { clip: null, t: 0, speed: 1 };
     this.b = { clip: null, t: 0, speed: 1 };
     this.w = 1; this.fade = 0.3;
@@ -294,21 +288,14 @@ export class FolkPose {
       const w = smooth(o.w), m = o.mask;
       for (let j = 0; j < n; j++) if (m[j] > 0) nlerp(sa, j * 4, sa, this.so, j * 4, w * m[j]);
     }
-    // Running, fists (eased across a change of clip, as the clips are).
-    const runA = RUN_CLIPS.has(this.a.clip?.name) ? 1 : 0, runB = this.w < 1 && RUN_CLIPS.has(this.b.clip?.name) ? 1 : 0;
-    const run = this.w < 1 ? runB + (runA - runB) * smooth(this.w) : runA;
-    // Walking, loose hands (the same easing).
-    const walkA = WALK_CLIPS.has(this.a.clip?.name) ? 1 : 0;
-    const walkB = this.w < 1 && WALK_CLIPS.has(this.b.clip?.name) ? 1 : 0;
-    const walk = this.w < 1 ? walkB + (walkA - walkB) * smooth(this.w) : walkA;
-    if (run > 0.01 || walk > 0.01) {
-      const F = C.fist, Rl = C.relax;
-      for (let i = 0; i < F.length; i += 3) {
-        const a = Math.max(F[i + 1] * run * rig.fistAmount, Rl[i / 3] * walk) * (F[i + 2] ? -0.8 : 1) * 0.5;
-        FQ[0] = 0; FQ[1] = F[i + 2] ? Math.sin(a) : 0; FQ[2] = F[i + 2] ? 0 : Math.sin(a); FQ[3] = Math.cos(a);
-        quatMul(sa, F[i] * 4, sa, F[i] * 4, FQ, 0);
-      }
+    // Arms folded, by how much of the pose is (eased across a change of clip, and with a clip laid over).
+    let fold = 0;
+    if (rig.fold) {
+      const fa = FOLD_CLIPS.has(this.a.clip?.name) ? 1 : 0, fb = this.w < 1 && FOLD_CLIPS.has(this.b.clip?.name) ? 1 : 0;
+      fold = this.w < 1 ? fb + (fa - fb) * smooth(this.w) : fa;
+      if (o.clip && o.w > 0) fold += ((FOLD_CLIPS.has(o.clip.name) ? 1 : 0) - fold) * smooth(o.w) * (o.mask?.[rig.armSrc] ?? 0);
     }
+    this.foldNow = fold * rig.fold;
     this.fk(x, y, z, yaw);
     writePalette(this, out, off);
     if (rig.skirt) {
@@ -346,7 +333,7 @@ export class FolkPose {
       wt[j * 3] += wt[p * 3]; wt[j * 3 + 1] += wt[p * 3 + 1]; wt[j * 3 + 2] += wt[p * 3 + 2];
       quatMul(wq, j * 4, wq, p * 4, tq2, 0);
       if (j === rig.neck || j === rig.head) this.turnHead(j, yaw, j === rig.head ? 0.6 : 0.4);
-      else if (rig.armOut && (j === rig.arms[0] || j === rig.arms[1])) this.armOut(j, j === rig.arms[0] ? 1 : -1);
+      else if ((rig.armOut || this.foldNow) && (j === rig.arms[0] || j === rig.arms[1])) this.armOut(j, j === rig.arms[0] ? 1 : -1);
       if (this.rest > 0) {
         if (j === rig.arms[0] || j === rig.arms[1]) this.restArm(j, j === rig.arms[0] ? 0 : 1, false);
         else if (j === rig.fore[0] || j === rig.fore[1]) this.restArm(j, j === rig.fore[0] ? 0 : 1, true);
@@ -452,6 +439,14 @@ export class FolkPose {
     const r = [tv[0] * s, tv[1] * s, tv[2] * s, Math.cos(a)];
     tq2.set(wq.subarray(j * 4, j * 4 + 4));
     quatMul(wq, j * 4, r, 0, tq2, 0);
+    // Folded arms brought forward: both upper arms about the chest's own left-to-right, the same way.
+    if (this.foldNow) {
+      quatRotate(tv, 0, tq, 0, [1, 0, 0], 0);
+      const b = -this.foldNow / 2, sb = Math.sin(b);
+      const f = [tv[0] * sb, tv[1] * sb, tv[2] * sb, Math.cos(b)];
+      tq2.set(wq.subarray(j * 4, j * 4 + 4));
+      quatMul(wq, j * 4, f, 0, tq2, 0);
+    }
   }
 
   // Where a joint is now, in the world.
