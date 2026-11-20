@@ -70,7 +70,7 @@ async function boot({ buffer, base, lean }) {
     const file = await get(`assets/game/folk/${folk.models[m].glb}`).then((r) => r.arrayBuffer());
     const glb = parseGLB(file);
     for (const me of who) {
-      const rig = new FolkRig(glb, clips, { armOut: me.p.armOut, skirt: folk.models[m].skirt || null, fist: folk.models[m].fist, upright: folk.models[m].upright });
+      const rig = new FolkRig(glb, clips, { armOut: me.p.armOut, skirt: folk.models[m].skirt || null, upright: folk.models[m].upright, fold: folk.models[m].fold });
       life.setRig(me.i, rig);
       me.joints = rig.count + (rig.skirt ? SKIRT_JOINTS : 0);
       me.pal = new Float32Array(me.joints * 8);

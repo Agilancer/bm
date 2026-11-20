@@ -275,20 +275,8 @@ class Rig:
         self.chest = self.names.index("mixamorig:Spine2")
         self.arms = [self.names.index("mixamorig:LeftArm"), self.names.index("mixamorig:RightArm")]
 
-    def pose(self, clip, t, arm_out=0.0, curl=None):
+    def pose(self, clip, t, arm_out=0.0, arm_fwd=0.0):
         rot, hips = sample(clip, t)
-        if curl is not None:
-            # FolkPose.solve's hands: each finger joint turned in about its own z, a thumb's about its y the other way
-            # (curl: per finger thumb..pinky, per joint 1..3, radians).
-            hidx = {j["name"]: i for i, j in enumerate(clips()["meta"]["skeleton"])}
-            for side in ("Left", "Right"):
-                for fi, f in enumerate(("Thumb", "Index", "Middle", "Ring", "Pinky")):
-                    for k in range(3):
-                        j = hidx.get(f"mixamorig:{side}Hand{f}{k + 1}")
-                        if j is None: continue
-                        a = curl[fi][k] / 2 * (-0.8 if fi == 0 else 1)
-                        fq = np.array([0, np.sin(a), 0, np.cos(a)]) if fi == 0 else np.array([0, 0, np.sin(a), np.cos(a)])
-                        rot[j] = qmul(rot[j], fq)
         n = len(self.names); WR = np.zeros((n, 4)); WT = np.zeros((n, 3))
         for j in range(n):
             p = self.parent[j]; s = self.src[j]
@@ -304,6 +292,12 @@ class Rig:
                 fwd = qmat(qmul(WR[c], qconj(self.WR[c]))) @ np.array([0, 0, 1.0])
                 a = (1 if j == self.arms[0] else -1) * arm_out / 2
                 WR[j] = qmul(np.array([*(fwd * np.sin(a)), np.cos(a)]), WR[j])
+            if arm_fwd and j in self.arms:
+                # FolkPose.armOut's fold: both upper arms brought forward about the chest's left-to-right.
+                c = self.chest
+                rt = qmat(qmul(WR[c], qconj(self.WR[c]))) @ np.array([1.0, 0, 0])
+                b = -arm_fwd / 2
+                WR[j] = qmul(np.array([*(rt * np.sin(b)), np.cos(b)]), WR[j])
         M = np.zeros((n, 4, 4))
         for j in range(n):
             W = np.eye(4); W[:3, :3] = qmat(WR[j]); W[:3, 3] = WT[j]; M[j] = W @ self.ibm[j]
@@ -351,7 +345,7 @@ def faces(B):
 TESTS = [("larm", "trunk"), ("rarm", "trunk"), ("larm", "lleg"), ("rarm", "rleg"), ("lleg", "rleg")]
 
 
-def clipping(k, clip="run", n=6, arm_out=0.0, B=None, step=4):
+def clipping(k, clip="run", n=6, arm_out=0.0, B=None, step=4, arm_fwd=0.0):
     """Over n frames of the clip: the share of arm and leg verts more than 1 cm inside another part (per cent, the
     worst frame), and the deepest (m). Inside: behind the nearest face of that part, and a ray out along that face's
     normal crosses the part an odd number of times."""
@@ -361,7 +355,7 @@ def clipping(k, clip="run", n=6, arm_out=0.0, B=None, step=4):
     dur = clips()["meta"]["clips"][clip]["dur"]
     worst = {}; deep = 0.0
     for f in range(n):
-        M, _ = rig.pose(clip, dur * f / n, arm_out)
+        M, _ = rig.pose(clip, dur * f / n, arm_out, arm_fwd)
         V = rig.skin(M)
         Vt = [tuple(p) for p in V]
         for a, b in TESTS:
@@ -496,10 +490,10 @@ def save(B):
 
 # ---- Seeing it in Blender: a body posed by a clip as a plain mesh (Y up to Z up), for look() ----
 
-def show(k, clip="run", t=0.3, name=None, x=0.0, B=None, arm_out=0.0, curl=None):
+def show(k, clip="run", t=0.3, name=None, x=0.0, B=None, arm_out=0.0, arm_fwd=0.0):
     import bpy
     B = B or body(k); rig = Rig(B)
-    M, _ = rig.pose(clip, t, arm_out, curl)
+    M, _ = rig.pose(clip, t, arm_out, arm_fwd)
     V = rig.skin(M)
     V = np.stack([V[:, 0] + x, -V[:, 2], V[:, 1]], 1)
     Fc = faces(B)
@@ -521,7 +515,9 @@ def _rot_axis(ax, th):
     return np.eye(3) + np.sin(th) * K + (1 - np.cos(th)) * K @ K
 
 
-def upright(src="jog", dip=0.35, lean=0.45, plant=0.8):
+def upright(src="jog", dip=0.35, lean=0.45, plant=0.8, narrow=(1.0, 1.0)):
+    """narrow: the feet brought in under the hips, (across, fore and aft) as shares of where the clip has them: the
+    library's standing clips stand like a brawler, feet 30 cm apart and one 24 cm ahead of the other."""
     C = clips(); meta = C["meta"]; sk = meta["skeleton"]; c = meta["clips"][src]
     par = [j["parent"] for j in sk]; T = np.array([j["t"] for j in sk], np.float64)
     HP, Hi = hers(); HF = body_frame(HP, Hi); right, up, fwd = HF
@@ -559,6 +555,8 @@ def upright(src="jog", dip=0.35, lean=0.45, plant=0.8):
             a, k_, ft = Hi[side + "UpLeg"], Hi[side + "Leg"], Hi[side + "Foot"]
             L1 = np.linalg.norm(T[k_]); L2 = np.linalg.norm(T[ft])
             Hp = WT1[a]; Ft = WT0[ft] - up * drop
+            off = Ft - WT0[hip]
+            Ft = Ft - right * (off @ right) * (1 - narrow[0]) - fwd * (off @ fwd) * (1 - narrow[1])
             d = Ft - Hp; dl = np.linalg.norm(d)
             dl2 = min(dl, (L1 + L2) * 0.999); dn = d / dl
             Ft2 = Hp + dn * dl2
@@ -603,7 +601,7 @@ def add_clip(name, R, H, like="jog"):
     rot = np.concatenate([rot] + extra)
     hoff = len(hips); hips = np.concatenate([hips, H.reshape(-1).astype(np.float32)])
     src = meta["clips"][like]
-    meta["clips"][name] = {"frames": n, "dur": src["dur"], "loop": True, "hips": hoff, "travel": src["travel"], "src": f"{src['src']} upright (tools/folk/rig_fit.py)", "tracks": tracks}
+    meta["clips"][name] = {"frames": n, "dur": src["dur"], "loop": src["loop"], "hips": hoff, "travel": src["travel"], "src": f"{src['src']} upright (tools/folk/rig_fit.py)", "tracks": tracks}
     if len(rot) % 2: rot = np.concatenate([rot, np.zeros(1, np.int16)])
     meta["hipsByteOffset"] = len(rot) * 2
     open(os.path.join(FOLK, "clips.bin"), "wb").write(rot.tobytes() + hips.tobytes())
@@ -612,67 +610,46 @@ def add_clip(name, R, H, like="jog"):
     open(os.path.join(FOLK, "clips.json"), "w").write(js)
 
 
-# ---- Palms: each hand turned about its own length so its palm faces as hers does ----
-# Meshy bound many bodies with the palms forward (or up) where hers face the thighs, and the clips carry that across, so
-# a walk shows two open palms like a shrug. The hand's rest is rolled about the bone from the wrist to the middle knuckle
-# (the mesh rides along as a whole: nothing in it bends), on top of the fit above.
+# ---- A body's skin and feet in her clips ----
 
-def _palm(P, idx, side):
-    h, m, i, p = (P[idx[side + n]] for n in ("Hand", "HandMiddle1", "HandIndex1", "HandPinky1"))
-    ax = m - h; ax /= np.linalg.norm(ax)
-    n = np.cross(ax, i - p) * (1 if side == "Right" else -1)
-    n -= ax * (n @ ax)
-    return ax, n / np.linalg.norm(n)
+def stretch(k, clip_names=("walk", "run_up", "idle", "fold_arms"), n=3, arm_out=0.0, B=None, over=1.8):
+    """How far a body's skin is pulled about in the clips: the share of its edges more than `over` times their bind length
+    (per cent), the longest pull, and which joints those edges mostly follow. A joint put in the wrong place, or verts
+    that follow the wrong joint, show up here as a web of long edges."""
+    B = B or body(k); rig = Rig(B); F = faces(B)
+    E = np.unique(np.sort(np.concatenate([F[:, [0, 1]], F[:, [1, 2]], F[:, [2, 0]]]), axis=1), axis=0)
+    v0 = B["pos"].astype(np.float64); l0 = np.linalg.norm(v0[E[:, 0]] - v0[E[:, 1]], axis=1)
+    ok = l0 > 0.004
+    worst = 0.0; share = 0.0; who = {}
+    names = [x.split(":")[-1] for x in rig.names]
+    for c in clip_names:
+        dur = clips()["meta"]["clips"][c]["dur"]
+        for f in range(n):
+            M, _ = rig.pose(c, dur * (f + 0.5) / n, arm_out); V = rig.skin(M)
+            r = np.linalg.norm(V[E[:, 0]] - V[E[:, 1]], axis=1) / np.maximum(l0, 1e-9)
+            bad = ok & (r > over)
+            share = max(share, float(bad.mean()) * 100); worst = max(worst, float(r[ok].max()))
+            for e in E[bad][:400]:
+                j = names[int(B["jo"][e[0], int(np.argmax(B["we"][e[0]]))])]
+                who[j] = who.get(j, 0) + 1
+    top = sorted(who.items(), key=lambda x: -x[1])[:3]
+    return round(share, 2), round(worst, 1), top
 
 
-# (A hand's mesh flat and her knuckle joints differ by about 12 degrees on every body, the same way round on each side:
-# that much is how a flat hand's verts lie against knuckles, not a turned hand, so it's taken off before judging.)
-PALM_BIAS = {"Left": -11.5, "Right": 11.5}
-
-
-def palms(k, write=True, min_deg=10.0, max_deg=90.0, junk_deg=100.0, gate=80.0):
-    B = body(k); js = B["js"]
-    ex = js.setdefault("asset", {}).setdefault("extras", {}).setdefault("rigfit", {})
-    if "palm" in ex: return None
-    names, parent, T, R = skeleton(js)
-    base = [n.split(":")[-1] for n in names]; idx = {n: i for i, n in enumerate(base)}
+def ground(k, clip_names=("idle", "walk", "idle_ual_up"), n=4, B=None):
+    """Where a body's lowest point comes in the clips, against where it is at rest (cm; + floats, - sinks): the game sets
+    a body on the ground by its rest, and scales the hips' travel by its hips' height."""
+    B = B or body(k); rig = Rig(B)
+    names, parent, T, R = skeleton(B["js"])
+    # (At rest: every joint by its rest, the skin as bound.)
     WR, WT = fk_rest(parent, T, R)
-    HP, Hi = hers(); HF = body_frame(HP, Hi); F = body_frame(WT, idx)
-    rec = {}
-    nodes = js["nodes"]; J = js["skins"][0]["joints"]
-    for side in ("Left", "Right"):
-        if any(side + n not in idx for n in ("Hand", "HandMiddle1", "HandIndex1", "HandPinky1")): continue
-        # (Where the knuckle joints can't be trusted, leave the hand: Meshy sometimes names the little finger's bone as
-        # the index's, or bunches all four over a held thing; such a hand reads as turned half round, and isn't.)
-        th, ix, pk = (WT[idx[side + n]] for n in ("HandThumb1", "HandIndex1", "HandPinky1"))
-        if np.linalg.norm(ix - th) > np.linalg.norm(pk - th) or np.linalg.norm(ix - pk) < 0.03: continue
-        ax, n = _palm(WT, idx, side)
-        # The palm's facing from the hand's own mesh, not its knuckle joints, which Meshy can put 30-50 degrees round
-        # from the fingers they move: the flat of the verts bound to the hand (its least spread), turned from bind to
-        # rest, and on the knuckles' side of it.
-        hj = [i for nm, i in idx.items() if nm.startswith(side + "Hand")]
-        m = np.isin(B["jo"][:, 0], hj) & (B["we"][:, 0] > 0.5)
-        V = B["pos"][m].astype(np.float64)
-        if len(V) < 30: continue
-        c = V - V.mean(0); ev, U = np.linalg.eigh(c.T @ c); pn = U[:, 0]
-        if ev[0] / ev.sum() > 0.12: continue    # (not a flat hand: a fist, a mitten, a hand round a thing)
-        j0 = idx[side + "Hand"]
-        pn = qmat(WR[j0]) @ B["W"][j0, :3, :3].T @ pn
-        pn -= ax * (pn @ ax); pn /= np.linalg.norm(pn)
-        if np.degrees(np.arccos(min(abs(pn @ n), 1.0))) > gate: continue
-        n = pn if pn @ n > 0 else -pn
-        _, hn = _palm(HP, Hi, side)
-        want = F.T @ (HF @ hn); want -= ax * (want @ ax); want /= np.linalg.norm(want)
-        ang = np.arctan2(np.cross(n, want) @ ax, n @ want)
-        ang -= np.radians(PALM_BIAS[side])
-        if abs(np.degrees(ang)) < min_deg or abs(np.degrees(ang)) > junk_deg: continue
-        ang = np.sign(ang) * min(abs(ang), np.radians(max_deg))
-        j = idx[side + "Hand"]; p = parent[j]
-        S = _rot_axis(ax, ang)
-        Wj = S @ qmat(WR[j])
-        q = mat_q(qmat(WR[p]).T @ Wj); q /= np.linalg.norm(q)
-        nodes[J[j]]["rotation"] = [float(v) for v in q]
-        rec[side] = round(float(np.degrees(ang)), 1)
-    ex["palm"] = rec
-    if write: save(B)
-    return rec
+    M = np.zeros((len(names), 4, 4))
+    for j in range(len(names)):
+        W = np.eye(4); W[:3, :3] = qmat(WR[j]); W[:3, 3] = WT[j]; M[j] = W @ rig.ibm[j]
+    y0 = float(rig.skin(M)[:, 1].min())
+    out = {}
+    for c in clip_names:
+        dur = clips()["meta"]["clips"][c]["dur"]
+        lo = min(float(rig.skin(rig.pose(c, dur * f / n)[0])[:, 1].min()) for f in range(n))
+        out[c] = round((lo - y0) * 100, 1)
+    return round(y0 * 100, 1), out
