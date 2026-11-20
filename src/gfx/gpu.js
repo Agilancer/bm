@@ -1,6 +1,7 @@
 // Getting the most out of whatever GPU is there: the high-performance adapter, every limit and useful
 // feature it offers, and a quality tier picked from what it is.
 import { lanes } from '../core/files.js';
+import { FreshViews, wantFreshViews } from './freshviews.js';
 
 const WANTED_FEATURES = [
   'rg11b10ufloat-renderable', 'float32-filterable', 'timestamp-query', 'indirect-first-instance',
@@ -117,6 +118,8 @@ export async function initGPU(tierOverride = 'auto', { light = 0 } = {}) {
   } catch (e) {
     device = await adapter.requestDevice({ requiredFeatures });
   }
+  // (Before anything's made on it: WebKit's views made again now and then, src/gfx/freshviews.js.)
+  const fresh = wantFreshViews() ? new FreshViews(device) : null;
   const info = adapter.info || {};
   const vendor = (info.vendor || '').toLowerCase();
   const mobile = isMobileDevice();
@@ -132,7 +135,7 @@ export async function initGPU(tierOverride = 'auto', { light = 0 } = {}) {
   const picked = autoTier({ mobile, shared, discrete, laptop, mem });
   const tierName = TIERS[tierOverride] ? tierOverride : autoTier({ mobile, shared, discrete, laptop, mem, light: mobile ? 0 : light });
   return {
-    adapter, device, info, mobile, tierName, name, shared, laptop, mem,
+    adapter, device, info, mobile, tierName, name, shared, laptop, mem, fresh,
     // (Lighter than Auto would have picked, for the browser's closing the game last time: said on the title, src/main.js.)
     lightened: tierName !== picked && !TIERS[tierOverride],
     tier: { ...TIERS[tierName] },

@@ -8,7 +8,7 @@ const store = new Map(), heard = { win: {}, doc: {} };
 globalThis.localStorage = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)) };
 globalThis.addEventListener = (n, f) => { heard.win[n] = f; };
 globalThis.document = { hidden: false, addEventListener: (n, f) => { heard.doc[n] = f; } };
-const { beginRun, noteRun, deathWords, noteEvent, trailWords } = await import('../src/core/lastrun.js');
+const { beginRun, noteRun, deathWords, noteEvent, trailWords, trailSentence } = await import('../src/core/lastrun.js');
 const last = () => JSON.parse(store.get('velscour.lastRun'));
 
 test('a first start: nothing died, and it loads as the tier says', () => {
@@ -133,6 +133,39 @@ test('the last few things before a death are kept and said: the same again count
   assert.equal(trailWords(b.died), 'touched (x2)');
   assert.equal(trailWords({ trail: [{ s: 40, e: 'touched', n: 3 }, { s: 44, e: 'turned upright' }, { s: 44, e: 'size 390x806' }] }),
     'touched (x3), then 4 s later turned upright, then size 390x806', 'the time from one to the next, none when it was the same second');
+  // The picture's size stepping reads as its sharpness, and steps one after another as one.
+  const climb = [{ s: 1000, e: 'touched' }, { s: 1260, e: 'picture x0.66' }, { s: 1264, e: 'picture x0.76' }, { s: 1268, e: 'picture x0.88' }, { s: 1272, e: 'picture x1' }];
+  assert.equal(trailWords({ trail: climb }), 'touched, then about 4 minutes later the picture\'s sharpness eased back up, 66% to 100% over 12 s');
+  assert.equal(trailWords({ trail: [{ s: 5, e: 'picture x1' }, { s: 9, e: 'picture x0.76' }, { s: 9, e: 'touched' }] }), 'the picture\'s sharpness stepped down, 100% to 76% over 4 s, then touched');
+  assert.equal(trailWords({ trail: [{ s: 5, e: 'picture x0.88' }] }), 'the picture\'s sharpness went to 88%');
+  // Only steps the same way, no more than ten seconds apart, are one: a turn starts another from where it turned, and a
+  // step long after is a step of its own; steps in the same second have no "over 0 s"; long gaps in minutes.
+  const p = (s, x) => ({ s, e: `picture x${x}` });
+  assert.equal(trailWords({ trail: [p(100, 0.88), p(102, 1), p(500, 0.88)] }),
+    'the picture\'s sharpness eased back up, 88% to 100% over 2 s, then about 7 minutes later the picture\'s sharpness went to 88%');
+  assert.equal(trailWords({ trail: [p(0, 1), p(4, 0.88), p(8, 0.76), p(12, 0.88), p(16, 1)] }),
+    'the picture\'s sharpness stepped down, 100% to 76% over 8 s, then back up, 76% to 100% over 8 s');
+  assert.equal(trailWords({ trail: [p(5, 1), p(5, 0.88), p(5, 0.76), { s: 1005, e: 'touched' }] }),
+    'the picture\'s sharpness stepped down, 100% to 76%, then about 17 minutes later touched');
+  assert.equal(trailWords({ trail: [p(0, 1), p(4, 0.88), p(8, 1), { s: 9, e: 'a' }, { s: 10, e: 'b' }, { s: 11, e: 'c' }] }),
+    'the picture\'s sharpness eased back up, 88% to 100% over 4 s, then 1 s later a, then 1 s later b, then 1 s later c',
+    'the last four said, and a turn said first is still the picture\'s sharpness');
+  // And whether it kept going after the last of it: from the note kept after (every 8 s while the page is seen).
+  assert.equal(trailSentence({ trail: climb, after: 8 }), 'Just before: touched, then about 4 minutes later the picture\'s sharpness eased back up, 66% to 100% over 12 s.', 'under ten seconds: just before');
+  assert.equal(trailSentence({ trail: [{ s: 44, e: 'touched' }], after: 40 }), 'The last thing the game noted: touched. It kept going about 40 more seconds after that.');
+  assert.equal(trailSentence({ trail: climb, after: 200 }), 'The last things the game noted: touched, then about 4 minutes later the picture\'s sharpness eased back up, 66% to 100% over 12 s. It kept going about 3 more minutes after that.');
+  assert.equal(trailSentence({ trail: [] }), '');
+  const realNow = Date.now;
+  try {
+    let now = realNow();
+    Date.now = () => now;
+    beginRun();
+    noteEvent('picture x1');
+    now += 130e3; noteRun({ stage: 'playing', mins: 6 });
+    const c = beginRun();
+    assert.equal(c.died.after, 130);
+    assert.equal(trailSentence(c.died), 'The last thing the game noted: the picture\'s sharpness went to 100%. It kept going about 2 more minutes after that.');
+  } finally { Date.now = realNow; }
   heard.win.pagehide();
   assert.equal(beginRun().died, null);
   assert.equal(trailWords(null), '');

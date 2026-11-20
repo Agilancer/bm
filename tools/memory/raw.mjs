@@ -80,7 +80,8 @@ if (ph) {
 } else await send('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: +(process.env.DPR || 1), mobile: false }, S);
 if (process.env.DM) await send('Page.addScriptToEvaluateOnNewDocument', { source: `Object.defineProperty(navigator, 'deviceMemory', { get: () => ${+process.env.DM} });` }, S);
 if (process.env.HC) await send('Page.addScriptToEvaluateOnNewDocument', { source: `Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => ${+process.env.HC} });` }, S);
-await send('Page.addScriptToEvaluateOnNewDocument', { source: INIT }, S);
+// (NOINIT=1: without init.js, whose counting costs time of its own, to time the game as a player has it.)
+if (!process.env.NOINIT) await send('Page.addScriptToEvaluateOnNewDocument', { source: INIT }, S);
 if (process.env.GFX) await send('Page.addScriptToEvaluateOnNewDocument', { source: `try { const k = 'velscour.settings'; const o = JSON.parse(localStorage.getItem(k) || '{}'); o.gfx = '${process.env.GFX}'; localStorage.setItem(k, JSON.stringify(o)); } catch {}` }, S);
 // LS='{"key":"value"}': put in the page's storage before it starts (the threads' consent, the keep question...).
 if (process.env.LS) await send('Page.addScriptToEvaluateOnNewDocument', { source: `try { for (const [k, v] of Object.entries(${process.env.LS})) if (localStorage.getItem(k) === null) localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v)); } catch {}` }, S);
