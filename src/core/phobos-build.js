@@ -15,6 +15,7 @@ import { PHOBOS } from './phobos-data.js';
 import { HUBS, hubHouses, hubFar, hubNear, inHub } from './phobos-hubs.js';
 import { MOUTH_SQUARE, PHOBOS_SEALS, SEAL_SQUARE, SEWER_MOUTHS, inSealSquare } from './phobos-seals.js';
 import { cityTowers, towerFar, towerInner, towerNear, towerYards, wallTops, wallTowerAt } from './phobos-towers.js';
+import { bridgeHouse, dressHouse, houseFarMore, jutOf, roofTop, roofs, streetLife, styleHouses } from './phobos-houses.js';
 
 const TAU = Math.PI * 2;
 const Y = (x, z) => terrainHeight(x, z);
@@ -135,8 +136,11 @@ function houseWalls(K, h, F) {
 function houseFar(K, h) {
   const F = footing(h), { lo, hi } = F;
   // (On a phone a flat lid in the roof's own tiles: ten thousand ridged roofs are more corners than it should hold.)
-  K.box(h.wall, h.x, lo - 0.5, h.z, h.hx, hi - lo + h.h + 0.5, h.hz, h.yaw, { top: h.roof ? (K.lean ? h.roof : false) : h.wall, collide: false });
-  if (h.roof && !K.lean) { const R = roofOf(h); gable(K, h.roof, h.x, hi + h.h, h.z, R.sx, R.sz, R.rh, R.yaw, h.wall, 0.4); }
+  // (Its roof by its style, src/core/phobos-houses.js: a gable, a hip, a pent, a mansard, a gambrel, a stepped gable, a flat
+  // lid behind a parapet, or the rafters of one burnt out.)
+  const kind = h.st?.roof || 'gable';
+  K.box(h.wall, h.x, lo - 0.5, h.z, h.hx, hi - lo + h.h + 0.5, h.hz, h.yaw, { top: h.roof ? (K.lean || kind === 'flat' ? h.roof : kind === 'ribs' ? h.wall : false) : h.wall, collide: false });
+  if (h.roof && !K.lean) { roofs(K, kind, h.roof, h.wall, h.x, hi + h.h, h.z, roofOf(h), -h.front); houseFarMore(K, h, F, hi + h.h); }
   // (One in three has a lit window in its front, big enough to be seen from the castle: the city's alight from far off.)
   const id = Math.round(h.x * 7 + h.z * 13);
   if (h.roof && hash2(id, 61) < 0.55) {
@@ -286,17 +290,18 @@ function houseNear(K, h) {
   if (h.door !== undefined) doorLeaf(K, houseDoor(h));
   // The roof: ridged, a chimney on most, a dormer on some of the bigger.
   if (!ruin) {
-    const R = roofOf(h), rh = R.rh;
-    gable(K, h.roof, h.x, top, h.z, R.sx, R.sz, rh, R.yaw, h.wall, 0.4);
+    const R = roofOf(h), kind = h.st?.roof || 'gable', rh = roofTop(kind, R);
+    roofs(K, kind, h.roof, h.wall, h.x, top, h.z, R, -f, true);
     // (A chimney stack on most, a dark pot or two on it.)
     // (Its stack straight over the hearth, on the side wall across from the stair, up through the roof and a metre and more
     // clear of its ridge, as a stack must draw; a dark pot or two on it, smoke out of most.)
     if (ix > 1.4) { const [cx, , cz] = P(h.hx - 0.45, 0, -f * iz * 0.28), ct = top + rh + 1.3; K.box('soot:stone', cx, top - 0.4, cz, 0.45, ct - top + 0.4, 1.05, h.yaw, { collide: false }); K.box('dark:stone', cx, ct, cz, 0.52, 0.18, 1.12, h.yaw, { collide: false }); { const [p1, , q1] = P(h.hx - 0.45, 0, -f * iz * 0.28 - 0.35), [p2, , q2] = P(h.hx - 0.45, 0, -f * iz * 0.28 + 0.35); K.drum('dark:stone', p1, ct + 0.18, q1, 0.15, 0.45, 6, { collide: false }); if (r(4) < 0.5) K.drum('dark:stone', p2, ct + 0.18, q2, 0.13, 0.32, 6, { collide: false }); } if (r(8) < 0.75) (K.smokes ||= []).push([cx, ct + 0.7, cz]); }
-    if (!R.turn && h.hx > 4.2 && r(5) < 0.3) { const [dx, , dz] = P((r(6) - 0.5) * h.hx, 0, f * h.hz * 0.55); K.box(h.wall, dx, top + rh * 0.1, dz, 0.9, 1.5, 0.9, h.yaw, { collide: false, top: false }); gable(K, h.roof, dx, top + rh * 0.1 + 1.5, dz, 1.1, 1.1, 0.8, h.yaw + Math.PI / 2, h.wall, 0.2); }
+    if (kind === 'gable' && !h.st?.dormer && !R.turn && h.hx > 4.2 && r(5) < 0.3) { const [dx, , dz] = P((r(6) - 0.5) * h.hx, 0, f * h.hz * 0.55); K.box(h.wall, dx, top + rh * 0.1, dz, 0.9, 1.5, 0.9, h.yaw, { collide: false, top: false }); gable(K, h.roof, dx, top + rh * 0.1 + 1.5, dz, 1.1, 1.1, 0.8, h.yaw + Math.PI / 2, h.wall, 0.2); }
   } else for (let k = 0; k < 3; k++) { const [qx, , qz] = P((r(20 + k) - 0.5) * ix * 1.5, 0, (r(30 + k) - 0.5) * iz * 1.5); K.rock('dark:rubble', qx, qz, 0.5 + r(40 + k) * 0.7, 0.4 + r(50 + k) * 0.5, { collide: false }); }
   // The windows drawn (wins, above). Each in a wooden surround a hand proud of the wall, a sill under it.
   for (const w of wins) {
-    const { st, sd, q, wx, wy, ww, wh, lit } = w, wz = q * (h.hz + 0.05), d = q > 0 ? 1 : -1, N = [q * s, 0, q * c], fw = ww + 0.1;
+    // (On a deep jetty, src/core/phobos-houses.js, the street front's windows from the third storey up stand out with it.)
+    const { st, sd, q, wx, wy, ww, wh, lit } = w, wz = q * (h.hz + 0.05 + (q === f && st >= 2 ? jutOf(h) : 0)), d = q > 0 ? 1 : -1, N = [q * s, 0, q * c], fw = ww + 0.1;
     const frame = (zz, nn, rev) => {
       const Q = (x0, y0, x1, y1) => (rev ? K.quad('dark:wood', P(x0, y0, zz), P(x1, y0, zz), P(x1, y1, zz), P(x0, y1, zz), nn) : K.quad('dark:wood', P(x1, y0, zz), P(x0, y0, zz), P(x0, y1, zz), P(x1, y1, zz), nn));   // (dark: in plain wood, lit by the lamps, the frames glowed orange, the critics)
       Q(wx - d * fw, wy - 0.12, wx + d * fw, wy); Q(wx - d * fw, wy + wh, wx + d * fw, wy + wh + 0.1);
@@ -328,7 +333,7 @@ function houseNear(K, h) {
   }
   // A jettied front on some along the named streets: the first floor's beam carried out over the street on brackets; and
   // where there's no shop's awning under it, a pent roof of the house's tiles along the ground floor.
-  if (h.spine && !ruin && storeys >= 2 && r(33) < 0.5) {
+  if (!ruin && storeys >= 2 && (h.st ? h.st.jetty > 0 || (h.spine && r(33) < 0.5) : h.spine && r(33) < 0.5) && h.mark?.kind !== 'guildhall') {
     const jy = fy + 3.3 - 0.4, [bx, , bz] = P(0, 0, fz + f * 0.26);
     K.box('dark:wood', bx, jy, bz, h.hx + 0.1, 0.34, 0.26, h.yaw, { collide: false });
     for (let k = 0, n = Math.max(2, Math.round(h.hx / 1.3)); k <= n; k++) { const [kx, , kz] = P(-h.hx + 0.2 + (2 * h.hx - 0.4) * k / n, 0, fz + f * 0.2); K.box('dark:wood', kx, jy - 0.55, kz, 0.08, 0.55, 0.2, h.yaw, { collide: false }); }
@@ -349,6 +354,8 @@ function houseNear(K, h) {
     if (r(24) < 0.45) { const g = P(DOOR + 1.6, 0, fz + f * 0.8); K.goods(g[0], g[2], 4, 0.7); }
   }
   if (!ruin) backyard(K, h, P, fy, r);
+  // What's its own: its style's and its district's dress (src/core/phobos-houses.js).
+  if (!ruin) { const nd = K.colliders.length; dressHouse(K, h, { P, F, fy, top, f, storeys, wins, R: roofOf(h), flag, BANNER, lamp: (p, rr, i) => (K.lamps ||= []).push({ p, c: [1, 0.62, 0.3], r: rr, i, flicker: 0.35 }) }); K.colliders.length = nd; }
   const n1 = K.colliders.length;
   if (/poor_brick|daub|soot/.test(h.wall) && r(17) < 0.16 && h.h > 7) { const a = P(-h.hx * 0.5, 0, fz + f * 0.15), b = P(-h.hx * 0.5, 0, fz + f * 2.85); K.washing(a[0], a[2], b[0], b[2], 3.6 + r(18) * 2.4); }
   if (r(19) < 0.14) { const q = P(-DOOR - 1.1, 0, fz + f * 0.5); K.barrel(q[0], q[2]); }
@@ -1100,7 +1107,7 @@ export function phobosHouses() {
         // (A spire's door on the alley its row's doors are on: src/core/phobos-towers.js.)
         if (S.spires && hash2(id, 3) < S.spires) { put({ spire: true, x, z, r: Math.min(uw, ud) * 0.42, h: 26 + hsh * 34, wall: S.spireWall || pick(S.wall), yaw: zn.turn, front: row ? 1 : -1 }); continue; }
         // (Its door's in the long side that looks out on the alley, not the one on the yard.)
-        put({ x, z, yaw: zn.turn, hx: uw * 0.5 + 0.02, hz: ud * 0.5, h, wall: pick(S.wall), roof: pick(S.roof), front: row ? 1 : -1 });
+        put({ x, z, yaw: zn.turn, hx: uw * 0.5 + 0.02, hz: ud * 0.5, h, wall: pick(S.wall), roof: pick(S.roof), front: row ? 1 : -1, dk: zn.key });
       }
     }
   }
@@ -1119,13 +1126,16 @@ export function phobosHouses() {
         if (S.open && d && Math.hypot(x - d.x, z - d.z) < S.open) continue;
         const v = hash2(i * 31 + k, sd + 7), h = spine ? 9.5 + 6 * v + 3 * Math.min(1, Math.max(0, (x - 9400) / 1200)) : S.h[0] + (S.h[1] - S.h[0]) * v;
         // (Local +z is (-uz, ux): the house on that side of the street has its door in its -z side, toward the street.)
-        put({ x, z, yaw, hx: uw * 0.5 + 0.02, hz: ud * 0.5, h, wall: S.wall[Math.floor(v * 97) % S.wall.length], roof: S.roof[Math.floor(v * 53) % S.roof.length] || (spine ? 'dark:roof_2' : null), front: -sd, shop: true, spine });
+        put({ x, z, yaw, hx: uw * 0.5 + 0.02, hz: ud * 0.5, h, wall: S.wall[Math.floor(v * 97) % S.wall.length], roof: S.roof[Math.floor(v * 53) % S.roof.length] || (spine ? 'dark:roof_2' : null), front: -sd, shop: true, spine, dk: key });
       }
     }
   }
   // (Each roofed house's door its own number, the house's place in the list: src/items/phobos-doors.js. A spire's is the
   // towers': 20000 on.)
   out.forEach((h, i) => { if (h.roof && !h.spire) h.door = i; });
+  // (And what each is, by its district and a number of its own; the one-off houses marked. src/core/phobos-houses.js.)
+  for (const h of out) if (h.hub) h.dk ||= districtAt(h.x, h.z).key;
+  styleHouses(out);
   HOUSES = out;
   return out;
 }
@@ -1135,6 +1145,21 @@ const byCell = () => { const m = new Map(); for (const h of phobosHouses()) (m.g
 // (The mages' spires are the towers': src/core/phobos-towers.js.)
 function districts(K) {
   for (const [cell, list] of byCell()) K.group('ph:' + cell, true, () => { for (const h of list) if (!h.spire) houseFar(K, h); });
+  // (The toll-houses on the Slough's two footbridges, src/core/phobos-houses.js: each in its cell's group, as a house is.)
+  if (!K.lean) for (const b of footbridges()) K.group('ph:' + cellOf(b.x, b.z), true, () => bridgeHouse(K, b, true));
+}
+// Where the Slough's two footbridges are (waters, above, builds them): { x, z, y (the deck), th (its yaw), ux, uz }.
+let FOOT = null;
+function footbridges() {
+  if (FOOT) return FOOT;
+  FOOT = [];
+  for (const zc of [-390, 180]) {
+    const r0 = sloughRun().find((q) => !q.skip && q.lv !== null && Math.abs((q.p[1] + q.q[1]) / 2 - zc) < 5);
+    if (!r0) continue;
+    const mx = (r0.p[0] + r0.q[0]) / 2, mz = (r0.p[1] + r0.q[1]) / 2, { ux, uz } = r0;
+    FOOT.push({ x: mx, z: mz, y: Math.min(Y(mx - uz * 15.5, mz + ux * 15.5), Y(mx + uz * 15.5, mz - ux * 15.5)) + 0.3, th: Math.atan2(-uz, ux), ux, uz });
+  }
+  return FOOT;
 }
 // One cell's houses as they are from near (houseNear), and what lines its streets: built when you come within a street or
 // two of it, by the renderer. Nothing here stops a body: that's all in the far view's build.
@@ -1307,6 +1332,9 @@ export function phobosCell(K, cell) {
     (K.lamps ||= []).push({ p: [l.x + Math.cos(l.yaw) * out, Y(l.x, l.z) + hh - 0.7, l.z - Math.sin(l.yaw) * out], c: [1, 0.66, 0.34], r: l.iron ? 32 : 36, i: l.iron ? 30 : 22, flicker: 0.3, prio: 8 });   // (prio: the street's own lamps before the doors', so there are pools down the cobbles at dusk, the critics)
   }
   for (const h of byCell().get(cell) || []) if (!h.spire) houseNear(K, h);
+  // (What stands along its streets, and the toll-houses on the Slough's footbridges: src/core/phobos-houses.js.)
+  streetLife(K, cell, { streets: STREETS, cellOf, districtAt, cityIn, sloughD, segD, BANNER, inSquare: (x, z) => inSealSquare(x, z, 2) || inHub(x, z, 2) || SEWER_MOUTHS.some((m) => Math.hypot(x - m.x, z - m.z) < MOUTH_SQUARE + 12) });
+  for (const b of footbridges()) if (cellOf(b.x, b.z) === cell) bridgeHouse(K, b, false);
   // (Its towers and spires, gone into: their rooms, stairs and things.)
   for (const t of cityTowers()) if (t.cell === cell) towerNear(K, t);
   for (const hb of HUBS) if (cellOf(hb.x, hb.z) === cell) hubNear(K, hb);
