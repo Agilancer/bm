@@ -96,6 +96,8 @@ export class BodySkin {
       const enc = device.createCommandEncoder();
       this.r.mip.generate(tex, format, 1, mips, enc);
       device.queue.submit([enc.finish()]);
+      tex = await this.r.astc.pack(tex);   // (packed on a phone: src/gfx/astc.js)
+      if (turn !== this.turn) { tex.destroy(); return; }   // (changed again while it packed)
     }
     // The body's own maps, with this colour in place of its first (or its first back, with nothing worn).
     const [alb, nrm, mr] = body.maps;

@@ -504,6 +504,10 @@ async function boot(plan, poolSize) {
     return;
   }
   const loadMs = performance.now() - start;
+  if (renderer.astc.on) {
+    const a = renderer.astc.stats;
+    console.info(`graphics: ${a.packed} pictures packed to ASTC on the GPU, ${Math.round(a.plainMB)} MB to ${Math.round(a.packedMB)}; ${a.kept} kept plain, ${a.masks} of them for a mask in their alpha (src/gfx/astc.js)`);
+  }
   pool.takeBack(lent);
   setProgress(0.99, 'Opening the gates...');
   // Tasks for the pool once the load is done: thinking about the fight.

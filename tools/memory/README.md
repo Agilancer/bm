@@ -26,7 +26,9 @@ the page's storage before it starts: `{"bm-threads-consent":"all"}` with `NOAUTO
 `WHY=1`, `GPUDUMP=1` (each `mem` also gives the GPU process's own account, its allocators two deep), `DEBUG_PORT`
 (9351; another for a second run at once, though two at once share the GPU process and swell its figures: run them one
 after the other for numbers). The Chrome it starts plays sound before any tap (`--autoplay-policy=no-user-gesture-required`),
-which an iPhone never does.
+which an iPhone never does. `FLAGS` adds Chrome flags: `FLAGS="--enable-unsafe-swiftshader" Q="&soft=1"` runs the game on
+Chrome's software GPU, slowly, the one GPU on a PC that reads a phone's packed pictures (`src/gfx/astc.js`; `&astc=0` to
+see it without them). The textures' count by format and size is in `window.__gpu.texBy`.
 
 `node tools/memory/heapbig.mjs OUT/sim.heapsnapshot 40`: the biggest buffers in a snapshot, each with the chain of
 properties holding it, then the same summed by holder. `init.js` (put in every page and thread) also gives the page
