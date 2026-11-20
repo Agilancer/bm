@@ -267,11 +267,15 @@ const SWAP_LAST = ['Ashby', 'Blackwater', 'Cole', 'Dunn', 'Ember', 'Flint', 'Gal
 const MESHY = new Set(['sweep', 'fishwife', 'bonecarver', 'tanner', 'watchman', 'ragwoman', 'cutpurse', 'smelter', 'apothecary', 'merchant', 'baker', 'butcher', 'gravedigger', 'lamplighter', 'washerwoman', 'ferryman', 'plaguedoctor', 'grinder', 'chandler', 'mason', 'dockhand', 'porter', 'moneylender', 'acolyte', 'mourner', 'veteran', 'dyer', 'weaver', 'innkeeper', 'noblewoman', 'fiddler', 'scribe', 'barber', 'beggarwoman', 'urchingirl', 'hedgewitch', 'joiner', 'pieseller', 'gaoler', 'dukeservant', 'charcoalburner', 'netmender', 'bargewoman', 'offduty', 'magestudent', 'younglord', 'ladysmaid', 'pilgrim', 'tollkeeper', 'spiceseller', 'peddler', 'graverobber']);
 // (Four of each since the forty-nine more came: they're in the fifth's place.)
 export const SWAPS_PER = 4;
+// (Each of a body's swaps in a district of its own, never the one it's made on's nor another of them's: four of one body
+// walking a street together looked like what it is. The owner, 2026-11-20.)
+const DISTRICTS = ['barbican', 'cinder', 'rookeries', 'market', 'wharf', 'tanners', 'bones', 'barracks', 'mages', 'dukes', 'approach'];
+const areaOf = (p, n, k) => { const i = DISTRICTS.indexOf(p.area); return i < 0 ? p.area : DISTRICTS[(i + 1 + ((n + 3 * k) % 10)) % DISTRICTS.length]; };
 const swapsOf = (p, n) => {
   const out = [];
   for (let k = 1; k <= SWAPS_PER; k++) {
     const h = (n * 7 + k * 13) % 997, first = SWAP_FIRST[p.sex === 'f' ? 'f' : 'm'][h % 30], last = SWAP_LAST[(h * 3 + k) % SWAP_LAST.length];
-    out.push(roam({ ...p, id: `${p.id}_${k}`, name: p.age < 15 ? first : `${first} ${last}`, title: p.title.replace(/^the /, 'a '), body: `${p.body}_s${k}`, age: Math.max(9, p.age + ((h % 21) - 10)), speed: (p.speed || 1) * (0.9 + (h % 5) * 0.05), swapOf: p.id }));
+    out.push(roam({ ...p, id: `${p.id}_${k}`, name: p.age < 15 ? first : `${first} ${last}`, title: p.title.replace(/^the /, 'a '), body: `${p.body}_s${k}`, area: areaOf(p, n, k), age: Math.max(9, p.age + ((h % 21) - 10)), speed: (p.speed || 1) * (0.9 + (h % 5) * 0.05), swapOf: p.id }));
   }
   return out;
 };
