@@ -133,6 +133,21 @@ test('the last few things before a death are kept and said: the same again count
   assert.equal(trailWords(b.died), 'touched (x2)');
   assert.equal(trailWords({ trail: [{ s: 40, e: 'touched', n: 3 }, { s: 44, e: 'turned upright' }, { s: 44, e: 'size 390x806' }] }),
     'touched (x3), then 4 s later turned upright, then size 390x806', 'the time from one to the next, none when it was the same second');
+  // How long it ran on after the last word: from the note kept after it (every 8 s of play).
+  assert.equal(trailWords({ trail: [{ s: 40, e: 'picture x0.88' }, { s: 44, e: 'picture x1' }], after: 8 }), 'picture x0.88, then 4 s later picture x1', 'under ten seconds: nothing said');
+  assert.equal(trailWords({ trail: [{ s: 44, e: 'picture x1' }], after: 40 }), 'picture x1, and the game ran on 40 s after that');
+  assert.equal(trailWords({ trail: [{ s: 44, e: 'picture x1' }], after: 200 }), 'picture x1, and the game ran on 3 minutes after that');
+  const realNow = Date.now;
+  try {
+    let now = realNow();
+    Date.now = () => now;
+    beginRun();
+    noteEvent('picture x1');
+    now += 130e3; noteRun({ stage: 'playing', mins: 6 });
+    const c = beginRun();
+    assert.equal(c.died.after, 130);
+    assert.equal(trailWords(c.died), 'picture x1, and the game ran on 2 minutes after that');
+  } finally { Date.now = realNow; }
   heard.win.pagehide();
   assert.equal(beginRun().died, null);
   assert.equal(trailWords(null), '');

@@ -30,7 +30,11 @@ export function beginRun(params = new URLSearchParams(), { pc = false } = {}) {
   let light = Math.max(0, Math.min(LIGHT_MOST, Number(read(LIGHT_KEY)) || 0));
   // (A note a week old is no news. One that says the GPU was lost was the game's own reload: src/main.js device.lost.)
   const recent = last && Date.now() - last.at < 7 * 86400e3;
-  const died = recent && last.ended === false ? { stage: last.stage, mins: last.mins || 0, where: last.where || '', gpu: last.gpu || '', ...(last.trail?.length ? { trail: last.trail } : {}) } : null;
+  // (after: how long the note went on being kept after the trail's last word, the note being kept every 8 s or so of play:
+  // whether that last thing did it, or the game ran on a while.)
+  const lastE = last?.trail?.at(-1);
+  const after = lastE && last.at0 ? Math.max(0, Math.round((last.at - last.at0) / 1000) - lastE.s) : 0;
+  const died = recent && last.ended === false ? { stage: last.stage, mins: last.mins || 0, where: last.where || '', gpu: last.gpu || '', ...(last.trail?.length ? { trail: last.trail, after } : {}) } : null;
   const early = recent && (last.stage !== 'playing' || (last.mins || 0) < PC_EARLY_MINS);
   // (And either kind, at any time, after the GPU said it was out of memory: src/main.js, the device's uncapturederror.)
   // (A phone that lost its GPU, at any time: it takes it back for want of memory as often as for anything, and one that
@@ -78,10 +82,13 @@ export function noteEvent(what) {
 }
 
 /** The trail as the player reads it: "touched (x3), then 4 s later turned upright". '' if there's none. (The time between
- *  one and the next, as that's all it knows: nothing notes the kill itself.) */
+ *  one and the next; nothing notes the kill itself, but the note kept every 8 s says the game ran on a while after the last,
+ *  when it did: "..., and the game ran on 3 minutes after that".) */
 export function trailWords(d) {
   const tr = (d?.trail || []).slice(-4);
-  return tr.map((x, i) => `${i && x.s > tr[i - 1].s ? `${x.s - tr[i - 1].s} s later ` : ''}${x.e}${x.n > 1 ? ` (x${x.n})` : ''}`).join(', then ');
+  const a = d?.after || 0;
+  return tr.map((x, i) => `${i && x.s > tr[i - 1].s ? `${x.s - tr[i - 1].s} s later ` : ''}${x.e}${x.n > 1 ? ` (x${x.n})` : ''}`).join(', then ')
+    + (tr.length && a >= 10 ? `, and the game ran on ${a >= 90 ? `${Math.round(a / 60)} minutes` : `${a} s`} after that` : '');
 }
 
 /** How a death reads to the player: "while it was loading", "12 minutes into play, at (-40, 212)". */

@@ -36,5 +36,11 @@ properties holding it, then the same summed by holder. `init.js` (put in every p
 `__made(ms)` (the GPU's textures, views and buffers made a second over that many ms, and the MB a second written to it,
 by where), from a `log` step: `{"log": "return __gpuBy()"}`.
 
+`init.js` also models a WebKit bug (bugs.webkit.org 329399, fixed on WebKit's main 4 November 2026): an iPhone's WebGPU
+keeps in each texture view the id of every command encoder it was used in (attachments, and views in bind groups set in a
+pass), until the view is let go. `__slots(ms)`: encoders and view-ids added a second, by where each view was made;
+`__leak(n)`: the ids held now by views not yet collected, and the `n` biggest holders (after a `{"gc": 1}` step, or the
+collected ones still count). `src/gfx/freshviews.js` is the game's answer; `Q="&fresh=0"` to see it without.
+
 A phone's browser keeps a picture for every layer the compositor makes, and an iPhone counts them, and the GPU's
 textures and buffers, against the page. So on a phone, measure `layers` and the GPU's ask as well as the page's own.

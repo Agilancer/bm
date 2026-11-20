@@ -49,6 +49,72 @@
     };
     return `buffers:\n${sum(G.bufBy)}\ntextures:\n${sum(G.texBy)}`;
   };
+  // The texture views each command encoder uses, as WebKit counts them (bug 329399: an iPhone's WebGPU before the fix of
+  // 4 November 2026 keeps one id for every command encoder a view was ever used in, until the view itself is let go): its
+  // passes' attachments, and every view in a bind group set in one of its passes or bundles. `__slots(ms)`: encoders and
+  // view-ids added a second, and by whom the views were made.
+  const V = (window.__views = { encoders: 0, slots: 0, by: {}, seen: new WeakSet(), distinct: 0 });
+  const texKey = new WeakMap(), viewKey = new WeakMap(), bgViews = new WeakMap(), passEnc = new WeakMap(), encViews = new WeakMap(), bundleViews = new WeakMap();
+  const ct = P.createTexture;
+  P.createTexture = function (d) { const t = ct.call(this, d); const s = d.size; texKey.set(t, `${s.width ?? s[0]}x${s.height ?? s[1] ?? 1}x${s.depthOrArrayLayers ?? s[2] ?? 1} ${d.format}`); return t; };
+  const cv2 = TP.createView;
+  TP.createView = function (...a) { const v = cv2.apply(this, a); viewKey.set(v, `${texKey.get(this) || '?'} @ ${where()}`); return v; };
+  const cbg = P.createBindGroup;
+  P.createBindGroup = function (d) {
+    const bg = cbg.call(this, d);
+    const vs = (d.entries || []).map((e) => e.resource).filter((r) => r instanceof GPUTextureView || (window.GPUExternalTexture && r instanceof GPUExternalTexture));
+    if (vs.length) bgViews.set(bg, vs);
+    return bg;
+  };
+  const addTo = (enc, views) => { if (!enc || !views) return; let s = encViews.get(enc); if (!s) encViews.set(enc, (s = new Set())); for (const v of views) s.add(v); };
+  const CE = GPUCommandEncoder.prototype, brp = CE.beginRenderPass, bcp = CE.beginComputePass, fin = CE.finish;
+  CE.beginRenderPass = function (d) {
+    const p = brp.call(this, d); passEnc.set(p, this);
+    const vs = [];
+    for (const c of d.colorAttachments || []) if (c) { vs.push(c.view); if (c.resolveTarget) vs.push(c.resolveTarget); }
+    if (d.depthStencilAttachment) vs.push(d.depthStencilAttachment.view);
+    addTo(this, vs);
+    return p;
+  };
+  CE.beginComputePass = function (...a) { const p = bcp.apply(this, a); passEnc.set(p, this); return p; };
+  // The bug itself, as a model: each view's ids, alive until the view is collected. `__leak()`: the ids held now, and as
+  // bytes at 16 an id (a WTF HashSet<uint64_t> half full).
+  V.held = 0; V.ids = new WeakMap(); V.heldBy = {};
+  const gone = new FinalizationRegistry((c) => { V.held -= c.n; V.heldBy[c.k] -= c.n; });
+  CE.finish = function (...a) {
+    const s = encViews.get(this);
+    V.encoders++;
+    if (s) {
+      V.slots += s.size;
+      for (const v of s) {
+        const k = viewKey.get(v) || 'canvas or unknown'; V.by[k] = (V.by[k] || 0) + 1;
+        if (!V.seen.has(v)) { V.seen.add(v); V.distinct++; }
+        let c = V.ids.get(v); if (!c) { V.ids.set(v, (c = { n: 0, k: k.replace(/ < .*/, '') })); gone.register(v, c); }
+        c.n++; V.held++; V.heldBy[c.k] = (V.heldBy[c.k] || 0) + 1;
+      }
+    }
+    return fin.apply(this, a);
+  };
+  window.__leak = (n = 0) => `${V.held} ids held (${(V.held * 16 / 1048576).toFixed(1)} MB at 16 B an id) over ${V.encoders} encoders`
+    + (n ? String.fromCharCode(10) + Object.entries(V.heldBy).filter((e) => e[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, n).map(([k, x]) => `${String(x).padStart(9)}  ${k}`).join(String.fromCharCode(10)) : '');
+  for (const C of [GPURenderPassEncoder, GPUComputePassEncoder]) {
+    const sbg = C.prototype.setBindGroup;
+    C.prototype.setBindGroup = function (i, bg, ...r) { addTo(passEnc.get(this), bg && bgViews.get(bg)); return sbg.call(this, i, bg, ...r); };
+  }
+  const RBE = GPURenderBundleEncoder.prototype, rsbg = RBE.setBindGroup, rfin = RBE.finish;
+  RBE.setBindGroup = function (i, bg, ...r) { const vs = bg && bgViews.get(bg); if (vs) { let s = this.__vs; if (!s) this.__vs = s = new Set(); for (const v of vs) s.add(v); } return rsbg.call(this, i, bg, ...r); };
+  RBE.finish = function (...a) { const b = rfin.apply(this, a); if (this.__vs) bundleViews.set(b, [...this.__vs]); return b; };
+  const xb = GPURenderPassEncoder.prototype.executeBundles;
+  GPURenderPassEncoder.prototype.executeBundles = function (bundles) { const e = passEnc.get(this); for (const b of bundles) addTo(e, bundleViews.get(b)); return xb.call(this, bundles); };
+  window.__slots = async (ms = 3000) => {
+    const e0 = V.encoders, s0 = V.slots, b0 = { ...V.by };
+    await new Promise((r) => setTimeout(r, ms));
+    const per = (x) => Math.round(x * 1000 / ms);
+    const top = Object.keys(V.by).map((k) => [per(V.by[k] - (b0[k] || 0)), k]).filter((r) => r[0] > 0).sort((x, y) => y[0] - x[0]).slice(0, 16)
+      .map((r) => `${String(r[0]).padStart(6)}/s  ${r[1]}`).join(String.fromCharCode(10));
+    return `encoders ${per(V.encoders - e0)}/s, view-ids added ${per(V.slots - s0)}/s (${((V.slots - s0) / Math.max(1, V.encoders - e0)).toFixed(1)} an encoder), distinct views ever used ${V.distinct}${String.fromCharCode(10)}${top}`;
+  };
+
   window.__made = async (ms = 2000) => {
     const a = { ...G.made }, ab = { ...G.madeBy }, w0 = G.wrote;
     await new Promise((r) => setTimeout(r, ms));

@@ -2763,6 +2763,44 @@ and the auto-play banner) hold the buttons and bars at its corners, and each is 
 them as small as what's in them means laying out the interface again, the Move Buttons positions with it, and how WebKit
 makes its layers can't be measured here.
 
+**Twenty-one minutes in: the iPhone's browser keeping a note of every frame (November 2026).** With the pictures packed,
+the owner played 21 minutes before the phone closed the game, where it had been three to five. The title said what came
+just before: the picture's size stepping up, x0.66 to x1, four seconds apart. That step is real, but small: the picture's
+targets and the canvas at x1 are some 16 MB on a phone, against 7 at x0.66. And nothing the game holds grows as it's
+played: as an iPhone in Chrome, ten minutes in, it asked the GPU for the same 246 MB of textures and 301 of buffers as at
+the start. What grows is in WebKit, the engine of every browser on an iPhone. Until a fix made on 4 November 2026
+(bugs.webkit.org 329399, found on iOS 27.2; in no iOS yet that we know of), WebKit's WebGPU keeps in every texture view
+the number of every command encoder that view was ever used in, as a pass's attachment or in a bind group, and lets none
+go while the view lives. The game makes its views once, as it loads, and draws with them every frame: about 277 views in
+an encoder in the town, at 66 encoders a second, so some 18,000 numbers a second, and 23 million by 21 minutes. At 16 to
+32 bytes each, that's 350 to 700 MB more than the game asked for, counted by iOS against the page. The climb in the
+picture's size was likely the last few MB on top.
+
+So on WebKit (Safari, and every browser on an iPhone or iPad) the game makes its views again every 20 seconds, and the
+bind groups that hold them (`src/gfx/freshviews.js`). The game keeps the views and bind groups it made and goes on using
+them as before; a pass is handed the newest made from them instead, and the ones before are let go, WebKit's numbers with
+them. A view made again is the same texture seen the same way, so nothing looks different. A round is spread over a few
+frames, 48 bind groups at a time. What's under five seconds old, destroyed, or the canvas's own is left alone, and any
+objection from the GPU puts everything back as the game made it, for good (the crash line then says "views no longer made
+fresh"). `?fresh=0` turns it off, `?fresh=1` on anywhere. Chrome has no such bug and doesn't run it.
+
+Tried as an iPhone in Chrome, with the bug modelled (`tools/memory/init.js`: each view's numbers kept until the view is
+collected, `__leak()`), standing in the town:
+
+| | Without | With |
+| --- | --- | --- |
+| Numbers held after 45 s | 2.2 million (34 MB at 16 bytes) | 0.6 million (9 MB) |
+| After 5 minutes | 7.1 million (108 MB), rising 19,500 a second | 0.3 to 0.55 million (4 to 9 MB), level |
+| Encoders a second | 66 | 65 |
+| GPU errors | 0 | 0 |
+
+Each round made about 790 views and 310 bind groups. The story's opening and the village look as they did, and
+`node --test tests/freshviews.test.mjs` holds the swapping on a stand-in WebGPU. **Not tried on an iPhone**: Chrome can't
+show WebKit's numbers, only the model of them.
+
+The title's "Just before" now also says whether the game ran on a while after the last of it ("..., and the game ran on
+3 minutes after that"), from the note kept every eight seconds: whether the last thing did it, or only came before it.
+
 ### What has and hasn't been tested
 
 The owner's first session on a phone found the frame rate too low, which led to the phone tier below. **That rework hasn't
