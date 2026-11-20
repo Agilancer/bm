@@ -499,7 +499,7 @@ async function boot(plan, poolSize) {
   // What of the land you've seen.
   addPart('map', { save: () => worldMap.save(), load: (d) => worldMap.load(d) });
   game.gemFx = new GemFx(renderer);
-  const GEM_COLOR = (g) => ({ ruby: '#d8362c', topaz: '#e2a63a', emerald: '#3fb56a', sapphire: '#3f7fe0', amethyst: '#a45ad6', diamond: '#cfe6ee' }[g.kind]);
+  const GEM_COLOR = (g) => ({ ruby: '#d8362c', topaz: '#e2a63a', emerald: '#3fb56a', sapphire: '#3f7fe0', amethyst: '#a45ad6', diamond: '#cfe6ee', aquamarine: '#35d0c4' }[g.kind]);
   // (bm.wear('crimson_regalia') dresses the whole body in one set, to look at it; bm.wear() goes back to what's worn.)
   let forcedSkin = null;
   const wearSkins = () => {

@@ -56,6 +56,17 @@ const LOOKS = {
     },
     flawless(r, x, y, z, n, t) { const a = t * 5; r.emit(K(ELEM.VOID), n(22), x + Math.cos(a) * 0.12, y + Math.sin(a) * 0.12, z, 0, 0, 0, 0, 0, 0.02, 0.012, 0.02, 0.2, 0.3); },
   },
+  // Thin tide-green threads thrown far out level with it, that slow and hang as if they'd reached something: the gem of reach.
+  aquamarine: {
+    light: [0.2, 0.9, 0.82], i: 1.2, r: 6, pulse: (t) => 0.7 + 0.3 * Math.sin(t * 1.2) ** 2,
+    shed(r, x, y, z, n) {
+      for (let i = n(10); i > 0; i--) {
+        const a = Math.random() * TAU;
+        r.emit(K(ELEM.SPIRIT), 1, x, y, z, Math.cos(a), 0.08, Math.sin(a), 0.15, 1.6, 2.6, 0.002, 0.005, 0.5, 0.8);
+      }
+    },
+    flawless(r, x, y, z, n, t) { const a = t * 0.8; for (const s of [0, Math.PI]) r.emit(K(ELEM.SPIRIT), n(9), x, y, z, Math.cos(a + s), 0, Math.sin(a + s), 0.05, 3, 4.5, 0.003, 0.006, 0.4, 0.6); },
+  },
   // Glints that go off like a star, and a light that turns through every colour.
   diamond: {
     light: null, i: 1.4, r: 5, pulse: () => 1,

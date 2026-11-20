@@ -4,7 +4,7 @@ import { EV, FX_FLOATS, FX_START, H, INPUT, MAX_FX, SPELL_PALETTE, WEAPONS } fro
 import { SHIELD_FACE_POINT, shieldRise, shieldX, shieldY } from '../core/shield-pose.js';
 import { EYE } from './player.js';
 import { struck } from './ragdoll.js';
-import { CALM_AFTER, CALM_REGEN, DRY_BITE, STAFF_GIVE, ELEM, FX, MANA_REGEN, MAX_MANA, REACH, REGEN_HOLD, SPELLS } from './spells.js';
+import { CALM_AFTER, CALM_REGEN, DRY_BITE, STAFF_GIVE, ELEM, FX, MANA_REGEN, MAX_MANA, REACH, REACH_CAP, REGEN_HOLD, SPELLS } from './spells.js';
 import { DMG_FIELDS, effectiveAll } from './skills.js';
 import { STAFFS2 } from '../items/staffs2.js';
 import { STAFF_GRAND, STAFF_SHOTS, installStaffShots } from './staffshots.js';
@@ -53,6 +53,9 @@ const heightOf = (k) => (k.crawling ? 0.7 : k.opts?.height ?? [2, 2, 1.2, 2.2, 3
 // What a staff fires: the old twelve by their own tables, the new ones by the kind of shot their row names.
 const SHOT_OF = Object.fromEntries(STAFFS2.map((s) => [s.id, s.shot]));
 const OLD_SHOT = Object.fromEntries(Object.values(STAFF_SHOT).map((d) => [d.key, d]));
+// What gear's reach stretches in a row (Casting.setFar): how far it's laid, poured, cut out, sought, or leaps.
+const FAR_KEYS = ['range', 'out', 'seek', 'reach'];
+
 function staffShot(id) {
   if (STAFF_SHOT[id]) return STAFF_SHOT[id];
   if (STAFF_BOLT[id]) return SPELLS.find((d) => d.key === STAFF_BOLT[id]);
@@ -68,12 +71,35 @@ export class Casting {
     this.n = 0;
     this.castSeen = -1;
     // Every spell as it's cast: its row in SPELLS grown by the ranks and branches bought (setSkills; src/sim/skills.js).
-    this.defs = effectiveAll(null);
+    this.baseDefs = this.defs = effectiveAll(null);
+    this.far = 1; this.reach = REACH; this.farCache = new Map();
     this.reset();
   }
 
   // What's been bought in the six trees, from the page (src/items/skillbook.js): { node id: rank }.
-  setSkills(ranks) { this.defs = effectiveAll(ranks || null); }
+  setSkills(ranks) { this.baseDefs = effectiveAll(ranks || null); this.defs = this.baseDefs.map((d) => this.stretch(d)); }
+
+  // How much further than REACH what you wear lets you cast (INPUT.FAR, src/items/items.js writeWeapon), at most REACH_CAP more.
+  // The leash every bolt, zone and missile is held on grows with it, and so does each spell's own range, cone, jump and seeking
+  // (FAR_KEYS). Blink and Stormstep are ways to move, and keep theirs.
+  setFar(f) {
+    f = Math.max(1, Math.min(1 + REACH_CAP, +f || 1));
+    if (f === this.far) return;
+    this.far = f; this.reach = REACH * f; this.farCache = new Map();
+    this.defs = this.baseDefs.map((d) => this.stretch(d));
+  }
+
+  // A row as far as you reach now: itself with no gear for it, else a stretched copy (kept, so a row is copied once a change).
+  stretch(d) {
+    if (this.far === 1 || !d) return d;
+    let s = this.farCache.get(d);
+    if (!s) {
+      s = { ...d };
+      for (const k of FAR_KEYS) if (typeof s[k] === 'number' && !(k === 'range' && d.cast === 'blink')) s[k] *= this.far;
+      this.farCache.set(d, s);
+    }
+    return s;
+  }
 
   reset() {
     Object.assign(this, {
@@ -364,7 +390,7 @@ export class Casting {
     const p = sim.player;
     const t = p.clip === 'staff_cast' ? p.t : null;
     if (t === null) return;
-    const id = WEAPONS[p.weapon].id, def = staffShot(id), info = p.rigs[3].clips.staff_cast;
+    const id = WEAPONS[p.weapon].id, row = staffShot(id), def = this.stretch(row), info = p.rigs[3].clips.staff_cast;
     const from = this.staffOrigin(p, sim.input[INPUT.VIEW_ASPECT] || 16 / 9, out3, sim);
     if (t < info.hit) {
       const k = smooth(t / info.hit);
@@ -375,7 +401,7 @@ export class Casting {
     if (p.fired) return;
     p.fired = true;
     // (A staff is what you fight with between spells, and when there's no mana for one: it costs little.)
-    const cost = (def.mana && !SPELLS.includes(def) ? def.mana * STAFF_THRIFT : STAFF_MANA) * (1 - this.thrift);
+    const cost = (def.mana && !SPELLS.includes(row) ? def.mana * STAFF_THRIFT : STAFF_MANA) * (1 - this.thrift);
     // With no mana for it the shot still goes, for nothing and weaker (DRY_BITE): out of mana is never out of things to do.
     // And a staff shot doesn't count as spending, for how soon the mana comes back fast: it's what you do while it does.
     const dry = this.mana < cost;
@@ -800,7 +826,7 @@ export class Casting {
       }
       b.x += dx * end; b.y += dy * end; b.z += dz * end;
       if (end < step - 1e-4 || b.age > b.maxAge) { this.land(b, sim, null, dx, dy, dz, end < step - 1e-4); continue; }
-      if (b.leash && Math.hypot(b.x - b.leash[0], b.y - b.leash[1], b.z - b.leash[2]) > REACH && this.spend(b, sim, dx, dy, dz)) continue;
+      if (b.leash && Math.hypot(b.x - b.leash[0], b.y - b.leash[1], b.z - b.leash[2]) > this.reach && this.spend(b, sim, dx, dy, dz)) continue;
       this.drawBolt(b, dx, dy, dz, sp, dt, sim);
       keep.push(b);
     }
@@ -1074,7 +1100,7 @@ export class Casting {
     if (this.trace(sim, z.x, gh + 1, z.z, z.dx, 0, z.dz, step + 0.3) < step + 0.3) {
       // Round a wall, not through it.
       const t = z.dx, turn = hash(z.seed) > 0.5 ? 1 : -1; z.dx = -z.dz * turn; z.dz = t * turn;
-    } else if (Math.hypot(z.x + z.dx * step - z.leash[0], z.z + z.dz * step - z.leash[1]) <= REACH) { z.x += z.dx * step; z.z += z.dz * step; }
+    } else if (Math.hypot(z.x + z.dx * step - z.leash[0], z.z + z.dz * step - z.leash[1]) <= this.reach) { z.x += z.dx * step; z.z += z.dz * step; }
     const rings = 9;
     for (let i = 0; i < rings; i++) {
       const u = i / (rings - 1), r = (0.12 + u ** 1.4 * 0.95) * R * end;
@@ -1379,7 +1405,7 @@ export class Casting {
         const seen = new Set(), r = def.radius;
         for (let i = 0; i < def.count; i++) {
           const a = b.ang + i * TAU / def.count, x = p.x + Math.cos(a) * r, y = p.y + 1.1, z = p.z + Math.sin(a) * r;
-          const k = this.nearestFoe(sim, x, y, z, REACH, seen) || this.nearestFoe(sim, x, y, z, REACH);
+          const k = this.nearestFoe(sim, x, y, z, this.reach, seen) || this.nearestFoe(sim, x, y, z, this.reach);
           if (!k) continue;
           seen.add(k);
           const L = Math.hypot(k.x - x, chestOf(k) - y, k.z - z) || 1;
@@ -1419,7 +1445,7 @@ export class Casting {
     const hit = new Set();
     let px = p.x, py = p.y, pz = p.z, made = 0;
     for (let i = 0; i < def.count; i++) {
-      if (1.5 + i * def.step > REACH) break;   // (and no further than you reach)
+      if (1.5 + i * def.step > this.reach) break;   // (and no further than you reach)
       const x = p.x + s * (1.5 + i * def.step), z = p.z + c * (1.5 + i * def.step);
       const step = Math.hypot(x - px, z - pz);
       const wall = sim.world.rayBoxes(px, py + 0.6, pz, s, 0, c, step);
@@ -1880,7 +1906,7 @@ export class Casting {
       let m = null;
       for (const o of this.missiles) if (o.state === 'hover' && (!m || o.hoverT > m.hoverT)) m = o;
       if (!m || (m.def.barrage && holding)) break;
-      const foe = this.lockOn(sim, REACH, 1.1) || this.nearestFoe(sim, m.x, m.y, m.z, REACH);
+      const foe = this.lockOn(sim, this.reach, 1.1) || this.nearestFoe(sim, m.x, m.y, m.z, this.reach);
       // Nothing to hunt for long, it goes where you look.
       if (!foe && !(m.hoverT > 8 && this.state !== 'hold')) break;
       m.state = 'seek'; m.target = foe; m.age = 0; m.leash = [p.x, p.y + EYE, p.z];
@@ -1911,7 +1937,7 @@ export class Casting {
         keep.push(m);
         continue;
       }
-      if (m.target && m.target.dead) m.target = this.nearestFoe(sim, m.x, m.y, m.z, REACH);
+      if (m.target && m.target.dead) m.target = this.nearestFoe(sim, m.x, m.y, m.z, this.reach);
       const sp = Math.min(m.def.speed || 26, 7 + m.age * 90);
       let dx = m.vx, dy = m.vy, dz = m.vz;
       const L = 1 / (Math.hypot(dx, dy, dz) || 1);
@@ -1926,7 +1952,7 @@ export class Casting {
       const step = sp * dt, end = this.trace(sim, m.x, m.y, m.z, dx, dy, dz, step);
       const foe = this.foeOn(sim, m.x, m.y, m.z, dx, dy, dz, end, 0.08);
       // (No further than you reach: there it goes out, as a bolt does.)
-      if (!foe && Math.hypot(m.x - m.leash[0], m.y - m.leash[1], m.z - m.leash[2]) > REACH) { this.burst(FX.FLARE, e, m.x, m.y, m.z, 0.25, 0.04, 0.18, { alpha: 0.6 }); continue; }
+      if (!foe && Math.hypot(m.x - m.leash[0], m.y - m.leash[1], m.z - m.leash[2]) > this.reach) { this.burst(FX.FLARE, e, m.x, m.y, m.z, 0.25, 0.04, 0.18, { alpha: 0.6 }); continue; }
       if (foe || end < step - 1e-4 || m.age > 4) {
         const t = foe ? foe.t : end, x = m.x + dx * t, y = m.y + dy * t, z = m.z + dz * t;
         if (foe) {

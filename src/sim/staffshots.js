@@ -360,7 +360,7 @@ export function installStaffShots(Casting, { chestOf, radiusOf, hash, smooth, cl
     } else { z.vy += (1.5 - z.vy) * dt; }
     z.x += z.vx * dt; z.y += z.vy * dt; z.z += z.vz * dt;
     // (No further than you reach: there it fades, having caught no one.)
-    if (Math.hypot(z.x - z.leash[0], z.y - z.leash[1], z.z - z.leash[2]) > REACH) { this.burst(FX.PUFF, e, z.x, z.y, z.z, 0.15, 0.6, 0.3, { alpha: 0.5 }); return false; }
+    if (Math.hypot(z.x - z.leash[0], z.y - z.leash[1], z.z - z.leash[2]) > this.reach) { this.burst(FX.PUFF, e, z.x, z.y, z.z, 0.15, 0.6, 0.3, { alpha: 0.5 }); return false; }
     const sp = Math.hypot(z.vx, z.vy, z.vz) || 1, w = Math.sin(z.t * 13 + z.seed * 20) * 0.08, g = smooth(z.t / 0.35);
     this.fx(FX.ORB, e, z.x, z.y + w, z.z, def.size * (0.3 + 0.7 * g), 0, 1, 0, 0, 0.4 + 0.6 * g, 4 * g, 3, 0, z.seed);
     this.fx(FX.TRAIL, e, z.x, z.y + w, z.z, def.size * 0.8 * g, -z.vx / sp, -z.vy / sp, -z.vz / sp, 0.9 * g, 0.6 * g, 0, 0, 0, z.seed);

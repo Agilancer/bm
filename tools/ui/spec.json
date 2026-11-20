@@ -1396,6 +1396,47 @@
    "brief": "The twelve finest gems: the same six kinds across as on the gems sheet, in the same order and colours, in two cuts finer than its bottom row. Each is the flawless stone of its kind from that sheet, the same shape, made grander. Top row, brilliant: brighter, every facet blazing, with a soft halo of its own colour close about it. Bottom row, perfect: brighter again, in a wide glowing halo, with a white four-pointed star of light on its upper edge and two or three small sparks around it. The two in a column are plainly the same stone, the lower the finer; the six in a row are plainly the same cut in different colours. Loose stones only: no settings, no rings, no frames, and nothing lettered."
   },
   {
+   "id": "aquamarine_gems",
+   "title": "Icons: the aquamarine, all five cuts",
+   "priority": "C",
+   "size": [
+    1536,
+    1024
+   ],
+   "kind": "grid",
+   "cols": 5,
+   "rows": 1,
+   "out": 160,
+   "cells": [
+    {
+     "name": "gem_aquamarine_0",
+     "group": "goods",
+     "what": "An aquamarine, clear sea-green: uncut and cloudy."
+    },
+    {
+     "name": "gem_aquamarine_1",
+     "group": "goods",
+     "what": "An aquamarine, clear sea-green: cleanly faceted."
+    },
+    {
+     "name": "gem_aquamarine_2",
+     "group": "goods",
+     "what": "An aquamarine, clear sea-green: brilliant, many-faceted, lit from within."
+    },
+    {
+     "name": "gem_aquamarine_3",
+     "group": "goods",
+     "what": "An aquamarine, clear sea-green: a flawless stone grown brighter, its facets blazing, a soft halo of its own colour about it."
+    },
+    {
+     "name": "gem_aquamarine_4",
+     "group": "goods",
+     "what": "An aquamarine, clear sea-green: the finest there is: a flawless stone ablaze, in a wide halo of its own colour, a white four-pointed star of light glinting on its upper edge and smaller sparks about it."
+    }
+   ],
+   "brief": "Five aquamarines, a clear sea-green between the emerald and the sapphire of the gem sheets, in the same five cuts left to right as on those sheets: rough (uncut, lumpy, cloudy), cut (a clean six-sided faceted stone), flawless (brilliant, many-faceted, lit from within), brilliant (brighter, a soft sea-green halo close about it) and perfect (ablaze, a wide halo, rays of its own colour and a white four-pointed star on its upper edge). Same size and light as the stones on those sheets, each centred in its cell on a transparent background. No letters, no frames."
+  },
+  {
    "id": "icons_marks",
    "title": "Icons: quest marks and party roles",
    "priority": "C",

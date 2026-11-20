@@ -32,6 +32,8 @@ import { SkullEyes } from './skulleyes.js';
 import { BoardMarks } from './boardmarks.js';
 import { ShadowCache } from './shadowcache.js';
 import { GEM_CUTS, SKULL_ANCHORS } from './skullgemdata.js';
+// A gem with no cut of its own in the skull's sockets (it came after skull_gems.glb was made) wears the nearest-coloured one's.
+const CUT_STANDIN = { aquamarine: 'emerald' };
 import { PATTERNS, SKINS } from '../items/skins.js';
 import { BODIES } from '../sim/undead.js';
 import { lerp, mat4Invert, mat4LookTo, mat4Mul, mat4Ortho, mat4Perspective, smoothstep } from '../core/math.js';
@@ -2746,7 +2748,7 @@ export class Renderer {
     const { prim, alb, nrm, mr } = src, device = this.device, out = [];
     let verts = 0, tris = 0;
     spots.forEach((name, i) => {
-      const cut = GEM_CUTS[gems[i]?.kind || 'empty'];
+      const cut = GEM_CUTS[gems[i]?.kind || 'empty'] || GEM_CUTS[CUT_STANDIN[gems[i].kind]] || GEM_CUTS.diamond;
       out.push({ name, cut, gem: gems[i] }); verts += cut.v[1]; tris += cut.i[1];
     });
     const pos = new Float32Array(verts * 3), nr = new Float32Array(verts * 3), uv = new Float32Array(verts * 2), idx = new Uint32Array(tris);

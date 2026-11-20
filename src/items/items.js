@@ -4,7 +4,7 @@
 import { BEACON_COLOR, beaconLines } from './beacon.js';
 import { SKINS, rollPattern, rollSkin } from './skins.js';
 import { INPUT, WEAPONS } from '../core/layout.js';
-import { POWER_CAP, REGEN_CAP, SPELLS, THRIFT_CAP } from '../sim/spells.js';
+import { POWER_CAP, REACH, REACH_CAP, REGEN_CAP, SPELLS, THRIFT_CAP } from '../sim/spells.js';
 import { SCROLLS } from '../sim/skills.js';
 import { STAFFS2 } from './staffs2.js';
 import { SHIELDS2 } from './shields2.js';
@@ -203,6 +203,7 @@ const GEAR_AFFIXES = [
 const WIZ_AFFIXES = [
   { stat: 'power', pos: 'pre', tiers: [['Kindled', 0.06, 0.1], ['Searing', 0.11, 0.17], ['Cataclysmic', 0.18, 0.28]] },
   { stat: 'thrift', pos: 'pre', tiers: [['Frugal', 0.03, 0.05], ['Spare', 0.06, 0.08], ['Ascetic', 0.09, 0.13]] },
+  { stat: 'reach', pos: 'pre', tiers: [['Reaching', 0.04, 0.06], ['Farcasting', 0.07, 0.1], ['Horizon-Bound', 0.11, 0.15]] },
   { stat: 'regen', pos: 'suf', tiers: [['of Trickling', 0.06, 0.1], ['of the Spring', 0.12, 0.18], ['of the Flood', 0.2, 0.3]] },
   { stat: 'mana', pos: 'suf', int: true, tiers: [['of the Well', 12, 20], ['of the Deep Well', 22, 36], ['of the Abyss', 40, 64]] },
   { stat: 'leech', pos: 'suf', int: true, tiers: [['of Thirst', 1, 2], ['of the Red Cup', 2, 3], ['of the Long Drink', 3, 5]] },
@@ -215,6 +216,7 @@ const ROBE_AFFIXES = [
   { stat: 'mana', pos: 'suf', int: true, tiers: [['of the Well', 6, 10], ['of the Deep Well', 11, 18], ['of the Abyss', 19, 30]] },
   { stat: 'life', pos: 'suf', int: true, tiers: [['of Broth', 6, 10], ['of the Old Oak', 11, 18], ['of the Old Blood', 19, 30]] },
   { stat: 'thrift', pos: 'suf', tiers: [['of Ease', 0.01, 0.02], ['of the Long Road', 0.02, 0.03], ['of Scant Words', 0.04, 0.05]] },
+  { stat: 'reach', pos: 'suf', tiers: [['of the Long Arm', 0.02, 0.03], ['of the Far Field', 0.035, 0.05], ['of the Horizon', 0.055, 0.075]] },
 ];
 // What a shield can roll. Its ward and these count only with no skull in hand: see gearTotals.
 const SHIELD_AFFIXES = [
@@ -223,6 +225,7 @@ const SHIELD_AFFIXES = [
   { stat: 'life', pos: 'suf', int: true, tiers: [['of Broth', 8, 12], ['of the Old Oak', 14, 22], ['of the Old Blood', 24, 36]] },
   { stat: 'mana', pos: 'suf', int: true, tiers: [['of the Well', 8, 14], ['of the Deep Well', 15, 24], ['of the Abyss', 26, 40]] },
   { stat: 'regen', pos: 'suf', tiers: [['of Trickling', 0.04, 0.07], ['of the Spring', 0.08, 0.12], ['of the Flood', 0.13, 0.2]] },
+  { stat: 'reach', pos: 'suf', tiers: [['of the Long Arm', 0.03, 0.04], ['of the Far Field', 0.05, 0.07], ['of the Horizon', 0.08, 0.1]] },
 ];
 const SHIELD_WARD = [6, 8, 11, 15, 20];   // by rarity, before its quality
 const TOWER_WARD = 1.25;                  // a tower shield's ward, against a kite's of the same rarity
@@ -247,6 +250,7 @@ export const GEMS = {
   sapphire: { name: 'Sapphire', color: '#3f7fe0', stat: 'mana', values: [10, 16, 24, 36, 54] },
   amethyst: { name: 'Amethyst', color: '#a45ad6', stat: 'thrift', values: [0.02, 0.035, 0.05, 0.07, 0.10] },
   diamond: { name: 'Diamond', color: '#cfe6ee', stat: 'life', values: [10, 18, 30, 46, 70] },
+  aquamarine: { name: 'Aquamarine', color: '#35d0c4', stat: 'reach', values: [0.03, 0.05, 0.08, 0.11, 0.16] },
 };
 // A gem's cut, made sure of: a whole number that there is a cut for (a save or a console can hand anything in).
 export const gemGrade = (g) => Math.max(0, Math.min(GEM_GRADES.length - 1, Math.round(+g) || 0));
@@ -265,6 +269,7 @@ const STAT_TEXT = {
   regen: (v) => `+${pct(v)} mana regeneration`,
   mana: (v) => `+${v} mana`,
   thrift: (v) => `-${pct(v)} mana cost`,
+  reach: (v) => `+${pct(v)} spell and staff range`,
 };
 
 // A small seeded generator (mulberry32), so a roll can be replayed.
@@ -610,6 +615,7 @@ export const wornSlot = (item) => (item.type === 'weapon' ? 'main' : item.type =
 const CMP = [
   ['armor', (v) => `${v} ward`], ['life', (v) => `${v} life`], ['mana', (v) => `${v} mana`], ['power', (v) => `${pct(v)} spell damage`],
   ['regen', (v) => `${pct(v)} mana regeneration`], ['leech', (v) => `${v} life on each hit`], ['thrift', (v) => `${pct(v)} less mana cost`],
+  ['reach', (v) => `${pct(v)} spell and staff range`],
 ];
 const UP = '#7fd67f', DOWN = '#e0705a';
 export function compareLines(item, slots) {
@@ -639,11 +645,12 @@ export function compareLines(item, slots) {
 const GEM_LOOK = {
   ruby: 'Sheds rising embers and a warm, flickering light.', topaz: 'Crackles with sparks, and strobes like a storm far off.', emerald: 'Breathes out a slow green mist.',
   sapphire: 'Falls in snow, with a cold steady light.', amethyst: 'Draws dark motes in out of the air.', diamond: 'Throws prisms that turn through every colour.',
+  aquamarine: 'Sends out thin tide-green threads that run far, and ebb back.',
 };
 
 // All that what's worn and held comes to. With a skull in hand the skull counts and the shield doesn't: ward, words, gems, ability, nothing. It's only there to ride.
 export function gearTotals(slots) {
-  const add = { armor: 0, life: 0, power: 0, regen: 0, mana: 0, thrift: 0, leech: 0, shPower: 0, shValue: 0 };
+  const add = { armor: 0, life: 0, power: 0, regen: 0, mana: 0, thrift: 0, reach: 0, leech: 0, shPower: 0, shValue: 0 };
   const skull = slots.skull;
   for (const [slot, it] of Object.entries(slots)) {
     if (!it || (slot === 'off' && skull)) continue;
@@ -662,6 +669,7 @@ const STAT_MOST = {
   power: `Everything you wear together adds at most ${POWER_CAP * 100}% spell damage.`,
   regen: `Everything you wear together adds at most ${REGEN_CAP * 100}% mana regeneration.`,
   thrift: `Everything you wear together takes at most ${THRIFT_CAP * 100}% off a cast.`,
+  reach: `Everything you wear together adds at most ${Math.round(REACH_CAP * 100)}% range: ${REACH} paces at most becomes ${Math.round(REACH * (1 + REACH_CAP) * 10) / 10}.`,
 };
 
 // Puts the staff, or empty hands, what's worn and what the level comes to, in the shared block for the sim thread to take up.
@@ -678,5 +686,7 @@ export function writeWeapon(input, item, worn = gearTotals({}), lv = { power: 1,
   // (Both have a most: src/sim/spells.js. Mana is meant to run out.)
   input[INPUT.REGEN] = (1 + Math.min(worn.regen, REGEN_CAP)) * lv.regen;
   input[INPUT.THRIFT] = Math.min(worn.thrift, THRIFT_CAP);
+  // (How much further everything you cast goes: src/sim/casting.js setFar. It has a most too, so a boss's wheel still matters.)
+  input[INPUT.FAR] = 1 + Math.min(worn.reach || 0, REACH_CAP);
   input[INPUT.SH_POWER] = worn.shPower; input[INPUT.SH_VALUE] = worn.shValue;
 }

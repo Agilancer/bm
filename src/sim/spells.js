@@ -23,6 +23,9 @@ export const STAFF_GIVE = 4;
 // its middle in the delves, src/sim/moves.js fireWheel), so to hit one from where you stand, you stand where its wheel turns.
 // (Blink and Stormstep are ways to move, not to strike from afar: they keep their own range.)
 export const REACH = 9;
+// Gear and gems can stretch it (the 'reach' stat, src/items/items.js): everything you cast goes this share further at most, and
+// whatever ranges a spell has of its own (a cone, a jump, a seeking bolt's sight) stretch with it. Blink and Stormstep don't.
+export const REACH_CAP = 0.2;
 
 // What each is made of, which picks its colours in the shaders and its noise.
 export const ELEM = { FIRE: 0, FROST: 1, ARCANE: 2, STORM: 3, HEAL: 4, LIGHT: 5, DRAIN: 6, BONE: 7, VOID: 8, POISON: 9, SPIRIT: 10, STONE: 11 };
