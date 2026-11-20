@@ -9,7 +9,7 @@
 // Its doors: each shut one's leaf is drawn with its house; opened, that's folded away (hideDoor) and the leaf's swung as a
 // thing of its own (src/items/phobos-doors.js).
 
-import { buildPhobosCell, unpackCell } from '../core/sites.js';
+import { buildPhobosCell, buildSites, unpackCell } from '../core/sites.js';
 import { CASTLE_CELLS, CELL, cellOf, phobosHouses, wallCells } from '../core/phobos-build.js';
 import { cityTowers } from '../core/phobos-towers.js';
 import { CITY, CRAG } from '../core/east.js';
@@ -20,12 +20,16 @@ const NEAR = 150, FAR = 230, KEEP = 30;   // metres to build a cell at, and to l
 // (Kept: more than are ever wanted at once, which is twelve at its distances, or they'd be built and let go in turn for good.)
 const LEAN = { near: 105, far: 165, keep: 14 };
 
+/** Every cell of the city with something in it to build from near. */
+export function phobosCells() { return [...new Set([...phobosHouses().map((h) => h.cell), ...CASTLE_CELLS, ...wallCells(), ...cityTowers().map((t) => t.cell)])]; }
+
 export class PhobosNear {
   constructor(renderer) {
     this.r = renderer;
     this.cells = new Map();       // cell -> { VB, IB, opaque, cut, x, z }
     // (The cells with houses in, and the crag's: src/core/phobos-build.js castleNear; and the towers', gone into.)
-    this.have = new Set([...phobosHouses().map((h) => h.cell), ...CASTLE_CELLS, ...wallCells(), ...cityTowers().map((t) => t.cell)]);
+    // (Worked out with the land on its thread, where it was built there: src/core/sites.js adoptSites.)
+    this.have = new Set(buildSites().phCells || phobosCells());
     this.count = 0;
     this.doors = new Map();       // door id -> { cell, VB, runs, hidden }
     const lean = !!renderer.tier.lean;
@@ -98,7 +102,13 @@ export class PhobosNear {
     if (this.apart) {
       // (What's come back is put up, if it's still wanted: you may have gone on past it. Then the nearest wanting is asked for.)
       // (A thread that's said nothing of a cell for ten seconds isn't going to: ended, and the next one asked starts another.)
-      if (this.asked && performance.now() - this.askedAt > 10000) { try { this.builder?.terminate(); } catch { /* gone */ } this.builder = null; this.asked = null; }
+      // (Half a minute: its first cell waits on the thread reading the city in, which is seconds on a phone. And the second
+      // time it happens the cells are built here from then on, as they used to be: slow, but there.)
+      if (this.asked && performance.now() - this.askedAt > 30000) {
+        try { this.builder?.terminate(); } catch { /* gone */ }
+        this.builder = null; this.asked = null;
+        if ((this.quiet = (this.quiet || 0) + 1) >= 2) this.apart = false;
+      }
       const got = this.ready.shift();
       if (want && !this.asked && !(got && got[0] === want[0])) this.ask(want[0]);
       want = null;

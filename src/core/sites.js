@@ -1593,19 +1593,22 @@ export function packSites(b) {
 /** A land built elsewhere (packSites), taken as this thread's own: buildSites() gives it from here on. Nothing in it stops a body. */
 export function adoptSites(d) {
   built = { geometry: true, lean: d.lean, apart: true, parts: new Map(d.parts.map(([name, pos, nrm, uv, idx]) => [name, { pos, nrm, uv, idx }])),
-    colliders: [], floors: [], spots: d.spots, fires: d.fires, groups: new Map(d.groups), lamps: d.lamps, doors: d.doors };
+    colliders: [], floors: [], spots: d.spots, fires: d.fires, groups: new Map(d.groups), lamps: d.lamps, doors: d.doors,
+    // (And of Phobos, what the page would else work out for itself as the game began, a second and a half of it on a PC:
+    // which cells have something to build from near, src/gfx/phobos-near.js. Its doors: src/core/phobos-towers.js adoptCityDoors.)
+    phCells: d.phCells || null };
   return built;
 }
 
 /** The land with its corners, built on a thread of its own and taken (adoptSites). false if it couldn't be: then buildSites builds it here. */
-export function buildSitesApart(lean, opening) {
+export function buildSitesApart(lean, opening, onPhobos = null) {
   if (built?.geometry && built.lean === lean) return Promise.resolve(true);
   if (typeof Worker === 'undefined') return Promise.resolve(false);
   return new Promise((resolve) => {
     let w = null;
     const done = (ok, why) => { if (why) console.warn('the land, built apart:', why); try { w?.terminate(); } catch { /* gone already */ } resolve(ok); };
     try { w = new Worker(new URL('./sites.worker.js', import.meta.url), { type: 'module' }); } catch (err) { done(false, err.message); return; }
-    w.onmessage = (e) => { if (e.data.error) done(false, e.data.error); else { adoptSites(e.data); done(true); } };
+    w.onmessage = (e) => { if (e.data.error) done(false, e.data.error); else { adoptSites(e.data); onPhobos?.(e.data); done(true); } };
     w.onerror = (e) => done(false, e.message || 'its thread failed');
     w.postMessage({ lean, opening });
   });

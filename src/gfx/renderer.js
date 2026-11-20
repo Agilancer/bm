@@ -13,6 +13,7 @@ import { roadSegments } from '../core/roads.js';
 import { terrainHeight } from '../core/terrain.js';
 import { PORTAL_MODELS, buildSites, buildSitesApart, buildUnder, dropSiteGeometry } from '../core/sites.js';
 import { PhobosNear } from './phobos-near.js';
+import { adoptCityDoors } from '../core/phobos-towers.js';
 import { StairsNear } from './stairs-near.js';
 import { DELVES, PORTAL_SPOTS, braziers, caveFloorY, caveRoofY, delveAt, inDungeon, torches } from '../core/dungeon.js';
 import { DOOR, HALL, hallLights, inHall } from '../core/testhall.js';
@@ -292,7 +293,7 @@ export class Renderer {
     const twice = new Map(), wanted = new Map();
     for (const path of models) wanted.set(path, (wanted.get(path) || 0) + 1);
     const read = (path) => {
-      if ((wanted.get(path) || 1) < 2) return getFile(base + path).then(parseGLB);
+      if (!twice.has(path) && (wanted.get(path) || 1) < 2) return getFile(base + path).then(parseGLB);
       const glb = twice.get(path) || twice.set(path, getFile(base + path).then(parseGLB)).get(path);
       wanted.set(path, wanted.get(path) - 1);
       if (wanted.get(path) < 1) twice.delete(path);
@@ -353,7 +354,7 @@ export class Renderer {
     // (Built here it was the load's one long stop: five seconds with the bar still. If it can't be had that way,
     // buildStatics builds it here as it used to.)
     steps.add();
-    const landBuilt = timed('the countries built', buildSitesApart(lean, this.openingEnabled).then((ok) => { tick(); return ok; }));
+    const landBuilt = timed('the countries built', buildSitesApart(lean, this.openingEnabled, (d) => adoptCityDoors(d.phDoors)).then((ok) => { tick(); return ok; }));
 
     // ---- the pictures ----
     steps.add(manifest.layers.length * 2 + manifest.ground.length * 2 + p2.layers.length * 2);

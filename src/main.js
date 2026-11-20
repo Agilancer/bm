@@ -365,16 +365,19 @@ async function boot(plan, poolSize) {
     let times = [];
     try { times = JSON.parse(sessionStorage.getItem(GPU_LOST_AT + 's') || '[]').filter((t) => Date.now() - t < 600000); } catch { /* no storage */ }
     if (Date.now() - last < 60000 || times.length >= 2) {
-      noteRun({ ended: 'gpu', gpu: gpuNote?.() || '' });
+      noteRun({ ended: document.hidden ? 'hidden' : 'gpu', gpu: gpuNote?.() || '' });
+      failOnTitle('The graphics reset again. Reload the page to carry on: your game is kept for Continue.');
       await Promise.race([keepForReset?.(), new Promise((r) => setTimeout(r, 3000))]).catch(() => {});
-      failOnTitle('The graphics reset again. Reload the page to carry on: your game is kept for Continue.'); return;
+      return;
     }
     try { sessionStorage.setItem(GPU_LOST_AT + 's', JSON.stringify([...times, Date.now()])); } catch { /* no storage */ }
     try {
       sessionStorage.setItem(GPU_LOST_AT, String(Date.now())); sessionStorage.setItem(GPU_LOST_OFFER, '1'); sessionStorage.setItem('velscour.skipSplash', '1');
       sessionStorage.setItem(GPU_LOST_NOTE, gpuNote?.() || '');
     } catch { /* no storage */ }
-    noteRun({ ended: 'gpu', gpu: gpuNote?.() || '' });
+    // (Taken back while the page was put away, as a phone does to any page: no sign the game was too much for it, so not
+    // noted as a loss, which would load the next start lighter for good.)
+    noteRun({ ended: document.hidden ? 'hidden' : 'gpu', gpu: gpuNote?.() || '' });
     failOnTitle('The graphics reset. Keeping your game, and starting again...');
     await Promise.race([keepForReset?.(), new Promise((r) => setTimeout(r, 3000))]).catch(() => {});
     // (Out of sight, it waits to be looked at again: loading the whole game where nobody's watching is the surest way to

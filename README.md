@@ -2599,7 +2599,7 @@ server up; steps `mem`, `threads` with `ATTACH=1`, `dump` for Chrome's own accou
 | A phone's settings: threads | 9 | 5 |
 | Medium, a laptop's (1920 x 1080): settled | 3,300 MB | 1,740 MB (1,140 collected) |
 | Ultra: settled | 3,360 MB | 1,960 MB |
-| The longest the page stood still while loading | 4.9 s | 0.6 s on a phone's settings, 1.0 s on Ultra |
+| The longest the page stood still while loading | 4.9 s | 0.4 s, and one of 1.1 to 1.3 s as the game begins (not yet found) |
 | Asked of the GPU on a phone's settings | 570 MB | the same |
 | Asked of the GPU at Medium, and at Ultra | 1.85 GB, 5.8 GB | the same |
 
