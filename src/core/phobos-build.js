@@ -2091,7 +2091,8 @@ export function castleTowers() {
   const horns = add('horns', 'horns', 'the Horn Tower', 11140, 135, 8, WARDS[1][1] + 218, { square: true });
   const patio = [-1, 1].map((s) => add(`patio${s}`, 'patio', s < 0 ? 'the North Belvedere' : 'the South Belvedere', x - 184 - 70, z + s * 100, 9, 360));
   for (const t of [...sat, ...small, ...needles, clock, horns, ...patio]) {
-    t.deck = t.kind === 'clock' ? t.top - 26 : t.kind === 'horns' ? t.top - 30 : t.top - (t.kind === 'small' ? 7 : 11);
+    // (A Needle's under its head, which is twice its shaft across: a deck up in the head looked at the head's inside.)
+    t.deck = t.kind === 'clock' ? t.top - 26 : t.kind === 'horns' ? t.top - 30 : t.kind === 'needle' ? t.top - 29 : t.top - (t.kind === 'small' ? 7 : 11);
     // (One whose head doesn't clear what it stands through is in the Keep's body: seen from outside, never climbed.)
     t.buried = t.base !== null && t.deck < t.base + 6;
     if (t.buried) continue;
@@ -2147,10 +2148,12 @@ export function castleTowers() {
   }
   // (And the rim towers to the spires they stand under.)
   for (const [i, s] of [[0, 0], [1, 1], [3, 2], [5, 3], [7, 4], [2, 1], [6, 4]]) { const h = sat[i].top - 30, sp = spires[s]; span(sat[i], h, sp, snap(sp, h)); }
-  // The Needles: each to the two rim towers it stands over, the three east ones to each other (the High Round), and each
-  // of the middle four in to a spire's upper gallery.
+  // The Needles: each to the two rim towers it stands over, the Gallows and the Thorn to each other, and each of the
+  // middle four in to a spire's upper gallery.
   for (const [n, i, j] of [[0, 0, 1], [1, 2, 3], [2, 3, 4], [3, 4, 5], [4, 5, 6], [5, 7, 8]]) { link(needles[n], sat[i], 30); link(needles[n], sat[j], 46); }
-  for (const [m, n] of [[1, 2], [2, 3], [3, 4]]) link(needles[m], needles[n], 70 + 12 * m, { arch: 11, piers: true, w: 4.5 });
+  // (One only, the High Bridge, from the Gallows Needle to the Thorn: the Widow's to the Gallows and the Thorn to the Red
+  // ran through the Crow Tower's crown and the Gibbet Watch's, which join those Needles anyway.)
+  for (const [m, n] of [[2, 3]]) link(needles[m], needles[n], 94, { arch: 11, piers: true, w: 4.5 });
   for (const [n, s, lv] of [[1, 1, 1], [2, 2, 1], [3, 3, 1], [4, 4, 1]]) { const sp = spires[s], h = Math.min(needles[n].deck - 16, gal(sp, lv)); span(needles[n], h, sp, gal(sp, lv), { arch: 9, piers: true, w: 4.5 }); }
   // The Clock Tower to the Horn Tower and on to the Ringers' Tower; the belvederes to the Page's and the Kitchen Towers.
   link(clock, horns, 44, { arch: 5 }); span(horns, horns.top - 60, sat[15], sat[15].top - 30, { arch: 4 });
@@ -2258,7 +2261,8 @@ function climb(K, t, draw) {
     }
   }
   // (A lamp in the turret every two turns, so the stair isn't climbed blind.)
-  for (let yy = y0 + 4; yy < top; yy += TURN * 2) (K.lamps ||= []).push({ p: [t.tx - Math.cos(t.ta) * RT, yy + 2.6, t.tz - Math.sin(t.ta) * RT], c: [1, 0.5, 0.22], r: 14, i: 14, flicker: 0.3 });
+  // (Bright, and first among the frame's twelve when you're on it: a stair climbed blind is no stair.)
+  for (let yy = y0 + 4; yy < top; yy += TURN) (K.lamps ||= []).push({ p: [t.tx - Math.cos(t.ta) * RT, yy + 2.6, t.tz - Math.sin(t.ta) * RT], c: [1, 0.56, 0.26], r: 12, i: 34, flicker: 0.3, prio: 6 });
   if (t.from !== null) {
     const fx = t.tx + Math.cos(t.ta + 1.9) * (R + 1.6), fz = t.tz + Math.sin(t.ta + 1.9) * (R + 1.6), fy = t.base > 290 ? t.from : Y(fx, fz);
     K.drum('dark:stone', fx, fy - 0.3, fz, 0.6, 2.5, 6, { r2: 0.4, collide: false }); K.drum('char:stone', fx, fy + 2.2, fz, 0.34, 0.5, 8, { r2: 0.62, collide: false });

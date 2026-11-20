@@ -22,7 +22,7 @@ test('every tower that shows its head has a stair turret, galleries on its rhyth
     assert.ok(Number.isFinite(t.tx) && Number.isFinite(t.ta), `${t.key}: a turret`);
     const y0 = t.from ?? PLAIN + t.levels[0];
     for (const h of [...t.levels, t.deck]) assert.ok(Math.abs(((PLAIN + h - y0) / TURN) - Math.round((PLAIN + h - y0) / TURN)) < 1e-6, `${t.key}: its gallery at ${h} is ${((PLAIN + h - y0) / TURN).toFixed(2)} turns up`);
-    assert.ok(t.deck < t.top - 2 && t.deck > t.top - 40, `${t.key}: deck ${t.deck} under its crown at ${t.top}`);
+    assert.ok(t.deck < t.top - 2 && t.deck > t.top - 44, `${t.key}: deck ${t.deck} under its crown at ${t.top}`);
   }
   assert.equal(towers.filter((t) => t.kind === 'needle' && !t.buried).length, 6, 'the six Needles');
 });

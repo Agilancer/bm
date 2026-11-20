@@ -1020,7 +1020,7 @@ export const QUESTS_CASTLE = {
     giver: 'ho_wren',
     needs: 'the_scriveners_lift',
     offer: [
-      "You want to run with us, you run the High Round first. Four Needles past the rim: the Widow's, the Gallows, the Thorn, the Red. Three bridges between them, a hand wide in places. Wider than they look. Narrower than you'd like.",
+      "You want to run with us, you run the High Round first. Four Needles past the rim: the Widow's, the Gallows, the Thorn, the Red. The High Bridge between the middle two, and the rim towers' bridges to the rest, a hand wide in places. Wider than they look. Narrower than you'd like.",
       "Stand on the deck of each. Don't get seen. And if you fall, fall quietly: I've a crew to think of.",
     ],
     accept: "Four Needles. I'll run it.",
