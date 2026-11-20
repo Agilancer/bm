@@ -664,6 +664,14 @@ function bridge(K, layer, a, b, w = 3, o = {}) {
     const u = (i + 0.5) / n, x = a[0] + dx * u, z = a[2] + dz * u, fy = Y(x, z) - 2, ty = bot(u) + 0.5;
     if (ty - fy < 190) K.box(layer, x, fy, z, 2.6, ty - fy, w * 0.8, yaw, { collide: false });
   }
+  // (o.dress: a corbel of two wedges under each end, where it springs from its tower; and under a long one his V, two struts
+  // down from its quarters to a point below its middle. A deck from nothing to nothing was a ribbon: the critics.)
+  if (o.dress && !K.lean) {
+    const was = K.soft; K.soft = true;
+    for (const u of [0.03, 0.97]) { const q = at(u, 0, bot(u) + 0.6); for (const off of [-w * 0.6, w * 0.6]) K.spike(layer, q[0] + sx * off, q[1], q[2] + sz * off, 1.5, -(6 + Math.min(6, L * 0.06)), 4, yaw); }
+    if (L > 55) { const tip = at(0.5, 0, bot(0.5) - Math.min(16, L * 0.14)); for (const u of [0.3, 0.7]) for (const off of [-w * 0.7, w * 0.7]) K.beam(layer, at(u, off, bot(u) + 0.3), [tip[0] + sx * off * 0.3, tip[1], tip[2] + sz * off * 0.3], 0.5); }
+    K.soft = was;
+  }
   // (walk: its deck is stood on, a tread at a time, following its fall and its arch. Its ends run a little into what it joins.)
   if (o.walk) {
     const m = Math.ceil((L + 4) / 0.9), rects = [];
@@ -1488,7 +1496,7 @@ function yardThings() {
 let YARD_THINGS = null;
 function castleNear(K, cell) {
   // (Its towers' stairs, galleries and decks: climb, below.)
-  for (const t of castleTowers().towers) if (t.cell === cell && t.kind !== 'spire') climb(K, t, 'soot:p2_keep_basalt');
+  for (const t of castleTowers().towers) if (t.cell === cell && t.kind !== 'spire') climb(K, t, 'p2_walk_paving');
   for (const t of (YARD_THINGS ||= yardThings())) if (t.cell === cell) {
     const { x, z } = t, y = Y(x, z), NC = { collide: false };
     if (t.kind === 'slab') K.paving(t.way ? 'soot:p2_bone_joint_flags' : 'p2_ward_paving', x, z, 4.02, 4.02, 0, t.way ? 0.07 : 0.04);
@@ -1844,6 +1852,15 @@ export function phobosKeep(K) {
     }
   });
   for (let k = 0; k < 8; k++) { const t = k / 8 * TAU; K.drum(C, x + Math.cos(t) * 21, P(630), z + Math.sin(t) * 21, 2.8, 16, 8, { collide: false }); K.cone(R, x + Math.cos(t) * 21, P(646), z + Math.sin(t) * 21, 3.4, 18, 8); }
+  // (His red in runs of slits up the trunk's west half, lit day and night, and three of his banners down the patio's lip:
+  // at ten in the morning the Keep was a black cut-out from the yard. The critics, 2026-11-20.)
+  if (!K.lean) {
+    for (const [r, a, b] of stages) for (let k = 0; k < 5; k++) {
+      const t = Math.PI + (k - 2) * 0.42, d = r * Math.cos(Math.PI / 20) + 0.08, cx = x + Math.cos(t) * d, cz = z + Math.sin(t) * d, tx = -Math.sin(t) * 0.45, tz = Math.cos(t) * 0.45;
+      for (let yy = P(Math.max(a, 300)) + 8; yy + 4 < P(b) - 8; yy += 11) K.quad('blood:flame', [cx - tx, yy, cz - tz], [cx + tx, yy, cz + tz], [cx + tx, yy + 3.4, cz + tz], [cx - tx, yy + 3.4, cz - tz], [Math.cos(t), 0, Math.sin(t)]);
+    }
+    for (const zc of [-62, 0, 62]) hangBanner(K, x - 184 - 74 - 0.5, P(298), z + zc, [-1, 0], 8, 46, 5);
+  }
   K.cone('p2_bronze_plates', x, P(630), z, 17, KEEP.top - 630, 16);
   // His balcony, west, at the last stage's foot, looking down the whole of it to the Sill; and the fire in the crown.
   K.box(G, x - 38, P(578), z, 10, 2, 14, 0, { collide: false }); for (const s of [-1, 1]) K.spike(G, x - 43, P(578), z + s * 9, 2.6, -16, 4, 0);
@@ -1913,7 +1930,7 @@ export function phobosKeep(K) {
   tops.forEach(([ax, az, ar, , atop], i) => {
     const nx = tops[i + 1] || [x, z, 33, 0, 590], [bx, bz, br] = nx, bfoot = i < 4 ? tops[i + 1][3] + (tops[i + 1][4] - tops[i + 1][3]) * 0.34 : 560;
     const d = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / d, uz = (bz - az) / d;
-    bridge(K, KB, [ax + ux * ar, P(atop) - 20, az + uz * ar], [bx - ux * br, P(bfoot), bz - uz * br], 5.5, { arch: 6, piers: true, walk: true });
+    bridge(K, KB, [ax + ux * ar, P(atop) - 20, az + uz * ar], [bx - ux * br, P(bfoot), bz - uz * br], 5.5, { arch: 6, piers: true, walk: true, dress: true });
     // (Each spire's tie back to the Keep's body is walked now, to a step's lip: castleTowers.)
   });
   // The lesser towers: the satellites out on the crag's rim and between the spires, the turrets on the curtain and the
@@ -1922,34 +1939,71 @@ export function phobosKeep(K) {
   // (castleTowers, climb, below; the owner, 2026-11-19: "access ... all the different towers within Castle Velscour, and
   // go across all the bridges").
   const CT = castleTowers();
+  // (Their slate dark, in two bands: pale, a cone read as untextured. Their stone at three times its size on a shaft this
+  // tall: at its own six metres it was a chain-link moire from anywhere. The critics, 2026-11-20.)
+  const SL = 'soot:p2_fishscale_slate', SL2 = 'dark:p2_fishscale_slate', BIG = { tile: 3 };
+  // A cone in two bands of slate, the lower a little lighter.
+  const cone2 = (cx, cy, cz, r, h, sides) => { K.drum(SL, cx, cy, cz, r, h * 0.45, sides, { r2: r * 0.55, open: true, collide: false }); K.cone(SL2, cx, cy + h * 0.45, cz, r * 0.55, h * 0.55, sides); };
+  // A tower's crown, one of five by its number: a cone with pinnacles; his V in a ring of merlons round a fire; a drum wider
+  // than the shaft under a low cone; two horns, leaning out, a fire between; a broken crown, its merlons at all heights.
+  const crown = (t, cx, cy, cz, r, kind) => {
+    if (K.lean) { K.cone(SL, cx, cy, cz, r + 2.4, r * 4.4, 10); return; }
+    if (kind === 0) { cone2(cx, cy, cz, r + 2.6, r * (4 + 2 * hash2(t.i || 0, 9)), 12); for (let k = 0; k < 6; k++) { const a = k / 6 * TAU; K.spike(SL2, cx + Math.cos(a) * (r + 1.8), cy, cz + Math.sin(a) * (r + 1.8), 1.1, 9, 4, a); } }
+    else if (kind === 1) { for (let k = 0; k < 10; k++) { const a = (k + 0.5) / 10 * TAU; K.vee(G, cx + Math.cos(a) * (r + 1.4), cy, cz + Math.sin(a) * (r + 1.4), 1.5, 3.4, 0.5, -a + Math.PI / 2, 0.5); } K.drum('iron', cx, cy, cz, r * 0.3, 1.4, 8, { r2: r * 0.5, open: true, collide: false }); fire(K, cx, cy + 1, cz, r * 0.34, r * 0.9, 'blood:flame'); }
+    else if (kind === 2) { K.drum(G, cx, cy - 1, cz, r + 1.6, 3, 12, { r2: r + 4.4, open: true, collide: false }); K.drum(C, cx, cy + 2, cz, r + 4.4, 7, 12, { collide: false }); K.drum('blood:flame', cx, cy + 4, cz, r + 4.45, 1.6, 12, { open: true, collide: false }); for (let k = 0; k < 6; k++) { const a = (k + 0.5) / 6 * TAU; K.box(C, cx + Math.cos(a) * (r + 4.5), cy + 3.8, cz + Math.sin(a) * (r + 4.5), 1.3, 2, 1.3, -a, { collide: false }); } cone2(cx, cy + 9, cz, r + 5, r * 2.2, 12); }
+    else if (kind === 3) { const a = Math.atan2(cz - KEEP.z, cx - KEEP.x) + Math.PI / 2; for (const sg of [-1, 1]) K.spike(SL2, cx + Math.cos(a) * sg * r * 0.55, cy, cz + Math.sin(a) * sg * r * 0.55, r * 0.5, r * 4.6, 5, a, [Math.cos(a) * sg * 0.16, Math.sin(a) * sg * 0.16]); K.drum('iron', cx, cy, cz, r * 0.26, 1.2, 8, { r2: r * 0.42, open: true, collide: false }); fire(K, cx, cy + 0.9, cz, r * 0.3, r * 0.8, 'blood:flame'); }
+    else { for (let k = 0; k < 9; k++) { const a = (k + 0.5) / 9 * TAU, hh = 1.2 + 7 * hash2(k * 3 + (t.i || 0), 41) ** 2; K.box(C, cx + Math.cos(a) * (r + 1.2), cy, cz + Math.sin(a) * (r + 1.2), 1.1, hh, 0.7, -a + Math.PI / 2, { collide: false }); } K.cone(SL2, cx + r * 0.2, cy, cz - r * 0.15, r * 0.7, r * 2.6, 6); }
+  };
+  // His red in slits up a shaft, a run of them on the side toward the city and one a third round: lit day and night, so
+  // the castle isn't a black cut-out against the morning.
+  const slits = (cx, cz, r, y0, y1, sides, turn = 0) => {
+    if (K.lean) return;
+    for (const off of [0, Math.ceil(sides / 3)]) {
+      const i = ((Math.round((Math.PI - turn) / TAU * sides - 0.5) + off) % sides + sides) % sides, a = turn + (i + 0.5) / sides * TAU, d = r * Math.cos(Math.PI / sides) + 0.06, wx = cx + Math.cos(a) * d, wz = cz + Math.sin(a) * d, tx = -Math.sin(a) * 0.32, tz = Math.cos(a) * 0.32;
+      for (let yy = y0 + 9; yy + 3 < y1 - 8; yy += 13) K.quad('blood:flame', [wx - tx, yy, wz - tz], [wx + tx, yy, wz + tz], [wx + tx, yy + 2.6, wz + tz], [wx - tx, yy + 2.6, wz - tz], [Math.cos(a), 0, Math.sin(a)]);
+    }
+  };
+  K.soft = true;   // (their crowns' pinnacles and horns stop nothing: a phone, which has plain cones, is stopped by what a PC is)
   for (const t of CT.towers) {
     const { x: sx, z: sz, r, top, fy } = t;
     if (t.kind === 'sat') {
-      if (t.square) K.box(C, sx, fy - 4, sz, r * 0.95, P(top) - fy + 4, r * 0.95, t.i, { collide: fy > PLAIN + 100 });
-      else K.drum(C, sx, fy - 4, sz, r, P(top) - fy + 4, t.i % 3 ? 12 : 8, { collide: fy > PLAIN + 100 });
+      // (A battered foot, a shaft that narrows a little to its head, a gallery, its crown.)
+      const sides = t.square ? 4 : t.i % 3 ? 12 : 8, turn = t.square ? t.i + Math.PI / 4 : 0, rr = t.square ? r * 0.95 * Math.SQRT2 : r;
+      K.drum(C, sx, fy - 4, sz, rr * 1.22, 14, sides, { r2: rr, collide: fy > PLAIN + 100, turn, ...BIG });
+      K.drum(C, sx, fy + 10, sz, rr, P(top) - fy - 10, sides, { r2: rr * 0.94, collide: false, turn, ...BIG });
       K.drum(G, sx, P(top) - 5, sz, r, 2, 12, { r2: r + 2, open: true, collide: false }); K.drum(G, sx, P(top) - 3, sz, r + 2, 4, 12, { open: true, collide: false });
-      K.cone(R, sx, P(top) + 1, sz, r + 2.6, r * (4 + 2 * hash2(t.i, 9)), 12);
+      crown(t, sx, P(top) + 1, sz, r, t.i % 5);
+      slits(sx, sz, rr * 0.97, fy, P(top), sides, turn);
     } else if (t.kind === 'small') {
-      K.drum(C, sx, fy - 3, sz, r, P(top) - fy + 3, 10, { collide: false });
+      K.drum(C, sx, fy - 3, sz, r * 1.15, P(top) - fy + 3, 10, { r2: r * 0.94, collide: false, ...BIG });
       K.drum(G, sx, P(top) - 3, sz, r, 3, 10, { r2: r + 1.6, open: true, collide: false });
-      K.cone(R, sx, P(top), sz, r + 1.8, r * 5, 10);
+      crown(t, sx, P(top), sz, r - 0.6, [0, 4, 1, 0, 3][(t.i >> 1) % 5]);
+      slits(sx, sz, r, fy, P(top), 10);
     } else if (t.kind === 'needle') {
-      // A Needle: a pier down to the rock, a shaft in two stages, each narrower, a flared head with his fire in it and a
-      // spike of slate twice as tall as any satellite's, four pinnacles round its foot.
-      const mid = fy + (P(top) - fy) * 0.56;
-      K.drum(S, sx, fy - 4, sz, r + 2.6, mid - fy + 4, 10, { r2: r + 0.8, collide: false });
-      K.drum(C, sx, mid, sz, r + 0.8, P(top) - mid, 10, { r2: r, collide: false, turn: 0.31 });
+      // A Needle: a pier down to the rock, a shaft in two stages, each narrower; a head twice the shaft's width with his
+      // fire in a band round it; and a crown of its own, no two alike, a beacon burning in every one.
+      const mid = fy + (P(top) - fy) * 0.56, n = NEEDLES.findIndex((q) => q[0] === t.key), hd = P(top) - 15;
+      K.drum(S, sx, fy - 4, sz, r + 3.4, mid - fy + 4, 10, { r2: r + 0.8, collide: false, ...BIG });
+      K.drum(C, sx, mid, sz, r + 0.8, hd - mid, 10, { r2: r * 0.9, collide: false, turn: 0.31, ...BIG });
       K.drum(G, sx, mid - 2, sz, r + 1, 2.4, 10, { r2: r + 2.8, open: true, collide: false });
-      K.drum(G, sx, P(top) - 6, sz, r, 3, 12, { r2: r + 3.2, open: true, collide: false }); K.drum(G, sx, P(top) - 3, sz, r + 3.2, 4, 12, { open: true, collide: false });
-      K.drum('blood:flame', sx, P(top) - 11, sz, r + 0.25, 3.4, 12, { open: true, collide: false });
-      for (let k = 0; k < 6; k++) { const a = (k + 0.5) / 6 * TAU; K.box(C, sx + Math.cos(a) * (r + 0.3), P(top) - 11.3, sz + Math.sin(a) * (r + 0.3), 0.9, 4, 0.9, -a, { collide: false }); }
-      K.cone(R, sx, P(top) + 1, sz, r + 3.8, r * 8.5, 12);
-      for (let k = 0; k < 4; k++) { const a = k / 4 * TAU + 0.6; K.spike(R, sx + Math.cos(a) * (r + 2.6), P(top) + 1, sz + Math.sin(a) * (r + 2.6), 1.5, 17, 4, a); }
+      K.drum(G, sx, hd - 4, sz, r * 0.9, 4, 12, { r2: r * 1.9, open: true, collide: false });
+      K.drum(C, sx, hd, sz, r * 1.9, 13, 12, { collide: false });
+      K.drum('blood:flame', sx, hd + 5, sz, r * 1.9 + 0.06, 3, 12, { open: true, collide: false });
+      for (let k = 0; k < 6; k++) { const a = (k + 0.5) / 6 * TAU; K.box(C, sx + Math.cos(a) * (r * 1.9 + 0.1), hd + 4.6, sz + Math.sin(a) * (r * 1.9 + 0.1), 1.5, 3.8, 1.5, -a, { collide: false }); }
+      const cy = hd + 13;
+      if (n % 3 === 0) { cone2(sx, cy, sz, r * 1.9 + 0.8, r * 7, 12); for (let k = 0; k < 4; k++) { const a = k / 4 * TAU + 0.6; K.spike(SL2, sx + Math.cos(a) * r * 1.7, cy, sz + Math.sin(a) * r * 1.7, 1.6, 19, 4, a); } }
+      else if (n % 3 === 1) { const a = Math.atan2(sz - KEEP.z, sx - KEEP.x) + Math.PI / 2; for (const sg of [-1, 1]) K.spike(SL2, sx + Math.cos(a) * sg * r, cy, sz + Math.sin(a) * sg * r, r * 0.8, r * 6.5, 5, a, [Math.cos(a) * sg * 0.13, Math.sin(a) * sg * 0.13]); }
+      else { for (let k = 0; k < 12; k++) { const a = (k + 0.5) / 12 * TAU; if (!K.lean) K.vee(G, sx + Math.cos(a) * (r * 1.9 - 0.6), cy, sz + Math.sin(a) * (r * 1.9 - 0.6), 1.9, 4.4, 0.6, -a + Math.PI / 2, 0.5); } K.cone(SL2, sx, cy, sz, r * 0.9, r * 4.4, 8); }
+      // (Its beacon: the land's fire, so it moves; and a light the frame's twelve can take from afar.)
+      fire(K, sx, cy + (n % 3 === 0 ? r * 7 : 1.2), sz, 1.6, 5.5, 'blood:flame');
+      (K.lamps ||= []).push({ p: [sx, cy + 4, sz], c: [1, 0.22, 0.1], r: 70, i: 220, flicker: 0.3, prio: 20 });
+      slits(sx, sz, r + 0.6, fy, hd - 6, 10);
     }
     // (The spires, the Clock Tower, the Horn Tower and the patio's two are drawn where they always were: above, phobosCastle.)
     if (t.kind !== 'spire') climb(K, t, null);
   }
-  for (const b of CT.bridges) bridge(K, KB, b.a, b.b, b.w, { arch: b.arch, piers: b.piers, walk: true });
+  K.soft = false;
+  for (const b of CT.bridges) bridge(K, KB, b.a, b.b, b.w, { arch: b.arch, piers: b.piers, walk: true, dress: true });
   // (Their decks' fires: the far build's, so they move. The braziers themselves are the near cells'.)
   for (const t of CT.towers) for (const [bx, by, bz] of deckFires(t)) fire(K, bx, by + 1.7, bz, 0.55, 1.8);
 }
@@ -2128,14 +2182,19 @@ export function castleTowers() {
 function climb(K, t, draw) {
   if (t.buried) return;
   const s = stairOf(t), P = (h) => PLAIN + h, stops = [...t.levels.map(P), P(t.deck)];
-  const y0 = t.from ?? stops.shift(), top = P(t.deck), G = 'soot:p2_keep_basalt', seen = K.geometry !== false;
+  const y0 = t.from ?? stops.shift(), top = P(t.deck), G = 'dark:p2_bridge_ashlar', seen = K.geometry !== false;
   // (Every flight starts and ends on the side facing the tower: TURN to a turn.)
   const a0 = t.ta + Math.PI, R = RT + HW + 0.4;
   const gallery = (h, rOut, deck) => {
     walk(K, ringRects(t.x, t.z, s.re - 0.5, rOut, h));
     if (!seen) return;
     // (From far a band; on a phone only the deck's.)
-    if (!draw) { if (!K.lean || deck) K.drum(G, t.x, h - 1.1, t.z, s.re, 2.1, K.lean ? 8 : 12, { r2: rOut, open: true, collide: false }); return; }
+    if (!draw) {
+      if (!K.lean || deck) K.drum(G, t.x, h - 1.1, t.z, s.re, 2.1, K.lean ? 8 : 12, { r2: rOut, open: true, collide: false });
+      // (And a doorway's light on the shaft beside its turret, seen from the yard: there's a way up to here.)
+      if (!K.lean) { const b = t.ta + 0.9, d = s.re + 0.08, cx = t.x + Math.cos(b) * d, cz = t.z + Math.sin(b) * d, tx = -Math.sin(b) * 0.7, tz = Math.cos(b) * 0.7; K.quad('eve:flame', [cx - tx, h + 0.2, cz - tz], [cx + tx, h + 0.2, cz + tz], [cx + tx, h + 2.6, cz + tz], [cx - tx, h + 2.6, cz - tz], [Math.cos(b), 0, Math.sin(b)]); }
+      return;
+    }
     K.drum(G, t.x, h - 1.1, t.z, s.re, 1.1, 16, { r2: rOut, collide: false, open: true });
     for (let k = 0; k < 16; k++) { const b0 = k / 16 * TAU, b1 = (k + 1) / 16 * TAU, F = (b, r) => [t.x + Math.cos(b) * r, h, t.z + Math.sin(b) * r]; K.quad('p2_walk_paving', F(b0, s.re - 0.6), F(b1, s.re - 0.6), F(b1, rOut), F(b0, rOut), [0, 1, 0]); }
     // (Its parapet: a low wall round its edge, his V in every other stretch, left open where the turret stands; corbels under it.)
@@ -2172,7 +2231,7 @@ function climb(K, t, draw) {
         K.drum(G, t.tx, lo, t.tz, R, hi - lo, N, { collide: false, open: true, skip: door ? face : undefined });
         for (let i = 0; i < N; i++) { if (door && face(i)) continue; const am = (i + 0.5) / N * TAU; K.quad('ph_grey_plaster', Q(i + 1, R - 0.3, lo), Q(i, R - 0.3, lo), Q(i, R - 0.3, hi), Q(i + 1, R - 0.3, hi), [-Math.cos(am), 0, -Math.sin(am)]); }
       }
-      for (let yy = y0 + 5, j = 0; yy < top; yy += 6, j++) { const i = (j * 5 + 3) % N; if (face(i)) continue; const am = (i + 0.5) / N * TAU, w = 0.16, rr = R * Math.cos(Math.PI / N) + 0.03, cx = t.tx + Math.cos(am) * rr, cz = t.tz + Math.sin(am) * rr, tx = -Math.sin(am) * w, tz = Math.cos(am) * w; K.quad(hash2(Math.round(t.x) + j, Math.round(t.z)) < 0.35 ? 'eve:flame' : 'slate:iron', [cx - tx, yy, cz - tz], [cx + tx, yy, cz + tz], [cx + tx, yy + 1.5, cz + tz], [cx - tx, yy + 1.5, cz - tz], [Math.cos(am), 0, Math.sin(am)]); }
+      for (let yy = y0 + 5, j = 0; yy < top; yy += 6, j++) { const i = (j * 5 + 3) % N; if (face(i)) continue; const am = (i + 0.5) / N * TAU, w = 0.16, rr = R * Math.cos(Math.PI / N) + 0.03, cx = t.tx + Math.cos(am) * rr, cz = t.tz + Math.sin(am) * rr, tx = -Math.sin(am) * w, tz = Math.cos(am) * w; K.quad(j % 2 ? 'blood:flame' : 'eve:flame', [cx - tx, yy, cz - tz], [cx + tx, yy, cz + tz], [cx + tx, yy + 1.5, cz + tz], [cx - tx, yy + 1.5, cz - tz], [Math.cos(am), 0, Math.sin(am)]); }
     }
     if (!K.lean) K.drum(G, t.tx, top + 3.4, t.tz, R + 0.5, 0.5, 8, { collide: false });
     K.cone('p2_fishscale_slate', t.tx, top + (K.lean ? 3.4 : 3.9), t.tz, R + 0.7, R * 2.3, K.lean ? 6 : 8);
@@ -2183,6 +2242,21 @@ function climb(K, t, draw) {
   for (const [bx, by, bz] of deckFires(t)) { K.drum('dark:stone', bx, by, bz, 0.5, 1.4, 6, { r2: 0.35, collide: false }); K.drum('iron', bx, by + 1.4, bz, 0.45, 0.6, 8, { r2: 0.9, open: true, collide: false }); }
   const f = deckFires(t)[0];
   if (f) (K.lamps ||= []).push({ p: [f[0], f[1] + 3, f[2]], c: [1, 0.42, 0.18], r: 30, i: 60, flicker: 0.35 });
+  // What's found on a deck with no chest: a spyglass on its stand, trained on the city; or a crows' nest of sticks, three
+  // eggs in it; or what's left of whoever came up here last.
+  if (!castleFinds().chests.some((c) => c.id === `tower:${t.key}`)) {
+    const a = t.ta + Math.PI - 0.95, r = s.rd - 1.5, fx = t.x + Math.cos(a) * r, fz = t.z + Math.sin(a) * r, k = Math.abs(Math.round(t.x + t.z)) % 3;
+    if (k === 0) {
+      for (let j = 0; j < 3; j++) { const b = j / 3 * TAU; K.beam('dark:wood', [fx + Math.cos(b) * 0.5, top, fz + Math.sin(b) * 0.5], [fx, top + 1.35, fz], 0.035); }
+      K.beam('p2_bronze_plates', [fx - Math.cos(a) * 0.5, top + 1.3, fz - Math.sin(a) * 0.5], [fx + Math.cos(a) * 0.7, top + 1.62, fz + Math.sin(a) * 0.7], 0.07);
+    } else if (k === 1) {
+      K.drum('dark:wood', fx, top, fz, 0.9, 0.3, 9, { r2: 1.15, open: true, collide: false }); K.drum('p2_straw_ground', fx, top + 0.02, fz, 0.85, 0.1, 9, { collide: false });
+      for (let j = 0; j < 3; j++) K.drum('pale:stone', fx + Math.cos(j * 2.1) * 0.22, top + 0.12, fz + Math.sin(j * 2.1) * 0.22, 0.09, 0.16, 6, { r2: 0.05, collide: false });
+    } else {
+      K.box('pale:stone', fx, top, fz, 0.5, 0.06, 0.16, a, { collide: false }); K.drum('pale:stone', fx + Math.cos(a + 1.57) * 0.7, top, fz + Math.sin(a + 1.57) * 0.7, 0.13, 0.17, 7, { r2: 0.09, collide: false });
+      K.box('dark:cloth_oat', fx, top + 0.01, fz, 0.8, 0.02, 0.5, a + 0.4, { collide: false }); K.beam('dark:wood', [fx - 0.9, top + 0.05, fz + 0.4], [fx + 0.8, top + 0.05, fz - 0.5], 0.03);
+    }
+  }
   // (A lamp in the turret every two turns, so the stair isn't climbed blind.)
   for (let yy = y0 + 4; yy < top; yy += TURN * 2) (K.lamps ||= []).push({ p: [t.tx - Math.cos(t.ta) * RT, yy + 2.6, t.tz - Math.sin(t.ta) * RT], c: [1, 0.5, 0.22], r: 14, i: 14, flicker: 0.3 });
   if (t.from !== null) {

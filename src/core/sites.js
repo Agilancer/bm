@@ -193,7 +193,8 @@ export class Kit {
   // A round thing of sides faces: a drum from y to y + h, radius r (r2 at its top), with a lid unless open.
   drum(layer, x, y, z, r, h, sides = 12, o = {}) {
     const r2 = o.r2 ?? r, a0 = o.turn || 0;
-    const [tw, th] = tileOf(layer);
+    // (o.tile: its stone so many times its own size, for a shaft so tall its courses would be a moire from afar.)
+    const [tw, th] = tileOf(layer).map((v) => v * (o.tile || 1));
     const p = this.part(layer);
     for (let i = 0; i < sides; i++) {
       // (skip: a side left out, where a doorway goes through it.)
@@ -313,7 +314,9 @@ export class Kit {
       const A = [x + Math.cos(a) * r, y, z + Math.sin(a) * r], B = [x + Math.cos(b) * r, y, z + Math.sin(b) * r], T = [x + lean[0] * h, y + h, z + lean[1] * h];
       this.tri(layer, A, T, B);
     }
-    if (r > 0.6) this.collide(x, z, r * 0.7, r * 0.7, 0, y + h * 0.6);
+    // (soft: while it's set, a spike stops nothing: a corbel under a bridge, a pinnacle on a crown, which would else stand
+    // as a pillar from the ground to itself. src/core/phobos-build.js.)
+    if (r > 0.6 && !this.soft) this.collide(x, z, r * 0.7, r * 0.7, 0, y + h * 0.6);
     return p;
   }
 
