@@ -13,8 +13,8 @@ export const RULES_CASTLE = {
   what_the_censor_burns: { needs: 'the_way_they_came', steps: [{ boss: 'censor' }, { back: true, say: 'The Censor is dead. His fire is out.' }], gold: 5200, xp: 78000, item: 'skull', named: 'The Unburnt Page', seed: 0xce450 },
   bets_lesson: { needs: 'the_bookcase', steps: [{ visit: ['vista:well_of_books'] }, { back: true, say: 'Six storeys. I counted them twice.' }], gold: 600, xp: 30000 },
   // ---- the household's, up the castle's towers (src/core/phobos-build.js castleTowers) ----
-  a_view_for_a_princess: { needs: 'the_gate_captain', steps: [{ visit: ['vista:small14', 'vista:small16'] }, { back: true, say: "I've stood on both turrets over his yard. You can see your garden's wall from the north one." }], gold: 2600, xp: 44000 },
-  wynns_towers: { needs: 'wynns_map', steps: [{ visit: ['vista:sat0', 'vista:sat8', 'vista:sat9', 'vista:sat10', 'vista:sat11'] }, { back: true, say: 'Five towers, and every stair in them. Your map is short by a turn in the Larder Tower.' }], gold: 4200, xp: 62000, item: 'scroll' },
+  a_view_for_a_princess: { needs: 'the_gate_captain', steps: [{ visit: ['vista:small14', 'vista:small16'] }, { back: true, say: "I've stood on both turrets over his yard." }], gold: 2600, xp: 44000 },
+  wynns_towers: { needs: 'wynns_map', steps: [{ visit: ['vista:sat0', 'vista:sat8', 'vista:sat9', 'vista:sat10', 'vista:sat11'] }, { back: true, say: 'Five towers, and every stair in them.' }], gold: 4200, xp: 62000, item: 'scroll' },
   pips_dare: { needs: 'the_hornwings', steps: [{ visit: ['vista:horns'] }, { back: true, say: "I stood on the Horn Tower's head. You can see the whole city." }], gold: 1800, xp: 50000 },
   jorys_strongboxes: { needs: 'the_household', steps: [{ visit: ['room:cm_maps', 'room:cm_horns', 'room:cm_conserv'] }, { back: true, say: 'All three are where you put them. Two are still locked.' }], gold: 3800, xp: 56000 },
   the_black_nave: { needs: 'the_feast_that_walks', steps: [{ enter: 'highward' }, { visit: ['vista:black_nave'] }, { kill: 'room:ch_sanct', n: 6 }, { back: true, say: 'The Sanctuaries are quiet. Nobody is singing in them.' }], gold: 7200, xp: 110000, item: 'robe', named: "The Cantor's White", seed: 0x5a9c7 },
@@ -26,7 +26,7 @@ export const RULES_CASTLE = {
   // ---- the roof-runners', in the Gargoyles' Roost: the Needles, the bridges, the high places ----
   the_high_round: { needs: 'the_scriveners_lift', steps: [{ visit: ['vista:widow', 'vista:gallows', 'vista:thorn', 'vista:red'] }, { back: true, say: 'Four Needles, and the three bridges between them. Nobody saw me.' }], gold: 7600, xp: 120000, item: 'robe', named: "The Roof-Runner's Greys", seed: 0x40f17 },
   every_needle: { needs: 'the_high_round', steps: [{ visit: ['vista:cinder', 'vista:ash', 'vista:keep_crown'] }, { back: true, say: "Both ends of the rim, and the Keep's own crown. That's all of it." }], gold: 9800, xp: 150000, item: 'skull', named: "The Gargoyle's Eye", seed: 0x6a961 },
-  rooks_ledger: { needs: 'the_scriveners_lift', steps: [{ visit: ['vista:clock', 'vista:patio-1', 'vista:patio1', 'vista:keep_patio'] }, { back: true, say: 'The Clock Tower, both belvederes and the Crown Court. Your ledger is right about the guards.' }], gold: 6800, xp: 104000 },
+  rooks_ledger: { needs: 'the_scriveners_lift', steps: [{ visit: ['vista:clock', 'vista:patio-1', 'vista:patio1', 'vista:keep_patio'] }, { back: true, say: 'The Clock Tower, both belvederes and the Crown Court.' }], gold: 6800, xp: 104000 },
   the_reliquary: { needs: 'rooks_ledger', steps: [{ visit: ['room:ch_reliq'] }, { back: true, say: "I've been in the Reliquary. It was guarded." }], gold: 9000, xp: 140000, item: 'gem', seed: 0x2e11c },
 };
 // Who gives each (their words say so too: src/folk/lines/phobos-more-castle.js).
