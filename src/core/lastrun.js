@@ -32,10 +32,15 @@ export function beginRun(params = new URLSearchParams(), { pc = false } = {}) {
   const recent = last && Date.now() - last.at < 7 * 86400e3;
   const died = recent && last.ended === false ? { stage: last.stage, mins: last.mins || 0, where: last.where || '', gpu: last.gpu || '' } : null;
   const early = recent && (last.stage !== 'playing' || (last.mins || 0) < PC_EARLY_MINS);
-  if (pc ? early && (died || last.ended === 'gpu') : died) light = Math.min(LIGHT_MOST, light + 1);
+  // (And either kind, at any time, after the GPU said it was out of memory: src/main.js, the device's uncapturederror.)
+  // (A phone that lost its GPU, at any time: it takes it back for want of memory as often as for anything, and one that
+  // loses it every run would otherwise come back the same weight every time.)
+  if ((pc ? early && (died || last.ended === 'gpu') : died || (recent && last.ended === 'gpu')) || (recent && last.oom)) light = Math.min(LIGHT_MOST, light + 1);
   if (params.has('light')) light = Math.max(0, Math.min(LIGHT_MOST, Number(params.get('light')) || 0));
   write(LIGHT_KEY, light);
-  note = { at: Date.now(), stage: 'starting', ended: false, mins: 0, where: '', gpu: '', deaths: (last?.deaths || 0) + (died ? 1 : 0) };
+  // (Begun out of sight, as a reload for a lost GPU can be: put away already, so a page let go there isn't taken for one that died.)
+  const unseen = typeof document !== 'undefined' && document.hidden === true;
+  note = { at: Date.now(), stage: 'starting', ended: unseen ? 'hidden' : false, mins: 0, where: '', gpu: '', deaths: (last?.deaths || 0) + (died ? 1 : 0) };
   write(KEY, note);
   if (typeof addEventListener === 'function') {
     // Left or put away in the ordinary way; and back again.

@@ -633,6 +633,13 @@ function warrensMouth(K) {
   for (const d of DELVES) if (!d.within) portalWall(K, d.portal.x, d.portal.z, d.portal.yaw, `${d.tag}_portal`);
   // (And out on the land, the bank each is cut into, and what's on it: PORTAL_BANKS, portalDress.)
   for (const b of PORTAL_BANKS) portalDress(K, b);
+  // (And in Phobos and its castle, each the door of a building of its own: cityPortalDress.)
+  for (const d of DELVES) {
+    if (d.within) continue;
+    const castle = d.key === 'lowerward' || d.key === 'ironbarracks';
+    if (castle || DELVES_SEWER.has(d.key)) cityPortalDress(K, d.portal.x, d.portal.z, d.portal.yaw, castle);
+    (d.ways || []).forEach((w) => cityPortalDress(K, w.x, w.z, w.yaw, false));
+  }
   // (A sewer's second mouth in the streets of Phobos: src/core/delve-sewers.js ways.)
   for (const d of DELVES) (d.ways || []).forEach((w, i) => portalWall(K, w.x, w.z, w.yaw, `${d.tag}_w${i}`));
 }
@@ -723,6 +730,37 @@ function portalDress(K, [bx, bz, yaw, H, kind]) {
       const sd = i % 2 ? 1 : -1, [x, y, z] = at(sd * (3 + i * 2.5), -W - 4 - i * 2.2);
       K.spike('pale:stone', x, y - 0.5, z, 0.6, 5 + r(i, 25) * 4, 6, 0, [sd * 0.25, -0.2]);
     }
+  }
+}
+
+// The ways down in Phobos (src/core/delve-sewers.js) and up into its castle: not a wall stood in a square, but the door of a
+// building that's there for it. Down to the sewers, a sluice-house: the wall its front, its hall behind it under a slate
+// roof whose gable stands over the door, buttresses at its back corners, a vent stack, lanterns either side, the black run of
+// a drain out beside it, a few barrels. Into the castle, a block of its dark stone with a crenellated head and His red hung
+// either side (the castle's: His, by the V and T rule). Nothing on the terrace or its steps. (The owner, 2026-11-20: "Build
+// them into areas of the map they are in".)
+const DELVES_SEWER = new Set(['westdrains', 'sloughmains', 'charnelruns', 'highconduits']);
+function cityPortalDress(K, x, z, yaw, castle) {
+  const F = terraceFrame(x, z, yaw), { P, G } = F, U = PORTAL_PAD.hu + PLAT.edge, W = PORTAL_PAD.hw + PLAT.edge;
+  const { top } = terraceTop(G, 'city', true);
+  const at = (u, w) => { const [px, pz] = P(u, w); return [px, terrainHeight(px, pz), pz]; };
+  const D = 4.6, wc = -W - D - 0.05, head = top + (castle ? 9.4 : 8.0);
+  const [cx, , cz] = at(0, wc), lo = Math.min(...[[-U, -W], [U, -W], [-U, wc * 2 + W], [U, wc * 2 + W]].map(([u, w]) => at(u, w)[1])) - 0.6;
+  // The hall behind the wall: as wide as the terrace, as high as the wall and a little more.
+  K.box(castle ? 'dark:block' : 'dark:ashlar', cx, lo, cz, U + 0.3, head - lo, D, yaw);
+  if (castle) {
+    // (A crenellated head along the front and the sides, and His red either side of the door.)
+    for (let i = -4; i <= 4; i++) { const [mx, , mz] = at(i * (U / 4.2), -W - 0.35); K.box('dark:block', mx, head, mz, 0.42, 1.0, 0.35, yaw, { collide: false }); }
+    for (const sd of [-1, 1]) for (let k = 0; k < 4; k++) { const [mx, , mz] = at(sd * (U + 0.05), -W - 1 - k * 2.4); K.box('dark:block', mx, head, mz, 0.3, 1.0, 0.42, yaw, { collide: false }); }
+    for (const sd of [-1, 1]) { const [bx, , bz] = at(sd * (U - 1.2), -W + 0.4); K.banner(bx, bz, head - top - 1, yaw, 'cloth_red', { y: top + 1, w: 0.9, len: 4.2, collide: false }); }
+  } else {
+    // (The slate roof, its gable end over the door, eaves a hand past the walls.)
+    K.gable('soot:roof_2', 'dark:ashlar', cx, head, cz, D + 0.15, U + 0.45, 3.4, yaw + Math.PI / 2, 0.45);
+    for (const sd of [-1, 1]) { const [bx, by, bz] = at(sd * (U + 0.55), wc * 2 + W + 0.6); K.box('dark:ashlar', bx, by - 0.4, bz, 0.5, head - by - 1.5, 0.7, yaw, { collide: false }); }
+    { const [vx, , vz] = at(U * 0.45, wc - 1.2); K.box('dark:block', vx, head, vz, 0.55, 4.6, 0.55, yaw, { collide: false }); }
+    for (const sd of [-1, 1]) { const [lx, , lz] = at(sd * (U + 1.4), W + 0.6); K.lantern(lx, lz, 2.8, yaw); }
+    { const [dx, , dz] = at(U + 2.2, (W + 6) / 2 - W / 2); K.paving('water', dx, dz, 0.45, W + 4, yaw, 0.03); }
+    for (const [u, w] of [[-U - 1.6, -W + 1.2], [-U - 2.5, -W + 2.2], [U + 1.6, -W + 2.6]]) { const [bx, , bz] = at(u, w); K.barrel(bx, bz); }
   }
 }
 
@@ -1494,6 +1532,12 @@ function sorrowhorn(K) {
 }
 
 
+// Where the flattest ground for each site's seal was found (flattest, below). After the land's shape changes, run
+// `node --test tests/sites-apart.test.mjs`: it says which of these have moved, and what to write here.
+const SEAL_AT = { farm: [1683.1, 138], hamlet: [2058, 14], falls: [2576, -130], belltower: [2430.5, -512], sallow: [-132, -3376], chapel: [-898, -4272],
+  abbey: [3975.6, -2864], khel: [-3696, -664.4], stones: [-1900, 4414], frostwatch: [700, 3928], shrine: [-700, 3312], crossroads: [4088, 3212.5],
+  stair: [-1663.1, -1890], crown: [-2496.9, -2996] };
+
 // Every seal's place: the sites that have one, Bellmourn's own beside the south road, and City State Phobos's in its
 // districts (src/core/phobos-seals.js). The Sill's, where the road first shows you Phobos, says so too.
 export const SEALS = [{ key: 'bellmourn', x: 7.6, z: 86, name: 'Bellmourn' }].concat(
@@ -1504,7 +1548,11 @@ export const SEALS = [{ key: 'bellmourn', x: 7.6, z: 86, name: 'Bellmourn' }].co
     // (The two small towns' are inside their walls, on the level, where nothing's built.)
     const set = { thornwick: [2396, 1833], cinderford: [-2088, -162], sill: [8931, 19] }[k];   // (the Sill's: on its shelf, back from the lip)
     const name = k === 'sill' ? `${s.name} - Phobos` : s.name;
-    return set ? { key: k, x: set[0], z: set[1], name } : { key: k, ...flattest(s.x + off[0], s.z + off[1]), name };
+    // (Found once and written down, SEAL_AT below: looking for the flattest ground was three quarters of a second's work
+    // on a PC, several on a phone, in every thread that reads this file, before a line of the game had run. looked: true
+    // makes it look again, for the test that holds the table to the land: tests/sites-apart.test.mjs.)
+    const at = set ? { x: set[0], z: set[1] } : SEAL_AT[k] && !globalThis.__bmSealsLooked ? { x: SEAL_AT[k][0], z: SEAL_AT[k][1] } : flattest(s.x + off[0], s.z + off[1]);
+    return { key: k, ...at, name };
   }), PHOBOS_SEALS.map((s) => ({ key: s.key, x: s.x, z: s.z, name: s.name })));
 
 // The flattest ground for a seal's dais within 16 m of where it was meant to go: how far the land under it rises and falls,
@@ -1565,6 +1613,45 @@ export function buildSites(geometry = false, lean = false) {
   return built;
 }
 
+// ---- built on a thread of its own, for the renderer ----
+// Building the land is three to five seconds of one thread's whole attention on a PC, more on a phone, and where the
+// renderer did it itself the page stood still for that long: the loading bar stopped, and a phone's browser can take a
+// page that doesn't answer for one that's hung. So the renderer has it built apart (src/core/sites.worker.js) and takes
+// what it wants of it. What that thread built and threw away goes with the thread, all of it at once, and the page never
+// holds what stops a body (sixty-six thousand colliders, ten thousand floors): that's the simulation's.
+
+/** What the renderer wants of a land built with its corners, ready to send: [what, its buffers to hand over]. */
+export function packSites(b) {
+  const parts = [...b.parts].map(([name, p]) => [name, p.pos, p.nrm, p.uv, p.idx]);
+  const transfer = [];
+  for (const p of parts) for (let i = 1; i < 5; i++) if (p[i].byteLength) transfer.push(p[i].buffer);
+  return [{ lean: b.lean, parts, spots: b.spots, fires: b.fires, lamps: b.lamps, doors: b.doors, groups: [...b.groups] }, transfer];
+}
+
+/** A land built elsewhere (packSites), taken as this thread's own: buildSites() gives it from here on. Nothing in it stops a body. */
+export function adoptSites(d) {
+  built = { geometry: true, lean: d.lean, apart: true, parts: new Map(d.parts.map(([name, pos, nrm, uv, idx]) => [name, { pos, nrm, uv, idx }])),
+    colliders: [], floors: [], spots: d.spots, fires: d.fires, groups: new Map(d.groups), lamps: d.lamps, doors: d.doors,
+    // (And of Phobos, what the page would else work out for itself as the game began, a second and a half of it on a PC:
+    // which cells have something to build from near, src/gfx/phobos-near.js. Its doors: src/core/phobos-towers.js adoptCityDoors.)
+    phCells: d.phCells || null };
+  return built;
+}
+
+/** The land with its corners, built on a thread of its own and taken (adoptSites). false if it couldn't be: then buildSites builds it here. */
+export function buildSitesApart(lean, opening, onPhobos = null) {
+  if (built?.geometry && built.lean === lean) return Promise.resolve(true);
+  if (typeof Worker === 'undefined') return Promise.resolve(false);
+  return new Promise((resolve) => {
+    let w = null;
+    const done = (ok, why) => { if (why) console.warn('the land, built apart:', why); try { w?.terminate(); } catch { /* gone already */ } resolve(ok); };
+    try { w = new Worker(new URL('./sites.worker.js', import.meta.url), { type: 'module' }); } catch (err) { done(false, err.message); return; }
+    w.onmessage = (e) => { if (e.data.error) done(false, e.data.error); else { adoptSites(e.data); onPhobos?.(e.data); done(true); } };
+    w.onerror = (e) => done(false, e.message || 'its thread failed');
+    w.postMessage({ lean, opening });
+  });
+}
+
 // What's under the world, by the key the renderer asks for it by: each delve's, and the Test Dungeon's hall.
 export const UNDER_KEYS = [...DELVES.map((d) => d.key), 'hall'];
 
@@ -1596,6 +1683,19 @@ export function buildPhobosCell(cell) {
   // (groups: its doors' leaves, each its own, which the renderer folds away while one's open: src/gfx/phobos-near.js.)
   // (smokes: its chimneys that have a fire under them, [x, y, z]: smoke drawn up out of them, src/gfx/phobos-near.js.)
   return { parts: K.parts, lamps: K.lamps || [], groups: K.groups, smokes: K.smokes || [] };
+}
+
+/** A cell of Phobos as buildPhobosCell built it, ready to send to another thread: [what, its buffers to hand over]. */
+export function packCell(cell, b) {
+  const parts = [...b.parts].map(([name, p]) => [name, p.pos, p.nrm, p.uv, p.idx]);
+  const transfer = [];
+  for (const p of parts) for (let i = 1; i < 5; i++) if (p[i].byteLength) transfer.push(p[i].buffer);
+  return [{ cell, parts, lamps: b.lamps, groups: [...b.groups], smokes: b.smokes }, transfer];
+}
+
+/** And as it's taken on the other side: what buildPhobosCell gives. */
+export function unpackCell(d) {
+  return { parts: new Map(d.parts.map(([name, pos, nrm, uv, idx]) => [name, { pos, nrm, uv, idx }])), lamps: d.lamps, groups: new Map(d.groups), smokes: d.smokes };
 }
 
 /** The parts let go, once they're in the renderer's buffer. Everything else stays. */

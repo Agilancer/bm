@@ -25,8 +25,13 @@ export const TIERS = {
 
 // A phone's tier made lighter still, for one whose browser has closed the game for want of memory (src/core/lastrun.js):
 // level 1 and up, no model's picture over 256 a side (its normals 128).
+// Level 2, for one closed again after that: smaller still, and less of everything the GPU holds or draws that isn't the
+// game itself: a quarter fewer pixels, shadows a quarter the size, half the grass and the sparks.
 export function lighten(tier, level) {
-  return level > 0 ? { ...tier, texCap: Math.min(tier.texCap || 256, 256) } : tier;
+  if (level <= 0) return tier;
+  if (level === 1) return { ...tier, texCap: Math.min(tier.texCap || 256, 256) };
+  return { ...tier, texCap: Math.min(tier.texCap || 192, 192), shadowSize: Math.min(tier.shadowSize, 512), maxPixels: Math.round((tier.maxPixels || 750000) * 0.75),
+    grassCap: Math.round(tier.grassCap / 2), particles: Math.round(tier.particles / 2), bloodSize: Math.min(tier.bloodSize, 512) };
 }
 
 // The PC tiers by what they ask of memory: Ultra and High the same pictures, Medium a quarter of them, Low less again.
@@ -243,11 +248,23 @@ export function textureArrayFromBitmaps(device, mipgen, bitmaps, format) {
   return tex;
 }
 
+// A buffer holding `data`. Written with the queue, not mapped as it's made: the browser keeps the memory a mapped buffer was
+// filled through for the next one, as big as the biggest ever made (a 64 MB buffer left 68 MB held in both the page and the
+// GPU's process for good, measured in Chrome, November 2026; the same bytes through writeBuffer left 8).
+const WRITE_AT_MOST = 4 << 20;
 export function makeBuffer(device, data, usage) {
-  const buf = device.createBuffer({ size: (data.byteLength + 3) & ~3, usage: usage | GPUBufferUsage.COPY_DST, mappedAtCreation: true });
-  const Ctor = data.constructor;
-  new Ctor(buf.getMappedRange()).set(data);
-  buf.unmap();
+  const size = (data.byteLength + 3) & ~3;
+  const buf = device.createBuffer({ size, usage: usage | GPUBufferUsage.COPY_DST });
+  if (!data.byteLength) return buf;
+  // (A few megabytes at a time: what a write is carried over in is kept by the browser too, as big as the biggest write.)
+  const whole = data.byteLength === size ? size : size - 4;
+  for (let at = 0; at < whole; at += WRITE_AT_MOST) device.queue.writeBuffer(buf, at, data.buffer, data.byteOffset + at, Math.min(WRITE_AT_MOST, whole - at));
+  if (whole !== size) {
+    // (A length that isn't a multiple of four bytes: its whole words above, then its last few in a word of their own.)
+    const tail = new Uint8Array(4);
+    tail.set(new Uint8Array(data.buffer, data.byteOffset + whole, data.byteLength - whole));
+    device.queue.writeBuffer(buf, whole, tail);
+  }
   return buf;
 }
 

@@ -101,6 +101,9 @@ function build() {
     }
   });
   STRETCH = Float32Array.from(list);
+  // (Let go by hand: each flight's `point` above is a function made in here, and holds on to everything this one named,
+  // this list of 6.5 MB among it, in every thread that asks the land's height: eight of them.)
+  list.length = 0;
   for (let o = 0; o < STRETCH.length; o += 8) {
     const ax = STRETCH[o], az = STRETCH[o + 1], bx = STRETCH[o + 2], bz = STRETCH[o + 3], m = STRETCH[o + 6] + REACH;
     for (let i = Math.floor((Math.min(ax, bx) - m) / CELL); i <= Math.floor((Math.max(ax, bx) + m) / CELL); i++)

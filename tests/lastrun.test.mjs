@@ -82,3 +82,35 @@ test('on a PC only a run that went soon after it loaded counts, and a GPU lost t
   heard.win.pagehide();
   beginRun(new URLSearchParams('light=0'));
 });
+
+test('the GPU out of memory: the next start is lighter, on a phone or a PC, however the page went', () => {
+  beginRun(new URLSearchParams('light=0'));
+  noteRun({ stage: 'playing', mins: 40, oom: true });
+  heard.win.pagehide();   // (left in the ordinary way, long into play: neither would count on its own)
+  assert.deepEqual(beginRun(undefined, { pc: true }), { died: null, light: 1 });
+  heard.win.pagehide();
+  assert.equal(beginRun(undefined, { pc: true }).light, 1, 'and no lighter again for the one time');
+  noteRun({ stage: 'playing', mins: 2, oom: true });
+  heard.win.pagehide();
+  assert.equal(beginRun().light, 2, 'a phone too');
+  heard.win.pagehide();
+  beginRun(new URLSearchParams('light=0'));
+});
+
+test('a phone that lost its GPU loads lighter next time; a start out of sight is no death', () => {
+  beginRun(new URLSearchParams('light=0'));
+  noteRun({ stage: 'playing', mins: 30, ended: 'gpu' });
+  const a = beginRun();
+  assert.equal(a.died, null, "the game's own reload, not a death");
+  assert.equal(a.light, 1, 'but lighter, long into play as it was');
+  heard.win.pagehide();
+  // Begun while the page is put away (a reload for a lost GPU can be): marked put away from the first, so let go there
+  // it isn't taken for one that died.
+  document.hidden = true;
+  beginRun();
+  assert.equal(last().ended, 'hidden');
+  assert.equal(beginRun().died, null);
+  document.hidden = false;
+  heard.win.pagehide();
+  beginRun(new URLSearchParams('light=0'));
+});
