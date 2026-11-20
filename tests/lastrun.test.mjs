@@ -8,7 +8,7 @@ const store = new Map(), heard = { win: {}, doc: {} };
 globalThis.localStorage = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)) };
 globalThis.addEventListener = (n, f) => { heard.win[n] = f; };
 globalThis.document = { hidden: false, addEventListener: (n, f) => { heard.doc[n] = f; } };
-const { beginRun, noteRun, deathWords } = await import('../src/core/lastrun.js');
+const { beginRun, noteRun, deathWords, noteEvent, trailWords } = await import('../src/core/lastrun.js');
 const last = () => JSON.parse(store.get('velscour.lastRun'));
 
 test('a first start: nothing died, and it loads as the tier says', () => {
@@ -111,6 +111,31 @@ test('a phone that lost its GPU loads lighter next time; a start out of sight is
   assert.equal(last().ended, 'hidden');
   assert.equal(beginRun().died, null);
   document.hidden = false;
+  heard.win.pagehide();
+  beginRun(new URLSearchParams('light=0'));
+});
+
+test('the last few things before a death are kept and said: the same again counted, the oldest let go', () => {
+  beginRun(new URLSearchParams('light=0'));
+  noteRun({ stage: 'playing', mins: 4 });
+  noteEvent('touched'); noteEvent('touched'); noteEvent('touched');
+  for (let i = 0; i < 9; i++) noteEvent(`size ${800 + i}x390`);
+  noteEvent('turned upright');
+  const a = beginRun();
+  assert.equal(a.died.trail.length, 8, 'eight at most');
+  assert.equal(a.died.trail.at(-1).e, 'turned upright');
+  assert.ok(!a.died.trail.some((x) => x.e === 'touched'), 'the oldest gone');
+  assert.match(trailWords(a.died), /^size 806x390, then size 807x390, then size 808x390, then turned upright$/);
+  beginRun();
+  noteRun({ stage: 'playing', mins: 4 });
+  noteEvent('touched'); noteEvent('touched');
+  const b = beginRun();
+  assert.equal(trailWords(b.died), 'touched (x2)');
+  assert.equal(trailWords({ trail: [{ s: 40, e: 'touched', n: 3 }, { s: 44, e: 'turned upright' }, { s: 44, e: 'size 390x806' }] }),
+    'touched (x3), then 4 s later turned upright, then size 390x806', 'the time from one to the next, none when it was the same second');
+  heard.win.pagehide();
+  assert.equal(beginRun().died, null);
+  assert.equal(trailWords(null), '');
   heard.win.pagehide();
   beginRun(new URLSearchParams('light=0'));
 });

@@ -405,12 +405,12 @@ export class Renderer {
           skirtDirection[v] = Math.round((angle / (2 * Math.PI) + 0.5) * 65535);
         }
         return { ...prim, flex: Float32Array.from(skirt, (weight) => -weight), skirtDirection };
-      }, SKIRT_PALETTE_JOINTS);
+      }, SKIRT_PALETTE_JOINTS, true);
       return { form, jaw: glb.json.scenes[0].extras?.jaw };
     }));
     // (Your own body, and its colour picture as it came, for the gear painted onto it: src/gfx/bodyskin.js.)
     const self = model('assets/game/player/wizard.glb', async (glb) => {
-      const [body] = await this.buildCrabs(glb, 1, 1);
+      const [body] = await this.buildCrabs(glb, 1, 1, null, 0, true);
       const mat = glb.json.materials[glb.json.meshes[0].primitives[0].material];
       return { body, colour: imageBytes(glb, glb.json.textures[mat.pbrMetallicRoughness.baseColorTexture.index].source) };
     });
@@ -1023,18 +1023,20 @@ export class Renderer {
     this.stats.staticTris = ni / 3;
   }
 
-  async imageTexture(glb, imageIndex, format, scale = 1, full = false) {
-    return this.bitmapTexture(imageBytes(glb, imageIndex), format, scale, full);
+  async imageTexture(glb, imageIndex, format, scale = 1, full = false, near = false) {
+    return this.bitmapTexture(imageBytes(glb, imageIndex), format, scale, full, near);
   }
 
   // A picture as a texture, shrunk by scale. On a phone, of a model's pictures (those given a scale under 1): none is over
   // tier.texCap a side (some bodies' colours came 4096 across, 1024 after the shrink: 5 MB apiece), and its normals and its
   // metal and roughness, the two that aren't colours, are tier.mapScale of that again: there are two of them to every
   // colour picture, uncompressed, and at a phone's size they were a third of all its textures. full: as scale says.
-  async bitmapTexture(blob, format, scale, full = false) {
-    const lean = this.tier.lean && scale < 1 && !full && this.tier.texCap;
+  // near: one seen close (Lisandra, your own body), held to tier.texCapNear instead.
+  async bitmapTexture(blob, format, scale, full = false, near = false) {
+    const cap = near ? this.tier.texCapNear || this.tier.texCap : this.tier.texCap;
+    const lean = this.tier.lean && scale < 1 && !full && cap;
     const k = lean && format === 'rgba8unorm' ? this.tier.mapScale : 1;
-    const bmp = await decodeScaledBitmap(blob, scale * k, lean ? this.tier.texCap * k : 0);
+    const bmp = await decodeScaledBitmap(blob, scale * k, lean ? cap * k : 0);
     const mips = mipCountFor(bmp.width, bmp.height);
     const tex = this.device.createTexture({ size: [bmp.width, bmp.height], format, mipLevelCount: mips, usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT });
     try {
@@ -1141,7 +1143,8 @@ export class Renderer {
     return { ...base, outBuf, palette, params, bg };
   }
 
-  async buildCrabs(glb, count, scale, prepare, paletteExtra = 0) {
+  // near: seen close, its pictures held to the tier's texCapNear rather than texCap (bitmapTexture).
+  async buildCrabs(glb, count, scale, prepare, paletteExtra = 0, near = false) {
     const pr = glb.json.meshes[0].primitives[0];
     const a = pr.attributes;
     const pos = accessor(glb, a.POSITION).slice();
@@ -1154,9 +1157,9 @@ export class Renderer {
     const srcOf = (t) => glb.json.textures[t.index].source;
     const texScale = this.tier.texScale;
     const [alb, nrm, mr] = await Promise.all([
-      this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture), 'rgba8unorm-srgb', texScale),
-      this.imageTexture(glb, srcOf(mat.normalTexture), 'rgba8unorm', texScale),
-      this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture), 'rgba8unorm', texScale),
+      this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture), 'rgba8unorm-srgb', texScale, false, near),
+      this.imageTexture(glb, srcOf(mat.normalTexture), 'rgba8unorm', texScale, false, near),
+      this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture), 'rgba8unorm', texScale, false, near),
     ]);
     const out = [];
     for (let i = 0; i < count; i++) {
@@ -2314,16 +2317,30 @@ export class Renderer {
     let cw = Math.max(2, Math.floor(canvas.clientWidth * dpr)), ch = Math.max(2, Math.floor(canvas.clientHeight * dpr));
     const screen = `${cw}x${ch}`;
     if (this.screen !== screen) {
+      // (Only a phone keeps a picture of another shape than the screen's: viewAspect, the screen's own, for the view.)
+      let keep = false;
       if (gpu.mobile && this.activeKey) {
         // A phone turning goes through a run of sizes, and each would be every target thrown away and made again. Upright
         // it keeps the sideways picture it has (nothing's drawn then: src/main.js turned); any other size is taken once
         // it's held for a moment.
         if (ch > cw) return;
-        if (this.wantScreen !== screen) { this.wantScreen = screen; this.wantAt = performance.now(); }
-        if (performance.now() - this.wantAt < 300) return;
+        // Nor for the browser's own bar, shown and put away: the same width, a little less height or more. (An iPhone held
+        // sideways shows it for a tap near the screen's edge: a touch was every target made again.) Nor while a word's
+        // being typed, however much height the keyboard takes: it gives it back when it goes, and each was the canvas and
+        // every target made again, for the length of a name. A phone's picture is the same number of pixels whatever the
+        // screen's shape (maxPixels), so it's kept, and only the view takes the screen's shape: the browser stretches the
+        // picture to it, and nothing in the world is drawn squashed.
+        const f = document.activeElement;
+        const typing = !!f?.matches?.('textarea, input:not([type]), input[type=text], input[type=search], input[type=email]') && f.offsetParent !== null;
+        keep = cw === this.screenW && (typing || Math.abs(ch - this.screenH) <= this.screenH * 0.25);
+        if (!keep) {
+          if (this.wantScreen !== screen) { this.wantScreen = screen; this.wantAt = performance.now(); }
+          if (performance.now() - this.wantAt < 300) return;
+        }
       }
-      this.screen = screen; this.wantScreen = null; this.dropTargetSets();
-    }
+      if (keep) { this.viewAspect = cw / ch; cw = this.screenW; ch = this.screenH; }
+      else { this.screen = screen; this.screenW = cw; this.screenH = ch; this.viewAspect = 0; this.wantScreen = null; this.dropTargetSets(); }
+    } else this.viewAspect = 0;
     let W, H_;
     if (tier.maxPixels) {
       // The canvas itself is only as big as the picture, and the browser stretches it to the screen for nothing. Scale
@@ -2340,8 +2357,11 @@ export class Renderer {
     if (!this.targetSets) this.targetSets = new Map();
     let set = this.targetSets.get(key);
     if (!set) {
-      // Two sets at most: the one in use and the one before it.
-      if (this.targetSets.size >= 2) {
+      // Two sets at most: the one in use and the one before it. (On a phone, only the one in use: an iPhone counts the GPU's
+      // memory as the page's, and the set before was a screen's worth of pictures kept for a step back that may not come.)
+      // (What's been sent to the GPU with them still finishes: a texture let go is let go once that's done.)
+      if (gpu.mobile) this.dropTargetSets();
+      else if (this.targetSets.size >= 2) {
         const oldest = [...this.targetSets.keys()].find((k) => k !== this.activeKey);
         for (const t of this.targetSets.get(oldest).textures) t.destroy();
         this.targetSets.delete(oldest);
@@ -2529,7 +2549,8 @@ export class Renderer {
   writeFrame(cam, snap) {
     const d = this.frameData;
     const { W, H: Ht } = this;
-    const aspect = W / Ht;
+    // (The screen's shape, which on a phone with its browser's bar out isn't quite the picture's: resize.)
+    const aspect = this.viewAspect || W / Ht;
     // (A cinematic camera can narrow the lens: cam.fov, in radians.)
     const fov = cam.fov || WORLD_FOV;
     mat4Perspective(this.tmpP, fov, aspect, 0.08);
@@ -3115,7 +3136,7 @@ export class Renderer {
     vmData[12] = vmX; vmData[13] = vmY; vmData[14] = vmZ;
     if (this.shieldParts.length) {
       const pal = this.shieldPal || (this.shieldPal = new Float32Array(8));
-      shieldPose(pal, shieldUp, this.W / this.H);
+      shieldPose(pal, shieldUp, this.viewAspect || this.W / this.H);
       // The stride, moved in view space: half of it times the board's rotation, on the dual part.
       const hx = this.carryX, hy = this.carryY;
       pal[4] += hx * pal[3] + hy * pal[2]; pal[5] += hy * pal[3] - hx * pal[2]; pal[6] += hx * pal[1] - hy * pal[0]; pal[7] -= hx * pal[0] + hy * pal[1];

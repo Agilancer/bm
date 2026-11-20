@@ -2564,7 +2564,8 @@ found). Run it after anything that adds to what's loaded.
   sounds it decodes as they're first heard, a phone keeps 24 MB, the longest unheard going first
   (`tests/audio-kept.test.mjs`).
 - **Models' pictures on a phone** (`mapScale`, `texCap` on the Mobile tier in `src/gfx/gpu.js`; `bitmapTexture` in
-  `src/gfx/renderer.js`). None is over 512 a side (some bodies' colours came 4096 across, 1024 after the tier's shrink),
+  `src/gfx/renderer.js`). None is over 256 a side, or 512 for what's seen close (`texCapNear`, since the third pass below;
+  some bodies' colours came 4096 across, 1024 after the tier's shrink),
   and a body's normals and its metal and roughness are half its colours' size again. The arms and what's held in them
   keep theirs.
 - **A body built once for all who wear it** (`cloneCharacter`). The seven quartermasters each had a body of their own;
@@ -2579,10 +2580,11 @@ and the woods loaded at the start, where the models themselves would have to be 
 doing as it goes: loading, at the title, playing, for how long and where, every eight seconds of play. Leaving the page or
 putting it away marks the note; one found unmarked at the next start is a page the browser killed. The title then says so
 (when, and where you stood), offers **Continue** from the last autosave, and on a phone loads lighter: no model's picture
-over 256 a side. It never has fewer of the other heroes about: a party for the Warrens is
-hired from them (four, with a tank and a healer), so a cast cut down would leave no way into a dungeon. The
-level is kept in this browser (`velscour.light`); `?light=0` puts it back, `?light=2` tries the lightest. If it still
-happens, what the title says is what to pass on: whether it died loading or playing, and after how long.
+over 192 a side (256 for what's seen close), and after another, 160 (192). It never has fewer of the other heroes about: a
+party for the Warrens is hired from them (four, with a tank and a healer), so a cast cut down would leave no way into a
+dungeon. The level is kept in this browser (`velscour.light`); `?light=0` puts it back, `?light=2` tries the lightest. If it
+still happens, what the title says is what to pass on: whether it died loading or playing, after how long, and (since the
+third pass below) the last few things that happened just before, a touch, a turn, the screen's size, a field to type in.
 
 **Measured again, honestly (November 2026, the second pass).** The owner said it was still crashing, on phones and on
 laptops whose GPU is on the processor. Two things were wrong with the numbers above. The game had grown (Phobos, the
@@ -2634,6 +2636,85 @@ After that: the skinned bodies' buffers (100 bytes a corner), the interiors (36 
 
 **Not known:** which of these the owner's phone was dying of, or how much it allows. Nothing here has been run on a phone:
 the pictures looked at were the town and three delves in headless Chromium at a phone's settings.
+
+**The third pass: a touch, or a turn (November 2026).** Still white and back to the start, the owner said, after three to
+five minutes of the story playing itself, the moment the screen was touched or the phone turned. It's an iPhone, the game
+played from its home screen (the owner said so): an app put there never keeps to the sideways the manifest asks for (iOS
+doesn't lock a web app's turn), so every accidental turn is a real one, and a white page that loads again is WebKit's way
+when it ends one for its memory. (Such an app has no browser bar, and its storage is its own, Safari's apart: the note
+below is kept in the app. The site on GitHub Pages has no `files.json`, so the service worker fetches every file fresh:
+the app runs what's on `main`.) An iPhone counts against the page more than a PC's browser
+does: every texture and buffer the game asks of the GPU, and a picture for every layer the page is drawn in, at three
+pixels to the point (one the size of the screen is 11 MB). So this pass measured those as well
+(`tools/memory/README.md`: `layers`, `GPUDUMP=1`, `snap`), in plain Chrome made an iPhone, 60 s into the story:
+
+| | Before | After |
+| --- | --- | --- |
+| The page's process, once garbage is collected | 790 MB | about 700 MB |
+| From the title by New Game, 45 s into the story (collected) | 897 MB | 765 to 807 MB |
+| Layers, at an iPhone's three pixels to the point | 82 MB | 36 MB |
+| Layers a touch adds | 23 MB | none |
+| Textures asked of the GPU | 290 MB | 240 MB |
+| The simulation's buffers | 166 MB | 125 MB |
+
+- **Pictures over the picture.** Each see-through thing over the game's canvas is a layer of its own, and an iPhone keeps a
+  picture of it. Several were the size of the screen and showed nothing:
+  - the opening's white flash at nothing;
+  - the townsfolk's words and marks, whose boxes were the screen (now a point at its corner, what's in them hung off it);
+  - the tail of her speech bubble, drawn from the screen's corner, and over the bubble's own layer, so the compositor gave it
+    one as big as the screen (now inside the bubble and the size of the tail: `src/ui/speech.js`; the bubble keeps a small
+    layer of its own, so the story's isn't painted again each frame it moves);
+  - the loading screen, faded to nothing but still there over everything, with its gradient (now hidden once it's faded);
+  - the emergency bar, up out of sight with its grain running forever (now still, and not painted, while it's up).
+
+  And a blur of what's behind (`backdrop-filter`) over a live canvas copies and blurs the screen every frame, and lays
+  everything over it in layers of their own. The waking haze in the opening blurs only while it's there (its first
+  seconds), and on a touch screen the spell book and the cards are dark glass rather than frosted.
+- **Overlays put away while the phone's upright** (`body.upright` in `index.html`, set by `turned` in `src/main.js`). Turned
+  the wrong way, a cover asks for it back; what was under it is no longer painted, so a turn doesn't keep a dozen layers at
+  the new size under it. The cover's painted picture sits above its words (it was laid over them) and nods the way to turn.
+- **A field to type in leaves the picture be** (`resize` in `src/gfx/renderer.js`). An iPhone's keyboard takes half the
+  screen's height in landscape, and a height held for 0.3 s was the screen's pictures made again at it, and again when the
+  keyboard went. The name the story asks for, where it waits for as long as it takes, was such a field. While a text field
+  in sight has the keys, the picture is kept and only the view takes the shorter screen's shape, so nothing's squashed; and
+  on Answer the field lets go of them and the page goes back to its top (`src/ui/opening.js`).
+- **A hold skips only on the words that say so, on a touch screen** (`src/ui/opening.js`: "Hold here to skip"). Any finger
+  held a second anywhere was a skip, and a skip in the story's middle moves you to the road and builds it at once. The
+  words are a pill to hold, 44 points at least, and clear of the strip at the screen's foot an iPhone keeps for its home
+  swipe (`index.html`, `env(safe-area-inset-bottom)`).
+- **Sound in one channel on a phone** (`slim` in `src/audio.js`, the title's too). A place's sounds go through a panner,
+  which hears one; the beds lose a width a phone's speakers barely had. The two are summed at 1/√2 each, so a sound
+  through the panner is as loud as it was. Half of 75 to 95 MB.
+- **Clips at their own rate** (`ArmsRig` in `src/sim/anim.js`). The monsters' clips are keyed at 24 or 30 a second and were
+  made again at 60: the same curve in twice the memory. The grid is now the closest two keys' rate, if every key falls on
+  it, and 60 a second if not. The witch's keys are at a rate that doesn't go into 60, and a 60 Hz grid cut across them by
+  up to ten degrees; now every clip tested is within a twentieth of a degree of its keys. And all a clip's tracks in one
+  block, not forty thousand (`tests/arms-rig-rate.test.mjs`).
+- **One set of the screen's pictures on a phone** (`resize` in `src/gfx/renderer.js`), and a phone's governor never above
+  its tier's pixels (`PHONE_ONLY_STEPS` in `src/gfx/governor.js`): each step up was the screen's pictures made again,
+  half as big again, with the last ones kept.
+- **Models' pictures on a phone 256 a side** (`texCap`), and 512 for what's seen close (`texCapNear`: Lisandra, your own
+  body, her book, the cave's walls and floor). After a crash, 192 (256 close), then 160 (192 close): never sharper.
+- **What came just before** (`noteEvent` in `src/core/lastrun.js`). The note the game leaves now keeps its last eight
+  happenings on a phone: a touch, a turn, the screen's size, a field to type in, a skip, the picture stepped down. After a
+  death the title says the last four, with the seconds between them ("Just before: touched (x3), then 4 s later size
+  844x190, then…"), which is what to pass on. Nothing notes the kill itself, so how long after the last it came isn't known.
+- **The browser's bar leaves the picture be** (`resize` in `src/gfx/renderer.js`). Sideways, an iPhone shows its bar for a
+  tap near the screen's edge: the same width, a few dozen points less height, and every target was made again for it,
+  and again when it went. A phone's picture is the same number of pixels whatever the screen's shape, so it's kept, and
+  only the view takes the screen's shape (`viewAspect`; the sim's aim too, `VIEW_ASPECT` in `src/input.js`).
+- **Every one of the other Tessariels on a phone** (`HERO_SLOTS` in `src/core/heroes.js`). OWNER RULE: "DO NOT REDUCE
+  THE NUMBER OF NPC PLAYERS". A phone had eight to a PC's sixteen, and a PC stepped down to the Mobile tier after a crash
+  had eight too. Now it's sixteen everywhere, each in a body of their own, and only the player's own setting has fewer
+  (the setting now reads "All of them (16)"). Sixteen in eight bodies was tried first and dropped: twins with the same
+  weapons side by side read as a fault. The eight more bodies cost about 19 MB of the GPU's memory, measured as an iPhone
+  (buffers 288 to 307 MB, textures 240 to 243) (`tests/crash-party.test.mjs`).
+
+Turned upright and back, and touched, in the story: the page's memory, the layers and the GPU's textures and buffers
+stayed where they were, and no render target was made again. **Not known, still:** whether the owner's iPhone now holds.
+None of this has run on one, and Chrome made to look like one is not WebKit: its layers, its sound and its garbage are its
+own. What's left, biggest first: the GPU's buffers (some 290 MB: the bodies of the undead, the land, the townsfolk, the
+interiors), the land's map papers (21 MB of canvas), and the threads' heaps.
 
 ### What has and hasn't been tested
 

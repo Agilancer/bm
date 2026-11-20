@@ -13,7 +13,7 @@ import { C, C_BLEEDS, C_SIZE, CHARS_START, CTRL, EV, EV_CAPACITY, EV_FLOATS, H, 
 import { clamp, damp, lerp, smoothstep, wrapAngle } from './core/math.js';
 import { FileWatch, getFile, watchFiles } from './core/files.js';
 import { initGPU, isMobileDevice, lighten } from './gfx/gpu.js';
-import { Governor } from './gfx/governor.js';
+import { Governor, PHONE_ONLY_STEPS } from './gfx/governor.js';
 import { STEPS as DESK_STEPS, deskStep } from './gfx/deskscale.js';
 import { RenderDiagnostics } from './gfx/render-diagnostics.js';
 import { Clock } from './clock.js';
@@ -66,7 +66,7 @@ import { Arrange } from './ui/arrange.js';
 import { groundAt, setHomes } from './ui/places.js';
 import { HallUI } from './ui/testhall.js';
 import { HALL, SPAWN, hallAt } from './core/testhall.js';
-import { beginRun, deathWords, noteRun } from './core/lastrun.js';
+import { beginRun, deathWords, noteEvent, noteRun, trailWords } from './core/lastrun.js';
 import { HUB_SMOKE } from './core/phobos-hubs.js';
 import { Beacon } from './ui/beacon.js';
 
@@ -466,11 +466,11 @@ async function boot(plan, poolSize) {
   const pendingEvents = [];
   const hz = gpu.tier.sim;
   // The other Tessariels this session (src/core/heroes.js): who they are is kept, so the same people are about next time.
-  // How many: by the tier, the setting, or ?heroes=N for tests.
+  // How many: HERO_SLOTS, unless the player's own setting says fewer (or ?heroes=N for tests).
   const heroCount = params.has('heroes') ? Number(params.get('heroes')) : settings.heroes === 'off' ? 0
-    // (Never fewer for a browser that closed the game last time, src/core/lastrun.js: the party for the Warrens is hired from
-    // these, four with a tank and a healer, and a cast cut to two or four left none to be had, or no choice of who.)
-    : Math.min(settings.heroes === 'few' ? 8 : 99, HERO_SLOTS[gpu.tier.lean ? 'lean' : 'desktop']);
+    // (The same on every device and tier, and never fewer for a browser that closed the game last time: OWNER RULE, "DO NOT
+    // REDUCE THE NUMBER OF NPC PLAYERS". The party for the Warrens is hired from these, too. tests/crash-party.test.mjs.)
+    : settings.heroes === 'few' ? 8 : HERO_SLOTS;
   let cast = [];
   if (heroCount > 0) {
     try {
@@ -482,7 +482,7 @@ async function boot(plan, poolSize) {
       try { kept = JSON.parse(localStorage.getItem('bm.heroes') || 'null'); } catch { /* none */ }
       const seed = kept?.seed || Math.floor(Math.random() * 2 ** 31);
       try { localStorage.setItem('bm.heroes', JSON.stringify({ ...(kept || {}), seed })); } catch { /* full */ }
-      cast = withBrokers(makeCast(roster, kit, names, Math.min(heroCount, 16), seed, params.get('bodies')?.split(',') || null), roster, kit, !!gpu.tier.lean);
+      cast = withBrokers(makeCast(roster, kit, names, Math.min(heroCount, HERO_SLOTS), seed, params.get('bodies')?.split(',') || null), roster, kit, !!gpu.tier.lean);
     } catch (e) { console.warn('heroes', e); cast = []; }
   }
   renderer.heroCast = cast;
@@ -829,7 +829,7 @@ async function boot(plan, poolSize) {
     input.menu = false;
     simWorker.postMessage({ type: 'openingName' });
     if (!input.touch && !AUTO) input.lock();
-  }, { audio, renderer, log: chatLog, onSkip: () => simWorker.postMessage({ type: 'openingSkip' }) }) : null;
+  }, { audio, renderer, log: chatLog, touch: input.touch, onSkip: () => { noteEvent('held to skip'); simWorker.postMessage({ type: 'openingSkip' }); } }) : null;
   const enter = async (fresh = true) => {
     noteRun({ stage: 'playing' });
     title.hide();
@@ -959,6 +959,7 @@ async function boot(plan, poolSize) {
     await new Promise((r) => setTimeout(r, 700));
     const kept = !!saves.newest();
     const text = `The browser closed the game last time, ${deathWords(RUN.died)}. It does that when a page wants more memory than the device has to give.`
+      + `${RUN.died.trail?.length ? ` Just before: ${trailWords(RUN.died)}.` : ''}`
       + `${gpu.mobile && RUN.light ? ' This time the game is using less memory: smaller pictures on the models.' : ''}`
       + `${lighterWords()}`
       + `${kept ? ' Continue picks up from where the game was last kept.' : ''}`;
@@ -1227,6 +1228,10 @@ async function boot(plan, poolSize) {
     const up = input.touch && window.innerHeight > window.innerWidth;
     if (up === !!game.upright) return;
     game.upright = up;
+    // (And what's over the world goes too, not only covered: a phone keeps a picture of each piece, at the old size and the
+    // new as it turns, under the cover as much as over the world. index.html body.upright.)
+    document.body.classList.toggle('upright', up);
+    noteEvent(up ? 'turned upright' : 'turned back sideways');
     if (!input.enabled) return;     // (under the title, the world's held still already)
     if (up) input.releaseControls();
     shared.input[INPUT.PAUSE] = up || awayHeld() || state.paused ? 1 : 0;
@@ -1234,6 +1239,12 @@ async function boot(plan, poolSize) {
   window.addEventListener('resize', turned);
   window.addEventListener('orientationchange', turned);
   turned();
+  // What came just before, if the browser closes the game (src/core/lastrun.js noteEvent): a touch, a size, a field typed in.
+  if (input.touch) {
+    addEventListener('touchstart', () => noteEvent('touched'), { capture: true, passive: true });
+    addEventListener('resize', () => noteEvent(`size ${innerWidth}x${innerHeight}`), { passive: true });
+    addEventListener('focusin', (e) => { if (e.target?.matches?.('input, textarea')) noteEvent('typing'); });
+  }
   // The game's own panels (the talk, the shops, the seals, the skull's menu, the book, the pack): a tick under the pointer and a
   // click as one's pressed (MenuSFX, by Kevin Fowler). The title and the pause menu have their own (src/title.js chime, tick).
   let uiHover = null;
@@ -1505,7 +1516,7 @@ class GameView {
     this.unpaced = gpu.mobile || params.has('unpaced');
     this.paceAt = -1; this.snapSlot = 0; this.snapUs = 0; this.pacedSnap = false;
     this.simT = 0; this.simStats = { ms: 0, worst: 0, rate: 0, paced: false };
-    if (gpu.mobile || gpu.tier.lean) this.governor = new Governor({ apply: (s) => { renderer.scale = s; }, demote: () => renderer.demote() });
+    if (gpu.mobile || gpu.tier.lean) this.governor = new Governor({ apply: (s) => { if (renderer.scale !== s && gpu.mobile) noteEvent(`picture x${s}`); renderer.scale = s; }, demote: () => renderer.demote(), ...(gpu.mobile ? { steps: PHONE_ONLY_STEPS, start: 0 } : {}) });
     this.busySum = 0; this.busyN = 0; this.timed = []; this.benched = false;
     renderer.onBusy = (ms) => {
       this.busySum += ms; this.busyN++;

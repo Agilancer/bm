@@ -240,7 +240,10 @@ export class Input {
     s[INPUT.MOVE_Z] = mz;
     s[INPUT.YAW] = this.yaw;
     s[INPUT.PITCH] = this.pitch;
-    s[INPUT.VIEW_ASPECT] = this.canvas.width / Math.max(1, this.canvas.height);
+    // (The screen's shape, which the view is drawn to: on a phone with its browser's bar out, or its keyboard, the canvas keeps
+    // a picture of another shape and the view takes the screen's, src/gfx/renderer.js resize. Upright, the sideways picture's.)
+    const vw = this.canvas.clientWidth, vh = this.canvas.clientHeight;
+    s[INPUT.VIEW_ASPECT] = vw > vh && vh > 0 ? vw / vh : this.canvas.width / Math.max(1, this.canvas.height);
     s[INPUT.SPRINT] = (k.has('ShiftLeft') || k.has('ShiftRight') || this.sprintToggle || this.stickRun || a?.run) ? 1 : 0;
     s[INPUT.JUMP_HELD] = this.enabled && !this.menu && (k.has('Space') || this.jumpTouch || a?.jumpHeld) ? 1 : 0;
     s[INPUT.CAST] = this.enabled && !this.menu && (k.has('KeyF') || this.castMouse || this.castTouch || this.castSlot || a?.cast) ? 1 : 0;

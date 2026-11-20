@@ -43,6 +43,9 @@ export class OpeningHUD {
   constructor(onName, opts = {}) {
     this.name = '';
     this.onSkip = opts.onSkip;
+    // (A touch screen's from the start: its words are 'Tap CAST' and 'Hold here to skip', and the name field isn't put in
+    // focus for a keyboard nobody asked for.)
+    this.touched = !!opts.touch;
     this.fx = opts.renderer;
     this.sound = opts.audio ? new OpeningSound(opts.audio) : null;
     this.log = opts.log || null;      // the chat log (src/ui/chatlog.js): each of her lines goes into it as she says it
@@ -83,6 +86,10 @@ export class OpeningHUD {
       if (!name) return;
       this.name = name;
       this.namePanel.hidden = true;
+      // (The field let go, so the keyboard goes and nothing takes a word as still being typed; and the page put back at its
+      // top, where an iPhone's app from the home screen can leave it scrolled once the keyboard has gone.)
+      this.field.blur();
+      scrollTo(0, 0);
       onName();
     });
     this.form.addEventListener('keydown', (event) => event.stopPropagation());
@@ -91,8 +98,11 @@ export class OpeningHUD {
     addEventListener('keydown', (e) => { if (e.code === 'Space') this.holding.key = true; });
     addEventListener('keyup', (e) => { if (e.code === 'Space') this.holding.key = false; });
     addEventListener('blur', () => { this.holding.key = false; this.holding.touch = 0; });
-    addEventListener('touchstart', (e) => { this.holding.touch = e.touches.length; this.touched = true; }, { passive: true });
-    addEventListener('touchend', (e) => { this.holding.touch = e.touches.length; }, { passive: true });
+    // (On a touch screen, only a thumb held on the hint itself: one resting anywhere skipped the story, and from the ledge
+    // on that's a jump down the hill with all of the land there to bring up at once.)
+    const onHint = (e) => [...e.touches].filter((t) => this.skipHint.contains(t.target)).length;
+    addEventListener('touchstart', (e) => { this.holding.touch = onHint(e); this.touched = true; }, { passive: true });
+    addEventListener('touchend', (e) => { this.holding.touch = onHint(e); }, { passive: true });
     addEventListener('touchcancel', () => { this.holding.touch = 0; }, { passive: true });
     this.reset();
   }
@@ -147,6 +157,7 @@ export class OpeningHUD {
     const vignette = stage !== OPENING.WAKE ? 0 : t < SWAP_AT ? 0.9 : lerp(0.9, 0.22, smoothstep(SWAP_AT, SWAP_AT + 2, t));
     this.eyes.style.setProperty('--lid', `${((1 - lids) * 51).toFixed(2)}vh`);
     this.eyes.style.setProperty('--haze', `${haze.toFixed(2)}px`);
+    this.eyes.classList.toggle('hazy', haze > 0.05);
     this.eyes.style.setProperty('--vig', vignette.toFixed(3));
     this.eyes.hidden = stage !== OPENING.WAKE || t > CAVE.drop + 1.4;
     // The flash when the glamour breaks; and the dark, if you're knocked flat on the road.
@@ -156,6 +167,8 @@ export class OpeningHUD {
     const black = fell < 1.8 ? 1 - smoothstep(0.5, 1.8, fell) : 0;
     this.flash.style.opacity = Math.max(white, black).toFixed(3);
     this.flash.classList.toggle('dark', black > white);
+    // (Gone while there's none: at nothing it was still a screen-sized picture over the world's, 11 MB on an iPhone.)
+    this.flash.hidden = Math.max(white, black) < 0.002;
     // The name.
     this.namePanel.hidden = stage !== OPENING.NAME || !!this.name;
     if (!this.namePanel.hidden && document.activeElement !== this.field && !this.touched) this.field.focus({ preventScroll: true });
@@ -194,7 +207,7 @@ export class OpeningHUD {
     if (this.holdT >= SKIP_HOLD) { this.holdT = 0; this.skipped = stage; this.onSkip?.(); }
     // (On a phone, a thumb held while you walk out is walking: only Space skips that, so the hint isn't offered.)
     this.skipHint.hidden = !canSkip || this.skipped === stage || (stage === OPENING.WAKE && t < 2) || (this.touched && !touchOK);
-    this.skipHint.querySelector('span').textContent = this.touched ? 'Hold to skip' : 'Hold Space to skip';
+    this.skipHint.querySelector('span').textContent = this.touched ? 'Hold here to skip' : 'Hold Space to skip';
     this.skipHint.style.setProperty('--k', (this.holdT / SKIP_HOLD).toFixed(3));
     // Dust and stones when it comes down.
     this.effects(snap, stage, t, dt, her, crossed);
