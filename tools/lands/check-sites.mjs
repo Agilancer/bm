@@ -41,7 +41,9 @@ for (const [what, x, z, r] of [['the Howling Mouth', SITES.deepsmouth.x, SITES.d
 // And where each of the later delves' portals stands (src/core/dungeon.js DELVES): nothing of the place it's at within
 // eight metres of it, and the ground under its terrace near enough level.
 for (const d of DELVES.slice(3).filter((q) => !q.within)) {
-  for (const c of near(d.portal.x, d.portal.z, 8)) say(`the portal's ground for ${d.name}`, d.portal.x, d.portal.z, c);
+  // (Not the dungeon's own building behind its back wall, a city portal's hall: src/core/sites.js cityPortalDress.)
+  const behind = (c) => { const dx = c.x - d.portal.x, dz = c.z - d.portal.z; return dx * Math.sin(d.portal.yaw) + dz * Math.cos(d.portal.yaw) < -PORTAL_PAD.hw - 0.4; };
+  for (const c of near(d.portal.x, d.portal.z, 8)) if (!behind(c)) say(`the portal's ground for ${d.name}`, d.portal.x, d.portal.z, c);
   // (Under the terrace itself, turned the way it faces: round it the land's raised into the bank it's cut into, lands.js
   // PORTAL_BANKS.)
   const g = terrainHeight(d.portal.x, d.portal.z), c = Math.cos(d.portal.yaw), s = Math.sin(d.portal.yaw); let slope = 0;
