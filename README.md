@@ -2502,6 +2502,75 @@ three minutes there; `tools/autoplay/watch.mjs` for auto-play).
   before any of this.
 - **Nobody has played any of it by hand.** No new line has a recorded voice.
 
+### Textures without their repeat
+
+The owner (November 2026): "far too many shots where it's just the same textures repeated over and over again on the
+ground, houses, castles". Every painting tiles, and the eye finds the tile: the same blotch in a grid across a meadow,
+the same stone in the same place up a curtain, the same stain in every bay of a timbered front. What's done about it, in
+`src/gfx/materials.js` and the paintings themselves:
+
+- **The ground** (TERRAIN, on a PC): every ground painting is laid by `untile()`, not read once. The land is cut into
+  patches along the contours of a slow noise; each patch has its own copy of the painting, slid its own way; where two
+  meet, the copy that stands higher there by the painting's own height shows, over an edge a few hundredths wide, so a
+  join runs round a stone or a tussock and never cross-fades one painting through the other (that ghosted the flagstones'
+  joints and greyed the grass). What blending there is keeps the painting's contrast (mixed about its own mean and scaled
+  back up). The second read is paid only along the joins. Setts, flags and planks laid square to their way are slid only
+  along it. Cliff faces take their painting from the two sides blended by how much they face each, and only what's steep
+  is a face. Over it, the meadows' own lie, some tens of metres a patch: dry stretches gone to straw, lush dark ones, worn
+  places where plain grey-brown earth shows, more where the ground tilts. On a phone the one painting each ground reads is
+  bent out of line by a slow warp instead (a couple of metres over some tens: no grid, and no more reads of the paintings).
+- **The houses, the castles and the places** (STATIC). Their masonry, roofs and boards read two copies of the tile, slid
+  along their courses by a noise laid in the world's own space, meeting in the mortar (as Phobos's already did; now
+  everywhere, the delves too). Then, outdoors, weather where weather puts it, never in clouds: each stone, shingle or board
+  its own tone on its face, the joints left dark; a slow drift of tone so no two houses or stretches of curtain are one
+  stone; damp risen and dirt splashed up the foot of a wall, a ragged band to about a metre, greener on what faces north
+  (where the ground under it is known: each place's levelled pad and the town, `GROUNDS`; nowhere else); thin rain runs
+  down masonry here and there along it; lichen on wall tops; on roofs, runs down the fall line, moss in the hollows of the
+  north slopes, and each roof a little its own colour. A timbered front's timber and glass are never touched: only its
+  plaster varies, bay by bay, its painted stains kept in some bays and lifted in others, with a line of dirt where it meets
+  the timber. The church's own masonry (`wall_ashlar`, `wall_rough`, `src/gfx/interior.js`) takes the slide and the
+  stone-by-stone tone and no weather, since the same stone lines its inside. On a phone, the drift of tone only.
+- **The land's walls** (`src/core/sites.js`): a long wall is built of boxes some eight metres long, overlapping. Each began
+  its painting its own way, so a curtain read as panels with a seam every eight metres; now u runs on along the wall's
+  line by the metre, and round a drum it's a whole number of repeats. The ends between two boxes of one wall aren't built
+  (seen edge on, flush with the face, they drew a thin dark line down every join). The coursed stone (`course`) is laid half
+  again as big, about 40 cm a course.
+- **The paintings** (`python tools/world/unrepeat_tex.py`, reading each from the commit before, so it can be run again):
+  the grass's pale netting strands toned down and their relief eased; the masonry's broad light and dark half divided out,
+  so no blotch marks the period of the tile; the pale plaster of the fourteen timbered fronts evened, its dark rims and
+  stains lifted (only ever lightened), the dirt splashed at each panel's foot left, the timber, glass and stone infill as
+  painted. Same sizes, so nothing more is held: no memory measured, none added.
+
+**Looked at:** `tools/world/repeats.mjs <round>` photographs the same fourteen places every round (the square, a lane, a long
+timbered house near and far, the roofs from above, the meadow by the church, the hill road, the downs, Blackvigil,
+Gatewatch, Greywarden, Frostwatch, the abbey, Khel) in a real Chromium window on a virtual screen with a software GPU,
+about four minutes a picture; `BASE=<commit>` serves every changed game file, the textures included, as it was then, for
+a place's "before"; `python tools/world/repeats_sheet.py <before> <after>` lays two rounds side by side.
+
+**Three rounds, two critics** (2026-11-20). After each round two reviewers, briefed apart, each with thirty years of
+level design and texturing behind them, judged the fourteen places against the original: one for the scene as a whole
+(art direction and level design), one for the materials up close. Round 1 (the ground's offset copies, the slide on all
+masonry, weathering in world space) broke the repeat but laid grime in clouds with no cause, camouflage on Greywarden,
+with a hard cut down every round tower where its projection switched, and a cross-fade that ghosted flagstones; the
+owner, seeing it: the timbered fronts looked awful, a soot cloud dragged across a gable's beams. Round 2 put the weather
+where weather goes, left the fronts' timber and glass alone, made the ground's joins height-led, and evened the paintings;
+both found it much cleaner but turned it down for rain streaks that ran as pinstripes, flat stone at Greywarden, dark lines
+at Blackvigil's joins (there in the original: the boxes' ends), an orange stain by the abbey's stairs, the khaki of the
+meadow's dry grass, and the downs still one carpet. Round 3 fixed those. **The level designer approved it; the texture
+critic did not**, though calling it better than the original nearly everywhere and fit to ship. Left, and said by them:
+
+- **The timbered fronts' framing** on some houses is mapped at a different scale from storey to storey (a gable's lower
+  band of braces at half the scale of the storey above) and a few painted studs run down over the stone plinth. It's in
+  the village's own modelled UVs (`tools/village/build_village.py`, in Blender), as it was before, and wants a pass there:
+  the framed faces at one density in metres, rails at the storeys' heights, the framing cut at the sill. Not done here.
+- Greywarden's curtain still lines its joints up in columns at one stone's width (they'd stagger the courses); a faint tan
+  ring by the abbey's stairs; a small streak in the corner of the near ground at Khel; the downs' patches could be
+  stronger; the two lower windows of the long house still drip the same stain.
+- Seen only in pictures from a software GPU at 1280 by 720. Not looked at on a real GPU or a phone, and not measured for
+  frame time: the ground reads two copies only along its joins, and a wall's weather is a few more reads of the small
+  noise and the PH2 pack's decals. After the last round the older roofs' grey was warmed (a cool one read lilac beside red
+  shingles), seen in two pictures, not by the critics.
+
 ### When the GPU is lost
 
 A phone or tablet can take its GPU back from a page: its memory wanted elsewhere, a frame it gave up on, the browser put

@@ -1,8 +1,39 @@
 // WGSL for everything drawn in the world pass.
 import { COMMON } from './shaders.js';
-import { CHURCH_Z } from '../core/church.js';
+import { CHURCH_SITE, CHURCH_Z } from '../core/church.js';
 import { CRAG } from '../core/east.js';
+import { SITES } from '../core/lands.js';
+import { terrainHeight } from '../core/terrain.js';
 import { RD_CELL, RD_HALF, RD_MAX, RD_N, RD_NX } from '../core/roads.js';
+
+// Where the ground is known to a building's foot without a map of it: each place's levelled pad (src/core/lands.js SITES,
+// levelled to its own middle's height), and the town's houses, which all stand at the land's 0 to 0.1. [x, z, radius,
+// height], for the damp and the splashed dirt at the foot of a wall (STATIC). A pad the land doesn't keep level (a few,
+// where hills come in over its edge) is left out; anywhere else a wall has no damp band.
+const GROUNDS = (() => {
+  const g = [[20, 0, 78, 0.06]];
+  for (const s of Object.values(SITES)) {
+    if (!s.pad) continue;
+    const y = terrainHeight(s.x, s.z);
+    let off = 0;
+    for (let a = 0; a < 16; a++) off = Math.max(off, Math.abs(terrainHeight(s.x + Math.cos(a) * s.pad * 0.9, s.z + Math.sin(a) * s.pad * 0.9) - y));
+    if (off < 0.25) g.push([s.x, s.z, s.pad * 0.95, y]);
+  }
+  return g;
+})();
+const f1 = (v) => (Number.isInteger(v) ? v.toFixed(1) : String(+v.toFixed(3)));
+const GROUND_WGSL = /* wgsl */ `
+const GROUNDS = array<vec4f, ${GROUNDS.length}>(${GROUNDS.map((g) => `vec4f(${g.map(f1).join(', ')})`).join(', ')});
+// The ground's height under p, where it's known; else far below.
+fn groundUnder(p: vec3f) -> f32 {
+  if (p.x > ${f1(CHURCH_SITE.x0)} && p.x < ${f1(CHURCH_SITE.x1)} && abs(p.z - ${f1(CHURCH_SITE.z)}) < ${f1(CHURCH_SITE.hz)}) { return ${f1(CHURCH_SITE.y)}; }
+  for (var i = 0; i < ${GROUNDS.length}; i++) {
+    let G = GROUNDS[i]; let d = p.xz - G.xy;
+    if (dot(d, d) < G.z * G.z) { return G.w; }
+  }
+  return -1e6;
+}
+`;
 
 export const TERRAIN = COMMON + /* wgsl */ `
 @group(1) @binding(0) var groundColor: texture_2d_array<f32>;
@@ -51,6 +82,52 @@ struct V { @builtin(position) pos: vec4f, @location(0) p: vec3f, @location(1) n:
 
 fn rot(p: vec2f, a: f32) -> vec2f { let c = cos(a); let s = sin(a); return vec2f(c * p.x - s * p.y, s * p.x + c * p.y); }
 
+// A ground painting laid without its repeat (on a PC). The land is cut into patches along the contours of a slow noise (k,
+// 0 to 1, read once for here); each patch has its own copy of the painting, slid its own way, and where two patches meet
+// the copy that stands higher there (by the painting's own height, each lifted by how far into its patch this is) shows,
+// over an edge a few hundredths of the height wide: so a join runs round a stone or a tussock, the way a stone in one
+// copy lies on the other, and never fades one painting through the other (a cross-fade ghosted the flagstones' joints and
+// greyed the grass: the critics). What blending there is keeps the painting's contrast: the two are mixed about the
+// painting's own mean and the mix scaled back up by how much it would have lost. One copy alone where a patch is whole,
+// so the second read is only paid along the joins. slide: which ways a copy may be slid (setts and flags only along
+// their way, or their rows break). (The owner: the same tile over and over on the ground, the houses and the castles.)
+struct GS { c: vec4f, d: vec4f };
+fn hash2(i: f32) -> vec2f { return fract(sin(vec2f(12.9898, 78.233) * i + vec2f(0.0, i * 0.37)) * 43758.5453); }
+fn keepContrast(a: vec4f, b: vec4f, w: f32, mean: vec4f) -> vec4f {
+  return mean + (mix(a, b, w) - mean) / sqrt(w * w + (1.0 - w) * (1.0 - w));
+}
+fn untile(l: i32, uv: vec2f, dx: vec2f, dy: vec2f, k: f32, slide: vec2f) -> GS {
+  let s = k * 7.0 + f32(l) * 0.618;
+  let i = floor(s);
+  let t = clamp((fract(s) - 0.2) / 0.6, 0.0, 1.0);
+  var a = GS(vec4f(0.0), vec4f(0.5, 0.5, 0.9, 0.5)); var b = a;
+  if (t < 1.0) {
+    let o = hash2(i) * slide;
+    a = GS(textureSampleGrad(groundColor, repeatSmp, uv + o, l, dx, dy), textureSampleGrad(groundDetail, repeatSmp, uv + o, l, dx, dy));
+  }
+  if (t <= 0.0) { return a; }
+  let o = hash2(i + 1.0) * slide;
+  b = GS(textureSampleGrad(groundColor, repeatSmp, uv + o, l, dx, dy), textureSampleGrad(groundDetail, repeatSmp, uv + o, l, dx, dy));
+  if (t >= 1.0) { return b; }
+  let w = smoothstep(-0.07, 0.07, (b.d.a + t * 1.25) - (a.d.a + (1.0 - t) * 1.25));
+  let mean = textureSampleLevel(groundColor, repeatSmp, uv, l, 12.0);
+  return GS(keepContrast(a.c, b.c, w, mean), mix(a.d, b.d, w));
+}
+// (The same for a painting whose colour alone is wanted: its light stands for its height.)
+fn untileC(l: i32, uv: vec2f, dx: vec2f, dy: vec2f, k: f32) -> vec4f {
+  let s = k * 7.0 + f32(l) * 0.618;
+  let i = floor(s);
+  let t = clamp((fract(s) - 0.2) / 0.6, 0.0, 1.0);
+  var a = vec4f(0.0);
+  if (t < 1.0) { a = textureSampleGrad(groundColor, repeatSmp, uv + hash2(i), l, dx, dy); }
+  if (t <= 0.0) { return a; }
+  let b = textureSampleGrad(groundColor, repeatSmp, uv + hash2(i + 1.0), l, dx, dy);
+  if (t >= 1.0) { return b; }
+  let la = sqrt(dot(a.rgb, vec3f(0.3, 0.6, 0.1))); let lb = sqrt(dot(b.rgb, vec3f(0.3, 0.6, 0.1)));
+  let w = smoothstep(-0.06, 0.06, (lb + t * 1.1) - (la + (1.0 - t) * 1.1));
+  return keepContrast(a, b, w, textureSampleLevel(groundColor, repeatSmp, uv, l, 12.0));
+}
+
 @fragment fn fs(in: V) -> Out {
   let p = in.p;
   let toCam = F.camPos.xyz - p;
@@ -87,9 +164,12 @@ fn rot(p: vec2f, a: f32) -> vec2f { let c = cos(a); let s = sin(a); return vec2f
   // The Tripo grounds (tools/world/build_ground.py), on a scale and turn of their own: the road's gravel, snow, stone, forest floor.
   let uvC = rot(p.xz, 0.6) * 0.17 + 0.11;
   let dxC = dpdx(uvC); let dyC = dpdy(uvC);
-  // Stone on a steep face is painted on the face, not stretched down it from above.
-  let side = select(p.zy, p.xy, abs(in.n.z) > abs(in.n.x)) * vec2f(0.13, -0.13);
-  let dxS = dpdx(side); let dyS = dpdy(side);
+  // Stone on a steep face is painted on the face, not stretched down it from above: from the side it faces most, the two
+  // sides blended by how much it faces each (picking one smeared a face that turned between them).
+  let sideX = p.zy * vec2f(0.13, -0.13); let sideZ = p.xy * vec2f(0.13, -0.13);
+  let dxSX = dpdx(sideX); let dySX = dpdy(sideX); let dxSZ = dpdx(sideZ); let dySZ = dpdy(sideZ);
+  let nx4 = pow(abs(in.n.x), 4.0); let nz4 = pow(abs(in.n.z), 4.0);
+  let faceX = nx4 / max(nx4 + nz4, 1e-6);
   // Roads: worn gravel and set stones wherever the ground's trodden hard. Rock: on the steeps and the far map's bare ground.
   let roadAmt = smoothstep(0.42, 0.78, dirtBase + (macro2.g - 0.5) * 0.25);
   let rock0 = max(fm.a, smoothstep(0.2, 0.42, steep));
@@ -105,13 +185,16 @@ fn rot(p: vec2f, a: f32) -> vec2f { let c = cos(a); let s = sin(a); return vec2f
     // One painting of each ground and one detail map on a phone (the paintings nearest the average of their kind, and
     // the relief of whichever ground this mostly is): the ground covers half the screen, so these three reads in place of
     // eight are the biggest saving in the frame. (Where it's mostly road, the road's gravel in place of the dirt: no extra read.)
-    grassCol = textureSample(groundColor, repeatSmp, uvA, 5);
+    // (Its repeat bent out of line by a slow warp, a couple of metres either way over some tens: no grid to see, for one
+    // more read of the small noise and none of the paintings.)
+    let uvL = uvA + (textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.011 + vec2f(0.57, 0.19), 3.0).rg - 0.5) * 1.1;
+    grassCol = textureSample(groundColor, repeatSmp, uvL, 5);
     // The patchwork the other paintings gave: warmer and cooler stretches, and dry ones.
     grassCol = vec4f(grassCol.rgb * mix(vec3f(1.2, 1.02, 0.85), vec3f(0.88, 1.0, 1.08), smoothstep(0.3, 0.7, macro2.g)), grassCol.a);
     grassCol = vec4f(mix(grassCol.rgb, vec3f(0.24, 0.2, 0.09), smoothstep(0.52, 0.78, macro2.r) * 0.38), grassCol.a);
     // (On a laid way, its own ground in the dirt's place: still the one read.)
-    dirtCol = textureSample(groundColor, repeatSmp, uvA, select(select(1, 6, dirtBase > 0.5), 17 + i32(rh.kind + 0.5), pave > 0.3));
-    grassDet = textureSample(groundDetail, repeatSmp, uvA, select(3, 1, dirtBase > 0.5));
+    dirtCol = textureSample(groundColor, repeatSmp, uvL, select(select(1, 6, dirtBase > 0.5), 17 + i32(rh.kind + 0.5), pave > 0.3));
+    grassDet = textureSample(groundDetail, repeatSmp, uvL, select(3, 1, dirtBase > 0.5));
     dirtDet = vec4f(grassDet.rgb, 1.0 - grassDet.a);
   } else {
     let macro1 = textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.0071, 0.0);
@@ -127,14 +210,21 @@ fn rot(p: vec2f, a: f32) -> vec2f { let c = cos(a); let s = sin(a); return vec2f
     let d0 = i32(floor(dPick)) % 3;
     let d1 = (d0 + 1) % 3;
     let dFade = smoothstep(0.3, 0.7, fract(dPick));
-    grassCol = mix(textureSampleGrad(groundColor, repeatSmp, uvA, 3 + g0, dxA, dyA), textureSampleGrad(groundColor, repeatSmp, uvB, 3 + g1, dxB, dyB), gFade);
-    grassDet = mix(textureSampleGrad(groundDetail, repeatSmp, uvA, 3 + g0, dxA, dyA), textureSampleGrad(groundDetail, repeatSmp, uvB, 3 + g1, dxB, dyB), gFade);
-    dirtCol = mix(textureSampleGrad(groundColor, repeatSmp, uvB, d0, dxB, dyB), textureSampleGrad(groundColor, repeatSmp, uvA, d1, dxA, dyA), dFade);
-    dirtDet = mix(textureSampleGrad(groundDetail, repeatSmp, uvB, d0, dxB, dyB), textureSampleGrad(groundDetail, repeatSmp, uvA, d1, dxA, dyA), dFade);
+    // (And each of those laid without its own repeat: untile(). Its patches, from a noise of their own.)
+    let kU = textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.021 + vec2f(0.23, 0.61), 0.0);
+    let free = vec2f(1.0);
+    var ga = GS(vec4f(0.0), vec4f(0.5)); var gb = ga; var da = ga; var db = ga;
+    if (gFade < 1.0) { ga = untile(3 + g0, uvA, dxA, dyA, kU.r, free); }
+    if (gFade > 0.0) { gb = untile(3 + g1, uvB, dxB, dyB, kU.g, free); }
+    if (dFade < 1.0) { da = untile(d0, uvB, dxB, dyB, kU.b, free); }
+    if (dFade > 0.0) { db = untile(d1, uvA, dxA, dyA, kU.a, free); }
+    grassCol = mix(ga.c, gb.c, gFade); grassDet = mix(ga.d, gb.d, gFade);
+    dirtCol = mix(da.c, db.c, dFade); dirtDet = mix(da.d, db.d, dFade);
     // The road's own gravel and stones over the dirt.
     if (roadAmt > 0.002) {
-      dirtCol = mix(dirtCol, textureSampleGrad(groundColor, repeatSmp, uvC, 6, dxC, dyC), roadAmt);
-      dirtDet = mix(dirtDet, textureSampleGrad(groundDetail, repeatSmp, uvC, 6, dxC, dyC), roadAmt);
+      let r = untile(6, uvC, dxC, dyC, kU.g, free);
+      dirtCol = mix(dirtCol, r.c, roadAmt);
+      dirtDet = mix(dirtDet, r.d, roadAmt);
     }
     // Which stone: grey granite round the town, black basalt in the Ashen Waste and on the Sorrowhorn, rust-red in the Rustwood,
     // pale limestone on the Downs and the moor, frost-split where the snow lies. Picked per spot with a little noise, so where two
@@ -147,16 +237,25 @@ fn rot(p: vec2f, a: f32) -> vec2f { let c = cos(a); let s = sin(a); return vec2f
       if (fk.g + j * 0.3 > bw) { layer = 17; bw = fk.g + j * 0.3; }
       if (fk.b - j * 0.35 > bw) { layer = 12; bw = fk.b - j * 0.35; }
       if (fm.b + j * 0.3 > max(bw, 0.35)) { layer = 10; }
-      let top = textureSampleGrad(groundColor, repeatSmp, uvC * 0.8, layer, dxC * 0.8, dyC * 0.8);
-      let face = textureSampleGrad(groundColor, repeatSmp, side, layer, dxS, dyS);
-      rockCol = mix(face.rgb, top.rgb, smoothstep(0.55, 0.85, in.n.y));
-      rockDet = textureSampleGrad(groundDetail, repeatSmp, uvC * 0.8, layer, dxC * 0.8, dyC * 0.8);
+      let top = untile(layer, uvC * 0.8, dxC * 0.8, dyC * 0.8, kU.r, free);
+      // (A face's patches by its own noise, read across the face: the land's from above would smear down a cliff. Only
+      // what's steep is a face: on a gentle slope the side's painting is stretched, and a little of it was a smear.)
+      let topW = smoothstep(0.45, 0.75, in.n.y);
+      var face = top.c;
+      if (topW < 1.0) {
+        var fs = vec4f(0.0); var fw = 0.0;
+        if (faceX > 0.03) { fs += untileC(layer, sideX, dxSX, dySX, textureSampleLevel(noiseTex, repeatSmp, sideX * 0.16 + vec2f(0.47, 0.13), 0.0).b) * faceX; fw += faceX; }
+        if (faceX < 0.97) { fs += untileC(layer, sideZ, dxSZ, dySZ, textureSampleLevel(noiseTex, repeatSmp, sideZ * 0.16 + vec2f(0.47, 0.13), 0.0).b) * (1.0 - faceX); fw += 1.0 - faceX; }
+        face = fs / fw;
+      }
+      rockCol = mix(face.rgb, top.c.rgb, topW);
+      rockDet = top.d;
       haveRock = true;
     }
     // Snow with its own drifts, and stones breaking through it where it's thin or the ground steepens.
     if (snowAmt > 0.002) {
-      let sn = textureSampleGrad(groundColor, repeatSmp, uvC * 0.7, 7, dxC * 0.7, dyC * 0.7);
-      let sr = textureSampleGrad(groundColor, repeatSmp, uvC * 0.9, 8, dxC * 0.9, dyC * 0.9);
+      let sn = untileC(7, uvC * 0.7, dxC * 0.7, dyC * 0.7, kU.b);
+      let sr = untileC(8, uvC * 0.9, dxC * 0.9, dyC * 0.9, kU.a);
       let stony = max(smoothstep(0.58, 0.8, macro1.a + (macro2.a - 0.5) * 0.25), smoothstep(0.12, 0.3, steep)) * smoothstep(0.95, 0.5, snowAmt * 0.75);
       snowTex = vec4f(mix(sn.rgb, sr.rgb, stony), stony);
       haveSnow = true;
@@ -173,25 +272,41 @@ fn rot(p: vec2f, a: f32) -> vec2f { let c = cos(a); let s = sin(a); return vec2f
         uvP = vec2f(rh.across, rh.along) * sc;
         gx = vec2f(dot(dpx, nrm), dot(dpx, rh.dir)) * sc; gy = vec2f(dot(dpy, nrm), dot(dpy, rh.dir)) * sc;
       }
-      paveCol = textureSampleGrad(groundColor, repeatSmp, uvP, layer, gx, gy).rgb;
-      paveDet = textureSampleGrad(groundDetail, repeatSmp, uvP, layer, gx, gy);
+      // (Setts, flags and planks laid square to their way are slid only along it, or their courses would break.)
+      let pv = untile(layer, uvP, gx, gy, kU.a, select(vec2f(1.0), vec2f(0.0, 1.0), rh.kind < 2.5 || rh.kind > 6.5));
+      paveCol = pv.c.rgb;
+      paveDet = pv.d;
     }
     // Under the pines, a floor of old needles and cones, not plain dark.
-    if (fm.g > 0.02) { floorCol = textureSampleGrad(groundColor, repeatSmp, uvA * 0.8, 14, dxA * 0.8, dyA * 0.8).rgb; haveFloor = true; }
+    if (fm.g > 0.02) { floorCol = untileC(14, uvA * 0.8, dxA * 0.8, dyA * 0.8, kU.g).rgb; haveFloor = true; }
     // Fen and ash, in the countries that have them.
-    if (ft.a > 0.2) { fenCol = textureSampleGrad(groundColor, repeatSmp, uvB, 15, dxB, dyB).rgb; }
-    if (fk.r > 0.15) { ashCol = textureSampleGrad(groundColor, repeatSmp, uvC, 16, dxC, dyC).rgb; }
+    if (ft.a > 0.2) { fenCol = untileC(15, uvB, dxB, dyB, kU.r).rgb; }
+    if (fk.r > 0.15) { ashCol = untileC(16, uvC, dxC, dyC, kU.b).rgb; }
   }
 
+  // The meadows' own lie, some tens of metres to a patch (field): dry stretches gone to straw, lush dark ones, and worn
+  // places where the earth shows through, more of them where the ground tilts. (One green carpet from a hilltop, the
+  // critics: the paintings' repeat was gone and the land was still all one.)
+  let field = textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.0091 + vec2f(0.13, 0.52), 0.0);
+  let worn = smoothstep(0.66, 0.8, field.a + (macro2.r - 0.5) * 0.15) * 0.45 * (1.0 - 0.5 * inMap) + smoothstep(0.14, 0.34, steep) * 0.25;
   // Dirt shows through where the grass's own height runs low.
-  let edge = clamp(dirtBase * 1.7 - 0.35 + (dirtDet.a - grassDet.a) * 0.9 + (macro2.b - 0.5) * 0.35, 0.0, 1.0);
+  let edge = clamp(dirtBase * 1.7 - 0.35 + (dirtDet.a - grassDet.a) * 0.9 + (macro2.b - 0.5) * 0.35 + worn, 0.0, 1.0);
   let dirt = smoothstep(0.32, 0.68, edge);
-  var albedo = mix(mix(vec3f(dot(grassCol.rgb, vec3f(0.3, 0.6, 0.1))), grassCol.rgb, 0.5) * vec3f(0.58, 0.57, 0.4), dirtCol.rgb, dirt);
+  // (Earth that shows only because the grass is worn there is the plain grey-brown of trodden ground, not the country's
+  // red: in the Rustwood a worn bank was an orange stain, the critics.)
+  let wornOnly = clamp(worn * 2.0 - dirtBase * 2.0, 0.0, 1.0);
+  let earth = mix(dirtCol.rgb, vec3f(dot(dirtCol.rgb, vec3f(0.3, 0.6, 0.1))) * vec3f(1.05, 0.98, 0.86), wornOnly * 0.75);
+  var albedo = mix(mix(vec3f(dot(grassCol.rgb, vec3f(0.3, 0.6, 0.1))), grassCol.rgb, 0.5) * vec3f(0.58, 0.57, 0.4), earth, dirt);
   var det = mix(grassDet, dirtDet, dirt);
   // Meadow far from the village goes drier and more varied, like the hills under this light.
   let farDry = smoothstep(90.0, 420.0, length(p.xz));
   albedo = mix(albedo, mix(vec3f(dot(albedo, vec3f(0.3, 0.6, 0.1))), albedo, 0.55) * vec3f(0.92, 0.9, 0.76), farDry * 0.85);
   albedo *= 0.8 + macro2.r * 0.45;
+  // (The field's dry and lush stretches, over the far wash so it doesn't grey them out: gentle where the grass's blades
+  // stand over the ground, which stay green, and fuller out on the open land.)
+  let dryK = smoothstep(0.52, 0.72, field.r + (macro2.g - 0.5) * 0.2) * mix(0.14, 0.5, farDry) * (1.0 - dirt);
+  albedo = mix(albedo, vec3f(dot(albedo, vec3f(0.3, 0.6, 0.1))) * vec3f(1.42, 1.18, 0.66) + vec3f(0.012, 0.009, 0.0), dryK);
+  albedo *= mix(vec3f(1.0), vec3f(0.8, 0.94, 0.72), smoothstep(0.56, 0.76, field.g) * mix(0.5, 1.0, farDry) * (1.0 - dirt));
   // And a broader wash over the meadows, some sixty metres across: greener, yellower, greyer stretches, so the grass's paintings
   // never show their repeat from a hilltop.
   if (!LEAN) {
@@ -308,6 +423,25 @@ fn p2W(uv: vec2f, l: i32, s: f32, dist: f32) -> vec4f {
 fn detAt(uv: vec2f, l: i32, dx: vec2f, dy: vec2f) -> vec4f {
   if (l >= 200) { return textureSampleGrad(p2Detail, repeatSmp, uv, l - 200, dx, dy); }
   return textureSampleGrad(detailArr, repeatSmp, uv, l, dx, dy);
+}
+${GROUND_WGSL}
+// A wall's (or a roof's) own across and down in the world's metres, for what weathers it: qa where it faces along x, qb
+// where it faces along z, f how much it faces x. The two are blended by f rather than one picked, so round a tower the
+// pattern turns with the wall and never switches (picking one was a hard line down every drum). nz2: the small noise read
+// that way, s to the metre; p2W2: one of the PH2 pack's paintings (s metres a repeat across, t down).
+fn nz2(qa: vec2f, qb: vec2f, f: f32, s: f32, o: vec2f, lv: f32) -> vec4f {
+  let a = select(0.0, f, f > 0.03); let b = select(0.0, 1.0 - f, f < 0.97);
+  var r = vec4f(0.0);
+  if (a > 0.0) { r += textureSampleLevel(noiseTex, repeatSmp, qa * s + o, lv) * a; }
+  if (b > 0.0) { r += textureSampleLevel(noiseTex, repeatSmp, qb * s + o, lv) * b; }
+  return r / (a + b);
+}
+fn p2W2(qa: vec2f, qb: vec2f, f: f32, l: i32, s: f32, t: f32, o: vec2f, dist: f32) -> vec4f {
+  let a = select(0.0, f, f > 0.03); let b = select(0.0, 1.0 - f, f < 0.97);
+  var r = vec4f(0.0);
+  if (a > 0.0) { r += p2W(vec2f(qa.x / s, -qa.y / t) + o, l, s, dist) * a; }
+  if (b > 0.0) { r += p2W(vec2f(qb.x / s, -qb.y / t) + o, l, s, dist) * b; }
+  return r / (a + b);
 }
 
 struct V {
@@ -465,6 +599,27 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
     let w = smoothstep(0.32, 0.68, l - ia + (db.a - da.a) * 0.9);
     tex = mix(colAt(uv + oa, layerI, dx, dy), colAt(uv + ob, layerI, dx, dy), w);
     det = mix(da, db, w);
+  }
+  // And the same everywhere else: the town's and the land's own masonry, roofs and boards, the castles and the places out in
+  // the countries, and down the delves. Its patches are laid in the world's own space, not the painting's, so two towers
+  // built alike aren't stone for stone the same; slid along only, so a course stays level. Never a painting with windows in
+  // it (params.z), a door, a banner or anything laid once (params.w is nothing on those). (The owner: the same texture over
+  // and over on the houses and the castles.)
+  let wide = !LEAN && !phob && !flat_ && params.w < 0.0 && params.z == 0.0;
+  if (wide && dist < 260.0) {
+    let l = textureSampleLevel(noiseTex, repeatSmp, vec2f(p.x + p.y * 0.71, p.z - p.y * 0.63) * 0.043 + vec2f(0.19, 0.83), 0.0).b * 8.0;
+    let ia = floor(l);
+    let oa = vec2f(fract(sin(ia * 12.9898 + 0.31) * 43758.5), 0.0); let ob = vec2f(fract(sin((ia + 1.0) * 12.9898 + 0.31) * 43758.5), 0.0);
+    let t = clamp((l - ia - 0.25) / 0.5, 0.0, 1.0);
+    if (t <= 0.0) { tex = colAt(uv + oa, layerI, dx, dy); det = detAt(uv + oa, layerI, dx, dy); }
+    else if (t >= 1.0) { tex = colAt(uv + ob, layerI, dx, dy); det = detAt(uv + ob, layerI, dx, dy); }
+    else {
+      let da = detAt(uv + oa, layerI, dx, dy);
+      let db = detAt(uv + ob, layerI, dx, dy);
+      let w = smoothstep(0.0, 1.0, clamp(t + (db.a - da.a) * 2.4 * t * (1.0 - t), 0.0, 1.0));
+      tex = mix(colAt(uv + oa, layerI, dx, dy), colAt(uv + ob, layerI, dx, dy), w);
+      det = mix(da, db, w);
+    }
   }
   if (flat_) {
     let m = flatMaterial(lay, p, F.camPos.w);
@@ -651,6 +806,112 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
         // A roof's or a ledge's top: moss in its hollows, darker in the grime's clouds.
         let moss = p2W(p.xz / 2.0, 282, 2.0, dist).rgb;
         albedo = mix(albedo, moss * 0.7, smoothstep(0.58, 0.82, mid.b) * smoothstep(0.1, 0.5, 1.0 - det.a) * 0.6);
+      }
+    }
+    // Out in the weather everywhere else (above the delves, which lie fifty metres and more under the land): the town's
+    // houses, the castles and the places, in the world's own space so it runs on over every tile and joint, and placed
+    // where weather puts it rather than in clouds (the critics: clouds of grime with no cause read as camouflage):
+    // - every surface: a slow drift of tone, a few in a hundred, so no two houses or stretches of curtain are one stone;
+    // - masonry, roofs and boards: each stone, shingle or board its own tone, on its face (by the painting's height) so
+    //   the joints stay dark between them; the same stone in the same place, tile after tile, was the repeat that read;
+    // - a wall's foot, where the ground under it is known (groundUnder): rising damp and splashed dirt, a ragged band to
+    //   about a metre, greener and darker on what faces north;
+    // - masonry: thin rain streaks down its face, a crack now and then, lichen on its tops;
+    // - a roof: its streaks down the fall line, moss on the slope that faces north, in the shingles' hollows;
+    // - a painted front (params.z): never its timber or its glass. Only its plaster and infill: each bay a little its own
+    //   tone, a line of dirt where the plaster meets the timber, and the damp at the foot. (The owner: the fronts with their
+    //   cross beams must look right.)
+    // The church's masonry (-3, src/gfx/interior.js) takes the tone and the stone by stone, none of the weather: the same
+    // stone lines its inside. On a phone, the drift of tone only. (The PH2 pack's decals, soot and cracks, are white on black made cut-outs: what
+    // they mark is in their alpha, their colour near black.)
+    if (!phob && params.w < 0.0 && params.x == 0.0 && p.y > -20.0) {
+      let big = textureSampleLevel(noiseTex, repeatSmp, vec2f(p.x + p.y * 0.5, p.z - p.y * 0.5) * 0.0093 + vec2f(0.61, 0.27), 0.0);
+      albedo *= 0.92 + 0.17 * big.r;
+      albedo = mix(albedo, albedo * vec3f(1.04, 1.0, 0.94), smoothstep(0.4, 0.75, big.g));
+      albedo = mix(albedo, albedo * vec3f(0.97, 0.99, 1.03), smoothstep(0.4, 0.75, big.b));
+      if (!LEAN) {
+        let top = n0.y > 0.9;
+        let vert = abs(n0.y) < 0.45;
+        let slope = !top && !vert && n0.y > 0.0;
+        let hx = n0.x * n0.x * n0.x * n0.x; let hz = n0.z * n0.z * n0.z * n0.z;
+        let fx = hx / max(hx + hz, 1e-6);
+        let qa = vec2f(p.z, p.y); let qb = vec2f(p.x, p.y);
+        let mason = params.z == 0.0 && params.w > -1.5;
+        let boards = params.w < -1.5 && params.w > -2.5;
+        let weather = params.w > -2.5;
+        let ground = groundUnder(p);
+        let hg = p.y - ground;
+        if (params.z == 0.0) {
+          let sz = select(0.62, 1.35, boards);
+          var sv: vec4f;
+          if (top) { sv = textureSampleLevel(noiseTex, repeatSmp, p.xz * sz + vec2f(0.17, 0.43), 2.0); }
+          else { sv = nz2(qa, qb, fx, sz, vec2f(0.17, 0.43), 2.0); }
+          let face = smoothstep(0.34, 0.6, det.a);
+          albedo *= mix(1.0, select(0.8 + 0.4 * sv.r, 0.85 + 0.3 * sv.r, boards), face);
+          albedo = mix(albedo, albedo * vec3f(1.06, 1.0, 0.93), smoothstep(0.55, 0.8, sv.g) * face);
+          albedo = mix(albedo, vec3f(dot(albedo, vec3f(0.3, 0.55, 0.15))) * vec3f(0.97, 0.99, 1.03), smoothstep(0.58, 0.85, sv.b) * face * 0.5);
+        }
+        if (params.z > 0.0) {
+          let glass = 1.0 - smoothstep(0.1, 0.26, det.b);
+          let sg = sqrt(max(tex.rgb, vec3f(0.0)));
+          let wood = clamp((0.4 - dot(sg, vec3f(0.2126, 0.7152, 0.0722))) * 7.0, 0.0, 1.0) * clamp((sg.r - sg.b) * 7.0, 0.0, 1.0);
+          let infill = (1.0 - smoothstep(0.15, 0.5, wood)) * (1.0 - glass);
+          // (Each bay: a noise about a bay's width, read across the front.)
+          let bay = nz2(qa, qb, fx, 0.33, vec2f(0.33, 0.77), 1.0);
+          albedo *= mix(1.0, 0.93 + 0.13 * bay.r, infill);
+          albedo = mix(albedo, albedo * vec3f(1.04, 0.99, 0.9), smoothstep(0.5, 0.8, bay.g) * infill);
+          // (The stains, drips and old patches painted into the plaster, the same in every bay: lifted toward the plaster
+          // round them in some bays and left in others, by the bay's own noise, so each bay keeps a different few.)
+          let wide = textureSampleLevel(colorArr, repeatSmp, uv, layerI, 6.0).rgb;
+          let lifted = max(albedo, albedo * clamp(dot(wide, vec3f(0.3, 0.55, 0.15)) / max(dot(tex.rgb, vec3f(0.3, 0.55, 0.15)), 1e-3), 1.0, 1.7));
+          albedo = mix(albedo, lifted, smoothstep(0.42, 0.62, bay.a) * infill * 0.85);
+          // (Where the plaster meets the timber: the painting itself, blurred, is darker there.)
+          let soft = sqrt(max(textureSampleLevel(colorArr, repeatSmp, uv, layerI, 4.0).rgb, vec3f(0.0)));
+          let nearWood = clamp((0.62 - dot(soft, vec3f(0.2126, 0.7152, 0.0722))) * 4.0, 0.0, 1.0);
+          albedo *= 1.0 - 0.14 * nearWood * infill * (0.5 + bay.b);
+        }
+        if (weather && vert && hg > -1.0 && hg < 2.5) {
+          // The foot of a wall: damp risen into it and the dirt splashed up, to about a metre with a ragged top.
+          let rag = nz2(qa, qb, fx, 1.3, vec2f(0.71, 0.11), 1.0);
+          let band = 1.0 - smoothstep(0.35, 1.0 + 0.5 * rag.r, hg);
+          let splash = 1.0 - smoothstep(0.0, 0.3 + 0.2 * rag.g, hg);
+          let north = smoothstep(-0.2, 0.8, -n0.z);
+          albedo = mix(albedo, albedo * mix(vec3f(0.87, 0.85, 0.8), vec3f(0.8, 0.85, 0.76), north * 0.7), band * select(0.8, 1.0, mason));
+          albedo *= 1.0 - 0.1 * splash;
+          rough = mix(rough, max(rough, 0.85), band * 0.5);
+        }
+        if (mason && vert) {
+          // Rain down the face in thin runs, here and there along it (where a noise along the wall says the water comes
+          // down), no darker than a sixth. (Everywhere at once, every few metres, they read as pinstripes: a repeat again.)
+          let st = p2W2(qa, qb, fx, 280, 5.3, 13.0, vec2f(0.0), dist).a;
+          let runs = nz2(qa, qb, fx, 0.17, vec2f(0.21, 0.66), 1.0);
+          albedo *= 1.0 - 0.18 * st * smoothstep(0.45, 0.68, runs.r);
+          let ck = p2W2(qa, qb, fx, 285, 3.0, 3.0, vec2f(0.61, 0.0), dist).a;
+          albedo *= 1.0 - 0.3 * ck * smoothstep(0.62, 0.8, big.a);
+        }
+        if (mason && top) {
+          // A wall's top or a ledge: lichen in spots, grey-green and pale.
+          let li = p2W(p.xz / 1.5, 286, 1.5, dist).rgb;
+          let m = textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.21 + vec2f(0.4, 0.2), 0.0);
+          albedo = mix(albedo, li * 0.85, smoothstep(0.5, 0.75, m.b) * 0.45);
+        }
+        if (boards && slope) {
+          // A roof: streaks down the fall line from the ridge, and moss on the slope that faces north, in its hollows.
+          // (Each roof its own: a noise about a house apart sets one redder or browner, one greyer and older.)
+          let own = textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.031 + vec2f(0.83, 0.37), 0.0);
+          albedo *= 0.86 + 0.28 * own.r;
+          albedo = mix(albedo, albedo * vec3f(1.1, 0.96, 0.86), smoothstep(0.45, 0.75, own.g) * 0.8);
+          // (Older and greyer is a warm grey, weathered wood's: a cool one beside red shingles read lilac.)
+          albedo = mix(albedo, vec3f(dot(albedo, vec3f(0.3, 0.55, 0.15))) * vec3f(1.04, 0.98, 0.9), smoothstep(0.5, 0.8, own.b) * 0.45);
+          let st = p2W2(qa, qb, fx, 280, 3.1, 5.0, vec2f(0.37, 0.0), dist).a;
+          let m = nz2(qa, qb, fx, 0.27, vec2f(0.05, 0.71), 0.0);
+          albedo *= 1.0 - 0.22 * st * smoothstep(0.35, 0.6, m.r);
+          let north = smoothstep(-0.1, 0.5, -n0.z);
+          let moss = p2W(p.xz / 2.0, 282, 2.0, dist).rgb;
+          // (Moss in the shingles' hollows and down the slope in runs, never in clouds.)
+          let mrun = nz2(qa * vec2f(1.0, 0.25), qb * vec2f(1.0, 0.25), fx, 0.9, vec2f(0.5, 0.1), 1.0);
+          albedo = mix(albedo, moss * 0.8, smoothstep(0.55, 0.78, mrun.b) * north * smoothstep(0.2, 0.6, 1.0 - det.a) * 0.4);
+        }
       }
     }
     n = perturbD(n0, dp1, dp2, dx, dy, det.rg, select(1.0, mix(1.4, 0.7, smoothstep(5.0, 20.0, dist)), params.z < 0.0));
