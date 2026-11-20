@@ -52,6 +52,47 @@ export const CLIFF = { x: 2640, z0: -900, z1: 700, top: 30 };
 export const POOL = { x: 2612, z: -120, r: 30 };
 export const KNOLL = { x: 2440, z: -540, r: 80, h: 22 };
 // The barrows' mounds: [x, z, radius, height, which way the door faces] (their doors: src/core/sites.js).
+// The dungeons' ways in out on the land (src/core/dungeon.js DELVES portal: x, z, the way they face), and the bank each is cut
+// into: not a wall stood alone in a field but the door of a hillside, a mound, a spoil-heap, a drift of rock (src/core/sites.js
+// portalWall; what's on and round each bank, portalDress). [x, z, yaw, how high the bank stands over the land, what it is].
+// (Checked against DELVES in tests/portal-banks.test.mjs.)
+export const PORTAL_BANKS = [
+  [-4914, 200, Math.PI / 2, 10, 'keep'],       // Blackvigil Keep: in the keep's fallen outworks, by its gate on the Vigil Road
+  [880, 3990, -Math.PI / 2, 13, 'mine'],        // the Howling Deeps: the Howling Mouth, a drift into the hill
+  [-430, -2717, 0.53, 10, 'drowned'],          // the Drowned Vaults: an old embankment gone to reed and water
+  [2861, -4290, 1.82, 11.5, 'spore'],              // the Sporehold: a knoll grown over with the fungus
+  [3087, 4493, 1.08, 10.5, 'playhouse'],           // the Hollow Playhouse: the ruin of its tiered bank of seats
+  [-2910, 3439, 0, 8.5, 'barrow'],                // the Kingsbarrow: the door of a barrow of its own, by the great one
+  [-2577, -2913, Math.PI, 15, 'bones'],         // the Elder Dragon Gods: a ridge of rock with the old bones in it
+];
+// The terrace these stand at the front of (PORTAL_PAD in src/core/dungeon.js, PLAT.edge in sites.js): half across, half
+// through, and how far behind the portal its middle is.
+const BANK_PAD = { u: 6.6 + 0.14, w: 4.4 + 0.14, at: 0.2 };
+// How much of a bank's height is over (x, z): nothing on the terrace itself (it's laid on the land as it was); behind the
+// wall, all of it; up its sides, cheeks coming forward either side of the terrace, lower towards its front; and falling away
+// all round, out to some thirty metres. A little roughness, so it's ground and not a mould.
+export function bankAt(x, z) {
+  let h = 0;
+  for (const [bx, bz, yaw, H, kind] of PORTAL_BANKS) {
+    const dx0 = x - bx, dz0 = z - bz;
+    if (dx0 * dx0 + dz0 * dz0 > 60 * 60) continue;
+    const c = Math.cos(yaw), s = Math.sin(yaw), dx = dx0 + BANK_PAD.at * s, dz = dz0 + BANK_PAD.at * c;
+    const u = Math.abs(dx * c - dz * s), w = dx * s + dz * c, { u: U, w: W } = BANK_PAD;
+    // (Blackvigil's stands before the keep's own gate: the keep's behind it, and only its fallen outworks banked either side.)
+    const behind = kind === 'keep' ? 0 : 1 - sstep(-W - 6.5, -W - 0.2, w);
+    // (Over the wall's top behind it, and its cheeks coming forward either side of the terrace past its front, lower there:
+    // the wall's a doorway in the hill's face, not a thing stood up in front of it.)
+    // (Short of the Howling Mouth's camp, out in front of the Deeps' to one side.)
+    const reach = kind === 'mine' ? 3 : 9;
+    const side = sstep(U + 0.4, U + 6, u) * (1 - 0.45 * sstep(-W, W + 2, w)) * (1 - sstep(W + 1, W + reach, w));
+    const core = Math.max(behind, side);
+    const out = Math.hypot(Math.max(0, u - U - 2), Math.max(0, -w - W - 6), Math.max(0, w - W - 4) * 1.6);
+    const fall = 1 - sstep(6, kind === 'bones' ? 46 : 38, out);
+    const rough = 0.85 + 0.3 * fbm(x * 0.09 + bx * 0.01, z * 0.09, 2);
+    h = Math.max(h, H * core * fall * rough);
+  }
+  return h;
+}
 export const BARROWS = [[-2900, 3400, 26, 7, 0.4], [-2840, 3480, 14, 4, 1.4], [-2980, 3330, 18, 5, -2.2], [-2810, 3330, 11, 3, -0.6], [-3010, 3470, 12, 3.5, 2.6]];
 
 // Named places: [x, z, radius, name], and what's done to the ground there (pad: levelled to its own middle's height).
@@ -337,7 +378,8 @@ export function landHeight(x, z, level, raw = false) {
     if (d < wt.r) h = Math.min(h, bed);
     else h += (Math.max(y + 0.2, Math.min(h, y + 2)) - h) * (1 - sstep(wt.r, wt.r + 40, d));
   }
-  return h;
+  // The banks the dungeons' ways in are cut into (PORTAL_BANKS): last, over a place levelled for its buildings too.
+  return h + bankAt(x, z);
 }
 
 // (The land before roads, places and water: what they're levelled to. src/core/terrain.js hands over its own land.)

@@ -5,7 +5,7 @@ import { QuestBook, RULES } from '../src/folk/quests.js';
 import { QUESTS } from '../src/folk/lines/quests.js';
 import { GIVERS } from '../src/folk/lines/lisandra.js';
 import { BEYOND } from '../src/folk/lines/beyond.js';
-import { POSTED } from '../src/folk/people.js';
+import { CROWD, POSTED } from '../src/folk/people.js';
 
 const book = () => new QuestBook({ change() {}, toast() {}, done() {} });
 
@@ -14,7 +14,8 @@ test('every quest has its words, and Lisandra sends you to everyone in town who 
   const givers = new Set(Object.keys(RULES).map((id) => QUESTS[id].giver));
   for (const g of GIVERS) assert.ok(givers.has(g), g);
   // (Everyone else who gives work is out in the land: posted in the small towns, or at the Bell Tower.)
-  const far = new Set([...POSTED, ...BEYOND].map((p) => p.id));
+  // (Those posted, out in the land, or Phobos's people of the districts, whose work you find in their own quarter.)
+  const far = new Set([...POSTED, ...BEYOND, ...CROWD.filter((p) => p.area)].map((p) => p.id));
   for (const g of givers) assert.ok(GIVERS.includes(g) || g === 'lisandra' || far.has(g), g);
 });
 

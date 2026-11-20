@@ -13,7 +13,7 @@ import fs from 'node:fs';
 
 globalThis.__bmNoBed = true;   // (the land as it lies, with no bed laid yet)
 const { groundBase, terrainHeight } = await import('../../src/core/terrain.js');
-const { ROUTES, SITES } = await import('../../src/core/lands.js');
+const { PORTAL_BANKS, ROUTES, SITES } = await import('../../src/core/lands.js');
 const { SEALS, buildSites } = await import('../../src/core/sites.js');
 const { townDist } = await import('../../src/core/town.js');
 const { cityIn } = await import('../../src/core/east.js');
@@ -37,10 +37,12 @@ const SUB = 2;   // metres between the heights worked on (every other one is kep
 // Where nothing's laid: the town's green, inside Phobos's wall, and wherever the land's shaped for something after the ways
 // are laid (src/core/terrain.js: the hill's roads and its top, the church's terrace, the house plots, the Warrens' portal),
 // which has the last word; and a place's own level ground (src/core/lands.js SITES pad) and round its seal, where what's built
-// there was set on the land as it was levelled for it.
+// there was set on the land as it was levelled for it; and round a dungeon's way in, its terrace and the bank it's cut into
+// (src/core/lands.js PORTAL_BANKS, part of the land as it lies, so it isn't seen as shaped after).
 const PADDED = Object.values(SITES).filter((s) => s.pad);
 const unlaid = (x, z) => townDist(x, z) < 12 || (x > 9300 && x < 10800 && cityIn(x, z) < 1.05) || Math.abs(terrainHeight(x, z) - groundBase(x, z)) > 0.01
-  || PADDED.some((s) => Math.hypot(x - s.x, z - s.z) < s.pad + 4) || SEALS.some((s) => Math.hypot(x - s.x, z - s.z) < 9);
+  || PADDED.some((s) => Math.hypot(x - s.x, z - s.z) < s.pad + 4) || SEALS.some((s) => Math.hypot(x - s.x, z - s.z) < 9)
+  || PORTAL_BANKS.some((b) => Math.hypot(x - b[0], z - b[1]) < 30);
 
 // Ways laid so far, for the later ones to meet: their stretches in 32 m squares.
 const CELL = 32, grid = new Map(), gk = (i, j) => (i + 4096) * 8192 + (j + 4096);

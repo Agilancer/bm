@@ -15,6 +15,7 @@ import { DELVES, inDungeon } from '../core/dungeon.js';
 import { art } from './skin.js';
 import { ABIL, H, INPUT } from '../core/layout.js';
 import { MAX_LEVEL } from '../items/levels.js';
+import { READY } from './phobos-ready.js';
 
 const PASSWORD = '6669';
 // The countries thick with trees, where the woods' own sounds are heard.
@@ -121,7 +122,7 @@ const TAGS = { god: 'GOD', fly: 'NO-CLIP', noDamage: 'NO DMG', doubleJump: '2X J
 
 export class Lands {
   /** o: { shared, input, hud, audio, pack, worldMap, cmd(code, a, b, c), snap(), hour(), opened(), closed(), canMenu(), arm(),
-   * level(+1|-1), gear('god'|'peasant') -> line, bells() } */
+   * level(+1|-1), gear('god'|'peasant') -> line, ready(READY entry) -> line, bells() } */
   constructor(o) {
     this.o = o;
     this.cheats = { noDamage: false, fly: false, god: false, doubleJump: false };
@@ -216,6 +217,13 @@ export class Lands {
     const dun = el('button', 'row', `<span><b>Teleport to Dungeon</b><em>To the portal of any of the ${DELVES.length} dungeons, your party with you</em></span>`);
     dun.onclick = () => { this.menu.classList.remove('on'); this.listDungeons(); };
     M.append(port, bells, travel, dun);
+    // (Straight to the road outside Phobos, ready for one stretch of it: src/ui/phobos-ready.js.)
+    M.append(el('h3', null, 'Ready for Phobos'));
+    for (const r of READY) {
+      const b = el('button', 'row', `<span><b>${esc(r.name)}</b><em>Level ${r.level}: ${esc(r.what)}. The quests before it done, its own begun, kit to match, at the gate</em></span>`);
+      b.onclick = () => { this.close(); this.o.hud.tip(this.o.ready(r), 6); };
+      M.append(b);
+    }
     M.append(el('h3', null, 'Gear'));
     const pair = el('div', 'pair');
     const god = el('button', null, '<b>GEAR GOD</b><em style="display:block;font-size:12px;color:#a89878">Epic, Legendary, Mythical: skulls, staffs, shields, robes, gems, and gold</em>');
