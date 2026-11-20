@@ -30,8 +30,8 @@ export function beginRun(params = new URLSearchParams(), { pc = false } = {}) {
   let light = Math.max(0, Math.min(LIGHT_MOST, Number(read(LIGHT_KEY)) || 0));
   // (A note a week old is no news. One that says the GPU was lost was the game's own reload: src/main.js device.lost.)
   const recent = last && Date.now() - last.at < 7 * 86400e3;
-  // (after: how long the note went on being kept after the trail's last word, the note being kept every 8 s or so of play:
-  // whether that last thing did it, or the game ran on a while.)
+  // (after: how long the note went on being kept after the trail's last word, the note being kept every 8 s while the page
+  // is seen: whether that last thing did it, or the game kept going a while.)
   const lastE = last?.trail?.at(-1);
   const after = lastE && last.at0 ? Math.max(0, Math.round((last.at - last.at0) / 1000) - lastE.s) : 0;
   const died = recent && last.ended === false ? { stage: last.stage, mins: last.mins || 0, where: last.where || '', gpu: last.gpu || '', ...(last.trail?.length ? { trail: last.trail, after } : {}) } : null;
@@ -46,6 +46,9 @@ export function beginRun(params = new URLSearchParams(), { pc = false } = {}) {
   const unseen = typeof document !== 'undefined' && document.hidden === true;
   note = { at: Date.now(), at0: Date.now(), stage: 'starting', ended: unseen ? 'hidden' : false, mins: 0, where: '', gpu: '', deaths: (last?.deaths || 0) + (died ? 1 : 0), trail: [] };
   write(KEY, note);
+  // Kept every 8 s while the page is seen, in a menu or on the map as in play (where src/main.js keeps it too, with how long
+  // and where), so `after` above says how long the game went on.
+  if (typeof setInterval === 'function') setInterval(() => { if (note?.ended === false) { note.at = Date.now(); write(KEY, note); } }, 8000)?.unref?.();
   if (typeof addEventListener === 'function') {
     // Left or put away in the ordinary way; and back again.
     addEventListener('pagehide', () => noteRun({ ended: 'left' }));
@@ -82,13 +85,35 @@ export function noteEvent(what) {
 }
 
 /** The trail as the player reads it: "touched (x3), then 4 s later turned upright". '' if there's none. (The time between
- *  one and the next; nothing notes the kill itself, but the note kept every 8 s says the game ran on a while after the last,
- *  when it did: "..., and the game ran on 3 minutes after that".) */
+ *  one and the next, as that's all it knows: nothing notes the kill itself.) The picture's size stepping, noted as
+ *  'picture x0.66', reads as its sharpness, and steps one after another as one: "the picture's sharpness eased back up, 66%
+ *  to 100% over 12 s" (the game does that after a slowdown: src/gfx/governor.js). */
 export function trailWords(d) {
-  const tr = (d?.trail || []).slice(-4);
-  const a = d?.after || 0;
-  return tr.map((x, i) => `${i && x.s > tr[i - 1].s ? `${x.s - tr[i - 1].s} s later ` : ''}${x.e}${x.n > 1 ? ` (x${x.n})` : ''}`).join(', then ')
-    + (tr.length && a >= 10 ? `, and the game ran on ${a >= 90 ? `${Math.round(a / 60)} minutes` : `${a} s`} after that` : '');
+  const items = [];
+  for (const x of d?.trail || []) {
+    const m = /^picture x([\d.]+)$/.exec(x.e), prev = items[items.length - 1];
+    if (m && prev?.pics) { prev.pics.push(+m[1]); prev.s1 = x.s; continue; }
+    items.push(m ? { s: x.s, s1: x.s, pics: [+m[1]] } : { s: x.s, s1: x.s, e: x.e, n: x.n });
+  }
+  const words = (t) => {
+    if (!t.pics) return `${t.e}${t.n > 1 ? ` (x${t.n})` : ''}`;
+    const p = t.pics.map((v) => `${Math.round(v * 100)}%`);
+    if (p.length === 1) return `the picture's sharpness to ${p[0]}`;
+    return `the picture's sharpness ${t.pics[t.pics.length - 1] > t.pics[0] ? 'eased back up' : 'stepped down'}, ${p[0]} to ${p[p.length - 1]} over ${t.s1 - t.s} s`;
+  };
+  const tr = items.slice(-4);
+  return tr.map((t, i) => `${i && t.s > tr[i - 1].s1 ? `${t.s - tr[i - 1].s1} s later ` : ''}${words(t)}`).join(', then ');
+}
+
+/** The trail as the title says it: "Just before: ...", or, when the game kept going a while after the last of it (the note
+ *  being kept every 8 s while the page is seen: `after`), "The last things it noted: .... It kept going about 3 more minutes
+ *  after that." '' if there's no trail. */
+export function trailSentence(d) {
+  const w = trailWords(d);
+  if (!w) return '';
+  const a = d.after || 0;
+  if (a < 10) return `Just before: ${w}.`;
+  return `The last things it noted: ${w}. It kept going about ${a >= 90 ? `${Math.round(a / 60)} more minutes` : `${a} more seconds`} after that.`;
 }
 
 /** How a death reads to the player: "while it was loading", "12 minutes into play, at (-40, 212)". */

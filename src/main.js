@@ -66,7 +66,7 @@ import { Arrange } from './ui/arrange.js';
 import { groundAt, setHomes } from './ui/places.js';
 import { HallUI } from './ui/testhall.js';
 import { HALL, SPAWN, hallAt } from './core/testhall.js';
-import { beginRun, deathWords, noteEvent, noteRun, trailWords } from './core/lastrun.js';
+import { beginRun, deathWords, noteEvent, noteRun, trailSentence } from './core/lastrun.js';
 import { HUB_SMOKE } from './core/phobos-hubs.js';
 import { Beacon } from './ui/beacon.js';
 
@@ -963,7 +963,7 @@ async function boot(plan, poolSize) {
     await new Promise((r) => setTimeout(r, 700));
     const kept = !!saves.newest();
     const text = `The browser closed the game last time, ${deathWords(RUN.died)}. It does that when a page wants more memory than the device has to give.`
-      + `${RUN.died.trail?.length ? ` Just before: ${trailWords(RUN.died)}.` : ''}`
+      + `${RUN.died.trail?.length ? ` ${trailSentence(RUN.died)}` : ''}`
       + `${gpu.mobile && RUN.light ? ' This time the game is using less memory: smaller pictures on the models.' : ''}`
       + `${lighterWords()}`
       + `${kept ? ' Continue picks up from where the game was last kept.' : ''}`;
@@ -1420,6 +1420,9 @@ class Hud {
       this.fps = this.frames * 1000 / (now - this.lastFpsT);
       this.frames = 0; this.lastFpsT = now;
       this.worstShown = this.worst; this.worst = 0;
+      // (And the worst of the last 20 s, which would show a stall every so often, as a round of src/gfx/freshviews.js might.)
+      (this.worsts ||= []).push(this.worstShown); if (this.worsts.length > 40) this.worsts.shift();
+      this.worst20 = Math.max(...this.worsts);
     }
     this.worst = Math.max(this.worst, dt * 1000);
     this.t += dt;
@@ -1464,8 +1467,9 @@ class Hud {
     }
     if (this.debug) {
       const k = this.gpu.tier;
-      $('debug').textContent = `${this.fps.toFixed(0)} fps   worst ${this.worstShown.toFixed(0)} ms   gpu busy ${stats.busyMs.toFixed(1)} ms${stats.gpuMs > 0 ? `   timer ${stats.gpuMs.toFixed(1)} ms` : ''}
-${this.gpu.info.vendor || ''} ${this.gpu.info.architecture || ''}  tier ${k.name}
+      const fv = this.gpu.fresh;
+      $('debug').textContent = `${this.fps.toFixed(0)} fps   worst ${this.worstShown.toFixed(0)} ms (${(this.worst20 || 0).toFixed(0)} in 20 s)   gpu busy ${stats.busyMs.toFixed(1)} ms${stats.gpuMs > 0 ? `   timer ${stats.gpuMs.toFixed(1)} ms` : ''}
+${this.gpu.info.vendor || ''} ${this.gpu.info.architecture || ''}  tier ${k.name}${fv ? `  views made fresh: ${fv.on ? `${fv.rounds} rounds` : `off (${fv.why})`}` : ''}
 render ${stats.W}x${stats.H}  scale ${stats.scale.toFixed(2)}  msaa ${stats.msaa}  effects -${stats.demoted}  refresh ${stats.vsync.toFixed(1)} ms
 threads ${this.plan.cores} logical, ${this.poolSize + 2} used, shared ${this.isolated ? 'yes' : 'no'}
 sim ${stats.sim ? `${stats.sim.ms.toFixed(1)} ms a tick, worst ${stats.sim.worst.toFixed(1)}, ${stats.sim.rate.toFixed(0)} a second${stats.sim.paced ? ', by the frames' : ` (own clock, ${k.sim} Hz)`}` : `${k.sim} Hz`}${stats.sim?.town ? `  town ${stats.sim.town.ms.toFixed(1)} ms, ${stats.sim.town.rate.toFixed(0)} a second` : ''}  planner rollouts ${(snap[H.ROLLOUTS] / 1000).toFixed(0)}k

@@ -2763,43 +2763,79 @@ and the auto-play banner) hold the buttons and bars at its corners, and each is 
 them as small as what's in them means laying out the interface again, the Move Buttons positions with it, and how WebKit
 makes its layers can't be measured here.
 
-**Twenty-one minutes in: the iPhone's browser keeping a note of every frame (November 2026).** With the pictures packed,
-the owner played 21 minutes before the phone closed the game, where it had been three to five. The title said what came
-just before: the picture's size stepping up, x0.66 to x1, four seconds apart. That step is real, but small: the picture's
-targets and the canvas at x1 are some 16 MB on a phone, against 7 at x0.66. And nothing the game holds grows as it's
-played: as an iPhone in Chrome, ten minutes in, it asked the GPU for the same 246 MB of textures and 301 of buffers as at
-the start. What grows is in WebKit, the engine of every browser on an iPhone. Until a fix made on 4 November 2026
-(bugs.webkit.org 329399, found on iOS 27.2; in no iOS yet that we know of), WebKit's WebGPU keeps in every texture view
-the number of every command encoder that view was ever used in, as a pass's attachment or in a bind group, and lets none
-go while the view lives. The game makes its views once, as it loads, and draws with them every frame: about 277 views in
-an encoder in the town, at 66 encoders a second, so some 18,000 numbers a second, and 23 million by 21 minutes. At 16 to
-32 bytes each, that's 350 to 700 MB more than the game asked for, counted by iOS against the page. The climb in the
-picture's size was likely the last few MB on top.
+**Twenty-one minutes in: the iPhone's browser keeping a note of every frame (November 2026).**
 
-So on WebKit (Safari, and every browser on an iPhone or iPad) the game makes its views again every 20 seconds, and the
-bind groups that hold them (`src/gfx/freshviews.js`). The game keeps the views and bind groups it made and goes on using
-them as before; a pass is handed the newest made from them instead, and the ones before are let go, WebKit's numbers with
-them. A view made again is the same texture seen the same way, so nothing looks different. A round is spread over a few
-frames, 48 bind groups at a time. What's under five seconds old, destroyed, or the canvas's own is left alone, and any
-objection from the GPU puts everything back as the game made it, for good (the crash line then says "views no longer made
-fresh"). `?fresh=0` turns it off, `?fresh=1` on anywhere. Chrome has no such bug and doesn't run it.
+*For the owner, in short.* The likeliest reason the phone closed the game at 21 minutes is a fault in the iPhone's
+browser: it keeps a small note of every frame the game draws and never throws them away, so after twenty minutes or so
+they fill the phone. The game now clears those notes itself every twenty seconds, on an iPhone or iPad (and Safari on a
+Mac) only. Nothing on screen should change; a stutter or the picture going soft every twenty seconds, or black flashes,
+would mean it's costing something it shouldn't. **It hasn't run on an iPhone yet**: everything below was measured on a PC
+acting as one. The home-screen app has no switch to turn it off; it turns itself off if the phone's graphics ever object
+to it.
 
-Tried as an iPhone in Chrome, with the bug modelled (`tools/memory/init.js`: each view's numbers kept until the view is
-collected, `__leak()`), standing in the town:
+To try it: close the app fully (swipe it away) and open it again, so it loads the new game, and play for 30 minutes or
+more. If it lasts, say so. If it closes again, keep a picture of the title it shows and note how long you'd played,
+whether the phone was hot, and the iOS version (Settings > General > About). And if you can, the phone's own record of
+it: Settings > Privacy & Security > Analytics & Improvements > Analytics Data, the newest file whose name begins
+`JetsamEvent`. That says which part of the browser was too big, which settles whether this was the cause.
+
+*What was found.* With the pictures packed, the owner played 21 minutes before the phone closed the game, where it had
+been three to five. The title said what came just before: the picture's size stepping back up, x0.66 to x1, four seconds
+a step. That step is real, but small: the picture's targets and the canvas are some 9 MB more at x1 than at x0.66 on a
+phone. And nothing the game holds grows as it's played: as an iPhone in Chrome, ten minutes in, it asked the GPU for the
+same 246 MB of textures and 301 of buffers as at the start.
+
+What likely grows is in WebKit, the engine of Safari and of every browser on an iPhone. A bug in its WebGPU
+(bugs.webkit.org 329399, reported on iOS 27.2 in October 2026, fixed in WebKit's code on 4 November; in no iOS yet that
+we know of) has every texture view keep the number of every command encoder it was used in (as a pass's attachment, or
+in a bind group set in a pass) and let none go while the view lives. Its reporter measured 65 MB for 32 views over
+70,000 frames, about 30 bytes a number. The game makes its views once, as it loads, and draws with them every frame:
+about 277 views an encoder in the town, at 66 encoders a second, some 18,000 numbers a second: 23 million by 21 minutes,
+about 650 MB that the game never asked for. That is the likeliest reading, **not proven**: the numbers are kept in
+WebKit's GPU process, not the page, and had iOS closed only that, the game would have lost its GPU and said "the
+graphics reset", where it said the browser had closed it. iOS may have closed the page with it, or the cause is
+elsewhere. The `JetsamEvent` file above would say. Chrome on a PC or an Android phone has its own engine, no such bug,
+and doesn't run what follows; Chrome on an iPhone is WebKit, and does.
+
+*What the game does now* (`src/gfx/freshviews.js`, on WebKit only). Every 20 seconds it makes again the views and bind
+groups used since the last round, and hands passes the new ones; the old ones are let go, and WebKit's numbers with them.
+A view made again is the same texture seen the same way, so nothing looks different. The game itself goes on holding
+and using what it made, untouched; bind groups it makes after a round are made with the newest views.
+
+- A round is spread over frames: at most a millisecond's work before each frame's encoder.
+- What's under five seconds old, destroyed, or the canvas's own is left alone.
+- Nothing made is handed out until the GPU has said it was made without error. If it says it is out of memory, the next
+  start loads lighter, as any other time it does; any objection at all puts everything back as the game made it, for
+  good, and the crash title then says "views no longer made fresh".
+- `?fresh=0` turns it off, `?fresh=1` on anywhere (as with `?light`, a home-screen app can't be given either).
+- The Frame rate readout's first line gives the worst frame of the last 20 seconds; its second says how many rounds have
+  run, or why it stopped.
+
+Tried as an iPhone in Chrome, with the bug modelled (`tools/memory/init.js` keeps each view's numbers until the view is
+collected; `__leak()` counts them):
 
 | | Without | With |
 | --- | --- | --- |
-| Numbers held after 45 s | 2.2 million (34 MB at 16 bytes) | 0.6 million (9 MB) |
-| After 5 minutes | 7.1 million (108 MB), rising 19,500 a second | 0.3 to 0.55 million (4 to 9 MB), level |
+| Numbers held after 45 s, in the town | 2.2 million (63 MB at 30 bytes) | 0.6 million (17 MB) |
+| After 5 minutes, in the town | 7.1 million (203 MB), rising 19,500 a second | 0.3 to 0.55 million (9 to 16 MB), level |
+| 25 minutes of auto-play questing, no collection forced | | LONG2 |
 | Encoders a second | 66 | 65 |
 | GPU errors | 0 | 0 |
 
-Each round made about 790 views and 310 bind groups. The story's opening and the village look as they did, and
-`node --test tests/freshviews.test.mjs` holds the swapping on a stand-in WebGPU. **Not tried on an iPhone**: Chrome can't
-show WebKit's numbers, only the model of them.
+With the PC's processor slowed four times, a round's work came to about 5 ms in all, a millisecond a frame over five
+frames (the first round, with everything made since the load, takes longer). The worst frames around the rounds were
+23.5 and 8.1 ms, where the game's own worst elsewhere in the same minute were 38 and 275 ms. The story's opening and the
+village look as they did, and `node --test tests/freshviews.test.mjs` holds the swapping on a stand-in WebGPU. **Not
+tried on an iPhone**: Chrome can't show WebKit's numbers, only the model of them.
 
-The title's "Just before" now also says whether the game ran on a while after the last of it ("..., and the game ran on
-3 minutes after that"), from the note kept every eight seconds: whether the last thing did it, or only came before it.
+The crash title now says the picture's size as its sharpness, and steps one after another as one: "the picture's
+sharpness eased back up, 66% to 100% over 12 s". And from the note kept every eight seconds while the game is seen, it
+says whether the game kept going after the last thing it noted: "Just before: ..." if not, else "The last things it
+noted: ... It kept going about 3 more minutes after that." So the last thing noted reads as the cause only when it was.
+
+**Looked at, left:** the picture's size climbing back. Each step makes the picture's targets again, at most about 9 MB
+more on a phone. The way to make it nothing would be targets made once at the full size and drawn into smaller, which
+reaches into every pass; with the views made fresh, the step is small beside what it's spared.
 
 ### What has and hasn't been tested
 

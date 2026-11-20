@@ -14,7 +14,7 @@ account by allocator; the planners must be stopped first, `Atomics.store(bm.shar
 "text": "words in it", "hold": ms}` (a finger on the first one shown, waiting up to 60 s for it: the real title's buttons;
 `hold` keeps it down that long, as on the story's "Hold here to skip"),
 `{"emulate": ["Domain.method", {...}]}` (any emulation call: a turn of the phone is `Emulation.setDeviceMetricsOverride`
-with the sizes swapped), `{"layers": "label"}` (the compositor's painted layers and what each weighs at the screen's
+with the sizes swapped; a slower phone's processor, `["Emulation.setCPUThrottlingRate", {"rate": 4}]`), `{"layers": "label"}` (the compositor's painted layers and what each weighs at the screen's
 pixel ratio, as an iPhone keeps a picture for each, the biggest named; `WHY=1` adds the compositor's reason for each),
 `{"snap": "sim"}` (a heap snapshot of the thread whose script's name has that in it, `page` for the page, to
 `OUT/<name>.heapsnapshot`; needs `ATTACH=1`).
@@ -23,7 +23,8 @@ Env: `PORT` (8861), `PHONE` (`pixel`, `iphone`, `small`, `tablet`; none is a des
 `medium`, `high`...), `HC` and `DM` (the cores and the memory the page is told of), `NOAUTO=1` (the real title), `Q`
 (more query string), `OUT`, `OPENING=1` (the story from its start, not skipped), `LS='{"key":"value"}'` (put in
 the page's storage before it starts: `{"bm-threads-consent":"all"}` with `NOAUTO=1` gets past the threads' question),
-`WHY=1`, `GPUDUMP=1` (each `mem` also gives the GPU process's own account, its allocators two deep), `DEBUG_PORT`
+`WHY=1`, `NOINIT=1` (no `init.js` in the page: its counting costs time of its own, a stack taken at every view and bind
+group made, so time the game without it), `GPUDUMP=1` (each `mem` also gives the GPU process's own account, its allocators two deep), `DEBUG_PORT`
 (9351; another for a second run at once, though two at once share the GPU process and swell its figures: run them one
 after the other for numbers). The Chrome it starts plays sound before any tap (`--autoplay-policy=no-user-gesture-required`),
 which an iPhone never does. `FLAGS` adds Chrome flags: `FLAGS="--enable-unsafe-swiftshader" Q="&soft=1"` runs the game on
@@ -38,9 +39,14 @@ by where), from a `log` step: `{"log": "return __gpuBy()"}`.
 
 `init.js` also models a WebKit bug (bugs.webkit.org 329399, fixed on WebKit's main 4 November 2026): an iPhone's WebGPU
 keeps in each texture view the id of every command encoder it was used in (attachments, and views in bind groups set in a
-pass), until the view is let go. `__slots(ms)`: encoders and view-ids added a second, by where each view was made;
-`__leak(n)`: the ids held now by views not yet collected, and the `n` biggest holders (after a `{"gc": 1}` step, or the
-collected ones still count). `src/gfx/freshviews.js` is the game's answer; `Q="&fresh=0"` to see it without.
+pass), until the view is let go; its reporter measured about 30 bytes an id. `__slots(ms)`: encoders and view-ids added
+a second, by where each view was made; `__leak(n)`: the ids held now by views not yet collected, and the `n` biggest
+holders (a view the page has let go of counts until the browser collects it, as on WebKit; a `{"gc": 1}` step collects
+them now).
+`src/gfx/freshviews.js` is the game's answer, and runs in a `PHONE=iphone` run (its user agent is an iPhone's);
+`Q="&fresh=0"` to see it without. With `?auto`, the Auto button is hidden until the body has the class `playing`, and
+pressing it opens a menu of ways to play first: `document.body.classList.add('playing'); autoBtn.click()`, then click a
+`#autoMenu [data-m]` card.
 
 A phone's browser keeps a picture for every layer the compositor makes, and an iPhone counts them, and the GPU's
 textures and buffers, against the page. So on a phone, measure `layers` and the GPU's ask as well as the page's own.

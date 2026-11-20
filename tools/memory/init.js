@@ -95,7 +95,7 @@
     }
     return fin.apply(this, a);
   };
-  window.__leak = (n = 0) => `${V.held} ids held (${(V.held * 16 / 1048576).toFixed(1)} MB at 16 B an id) over ${V.encoders} encoders`
+  window.__leak = (n = 0) => `${V.held} ids held (${(V.held * 30 / 1048576).toFixed(1)} MB at the 30 B an id its reporter measured) over ${V.encoders} encoders`
     + (n ? String.fromCharCode(10) + Object.entries(V.heldBy).filter((e) => e[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, n).map(([k, x]) => `${String(x).padStart(9)}  ${k}`).join(String.fromCharCode(10)) : '');
   for (const C of [GPURenderPassEncoder, GPUComputePassEncoder]) {
     const sbg = C.prototype.setBindGroup;

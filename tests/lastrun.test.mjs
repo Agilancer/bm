@@ -8,7 +8,7 @@ const store = new Map(), heard = { win: {}, doc: {} };
 globalThis.localStorage = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)) };
 globalThis.addEventListener = (n, f) => { heard.win[n] = f; };
 globalThis.document = { hidden: false, addEventListener: (n, f) => { heard.doc[n] = f; } };
-const { beginRun, noteRun, deathWords, noteEvent, trailWords } = await import('../src/core/lastrun.js');
+const { beginRun, noteRun, deathWords, noteEvent, trailWords, trailSentence } = await import('../src/core/lastrun.js');
 const last = () => JSON.parse(store.get('velscour.lastRun'));
 
 test('a first start: nothing died, and it loads as the tier says', () => {
@@ -133,10 +133,16 @@ test('the last few things before a death are kept and said: the same again count
   assert.equal(trailWords(b.died), 'touched (x2)');
   assert.equal(trailWords({ trail: [{ s: 40, e: 'touched', n: 3 }, { s: 44, e: 'turned upright' }, { s: 44, e: 'size 390x806' }] }),
     'touched (x3), then 4 s later turned upright, then size 390x806', 'the time from one to the next, none when it was the same second');
-  // How long it ran on after the last word: from the note kept after it (every 8 s of play).
-  assert.equal(trailWords({ trail: [{ s: 40, e: 'picture x0.88' }, { s: 44, e: 'picture x1' }], after: 8 }), 'picture x0.88, then 4 s later picture x1', 'under ten seconds: nothing said');
-  assert.equal(trailWords({ trail: [{ s: 44, e: 'picture x1' }], after: 40 }), 'picture x1, and the game ran on 40 s after that');
-  assert.equal(trailWords({ trail: [{ s: 44, e: 'picture x1' }], after: 200 }), 'picture x1, and the game ran on 3 minutes after that');
+  // The picture's size stepping reads as its sharpness, and steps one after another as one.
+  const climb = [{ s: 1000, e: 'touched' }, { s: 1260, e: 'picture x0.66' }, { s: 1264, e: 'picture x0.76' }, { s: 1268, e: 'picture x0.88' }, { s: 1272, e: 'picture x1' }];
+  assert.equal(trailWords({ trail: climb }), 'touched, then 260 s later the picture\'s sharpness eased back up, 66% to 100% over 12 s');
+  assert.equal(trailWords({ trail: [{ s: 5, e: 'picture x1' }, { s: 9, e: 'picture x0.76' }, { s: 9, e: 'touched' }] }), 'the picture\'s sharpness stepped down, 100% to 76% over 4 s, then touched');
+  assert.equal(trailWords({ trail: [{ s: 5, e: 'picture x0.88' }] }), 'the picture\'s sharpness to 88%');
+  // And whether it kept going after the last of it: from the note kept after (every 8 s while the page is seen).
+  assert.equal(trailSentence({ trail: climb, after: 8 }), 'Just before: touched, then 260 s later the picture\'s sharpness eased back up, 66% to 100% over 12 s.', 'under ten seconds: just before');
+  assert.equal(trailSentence({ trail: [{ s: 44, e: 'touched' }], after: 40 }), 'The last things it noted: touched. It kept going about 40 more seconds after that.');
+  assert.equal(trailSentence({ trail: [{ s: 44, e: 'touched' }], after: 200 }), 'The last things it noted: touched. It kept going about 3 more minutes after that.');
+  assert.equal(trailSentence({ trail: [] }), '');
   const realNow = Date.now;
   try {
     let now = realNow();
@@ -146,7 +152,7 @@ test('the last few things before a death are kept and said: the same again count
     now += 130e3; noteRun({ stage: 'playing', mins: 6 });
     const c = beginRun();
     assert.equal(c.died.after, 130);
-    assert.equal(trailWords(c.died), 'picture x1, and the game ran on 2 minutes after that');
+    assert.equal(trailSentence(c.died), 'The last things it noted: the picture\'s sharpness to 100%. It kept going about 2 more minutes after that.');
   } finally { Date.now = realNow; }
   heard.win.pagehide();
   assert.equal(beginRun().died, null);
