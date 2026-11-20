@@ -1053,6 +1053,13 @@ export class Warrens {
           const dd = nav.walkDist(qx, qz, x, z, sim.time);
           if (dd < bd) { bd = dd; best = [qx, qz]; }
         }
+        // (A room behind a lock, no walk to it from the way in: where its own door sets you down. src/core/delve-highward.js.)
+        if (!best) for (const l of d.links || []) {
+          const back = l.to === d.key ? d.links[l.n] : null;
+          if (!back) continue;
+          const [qx, qz] = toWorld(back.x + Math.sin(back.yaw) * 4, back.z + Math.cos(back.yaw) * 4, d);
+          if (Math.abs(qx - rx) < (r.hx ?? r.r) && Math.abs(qz - rz) < (r.hz ?? r.r)) best = [qx, qz];
+        }
         if (best) { [x, z] = best; yaw = Math.atan2(rx - x, rz - z); }
         for (const q of mine.slice(0, mine.indexOf(b))) this.down.add(q.key);
       }

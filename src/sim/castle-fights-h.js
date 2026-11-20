@@ -28,9 +28,9 @@ export const FIGHTS_H = {
     adds: [],
     moves: {
       brand: { clip: 'atk1', secs: 1.3, warn: 'cen_brand', go: (W, f, m, t, P) => MOVES.fireFan(P, m, t, K(m, 0.7)) },
-      pyre: { clip: 'atk2', secs: 1.3, warn: 'cen_pyre', go: (W, f, m, t, P) => MOVES.firepots(P, m, t, K(m, 0.7)) },
+      pyre: { clip: 'atk2', secs: 1.3, warn: 'cen_pyre', go: (W, f, m, t, P) => MOVES.firepots(P, m, t, K(m, 0.45)) },
       strike: { clip: 'atk2', secs: 1.3, warn: 'cen_strike', go: (W, f, m, t, P) => sweep(P, m, t, K(m, 1.1), { r: 8, half: 1.0 }) },
-      redact: { who: 'none', clip: 'atk3', secs: 1.3, warn: 'cen_redact', go: (W, f, m, t, P) => follow(W, P, m, K(m, 0.8), VOID, 'redact') },
+      redact: { who: 'none', clip: 'atk3', secs: 1.3, warn: 'cen_redact', go: (W, f, m, t, P) => follow(W, P, m, K(m, 0.55), VOID, 'redact') },
       // The rows of cases fired: three lanes across the vault, a lane between each clear.
       rows: { who: 'none', clip: 'atk3', secs: 1.6, warn: 'cen_rows', go(W, f, m, t, P) {
         const r = roomOf(f.boss.room), [rx, , rz] = roomSpot(r.id), off = (f.rowOff = ((f.rowOff || 0) + 1) % 2) * 4;
@@ -65,9 +65,9 @@ export const FIGHTS_H = {
     adds: [],
     moves: {
       fan: { clip: 'atk1', secs: 1.3, warn: 'str_fan', go: (W, f, m, t, P) => MOVES.fireFan(P, m, t, K(m, 0.7)) },
-      fall: { who: 'none', clip: 'atk2', secs: 1.4, warn: 'str_fall', go: (W, f, m, t, P) => { follow(W, P, m, K(m, 0.8), FIRE, 'fall'); P.rain(m.x, m.z, 15, 8, 1.2, { r: 2.2, fuse: 1.7, dmg: K(m, 0.7), knock: 1, elem: FIRE, tag: 'fall' }); } },
-      seek: { clip: 'atk3', secs: 1.2, warn: 'str_seek', go: (W, f, m, t, P) => MOVES.seekers(P, m, t, K(m, 0.5), { n: 4 }) },
-      wheel: { who: 'none', clip: 'roar', secs: 1.5, warn: 'str_wheel', go: (W, f, m, t, P) => MOVES.fireWheel(P, m, t, K(m, 0.5)) },
+      fall: { who: 'none', clip: 'atk2', secs: 1.4, warn: 'str_fall', go: (W, f, m, t, P) => P.rain(m.x, m.z, 15, 8, 1.3, { r: 2.2, fuse: 1.9, dmg: K(m, 0.6), knock: 1, elem: FIRE, tag: 'fall' }) },
+      seek: { clip: 'atk3', secs: 1.2, warn: 'str_seek', go: (W, f, m, t, P) => MOVES.seekers(P, m, t, K(m, 0.3), { n: 3, speed: 4.6 }) },
+      wheel: { who: 'none', clip: 'roar', secs: 1.5, warn: 'str_wheel', go: (W, f, m, t, P) => MOVES.fireWheel(P, m, t, K(m, 0.35)) },
     },
     // The eclipse: every thirty seconds, three quarters of the room under fire and one left dark, never the same one twice
     // running. The dark quarter's middle is where to stand.
@@ -90,30 +90,30 @@ export const FIGHTS_H = {
     deck: ['spade', 'graves', 'dirge', 'march', 'bury', 'spade'],
     adds: [],
     moves: {
-      spade: { clip: 'atk2', secs: 1.3, warn: 'sex_spade', go: (W, f, m, t, P) => sweep(P, m, t, K(m, 1.1), { r: 10, half: 1.05 }) },
+      spade: { clip: 'atk2', secs: 1.3, warn: 'sex_spade', go: (W, f, m, t, P) => sweep(P, m, t, K(m, 0.9), { r: 9, half: 1.0 }) },
       graves: { who: 'none', clip: 'atk3', secs: 1.4, warn: 'sex_graves', go: (W, f, m, t, P) => P.rain(m.x, m.z, 17, 9, 1.3, { r: 2.4, fuse: 1.7, dmg: K(m, 0.75), knock: 1, elem: BONE, tag: 'graves' }) },
       dirge: { who: 'none', clip: 'roar', at: 0.5, secs: 1.5, warn: 'sex_dirge', go: (W, f, m, t, P) => MOVES.quakeWave(P, m, null, K(m, 0.45), { reach: 26, speed: 10 }) },
-      march: { clip: 'atk1', secs: 1.3, warn: 'sex_march', go: (W, f, m, t, P) => { for (const turn of [-0.4, 0, 0.4]) P.march(m.x, m.z, yawTo(m, t) + turn, 9, 1.9, 0.14, { r: 1.25, fuse: 0.9, dmg: K(m, 0.8), knock: 2, elem: BONE, from: m, tag: 'march' }); } },
-      bury: { who: 'none', clip: 'atk4', secs: 1.3, warn: 'sex_bury', go: (W, f, m, t, P) => follow(W, P, m, K(m, 0.85), DRAIN, 'bury') },
+      march: { clip: 'atk1', secs: 1.3, warn: 'sex_march', go: (W, f, m, t, P) => { for (const turn of [-0.4, 0, 0.4]) P.march(m.x, m.z, yawTo(m, t) + turn, 9, 1.9, 0.14, { r: 1.25, fuse: 1.1, dmg: K(m, 0.55), knock: 2, elem: BONE, from: m, tag: 'march' }); } },
+      bury: { who: 'none', clip: 'atk4', secs: 1.3, warn: 'sex_bury', go: (W, f, m, t, P) => follow(W, P, m, K(m, 0.55), DRAIN, 'bury') },
     },
     // His grave-lantern: set down at four fifths of his life, and again at two fifths, each in its own place. While one
-    // burns, two of the dead come up out of the graves every thirteen seconds (never more than eight standing).
+    // burns, two of the dead come up out of the graves every sixteen seconds (never more than six standing).
     step(W, f, [m], dt) {
       if (!m) return;
       const life = m.hp / m.maxHp, n = (f.lit || 0);
       if (n < 2 && life < (n ? 0.4 : 0.8) && !(f.lantern && !f.lantern.asked && !f.lantern.dead && f.lantern.hp > 0)) {
         const [x, z] = at(W, LANTERN_AT[n]);
-        f.lit = n + 1; f.lantern = { asked: true }; f.raise = 9;
-        W.spawnAdds(`sex_lantern_${n}`, ['ch_lantern'], [x, z], 1, (k) => { k.hp = k.maxHp = 15000; k.opts.damage = 0; k.opts.speed = 0; k.opts.name = 'THE GRAVE-LANTERN'; k.lantern = true; k.aggro = true; k.opts.leash = 400; k.opts.sight = 80; f.lantern = k; f.out = false; }, ['Bloodred']);
+        f.lit = n + 1; f.lantern = { asked: true }; f.raise = 8;
+        W.spawnAdds(`sex_lantern_${n}`, ['ch_lantern'], [x, z], 1, (k) => { k.hp = k.maxHp = 10000; k.opts.damage = 0; k.opts.speed = 0; k.opts.name = 'THE GRAVE-LANTERN'; k.lantern = true; k.aggro = true; k.opts.leash = 400; k.opts.sight = 80; f.lantern = k; f.out = false; }, ['Bloodred']);
         W.warn(WARN.sex_lantern, 5);
       }
       const lt = f.lantern?.asked ? null : f.lantern;
       if (lt && !lt.dead && lt.hp > 0) {
-        if ((f.raise = (f.raise || 0) + dt) > 13 && W.adds().filter((a) => a.exhumed && !a.dead && a.hp > 0).length < 7) {
+        if ((f.raise = (f.raise || 0) + dt) > 16 && W.adds().filter((a) => a.exhumed && !a.dead && a.hp > 0).length < 5) {
           f.raise = 0; W.warn(WARN.sex_risen, 4);
           for (let i = 0; i < 2; i++) {
             const g = at(W, GRAVES[(f.graveN = (f.graveN || 0) + 1) % GRAVES.length]);
-            W.spawnAdds(`sex_dead_${f.graveN}`, EXHUMED, g, 1, (k) => { k.hp = k.maxHp = 3400; k.opts.damage = 62; k.opts.name = 'THE EXHUMED'; k.exhumed = true; k.aggro = true; k.opts.leash = 300; k.opts.sight = 70; }, ['Skullwhite']);
+            W.spawnAdds(`sex_dead_${f.graveN}`, EXHUMED, g, 1, (k) => { k.hp = k.maxHp = 2800; k.opts.damage = 40; k.opts.name = 'THE EXHUMED'; k.exhumed = true; k.aggro = true; k.opts.leash = 300; k.opts.sight = 70; }, ['Skullwhite']);
           }
         }
       } else if (lt && !f.out) { f.out = true; W.warn(WARN.sex_out, 4); }

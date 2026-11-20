@@ -148,7 +148,7 @@ const dPacks = [
   { key: 'cd_walk', room: 'cd_chained', pick: ['velscour_knight_3', 'velscour_knight_4'], n: 2, pal: ['Royal'], at: [8, -12], r: 1, walk: [[60, -84], [60, -94], [50, -110]] },
 ];
 const dBosses = [
-  { key: 'censor', room: 'cd_vault', name: 'The Censor', models: ['cd_censor'], pal: ['Royal'], hp: 82000, damage: 270, reach: 3.2, loot: 8 },
+  { key: 'censor', room: 'cd_vault', name: 'The Censor', models: ['cd_censor'], pal: ['Royal'], hp: 78000, damage: 240, reach: 3.2, loot: 8 },
 ];
 const dWarnings = {
   cen_open: 'The Censor. He burns what is not to be read, and drowns the rest: when he breaks the ink wells, the floor floods. Get up on a reading dais before it reaches you.',
@@ -184,12 +184,14 @@ export const DEEP_STACKS = {
   vistas: [{ id: 'well_of_books', name: 'the Well of Books', room: 'cd_well', x: 0, z: -57, r: 5 }],
   auto: { way: ['cd_door', 'cd_stair', 'cd_well', 'cd_hold', 'cd_dorm', 'cd_hold', 'cd_well', 'cd_chained', 'cd_well', 'cd_scriv', 'cd_sump', 'cd_scriv', 'cd_lift', 'cd_scriv', 'cd_vault'] },
   shots: [
-    ['cd_well', 'cd_well', [-14, 3, -56], [8, 9, -84]],
-    ['cd_hold', 'cd_hold', [-34, 3.4, -62], [-64, 1, -84]],
-    ['cd_hold2', 'cd_hold', [-70, 3, -88], [-44, 1.5, -62]],
-    ['cd_chained', 'cd_chained', [36, 3, -54], [64, 2, -78]],
-    ['cd_vault', 'cd_vault', [45, 4, -97], [64, 2, -118]],
-    ['cd_scriv', 'cd_scriv', [-16, 3.4, -108], [12, 1, -126]],
+    // (Heights over the delve's own floor: the Stacks lie twelve metres under their door.)
+    ['cd_well', 'cd_well', [-16, -9.5, -56], [10, 2, -88]],
+    ['cd_hold', 'cd_hold', [-34, -8.6, -62], [-64, -11, -84]],
+    ['cd_hold2', 'cd_hold', [-70, -9, -88], [-44, -10.5, -62]],
+    ['cd_dorm', 'cd_dorm', [-40, -9.4, -101], [-62, -11, -114]],
+    ['cd_chained', 'cd_chained', [36, -9, -54], [64, -10, -78]],
+    ['cd_vault', 'cd_vault', [45, -8, -97], [64, -10, -118]],
+    ['cd_scriv', 'cd_scriv', [-16, -8.6, -108], [12, -11, -126]],
   ],
   last: 'censor', tough: { hp: 25, damage: 2.7 }, pay: { xp: 46000, gold: 6400 },
   names: { Necromancers: 'CHAIN-ARCHIVIST', 'Night Paralysis Demons': 'INKSHADE', 'The Possessed': 'SCRIVENER', 'Haunted Mannequins': 'EMPTY ROBE', 'Dead Children': 'THE INK-DROWNED', "Velscour's Knights": 'STACK WARDEN' },
@@ -280,7 +282,7 @@ const hProps = [];
   add('chain', -61, -131, { up: 5 }); add('chain', -61, -125, { up: 5 });
   // ---- the Throne Antechambers: the last rooms before his stair. Graves cut in the marble floor (the Sexton's: he buries
   // who comes this far, and digs them up to serve); piers; his banners; the stair's door behind his mark at the south end.
-  for (const [x, z] of GRAVES) { add('pit', x, z, { r: 1.8 }); add('heap', x + 2.6, z + 1, { r: 1, layer: 'dark:rubble' }); }
+  for (const [x, z] of GRAVES) add('pit', x, z, { r: 1.8 });
   for (const z of [-178, -202]) { add('column', -17, z, { r: 1.5, solid: true }); add('column', 17, z, { r: 1.5, solid: true }); }
   add('mark', 0, -207.6, { up: 10, r: 2.4, back: -1 }); add('portcullis', 0, -207.2, { w: 4.6, h: 9, plain: true });
   for (const [x, z] of [[-8, -206], [8, -206], [-18, -190], [18, -190]]) add('brazier', x, z);
@@ -305,8 +307,8 @@ const hPacks = [
   { key: 'ch_walk', room: 'ch_sanct', pick: KNIGHTS, n: 2, pal: ['Skullwhite'], at: [-8, -30], r: 1, walk: [[-8, -96], [-8, -108], [-8, -116]] },
 ];
 const hBosses = [
-  { key: 'starreader', room: 'ch_observ', name: 'The Star-Reader', models: ['ch_starreader'], pal: ['Bloodred'], hp: 118000, damage: 330, reach: 3.2, loot: 8, at: [0, 5] },
-  { key: 'sexton', room: 'ch_ante', name: 'The Sexton of the High Ward', models: ['ch_sexton'], pal: ['Skullwhite'], hp: 150000, damage: 380, reach: 4, loot: 8, gives: 'key:sexton' },
+  { key: 'starreader', room: 'ch_observ', name: 'The Star-Reader', models: ['ch_starreader'], pal: ['Bloodred'], hp: 86000, damage: 280, reach: 3.2, loot: 8, at: [0, 5] },
+  { key: 'sexton', room: 'ch_ante', name: 'The Sexton of the High Ward', models: ['ch_sexton'], pal: ['Skullwhite'], hp: 120000, damage: 290, reach: 4, loot: 8, gives: 'key:sexton' },
 ];
 const hWarnings = {
   str_open: 'The Star-Reader. He brings his sky down a quarter at a time: when he calls the eclipse, three quarters of the room burn and one is dark. Stand in the dark.',

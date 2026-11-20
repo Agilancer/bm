@@ -116,7 +116,7 @@ const packs = [
 const bosses = [
   { key: 'kennelmaster', room: 'ib_kennels', name: 'The Kennelmaster', models: ['ib_kennelmaster'], pal: ['Rust'], hp: 52000, damage: 200, reach: 3.2, loot: 8 },
   { key: 'quartermaster', room: 'ib_stores', name: 'The Quartermaster', models: ['ib_quartermaster'], pal: ['Rust'], hp: 58000, damage: 210, reach: 3.8, loot: 8 },
-  { key: 'ironmarshal', room: 'ib_iron', name: 'The Iron Marshal', models: ['ib_marshal'], pal: ['Oxblood'], hp: 74000, damage: 215, reach: 3.8, loot: 0, needs: ['kennelmaster', 'quartermaster'], shut: 'irm_shut' },
+  { key: 'ironmarshal', room: 'ib_iron', name: 'The Iron Marshal', models: ['ib_marshal'], pal: ['Oxblood'], hp: 74000, damage: 215, reach: 3.8, loot: 0, needs: ['kennelmaster', 'quartermaster'], shut: 'irm_shut', gives: 'key:barracks' },
 ];
 const warnings = {
   ken_open: 'The Kennelmaster. He lets his hounds go in packs, and his whip sends them mad: bring them down fast. When he marks you with blood-scent, the hounds want only you: wash it off in the trough by the west wall.',
