@@ -64,14 +64,29 @@ export class PhobosNear {
     let want = null, best = NEAR;
     for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) {
       const x = cam.x + i * CELL, z = cam.z + j * CELL, key = cellOf(x, z);
-      if (!this.have.has(key) || this.cells.has(key)) continue;
+      if (!this.have.has(key) || this.cells.has(key) || this.asked?.[0] === key) continue;
       const [ci, cj] = key.split('_').map(Number), cx = 9300 + (ci + 0.5) * CELL, cz = -850 + (cj + 0.5) * CELL;
       const d = Math.max(0, Math.hypot(cx - cam.x, cz - cam.z) - CELL * 0.7);
       if (d < best) { best = d; want = [key, cx, cz]; }
     }
     let changed = false;
-    if (want) {
-      const built = buildPhobosCell(want[0]), set = r.packParts(built.parts, built.groups);
+    // Built on a pool thread, one at a time, and taken up here when it comes back (src/sim/job.worker.js phobosCell): built
+    // here it stopped the frame for a tenth of a second, three or four on a phone, every hundred metres walked. (Here
+    // after all if there's no pool, or a thread couldn't do it.)
+    if (want && !this.asked && !this.built) {
+      // (The land's own thread, which lays the ground round you as you walk: the load's threads are the planners' once the
+      // game's up, and never answer.)
+      if (r.landPool && !this.here) {
+        this.asked = want;
+        r.landPool.run('phobosCell', { cell: want[0] }, undefined, 0).then((b) => { this.built = [this.asked, { parts: new Map(b.parts), groups: new Map(b.groups), lamps: b.lamps, smokes: b.smokes }]; this.asked = null; }, () => { this.asked = null; this.here = true; });
+      } else this.built = [want, buildPhobosCell(want[0])];
+    }
+    want = null;
+    if (this.built) {
+      let built; [want, built] = this.built; this.built = null;
+      if (this.cells.has(want[0])) want = null;
+      else {
+      const set = r.packParts(built.parts, built.groups);
       for (const [k, runs] of set.slices) {
         const id = Number(k.slice(5));
         this.doors.set(id, { cell: want[0], VB: set.VB, runs, hidden: false });
@@ -83,6 +98,7 @@ export class PhobosNear {
       this.cells.set(want[0], { ...set, x: want[1], z: want[2], lamps: built.lamps.length, smokes: built.smokes });
       r.foldLand('ph:' + want[0], true);
       changed = true;
+      }
     }
     for (const [key, c] of this.cells) {
       if (Math.hypot(c.x - cam.x, c.z - cam.z) - CELL * 0.7 < FAR && this.cells.size <= KEEP) continue;

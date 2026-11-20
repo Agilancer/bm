@@ -144,10 +144,12 @@ class Pool {
     if (this.leaving[i] && !this.working[i] && !this.decoding[i]) { this.workers[i].terminate(); this.leaving[i] = false; }
   }
 
-  run(type, args, transfer) {
+  // (pin: the one thread this work always goes to, waiting for it if it's busy: a kind of work that needs a great deal
+  // loaded to do it, Phobos's near cells, is then loaded on one thread and not on each in turn.)
+  run(type, args, transfer, pin) {
     const id = this.next++;
     return new Promise((resolve, reject) => {
-      const job = { id, type, args, transfer, resolve, reject, light: type === 'decode' };
+      const job = { id, type, args, transfer, resolve, reject, light: type === 'decode', pin };
       if (job.light) {
         let to = 0;
         for (let i = 1; i < this.size; i++) if (this.decoding[i] < this.decoding[to]) to = i;
@@ -161,8 +163,10 @@ class Pool {
   hand() {
     for (let i = 0; i < this.size && this.line.length; i++) {
       if (this.working[i]) continue;
+      const k = this.line.findIndex((j) => j.pin === undefined || j.pin % this.size === i);
+      if (k < 0) continue;
       this.working[i] = true;
-      this.send(i, this.line.shift());
+      this.send(i, this.line.splice(k, 1)[0]);
     }
   }
 

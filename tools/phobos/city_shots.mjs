@@ -94,6 +94,8 @@ for (const [name, at, eye, look] of which) {
   const c = cam(eye[0], terrainHeight(eye[0], eye[2]) + eye[1], eye[2], look[0], terrainHeight(look[0], look[2]) + look[1], look[2]);
   await page.evaluate(`bm.cmd(19, 0, ${at[0]}, ${at[1]}); bm.setTime(${HOUR}); bm.setCam(${JSON.stringify(c)});`);
   await page.waitForTimeout(WAIT);
+  // (And till the near cells asked for have come back from their thread, and no more are wanted: src/gfx/phobos-near.js.)
+  for (let k = 0; k < 40; k++) { const busy = await page.evaluate('(() => { const n = bm.view.renderer.phobosNear; return !!n && (!!n.asked || !!n.built); })()'); if (!busy && k) break; await page.waitForTimeout(1500); }
   // (EVAL=<js>: a value read off the page before the shot, to see what's going on there.)
   if (process.env.EVAL) console.log(name, 'EVAL', JSON.stringify(await page.evaluate(process.env.EVAL)));
   try {
