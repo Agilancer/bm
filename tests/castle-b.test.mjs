@@ -376,7 +376,7 @@ test("nothing of Tessariel's, nothing that rings, and no cross on any floor or w
   for (const k of Object.keys(PROPS_B)) assert.ok(PROP_KINDS.includes(k), k);
   // (A wheel has three spokes or five: four is a cross in a ring.)
   for (const p of CW.props.filter((q) => q.kind === 'gear')) assert.ok(p.spokes === undefined || p.spokes === 5 || p.spokes === 3, 'a wheel of four spokes');
-  assert.match(src('../src/core/delve-props-b.js'), /p\.spokes === 3 \? 3 : 5/);
+  assert.match(src('../src/core/delve-props-b.js'), /sp = 3, turn/);
   // (No mark on the floor that's a cross, and none of the stock moves that are: the threads, the wheel of fire.)
   const code = src('../src/sim/castle-fights-b.js');
   assert.doesNotMatch(code, /shape: 'cross'|MOVES\.threads|MOVES\.fireWheel/);

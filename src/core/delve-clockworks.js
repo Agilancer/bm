@@ -75,10 +75,11 @@ const props = [];
   // ---- the Weight Shaft: three times as tall as it's wide. The great dial of the works high on its far wall, seen as you
   // come in under it; the weights hung down the shaft over their pits; wheels up both walls as big as houses.
   add('clockface', 3, -58.7, { yaw: 0, r: 4.4, up: 21, hands: [0.7, 2.3] });
-  add('catwalk', 0, -37, { hx: 10.6, hz: 0.7, up: 9 }); add('catwalk', 0, -47.5, { hx: 10.6, hz: 0.7, up: 16 });
+  // (One way across, down the shaft's middle: the weights hang clear of it either side, and no line of theirs crosses it.)
+  add('catwalk', 0.5, -46, { hx: 0.7, hz: 12.6, up: 12 }); add('daylight', 0.5, -40, { r: 1.6, pool: false });
   add('basket', -7, -47, { up: 8 }); add('basket', 7.4, -46, { up: 15 }); add('basket', -6, -52, { up: 22 });
-  add('weights', -4, -42, { n: 3, r: 1.3, up: 3 }); add('pit', -4, -42, { r: 2.3 });
-  add('weights', 5, -53, { n: 3, r: 1.3, up: 7, turn: 1 }); add('pit', 5, -53, { r: 2.3 });
+  add('weights', -5, -42, { n: 3, r: 1.3, up: 3 }); add('pit', -5, -42, { r: 2.3 });
+  add('weights', 6, -53, { n: 3, r: 1.3, up: 7, turn: 1 }); add('pit', 6, -53, { r: 2.3 });
   add('gear', -10.7, -42, { yaw: PI / 2, r: 4.2, up: 9.4 }); add('gear', -10.7, -49, { yaw: PI / 2, r: 2.6, up: 16.6, spokes: 5, turn: 0.2 });
   add('gear', 10.7, -52, { yaw: -PI / 2, r: 5, up: 13.4, spokes: 5 }); add('gear', 10.7, -48, { yaw: -PI / 2, r: 2.2, up: 6.2, turn: 0.4 });
   add('gear', 10.7, -41, { yaw: -PI / 2, r: 3, up: 24 }); add('gear', -10.7, -54, { yaw: PI / 2, r: 3.4, up: 26, spokes: 5 });
@@ -96,7 +97,7 @@ const props = [];
   add('gong', 46, -30, { yaw: 0.3, r: 1.5, solid: true }); add('gong', 64, -50, { yaw: -2.6, r: 1.5, solid: true });
   for (const z of HAMMER_ROWS) for (const x of [45, 54, 63]) add('dropweight', x, z, { up: 3.6 + ((x + z * 2) % 4) * 0.9, r: 0.36, len: 3 });
   // (Its own light: two fires hung low over the rows, on the weights and the blocks they come down on.)
-  add('basket', 49.5, -40, { up: 7.4 }); add('basket', 58.5, -40, { up: 7.4 });
+  add('basket', 49.5, -40, { up: 7.4 }); add('basket', 58.5, -40, { up: 7.4 }); add('daylight', 54, -40, { r: 1.5, pool: false });
   add('rings', STRIKER_PLATE[0], STRIKER_PLATE[1], { r: 2.4 });
   add('stand', 68.4, -40); add('stand', 40.4, -34); add('rack', 54, -52.4, { yaw: PI, h: 2.4, n: 6, board: true });
   add('mark', 54, -27.4, { up: 6.2, r: 1.3, back: 1 });
@@ -109,7 +110,7 @@ const props = [];
   PENDULUMS.forEach((z, i) => { add('pendulum', -5, z, { up: 2.8, r: 1.8, lean: [-8, 3, 9][i] }); add('sill', -5, z, { hx: 14.6, hz: 0.18 }); });
   add('gear', -12, -145.7, { yaw: 0, r: 4.2, up: 12, spokes: 5 }); add('clockface', -19.7, -124, { yaw: PI / 2, r: 2.4, up: 10, hands: [1.9, 0.2] });
   add('mark', 9.7, -134, { up: 9, r: 1.2, yaw: -PI / 2, back: -1 });
-  add('basket', -5, -123, { up: 7 }); add('basket', -5, -133, { up: 7 });
+  add('basket', -5, -123, { up: 7 }); add('basket', -5, -133, { up: 7 }); add('daylight', -5, -128, { r: 1.6, pool: false });
   for (const [x, z] of [[-17, -113], [6, -113], [-18, -143.4], [8.4, -143.4]]) add('brazier', x, z);
   // ---- the Escapement: low. The escape wheel and its anchor up the west wall, a lesser wheel lying, the oil, the files;
   // and a wheel stood against the west wall with a man's width of dark behind it.
@@ -230,7 +231,7 @@ export const CLOCKWORKS = {
   ],
   last: 'clockmaker', tough: { hp: 30, damage: 3.3 }, pay: { xp: 82000, gold: 10400 },
   names: { "Velscour's Knights": 'HOUR GUARD', 'Haunted Mannequins': 'WINDER', Kobolds: 'GEARWRIGHT', 'Plague Knights': 'ESCAPEMENT WARDEN', Harpies: 'DIAL-WING', 'Plague Giants': 'THE OILER' },
-  look: { wall: 'ashlar', foot: 'dark:block', floor: 'flags', banner: 'p2_banner_greygold', roof: 'dark:stone', flame: 'flame', light: [1, 0.6, 0.28], fire: [1, 0.64, 0.3], every: 15, high: 3, glow: 2.5, lit: true, beam: 'dark:stone', bays: 'chains' },
+  look: { wall: 'ashlar', foot: 'dark:block', floor: 'flags', banner: 'p2_banner_greygold', roof: 'dark:stone', flame: 'flame', light: [1, 0.6, 0.28], fire: [1, 0.64, 0.3], every: 15, high: 3, glow: 3.5, lit: true, beam: 'dark:stone', bays: 'chains' },
   words: { enter: 'Castle Velscour: the Clockworks. His clock counts every hour he has left to anyone. Its works go up through the tower.', clear: 'The Clockmaker is dead! His clock has stopped.', wipe: "You fall... and wake inside the Winders' Door." },
 };
 export const CLOCKWORKS_VARIANTS = {

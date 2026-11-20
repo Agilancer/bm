@@ -41,7 +41,7 @@ export const PROPS_B = {
   // A wheel of the works, upright against a wall and facing yaw out from it (flat: lying, a floor to stand on or a
   // platter): its rim, its teeth, its hub, and three spokes or five (spokes; never four). up: its middle over the floor.
   gear(K, d, p, x, y, z) {
-    const r = p.r, L = p.layer || 'p2_bronze_plates', teeth = Math.max(8, Math.round(r * 5)), sp = p.spokes === 3 ? 3 : 5, turn = p.turn || 0;
+    const r = p.r, L = p.layer || 'p2_bronze_plates', teeth = Math.max(8, Math.round(r * 5)), sp = 3, turn = p.turn || 0;
     if (p.flat) {
       const h = p.h || 0.35, y0 = y + (p.up || 0);
       K.drum(L, x, y0, z, r, h, Math.max(12, teeth), { collide: false, turn });
@@ -54,7 +54,8 @@ export const PROPS_B = {
     const N = Math.max(12, teeth);
     for (let k = 0; k < N; k++) { const a = turn + k / N * TAU, b = turn + (k + 1) / N * TAU; bar(K, L, P(a, r), P(b, r), t * 1.6); }
     for (let k = 0; k < teeth; k++) { const a = turn + (k + 0.5) / teeth * TAU; bar(K, L, P(a, r), P(a, r + Math.max(0.16, r * 0.1)), t * 1.2); }
-    for (let k = 0; k < sp; k++) { const a = turn + k / sp * TAU + 0.3; bar(K, L, P(a, r * 0.18), P(a, r), t); }
+    // (Three spokes, a quarter of a right angle off the level: none upright, none level, no two in one line through the hub.)
+    for (let k = 0; k < sp; k++) { const a = 0.26 + k / sp * TAU; bar(K, L, P(a, r * 0.18), P(a, r), t); }
     // (Its hub is a round boss and no more: an axle's end, seen from the side, is a bar through a hub.)
     round(K, 'iron', F, cy, r * 0.2, o + t, 10);
   },
@@ -134,6 +135,13 @@ export const PROPS_B = {
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const cx = x + sx * (hx - 0.1), cz = z + sz * (hz - 0.1); bar(K, 'iron', [cx, h + 0.1, cz], [cx, caveRoofY(cx, cz), cz], 0.04); }
   },
   // ---- the Menagerie of Chains ----
+  // A great chain hung from the roof down to up over the floor: links as thick as t, each a short bar turned a little
+  // from the last, a hook of iron at its end.
+  hungchain(K, d, p, x, y, z) {
+    const top = caveRoofY(x, z), t = p.t || 0.14, low = y + (p.up ?? 2.4), n = Math.max(2, Math.round((top - low) / (t * 3.4)));
+    for (let k = 0; k < n; k++) { const y0 = top - (top - low) * k / n, y1 = top - (top - low) * (k + 1) / n, o = (k % 2 ? 1 : -1) * t * 0.35; bar(K, 'iron', [x + o, y0, z - o], [x - o, y1, z + o], k % 2 ? t : t * 0.6); }
+    K.cone('iron', x, low - 0.5, z, 0.001, 0.5, 5);
+  },
   // A beast's pen on the floor: bars upright all round it, each ending in a point, and no lid (a plate over a row of bars
   // is a rail over posts). open: its front (toward +z, turned by yaw) stands open, the door's bars swung aside.
   beastcage(K, d, p, x, y, z) {
@@ -150,9 +158,9 @@ export const PROPS_B = {
     // (beast: what lies in it, a dark back and a head down on its paws. bent: three of its front bars forced out.)
     if (p.beast) {
       const b = F(hx * 0.15, 0.14, -hz * 0.2), hd = F(hx * 0.15 + 1.25, 0.14, -hz * 0.05);
-      K.drum('char:stone', b[0], b[1], b[2], 1.15, 0.85, 7, { r2: 0.75, collide: false, turn: 0.4 }); K.cone('char:stone', b[0], b[1] + 0.85, b[2], 0.75, 0.3, 7, 0.4);
-      K.drum('char:stone', hd[0], hd[1], hd[2], 0.42, 0.4, 6, { r2: 0.3, collide: false }); K.cone('char:stone', hd[0], hd[1] + 0.4, hd[2], 0.3, 0.2, 6);
-      for (const e of [-0.14, 0.14]) { const q = F(hx * 0.15 + 1.6, 0.42, -hz * 0.05 + e); K.drum('blood:flame', q[0], q[1], q[2], 0.04, 0.05, 4, NO); }
+      K.drum('umber:stone', b[0], b[1], b[2], 1.5, 1.2, 7, { r2: 1.0, collide: false, turn: 0.4 }); K.cone('umber:stone', b[0], b[1] + 1.2, b[2], 1.0, 0.45, 7, 0.4);
+      K.drum('umber:stone', hd[0], hd[1], hd[2], 0.55, 0.55, 6, { r2: 0.4, collide: false }); K.cone('umber:stone', hd[0], hd[1] + 0.55, hd[2], 0.4, 0.25, 6);
+      for (const e of [-0.14, 0.14]) { const q = F(hx * 0.15 + 1.78, 0.5, -hz * 0.05 + e * 1.3); K.drum('blood:flame', q[0], q[1], q[2], 0.07, 0.08, 4, NO); }
     }
     if (p.bent) for (let k = -1; k <= 1; k++) { const u = k * gap * 1.5; bar(K, 'iron', F(u, 0, hz), F(u + k * 0.5, h * 0.55, hz + 0.9), 0.07); bar(K, 'iron', F(u + k * 0.5, h * 0.55, hz + 0.9), F(u + k * 0.2, h * 0.95, hz + 0.3), 0.07); }
     if (p.bones) { skull(K, ...F(-hx * 0.4, 0.14, 0.2), 0.16, 1); bar(K, 'pale:stone', F(0.2, 0.2, -0.3), F(0.9, 0.22, 0.2), 0.05); }
@@ -210,9 +218,11 @@ export const PROPS_B = {
     for (let k = 0; k < N; k++) { const a = Math.PI - k / N * Math.PI, b = Math.PI - (k + 1) / N * Math.PI; bar(K, L, F(Math.cos(a) * (w + t / 2), up + h + Math.sin(a) * w * 0.6, 0.06), F(Math.cos(b) * (w + t / 2), up + h + Math.sin(b) * w * 0.6, 0.06), t); }
     bar(K, L, F(-w, up, 0.06), F(w, up, 0.06), t);
     // (Its glass: pale and cold, with one bright streak down an edge of it, so it's a glass and not a dark doorway.)
-    const glass = p.broken ? 'char:stone' : p.draped ? (p.cloth || 'dark:cloth_oat') : 'frost:iron';
+    const glass = p.broken ? 'char:stone' : p.draped ? (p.cloth || 'dark:cloth_oat') : 'slate:ice';
     K.quad(glass, F(-w, up + 0.08, 0.04), F(w, up + 0.08, 0.04), F(w, up + h, 0.04), F(-w, up + h, 0.04), F.n);
     for (let k = 0; k < N; k++) { const a = Math.PI - k / N * Math.PI, b = Math.PI - (k + 1) / N * Math.PI; K.quad(glass, F(0, up + h, 0.04), F(Math.cos(a) * w, up + h + Math.sin(a) * w * 0.6, 0.04), F(Math.cos(b) * w, up + h + Math.sin(b) * w * 0.6, 0.04), F(Math.cos(b) * w, up + h + Math.sin(b) * w * 0.6, 0.04), F.n); }
+    // (Paler toward its head on one side, as a glass is that has a light somewhere before it.)
+    if (!p.broken && !p.draped) K.quad('ice', F(-w * 0.9, up + h * 0.45, 0.045), F(w * 0.1, up + h * 0.97, 0.045), F(-w * 0.9, up + h * 0.97, 0.045), F(-w * 0.9, up + h * 0.97, 0.045), F.n);
     if (!p.broken && !p.draped) { K.quad('pale:flame', F(-w * 0.8, up + h * 0.3, 0.05), F(-w * 0.76, up + h * 0.3, 0.05), F(-w * 0.52, up + h * 0.86, 0.05), F(-w * 0.56, up + h * 0.86, 0.05), F.n); K.quad('pale:stone', F(-w * 0.6, up + h * 0.2, 0.05), F(-w * 0.56, up + h * 0.2, 0.05), F(-w * 0.3, up + h * 0.8, 0.05), F(-w * 0.34, up + h * 0.8, 0.05), F.n); }
     if (p.broken) for (let k = 0; k < 5; k++) { const q = F(-w + (k + 0.5) * w * 0.4, 0, 0.5 + (k % 3) * 0.35); K.spike('ice', q[0], q[1], q[2], 0.14 + (k % 2) * 0.08, 0.3 + (k % 3) * 0.2, 3, k); }
     if (p.draped) { K.quad(p.cloth || 'dark:cloth_oat', F(-w - 0.3, up + h * 0.2, 0.2), F(w + 0.3, up + h * 0.2, 0.2), F(w + 0.2, up + h + w * 0.6, 0.12), F(-w - 0.2, up + h + w * 0.6, 0.12), F.n); }
@@ -221,7 +231,7 @@ export const PROPS_B = {
   // (and every two metres of a long run of it).
   pane(K, d, p, x, y, z) {
     const yaw = p.yaw || 0, w = p.w || 0.9, h = p.h || 2.8;
-    for (const s of [0, Math.PI]) { const F = frame(x, y, z, yaw + s); K.quad('frost:iron', F(-w, 0.3, 0.03), F(w, 0.3, 0.03), F(w, 0.3 + h, 0.03), F(-w, 0.3 + h, 0.03), F.n); for (let u = -w + 0.5; u < w - 0.4; u += 2.2) K.quad('pale:flame', F(u, 0.3 + h * 0.4, 0.04), F(u + 0.04, 0.3 + h * 0.4, 0.04), F(u + 0.24, 0.1 + h, 0.04), F(u + 0.2, 0.1 + h, 0.04), F.n); }
+    for (const s of [0, Math.PI]) { const F = frame(x, y, z, yaw + s); K.quad('slate:ice', F(-w, 0.3, 0.03), F(w, 0.3, 0.03), F(w, 0.3 + h, 0.03), F(-w, 0.3 + h, 0.03), F.n); for (let u = -w + 0.5; u < w - 0.4; u += 2.2) K.quad('pale:flame', F(u, 0.3 + h * 0.4, 0.04), F(u + 0.04, 0.3 + h * 0.4, 0.04), F(u + 0.24, 0.1 + h, 0.04), F(u + 0.2, 0.1 + h, 0.04), F.n); }
     const F = frame(x, y, z, yaw);
     // (A post at each end and every two metres between: a long run of it is a wall of panes.)
     const n = Math.max(1, Math.round(w / 1.1));
@@ -288,8 +298,8 @@ export const PROPS_B = {
   glassbench(K, d, p, x, y, z) {
     const yaw = p.yaw || 0, F = frame(x, y, z, yaw), hx = p.hx || 2.2;
     K.box('dark:p2_worn_floorboards', x, y, z, hx, 0.9, 0.7, yaw, NO);
-    for (let k = 0; k < 3; k++) { const u = -hx + 0.7 + k * (hx * 0.62); K.quad('frost:iron', F(u - 0.5, 0.93 + k * 0.02, -0.4), F(u + 0.5, 0.93 + k * 0.02, -0.5), F(u + 0.6, 0.93 + k * 0.02, 0.3), F(u - 0.4, 0.93 + k * 0.02, 0.4), [0, 1, 0]); }
-    for (let k = 0; k < 2; k++) { const u = -hx * 0.5 + k * hx; K.quad('frost:iron', F(u - 0.6, 0.9, -0.6), F(u + 0.6, 0.9, -0.6), F(u + 0.6, 2.3, -0.5), F(u - 0.6, 2.3, -0.5), F.n); K.quad('pale:flame', F(u - 0.4, 1.5, -0.59), F(u - 0.36, 1.5, -0.59), F(u - 0.2, 2.2, -0.49), F(u - 0.24, 2.2, -0.49), F.n); }
+    for (let k = 0; k < 3; k++) { const u = -hx + 0.7 + k * (hx * 0.62); K.quad('slate:ice', F(u - 0.5, 0.93 + k * 0.02, -0.4), F(u + 0.5, 0.93 + k * 0.02, -0.5), F(u + 0.6, 0.93 + k * 0.02, 0.3), F(u - 0.4, 0.93 + k * 0.02, 0.4), [0, 1, 0]); }
+    for (let k = 0; k < 2; k++) { const u = -hx * 0.5 + k * hx; K.quad('slate:ice', F(u - 0.6, 0.9, -0.6), F(u + 0.6, 0.9, -0.6), F(u + 0.6, 2.3, -0.5), F(u - 0.6, 2.3, -0.5), F.n); K.quad('pale:flame', F(u - 0.4, 1.5, -0.59), F(u - 0.36, 1.5, -0.59), F(u - 0.2, 2.2, -0.49), F(u - 0.24, 2.2, -0.49), F.n); }
     // (The frame: two gilt sides and an arched head, nothing in it, leant on the bench's end.)
     const G = (u, v) => F(hx + 0.25 + v * 0.22, v, u);
     bar(K, 'gold', G(-0.5, 0), G(-0.5, 1.7), 0.1); bar(K, 'gold', G(0.5, 0), G(0.5, 1.7), 0.1);
