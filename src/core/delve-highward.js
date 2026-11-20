@@ -199,9 +199,9 @@ export const DEEP_STACKS = {
   auto: { way: ['cd_door', 'cd_stair', 'cd_well', 'cd_hold', 'cd_dorm', 'cd_hold', 'cd_well', 'cd_index', 'cd_well', 'cd_chained', 'cd_well', 'cd_scriv', 'cd_sump', 'cd_scriv', 'cd_lift', 'cd_scriv', 'cd_vault'] },
   shots: [
     // (Heights over the delve's own floor: the Stacks lie twelve metres under their door.)
-    ['cd_well', 'cd_well', [-15, -10, -57], [12, 6, -90]],
-    ['cd_hold', 'cd_hold', [-34, -8.6, -62], [-64, -11, -84]],
-    ['cd_hold2', 'cd_hold', [-70, -9, -88], [-44, -10.5, -62]],
+    ['cd_well', 'cd_well', [-4, -10.4, -57.5], [8, 10, -90]],
+    ['cd_hold', 'cd_hold', [-39.5, -9.3, -64], [-62, -11.2, -84]],
+    ['cd_hold2', 'cd_hold', [-65.5, -9.5, -84.6], [-44, -10.8, -64]],
     ['cd_dorm', 'cd_dorm', [-40, -9.4, -101], [-62, -11, -114]],
     ['cd_chained', 'cd_chained', [36, -9, -54], [64, -10, -78]],
     ['cd_vault', 'cd_vault', [45, -8, -97], [64, -10, -118]],

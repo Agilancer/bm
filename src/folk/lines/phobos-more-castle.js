@@ -1295,4 +1295,87 @@ export const QUESTS_CASTLE = {
       "You knock twice now. I noticed.",
     ],
   },
+
+  // ---- out on the castle's own ground: its yards, the court under the patio, the Sally road ----
+  honest_iron: {
+    title: 'Honest Iron',
+    giver: 'ho_thole',
+    needs: 'cold_iron',
+    offer: [
+      "His garrison drills in the south yard, by the Barracks hall, in plate I hammered. Good plate. I'd know every rivet. I want it back, a rivet at a time if that's how it comes.",
+      "A dozen pieces of iron off whatever you put down there. I'll make it into something that guards a door instead of breaking one.",
+    ],
+    accept: "A dozen pieces. I'll bring them.",
+    acceptLine: "Out by the castle's door, south across the yard, past the low wall: they drill between the two long halls. Don't fight them in a rank. Nobody wins against a rank.",
+    decline: 'Not now.',
+    declineLine: "Then they keep wearing it. I've borne that for six years. I can bear it a while longer.",
+    journal: [
+      "Garrick Thole wants his iron back from the garrison at drill in the Lower Ward's south yard, between the Barracks hall and the Armoury. Bring him twelve pieces of iron.",
+    ],
+    progress: [
+      "Twelve pieces. Off the ones at drill, by the long halls.",
+    ],
+    done: [
+      "That's mine. That one too. I'd know that weld anywhere, I was ashamed of it at the time. Give it here.",
+      "Hinges, I think. A door ought to have something honest holding it up. Take this for the carrying.",
+    ],
+    after: [
+      "Vane's door hangs on your iron now. She hasn't said thank you. She oiled the hinges herself, which is the same thing.",
+    ],
+  },
+  the_sally_road: {
+    title: 'The Sally Road',
+    giver: 'ho_vane',
+    needs: 'thirty_souls',
+    offer: [
+      "There's one way out of this castle that isn't through the city: the Sally Gate, east, behind the Keep, and the road from it to the Ash Terrace. If this room is ever found, that's the road thirty people run down.",
+      "His lancers keep it. I know, I posted the first of them. Thin them out. Five will do. I want to know it can be done.",
+    ],
+    accept: "Five of them. I'll clear the road.",
+    acceptLine: "Through the Sally Gate's passage on the castle's east side, and out along the shelf. They ride the road in the open. Keep off its middle.",
+    decline: 'Another day.',
+    declineLine: "Then I'll keep counting exits and hoping I never need the last one.",
+    journal: [
+      "Hesper Vane wants the Holdout's last way out tried. Kill five of the lancers who keep the Sally road, out past the Sally Gate on the castle's east side.",
+      "Go back to Hesper Vane at the Holdout's door.",
+    ],
+    progress: [
+      "Five, on the road east of the Sally Gate.",
+    ],
+    done: [
+      "Five. And you walked back, which tells me more than the count does. So it can be done. I'll sleep, tonight. Not long. But I'll sleep.",
+      "Here. A soldier's pay, for a soldier's work. It's the first I've paid out in years that I wasn't ashamed of.",
+    ],
+    after: [
+      "I walk the children to the foot of the stair now and back, once a week. They think it's a game. It's a drill.",
+    ],
+  },
+  wings_under_the_court: {
+    title: 'Wings Under the Court',
+    giver: 'ho_wren',
+    needs: 'the_ledger_keeper',
+    offer: [
+      "Under the Crown Court, where the patio stands on its piers, there's a roost that isn't ours. Pale things. They come out at dusk and they took one of mine off a bridge last month.",
+      "Go down among the piers after dark, when they're stirring and you can see them against the fires, and kill four. I'd come. I don't go under things. Roofs, yes. Under, no.",
+    ],
+    accept: "Four of them, after dark.",
+    acceptLine: "The Middle Ward's own ground, under the great patio, between the Great Hall and the gate towers. At night. By day they're up in the piers and you'll never see one.",
+    decline: 'Not tonight.',
+    declineLine: "Then keep off the low bridges at dusk. I mean it.",
+    journal: [
+      "Sable Wren lost a runner to the pale harpies that roost under the Crown Court. Go in among the patio's piers on the Middle Ward's ground, at night.",
+      "Kill four of the harpies under the Crown Court.",
+      "Go back to Sable Wren in the Gargoyles' Roost.",
+    ],
+    progress: [
+      "Under the patio. After dark. Four.",
+    ],
+    done: [
+      "Four. Good. That's for Marsh. He owed me money, so don't think I'm sentimental.",
+      "Your cut. We split everything, even the grudges.",
+    ],
+    after: [
+      "The low bridges are ours again at dusk. Rook's put it in the ledger as an asset.",
+    ],
+  },
 };
