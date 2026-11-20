@@ -194,7 +194,7 @@ export const MIRRORS = {
   ],
   last: 'duchess', tough: { hp: 40, damage: 4.2 }, pay: { xp: 128000, gold: 15000 },
   names: { "Velscour's Knights": 'COURT GUARD', 'Haunted Mannequins': 'EMPTY GOWN', 'The Possessed': 'THE FACELESS', 'Night Paralysis Demons': 'GLASS-SHADE', Necromancers: 'LADY OF THE GLASS' },
-  look: { wall: 'ashlar', foot: 'dark:block', floor: 'flags', banner: 'p2_banner_greygold', roof: 'dark:stone', flame: 'flame', light: [1, 0.84, 0.62], fire: [1, 0.86, 0.66], every: 15, high: 3, glow: 2.5, lit: true, beam: 'dark:stone', bays: 'chains' },
+  look: { wall: 'ashlar', foot: 'dark:block', floor: 'flags', banner: 'p2_banner_greygold', roof: 'dark:stone', flame: 'flame', light: [1, 0.84, 0.62], fire: [1, 0.86, 0.66], every: 15, high: 3, glow: 3.5, lit: true, beam: 'dark:stone', bays: 'chains' },
   words: { enter: 'Castle Velscour: the Hall of Mirrors. His court came here to look at itself. What looked back is still here.', clear: 'The Duchess is dead, and her Glass is only glass.', wipe: 'You fall... and wake inside the Silvered Door.' },
 };
 export const MIRRORS_VARIANTS = {

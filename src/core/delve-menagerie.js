@@ -81,8 +81,9 @@ const props = [];
   // (Out in the room, a way behind them along each wall: something lying in three, bones in the rest, one forced open.)
   [-39, -56, -65, -74].forEach((z, i) => add('beastcage', -6.4, z, { hx: 2.6, hz: 3.4, h: 3.4, gap: 0.3, yaw: PI / 2, turn: true, solid: true, open: i === 1, bones: i % 2 === 0, beast: i === 0 || i === 3, bent: i === 2 }));
   [-48, -57, -76].forEach((z, i) => add('beastcage', 6.4, z, { hx: 2.6, hz: 3.4, h: 3.4, gap: 0.3, yaw: -PI / 2, turn: true, solid: true, open: i === 1, bones: i !== 1, beast: i === 2 }));
-  for (const [x, z, up] of [[-2.4, -44, 3.4], [2, -52, 4.4], [-1, -66, 3], [2.6, -78, 4], [-10.6, -50, 2.6], [10.8, -70, 3]]) add('chain', x, z, { up });
-  add('basket', -1.5, -47, { up: 5.6 }); add('basket', 1.5, -61, { up: 5.6 }); add('basket', -1.5, -75, { up: 5.6 });
+  for (const [x, z, up] of [[-2.4, -44, 3.4], [2, -52, 4.2], [-1, -66, 3], [2.6, -78, 3.8], [-2, -57, 4.4], [1.6, -71, 3.2], [-10.6, -50, 2.6], [10.8, -70, 3]]) add('hungchain', x, z, { up });
+  // (Its fire over the cages with something in them, so what lies there is seen from the way between.)
+  add('basket', -5, -41, { up: 5.4 }); add('basket', 5, -59, { up: 5.4 }); add('basket', -5, -72, { up: 5.4 }); add('basket', 5, -76, { up: 5.4 });
   add('cage', -2, -62, { up: 4.6 }); add('cage', 3, -40, { up: 5 }); add('chain', 4, -70, { up: 4 });
   add('bones', 1, -50, { r: 1.2 }); add('heap', -3, -71, { r: 1.2, layer: 'p2_straw_ground' }); add('barrels', 10.4, -75); add('crates', 10.6, -65);
   add('decal', 2, -60, { layer: 'p2_blood_splashes', w: 2.4, flat: true, yaw: 0.8 }); add('decal', -12.95, -62, { layer: 'p2_gouges', w: 2.6, up: 0.8, yaw: PI / 2 });
@@ -91,7 +92,7 @@ const props = [];
   // the watchers' walk round two walls over the pit, the drain, old kills. Fire at the way down, fire on the walk.
   add('chainpost', PIT_STAKE[0], PIT_STAKE[1], { r: 1.3, h: 3.6, run: [PIT_CHAIN - 1, 3.4, 0.36] });
   add('rings', PIT_STAKE[0], PIT_STAKE[1], { r: 2.6, n: 1 });
-  add('basket', PIT_STAKE[0] + 3, PIT_STAKE[1] + 2.4, { up: 6 }); add('basket', PIT_STAKE[0] - 3, PIT_STAKE[1] - 2.4, { up: 6 });
+  add('basket', PIT_STAKE[0] + 3, PIT_STAKE[1] + 2.4, { up: 6 }); add('basket', PIT_STAKE[0] - 3, PIT_STAKE[1] - 2.4, { up: 6 }); add('daylight', PIT_STAKE[0] + 2, PIT_STAKE[1] + 0.6, { r: 1.6, pool: false });
   add('cage', PIT_STAKE[0] - 2, PIT_STAKE[1] - 1, { up: 5.4 });
   add('walk', -60, -34.25, { hx: 16, hz: 1.25, up: 6.5, side: -1 }); add('walk', -75.75, -50, { hx: 1.25, hz: 16, up: 6.5, side: 1 });
   add('pool', -70, -42, { r: 2, up: 0.03, layer: 'mire:water' }); add('bones', -50, -60, { r: 1.5 }); add('bones', -70, -62, { r: 1.2 }); add('bones', -58, -38, { r: 1 });
@@ -134,7 +135,7 @@ const props = [];
   // ---- the Ring of Chains: the chain posts, cages hung over it, his mark on the far wall. Fire under his mark, fire at
   // the two ways in; the hung fires over the middle.
   CHAIN_POSTS.forEach(([x, z, r], i) => add('chainpost', x, z, { r, h: 3.4, solid: true, run: [(i % 2 ? -1 : 1) * 3.4, 2.6 - i, 0.22] }));
-  add('basket', -6, -160, { up: 7.5 }); add('basket', 6, -164, { up: 7.5 }); add('basket', 0, -171, { up: 7.5 });
+  add('basket', -6, -160, { up: 7.5 }); add('basket', 6, -164, { up: 7.5 }); add('basket', 0, -171, { up: 7.5 }); add('daylight', 0, -163, { r: 1.8, pool: false });
   for (const [x, z, up] of [[-14, -164, 7], [14, -160, 9], [7, -172, 10]]) add('cage', x, z, { up });
   add('mark', 0, -177.6, { up: 8, r: 2, back: 1 });
   for (const [x, z] of [[-6, -176], [10, -176], [15.4, -153], [-15.4, -152]]) add('brazier', x, z);
@@ -231,7 +232,7 @@ export const MENAGERIE = {
   ],
   last: 'keeper', tough: { hp: 34, damage: 3.6 }, pay: { xp: 88000, gold: 11000 },
   names: { 'Goat Men': 'YARD RAM', 'Giant Spiders': 'CAGE SPIDER', Werewolf: 'PIT HOUND', Dragonlings: 'TANK WYRMLING', 'The Possessed': 'FLENSER', "Velscour's Knights": "KEEPER'S HAND", 'Plague Giants': 'THE FEEDER', Harpies: 'FLEDGLING' },
-  look: { wall: 'ashlar', foot: 'dark:block', floor: 'flags', banner: 'p2_banner_blood', roof: 'dark:stone', flame: 'dark:flame', light: [1, 0.42, 0.18], fire: [1, 0.46, 0.2], every: 15, high: 3, glow: 2.5, lit: true, beam: 'dark:stone', bays: 'chains' },
+  look: { wall: 'ashlar', foot: 'dark:block', floor: 'flags', banner: 'p2_banner_blood', roof: 'dark:stone', flame: 'dark:flame', light: [1, 0.42, 0.18], fire: [1, 0.46, 0.2], every: 15, high: 3, glow: 3.5, lit: true, beam: 'dark:stone', bays: 'chains' },
   words: { enter: 'Castle Velscour: the Menagerie of Chains. Everything he has had caught is kept here, and fed.', clear: 'The Keeper of Chains is dead! The cages stand open.', wipe: 'You fall... and wake inside the Feeding Gate.' },
 };
 export const MENAGERIE_VARIANTS = {
