@@ -26,6 +26,15 @@ export async function getFile(url, as = 'buffer') {
   } finally { watcher?.({ name, state: 'done' }); }
 }
 
+/**
+ * A file's bytes given back now, instead of whenever the collector next comes round: a model's file is its pictures too, 2 to
+ * 15 MB, and a load reads dozens for no more than a skeleton or a mesh. Only once nothing reads it through a view any more
+ * (a typed array over a let-go buffer is empty, and says nothing): what's kept of a file is copied out of it first.
+ */
+export function dropFile(buffer) {
+  try { if (buffer instanceof ArrayBuffer && buffer.byteLength && buffer.transfer) buffer.transfer(0); } catch { /* not ours to let go */ }
+}
+
 /** A file fetched by someone else (a pool thread decoding a picture): named on the loading screen while `work` is under way. */
 export function watched(url, work) {
   const name = fileName(url);

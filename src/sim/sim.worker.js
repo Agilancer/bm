@@ -13,7 +13,7 @@ import { STAFF_CORES } from '../items/staffcores.js';
 import { LISANDRA_FORMS } from '../core/lisandra.js';
 import { VillageWalker } from './village-walker.js';
 import { parseGLB } from '../core/glb.js';
-import { getFile, watchFiles } from '../core/files.js';
+import { dropFile, getFile, watchFiles } from '../core/files.js';
 import { CHARS_START, CTRL, C, C_SIZE, EV, EV_CAPACITY, EV_FLOATS, H, INPUT, MAX_CHARS, PLAN_FLOATS, PLAN_OBS, PLAN_TACTICS, SNAP_FLOATS, TOTAL_BYTES, WEAPONS, mapShared } from '../core/layout.js';
 import { ArmsRig, ClipBank, Rig } from './anim.js';
 import { Casting } from './casting.js';
@@ -692,6 +692,8 @@ async function boot(msg) {
   CRABS.forEach((c, i) => sim.knights.push(new Crab(2 + i, 2, crabRig, c)));
   sim.knights.push(new Gravehart(5, 3, new ArmsRig(heartBuf, GRAVEHART_SCALE), GRAVEHART));
   sim.knights.push(new Hydra(6, 4, new ArmsRig(hydraBuf, HYDRA_SCALE), HYDRA));
+  // (Each rig has copied what it keeps: the files, their pictures and all, are let go now. src/core/files.js dropFile.)
+  for (const file of [black, silver, arms2h, arms1h, crabBuf, heartBuf, hydraBuf, spellAttack, spellRaise, armsStaff]) dropFile(file);
   await addUndead(sim, base);
   for (const creature of FIELD_CREATURES) {
     const buffer = await fetchBuf(base + 'assets/monsters/new_creatures/' + creature.model + '.glb');
@@ -711,10 +713,12 @@ async function boot(msg) {
       clip.loop = ['idle', 'walk', 'run'].includes(clip.name);
     }
     sim.knights.push(new FieldCreature(sim.knights.length, rig, creature));
+    dropFile(buffer);
   }
   // The knights in the other suits: Tessariel's walking the village, Velscour's man on the west road.
   const townBufs = await Promise.all(TOWN_KNIGHTS.map((t) => fetchBuf(base + t.asset)));
   TOWN_KNIGHTS.forEach((t, i) => sim.knights.push(new Knight(sim.knights.length, t.kind, new Rig(parseGLB(townBufs[i]), bank), bank, t)));
+  townBufs.splice(0).forEach(dropFile);
   // The Tripo monsters' slots, empty until you come near a lair (src/sim/tripo.js).
   const [tripoRoster, tripoPalettes] = await Promise.all(['roster.json', 'palettes.json'].map((f) => fetchJSON(base + TRIPO_BASE + f)));
   const firstTripo = sim.knights.length;
@@ -734,6 +738,7 @@ async function boot(msg) {
     const heroBank = new ClipBank(hMeta, hBin);
     const bufs = await Promise.all(msg.heroes.map((p) => fetchBuf(`${base}assets/game/heroes/${p.body}.glb`)));
     msg.heroes.forEach((person, i) => sim.heroes.push(new Hero(i, new Rig(parseGLB(bufs[i]), heroBank), heroBank, person, kit.props)));
+    bufs.splice(0).forEach(dropFile);
     sim.heroWorld = new HeroWorld(sim, sim.heroes);
     sim.heroPlay = new HeroPlay(sim);
     if (msg.hour !== undefined) sim.heroWorld.setHour(msg.hour);
@@ -743,10 +748,12 @@ async function boot(msg) {
   // The Test Dungeon (src/sim/testhall.js): off until the main menu asks for it.
   sim.testHall = new TestHall(sim);
   for (const form of LISANDRA_FORMS) {
-    sim.villagers.push(new VillageWalker(await fetchBuf(base + form.asset), form, msg.opening));
+    const file = await fetchBuf(base + form.asset);
+    sim.villagers.push(new VillageWalker(file, form, msg.opening));
+    dropFile(file);
   }
   // Your own body, for the third-person view: the slot after hers.
-  sim.body = new PlayerBody(await fetchBuf(base + 'assets/game/player/wizard.glb'));
+  { const file = await fetchBuf(base + 'assets/game/player/wizard.glb'); sim.body = new PlayerBody(file); dropFile(file); }
   // (Every body has a slot in the snapshot, and yours the one after: past MAX_CHARS they'd be written over the slimes.)
   { const n = sim.knights.length + sim.heroes.length + sim.villagers.length + 1; if (n > MAX_CHARS) throw new Error(`${n} bodies, and room in the snapshot for ${MAX_CHARS} (src/core/layout.js MAX_CHARS)`); }
   if (msg.opening) {

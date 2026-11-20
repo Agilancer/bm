@@ -181,7 +181,10 @@ function threadPlan(mobile) {
   // Leave one logical core for the OS and browser, two on a phone where heat is the real limit.
   const spare = mobile ? 2 : 1;
   const usable = Math.max(2, cores - spare);
-  const pool = Math.max(1, Math.min(usable - 2, mobile ? 4 : 30));
+  // (A phone: two, and no more. Every thread is a copy of the land's code and data and a heap of its own, 25 to 95 MB
+  // apiece measured, and four of them working through the land at once was 400 MB of a load that a phone's browser ends
+  // the page for. README.md, "When the browser closes the game".)
+  const pool = Math.max(1, Math.min(usable - 2, mobile ? 2 : 30));
   return { cores, usable: pool + 2, pool };
 }
 
@@ -477,11 +480,21 @@ async function boot(plan, poolSize) {
     shared.ctrl[CTRL.PLAN_RUN] = 1;
     // On a phone every thread awake is heat the GPU then can't spend, so the planners take far less: the fight doesn't
     // need many rollouts to read, and they never slowed the frame on a PC.
-    if (gpu.mobile) pool.startPlanners(buffer, 2, 80, 2);
-    else pool.startPlanners(buffer, 4, 40);
-    // (The planners keep their threads for good, so the land laid again round you out in the countries has one of its own.)
-    renderer.landPool = renderer.landPool || new Pool(1);
-  }
+    // (And every thread kept is memory: each holds its own copy of the land's code and data, 25 MB at rest and up to 95 after
+    // working. So the load's threads are let go once it's done. A phone, or the Low setting, keeps one, for the land laid
+    // again round you, and plans nothing: the one knight whose tactics the planners weigh fights as well on even weights.
+    // A PC keeps four for planning, however many cores it loaded with, and one more for the land.)
+    if (gpu.tier.lean) {
+      shared.ctrl[CTRL.PLAN_RUN] = 0;
+      pool.takeBack(pool.size - 1);
+      renderer.landPool = pool;
+    } else {
+      pool.takeBack(Math.max(0, pool.size - 4));
+      pool.startPlanners(buffer, 4, 40);
+      // (The planners keep their threads for good, so the land laid again round you out in the countries has one of its own.)
+      renderer.landPool = renderer.landPool || new Pool(1);
+    }
+  } else pool.takeBack(pool.size - 1);   // (no shared memory, so no planners: one thread, for the land)
 
   // ---- the render thread's loop --------------------------------------------------------------------------------------
 
