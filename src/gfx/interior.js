@@ -187,7 +187,9 @@ export async function loadInterior(r, base, pool, tier, pictures, steps) {
     { binding: 3, resource: none }, { binding: 4, resource: none }] });
   const pom = tier.pom > 0 ? 1 : 0;
   const tiles = makeSet(r, glb, nodes, tileNames);
-  tiles.bg = bindGroup(tc, td, uniform((p) => man.layers.forEach((l, i) => { p[i * 4 + 1] = pom * (l.pom || POM[l.kind] || 0); p[i * 4 + 2] = -(l.deep || 0); })));
+  // (The church's own masonry, -3 in w: laid without its repeat and stone by stone its own tone, as the land's is
+  // (materials.js STATIC), but none of the weather, since the same stone lines its inside.)
+  tiles.bg = bindGroup(tc, td, uniform((p) => man.layers.forEach((l, i) => { p[i * 4 + 1] = pom * (l.pom || POM[l.kind] || 0); p[i * 4 + 2] = -(l.deep || 0); p[i * 4 + 3] = /^wall_(ashlar|rough)$/.test(l.name) ? -3 : 0; })));
   const atlas = makeSet(r, glb, nodes, atlasNames);
   atlas.bg = bindGroup(ac, ad, uniform((p) => man.atlases.forEach((l, i) => { p[i * 4] = 1; p[i * 4 + 2] = l.kind === 'glass' ? (l.rose ? 4 : 2) : 0; })));
   // The glow quads, the townsfolk's houses' first (their hearths, candles and windows: drawn wherever you are, since a house is
