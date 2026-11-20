@@ -2233,7 +2233,8 @@ function climb(K, t, draw) {
     for (let k = 0; k < n; k++) {
       const b = (k + 0.5) / n * TAU, px = t.x + Math.cos(b) * (rOut - 0.3), pz = t.z + Math.sin(b) * (rOut - 0.3), half = Math.PI * (rOut - 0.3) / n + 0.04;
       if (Math.abs(((b - t.ta) % TAU + TAU + Math.PI) % TAU - Math.PI) < gap) continue;
-      K.box(G, px, h, pz, 0.3, 0.95, half, -b, { collide: false }); if (k % 3 === 0) K.vee(G, px, h + 0.95, pz, 0.3, 0.9, half * 0.6, -b);
+      // (Waist high, his V on one stretch in four: a parapet to the chest was most of what a deck looked at. The critics.)
+      K.box(G, px, h, pz, 0.3, 0.72, half, -b, { collide: false }); if (k % 4 === 0) K.vee(G, px, h + 0.72, pz, 0.3, 0.7, half * 0.6, -b);
     }
     for (let k = 0; k < 8; k++) { const b = (k + 0.5) / 8 * TAU; K.spike(G, t.x + Math.cos(b) * (rOut - 1.1), h - 1.1, t.z + Math.sin(b) * (rOut - 1.1), 0.9, -4.5, 4, -b); }
   };

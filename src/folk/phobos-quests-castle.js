@@ -35,7 +35,7 @@ export const RULES_CASTLE = {
   // Every key in the castle, by whoever keeps it (src/core/castle-keys.js): the Librarian's long errand.
   the_nine_keys: { needs: 'the_bookcase', steps: [{ boss: 'ironmarshal' }, { boss: 'lector' }, { boss: 'painter' }, { boss: 'greatwork' }, { boss: 'clockmaker' }, { boss: 'keeper' }, { boss: 'boneprior' }, { boss: 'duchess' }, { back: true, say: 'Eight keys, Master Pell. Only the Sexton is left.' }], gold: 20000, xp: 300000, item: 'robe', named: "The Librarians' Mantle", seed: 0x9ce75 },
   // Little Bet's: the sky, counted for her from the tallest Needle, at night.
-  the_sky_for_bet: { needs: 'the_scriveners_lift', steps: [{ enter: 'vista:gallows', night: true }, { back: true, say: 'More than I could count. More than the books.' }], gold: 800, xp: 90000, item: 'gem', seed: 0xbe75c },
+  the_sky_for_bet: { needs: 'the_scriveners_lift', steps: [{ enter: 'vista:gallows', night: true }, { back: true, say: 'More than I could count. More than the books.' }], gold: 800, xp: 90000, item: 'skull', named: "Bet's Counting Stone", seed: 0xbe75c },
   // ---- the roof-runners', in the Gargoyles' Roost: the Needles, the bridges, the high places ----
   the_ledger_keeper: { needs: 'the_scriveners_lift', steps: [{ talk: 'ho_rook', say: 'Wren says you keep the ledger.', end: true }], gold: 2200, xp: 60000 },
   the_high_round: { needs: 'the_scriveners_lift', steps: [{ visit: ['vista:widow', 'vista:gallows', 'vista:thorn', 'vista:red'] }, { back: true, say: 'Four Needles, and every bridge between them. Nobody saw me.' }], gold: 7600, xp: 120000, item: 'robe', named: "The Roof-Runner's Greys", seed: 0x40f17 },

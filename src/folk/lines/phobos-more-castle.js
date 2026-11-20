@@ -105,6 +105,8 @@ export const LINES_CASTLE = {
       ],
     },
     about: [
+      { after: 'key:archive', say: "Pell came down himself when he heard about the Drowned Key. First time in a year. Ate two bowls. That's what a key's worth, down here." },
+      { after: 'key:mirrors', say: "Eight keys. I've set a ninth place at the long table, and nobody's to sit in it till you're back from the top. Don't make me clear it away." },
       "I cooked in his Kitchens, under the Great Hearth, when I was a girl. Then I saw what one of the pots was for, and I walked down a stair that an old man with a book happened to leave open.",
       "Cook. And whatever else needs doing that nobody's said out loud. Somebody has to tell thirty people when to sit down.",
       "I feed them. That's all. You'd be surprised how much of keeping people alive is just that, done every day, on time.",
@@ -343,6 +345,14 @@ export const LINES_CASTLE = {
       ],
     },
     about: [
+      { after: 'key:barracks', say: "Nettle says you've got a key. A real one, black. That's one. I've started a new count." },
+      { after: 'key:archive', say: "A wet key. Mother Coyle says don't touch it. That's two keys. Or it's three. Don't tell me, I'm counting." },
+      { after: 'key:portraits', say: "Is it true one of the keys was in a picture? How do you get a thing out of a picture? I've tried with the books." },
+      { after: 'key:undercroft', say: "The glass one rings. Corry flicked it. Vane took it off him. I counted how long it rang: nine." },
+      { after: 'key:clockworks', say: "Master Quill says the winding key is as long as my arm. I measured. It's longer." },
+      { after: 'key:menagerie', say: "A whole ring of keys and only one's any good? That's a bad ring. I'd have counted them first." },
+      { after: 'key:ossuary', say: "The bone one is a finger. Whose finger? Nobody will tell me whose finger." },
+      { after: 'key:mirrors', say: "Eight. That's eight, I've got them all on the wall in chalk. Mother Coyle says one more and you go up to him. I don't like that one." },
       "I'm Bet. I'm nine. I was born on the third cot from the end and I've never been past the hanging.",
       "I count things. Then I know if one's gone. One was gone, once. A man. Nobody said where.",
       "I'm going to see the sky when I'm bigger. Mother Coyle says. She didn't say how much bigger. I asked.",

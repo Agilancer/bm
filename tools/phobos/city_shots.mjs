@@ -82,6 +82,23 @@ function cam(ex, ey, ez, tx, ty, tz) {
     ['kt_needle', [T.gallows.x, T.gallows.z], A(T.gallows.x - 62, T.gallows.deck + 12, T.gallows.z + 24), A(T.gallows.x, T.gallows.deck + 6, T.gallows.z)],
     ['kt_needle_far', [T.gallows.x, T.gallows.z], A(T.gallows.x - 150, T.gallows.deck - 40, T.gallows.z + 60), A(T.gallows.x, T.gallows.deck - 30, T.gallows.z)],
   ); }
+// The rest of the world, for the once-over (docs/WORLD-PASS.md): the town, the roads, the small towns and the far places.
+// [name, stand at [x, z], eye [x, up, z], looking at [x, up, z]], heights over the ground there.
+SHOTS.push(
+  ['wd_bellmourn', [0, 40], [0, 2, 46], [0, 6, -20]],
+  ['wd_bellmourn_e', [60, 0], [70, 3, 6], [0, 6, 0]],
+  ['wd_road_e', [900, 150], [900, 2.4, 150], [1300, 6, 170]],
+  ['wd_woods', [-300, -260], [-300, 2.2, -260], [-380, 6, -330]],
+  ['wd_thornwick', [2400, 1880], [2400, 3, 1890], [2400, 6, 1800]],
+  ['wd_cinderford', [-2100, -120], [-2100, 3, -110], [-2100, 6, -200]],
+  ['wd_frostwatch', [700, 3980], [700, 3, 3990], [700, 6, 3900]],
+  ['wd_belltower', [2440, -450], [2440, 3, -440], [2440, 20, -540]],
+  ['wd_abbey', [3950, -2780], [3950, 3, -2770], [3950, 10, -2880]],
+  ['wd_fen', [-250, -3280], [-250, 3, -3270], [-250, 2, -3400]],
+  ['wd_keep', [-4830, 200], [-4820, 4, 200], [-5000, 30, 200]],
+  ['wd_barrows', [-2900, 3520], [-2900, 3, 3530], [-2900, 4, 3400]],
+  ['wd_sill', [9000, -100], [9000, 12, -100], [9700, 40, 0]],
+);
 const asked = process.argv.slice(2), which = asked.length ? SHOTS.filter((s) => asked.includes(s[0])) : SHOTS;
 // (On Windows the machine's own GPU by D3D11: the software Vulkan the Linux container wants gives no adapter there.)
 const b = await chromium.launch({ args: process.platform === 'win32' ? ['--enable-unsafe-webgpu', '--ignore-gpu-blocklist', '--use-angle=d3d11', '--enable-features=Vulkan,WebGPU', '--disable-dawn-features=use_dxc'] : ['--enable-unsafe-webgpu', '--ignore-gpu-blocklist', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--use-angle=swiftshader', '--no-sandbox'] });
