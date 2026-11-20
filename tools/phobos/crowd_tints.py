@@ -46,7 +46,8 @@ def h32(s):
 
 
 GEAR_WORDS = r"\b(hat|cap|hood|hooded|kerchief|helmet|coif|veil|wimple|bonnet|hairnet|net|headscarf|cowl|turban|skullcap|circlet|goggles|tied cloth|mantilla)\b"
-OLD_WORDS = r"\b(old|elderly|grey|gray|white hair|white-haired|silver|sixty|seventy|eighty|wrinkled|bald)\b"
+# (Not "old" alone: "about nine years old" is a child.)
+OLD_WORDS = r"\b(elderly|old (?:man|woman|soldier|lady)|grey|gray|white hair|white-haired|silver|sixty|seventy|eighty|wrinkled)\b"
 
 
 def heads_offered(res, doc):
@@ -65,12 +66,23 @@ def heads_offered(res, doc):
     return out, tones
 
 
+def ages():
+    """Each swap's age, by its body (src/folk/people.js): what hair it may have. Its prompt's words won't say: a grey
+    neckerchief isn't grey hair."""
+    import subprocess
+    js = "import('./src/folk/people.js').then((m) => console.log(JSON.stringify(Object.fromEntries(m.FOLK.map((p) => [p.body, p.age])))))"
+    return json.loads(subprocess.run(["node", "-e", js], cwd=ROOT, capture_output=True, text=True, check=True).stdout)
+
+
 def main():
     res = json.load(open(os.path.join(ROOT, "tools", "phobos", "residents.json")))["people"]
     # (Not the fifty-five who came in the swaps' places, nor the castle's: they've none. tools/phobos/crowd_roster2.json.)
     newer = {p["body"] for p in json.load(open(os.path.join(ROOT, "tools", "phobos", "crowd_roster2.json")))["people"]}
     newer |= {k for k in res if k.endswith("_b")}
     count, hatted, heads = [0], [0], [0]
+
+    global AGE
+    AGE = ages()
 
     def change(doc):
         offered, tones = heads_offered(res, doc)
@@ -101,7 +113,7 @@ def main():
                     if fits:
                         donor = fits[h32(f"{body}^{k}") % len(fits)]
                         sw["head"] = donor["k"]; used.add(donor["k"]); heads[0] += 1
-                old = donor["old"] if donor else bool(re.search(OLD_WORDS, v["prompt"], re.I))
+                old = AGE.get(f"{body}_s{k}", 30) >= 55
                 tones_ok = [6, 7] if old else [1, 2, 3, 4, 5]
                 if h32(f"{body}~{k}") % 3:
                     sw["dye"].append(tones_ok[h32(f"{body}*{k}") % len(tones_ok)])
