@@ -75,9 +75,9 @@ Everyone else sees only her glamours: the crone they call Old Lis by day, and a 
 
 **LISANDRA**: Stay where you are. I want a proper look at you.
 
-**LISANDRA**: Forty-three came through that door before you. Every one of them saw the girl.
+**LISANDRA**: Everyone who came through that door before you saw the girl.
 
-**LISANDRA**: You’re the first who’s seen the old woman under her.
+**LISANDRA**: You’re the first who’s seen the old woman underneath.
 
 ### 4 · Your hand (0:54 – 1:09)
 

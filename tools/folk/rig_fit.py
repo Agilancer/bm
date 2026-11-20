@@ -610,3 +610,68 @@ def add_clip(name, R, H, like="jog"):
     _CLIPS.clear()
     js = json.dumps(meta, separators=(",", ":"))
     open(os.path.join(FOLK, "clips.json"), "w").write(js)
+
+
+# ---- Palms: each hand turned about its own length so its palm faces as hers does ----
+# Meshy bound many bodies with the palms forward (or up) where hers face the thighs, and the clips carry that across, so
+# a walk shows two open palms like a shrug. The hand's rest is rolled about the bone from the wrist to the middle knuckle
+# (the mesh rides along as a whole: nothing in it bends), on top of the fit above.
+
+def _palm(P, idx, side):
+    h, m, i, p = (P[idx[side + n]] for n in ("Hand", "HandMiddle1", "HandIndex1", "HandPinky1"))
+    ax = m - h; ax /= np.linalg.norm(ax)
+    n = np.cross(ax, i - p) * (1 if side == "Right" else -1)
+    n -= ax * (n @ ax)
+    return ax, n / np.linalg.norm(n)
+
+
+# (A hand's mesh flat and her knuckle joints differ by about 12 degrees on every body, the same way round on each side:
+# that much is how a flat hand's verts lie against knuckles, not a turned hand, so it's taken off before judging.)
+PALM_BIAS = {"Left": -11.5, "Right": 11.5}
+
+
+def palms(k, write=True, min_deg=10.0, max_deg=55.0, junk_deg=100.0):
+    B = body(k); js = B["js"]
+    ex = js.setdefault("asset", {}).setdefault("extras", {}).setdefault("rigfit", {})
+    if "palm" in ex: return None
+    names, parent, T, R = skeleton(js)
+    base = [n.split(":")[-1] for n in names]; idx = {n: i for i, n in enumerate(base)}
+    WR, WT = fk_rest(parent, T, R)
+    HP, Hi = hers(); HF = body_frame(HP, Hi); F = body_frame(WT, idx)
+    rec = {}
+    nodes = js["nodes"]; J = js["skins"][0]["joints"]
+    for side in ("Left", "Right"):
+        if any(side + n not in idx for n in ("Hand", "HandMiddle1", "HandIndex1", "HandPinky1")): continue
+        # (Where the knuckle joints can't be trusted, leave the hand: Meshy sometimes names the little finger's bone as
+        # the index's, or bunches all four over a held thing; such a hand reads as turned half round, and isn't.)
+        th, ix, pk = (WT[idx[side + n]] for n in ("HandThumb1", "HandIndex1", "HandPinky1"))
+        if np.linalg.norm(ix - th) > np.linalg.norm(pk - th) or np.linalg.norm(ix - pk) < 0.03: continue
+        ax, n = _palm(WT, idx, side)
+        # The palm's facing from the hand's own mesh, not its knuckle joints, which Meshy can put 30-50 degrees round
+        # from the fingers they move: the flat of the verts bound to the hand (its least spread), turned from bind to
+        # rest, and on the knuckles' side of it.
+        hj = [i for nm, i in idx.items() if nm.startswith(side + "Hand")]
+        m = np.isin(B["jo"][:, 0], hj) & (B["we"][:, 0] > 0.5)
+        V = B["pos"][m].astype(np.float64)
+        if len(V) < 30: continue
+        c = V - V.mean(0); pn = np.linalg.eigh(c.T @ c)[1][:, 0]
+        j0 = idx[side + "Hand"]
+        pn = qmat(WR[j0]) @ B["W"][j0, :3, :3].T @ pn
+        pn -= ax * (pn @ ax); pn /= np.linalg.norm(pn)
+        if np.degrees(np.arccos(min(abs(pn @ n), 1.0))) > 60: continue
+        n = pn if pn @ n > 0 else -pn
+        _, hn = _palm(HP, Hi, side)
+        want = F.T @ (HF @ hn); want -= ax * (want @ ax); want /= np.linalg.norm(want)
+        ang = np.arctan2(np.cross(n, want) @ ax, n @ want)
+        ang -= np.radians(PALM_BIAS[side])
+        if abs(np.degrees(ang)) < min_deg or abs(np.degrees(ang)) > junk_deg: continue
+        ang = np.sign(ang) * min(abs(ang), np.radians(max_deg))
+        j = idx[side + "Hand"]; p = parent[j]
+        S = _rot_axis(ax, ang)
+        Wj = S @ qmat(WR[j])
+        q = mat_q(qmat(WR[p]).T @ Wj); q /= np.linalg.norm(q)
+        nodes[J[j]]["rotation"] = [float(v) for v in q]
+        rec[side] = round(float(np.degrees(ang)), 1)
+    ex["palm"] = rec
+    if write: save(B)
+    return rec

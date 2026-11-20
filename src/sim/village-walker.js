@@ -300,7 +300,7 @@ export class VillageWalker {
     const unit = (v, fallback) => { const l = len(v); return l > 1e-5 ? [v[0] / l, v[1] / l, v[2] / l] : fallback; };
     // A hand to a point (body space) by the shoulder and the elbow, each turned whole at its joint: the elbow opens or
     // closes to the distance, the shoulder swings the arm onto the point. Out of reach, she leans into it first. face:
-    // 'down' lays the palm flat on something, 'up' turns it up to look into, null leaves the wrist as the clip has it.
+    // 'down' lays the palm flat on something, 'up' turns it up to look into, 'in' lays it on her own chest, null leaves the wrist as the clip has it.
     const reach = (rot, tr, A, T, w, face) => {
       where(rot, tr, A.arm, pS); where(rot, tr, A.fore, pE); where(rot, tr, A.hand, pH);
       const a = len(sub(pE, pS)), b = len(sub(pH, pE));
@@ -321,7 +321,7 @@ export class VillageWalker {
       if (face && A.knuckle !== undefined && A.index !== undefined && A.pinky !== undefined) {
         where(rot, tr, A.hand, pH); where(rot, tr, A.knuckle, pE); where(rot, tr, A.index, pA); where(rot, tr, A.pinky, pB);
         const c = cross(sub(pE, pH), sub(pA, pB)), back = unit([c[0] * A.mirror, c[1] * A.mirror, c[2] * A.mirror], null);
-        const to = face === 'up' ? [0, -1, 0] : UP;
+        const to = face === 'up' ? [0, -1, 0] : face === 'in' ? [0, 0, 1] : UP;
         if (back) turnAbout(rot, A.hand, A.upHand, unit(cross(back, to), [1, 0, 0]), angle(back, to) * w);
       }
     };

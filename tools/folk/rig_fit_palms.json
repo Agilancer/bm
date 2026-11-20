@@ -1,0 +1,61 @@
+{
+ "chandler": {
+  "Right": -10.9
+ },
+ "porter": {
+  "Left": 55.0,
+  "Right": -55.0
+ },
+ "moneylender": {
+  "Left": -11.7,
+  "Right": 11.1
+ },
+ "veteran": {
+  "Right": -11.0
+ },
+ "weaver": {
+  "Left": 10.3,
+  "Right": -11.6
+ },
+ "innkeeper": {
+  "Right": -11.1
+ },
+ "younglord": {
+  "Right": -11.8
+ },
+ "ladysmaid": {
+  "Right": -11.5
+ },
+ "pilgrim": {
+  "Right": -10.7
+ },
+ "ghoulscullion": {
+  "Left": 14.0,
+  "Right": -18.4
+ },
+ "keeppriestess": {
+  "Right": -12.5
+ },
+ "astrologer": {
+  "Right": -10.4
+ },
+ "bookbinder": {
+  "Right": -10.1
+ },
+ "relicseller": {
+  "Right": 11.5
+ },
+ "pawnbroker": {
+  "Left": 12.0,
+  "Right": -12.0
+ },
+ "cardsharp": {
+  "Right": -12.7
+ },
+ "lodginglady": {
+  "Right": -11.0
+ },
+ "currier": {
+  "Right": -11.1
+ }
+}

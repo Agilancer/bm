@@ -15,13 +15,14 @@ const I = [0, 0, 0, 1];
 // On the run (these clips), the hands are fists, as anyone's are: her clips' hands are open. How far each finger's three
 // joints turn in at a full fist, thumb first: her own fist (src/sim/village-walker.js grip), the same rig her clips are
 // from, so the same turns: a finger about its joint's own z, a thumb about its y, the other way and a little less.
-const RUN_CLIPS = new Set(['run', 'jog', 'flee', 'jog_up']);
+const RUN_CLIPS = new Set(['run', 'jog', 'flee', 'jog_up', 'run_up']);
 const FIST = [[0.5, 0.35, 0.2], [1.2, 1.3, 0.9], [1.2, 1.3, 0.9], [1.2, 1.3, 0.9], [1.2, 1.3, 0.9]];
 // Walking, the hands hang loose: her clips' fingers are held straight and together, a karate chop on every passer-by. A
 // relaxed hand curls a little at each joint, more toward the little finger (thumb first; the same turns as the fist's).
 // Looked at in Blender on the Phobos bodies (tools/folk/rig_fit.py show(..., curl=...)).
 const WALK_CLIPS = new Set(['walk', 'walk_ual', 'walk_formal', 'walk_proud', 'swagger', 'crouch_walk']);
-const RELAX = [[0.5, 0.42, 0.28], [0.5, 0.63, 0.42], [0.63, 0.77, 0.5], [0.77, 0.9, 0.56], [0.9, 1.05, 0.63]];
+// (The middle and ring fingers bend more at the base knuckle, the tips less: a fist's curl at the tips reads as a claw.)
+const RELAX = [[0.5, 0.42, 0.28], [0.6, 0.6, 0.36], [0.88, 0.72, 0.42], [0.98, 0.84, 0.48], [1.02, 0.98, 0.54]];
 const FQ = new Float32Array(4);
 const conj = (q, i = 0) => [-q[i], -q[i + 1], -q[i + 2], q[i + 3]];
 
@@ -192,7 +193,8 @@ export class FolkRig {
 
 // The joints in the palette past a body's own: the skirt's six leg points and the facing (see SKIN in src/gfx/shaders.js).
 export const SKIRT_JOINTS = 4;
-const UPRIGHT = { jog: 'jog_up', run: 'jog_up' };
+// The fitted bodies' gaits (tools/folk/rig_fit.py upright): a jog with a foot always down, a run with a moment in the air.
+const UPRIGHT = { jog: 'jog_up', run: 'run_up' };
 // Abed, everything below the neck is sunk this far, into the mattress: the blanket over them (src/gfx/blankets.js) is shaped
 // like a body, and nothing of one pokes through it, a gown's knee or a squire's plate.
 const TUCK = 0.3;

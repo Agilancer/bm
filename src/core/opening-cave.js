@@ -46,8 +46,8 @@ const STORY = [
   { m: 'candles', hold: 1.8 },
   // She comes back through her things, watching your eyes the whole way, stops close, and leans in.
   { m: 'comeBack', hold: 3.0 },
-  { m: 'lean', text: 'Forty-three came through that door before you. Every one of them saw the girl.', eye: true },
-  { text: 'You’re the first who’s seen the old woman under her.' },
+  { m: 'lean', text: 'Everyone who came through that door before you saw the girl.', eye: true },
+  { text: 'You’re the first who’s seen the old woman underneath.' },
   // And then she sees your hand: embers on your knuckles.
   { w: 0.6, m: 'steps', text: '…And what is that in your hand? Look down.', eye: true, emote: 'question', feel: 1.8 },
   // The view tips down to your staff. Cast, and a spark leaps to the nearest candle; or it goes on its own after the wait.
