@@ -633,6 +633,13 @@ function warrensMouth(K) {
   for (const d of DELVES) if (!d.within) portalWall(K, d.portal.x, d.portal.z, d.portal.yaw, `${d.tag}_portal`);
   // (And out on the land, the bank each is cut into, and what's on it: PORTAL_BANKS, portalDress.)
   for (const b of PORTAL_BANKS) portalDress(K, b);
+  // (And in Phobos and its castle, each the door of a building of its own: cityPortalDress.)
+  for (const d of DELVES) {
+    if (d.within) continue;
+    const castle = d.key === 'lowerward' || d.key === 'ironbarracks';
+    if (castle || DELVES_SEWER.has(d.key)) cityPortalDress(K, d.portal.x, d.portal.z, d.portal.yaw, castle);
+    (d.ways || []).forEach((w) => cityPortalDress(K, w.x, w.z, w.yaw, false));
+  }
   // (A sewer's second mouth in the streets of Phobos: src/core/delve-sewers.js ways.)
   for (const d of DELVES) (d.ways || []).forEach((w, i) => portalWall(K, w.x, w.z, w.yaw, `${d.tag}_w${i}`));
 }
@@ -723,6 +730,37 @@ function portalDress(K, [bx, bz, yaw, H, kind]) {
       const sd = i % 2 ? 1 : -1, [x, y, z] = at(sd * (3 + i * 2.5), -W - 4 - i * 2.2);
       K.spike('pale:stone', x, y - 0.5, z, 0.6, 5 + r(i, 25) * 4, 6, 0, [sd * 0.25, -0.2]);
     }
+  }
+}
+
+// The ways down in Phobos (src/core/delve-sewers.js) and up into its castle: not a wall stood in a square, but the door of a
+// building that's there for it. Down to the sewers, a sluice-house: the wall its front, its hall behind it under a slate
+// roof whose gable stands over the door, buttresses at its back corners, a vent stack, lanterns either side, the black run of
+// a drain out beside it, a few barrels. Into the castle, a block of its dark stone with a crenellated head and His red hung
+// either side (the castle's: His, by the V and T rule). Nothing on the terrace or its steps. (The owner, 2026-11-20: "Build
+// them into areas of the map they are in".)
+const DELVES_SEWER = new Set(['westdrains', 'sloughmains', 'charnelruns', 'highconduits']);
+function cityPortalDress(K, x, z, yaw, castle) {
+  const F = terraceFrame(x, z, yaw), { P, G } = F, U = PORTAL_PAD.hu + PLAT.edge, W = PORTAL_PAD.hw + PLAT.edge;
+  const { top } = terraceTop(G, 'city', true);
+  const at = (u, w) => { const [px, pz] = P(u, w); return [px, terrainHeight(px, pz), pz]; };
+  const D = 4.6, wc = -W - D - 0.05, head = top + (castle ? 9.4 : 8.0);
+  const [cx, , cz] = at(0, wc), lo = Math.min(...[[-U, -W], [U, -W], [-U, wc * 2 + W], [U, wc * 2 + W]].map(([u, w]) => at(u, w)[1])) - 0.6;
+  // The hall behind the wall: as wide as the terrace, as high as the wall and a little more.
+  K.box(castle ? 'dark:block' : 'dark:ashlar', cx, lo, cz, U + 0.3, head - lo, D, yaw);
+  if (castle) {
+    // (A crenellated head along the front and the sides, and His red either side of the door.)
+    for (let i = -4; i <= 4; i++) { const [mx, , mz] = at(i * (U / 4.2), -W - 0.35); K.box('dark:block', mx, head, mz, 0.42, 1.0, 0.35, yaw, { collide: false }); }
+    for (const sd of [-1, 1]) for (let k = 0; k < 4; k++) { const [mx, , mz] = at(sd * (U + 0.05), -W - 1 - k * 2.4); K.box('dark:block', mx, head, mz, 0.3, 1.0, 0.42, yaw, { collide: false }); }
+    for (const sd of [-1, 1]) { const [bx, , bz] = at(sd * (U - 1.2), -W + 0.4); K.banner(bx, bz, head - top - 1, yaw, 'cloth_red', { y: top + 1, w: 0.9, len: 4.2, collide: false }); }
+  } else {
+    // (The slate roof, its gable end over the door, eaves a hand past the walls.)
+    K.gable('soot:roof_2', 'dark:ashlar', cx, head, cz, D + 0.15, U + 0.45, 3.4, yaw + Math.PI / 2, 0.45);
+    for (const sd of [-1, 1]) { const [bx, by, bz] = at(sd * (U + 0.55), wc * 2 + W + 0.6); K.box('dark:ashlar', bx, by - 0.4, bz, 0.5, head - by - 1.5, 0.7, yaw, { collide: false }); }
+    { const [vx, , vz] = at(U * 0.45, wc - 1.2); K.box('dark:block', vx, head, vz, 0.55, 4.6, 0.55, yaw, { collide: false }); }
+    for (const sd of [-1, 1]) { const [lx, , lz] = at(sd * (U + 1.4), W + 0.6); K.lantern(lx, lz, 2.8, yaw); }
+    { const [dx, , dz] = at(U + 2.2, (W + 6) / 2 - W / 2); K.paving('water', dx, dz, 0.45, W + 4, yaw, 0.03); }
+    for (const [u, w] of [[-U - 1.6, -W + 1.2], [-U - 2.5, -W + 2.2], [U + 1.6, -W + 2.6]]) { const [bx, , bz] = at(u, w); K.barrel(bx, bz); }
   }
 }
 
