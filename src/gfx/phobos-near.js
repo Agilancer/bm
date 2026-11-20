@@ -10,7 +10,7 @@
 // thing of its own (src/items/phobos-doors.js).
 
 import { buildPhobosCell } from '../core/sites.js';
-import { CASTLE_CELLS, CELL, cellOf, phobosHouses, wallCells } from '../core/phobos-build.js';
+import { CASTLE_CELLS, CELL, cellOf, phobosHouses, towerCells, wallCells } from '../core/phobos-build.js';
 import { cityTowers } from '../core/phobos-towers.js';
 import { CITY, CRAG } from '../core/east.js';
 
@@ -21,7 +21,7 @@ export class PhobosNear {
     this.r = renderer;
     this.cells = new Map();       // cell -> { VB, IB, opaque, cut, x, z }
     // (The cells with houses in, and the crag's: src/core/phobos-build.js castleNear; and the towers', gone into.)
-    this.have = new Set([...phobosHouses().map((h) => h.cell), ...CASTLE_CELLS, ...wallCells(), ...cityTowers().map((t) => t.cell)]);
+    this.have = new Set([...phobosHouses().map((h) => h.cell), ...CASTLE_CELLS, ...towerCells(), ...wallCells(), ...cityTowers().map((t) => t.cell)]);
     this.count = 0;
     this.doors = new Map();       // door id -> { cell, VB, runs, hidden }
   }

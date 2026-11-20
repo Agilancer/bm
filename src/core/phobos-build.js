@@ -698,8 +698,9 @@ export function spiral(K, layer, cx, cz, r, y0, y1, a0 = 0, dir = 1, o = {}) {
   // a stair open round the outside of a tower is no stair a castle would have, the owner, 2026-11-19. Not on a phone.)
   if (o.enclose && layer && !K.lean) {
     const ro = r + hw + 0.4, ri = r - hw, Q = (an, rr, yy) => [cx + Math.cos(an) * rr, yy, cz + Math.sin(an) * rr];
-    for (let k0 = 0, j = 0; k0 < n; k0 += 3, j++) {
-      const k1 = Math.min(n, k0 + 3), A0 = a0 + dir * k0 * da, A1 = a0 + dir * k1 * da, Y0 = y0 + k0 * rise, Y1 = y0 + k1 * rise, am = (A0 + A1) / 2;
+    // (o.doors: that many steps at each end left unwalled, a doorway onto the gallery it leaves and the one it comes to.)
+    for (let k0 = o.doors || 0, j = 0; k0 < n - (o.doors || 0); k0 += 3, j++) {
+      const k1 = Math.min(n - (o.doors || 0), k0 + 3), A0 = a0 + dir * k0 * da, A1 = a0 + dir * k1 * da, Y0 = y0 + k0 * rise, Y1 = y0 + k1 * rise, am = (A0 + A1) / 2;
       const out = [Math.cos(am), 0, Math.sin(am)], inw = out.map((v) => -v);
       K.quad(o.enclose, Q(A0, ro, Y0 - 1.2), Q(A1, ro, Y1 - 1.2), Q(A1, ro, Y1 + 3.6), Q(A0, ro, Y0 + 3.6), out);
       K.quad(o.enclose, Q(A0, ro - 0.4, Y0), Q(A1, ro - 0.4, Y1), Q(A1, ro - 0.4, Y1 + 3.4), Q(A0, ro - 0.4, Y0 + 3.4), inw);
@@ -1309,7 +1310,7 @@ export function phobosCell(K, cell) {
   // (Its towers and spires, gone into: their rooms, stairs and things.)
   for (const t of cityTowers()) if (t.cell === cell) towerNear(K, t);
   for (const hb of HUBS) if (cellOf(hb.x, hb.z) === cell) hubNear(K, hb);
-  if (CASTLE_CELLS.has(cell)) castleNear(K, cell);
+  if (CASTLE_CELLS.has(cell) || TOWER_CELLS().has(cell)) castleNear(K, cell);
   sloughNear(K, cell);
   wallNear(K, cell);
   // A seal's square: dark flags laid round it, an iron lantern at each corner. (The seal itself: src/core/sites.js.)
@@ -1458,6 +1459,8 @@ function yardThings() {
 }
 let YARD_THINGS = null;
 function castleNear(K, cell) {
+  // (Its towers' stairs, galleries and decks: climb, below.)
+  for (const t of castleTowers().towers) if (t.cell === cell && t.kind !== 'spire') climb(K, t, 'soot:p2_keep_basalt');
   for (const t of (YARD_THINGS ||= yardThings())) if (t.cell === cell) {
     const { x, z } = t, y = Y(x, z), NC = { collide: false };
     if (t.kind === 'slab') K.paving(t.way ? 'soot:p2_bone_joint_flags' : 'p2_ward_paving', x, z, 4.02, 4.02, 0, t.way ? 0.07 : 0.04);
@@ -1851,7 +1854,8 @@ export function phobosKeep(K) {
     // gallery a third and two thirds of the way up, to the gallery under its crown, where its bridge leaves.
     const RS = r + 5.4, on = STEPS.map(([hx, hz, , b], i) => ({ cx: x + 40 - i * 8, hx, hz, b })).filter((q) => Math.abs(sx - q.cx) < q.hx + RS && Math.abs(sz - z) < q.hz + RS).at(-1);
     let y = P(on.b), a = Math.atan2(z - sz, on.cx - sx) - 0.2;
-    for (const lv of [P(foot) + (top - foot) * 0.34, P(foot) + (top - foot) * 0.67, P(top) - 20]) {
+    // (And a gallery wherever a rim tower's or a Needle's bridge comes in: castleTowers.)
+    for (const lv of castleTowers().towers.find((q) => q.key === key).levels.map(P)) {
       if (lv <= y + 1) continue;
       a = spiral(K, G, sx, sz, RS, y, lv, a, 1, { enclose: C }); ring(K, G, sx, sz, r - 0.5, RS + 2.4, lv); y = lv;
     }
@@ -1877,53 +1881,278 @@ export function phobosKeep(K) {
     const nx = tops[i + 1] || [x, z, 33, 0, 590], [bx, bz, br] = nx, bfoot = i < 4 ? tops[i + 1][3] + (tops[i + 1][4] - tops[i + 1][3]) * 0.34 : 560;
     const d = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / d, uz = (bz - az) / d;
     bridge(K, KB, [ax + ux * ar, P(atop) - 20, az + uz * ar], [bx - ux * br, P(bfoot), bz - uz * br], 5.5, { arch: 6, piers: true, walk: true });
-    // (And each spire tied back to the trunk lower down, a flying bridge to its nearest gallery.)
-    const dt = Math.hypot(x - ax, z - az), tx = (x - ax) / dt, tz = (z - az) / dt, ty = tops[i][3] + (atop - tops[i][3]) * 0.34;
-    bridge(K, KB, [ax + tx * ar, P(ty), az + tz * ar], [x - tx * (ty < 400 ? 54 : ty < 500 ? 43 : 33), P(ty) + 12, z - tz * (ty < 400 ? 54 : ty < 500 ? 43 : 33)], 4.5, { arch: 4, piers: true });
+    // (Each spire's tie back to the Keep's body is walked now, to a step's lip: castleTowers.)
   });
-  // The satellites: lesser towers out on the crag's rim and between the spires, no two the same height, every one joined
-  // to a neighbour by a bridge high up. [x, z, radius, top over the plain]
-  const SAT = [
-    [11070, -215, 13, 330], [11190, -246, 12, 372], [11316, -232, 13, 418], [11416, -150, 12, 455], [11440, 5, 14, 500], [11420, 160, 12, 468],
-    [11326, 238, 13, 512], [11200, 250, 12, 440], [11075, 215, 13, 362], [11020, -70, 10, 348], [11020, 74, 10, 356], [11090, -14, 9, 330],
-    [11330, -8, 11, 560], [11316, -112, 10, 520], [11330, 116, 10, 578], [11140, 82, 9, 420],
-  ];
-  const sat = SAT.map(([sx, sz, r, top], i) => {
-    const fy = Y(sx, sz);
-    if (i % 3 === 1) K.box(C, sx, fy - 4, sz, r * 0.95, P(top) - fy + 4, r * 0.95, i, { collide: fy > PLAIN + 100 });
-    else K.drum(C, sx, fy - 4, sz, r, P(top) - fy + 4, i % 3 ? 12 : 8, { collide: fy > PLAIN + 100 });
-    K.drum(G, sx, P(top) - 5, sz, r, 2, 12, { r2: r + 2, open: true, collide: false }); K.drum(G, sx, P(top) - 3, sz, r + 2, 4, 12, { open: true, collide: false });
-    K.cone(R, sx, P(top) + 1, sz, r + 2.6, r * (4 + 2 * hash2(i, 9)), 12);
-    return [sx, sz, r, top];
-  });
-  const link = (a, b, drop = 26) => { const d = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / d, uz = (b[1] - a[1]) / d, h = Math.min(a[3], b[3]) - drop; bridge(K, KB, [a[0] + ux * a[2], P(h), a[1] + uz * a[2]], [b[0] - ux * b[2], P(h), b[1] - uz * b[2]], 4, { arch: 7 }); };
-  // (Each at a height of its own, turn about, and humped: two level spans meeting in a tower were one beam through it, a
-  // cross against the sky from the yard below. The V and T rule.)
-  for (let i = 0; i < 9; i++) link(sat[i], sat[(i + 1) % 9], i % 2 ? 44 : 26);                // the rim's ring of towers, all the way round
-  for (const [i, j] of [[9, 0], [10, 8], [12, 13], [12, 14], [15, 10]]) link(sat[i], sat[j], 34);
-  // The lesser towers: turrets out on the curtain and a few on the wards below, some two dozen, each tied by a light bridge to the
-  // two towers nearest it, so from the city the whole rock is laced together.
+  // The lesser towers: the satellites out on the crag's rim and between the spires, the turrets on the curtain and the
+  // wards, the Needles beyond the rim, the Clock Tower and the Horn Tower's heads, the patio's two: every one with a stair
+  // up it, a gallery where each bridge meets it and a deck under its crown, and every bridge between them walked
+  // (castleTowers, climb, below; the owner, 2026-11-19: "access ... all the different towers within Castle Velscour, and
+  // go across all the bridges").
+  const CT = castleTowers();
+  for (const t of CT.towers) {
+    const { x: sx, z: sz, r, top, fy } = t;
+    if (t.kind === 'sat') {
+      if (t.square) K.box(C, sx, fy - 4, sz, r * 0.95, P(top) - fy + 4, r * 0.95, t.i, { collide: fy > PLAIN + 100 });
+      else K.drum(C, sx, fy - 4, sz, r, P(top) - fy + 4, t.i % 3 ? 12 : 8, { collide: fy > PLAIN + 100 });
+      K.drum(G, sx, P(top) - 5, sz, r, 2, 12, { r2: r + 2, open: true, collide: false }); K.drum(G, sx, P(top) - 3, sz, r + 2, 4, 12, { open: true, collide: false });
+      K.cone(R, sx, P(top) + 1, sz, r + 2.6, r * (4 + 2 * hash2(t.i, 9)), 12);
+    } else if (t.kind === 'small') {
+      K.drum(C, sx, fy - 3, sz, r, P(top) - fy + 3, 10, { collide: false });
+      K.drum(G, sx, P(top) - 3, sz, r, 3, 10, { r2: r + 1.6, open: true, collide: false });
+      K.cone(R, sx, P(top), sz, r + 1.8, r * 5, 10);
+    } else if (t.kind === 'needle') {
+      // A Needle: a pier down to the rock, a shaft in two stages, each narrower, a flared head with his fire in it and a
+      // spike of slate twice as tall as any satellite's, four pinnacles round its foot.
+      const mid = fy + (P(top) - fy) * 0.56;
+      K.drum(S, sx, fy - 4, sz, r + 2.6, mid - fy + 4, 10, { r2: r + 0.8, collide: false });
+      K.drum(C, sx, mid, sz, r + 0.8, P(top) - mid, 10, { r2: r, collide: false, turn: 0.31 });
+      K.drum(G, sx, mid - 2, sz, r + 1, 2.4, 10, { r2: r + 2.8, open: true, collide: false });
+      K.drum(G, sx, P(top) - 6, sz, r, 3, 12, { r2: r + 3.2, open: true, collide: false }); K.drum(G, sx, P(top) - 3, sz, r + 3.2, 4, 12, { open: true, collide: false });
+      K.drum('blood:flame', sx, P(top) - 11, sz, r + 0.25, 3.4, 12, { open: true, collide: false });
+      for (let k = 0; k < 6; k++) { const a = (k + 0.5) / 6 * TAU; K.box(C, sx + Math.cos(a) * (r + 0.3), P(top) - 11.3, sz + Math.sin(a) * (r + 0.3), 0.9, 4, 0.9, -a, { collide: false }); }
+      K.cone(R, sx, P(top) + 1, sz, r + 3.8, r * 8.5, 12);
+      for (let k = 0; k < 4; k++) { const a = k / 4 * TAU + 0.6; K.spike(R, sx + Math.cos(a) * (r + 2.6), P(top) + 1, sz + Math.sin(a) * (r + 2.6), 1.5, 17, 4, a); }
+    }
+    // (The spires, the Clock Tower, the Horn Tower and the patio's two are drawn where they always were: above, phobosCastle.)
+    if (t.kind !== 'spire') climb(K, t, null);
+  }
+  for (const b of CT.bridges) bridge(K, KB, b.a, b.b, b.w, { arch: b.arch, piers: b.piers, walk: true });
+  // (Their decks' fires: the far build's, so they move. The braziers themselves are the near cells'.)
+  for (const t of CT.towers) for (const [bx, by, bz] of deckFires(t)) fire(K, bx, by + 1.7, bz, 0.55, 1.8);
+}
+
+// ---------------------------------------------------------------- the castle's towers, climbed
+
+// The satellites: lesser towers out on the crag's rim and between the spires, no two the same height. [x, z, radius, top over the plain]
+const SAT = [
+  [11070, -215, 13, 330], [11190, -246, 12, 372], [11316, -232, 13, 418], [11416, -150, 12, 455], [11440, 5, 14, 500], [11420, 160, 12, 468],
+  [11326, 238, 13, 512], [11200, 250, 12, 440], [11075, 215, 13, 362], [11020, -70, 10, 348], [11020, 74, 10, 356], [11090, -14, 9, 330],
+  [11330, -8, 11, 560], [11316, -112, 10, 520], [11330, 116, 10, 578], [11140, 82, 9, 420],
+];
+// The Needles (the owner, 2026-11-19: "even taller with even more towers, spires, lookouts, and tons of bridges"): six
+// slender towers out past the rim, each taller than any satellite, round the Keep's east side from the north cliff to the
+// south, bridged to the satellites they stand over, to each other and in to the spires. [key, name, x, z, radius, top]
+const NEEDLES = [
+  ['cinder', 'the Cinder Needle', 11150, -292, 9, 520], ['widow', "the Widow's Needle", 11370, -205, 9, 560], ['gallows', 'the Gallows Needle', 11468, -80, 10, 600],
+  ['thorn', 'the Thorn Needle', 11462, 90, 9, 585], ['red', 'the Red Needle', 11372, 212, 9, 612], ['ash', 'the Ash Needle', 11140, 290, 9, 540],
+];
+const SAT_NAMES = ['the Larder Tower', "the Fletchers' Tower", 'the North Watch', 'the Crow Tower', 'the Sally Tower', 'the Gibbet Watch', 'the South Watch', "the Falconers' Tower", "the Tanners' Tower",
+  "the Page's Tower", 'the Kitchen Tower', "the Steward's Tower", 'the Black Tower', "the Seneschal's Tower", "the Chamberlain's Tower", "the Ringers' Tower"];
+const TURRETS = ['Lamp', 'Rook', 'Smoke', 'Thrush', 'Cistern', 'Spindle', 'Latch', 'Candle', 'Owl', 'Ember', 'Wicket', 'Shrike', 'Bucket', 'Starling', 'Moth'];
+// What's walked on high up that isn't a tower: the Keep's four steps and the patio, as [x0, x1, z0, z1, top over the plain].
+const HIGH_DECKS = () => [...STEPS.map(([hx, hz, , b], i) => [KEEP.x + 40 - i * 8 - hx, KEEP.x + 40 - i * 8 + hx, KEEP.z - hz, KEEP.z + hz, b]), [KEEP.x - 184 - 74, KEEP.x - 184 + 74, KEEP.z - 104, KEEP.z + 104, 300]];
+// How a tower's climbed: its stair's radius and half-width, its galleries' outer edge, its deck's.
+// (re: the tower's own reach, a square one's to its corners. Its stair is a turret stood against it: a tight stair round
+// its own newel, TURN metres to a turn, so every flight ends where it began, facing the tower, and a gallery every TURN.)
+const TURN = 9, RT = 2.7, HW = 1.35;
+const stairOf = (t) => { const re = t.square ? t.r * 1.36 : t.r; return { re, rg: re + 3.3, rd: re + 5.6, dt: re + RT + HW + 0.45 }; };
+
+let TOWERS = null;
+// Every lesser tower of the castle and every bridge between them: { towers: [{ key, kind, name, x, z, r, top, fy, cell,
+// base (what its stair starts from, over the plain: the ground, a deck it stands through, or null: reached only by a
+// bridge), levels (its galleries, over the plain), deck (its lookout's height) }], bridges: [{ a, b (ends, in the world),
+// w, arch, piers }] }. A spire's are the stages phobosKeep winds its own stair by, and any gallery a bridge adds.
+export function castleTowers() {
+  if (TOWERS) return TOWERS;
+  const x = KEEP.x, z = KEEP.z, T = [], B = [], decks = HIGH_DECKS();
+  const baseOf = (sx, sz, fy) => {
+    let b = null;
+    for (const [x0, x1, z0, z1, top] of decks) if (sx >= x0 && sx <= x1 && sz >= z0 && sz <= z1) b = Math.max(b ?? -Infinity, top);
+    // (Else the crag's own ground, where it stands inside the curtain; out on the cliff it has no foot to be walked to.)
+    if (b === null && fy > PLAIN + 100 && Math.hypot((sx - CRAG.x) / CRAG.a, (sz - CRAG.z) / CRAG.b) < 0.84) b = fy - PLAIN;
+    return b;
+  };
+  const add = (key, kind, name, sx, sz, r, top, o = {}) => { const fy = Y(sx, sz), t = { key, kind, name, x: sx, z: sz, r, top, fy, cell: cellOf(sx, sz), levels: [], base: baseOf(sx, sz, fy), ...o }; T.push(t); return t; };
+  const spires = SPIRES.map(([key, sx, sz, r, foot, top]) => add(key, 'spire', `the ${key[0].toUpperCase()}${key.slice(1)} Spire`, sx, sz, r, top, { foot, levels: [foot + (top - foot) * 0.34, foot + (top - foot) * 0.67, top - 20] }));
+  const sat = SAT.map(([sx, sz, r, top], i) => add(`sat${i}`, 'sat', SAT_NAMES[i], sx, sz, r, top, { i, square: i % 3 === 1 }));
   const small = [];
   for (let i = 0; i < 30; i++) {
     const a = i / 30 * TAU + hash2(i, 31) * 0.14, k = i % 4 === 3 ? 0.56 + 0.1 * hash2(i, 17) : 0.76 + 0.12 * hash2(i, 17), sx = CRAG.x + Math.cos(a) * CRAG.a * k, sz = CRAG.z + Math.sin(a) * CRAG.b * k;
     if (i % 2 || (Math.abs(sz) < 30 && sx < x - 60)) continue;    // (the way up from the gate is kept open)
-    if (Math.hypot(sx - x, sz - z) < 70 || SPIRES.some((q) => Math.hypot(sx - q[1], sz - q[2]) < q[3] + 16) || sat.some((q) => Math.hypot(sx - q[0], sz - q[1]) < 26)) continue;
+    if (Math.hypot(sx - x, sz - z) < 70 || SPIRES.some((q) => Math.hypot(sx - q[1], sz - q[2]) < q[3] + 16) || sat.some((q) => Math.hypot(sx - q.x, sz - q.z) < 26)) continue;
     const fy = Y(sx, sz), r = 5.5 + 3 * hash2(i, 5), top = (fy - PLAIN) + 55 + 95 * hash2(i, 23);
-    K.drum(C, sx, fy - 3, sz, r, P(top) - fy + 3, 10, { collide: false });
-    K.drum(G, sx, P(top) - 3, sz, r, 3, 10, { r2: r + 1.6, open: true, collide: false });
-    K.cone(R, sx, P(top), sz, r + 1.8, r * 5, 10);
-    small.push([sx, sz, r, top]);
+    small.push(add(`small${i}`, 'small', `the ${TURRETS[small.length % TURRETS.length]} Turret`, sx, sz, r, top, { i }));
   }
+  const needles = NEEDLES.map(([key, name, sx, sz, r, top]) => add(key, 'needle', name, sx, sz, r, top));
+  // (The Clock Tower and the Horn Tower stand through the patio's east edge and the Keep's first step: only their heads
+  // show over those, and it's their heads that are climbed. The patio's own two at its west corners.)
+  const clock = add('clock', 'clock', 'the Clock Tower', 11105, 75, 11, WARDS[1][1] + 188, { square: true });
+  const horns = add('horns', 'horns', 'the Horn Tower', 11140, 135, 8, WARDS[1][1] + 218, { square: true });
+  const patio = [-1, 1].map((s) => add(`patio${s}`, 'patio', s < 0 ? 'the North Belvedere' : 'the South Belvedere', x - 184 - 70, z + s * 100, 9, 360));
+  for (const t of [...sat, ...small, ...needles, clock, horns, ...patio]) {
+    t.deck = t.kind === 'clock' ? t.top - 26 : t.kind === 'horns' ? t.top - 30 : t.top - (t.kind === 'small' ? 7 : 11);
+    // (One whose head doesn't clear what it stands through is in the Keep's body: seen from outside, never climbed.)
+    t.buried = t.base !== null && t.deck < t.base + 6;
+    if (t.buried) continue;
+    // Where its stair turret stands: the side nearest the way it should (toward the Keep on a deck, toward the crag's
+    // middle on the ground, away from it out on the cliff) that's clear of every higher deck and every other tower.
+    const s = stairOf(t), want = t.base !== null && t.base > 290 ? Math.atan2(z - t.z, x - t.x) : Math.atan2(CRAG.z - t.z, CRAG.x - t.x) + (t.base === null ? Math.PI : 0);
+    const lo = t.base ?? -Infinity, R = RT + HW + 0.6, rectD = (px, pz, [x0, x1, z0, z1]) => Math.hypot(Math.max(x0 - px, 0, px - x1), Math.max(z0 - pz, 0, pz - z1));
+    t.ta = null;
+    for (let k = 0; k < 24 && t.ta === null; k++) {
+      const a = want + ((k + 1) >> 1) * (k & 1 ? -1 : 1) * TAU / 24, cx = t.x + Math.cos(a) * s.dt, cz = t.z + Math.sin(a) * s.dt;
+      if (decks.some((d) => d[4] > lo + 1 && rectD(cx, cz, d) < R)) continue;
+      if (t.base !== null && t.base > 290 && !decks.some((d) => d[4] === t.base && cx > d[0] + R && cx < d[1] - R && cz > d[2] + R && cz < d[3] - R)) continue;
+      if (t.base !== null && t.base <= 290 && Math.hypot((cx - CRAG.x) / CRAG.a, (cz - CRAG.z) / CRAG.b) > 0.82) continue;
+      if (T.some((q) => q !== t && Math.hypot(q.x - cx, q.z - cz) < (q.square ? q.r * 1.36 : q.r) + R + (q.kind === 'spire' ? 9 : 1))) continue;
+      t.ta = a;
+    }
+    if (t.ta === null) { t.buried = true; continue; }
+    t.tx = t.x + Math.cos(t.ta) * s.dt; t.tz = t.z + Math.sin(t.ta) * s.dt;
+    t.from = t.base === null ? null : t.base > 290 ? PLAIN + t.base : Y(t.tx - Math.cos(t.ta) * RT, t.tz - Math.sin(t.ta) * RT);
+  }
+  // (A gallery's height on a tower: on its stair's own rhythm, a turn at a time from where it starts.)
+  const lattice = (t, h) => { if (t.from === null) { t.from0 ??= h; return t.from0 + Math.round((h - t.from0) / TURN) * TURN; } const f = t.from - PLAIN; return f + Math.max(0, Math.round((h - f) / TURN)) * TURN; };
+  for (const t of T) if (t.kind !== 'spire' && !t.buried && t.from !== null) t.deck = lattice(t, t.deck);
+  // A bridge from a's gallery at ha to b's at hb (over the plain), end to end between their galleries' outer edges. An end
+  // that would come in under what its tower stands through is lifted to land on that deck.
+  const end = (t, h) => (t.kind === 'spire' ? h : Math.min(t.deck ?? Infinity, lattice(t, h)));
+  const span = (a, ha, b, hb, o = {}) => {
+    const d = Math.hypot(b.x - a.x, b.z - a.z), ux = (b.x - a.x) / d, uz = (b.z - a.z) / d;
+    if (a.buried || b.buried) return false;
+    const ea = end(a, ha), eb = end(b, hb), ra = a.kind === 'spire' ? a.r : stairOf(a).rg - 1, rb = b.kind === 'spire' ? b.r : stairOf(b).rg - 1;
+    if (Math.abs(eb - ea) / Math.max(1, d - ra - rb) > 0.62) return false;   // (steeper than a stair: not built)
+    for (const [t, e] of [[a, ea], [b, eb]]) if (!(t.kind === 'spire' && e <= t.on) && !t.levels.some((q) => Math.abs(q - e) < 0.01)) t.levels.push(e);
+    if (B.some((q) => (q.from === a.key && q.to === b.key) || (q.from === b.key && q.to === a.key))) return false;
+    B.push({ a: [a.x + ux * ra, PLAIN + ea, a.z + uz * ra], b: [b.x - ux * rb, PLAIN + eb, b.z - uz * rb], w: o.w ?? 4, arch: Math.min(o.arch ?? 7, (d - ra - rb) * 0.07), piers: !!o.piers, from: a.key, to: b.key });
+    return true;
+  };
+  // (A spire's gallery: the nearest it has to h, if that's within nine metres; else one more, at h.)
+  // (Never under the step its own stair starts from: there it lands on the step.)
+  for (const sp of spires) { const RS = sp.r + 5.4; sp.on = STEPS.map(([hx, hz, , b], i) => ({ cx: x + 40 - i * 8, hx, hz, b })).filter((q) => Math.abs(sp.x - q.cx) < q.hx + RS && Math.abs(sp.z - z) < q.hz + RS).at(-1).b; sp.levels = sp.levels.filter((h) => h > sp.on + 1); }
+  const snap = (s, h) => { if (h < s.on + 5) return s.on; const q = s.levels.reduce((best, v) => (Math.abs(v - h) < Math.abs(best - h) ? v : best), s.levels[0]); return Math.abs(q - h) < 9 ? q : h; };
+  // (A spire's own three galleries, by which: a third and two thirds of the way up it, and under its crown.)
+  const gal = (sp, lv) => [sp.foot + (sp.top - sp.foot) * 0.34, sp.foot + (sp.top - sp.foot) * 0.67, sp.top - 20][lv];
+  const link = (a, b, drop, o) => { const h = Math.min(a.top, b.top) - drop; return span(a, h, b, h, o); };
+  // (Each at a height of its own, turn about, and humped: two level spans meeting in a tower were one beam through it, a
+  // cross against the sky from the yard below. The V and T rule.)
+  for (let i = 0; i < 8; i++) link(sat[i], sat[i + 1], i % 2 ? 44 : 26);                      // the rim's ring of towers, round from the north cliff to the south
+  for (const [i, j] of [[9, 0], [10, 8], [12, 13], [12, 14]]) link(sat[i], sat[j], 34);
+  // The turrets: each tied by a light bridge to the tower nearest it, so from the city the whole rock is laced together.
   const every = [...sat, ...small];
   for (const t of small) {
-    const near = every.filter((q) => q !== t).map((q) => [Math.hypot(q[0] - t[0], q[1] - t[1]), q]).sort((p, q) => p[0] - q[0]).slice(0, 1);
-    for (const [d, q] of near) if (d < 150) link(t, q, 12);
+    const near = every.filter((q) => q !== t).map((q) => [Math.hypot(q.x - t.x, q.z - t.z), q]).sort((p, q) => p[0] - q[0])[0];
+    if (near && near[0] < 150) link(t, near[1], 12, { w: 3 });
   }
   // (And the rim towers to the spires they stand under.)
-  for (const [i, s] of [[0, 0], [1, 1], [3, 2], [5, 3], [7, 4], [2, 1], [6, 4]]) { const t = tops[s]; link(sat[i], [t[0], t[1], t[2], sat[i][3] + 10], 30); }
+  for (const [i, s] of [[0, 0], [1, 1], [3, 2], [5, 3], [7, 4], [2, 1], [6, 4]]) { const h = sat[i].top - 30, sp = spires[s]; span(sat[i], h, sp, snap(sp, h)); }
+  // The Needles: each to the two rim towers it stands over, the three east ones to each other (the High Round), and each
+  // of the middle four in to a spire's upper gallery.
+  for (const [n, i, j] of [[0, 0, 1], [1, 2, 3], [2, 3, 4], [3, 4, 5], [4, 5, 6], [5, 7, 8]]) { link(needles[n], sat[i], 30); link(needles[n], sat[j], 46); }
+  for (const [m, n] of [[1, 2], [2, 3], [3, 4]]) link(needles[m], needles[n], 70 + 12 * m, { arch: 11, piers: true, w: 4.5 });
+  for (const [n, s, lv] of [[1, 1, 1], [2, 2, 1], [3, 3, 1], [4, 4, 1]]) { const sp = spires[s], h = Math.min(needles[n].deck - 16, gal(sp, lv)); span(needles[n], h, sp, gal(sp, lv), { arch: 9, piers: true, w: 4.5 }); }
+  // The Clock Tower to the Horn Tower and on to the Ringers' Tower; the belvederes to the Page's and the Kitchen Towers.
+  link(clock, horns, 44, { arch: 5 }); span(horns, horns.top - 60, sat[15], sat[15].top - 30, { arch: 4 });
+  link(patio[0], sat[9], 22, { arch: 4 }); link(patio[1], sat[10], 22, { arch: 4 });
+  // And each spire tied back to the Keep's body: a flying bridge from one of its galleries to the lip of a step.
+  // [spire, which of its galleries, which step]. (The Ember Spire stands in the first step's own floor.)
+  for (const [s, lv, st] of [[1, 1, 2], [2, 1, 3], [3, 0, 3], [4, 0, 3]]) {
+    const sp = spires[s], [hx, hz, , b] = STEPS[st], cx = x + 40 - st * 8;
+    const tx = Math.max(cx - hx + 3, Math.min(cx + hx - 3, sp.x)), tz = Math.max(z - hz + 3, Math.min(z + hz - 3, sp.z)), d = Math.hypot(tx - sp.x, tz - sp.z), ux = (tx - sp.x) / d, uz = (tz - sp.z) / d;
+    // (From its gallery's outer edge: a deck that falls away from under a gallery is a drop off the gallery's lip.)
+    B.push({ a: [sp.x + ux * (sp.r + 7.6), PLAIN + gal(sp, lv), sp.z + uz * (sp.r + 7.6)], b: [tx, PLAIN + b, tz], w: 4.5, arch: 0, piers: true, from: sp.key, to: `step${st}` });
+  }
+  for (const t of T) {
+    t.levels = t.levels.sort((p, q) => p - q).filter((h, i, all) => !i || h - all[i - 1] > 0.01);
+    if (t.kind === 'spire') continue;
+    // (A tower reached only by its bridges: its deck on its own rhythm too, now its lowest gallery's known.)
+    if (t.buried) continue;
+    if (t.from === null) { t.from0 ??= t.deck; t.deck = t.from0 + Math.round((t.deck - t.from0) / TURN) * TURN; }
+    // (The deck is the last of them; none in what it stands through.)
+    t.levels = t.levels.filter((h) => h < t.deck - 1 && (t.from === null || h > t.from - PLAIN + 1));
+  }
+  TOWERS = { towers: T, bridges: B };
+  return TOWERS;
 }
 
-// What's found on the land castle's towers (src/core/castle-finds.js): a chest on a deck, a lookout with a name.
-export function castleFinds() { return { chests: [], vistas: [] }; }
+// A tower's stair turret, its galleries and its deck. draw null: only what's stood on, and from far the turret as a plain
+// drum under a cap and a band for each gallery (in the cell's group, which the near view folds away); draw a layer: all
+// of it, as it is from near (castleNear): the stair round its newel, walled and roofed, a doorway onto each gallery.
+function climb(K, t, draw) {
+  if (t.buried) return;
+  const s = stairOf(t), P = (h) => PLAIN + h, stops = [...t.levels.map(P), P(t.deck)];
+  const y0 = t.from ?? stops.shift(), top = P(t.deck), G = 'soot:p2_keep_basalt', seen = K.geometry !== false;
+  // (Every flight starts and ends on the side facing the tower: TURN to a turn.)
+  const a0 = t.ta + Math.PI, R = RT + HW + 0.4;
+  const gallery = (h, rOut, deck) => {
+    walk(K, ringRects(t.x, t.z, s.re - 0.5, rOut, h));
+    if (!seen) return;
+    // (From far a band; on a phone only the deck's.)
+    if (!draw) { if (!K.lean || deck) K.drum(G, t.x, h - 1.1, t.z, s.re, 2.1, K.lean ? 8 : 12, { r2: rOut, open: true, collide: false }); return; }
+    K.drum(G, t.x, h - 1.1, t.z, s.re, 1.1, 16, { r2: rOut, collide: false, lid: 'dark:p2_bridge_ashlar' });
+    // (Its parapet: a low wall round its edge, his V in every other stretch, left open where the turret stands; corbels under it.)
+    const n = Math.max(12, Math.round(rOut * 1.3)), gap = Math.asin(Math.min(1, R / s.dt)) + 0.05;
+    for (let k = 0; k < n; k++) {
+      const b = (k + 0.5) / n * TAU, px = t.x + Math.cos(b) * (rOut - 0.3), pz = t.z + Math.sin(b) * (rOut - 0.3), half = Math.PI * (rOut - 0.3) / n + 0.04;
+      if (Math.abs(((b - t.ta) % TAU + TAU + Math.PI) % TAU - Math.PI) < gap) continue;
+      K.box(G, px, h, pz, 0.3, 1.05, half, -b, { collide: false }); if (k % 2 || deck) K.vee(G, px, h + 1.05, pz, 0.3, 1.1, half * 0.6, -b);
+    }
+    for (let k = 0; k < 8; k++) { const b = (k + 0.5) / 8 * TAU; K.spike(G, t.x + Math.cos(b) * (rOut - 1.1), h - 1.1, t.z + Math.sin(b) * (rOut - 1.1), 0.9, -4.5, 4, -b); }
+  };
+  const build = () => {
+    let y = y0;
+    for (const h of stops) {
+      if (h <= y + 1) continue;
+      const turn = Math.max(1, Math.round((h - y) / TURN)) * TAU;
+      spiral(K, draw, t.tx, t.tz, RT, y, h, a0, 1, draw ? { hw: HW, turn, wedge: true, thick: 0.4, reach: 0.4, enclose: G, doors: 3 } : { hw: HW, turn });
+      gallery(h, h === top ? s.rd : s.rg, h === top);
+      y = h;
+    }
+    if (!seen) return;
+    // The turret itself: from far a drum; from near its newel, and over its head on the deck a cap of slate on eight posts.
+    if (!draw) K.drum(G, t.tx, y0 - 1.5, t.tz, R, top + 3.4 - y0 + 1.5, 8, { collide: false, open: true });
+    else { K.drum(G, t.tx, y0 - 1, t.tz, RT - HW, top + 3.2 - y0 + 1, 8, { collide: false }); for (let k = 0; k < 8; k++) { const b = (k + 0.5) / 8 * TAU; K.box(G, t.tx + Math.cos(b) * (R - 0.2), top, t.tz + Math.sin(b) * (R - 0.2), 0.22, 3.4, 0.22, -b, { collide: false }); } }
+    if (!K.lean) K.drum(G, t.tx, top + 3.4, t.tz, R + 0.5, 0.5, 8, { collide: false });
+    K.cone('p2_fishscale_slate', t.tx, top + (K.lean ? 3.4 : 3.9), t.tz, R + 0.7, R * 2.3, K.lean ? 6 : 8);
+  };
+  if (draw) build(); else K.group('ph:' + t.cell, true, build);
+  if (!draw) return;
+  // From near, on its deck: a brazier at three points (their fires the land's), and where its stair starts a doorway's fire.
+  for (const [bx, by, bz] of deckFires(t)) { K.drum('dark:stone', bx, by, bz, 0.5, 1.4, 6, { r2: 0.35, collide: false }); K.drum('iron', bx, by + 1.4, bz, 0.45, 0.6, 8, { r2: 0.9, open: true, collide: false }); }
+  const f = deckFires(t)[0];
+  if (f) (K.lamps ||= []).push({ p: [f[0], f[1] + 3, f[2]], c: [1, 0.42, 0.18], r: 30, i: 60, flicker: 0.35 });
+  // (A lamp in the turret every two turns, so the stair isn't climbed blind.)
+  for (let yy = y0 + 4; yy < top; yy += TURN * 2) (K.lamps ||= []).push({ p: [t.tx - Math.cos(t.ta) * RT, yy + 2.6, t.tz - Math.sin(t.ta) * RT], c: [1, 0.5, 0.22], r: 14, i: 14, flicker: 0.3 });
+  if (t.from !== null) {
+    const fx = t.tx + Math.cos(t.ta + 1.9) * (R + 1.6), fz = t.tz + Math.sin(t.ta + 1.9) * (R + 1.6), fy = t.base > 290 ? t.from : Y(fx, fz);
+    K.drum('dark:stone', fx, fy - 0.3, fz, 0.6, 2.5, 6, { r2: 0.4, collide: false }); K.drum('char:stone', fx, fy + 2.2, fz, 0.34, 0.5, 8, { r2: 0.62, collide: false });
+    (K.lamps ||= []).push({ p: [fx, fy + 3.4, fz], c: [1, 0.5, 0.22], r: 24, i: 36, flicker: 0.35 });
+  }
+}
+// A gallery's floor round (cx, cz), from r0 out to r1, at y.
+function ringRects(cx, cz, r0, r1, y) { const N = 16, out = []; for (let i = 0; i < N; i++) { const a = (i + 0.5) / N * TAU; out.push([cx + Math.cos(a) * (r0 + r1) / 2, cz + Math.sin(a) * (r0 + r1) / 2, (r1 - r0) / 2 + 0.2, Math.PI * r1 / N + 0.4, -a, y]); } return out; }
+// Where a tower's deck's braziers stand: [x, y (the deck's floor), z] each. (A spire's are phobosKeep's own.)
+function deckFires(t) {
+  if (t.kind === 'spire' || t.buried) return [];
+  const s = stairOf(t), y = PLAIN + t.deck, out = [];
+  for (let k = 0; k < 3; k++) { const a = t.ta + Math.PI + (k - 1) * 1.9; out.push([t.x + Math.cos(a) * (s.rd - 1.3), y, t.z + Math.sin(a) * (s.rd - 1.3)]); }
+  return out;
+}
+// The cells the castle's towers stand in (some out past the crag's own: src/gfx/phobos-near.js builds them too).
+export const towerCells = () => castleTowers().towers.map((t) => t.cell);
+let TC = null;
+const TOWER_CELLS = () => (TC ||= new Set(towerCells()));
+
+// What's found on the land castle's towers (src/core/castle-finds.js): a lookout on every deck and at every spire's, on the
+// Keep's crown and the patio's lip; a chest on the Needles' decks and every other satellite's and turret's.
+let FINDS = null;
+export function castleFinds() {
+  if (FINDS) return FINDS;
+  const chests = [], vistas = [], CT = castleTowers(), P = (h) => PLAIN + h;
+  CT.towers.forEach((t, n) => {
+    if (t.kind === 'spire') { vistas.push({ id: `spire_${t.key}`, name: t.name, x: t.x, y: P(t.top - 20), z: t.z, r: t.r + 13, xp: 14000 }); return; }
+    if (t.buried) return;
+    const s = stairOf(t);
+    vistas.push({ id: t.key, name: t.name, x: t.x, y: P(t.deck), z: t.z, r: s.rd + 0.5, xp: t.kind === 'needle' ? 16000 : t.kind === 'small' ? 6000 : 10000 });
+    if (t.kind === 'needle' || t.kind === 'clock' || t.kind === 'horns' || n % 2 === 0) {
+      const a = t.ta + Math.PI + 0.95, r = s.re + 1.3;
+      chests.push({ id: `tower:${t.key}`, x: t.x + Math.cos(a) * r, y: P(t.deck), z: t.z + Math.sin(a) * r, yaw: Math.atan2(Math.cos(a), Math.sin(a)), loot: t.kind === 'needle' ? 4 : t.kind === 'small' ? 2 : 3 });
+    }
+  });
+  vistas.push({ id: 'keep_crown', name: "the Keep's Crown", x: KEEP.x, y: P(630), z: KEEP.z, r: 28, xp: 30000 });
+  vistas.push({ id: 'keep_patio', name: 'the Crown Court', x: KEEP.x - 184 - 66, y: P(300), z: KEEP.z, r: 14, xp: 8000 });
+  FINDS = { chests, vistas };
+  return FINDS;
+}
 
 export function phobos(K) { phobosCity(K); phobosCastle(K); phobosKeep(K); }
