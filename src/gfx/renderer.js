@@ -292,7 +292,7 @@ export class Renderer {
     const twice = new Map(), wanted = new Map();
     for (const path of models) wanted.set(path, (wanted.get(path) || 0) + 1);
     const read = (path) => {
-      if (wanted.get(path) < 2) return getFile(base + path).then(parseGLB);
+      if ((wanted.get(path) || 1) < 2) return getFile(base + path).then(parseGLB);
       const glb = twice.get(path) || twice.set(path, getFile(base + path).then(parseGLB)).get(path);
       wanted.set(path, wanted.get(path) - 1);
       if (wanted.get(path) < 1) twice.delete(path);
@@ -1237,7 +1237,7 @@ export class Renderer {
       parts.push({ range: sk.ranges[i], bg, ubo, name, isSword: name === 'greatsword', nrm });
     }
     // (What's kept of the mesh, for the gauntlets' under-layer later (armsUnder): copies, so the file can be let go.)
-    for (const p of prims) for (const k of ['pos', 'nrm', 'uv', 'idx', 'joints', 'weights']) if (ArrayBuffer.isView(p[k])) p[k] = p[k].slice();
+    for (const p of prims) for (const k of ['pos', 'nrm', 'uv', 'idx', 'joints', 'weights', 'sidePos']) if (ArrayBuffer.isView(p[k])) p[k] = p[k].slice();
     const shieldJoint = skin.joints.findIndex((j) => glb.json.nodes[j].name === 'shield');
     const shieldBind = shieldJoint < 0 ? null : mat4Invert(new Float32Array(16), accessor(glb, skin.inverseBindMatrices).subarray(shieldJoint * 16, shieldJoint * 16 + 16));
     return { ...sk, parts, weaponJoint, weaponBind, shieldJoint, shieldBind, prims, jointNames: skin.joints.map((j) => glb.json.nodes[j].name) };

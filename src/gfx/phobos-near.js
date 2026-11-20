@@ -17,7 +17,8 @@ import { CITY, CRAG } from '../core/east.js';
 const NEAR = 150, FAR = 230, KEEP = 30;   // metres to build a cell at, and to let it go at; how many are kept at most
 // (A phone's: nearer, and fewer kept. A cell from near is 150,000 to 380,000 corners, 5 to 14 MB on the GPU, and thirty of
 // them were 130 MB more than the land a phone already holds.)
-const LEAN = { near: 105, far: 165, keep: 10 };
+// (Kept: more than are ever wanted at once, which is twelve at its distances, or they'd be built and let go in turn for good.)
+const LEAN = { near: 105, far: 165, keep: 14 };
 
 export class PhobosNear {
   constructor(renderer) {
@@ -45,7 +46,7 @@ export class PhobosNear {
         this.builder.onerror = (e) => fail(e.message || 'its thread failed');
       } catch (err) { this.apart = false; return; }
     }
-    this.asked = key;
+    this.asked = key; this.askedAt = performance.now();
     this.builder.postMessage({ cell: key, opening: !!this.r.openingEnabled });
   }
 
@@ -96,6 +97,8 @@ export class PhobosNear {
     let changed = false, built = null;
     if (this.apart) {
       // (What's come back is put up, if it's still wanted: you may have gone on past it. Then the nearest wanting is asked for.)
+      // (A thread that's said nothing of a cell for ten seconds isn't going to: ended, and the next one asked starts another.)
+      if (this.asked && performance.now() - this.askedAt > 10000) { try { this.builder?.terminate(); } catch { /* gone */ } this.builder = null; this.asked = null; }
       const got = this.ready.shift();
       if (want && !this.asked && !(got && got[0] === want[0])) this.ask(want[0]);
       want = null;
@@ -119,11 +122,15 @@ export class PhobosNear {
       r.foldLand('ph:' + want[0], true);
       changed = true;
     }
-    for (const [key, c] of this.cells) {
-      if (Math.hypot(c.x - cam.x, c.z - cam.z) - CELL * 0.7 < FAR && this.cells.size <= KEEP) continue;
-      if (want && key === want[0]) continue;
-      this.drop(key, c); changed = true;
-      if (this.cells.size <= KEEP) break;
+    // (Let go: whatever's gone far; and, over the number kept, the furthest first, and never one near enough to be wanted
+    // again at once.)
+    const dist = (c) => Math.hypot(c.x - cam.x, c.z - cam.z) - CELL * 0.7;
+    for (const [key, c] of [...this.cells]) if (dist(c) >= FAR && !(want && key === want[0])) { this.drop(key, c); changed = true; }
+    while (this.cells.size > KEEP) {
+      let far = null, fd = NEAR;
+      for (const [key, c] of this.cells) { const d = dist(c); if (d > fd && !(want && key === want[0])) { fd = d; far = [key, c]; } }
+      if (!far) break;
+      this.drop(far[0], far[1]); changed = true;
     }
     if (changed) r.shadowEpoch = (r.shadowEpoch || 0) + 1;
     this.count = this.cells.size;
