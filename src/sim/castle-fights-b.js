@@ -9,10 +9,10 @@
 //       winding posts: cut them down in time, or he's mended. The Going Train stopped, fewer winders come to him; the
 //       Escapement jammed, he can't turn the hour back at all.
 //   The Menagerie of Chains (src/core/delve-menagerie.js)
-//     Old Hunger: what dies in his pit, he eats, and mends; stand on a carcass to kick it into the drain first.
+//     Old Hunger: on a chain; what dies inside its reach he eats, and mends: the hounds are drawn out past it to be killed.
 //     the Matron of Wings: her shriek takes everything she can see; get a dead tree between you.
-//     the Keeper of Chains: his chain takes one of you and reels them in, unless a chain post is put between; and he
-//       looses the beasts of every wing you didn't empty.
+//     the Keeper of Chains: his chain takes one of you and reels them in, unless he's hit hard enough to drop it (or a
+//       chain post is put between); and he looses the beasts of every wing you didn't empty.
 //   The Ossuary Chapel (src/core/delve-ossuary.js)
 //     the Cantor of Jaws: her tithe of bone stays where it comes up, till she gathers it in and every thicket bursts.
 //     the Bone Prior: he names one of you to kneel (not a step), bone coming up round them at everyone else; his old
@@ -26,7 +26,7 @@ import { MOVES } from './moves.js';
 import { ELEM, FX } from './spells.js';
 import { WARN, caveClear, roomOf, roomSpot } from '../core/dungeon.js';
 import { HAMMER_ROWS, PENDULUMS, STRIKER_PLATE, WINDERS_AT } from '../core/delve-clockworks.js';
-import { AVIARY_TREES, CHAIN_POSTS } from '../core/delve-menagerie.js';
+import { AVIARY_TREES, CHAIN_POSTS, PIT_CHAIN, PIT_STAKE } from '../core/delve-menagerie.js';
 import { ALTAR, BONE_PIERS } from '../core/delve-ossuary.js';
 import { GLASS_SPOTS, HALL_AXIS, IMAGE_GLASSES } from '../core/delve-mirrors.js';
 
@@ -38,7 +38,7 @@ const at = (W, [x, z]) => [W.delve.x + x, W.delve.z + z];
 const yawTo = (m, t) => Math.atan2(t.x - m.x, t.z - m.z);
 const K = (m, x) => m.opts.damage * x * 1.3;
 const up = (k) => !!k && !k.dead && k.hp > 0;
-const sweep = (P, m, t, dmg, o = {}) => P.mark({ shape: 'cone', x: m.x, z: m.z, yaw: yawTo(m, t), r: o.r || 8, half: o.half || 1.0, fuse: o.fuse || 1.15, dmg, knock: 4, elem: o.elem ?? STONE, from: m, aim: t, lock: 0.45, tag: o.tag || 'sweep' });
+const sweep = (P, m, t, dmg, o = {}) => P.mark({ shape: 'cone', x: m.x, z: m.z, yaw: yawTo(m, t), r: o.r || 8, half: o.half || 1.0, fuse: o.fuse || 1.3, dmg, knock: 4, elem: o.elem ?? STONE, from: m, aim: t, lock: 0.45, tag: o.tag || 'sweep' });
 // (Something thrown at each of you, and more of it round about.)
 const hail = (W, P, m, dmg, elem, tag, R = 16, n = 7) => {
   for (const b of W.bodies()) P.mark({ x: b.x, z: b.z, r: 2.4, fuse: 1.9, dmg, knock: 1, elem, follow: b, lock: 0.45, from: m, tag });
@@ -196,7 +196,7 @@ export const FIGHTS_B = {
       // The long hand: a line out from where he stands that sweeps round for six seconds. Keep ahead of it, or get out past its end.
       hand: { who: 'none', clip: 'roar', secs: 1.5, warn: 'ckm_hand', go(W, f, m, t, P) {
         f.handDir = -(f.handDir || 1);
-        P.mark({ shape: 'line', x: m.x, z: m.z, yaw: Math.random() * TAU, r: 22, w: 1.2, fuse: 1.6, dmg: K(m, 1.2), life: 6, spin: 0.5 * f.handDir, touch: K(m, 0.9), again: 1.2, knock: 2, elem: ARCANE, from: m, tag: 'hand' });
+        P.mark({ shape: 'line', x: m.x, z: m.z, yaw: Math.random() * TAU, r: 18, w: 1.2, fuse: 1.6, dmg: K(m, 1.2), life: 6, spin: 0.5 * f.handDir, touch: K(m, 0.9), again: 1.2, knock: 2, elem: ARCANE, from: m, tag: 'hand' });
       } },
       cogs: { who: 'none', clip: 'atk4', secs: 1.3, warn: 'ckm_cogs', go: (W, f, m, t, P) => hail(W, P, m, K(m, 0.8), STONE, 'cogs') },
       springs: { clip: 'atk3', secs: 1.3, warn: 'ckm_springs', go: (W, f, m, t, P) => MOVES.knifeFan(P, m, t, K(m, 0.5), { n: 5 }) },
@@ -250,7 +250,7 @@ export const FIGHTS_B = {
   // ---- Old Hunger: his jaws, his spring, his roar; the pit hounds; and what dies in his pit ------------------------------
   oldhunger: {
     open: 'hun_open', pace: [4.0, 3.1, 0.35], turn: [22, 4], enrage: [330, 2, 'hun_enrage'],
-    deck: ['maul', 'pounce', 'roar', 'rake', 'maul', 'bones'],
+    deck: ['maul', 'lunge', 'roar', 'rake', 'maul', 'bones'],
     adds: [
       { at: 0.82, warn: 'hun_hounds', n: 2, pick: ['mc_hound'], from: 'doors', hp: 4200, damage: 64, name: 'PIT HOUND', pal: ['Rust'], setUp: houndIn },
       { at: 0.58, warn: 'hun_hounds', n: 3, pick: ['mc_hound'], from: 'doors', hp: 4200, damage: 64, name: 'PIT HOUND', pal: ['Rust'], setUp: houndIn },
@@ -258,43 +258,35 @@ export const FIGHTS_B = {
     ],
     moves: {
       maul: { clip: 'atk2', secs: 1.3, warn: 'hun_maul', go: (W, f, m, t, P) => sweep(P, m, t, K(m, 1.3), { r: 9, half: 1.1, elem: DRAIN }) },
-      pounce: { who: 'far', clip: null, warn: 'hun_pounce', go: (W, f, m, t, P) => MOVES.ram(P, m, t, K(m, 0.55), { r: 24, w: 2 }) },
+      // To the end of his chain, all round: everything inside the ring and a little past it. Out to the pit's walls.
+      lunge: { who: 'none', clip: 'atk1', secs: 1.6, warn: 'hun_pounce', go(W, f, m, t, P) { const [sx, sz] = at(W, PIT_STAKE); P.mark({ x: sx, z: sz, r: PIT_CHAIN + 2.4, fuse: 2.3, dmg: K(m, 1.3), knock: 4, elem: DRAIN, from: m, tag: 'lunge' }); } },
       roar: { who: 'none', clip: 'roar', secs: 1.5, warn: 'hun_roar', go: (W, f, m, t, P) => MOVES.howlWave(P, m, null, K(m, 0.62)) },
       rake: { clip: 'atk3', secs: 1.3, warn: 'hun_rake', go: (W, f, m, t, P) => { for (const turn of [-0.4, 0, 0.4]) P.mark({ shape: 'line', x: m.x, z: m.z, yaw: yawTo(m, t) + turn, r: 14, w: 0.9, fuse: 1.1, dmg: K(m, 0.9), knock: 2, elem: DRAIN, from: m, tag: 'rake' }); } },
-      bones: { who: 'none', clip: 'atk4', secs: 1.3, warn: 'hun_bones', go: (W, f, m, t, P) => hail(W, P, m, K(m, 0.95), BONE, 'bones', 14, 6) },
+      bones: { who: 'none', clip: 'atk4', secs: 1.3, warn: 'hun_bones', go: (W, f, m, t, P) => hail(W, P, m, K(m, 1.3), BONE, 'bones', 14, 6) },
     },
-    // A hound that dies leaves a carcass where it fell. Stood on for a second and a half, it's kicked into the drain;
-    // left nine seconds, he eats it: a twentieth of his life back, and his blows the heavier for good.
+    // His chain: he goes no further from his stake than it lets him (the ring on the floor). A hound that dies inside its
+    // reach, he eats: a twentieth of his life back, and his blows the heavier for good. One that dies out past it, he can't
+    // get to.
     step(W, f, [m], dt) {
       if (!m) return;
-      pen(W, f, m);
-      const P = W.sim.perils;
+      const P = W.sim.perils, [sx, sz] = at(W, PIT_STAKE), d = Math.hypot(m.x - sx, m.z - sz);
+      if (d > PIT_CHAIN) { m.x = sx + (m.x - sx) / d * PIT_CHAIN; m.z = sz + (m.z - sz) / d * PIT_CHAIN; }
+      if (!f.ring || !P.marks.includes(f.ring)) f.ring = P.mark({ shape: 'ring', x: sx, z: sz, r: PIT_CHAIN + 0.35, r0: PIT_CHAIN - 0.35, fuse: 900, dmg: 0, soak: true, quiet: true, elem: DRAIN, tag: 'chain' });
       for (const k of f.hounds || []) {
         if (k.meat || up(k)) continue;
         k.meat = true;
-        (f.meat ||= []).push({ x: k.x, z: k.z, t: 0, on: 0, mk: show(P, k.x, k.z, 2.2, DRAIN, 'carcass') });
-        W.warn(WARN.hun_carcass, 8);
+        if (Math.hypot(k.x - sx, k.z - sz) > PIT_CHAIN + 1) { W.warn(WARN.hun_denied, 8); continue; }
+        m.hp = Math.min(m.maxHp, m.hp + m.maxHp * 0.05); m.opts.damage *= 1.06; W.warn(WARN.hun_fed, 4);
+        W.sim.casting.burst(FX.PUFF, DRAIN, k.x, m.y + 1, k.z, 1, 6, 0.5);
       }
-      for (const c of f.meat || []) {
-        c.t += dt;
-        c.on = W.bodies().some((b) => Math.hypot(b.x - c.x, b.z - c.z) < 2.2) ? c.on + dt : 0;
-        if (c.on >= 1.5) { c.gone = true; W.warn(WARN.hun_denied, 8); }
-        else if (c.t > 9) {
-          c.gone = true; m.hp = Math.min(m.maxHp, m.hp + m.maxHp * 0.05); m.opts.damage *= 1.06; W.warn(WARN.hun_fed, 4);
-          W.sim.casting.burst(FX.PUFF, DRAIN, c.x, m.y + 1, c.z, 1, 6, 0.5);
-        }
-        if (c.gone) lift(c.mk);
-      }
-      if (f.meat) f.meat = f.meat.filter((c) => !c.gone);
     },
-    // A carcass in the pit: whoever of you is nearest it (and isn't holding him) goes and stands on it.
+    // While a hound's up: whoever isn't holding him, out past the ring, so the hounds come out to them and die there.
     order(W, f, b, [m]) {
-      if (!m || !f.meat?.length || !free(W, m, b)) return null;
-      const rest = W.bodies().filter((q) => free(W, m, q));
-      for (const c of f.meat) if (nearest(rest, c) === b) return { to: [c.x, c.z], urgent: true };
-      return null;
+      if (!m || !free(W, m, b) || !(f.hounds || []).some(up)) return null;
+      const [sx, sz] = at(W, PIT_STAKE), dx = b.x - sx, dz = b.z - sz, d = Math.hypot(dx, dz) || 1;
+      return d < PIT_CHAIN + 2 ? { to: [sx + dx / d * (PIT_CHAIN + 3.6), sz + dz / d * (PIT_CHAIN + 3.6)], urgent: true } : null;
     },
-    end(W, f) { for (const c of f.meat || []) lift(c.mk); },
+    end(W, f) { lift(f.ring); },
   },
 
   // ---- the Matron of Wings: her talons, her feathers, her stoop, her wings' gust; her brood; and the shriek ------------------
@@ -362,7 +354,8 @@ export const FIGHTS_B = {
     },
     // What he looses, at three quarters, a half and a quarter of his life: the wolves, the spiders, the wyrmlings; each
     // only if its wing still had beasts in it when you came to him. And his chain, every twenty-six seconds: on one of
-    // you, who is reeled in to him unless a chain post is put between (it snags; he's pulled off his feet).
+    // you, who is reeled in to him unless he's hit hard enough as he hauls to make him drop it, or a chain post is put
+    // between (it snags; he's pulled off his feet).
     step(W, f, [m], dt) {
       if (!m) return;
       pen(W, f, m);
@@ -381,6 +374,13 @@ export const FIGHTS_B = {
         c.t += dt;
         if (b.dead || m.dead || c.t > 9) { lift(c.mk); f.chain = null; return; }
         c.mk.r = gap(m, b);
+        // (Hit hard enough as he hauls, he lets it go: so much of his life for each of you there is.)
+        if (c.from - m.hp > m.maxHp * 0.003 * Math.max(1, W.bodies().length)) {
+          lift(c.mk); f.chain = null; W.warn(WARN.kpr_dropped, 4);
+          sim.casting.burst(FX.SHOCK, DRAIN, m.x, m.y + 2, m.z, 1, 6, 0.5, { light: 7, lightR: 8 });
+          stun(f, m, 3, 1.3);
+          return;
+        }
         if (c.t < 1.2) return;
         if (!caveClear(m.x, m.z, b.x, b.z, 0.05)) {
           lift(c.mk); f.chain = null; W.warn(WARN.kpr_snag, 4);
@@ -396,7 +396,7 @@ export const FIGHTS_B = {
         const b = W.mark();
         if (!b || b.dead || gap(m, b) < 6) return;
         f.chainT = 0;
-        f.chain = { on: b, t: 0, mk: P.mark({ shape: 'line', ride: m, aim: b, lock: 1, r: gap(m, b), w: 0.35, fuse: 30, dmg: 0, soak: true, quiet: true, elem: DRAIN, tag: 'chain' }) };
+        f.chain = { on: b, t: 0, from: m.hp, mk: P.mark({ shape: 'line', ride: m, aim: b, lock: 1, r: gap(m, b), w: 0.35, fuse: 30, dmg: 0, soak: true, quiet: true, elem: DRAIN, tag: 'chain' }) };
         W.warn(WARN.kpr_chain, 4);
       }
     },
@@ -462,7 +462,7 @@ export const FIGHTS_B = {
     deck: (f) => (f.noPiers ? ['crozier', 'litany', 'ash', 'crozier', 'quake'] : ['crozier', 'piers', 'litany', 'ash', 'crozier', 'quake']),
     adds: [],
     moves: {
-      crozier: { clip: 'atk2', secs: 1.3, warn: 'pri_crozier', go: (W, f, m, t, P) => sweep(P, m, t, K(m, 1.3), { r: 10, half: 1.0, elem: BONE }) },
+      crozier: { clip: 'atk2', secs: 1.3, warn: 'pri_crozier', go: (W, f, m, t, P) => sweep(P, m, t, K(m, 1.15), { r: 9, half: 1.0, fuse: 1.4, elem: BONE }) },
       // The piers of bone pulled down: each along its own line, across the Sanctuary from where it stands; two of the four.
       piers: { who: 'none', clip: 'atk3', secs: 1.6, warn: 'pri_piers', go(W, f, m, t, P) {
         f.pierOff = ((f.pierOff || 0) + 1) % 2;

@@ -15,7 +15,7 @@ import { LOWER_WARD } from '../src/core/delve-castle.js';
 import { PROPS_B } from '../src/core/delve-props-b.js';
 import { PROP_KINDS } from '../src/core/delve-build.js';
 import { STRIKER_PLATE, HAMMER_ROWS, PENDULUMS, WINDERS_AT } from '../src/core/delve-clockworks.js';
-import { AVIARY_TREES, CHAIN_POSTS, PIT_STAKE } from '../src/core/delve-menagerie.js';
+import { AVIARY_TREES, CHAIN_POSTS, PIT_CHAIN, PIT_STAKE } from '../src/core/delve-menagerie.js';
 import { BONE_PIERS } from '../src/core/delve-ossuary.js';
 import { GLASS_SPOTS, IMAGE_GLASSES } from '../src/core/delve-mirrors.js';
 import { KEYS } from '../src/core/castle-keys.js';
@@ -46,7 +46,7 @@ test('four dungeons after the wards, where the contract puts them, a party welco
     assert.ok(d.names && Object.keys(d.names).length >= 4 && d.pay.xp > 0 && d.words.enter && d.words.clear && d.words.wipe, d.key);
     for (const r of d.rooms) { const [x, , z] = roomSpot(r.id); assert.ok(caveRoom(x, z) > 1, `${r.id}: its middle is in the open`); assert.ok(r.id.startsWith(`${d.tag}_`), r.id); }
     // (Under the shaders' underground line, with room over a head.)
-    for (const r of d.rooms) assert.ok(d.y + r.y + Math.abs(r.tz || 0) * r.hz + r.roof <= -22 && r.roof >= 5, `${r.id}: its roof`);
+    for (const r of d.rooms) assert.ok(d.y + r.y + Math.abs(r.tz || 0) * r.hz + r.roof <= -22 && r.roof >= 4.5, `${r.id}: its roof`);
   }
 });
 
@@ -55,6 +55,9 @@ test('each is built whole: every corner of it a real number, and no more of them
     let verts = 0;
     for (const [layer, p] of buildUnder(d.key).parts) { verts += p.pos.length / 3; for (let i = 0; i < p.pos.length; i++) assert.ok(Number.isFinite(p.pos[i]), `${d.key}: a corner of its ${layer} is no number`); }
     assert.ok(verts > 20000 && verts < 400000, `${d.key}: ${verts} corners`);
+    // (And no more faces than a phone draws easily: the Ossuary's walls of skulls were 143,000 of them.)
+    let tris = 0; for (const [, p] of buildUnder(d.key).parts) tris += p.idx.length / 3;
+    assert.ok(tris < 110000, `${d.key}: ${tris} triangles`);
   }
 });
 
@@ -97,7 +100,7 @@ test('each has two or three bosses, the last of them last, keyed, shut in till t
     for (const b of bs.slice(0, -1)) assert.ok(!b.gives && !b.needs, b.key);
     for (const b of bs) {
       const r = roomOf(b.room), [x, , z] = roomSpot(b.room, b.at?.[0] || 0, b.at?.[1] || 0);
-      assert.equal(r.delve, d); assert.ok(Math.min(r.hx, r.hz) >= 14, `${b.key}: room to fight in`); assert.ok(caveRoom(x, z) >= 4, `${b.key} stands in the open`);
+      assert.equal(r.delve, d); assert.ok(Math.min(r.hx, r.hz) >= 12 && Math.max(r.hx, r.hz) <= 20, `${b.key}: room to fight in, and no bigger than what's in it`); assert.ok(caveRoom(x, z) >= 4, `${b.key} stands in the open`);
       assert.ok(d.auto.way.lastIndexOf(b.room) >= 0);
     }
   }
@@ -176,6 +179,96 @@ test('the Striker is wound tighter till someone stands on the release plate', ()
   for (let t = 0; t < 2; t += 0.5) spec.step(W, f, [m], 0.5);
   assert.equal(f.wound, 0); assert.equal(m.opts.damage, 100); assert.ok(f.stun > 0 && m.shrug > 1 && warned.includes(WARN.stk_release), 'let down: stopped, and hurt the more');
   assert.equal(spec.order(W, f, b, [m]), null);
+});
+
+test('Old Hunger is on a chain: what dies inside its reach he eats, what dies out past it he cannot get to', () => {
+  const spec = FIGHTS_B.oldhunger, warned = [], marks = [];
+  const P = { marks, mark: (o) => { marks.push(o); return o; } };
+  const W = { delve: MC, sim: { perils: P, casting: { burst() {} } }, bodies: () => [], warn: (w) => warned.push(w), tank: () => null };
+  const [sx, sz] = [MC.x + PIT_STAKE[0], MC.z + PIT_STAKE[1]];
+  const m = { hp: 500, maxHp: 1000, state: 0, opts: { damage: 100 }, x: sx + 30, z: sz, y: 0 }, f = { boss: MC.bosses[0] };
+  spec.step(W, f, [m], 0.1);
+  assert.ok(Math.abs(Math.hypot(m.x - sx, m.z - sz) - PIT_CHAIN) < 0.01, 'he goes no further than his chain');
+  assert.equal(marks.filter((q) => q.shape === 'ring' && q.soak && !q.dmg).length, 1, "the chain's reach is shown, and hurts nobody");
+  const pit = roomOf('mc_pit');
+  assert.ok(PIT_CHAIN + 4 <= Math.min(pit.hx, pit.hz), 'room out past the ring to kill a hound in');
+  const hound = (dx) => ({ x: sx + dx, z: sz, hp: 0, dead: true });
+  f.hounds = [hound(PIT_CHAIN + 4)];
+  spec.step(W, f, [m], 0.1);
+  assert.equal(m.hp, 500); assert.ok(warned.includes(WARN.hun_denied), 'dead out of his reach: he goes hungry');
+  f.hounds.push(hound(3));
+  spec.step(W, f, [m], 0.1);
+  assert.equal(m.hp, 550); assert.ok(m.opts.damage > 100 && warned.includes(WARN.hun_fed), 'dead inside it: he eats');
+  spec.step(W, f, [m], 0.1);
+  assert.equal(m.hp, 550, 'once each');
+  // While a hound's up, whoever isn't holding him is sent out past the ring.
+  f.hounds.push({ x: sx, z: sz, hp: 10, dead: false });
+  const o = spec.order(W, f, { x: sx + 4, z: sz }, [m]);
+  assert.ok(o && Math.hypot(o.to[0] - sx, o.to[1] - sz) > PIT_CHAIN + 2);
+  assert.equal(spec.order(W, f, { x: sx + PIT_CHAIN + 5, z: sz }, [m]), null);
+});
+
+test("the Keeper's chain: hit him hard enough as he hauls and he lets it go", () => {
+  const spec = FIGHTS_B.keeper, warned = [], b = { x: 0, z: 0, dead: false };
+  const [rx, , rz] = roomSpot('mc_ring');
+  b.x = rx + 12; b.z = rz;
+  const W = { delve: MC, sim: { tripo: { lairs: ['mc_runs', 'mc_rows_s', 'mc_tank'].map((key) => ({ key, state: 'cleared' })) }, perils: { mark: (o) => o, hurt() {} }, casting: { burst() {} }, time: 0 }, bodies: () => [b], warn: (w) => warned.push(w), tank: () => null, mark: () => b, drag() {}, callAdds() {} };
+  const m = { hp: 1000, maxHp: 1000, state: 0, opts: { damage: 100 }, perform: () => true, x: rx, z: rz, y: 0 }, f = { boss: MC.bosses[2] };
+  for (let t = 0; t < 27 && !f.chain; t += 0.5) spec.step(W, f, [m], 0.5);
+  assert.ok(f.chain && f.chain.on === b && warned.includes(WARN.kpr_chain), 'his chain takes one of you');
+  m.hp -= 2;
+  spec.step(W, f, [m], 0.1);
+  assert.ok(f.chain, 'a scratch does not make him drop it');
+  m.hp -= 10;
+  spec.step(W, f, [m], 0.1);
+  assert.equal(f.chain, null); assert.ok(f.stun > 0 && warned.includes(WARN.kpr_dropped), 'hit hard enough, he lets it go and staggers');
+});
+
+test('the lessons of the first round: sections that differ, light in pools, nothing hung on a hung fire, a hero piece each', () => {
+  const HERO = { clockworks: ['clockface', 'cw_shaft'], menagerie: ['greatcage', 'mc_aviary'], ossuary: ['skullwall', 'oc_nave'], mirrors: ['bigmirror', 'hm_hall'] };
+  for (const d of [CW, MC, OC, HM]) {
+    const roofs = d.rooms.map((r) => r.roof);
+    assert.ok(Math.min(...roofs) <= 5 && Math.max(...roofs) >= 3 * Math.min(...roofs), `${d.key}: every room the same height`);
+    assert.ok(d.rooms.some((r) => r.roof >= 2 * Math.min(r.hx, r.hz)), `${d.key}: nothing tall and narrow`);
+    assert.ok(d.rooms.filter((r) => r.roof <= 7).length >= 3, `${d.key}: nothing low`);
+    // Pools of light: no fires stood round every wall, a torch every fifteen metres, a handful of fires to a room.
+    assert.ok(d.look.every >= 14, `${d.key}: a torch every ${d.look.every} m`);
+    for (const r of d.rooms) {
+      assert.equal(r.fires, 0, `${r.id}: fires stood all round it`);
+      const lit = d.props.filter((p) => ['brazier', 'basket'].includes(p.kind) && inRoom(r, p.x, p.z)).length;
+      assert.ok(lit <= 7, `${r.id}: ${lit} fires`);
+      // (A room that hangs its own fires down its middle has no ring of candles hung there too.)
+      const own = Math.min(r.hx, r.hz) >= 12 && r.roof >= 8 && r.hang !== 0 && !r.tz;
+      assert.ok(!own || !d.props.some((p) => p.kind === 'chandelier' && inRoom(r, p.x, p.z)), `${r.id}: a chandelier among its own hung fires`);
+    }
+    // A boss's room is lit: fire of its own, hung or stood.
+    for (const b of d.bosses) { const r = roomOf(b.room); assert.ok(r.hang !== 0 || d.props.filter((p) => ['brazier', 'chandelier', 'daylight'].includes(p.kind) && inRoom(r, p.x, p.z)).length >= 5, `${b.key} fights in the dark`); }
+    // One hero piece, bigger than anything else of its kind in the place, in the room it's named for.
+    const [kind, room] = HERO[d.key], r = d.rooms.find((q) => q.id === room);
+    const size = (p) => (p.r || p.w || 0) * (p.h || 1), all = d.props.filter((p) => p.kind === kind), hero = all.filter((p) => inRoom(r, p.x, p.z, -0.5)).sort((p, q) => size(q) - size(p))[0];
+    assert.ok(hero && size(hero) >= Math.max(...all.map(size)) * 0.75, `${d.key}: no great ${kind} in ${room}`);
+  }
+  // Nothing that's a rail over posts or a bar over uprights among their own things: the builders say so.
+  const code = src('../src/core/delve-props-b.js');
+  for (const k of ['gong', 'beastcage', 'pane', 'bonetree']) assert.ok(Object.keys(PROPS_B).includes(k));
+  assert.match(code, /No frame: a head across two posts is a bar over uprights/);
+  assert.match(code, /a plate over a row of bars/);
+  for (const d of [CW, MC, OC, HM]) assert.ok(!d.props.some((p) => p.kind === 'coatrail' || p.kind === 'dressform'), `${d.key}: a rail on posts, or the Playhouse's cloth`);
+  // (The nave's runner stops either side of its ring of black glass.)
+  const ring = OC.props.find((p) => p.kind === 'circle' && inRoom(roomOf('oc_nave'), p.x, p.z));
+  for (const c of OC.props.filter((p) => p.kind === 'carpet' && inRoom(roomOf('oc_nave'), p.x, p.z))) assert.ok(Math.abs(c.z - ring.z) - c.hz >= ring.r, 'a runner through the ring');
+});
+
+test("each last boss's opening call says what you could have emptied first, and each dungeon's quests have one that isn't a walk or a kill", () => {
+  const words = { clockmaker: [/Going Train/, /Escapement/], keeper: [/Wolf Runs/, /Cage Rows/, /Wyrm Tank/], boneprior: [/Under-Crypt/, /Charnel Aisle/], duchess: [/Cabinet of Faces/, /Dressing Rooms/, /Glass Maze/] };
+  for (const d of [CW, MC, OC, HM]) for (const re of words[d.last]) assert.match(d.warnings[FIGHTS_B[d.last].open], re, d.last);
+  const twist = (st) => (st.enter && st.night) || (st.talk && !st.back) || st.bring;
+  const mine = (d) => Object.values(RULES_B).filter((r) => r.steps.some((s) => [s.enter, s.kill, ...(s.visit || [])].some((k) => k === d.key || d.rooms.some((q) => `room:${q.id}` === k)) || d.bosses.some((b) => b.key === s.boss)));
+  for (const d of [CW, MC, OC, HM]) assert.ok(mine(d).some((r) => r.steps.some(twist)), `${d.key}: every step of its quests is a walk or a kill`);
+  assert.deepEqual(RULES_B.the_clock_that_strikes.steps[0], { enter: 'ph:approach', night: true });
+  assert.equal(RULES_B.the_wolf_runs.steps.at(-1).talk, 'ph_watch'); assert.ok(QUESTS_B.the_wolf_runs.others.ph_watch.length);
+  assert.equal(RULES_B.the_old_priors.steps.at(-1).bring, 'bone');
+  assert.equal(RULES_B.the_room_on_no_plan.steps[1].talk, 'ph_ondine'); assert.ok(QUESTS_B.the_room_on_no_plan.others.ph_ondine.length);
 });
 
 test('packs in their liveries, far enough apart, and none where you wake', () => {
@@ -341,4 +434,13 @@ test('four to eight quests to each and through it, from the household, at the le
   assert.equal(seen.size, Object.keys(RULES_B).length, 'a quest that goes to none of the four');
   const seeds = Object.values(RULES_B).filter((r) => r.seed).map((r) => r.seed);
   assert.equal(new Set(seeds).size, seeds.length, 'two named things from one seed');
+});
+
+test('nothing you can see through stands so close to a wall that the wall behind it is left out', () => {
+  // (The walls leave alone what a solid thing covers, within 0.9 m of it: src/core/delve-build.js outline. Bars and panes cover nothing.)
+  for (const d of [CW, MC, OC, HM]) for (const p of d.props.filter((q) => q.solid && ['beastcage', 'pane'].includes(q.kind))) for (const r of d.rooms) {
+    if (!inRoom(r, p.x, p.z)) continue;
+    const gap = Math.min(r.hx - Math.abs(p.x - r.x) - p.hx, r.hz - Math.abs(p.z - r.z) - p.hz);
+    assert.ok(gap >= 1, `${d.key}: a ${p.kind} at ${p.x}, ${p.z} is ${gap.toFixed(2)} m off ${r.id}'s wall`);
+  }
 });
