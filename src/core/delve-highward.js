@@ -182,7 +182,7 @@ export const DEEP_STACKS = {
     { id: 'sump', room: 'cd_sump', x: -34, z: -146, yaw: 0, loot: 2 },
   ],
   vistas: [{ id: 'well_of_books', name: 'the Well of Books', room: 'cd_well', x: 0, z: -57, r: 5 }],
-  auto: { way: ['cd_door', 'cd_stair', 'cd_well', 'cd_hold', 'cd_dorm', 'cd_hold', 'cd_well', 'cd_chained', 'cd_well', 'cd_scriv', 'cd_sump', 'cd_scriv', 'cd_lift', 'cd_scriv', 'cd_vault'] },
+  auto: { way: ['cd_door', 'cd_stair', 'cd_well', 'cd_hold', 'cd_dorm', 'cd_hold', 'cd_well', 'cd_index', 'cd_well', 'cd_chained', 'cd_well', 'cd_scriv', 'cd_sump', 'cd_scriv', 'cd_lift', 'cd_scriv', 'cd_vault'] },
   shots: [
     // (Heights over the delve's own floor: the Stacks lie twelve metres under their door.)
     ['cd_well', 'cd_well', [-16, -9.5, -56], [10, 2, -88]],
@@ -365,7 +365,7 @@ export const HIGH_WARD = {
     { id: 'observatory', name: "the Observatory's Eye", room: 'ch_observ', x: 40, z: -120, r: 5 },
     { id: 'black_nave', name: 'the Black Nave', room: 'ch_sanct', x: 0, z: -26, r: 5 },
   ],
-  auto: { way: ['ch_head', 'ch_sanct', 'ch_court', 'ch_sanct', 'ch_crypt', 'ch_mirror', 'ch_observ', 'ch_treas', 'ch_roost', 'ch_treas', 'ch_observ'] },
+  auto: { way: ['ch_head', 'ch_sanct', 'ch_court', 'ch_reliq', 'ch_court', 'ch_sanct', 'ch_crypt', 'ch_mirror', 'ch_observ', 'ch_treas', 'ch_roost', 'ch_treas', 'ch_ante'] },
   shots: [
     ['ch_sanct', 'ch_head', [0, 4, -20], [0, 5, -90]],
     ['ch_court', 'ch_court', [-34, 3, -46], [-56, 3, -70]],

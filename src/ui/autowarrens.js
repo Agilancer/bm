@@ -263,7 +263,30 @@ export function doWarrens(b, m, foes) {
   }
   // (After a wipe it's at the way in again: on from where it got to, past what's cleared.)
   if (dist(m.x, m.z, ...toWorld(D.entry.x, D.entry.z, D)) < 6 && b.room > 1 && b.t - (b.roomT || 0) > 20) b.room = 1;
+  // (Past the end of its way with the last of the place still standing, behind a lock it has no key to: out by the way in.)
+  if (b.room >= way.length) {
+    const [x, z] = toWorld(D.exitIn.x, D.exitIn.z, D);
+    b.say(`${D.name}: as far as its doors let me. Out.`);
+    b.warrensDone = D.key;
+    b.goTo(x, z, 0.5, true);
+    return;
+  }
   const id = way[Math.min(b.room, way.length - 1)], r = roomOf(id), [rx, , rz] = roomSpot(id);
+  // A room that isn't walked to from here: by a door between two rooms of the delve's own (src/core/delve-highward.js: the
+  // Reliquary, the Throne Antechambers), if it's open; if it's locked, the room's left out.
+  if ((D.links || []).some((l) => l.to === D.key) && !Number.isFinite(caveNav(rx, rz).walkDist(m.x, m.z, rx, rz, b.t))) {
+    const nav = caveNav(rx, rz);
+    const door = D.links.find((l) => {
+      if (l.to !== D.key) return false;
+      const back = D.links[l.n], [lx, lz] = toWorld(l.x, l.z, D), [ax, az] = toWorld(back.x + Math.sin(back.yaw) * 4, back.z + Math.cos(back.yaw) * 4, D);
+      return Number.isFinite(caveNav(lx, lz).walkDist(m.x, m.z, lx + Math.sin(l.yaw) * 2, lz + Math.cos(l.yaw) * 2, b.t)) && Number.isFinite(nav.walkDist(ax, az, rx, rz, b.t));
+    });
+    if (!door || (door.shut && !b.gateOpen(door.shut))) { b.say(`${r.name} is locked: on.`); b.room++; b.roomT = b.t; return; }
+    const [lx, lz] = toWorld(door.x, door.z, D);
+    b.say(`Through the door to ${r.name}.`);
+    b.goTo(lx, lz, 0.4, true);
+    return;
+  }
   // (A room that's long and not round: by its half length.)
   const R = r.r || Math.max(r.hx || 0, r.hz || 0, r.w || 0, r.h || 0) || 10;
   const boss = BOSSES.find((q) => q.room === id);
