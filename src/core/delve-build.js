@@ -803,11 +803,11 @@ export const PROPS = {
   // A circle cut in the floor and filled with black glass: where a working is made.
   circle(K, d, p, x, y, z) {
     const N = 28;
-    for (const [r0, r1] of [[p.r - 0.35, p.r], [p.r * 0.55 - 0.15, p.r * 0.55]]) for (let i = 0; i < N; i++) {
+    for (const [r0, r1] of [[p.r - 0.35, p.r], [p.r * 0.55 - 0.15, p.r * 0.55], [p.r * 0.22 - 0.1, p.r * 0.22]]) for (let i = 0; i < N; i++) {
       const a = i / N * TAU, b = (i + 1) / N * TAU;
       K.quad('obsidian', [x + Math.cos(a) * r0, y + 0.03, z + Math.sin(a) * r0], [x + Math.cos(a) * r1, y + 0.03, z + Math.sin(a) * r1], [x + Math.cos(b) * r1, y + 0.03, z + Math.sin(b) * r1], [x + Math.cos(b) * r0, y + 0.03, z + Math.sin(b) * r0], [0, 1, 0]);
     }
-    for (let i = 0; i < 5; i++) { const a = i / 5 * TAU, b = (i + 2) / 5 * TAU; rod(K, 'obsidian', x + Math.cos(a) * p.r * 0.55, y + 0.04, z + Math.sin(a) * p.r * 0.55, x + Math.cos(b) * p.r * 0.55, y + 0.04, z + Math.sin(b) * p.r * 0.55, 0.08); }
+    // (Rings only: the five-pointed star that was drawn in it is a seal. The critics, 2026-11-20; the V and T rule.)
   },
   lectern(K, d, p, x, y, z) {
     K.drum('dark:stone', x, y, z, 0.55, 0.3, 8, NO);
@@ -1104,8 +1104,13 @@ export const PROPS = {
   },
   // A hide tent: a goblin's nest.
   tent(K, d, p, x, y, z) {
-    K.cone('cloth_oat', x, y, z, p.r || 1.3, (p.r || 1.3) * 1.5, 6, x);
-    K.box('wood', x, y, z, 0.04, (p.r || 1.3) * 1.5 + 0.5, 0.04, 0, NO);
+    // (Hessian, patched darker and lighter tent by tent, its pole out of its peak, a dark slit for its door, a bedroll's
+    // end showing in it: a cone of plain cloth was a yellow pyramid. The critics, 2026-11-20.)
+    const r = p.r || 1.3, h = r * 1.5, tint = ['dark:p2_hessian', 'umber:p2_hessian', 'p2_hessian'][Math.abs(Math.round(x * 3 + z)) % 3], a = x + 0.6;
+    K.cone(tint, x, y, z, r, h, 6, x);
+    K.box('dark:wood', x, y, z, 0.04, h + 0.5, 0.04, 0, NO);
+    { const dx = Math.cos(a), dz = Math.sin(a), d0 = r * 0.83; K.quad('char:stone', [x + dx * d0 - dz * 0.34, y, z + dz * d0 + dx * 0.34], [x + dx * d0 + dz * 0.34, y, z + dz * d0 - dx * 0.34], [x + dx * d0 * 0.5 + dz * 0.03, y + h * 0.52, z + dz * d0 * 0.5 - dx * 0.03], [x + dx * d0 * 0.5 - dz * 0.03, y + h * 0.52, z + dz * d0 * 0.5 + dx * 0.03], [dx, 0.5, dz]);
+      K.box('cloth_red', x + dx * r * 1.05, y, z + dz * r * 1.05, 0.3, 0.12, 0.5, -a, NO); }
   },
   bones(K, d, p, x, y, z) {
     ribs(K, x, y, z, p.r / 2, x * 0.7);

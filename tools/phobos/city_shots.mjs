@@ -67,7 +67,8 @@ function cam(ex, ey, ez, tx, ty, tz) {
 }
 // The castle's towers, Needles and bridges (src/core/phobos-build.js castleTowers): eyes at heights over the plain.
 { const { towers, bridges } = castleTowers(), T = Object.fromEntries(towers.map((t) => [t.key, t])), A = (x, h, z) => [x, PLAIN + h - terrainHeight(x, z), z];
-  const deck = (k, dx, dz, to) => { const t = T[k]; return [`kt_deck_${k}`, [t.x, t.z], A(t.x + dx, t.deck + 1.8, t.z + dz), to]; };
+  // (From its lip on the side of what's looked at, a pace in from the parapet.)
+  const deck = (k, dx, dz, to) => { const t = T[k], re = (t.square ? t.r * 1.36 : t.r) + 4.2, a = Math.atan2(to[2] - t.z, to[0] - t.x); return [`kt_deck_${k}`, [t.x, t.z], A(t.x + Math.cos(a) * re, t.deck + 1.75, t.z + Math.sin(a) * re), to]; };
   SHOTS.push(
     ['kt_north', [11180, -400], A(11150, 330, -470), A(11260, 440, 0)],
     ['kt_east', [11600, 40], A(11680, 430, 60), A(11300, 470, 0)],

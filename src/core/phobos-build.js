@@ -1607,7 +1607,7 @@ export function phobosCastle(K) {
   const BL = { crenel: true, lite: 'p2_curtain_granite', vee: true };
   // (The towers in the curtains' own ashlar, as dark: in the granite they stood pale grey against near-black walls, two
   // castles in one. The halls keep the granite, a step lighter than the walls round them.)
-  const S = 'soot:p2_curtain_granite', C = 'soot:p2_bridge_ashlar', B = 'soot:p2_bridge_ashlar', R = 'blood:p2_blood_tiles', RT = 'p2_fishscale_slate';
+  const S = 'soot:p2_curtain_granite', C = 'soot:p2_bridge_ashlar', B = 'soot:p2_bridge_ashlar', R = 'blood:p2_blood_tiles', RT = 'soot:p2_fishscale_slate';
   // The outer curtain round the crag's edge, a tower every third stretch; the ward walls across it at each step up.
   const ring = [];
   for (let i = 0; i < 44; i++) { const a = i / 44 * TAU; ring.push([CRAG.x + Math.cos(a) * CRAG.a * 0.86, CRAG.z + Math.sin(a) * CRAG.b * 0.86]); }
@@ -1800,7 +1800,7 @@ export function phobosKeep(K) {
   // (Soot, not char: charred, the basalt went flat black. Its bridges and stairs in the ashlar charred, as dark as the
   // walls they cross: a paler bridge over a face in shadow read as a cross from the gate. The critics, round 3; the V/T rule.
   // Dark, not char: a deck's top catches the sky, and charred it still showed pale on the black.)
-  const S = 'soot:p2_keep_basalt', C = 'soot:p2_keep_basalt', R = 'p2_fishscale_slate', G = 'soot:p2_keep_basalt', KB = 'dark:p2_bridge_ashlar';
+  const S = 'soot:p2_keep_basalt', C = 'soot:p2_keep_basalt', R = 'soot:p2_fishscale_slate', G = 'soot:p2_keep_basalt', KB = 'dark:p2_bridge_ashlar';
   const x = KEEP.x, z = KEEP.z, base = PLAIN + KEEP.base, P = (h) => PLAIN + h;
   // The Keep's own body: three great steps of masonry on the High Ward, each set back from the one under it, arcaded down
   // their faces and turreted at their corners. The trunk rises through them and the spires stand round them: without it
@@ -1810,7 +1810,8 @@ export function phobosKeep(K) {
     const foot = i === 0 ? PLAIN + 165 : P(a);   // (the first goes down into the rock: it overhangs the Middle Ward)
     // (Its walls half a step lighter than its fins and cornices: in the same soot the bays between went black in any shade,
     // a grid of holes, scaffolding round nothing, from the yard. The critics.)
-    K.box('dark:p2_keep_basalt', cx, foot, z, hx, P(b) - foot, hz, 0, { collide: false });
+    // (Its own stone, untinted: sooted or dark, its faces were a black cut-out at ten in the morning. The critics, 2026-11-20.)
+    K.box('p2_keep_basalt', cx, foot, z, hx, P(b) - foot, hz, 0, { collide: false });
     // (Solid from the side, stood on from above: t, the top less a step, as the portals' terraces have it.)
     K.colliders.push({ x: cx, z, hx, hz, yaw: 0, h: P(b) - Y(cx, z), t: P(b) - 0.45 });
     walk(K, [[cx, z, hx, hz, 0, P(b)]]);
@@ -2031,7 +2032,7 @@ const ringTower = (ring, i) => i % 3 === 0 && i !== SALLY && !(Math.abs(ring[i][
 // a door toward the ward, a guardroom, a stair, a room over it, a chest): the outer curtain's fourteen, the Middle Ward
 // wall's six, and the Oubliettes' stair tower in the Lower Ward. As tower()'s own: { key, kind, layer, x, z, r, h, roof, o, face }.
 export function castleWallTowers() {
-  const C = 'soot:p2_bridge_ashlar', RT = 'p2_fishscale_slate', R = 'blood:p2_blood_tiles', out = [], ring = [];
+  const C = 'soot:p2_bridge_ashlar', RT = 'soot:p2_fishscale_slate', R = 'blood:p2_blood_tiles', out = [], ring = [];
   for (let i = 0; i < 44; i++) { const a = i / 44 * TAU; ring.push([CRAG.x + Math.cos(a) * CRAG.a * 0.86, CRAG.z + Math.sin(a) * CRAG.b * 0.86]); }
   ring.forEach((p, i) => { if (ringTower(ring, i)) out.push({ key: `curtain${i}`, kind: 'guard', layer: C, x: p[0], z: p[1], r: 8, h: 48 + 14 * hash2(i, 4), roof: i % 2 ? RT : null, o: { steep: 2.6 }, face: Math.atan2(CRAG.z - p[1], CRAG.x - p[0]) }); });
   const x0 = WARDS[1][0];
@@ -2247,7 +2248,7 @@ function climb(K, t, draw) {
         const lo = cuts[c], hi = cuts[c + 1], door = doors.some((h) => Math.abs(h - lo) < 0.01);
         if (hi - lo < 0.05) continue;
         K.drum(G, t.tx, lo, t.tz, R, hi - lo, N, { collide: false, open: true, skip: door ? face : undefined });
-        for (let i = 0; i < N; i++) { if (door && face(i)) continue; const am = (i + 0.5) / N * TAU; K.quad('ph_grey_plaster', Q(i + 1, R - 0.3, lo), Q(i, R - 0.3, lo), Q(i, R - 0.3, hi), Q(i + 1, R - 0.3, hi), [-Math.cos(am), 0, -Math.sin(am)]); }
+        for (let i = 0; i < N; i++) { if (door && face(i)) continue; const am = (i + 0.5) / N * TAU; K.quad('pale:ph_grey_plaster', Q(i + 1, R - 0.3, lo), Q(i, R - 0.3, lo), Q(i, R - 0.3, hi), Q(i + 1, R - 0.3, hi), [-Math.cos(am), 0, -Math.sin(am)]); }
       }
       for (let yy = y0 + 5, j = 0; yy < top; yy += 6, j++) { const i = (j * 5 + 3) % N; if (face(i)) continue; const am = (i + 0.5) / N * TAU, w = 0.16, rr = R * Math.cos(Math.PI / N) + 0.03, cx = t.tx + Math.cos(am) * rr, cz = t.tz + Math.sin(am) * rr, tx = -Math.sin(am) * w, tz = Math.cos(am) * w; K.quad(j % 2 ? 'blood:flame' : 'eve:flame', [cx - tx, yy, cz - tz], [cx + tx, yy, cz + tz], [cx + tx, yy + 1.5, cz + tz], [cx - tx, yy + 1.5, cz - tz], [Math.cos(am), 0, Math.sin(am)]); }
     }
@@ -2277,7 +2278,7 @@ function climb(K, t, draw) {
   }
   // (A lamp in the turret every two turns, so the stair isn't climbed blind.)
   // (Bright, and first among the frame's twelve when you're on it: a stair climbed blind is no stair.)
-  for (let yy = y0 + 4; yy < top; yy += TURN) (K.lamps ||= []).push({ p: [t.tx - Math.cos(t.ta) * RT, yy + 2.6, t.tz - Math.sin(t.ta) * RT], c: [1, 0.56, 0.26], r: 12, i: 34, flicker: 0.3, prio: 6 });
+  for (let yy = y0 + 4; yy < top; yy += TURN) (K.lamps ||= []).push({ p: [t.tx - Math.cos(t.ta) * RT, yy + 2.6, t.tz - Math.sin(t.ta) * RT], c: [1, 0.6, 0.3], r: 13, i: 90, flicker: 0.25, prio: 40 });
   if (t.from !== null) {
     const fx = t.tx + Math.cos(t.ta + 1.9) * (R + 1.6), fz = t.tz + Math.sin(t.ta + 1.9) * (R + 1.6), fy = t.base > 290 ? t.from : Y(fx, fz);
     K.drum('dark:stone', fx, fy - 0.3, fz, 0.6, 2.5, 6, { r2: 0.4, collide: false }); K.drum('char:stone', fx, fy + 2.2, fz, 0.34, 0.5, 8, { r2: 0.62, collide: false });

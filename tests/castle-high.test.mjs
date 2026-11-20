@@ -137,3 +137,8 @@ test('the castle\'s later quests: given by someone who is there, to places, peop
     }
   }
 });
+
+test('every corner of the castle\'s delves is a real number (a prop set down without what it needs makes corners that are not)', async () => {
+  const { buildUnder } = await import('../src/core/sites.js');
+  for (const d of castle) for (const [layer, p] of buildUnder(d.key).parts) { let bad = 0; for (let i = 0; i < p.pos.length; i++) if (!Number.isFinite(p.pos[i])) bad++; assert.equal(bad, 0, `${d.key} ${layer}: ${bad} numbers that aren't`); }
+});

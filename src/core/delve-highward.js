@@ -204,7 +204,7 @@ export const DEEP_STACKS = {
     ['cd_hold2', 'cd_hold', [-65.5, -9.5, -84.6], [-44, -10.8, -64]],
     ['cd_dorm', 'cd_dorm', [-40, -9.4, -101], [-62, -11, -114]],
     ['cd_chained', 'cd_chained', [36, -9, -54], [64, -10, -78]],
-    ['cd_vault', 'cd_vault', [45, -8, -97], [64, -10, -118]],
+    ['cd_vault', 'cd_vault', [56, -8.4, -96.4], [56, -9.6, -120]],
     ['cd_scriv', 'cd_scriv', [-16, -8.6, -108], [12, -11, -126]],
   ],
   last: 'censor', tough: { hp: 25, damage: 2.7 }, pay: { xp: 46000, gold: 6400 },
@@ -217,7 +217,7 @@ export const DEEP_STACKS = {
 const hRooms = [
   R('ch_head', 'the Sanctuaries Stair', 0, -8, 5, 15, 0, 9, { rock: 'p2_keep_basalt', foot: 'dark:block', ground: 'p2_bone_joint_flags', fires: 14 }),
   // (Tall and narrow: a nave three times as high as it's wide.)
-  R('ch_sanct', 'the Sanctuaries', 0, -56, 10.5, 36, 0, 36, { rock: 'p2_keep_basalt', foot: 'dark:course', ground: 'p2_oxblood_marble', banners: 18, cloth: 'p2_banner_skull', fires: 24 }),
+  R('ch_sanct', 'the Sanctuaries', 0, -56, 10.5, 36, 0, 36, { rock: 'soot:p2_curtain_granite', foot: 'dark:course', ground: 'p2_oxblood_marble', banners: 18, cloth: 'p2_banner_skull', fires: 24 }),
   R('ch_court', 'the Chapel Court', -46, -58, 16, 16, 0, 22, { rock: 'p2_keep_basalt', foot: 'dark:block', ground: 'p2_bone_joint_flags', banners: 0, hang: 0, fires: 22 }),
   R('ch_reliq', 'the Reliquary', -46, -100, 7, 7, 0, 9, { rock: 'p2_bone_plaster', foot: 'dark:block', ground: 'p2_oxblood_marble', banners: 0, fires: 9 }),
   R('ch_crypt', "the Generals' Crypt", 50, -40, 14, 18, 0, 5.6, { rock: 'slate:ashlar', foot: 'dark:block', ground: 'p2_walk_paving', banners: 0, fires: 26 }),
@@ -262,13 +262,13 @@ const hProps = [];
   // Reliquary's bone lock south.
   add('daylight', -46, -58, { r: 8, pool: false }); add('bonefont', -46, -58);
   for (const [x, z] of [[-56, -48], [-36, -48], [-56, -68], [-36, -68]]) add('bonetree', x, z);
-  add('skullwall', -46, -42.5, { yaw: PI, w: 8 }); add('bonestack', -60.4, -50); add('bonestack', -32, -70);
+  add('skullwall', -46, -42.5, { yaw: PI, w: 8 }); add('bonestack', -61.2, -50, { yaw: PI / 2 }); add('bonestack', -30.8, -66, { yaw: -PI / 2 });
   add('brazier', -41, -45); add('brazier', -51, -71); add('mark', -46, -73.6, { up: 6, r: 0.8, back: -1 }); add('portcullis', -46, -73.2, { w: 2.6, h: 5.6, plain: true });
   // ---- the Reliquary: what the chapel keeps for him. Bone shelves, a slab, candles; a chest that was never meant to be opened.
   add('bones', -50, -104, { r: 1.2 }); add('bones', -42, -96, { r: 1 }); add('table', -46, -103.6, { hx: 1.6, hz: 0.7 }); add('candles', -46, -103.6, { up: 0.9 });
   add('jarshelf', -52.6, -100, { yaw: PI / 2, w: 3 }); add('jarshelf', -39.4, -100, { yaw: -PI / 2, w: 3 });
   // ---- the Generals' Crypt: his generals' tombs in two ranks, their harness on stands at their feet, their standards.
-  for (const z of [-30, -40, -50]) { add('bier', 43, z, { hx: 2.2, hz: 1 }); add('bier', 57, z + 4, { hx: 2.2, hz: 1 }); add('deadguard', 39.4, z, { yaw: PI / 2 }); add('deadguard', 60.6, z + 4, { yaw: -PI / 2 }); add('gravegoods', 45.6, z + 1.6); }
+  for (const z of [-30, -40, -50]) { add('bier', 43, z, { hx: 2.2, hz: 1 }); add('bier', 57, z + 4, { hx: 2.2, hz: 1 }); add('deadguard', 39.4, z, { yaw: PI / 2 }); add('deadguard', 60.6, z + 4, { yaw: -PI / 2 }); add('gravegoods', 45.6, z + 1.6, { r: 0.9 }); }
   add('shields', 36.6, -35, { yaw: PI / 2 }); add('shields', 63.4, -52, { yaw: -PI / 2 }); add('brazier', 50, -26); add('brazier', 50, -54);
   add('urn', 47, -24); add('urn', 53, -24); add('decal', 63.95, -22.05, { layer: 'p2_cobweb', w: 2, up: 4.4, yaw: PI });
   // ---- the Mirror Gallery: tall dark glasses down both walls in iron frames (frames with no sitter: slate), a runner,
@@ -277,7 +277,8 @@ const hProps = [];
   add('carpet', 50, -86, { hx: 10, hz: 1.2, layer: 'pale:cloth_oat' }); add('chandelier', 44, -86, { up: 4.6, hang: true }); add('chandelier', 56, -86, { up: 4.6, hang: true });
   add('mark', 61.7, -86, { up: 5.6, r: 0.7, yaw: PI / 2, back: 1 });
   // ---- the Treasury: strongboxes in rows, coin in heaps, plate on stands, the tally desk; the hanging on the west wall.
-  for (const [x, z, r] of [[-15, -122, 1.6], [-16, -134, 1.3], [0, -134, 1.8], [2, -122, 1.2], [-9, -135, 1.1]]) add('gold', x, z, { r });
+  for (const [x, z, r] of [[-15, -122, 2.6], [-16, -134, 2.2], [0, -134, 3], [2, -122, 2], [-9, -135, 1.8], [-19, -128, 1.6]]) add('gold', x, z, { r });
+  add('strongdoor', -8, -137.6, { yaw: 0, w: 1.5 });
   for (const [x, z] of [[-19.6, -127], [4, -129.6], [-4, -120]]) add('crates', x, z);
   add('table', -8, -128, { hx: 2.4, hz: 0.8 }); add('candles', -8, -128, { up: 0.85 }); add('candles', -6.6, -128, { up: 0.85 }); add('stand', 3.6, -126); add('urn', -12, -121); add('urn', -2, -121);
   add('decal', -21.95, -124, { layer: 'p2_hessian', w: 3, h: 3.2, up: 1.7, yaw: PI / 2 });
@@ -289,7 +290,7 @@ const hProps = [];
   add('column', 40, -133, { r: 1.6, solid: true }); add('circle', 40, -133, { r: 5 }); add('circle', 40, -133, { r: 7.4 }); add('daylight', 40, -133, { r: 4.5 });
   // (The orrery: wheels of iron hung over its pier at three heights, turned each a different way; and his stars in the
   // dome, cold lights let in through it.)
-  add('gear', 40, -133, { up: 4, r: 4.4, flat: true }); add('gear', 40, -133, { up: 6.5, r: 3, flat: true }); add('gear', 40, -133, { up: 9, r: 1.8, flat: true });
+  add('gear', 40, -133, { up: 3.4, r: 6.4, flat: true, spokes: 5 }); add('gear', 40, -133, { up: 6.5, r: 4.6, flat: true, turn: 0.4 }); add('gear', 40, -133, { up: 9.6, r: 2.8, flat: true, spokes: 5, turn: 0.9 });
   for (const [x, z, r] of [[32, -122, 0.5], [47, -121, 0.4], [50, -131, 0.6], [33, -137, 0.4], [44, -139, 0.5], [36, -129, 0.35], [45, -126, 0.35]]) add('daylight', x, z, { r, pool: false });
   add('maptable', 31, -119, { hx: 2.4, hz: 1.6 }); add('lectern', 49, -119); add('bookcase', 29, -138.4, { hx: 2.4, hz: 0.4, h: 3.4 });
   for (const [x, z] of [[30, -138], [50, -118]]) add('brazier', x, z);
@@ -393,8 +394,8 @@ export const HIGH_WARD = {
     ['ch_court', 'ch_court', [-34, 3, -46], [-56, 3, -70]],
     ['ch_crypt', 'ch_crypt', [38, 3.4, -24], [60, 1.5, -54]],
     ['ch_mirror', 'ch_mirror', [39.5, 2.2, -86], [61, 2.6, -86]],
-    ['ch_treas', 'ch_treas', [4, 3.4, -120], [-18, 1, -136]],
-    ['ch_observ', 'ch_observ', [29, 4, -117], [46, 6, -136]],
+    ['ch_treas', 'ch_treas', [4.6, 2.6, -120], [-16, 0.8, -134]],
+    ['ch_observ', 'ch_observ', [30, 2.4, -118], [42, 6.5, -134]],
     ['ch_roost', 'ch_roost', [-42, 3, -120], [-60, 1.4, -134]],
     ['ch_ante', 'ch_ante', [-16, 4, -174], [8, 3, -206]],
   ],
