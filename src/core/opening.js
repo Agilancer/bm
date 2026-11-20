@@ -498,10 +498,12 @@ export const RUN_OUT = (() => {
 export const ESCORT_TO = [-30, 21];
 
 // Her clips in the opening (the walk is the form's own). Those that aren't a way of moving are kept on her mark.
-// She runs with her own 'run' at every speed, flat out too (the owner's pick in lisandra.html: an even stride, light on
-// her feet; no sprint clip, by the owner's word).
+// She runs on gaits made for her in Blender (tools/anim/gait.py): a jog, a run and a sprint, each a loop of eight steps
+// for its own pace (3.1, 5.6 and 8.6 m/s), so flat out her legs turn over as a sprinter's do and it isn't a run played
+// fast. OPENING_GAITS: each with the pace it takes over at. (The run she had before is still in her files, as run_old.)
 export const OPENING_RUN = 'run';
-export const OPENING_MOVES = [OPENING_RUN];
+export const OPENING_GAITS = [['jog', 0], ['run', 4.3], ['sprint', 7.1]];
+export const OPENING_MOVES = OPENING_GAITS.map((g) => g[0]);
 export const OPENING_CLIPS = [
   'Spell_Simple_Idle_Loop', 'Idle_Lantern_Loop', 'greet_01', 'greet_02', 'Interact', 'Hit_Knockback', 'scared_02', 'afraid',
   'frightened', 'fold_arms', 'Idle_FoldArms_Loop', 'wait', 'Spell_Simple_Shoot', 'Pointing into the distance', 'Pointing at an enemy',

@@ -1,13 +1,20 @@
 // Your own body, for the third-person view: the wizard (assets/game/player/wizard.glb, tools/player/build.mjs), posed here each
 // tick from what the player is doing and written into a character slot like anyone else's, with what's in his hands.
 //
-// The file brings a walk, a run and a fall (the death). Everything else is made here, on top of them:
-//   - standing: the bind pose with the arms let down, breathing;
-//   - the legs: walk and run mixed by pace, in step with each other, played backwards going backwards, the hips turned the
-//     way he's going and the chest kept to where you look; a jump is the run's flight;
+// The file brings a walk, a jog, a run and a sprint (made in Blender by tools/anim/gait.py, each for its own pace: 1.3,
+// 3.1, 5.6 and 8.6 m/s, a loop of eight steps no two alike) and a fall (the death). Everything else is made here, on top
+// of them:
+//   - standing: the bind pose with the arms let down, breathing, his weight going from foot to foot over planted feet,
+//     his head looking about;
+//   - the legs: the gaits mixed by pace, in step with each other, each stride as long as the ground it covers, played
+//     backwards going backwards, the hips turned the way he's going and the chest kept to where you look; a jump is the
+//     run's flight, a sidestep the sprint's;
+//   - the whole of him leans, from the ground up: forward as he picks up speed and back as he checks, into a turn, and
+//     into a sidestep;
 //   - the arms: each hand is put where it holds what it holds (the staff as a walking staff in the right, the skull under
 //     the left in a claw, or the shield on the left forearm), by a two-bone solve from the shoulder, with the fingers shut
-//     round it. An empty hand swings as the clip has it;
+//     round it. An empty hand swings as the clip has it, and a full one does a part of that swing round where it's held
+//     (pump), so the shoulder and the elbow of an arm with something in it still work as he runs;
 //   - the casts: the staff's shot, a spell thrown with one hand or pushed with both, one raised with one hand or both.
 //     They're poses of the arms and the chest alone, so they play standing, walking or running;
 //   - the shield ride: feet on the board, knees bent, side on, looking down the hill, the arms out as a surfer's and
@@ -18,11 +25,25 @@ import { clamp, damp, lerp, quatAxisAngle, quatFromMat3, quatMul, quatNlerp, qua
 import { ArmsRig } from './anim.js';
 
 const TAU = Math.PI * 2;
-// How fast the clips' own strides go, and how far past that the legs are let quicken: past it the feet slide a little
-// rather than patter (the game's run is 5.6 m/s and its sprint 8.6, well over the clip's 4.2).
-const QUICKEN = 1.22, QUICKEN_PAST = 0.22;
+// The gaits, slowest first, and the paces (m/s) over which each gives way to the next. Every loop is STEPS steps and
+// starts as the left foot lands, so they're in step at the same place in their loops.
+const GAITS = ['walk', 'jog', 'run', 'sprint'];
+const BANDS = [[1.5, 2.5], [3.3, 5.3], [6.0, 8.2]];
+const STEPS = 8;
+const QUICKEN = 1.2;              // how far past a gait's own cadence the legs are let quicken: past it the feet slide rather than patter
+const BACK_PACE = 3.1;            // going backwards he's never past a jog's stride
 const HIP_TURN = 1.15;            // how far the hips turn from where you look, moving sideways (rad)
-const AIR_PHASE = 0.3;            // where in the run's loop a jump hangs
+const AIR_PHASE = 0.094;          // where in the run's loop a jump hangs: the middle of a flight
+// The lean of the whole body, from the ground up (rad): by how fast he's gaining or losing pace, by how fast he's turning
+// at the pace he's going, and into a sidestep.
+const LEAN = { gain: 0.016, fwd: 0.15, back: 0.1, turn: 0.0045, bank: 0.15, dash: 0.3 };
+// Standing: how far the hips go from foot to foot and down with each breath (m), and how far the head looks about (rad).
+const IDLE = { sway: 0.014, sink: 0.006, look: 0.07 };
+// What's slung on him (the shield and the staff on his back, the skull at his hip) has its own weight: it lags what his
+// back does and settles after each landing. A spring to where it hangs (k, c: its stiffness and its damping, tuned so a
+// run's bounce moves it about 3 cm, a quarter of a step late), how far it may go (m), and how far that rocks each thing
+// (rad a metre: the shield about the way he's going, the staff's head from side to side).
+const JIG = { k: 600, c: 20, most: 0.05, rock: 3.5, staff: 11, nod: 1.6 };
 const PALM = [0.085, 0.034];      // the middle of the palm from the wrist: along the fingers, and out of the palm (m)
 const SKULL_DROP = 0.105;         // the skull's middle under the palm
 const SKULL_SIZE = 1.12, SHIELD_SIZE = 1.28;
@@ -92,12 +113,17 @@ function turnBetween(out, a, b, c, d) {
 const HOLD = {
   hang: { at: [0.07, -0.47, 0.06], f: [0.06, -1, 0.1], t: [0, 0.1, 1], pole: [0.5, -0.2, -1], curl: 0.3, thumb: 0.15 },
   // The staff as a walking staff: fist at the chest, the head tipped a little ahead. run: the same, carried higher and lower-angled.
-  staff: { at: [0.1, -0.33, 0.25], f: [-0.25, 0, 1], t: [-0.04, 0.96, 0.28], pole: [0.7, -0.5, -0.6], curl: 1.25, thumb: 0.55 },
-  staffRun: { at: [0.12, -0.2, 0.2], f: [-0.25, 0, 1], t: [-0.13, 0.7, 0.7], pole: [0.8, -0.4, -0.6], curl: 1.25, thumb: 0.55 },
+  // (pump: how much of the clip's own swing of that hand, round where it's held, the hand still does.)
+  staff: { at: [0.1, -0.33, 0.25], f: [-0.25, 0, 1], t: [-0.04, 0.96, 0.28], pole: [0.7, -0.5, -0.6], curl: 1.25, thumb: 0.55, pump: 0.6 },
+  // (Running, its foot is well clear of the ground behind him; sprinting it's trailed low at his hip, its head forward.)
+  staffRun: { at: [0.13, -0.24, 0.16], f: [-0.25, 0, 1], t: [-0.1, 0.5, 0.86], pole: [0.8, -0.4, -0.6], curl: 1.25, thumb: 0.55 },
+  staffSprint: { at: [0.15, -0.4, 0.04], f: [-0.5, -0.6, 0.3], t: [-0.04, 0.2, 0.98], pole: [0.7, -0.2, -0.9], curl: 1.25, thumb: 0.55 },
   // The skull: the hand over the crown, the skull hanging under it.
-  skull: { at: [0.05, -0.36, 0.3], f: [-0.2, -0.22, 1], t: [-1, 0, -0.1], pole: [0.8, -0.5, -0.5], curl: 0.62, thumb: 0.5, spread: 0.2 },
+  skull: { at: [0.05, -0.36, 0.3], f: [-0.2, -0.22, 1], t: [-1, 0, -0.1], pole: [0.8, -0.5, -0.5], curl: 0.62, thumb: 0.5, spread: 0.2, pump: 0.45 },
+  // (Running, it's brought in by his ribs, the elbow back at his side: out ahead of him his knee would meet it.)
+  skullRun: { at: [0.11, -0.22, 0.15], f: [-0.25, -0.2, 1], t: [-1, 0.1, -0.1], pole: [0.9, -0.5, -0.9], curl: 0.62, thumb: 0.5, spread: 0.2 },
   // The shield on the forearm: at ease by the side, face out; and on guard, across the chest, face ahead.
-  shield: { at: [0.1, -0.37, 0.19], f: [0.05, -0.42, 1], t: [0.12, 1, 0.3], pole: [0.8, -0.3, -0.7], curl: 1.2, thumb: 0.5 },
+  shield: { at: [0.1, -0.37, 0.19], f: [0.05, -0.42, 1], t: [0.12, 1, 0.3], pole: [0.8, -0.3, -0.7], curl: 1.2, thumb: 0.5, pump: 0.38 },
   guard: { at: [-0.06, -0.14, 0.4], f: [-1, 0.05, 0.25], t: [0, 1, 0.12], pole: [0.6, -0.8, 0], curl: 1.2, thumb: 0.5 },
   // On the board, a surfer's arms. The leading hand is out over the nose and a little to his toes, at his belt, the elbow
   // let down; the trailing arm is cocked out behind him to his heels, the hand up by the shoulder. Neither is straight
@@ -214,7 +240,7 @@ export class PlayerBody {
         hinge: [0, -sign, 0],                                              // the elbow bends the forearm forward
         f, t, n: nrm, fL: local(hand, f), tL: local(hand, t), nL: local(hand, nrm),
         // What the hand is doing, eased from one thing to the next.
-        now: null, w: 0, pose: { at: v3(), f: v3(), t: v3(), pole: v3(), curl: 0, thumb: 0, spread: 0, fall: 0, tuck: 0, flat: 0, along: 0 }, keep: [up, lo, hand],
+        now: null, w: 0, pump: 0, swing: v3(), pose: { at: v3(), f: v3(), t: v3(), pole: v3(), curl: 0, thumb: 0, spread: 0, fall: 0, tuck: 0, flat: 0, along: 0 }, keep: [up, lo, hand],
       };
       const th = J(`${s}_Thigh`), calf = J(`${s}_Calf`), foot = J(`${s}_Foot`), toe = J(`${s}_ToeBase`);
       this.legs[s] = {
@@ -229,13 +255,24 @@ export class PlayerBody {
     this.curT = this.idleT;
     this.fk(this.idleR, this.idleT, 0, n - 1);
     for (const s of SIDES) { this.reach(this.idleR, this.arms[s], this.side(HOLD.hang, this.arms[s].sign, {})); this.shut(this.idleR, this.arms[s], 0.3, 0.15, 0); }
-    // The walk and the run in step: where in each loop the left foot passes the right going forward.
-    const walk = rig.clips.walk, run = rig.clips.run;
-    walk.loop = run.loop = true;
-    this.walkAt = this.stepAt(walk); this.runAt = this.stepAt(run);
-    this.walkTravel = rig.extras.clips?.walk?.travel || 2.67; this.runTravel = rig.extras.clips?.run?.travel || 5.22;
     this.aR = new Float32Array(n * 4); this.aT = new Float32Array(n * 3);
     this.bR = new Float32Array(n * 4); this.bT = new Float32Array(n * 3);
+    // The gaits: each clip, how far a loop of it goes (m) and the pace it was made for, and where each hand is from its
+    // shoulder on the average through it (in the chest's own frame: what a hand's swing is measured from).
+    this.gaits = GAITS.map((name) => {
+      const clip = rig.clips[name], info = rig.extras.clips?.[name];
+      if (!clip || !info?.travel) throw new Error(`player body: no gait ${name}`);
+      clip.loop = true;
+      const g = { name, clip, travel: info.travel, pace: info.speed, mid: { L: v3(), R: v3() } };
+      const N = 48;
+      for (let i = 0; i < N; i++) {
+        rig.sampleInto(clip, clip.dur * i / N, this.aR, this.aT);
+        this.fk(this.aR, this.aT, 0, n - 1);
+        for (const s of SIDES) add(g.mid[s], g.mid[s], this.handFrom(this.arms[s], P1), 1 / N);
+      }
+      return g;
+    });
+    this.mix = new Float32Array(GAITS.length); this.mixTo = new Float32Array(GAITS.length); this.mix[0] = 1;
     this.baseR = new Float32Array(n * 4);
     this.props = new Float32Array(48);
     this.head = v3(); this.palmL = v3(); this.palmR = v3(); this.staffTip = v3();
@@ -244,9 +281,11 @@ export class PlayerBody {
   }
 
   reset() {
-    Object.assign(this, { phase: 0, wMove: 0, wRun: 0, wAir: 0, wRide: 0, wFly: 0, wDead: 0, twist: 0, backing: false, breath: Math.random() * 9, lean: 0, roll: 0, pitch: 0, guard: 0, time: 0, castW: 0, castA: 0, castB: 0, castKind: null, castHands: 1, airT: 0 });
+    Object.assign(this, { phase: 0, wMove: 0, wRun: 0, wAir: 0, wRide: 0, wFly: 0, wDead: 0, wDash: 0, twist: 0, backing: false, breath: Math.random() * 9, lean: 0, roll: 0, pitch: 0, guard: 0, time: 0, castW: 0, castA: 0, castB: 0, castKind: null, castHands: 1, airT: 0, gain: 0, was: undefined, wasYaw: undefined, bank: 0 });
+    if (this.mix) { this.mix.fill(0); this.mix[0] = 1; }
     this.s = { x: 0, y: 0, z: 0, yaw: 0, pitch: 0, vx: 0, vz: 0, onGround: true };
     this.yaw = 0; this.boardYaw = undefined; this.twistTo = 0; this.castShake = 0;
+    this.jig = { p: [0, 0], v: [0, 0], was: null, vel: [0, 0] };
     for (const s of SIDES) { this.arms[s].now = null; this.arms[s].w = 0; }
   }
 
@@ -262,12 +301,20 @@ export class PlayerBody {
     }
   }
 
-  // Where in a loop the left foot passes the right, going forward (a part of the loop).
-  stepAt(clip) {
-    const rig = this.rig, N = 48, L = this.legs.L.foot, R = this.legs.R.foot, rot = new Float32Array(rig.count * 4), tr = new Float32Array(rig.count * 3), d = [];
-    for (let i = 0; i < N; i++) { rig.sampleInto(clip, clip.dur * i / N, rot, tr); this.fk(rot, tr, 0, rig.count - 1); d.push(this.gp[L * 3 + 2] - this.gp[R * 3 + 2]); }
-    for (let i = 0; i < N; i++) { const a = d[i], b = d[(i + 1) % N]; if (a <= 0 && b > 0) return (i + a / (a - b)) / N; }
-    return 0;
+  // A hand from its shoulder, in the chest's own frame (as the body's stood now).
+  handFrom(A, out) {
+    const { gp, gq } = this, c = this.j.spine2;
+    set(out, gp[A.hand * 3] - gp[A.up * 3], gp[A.hand * 3 + 1] - gp[A.up * 3 + 1], gp[A.hand * 3 + 2] - gp[A.up * 3 + 2]);
+    conj(Q1, gq, c * 4);
+    quatRotate(out, 0, Q1, 0, out, 0);
+    return out;
+  }
+
+  // How much of each gait a pace is (into out), by BANDS.
+  paceMix(pace, out) {
+    const a = smoothstep(BANDS[0][0], BANDS[0][1], pace), b = smoothstep(BANDS[1][0], BANDS[1][1], pace), c = smoothstep(BANDS[2][0], BANDS[2][1], pace);
+    out[0] = 1 - a; out[1] = a * (1 - b); out[2] = b * (1 - c); out[3] = c;
+    return out;
   }
 
   // Joint j turned to stand as `world` (a turn in his space) says, and its branch stood again.
@@ -360,6 +407,7 @@ export class PlayerBody {
   //   the arm is the cast's), shake }.
   update(dt, s) {
     this.s = s;
+    this.dt = dt;
     this.time += dt;
     const sn = Math.sin(s.yaw), cs = Math.cos(s.yaw);
     const fwd = s.vx * sn + s.vz * cs, left = s.vx * cs - s.vz * sn, speed = Math.hypot(s.vx, s.vz);
@@ -374,6 +422,7 @@ export class PlayerBody {
     // (Not on the board: off a crest he's still in the ride's crouch, not the run's flight.)
     this.wMove = damp(this.wMove, moving || (!grounded && !riding && speed > 1) ? 1 : 0, 11, dt);
     this.wRun = damp(this.wRun, smoothstep(1.7, 3.8, speed) * (this.backing ? 0.45 : 1), 8, dt);
+    this.wDash = damp(this.wDash, s.dodge > 0 && !riding && !s.dead ? 1 : 0, s.dodge > 0 ? 22 : 9, dt);
     // The way the legs face: where he's going, or its opposite if that's behind him (then the stride runs backwards).
     if (speed > 0.3) {
       const way = Math.atan2(left, fwd);
@@ -382,13 +431,25 @@ export class PlayerBody {
       this.twistTo = clamp(this.backing ? wrapAngle(way - Math.PI) : way, -HIP_TURN, HIP_TURN);
     } else this.twistTo = 0;
     this.twist = damp(this.twist, moving ? this.twistTo : 0, 10, dt);
-    // The stride, by the ground covered: the clips' own length of step, the legs quickened only so far past their own pace.
-    const travel = lerp(this.walkTravel, this.runTravel, this.wRun), own = travel / lerp(this.rig.clips.walk.dur, this.rig.clips.run.dur, this.wRun);
-    const over = speed / own, rate = (over > QUICKEN ? QUICKEN + (over - QUICKEN) * QUICKEN_PAST : over) * own / travel;
+    // The gaits, by the pace: eased from one mix to the next, since a pace can change in a tick.
+    const mix = this.mix, to = this.paceMix(this.backing ? Math.min(speed, BACK_PACE) : speed, this.mixTo), ease_ = 1 - Math.exp(-9 * dt);
+    let travel = 0, own = 0;
+    for (let g = 0; g < mix.length; g++) { mix[g] += (to[g] - mix[g]) * ease_; travel += mix[g] * this.gaits[g].travel; own += mix[g] / this.gaits[g].clip.dur; }
+    // The stride, by the ground covered: a loop of the mix goes `travel`, so the feet hold the ground; the legs are
+    // quickened only so far past the mix's own cadence (a sidestep's pace is past any stride).
+    const rate = Math.min(speed / travel, own * QUICKEN);
+    this.rate = rate;                 // (loops a second: for whoever wants his cadence)
     if (grounded && !riding) this.phase = (this.phase + (this.backing ? -1 : 1) * rate * dt + 1) % 1;
     this.breath += dt;
-    this.lean = damp(this.lean, s.sprinting ? 0.13 : 0, 6, dt);
-    this.roll = damp(this.roll, (s.dodge > 0 ? clamp(left, -1, 1) * 0.3 : clamp(left / 6, -1, 1) * 0.05), 12, dt);
+    // The lean of the whole of him: forward as he gains pace, back as he loses it; into a turn; into a sidestep.
+    const was = this.was === undefined ? fwd : this.was, wasYaw = this.wasYaw === undefined ? s.yaw : this.wasYaw;
+    this.was = fwd; this.wasYaw = s.yaw;
+    this.gain = damp(this.gain, dt > 0 ? clamp((fwd - was) / dt, -40, 40) : 0, 5, dt);
+    const on = moving || this.wDash > 0.01 ? 1 : 0;
+    this.lean = damp(this.lean, on * (clamp(this.gain * LEAN.gain, -LEAN.back, LEAN.fwd) + (s.dodge > 0 ? clamp(fwd / 9, -1, 1) * LEAN.dash : 0)), 7, dt);
+    const turning = dt > 0 ? wrapAngle(s.yaw - wasYaw) / dt : 0;
+    this.bank = damp(this.bank, on * clamp(turning * speed * LEAN.turn, -LEAN.bank, LEAN.bank), 6, dt);
+    this.roll = damp(this.roll, (s.dodge > 0 ? clamp(left / 9, -1, 1) * LEAN.dash : clamp(left / 6, -1, 1) * 0.05), 12, dt);
     this.pitch = damp(this.pitch, clamp(s.pitch, -1, 1), 14, dt);
     this.guard = s.guard || 0;
     const c = s.cast;
@@ -418,11 +479,14 @@ export class PlayerBody {
     if (hold) {
       this.side(hold, A.sign, to);
       if (right && hold === HOLD.staff) {
-        // On the move the staff is carried, not planted: a little higher and further over, and it rides the stride.
+        // On the move the staff is carried, not planted: a little higher and further over (and the fist pumps: build).
         const r = this.side(HOLD.staffRun, A.sign, T2), k = this.wMove * (0.35 + 0.65 * this.wRun);
         this.blendHold(to, to, r, k);
-        const bob = Math.sin((this.phase * 2 + 0.1) * TAU) * 0.018 * this.wMove;
-        to.at[1] += bob; to.at[2] += Math.cos(this.phase * TAU) * 0.03 * this.wMove * this.wRun;
+        const flat = this.mix[3] * this.wMove;
+        if (flat > 0.01) this.blendHold(to, to, this.side(HOLD.staffSprint, A.sign, T2), flat);
+      }
+      if (!right && hold === HOLD.skull) {
+        this.blendHold(to, to, this.side(HOLD.skullRun, A.sign, T2), this.wMove * (0.35 + 0.65 * this.wRun));
       }
       if (riding) {
         const m = right ? RIDE_ARMS.back : RIDE_ARMS.front, k = hold === HOLD.rideFront || hold === HOLD.rideBack ? 1 : RIDE_ARMS.held;
@@ -437,6 +501,7 @@ export class PlayerBody {
     }
     // The hold eases in over the clip's own swing (an empty hand's weight is none).
     A.w = damp(A.w, hold ? 1 : 0, 9, dt);
+    A.pump = damp(A.pump, hold && !riding ? hold.pump || 0 : 0, 8, dt);
     if (hold) {
       if (!A.now) { A.now = true; this.copyHold(A.pose, to); }
       else this.blendHold(A.pose, A.pose, to, 1 - Math.exp(-14 * dt));
@@ -489,22 +554,41 @@ export class PlayerBody {
     this.curT = tr;
     // ---- the legs and the body under the arms ----
     rot.set(this.idleR); tr.set(this.idleT);
-    if (this.wMove > 0.001 || this.wAir > 0.001) {
-      const walk = rig.clips.walk, run = rig.clips.run, { aR, aT, bR, bT } = this;
+    for (const side of SIDES) set(this.arms[side].swing, 0, 0, 0);
+    if (this.wMove > 0.001 || this.wAir > 0.001 || this.wDash > 0.001) {
+      const { aR, aT, bR, bT, gaits, mix } = this;
       const air = this.wAir, ph = this.phase;
-      rig.sampleInto(run, ((ph + this.runAt) % 1) * run.dur, bR, bT);
-      if (this.wRun < 0.999) {
-        rig.sampleInto(walk, ((ph + this.walkAt) % 1) * walk.dur, aR, aT);
-        for (let k = 0; k < n; k++) quatNlerp(aR, k * 4, aR, k * 4, bR, k * 4, this.wRun);
-        for (let k = 0; k < n * 3; k++) aT[k] += (bT[k] - aT[k]) * this.wRun;
-      } else { aR.set(bR); aT.set(bT); }
-      if (air > 0.001) {
-        // A jump: the run's flight, held.
-        rig.sampleInto(run, ((AIR_PHASE + this.runAt) % 1) * run.dur, bR, bT);
-        for (let k = 0; k < n; k++) quatNlerp(aR, k * 4, aR, k * 4, bR, k * 4, air);
-        for (let k = 0; k < n * 3; k++) aT[k] += (bT[k] - aT[k]) * air;
+      // The gaits at the same place in their loops, mixed by the pace: the first there is, and the rest over it.
+      let had = 0;
+      set(MID.L, 0, 0, 0); set(MID.R, 0, 0, 0);
+      for (let g = 0; g < gaits.length; g++) {
+        const w = mix[g];
+        if (w < 0.002) continue;
+        const clip = gaits[g].clip;
+        add(MID.L, MID.L, gaits[g].mid.L, w); add(MID.R, MID.R, gaits[g].mid.R, w);
+        if (!had) { rig.sampleInto(clip, ph * clip.dur, aR, aT); had = w; continue; }
+        rig.sampleInto(clip, ph * clip.dur, bR, bT);
+        had += w;
+        const k = w / had;
+        for (let q = 0; q < n; q++) quatNlerp(aR, q * 4, aR, q * 4, bR, q * 4, k);
+        for (let q = 0; q < n * 3; q++) aT[q] += (bT[q] - aT[q]) * k;
       }
-      const w = Math.max(this.wMove, air);
+      // How far each hand is from the middle of its swing (the chest's frame): what a hand with something in it pumps by.
+      this.fk(aR, aT, 0, n - 1);
+      for (const side of SIDES) {
+        const A = this.arms[side], k = this.wMove * (1 - air);
+        this.handFrom(A, P1);
+        set(A.swing, (P1[0] - MID[side][0] / (had || 1)) * k, (P1[1] - MID[side][1] / (had || 1)) * k, (P1[2] - MID[side][2] / (had || 1)) * k);
+      }
+      const hang = Math.max(air, this.wDash);
+      if (hang > 0.001) {
+        // A jump: the run's flight, held. A sidestep: the sprint's, a leap.
+        const clip = gaits[this.wDash > air ? 3 : 2].clip;
+        rig.sampleInto(clip, AIR_PHASE * clip.dur, bR, bT);
+        for (let k = 0; k < n; k++) quatNlerp(aR, k * 4, aR, k * 4, bR, k * 4, hang);
+        for (let k = 0; k < n * 3; k++) aT[k] += (bT[k] - aT[k]) * hang;
+      }
+      const w = Math.max(this.wMove, hang);
       for (let k = 0; k < n; k++) quatNlerp(rot, k * 4, rot, k * 4, aR, k * 4, w);
       for (let k = 0; k < n * 3; k++) tr[k] += (aT[k] - tr[k]) * w;
     }
@@ -517,8 +601,36 @@ export class PlayerBody {
     const alive = 1 - this.wDead;
     this.baseR.set(rot);
     this.fk(rot, tr, 0, n - 1);
-    // ---- the hips turned the way he's going, and the lean of a sprint or a sidestep ----
     const ride = this.wRide;
+    // ---- standing: the weight from foot to foot and down with the breath, over feet that stay where they are ----
+    const still = (1 - this.wMove) * (1 - this.wAir) * (1 - ride) * (1 - this.wDash) * alive;
+    if (still > 0.01) {
+      const t = this.breath, { gp, gq } = this;
+      for (let i = 0; i < 2; i++) {
+        const f = this.legs[SIDES[i]].foot;
+        set(FEET[i], gp[f * 3], gp[f * 3 + 1], gp[f * 3 + 2]);
+        for (let k = 0; k < 4; k++) FEETQ[i][k] = gq[f * 4 + k];
+      }
+      tr[j.root * 3] += (Math.sin(t * 0.47) * 0.7 + Math.sin(t * 0.19 + 1.3) * 0.3) * IDLE.sway * still;
+      tr[j.root * 3 + 1] -= (0.5 + 0.5 * Math.sin(t * 1.5 + 0.4)) * IDLE.sink * still;
+      tr[j.root * 3 + 2] += Math.sin(t * 0.31 + 2) * IDLE.sway * 0.4 * still;
+      this.fk(rot, tr, 0, n - 1);
+      for (let i = 0; i < 2; i++) {
+        const L = this.legs[SIDES[i]];
+        this.limb(rot, L, FEET[i], set(P17, L.sign * 0.12, 0, 1));
+        this.stand(rot, L.foot, FEETQ[i]);
+      }
+    }
+    // ---- the lean of the whole of him, from the ground up: gaining and losing pace, a turn, a sidestep ----
+    const tipX = this.lean * (1 - ride) * alive, tipZ = -(this.bank + this.roll) * (1 - ride) * alive;
+    if (Math.abs(tipX) > 1e-4 || Math.abs(tipZ) > 1e-4) {
+      quatAxisAngle(Q5, 0, 1, 0, 0, tipX); quatAxisAngle(Q7, 0, 0, 0, 1, tipZ);
+      quatMul(Q5, 0, Q7, 0, Q5, 0);
+      quatRotate(tr, j.root * 3, Q5, 0, tr, j.root * 3);
+      quatMul(rot, j.root * 4, Q5, 0, rot, j.root * 4);
+      this.fk(rot, tr, 0, n - 1);
+    }
+    // ---- the hips turned the way he's going ----
     if (ride > 0.001) this.ride(rot, tr, ride);
     if (Math.abs(this.twist) > 1e-3 && alive > 0.01) {
       const a = this.twist * alive * (1 - ride);
@@ -534,17 +646,16 @@ export class PlayerBody {
     }
     // ---- the chest: breath, the lean, the cast's wind-up and throw, and the head to where you look ----
     const cast = CASTS[this.castKind], cw = this.castW * alive;
-    const breath = Math.sin(this.breath * 1.5) * 0.012 * (1 - this.wMove) * alive;
-    let bend = this.lean * this.wMove * (1 - ride) + breath, turn = 0;
+    const breath = Math.sin(this.breath * 1.5) * 0.016 * (1 - this.wMove) * alive;
+    let bend = breath, turn = 0;
     if (cast && cw > 0.001) {
       const b = ease(this.castB);
       bend += lerp(cast.lean[0] * this.castA, cast.lean[1], b) * cw;
       turn += lerp(cast.twist[0] * this.castA, cast.twist[1], b) * cw;
     }
-    if (Math.abs(bend) > 1e-4 || Math.abs(this.roll) > 1e-3) {
+    if (Math.abs(bend) > 1e-4) {
       quatAxisAngle(Q5, 0, 1, 0, 0, bend * 0.5);
       this.turn(rot, j.spine1, Q5); this.turn(rot, j.spine2, Q5);
-      if (Math.abs(this.roll) > 1e-3) { quatAxisAngle(Q5, 0, 0, 0, 1, -this.roll * alive * (1 - ride)); this.turn(rot, j.waist, Q5); }
     }
     if (Math.abs(turn) > 1e-4) {
       // (The casting shoulder is the right: back is a turn to his right.)
@@ -553,10 +664,13 @@ export class PlayerBody {
     }
     if (alive > 0.01) {
       // Looking up or down, a part of it in the neck and the rest in the head; turned back from the chest's own turn.
-      const look = -this.pitch * 0.32 * alive, back = turn * 0.6;
+      // (Standing, it looks about a little; and it's kept upright through whatever the body leans.)
+      const t = this.breath, about = (Math.sin(t * 0.29 + 0.6) * 0.6 + Math.sin(t * 0.13 + 2.1) * 0.4) * IDLE.look * still;
+      const look = -this.pitch * 0.32 * alive - (breath + tipX * 0.5) * 0.5 + Math.sin(t * 0.21) * IDLE.look * 0.3 * still, back = turn * 0.6 + about;
       quatAxisAngle(Q5, 0, 1, 0, 0, look); this.turn(rot, j.neck, Q5);
       quatAxisAngle(Q5, 0, 1, 0, 0, look * 0.8); this.turn(rot, j.head, Q5);
-      if (Math.abs(back) > 1e-4) { quatAxisAngle(Q5, 0, 0, 1, 0, back); this.turn(rot, j.head, Q5); }
+      if (Math.abs(back) > 1e-4) { quatAxisAngle(Q5, 0, 0, 1, 0, back * 0.5); this.turn(rot, j.neck, Q5); this.turn(rot, j.head, Q5); }
+      if (Math.abs(tipZ) > 1e-4) { quatAxisAngle(Q5, 0, 0, 0, 1, -tipZ * 0.6); this.turn(rot, j.head, Q5); }
     }
     // ---- the arms ----
     // Running, a hand with nothing in it is a loose fist, as anyone's is (the clips' hands are open): under whatever a hold
@@ -578,6 +692,13 @@ export class PlayerBody {
         w = Math.max(w, cw);
       }
       if (w < 0.002 || !h) continue;
+      // A hand with something in it still does a part of the clip's swing, round where it's held (not through a cast).
+      const pump = A.pump * (1 - cw);
+      if (pump > 0.002) {
+        quatRotate(P9, 0, this.gq, j.spine2 * 4, A.swing, 0);
+        h = this.copyHold(T7, h);
+        add(h.at, h.at, P9, pump);
+      }
       // The clip's own arm, kept to blend with.
       const keep = A.keep;
       for (let k = 0; k < 3; k++) { const q = keep[k] * 4; KEEP[k * 4] = rot[q]; KEEP[k * 4 + 1] = rot[q + 1]; KEEP[k * 4 + 2] = rot[q + 2]; KEEP[k * 4 + 3] = rot[q + 3]; }
@@ -685,8 +806,35 @@ export class PlayerBody {
     if (b > 1e-4) { quatRotate(P16, 0, q, 0, arc, 0); add(at, at, P16, b); }
   }
 
+  // Where what's slung on him has got to from where it hangs (JIG), in his own left and up: stepped once a tick from how
+  // his back is moving.
+  jigStep() {
+    const J = this.jig, s = this.s, dt = this.dt || 0, b = this.j.spine2 * 3, wt = this.rig.wt, sn = Math.sin(this.yaw), cs = Math.cos(this.yaw);
+    const at = [(wt[b] - s.x) * cs - (wt[b + 2] - s.z) * sn, wt[b + 1] - s.y];
+    if (!J.was || !(dt > 0) || dt > 0.1) { J.was = at; J.vel[0] = J.vel[1] = 0; return J; }
+    for (let i = 0; i < 2; i++) {
+      const vel = (at[i] - J.was[i]) / dt, acc = clamp((vel - J.vel[i]) / dt, -40, 40);
+      J.vel[i] = vel;
+      J.v[i] += (-JIG.k * J.p[i] - JIG.c * J.v[i] - acc) * dt;
+      J.p[i] = clamp(J.p[i] + J.v[i] * dt, -JIG.most, JIG.most);
+    }
+    J.was = at;
+    return J;
+  }
+
+  // A slung thing's frame (x, y up it, z its face, at) moved and rocked by the jig: k how much of it, rock how far a
+  // metre of it leans the thing over sideways, nod how far it tips it.
+  jigged(x, y, z, at, k, rock, nod) {
+    const J = this.jig, sn = Math.sin(this.yaw), cs = Math.cos(this.yaw), px = J.p[0] * k, py = J.p[1] * k;
+    at[0] += cs * px; at[2] -= sn * px; at[1] += py;
+    add(y, y, x, px * rock); add(y, y, z, py * nod); norm(y);
+    cross(P17, y, z); norm(P17); set(x, P17[0], P17[1], P17[2]);
+    cross(P17, x, y); set(z, P17[0], P17[1], P17[2]);
+  }
+
   // What he holds, a matrix each (a zero one: nothing there): the staff, the left hand's (skull, or the shield on the arm), the back's.
   hold(snap, off) {
+    this.jigStep();
     const s = this.s, m = this.props, R = this.arms.R, L = this.arms.L, at = P1, f = P2, t = P3, nn = P4, x = P5, z = P6;
     const sw = ease(s.stow || 0), { wq } = this.rig, sp = this.j.spine2, hp = this.j.hip;
     m.fill(0);
@@ -705,6 +853,7 @@ export class PlayerBody {
         quatRotate(P9, 0, Q2, 0, [-sl, cl * Math.cos(STOW.tip), cl * Math.sin(STOW.tip)], 0);
         quatRotate(P10, 0, Q2, 0, [0, 0, -1], 0);
         this.away(x, t, z, at, P9, P10, this.slung(P11, Q2, sp, STOW.staff), Q2, STOW.arc.staff, sw);
+        this.jigged(x, t, z, at, sw * 0.7, JIG.staff, 0);
       }
       put(m, 0, x, t, z, at, 1);
       add(this.staffTip, at, t, s.staffHead ?? STAFF_HEAD);
@@ -726,6 +875,7 @@ export class PlayerBody {
         quatRotate(P9, 0, Q6, 0, [0, 1, 0], 0);
         quatRotate(P10, 0, Q6, 0, STOW.face, 0);
         this.away(x, up, z, at, P9, P10, this.slung(P11, Q6, hp, STOW.skull), Q6, STOW.arc.skull, sw);
+        this.jigged(x, up, z, at, sw * 1.2, JIG.rock, JIG.nod);
       }
       put(m, 16, x, up, z, at, SKULL_SIZE * (1 + (STOW.size - 1) * sw));
     } else if (s.shield && !s.surf) {
@@ -733,12 +883,13 @@ export class PlayerBody {
       cross(x, t, nn); norm(x); cross(z, x, t);
       add(at, at, z, -SHIELD_SEAT);
       // (Put away it goes round onto his back: then it's the back's.)
-      if (sw > 0) { this.onBack(P12, P13, P14, P15, sw); this.away(x, t, z, at, P13, P14, P15, Q2, STOW.arc.shield, sw); put(m, 32, x, t, z, at, SHIELD_SIZE); }
+      if (sw > 0) { this.onBack(P12, P13, P14, P15, sw); this.away(x, t, z, at, P13, P14, P15, Q2, STOW.arc.shield, sw); this.jigged(x, t, z, at, sw, JIG.rock, JIG.nod); put(m, 32, x, t, z, at, SHIELD_SIZE); }
       else put(m, 16, x, t, z, at, SHIELD_SIZE);
     }
     if (s.shield && s.skull && !s.surf) {
       // Slung on the back: its face out behind, leaned over so the point is down toward one hip.
       this.onBack(x, t, z, at, sw);
+      this.jigged(x, t, z, at, 1, JIG.rock, JIG.nod);
       put(m, 32, x, t, z, at, SHIELD_SIZE);
     } else if (s.surf) {
       // The board under his feet, on the ground's lie, its point the way it's going.
@@ -761,8 +912,9 @@ function put(m, o, x, y, z, at, k) {
   m[o + 12] = at[0]; m[o + 13] = at[1]; m[o + 14] = at[2]; m[o + 15] = 1;
 }
 
-const BACK_NOW = [0, 0, 0], Q6 = new Float32Array(4);
+const BACK_NOW = [0, 0, 0], Q6 = new Float32Array(4), Q7 = new Float32Array(4);
+const MID = { L: [0, 0, 0], R: [0, 0, 0] }, FEET = [[0, 0, 0], [0, 0, 0]], FEETQ = [new Float32Array(4), new Float32Array(4)];
 const Q1 = new Float32Array(4), Q2 = new Float32Array(4), Q3 = new Float32Array(4), Q4 = new Float32Array(4), Q5 = new Float32Array(4), KEEP = new Float32Array(12), DIG = new Float32Array(25 * 4);
 const P1 = v3(), P2 = v3(), P3 = v3(), P4 = v3(), P5 = v3(), P6 = v3(), P7 = v3(), P8 = v3(), P9 = v3(), P10 = v3(), P11 = v3(), P12 = v3(), P13 = v3(), P14 = v3(), P15 = v3(), P16 = v3(), P17 = v3();
 const hold0 = () => ({ at: v3(), f: v3(), t: v3(), pole: v3(), curl: 0, thumb: 0, spread: 0, fall: 0, tuck: 0, flat: 0, along: 0 });
-const T1 = hold0(), T2 = hold0(), T3 = hold0(), T4 = hold0(), T5 = hold0(), T6 = hold0();
+const T1 = hold0(), T2 = hold0(), T3 = hold0(), T4 = hold0(), T5 = hold0(), T6 = hold0(), T7 = hold0();
