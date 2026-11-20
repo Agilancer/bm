@@ -15,7 +15,7 @@ import { PHOBOS } from './phobos-data.js';
 import { HUBS, hubHouses, hubFar, hubNear, inHub } from './phobos-hubs.js';
 import { MOUTH_SQUARE, PHOBOS_SEALS, SEAL_SQUARE, SEWER_MOUTHS, inSealSquare } from './phobos-seals.js';
 import { cityTowers, towerFar, towerInner, towerNear, towerYards, wallTops, wallTowerAt } from './phobos-towers.js';
-import { bridgeHouse, dressHouse, houseFarMore, jutOf, roofTop, roofs, streetLife, styleHouses } from './phobos-houses.js';
+import { bridgeHouse, dressHouse, eavesOf, houseFarMore, jutOf, roofTop, roofs, streetLife, styleHouses } from './phobos-houses.js';
 
 const TAU = Math.PI * 2;
 const Y = (x, z) => terrainHeight(x, z);
@@ -42,7 +42,9 @@ function gable(K, layer, x, y, z, hx, hz, rh, yaw, wall = layer, over = 0) {
 function roofOf(h) {
   const id = Math.round(h.x * 7 + h.z * 13), turn = hash2(id, 91) < (h.shop ? 0.45 : 0.33), pitch = 0.55 + 0.65 * hash2(id, 92);
   const sx = turn ? h.hz : h.hx, sz = turn ? h.hx : h.hz;
-  return { turn, yaw: h.yaw + (turn ? Math.PI / 2 : 0), rh: Math.min(sz * pitch, 8), sx: sx + 0.4, sz: sz + 0.4 };
+  // (A guildhall's steep, to stand over its row.)
+  const hall = h.mark?.kind === 'guildhall';
+  return { turn, yaw: h.yaw + (turn ? Math.PI / 2 : 0), rh: Math.min(sz * (hall ? Math.max(pitch, 1.25) : pitch), hall ? 9.5 : 8), sx: sx + 0.4, sz: sz + 0.4 };
 }
 // Where a house stands on its ground: the lowest and highest of its corners' ground, and its floor (the highest).
 export function footing(h) {
@@ -138,12 +140,15 @@ function houseFar(K, h) {
   // (On a phone a flat lid in the roof's own tiles: ten thousand ridged roofs are more corners than it should hold.)
   // (Its roof by its style, src/core/phobos-houses.js: a gable, a hip, a pent, a mansard, a gambrel, a stepped gable, a flat
   // lid behind a parapet, or the rafters of one burnt out.)
-  const kind = h.st?.roof || 'gable';
-  K.box(h.wall, h.x, lo - 0.5, h.z, h.hx, hi - lo + h.h + 0.5, h.hz, h.yaw, { top: h.roof ? (K.lean || kind === 'flat' ? h.roof : kind === 'ribs' ? h.wall : false) : h.wall, collide: false });
-  if (h.roof && !K.lean) { roofs(K, kind, h.roof, h.wall, h.x, hi + h.h, h.z, roofOf(h), -h.front); houseFarMore(K, h, F, hi + h.h); }
+  // (ev: its eaves; a tower-house's main block stops short of its height, a narrower stage and a cap over it: houseFarMore.
+  // On a phone, the whole of it one box.)
+  const kind = h.st?.roof || 'gable', ev = K.lean ? h.h : eavesOf(h);
+  K.box(h.wall, h.x, lo - 0.5, h.z, h.hx, hi - lo + ev + 0.5, h.hz, h.yaw, { top: h.roof ? (K.lean || kind === 'flat' ? h.roof : kind === 'ribs' ? h.wall : false) : h.wall, collide: false });
+  if (h.roof && !K.lean) { roofs(K, kind, h.roof, h.wall, h.x, hi + ev, h.z, roofOf(h), -h.front); houseFarMore(K, h, F, hi + ev); }
   // (One in three has a lit window in its front, big enough to be seen from the castle: the city's alight from far off.)
   const id = Math.round(h.x * 7 + h.z * 13);
-  if (h.roof && hash2(id, 61) < 0.55) {
+  // (Not a one-off house's on a phone: its land holds not a corner more than it did.)
+  if (h.roof && hash2(id, 61) < 0.55 && !(K.lean && h.mark)) {
     const { c, s } = F, f = h.front, wy = hi + 1.3 + Math.floor(hash2(id, 62) * Math.max(1, Math.round(h.h / 3.3))) * 3.3, wx = (hash2(id, 63) - 0.5) * h.hx, wz = f * (h.hz + 0.06);
     const P = (lx, ly, lz) => [h.x + lx * c + lz * s, ly, h.z - lx * s + lz * c];
     if (wy + 1.6 < hi + h.h) K.quad('eve:flame', P(wx + f * 0.65, wy, wz), P(wx - f * 0.65, wy, wz), P(wx - f * 0.65, wy + 1.4, wz), P(wx + f * 0.65, wy + 1.4, wz), [f * s, 0, f * c]);
@@ -223,7 +228,7 @@ function backyard(K, h, P, fy, r) {
   K.colliders.length = n0;
 }
 function houseNear(K, h) {
-  const F = footing(h), { lo, hi, c, s } = F, f = h.front, top = hi + h.h, fy = hi + 0.1, ceil = Math.min(top - 0.3, fy + 3.1);
+  const F = footing(h), { lo, hi, c, s } = F, f = h.front, top = hi + eavesOf(h), fy = hi + 0.1, ceil = Math.min(top - 0.3, fy + 3.1);
   const P = (lx, ly, lz) => [h.x + lx * c + lz * s, ly, h.z - lx * s + lz * c];
   const id = Math.round(h.x * 7 + h.z * 13), r = (k) => hash2(id, k), ruin = !h.roof;
   // The windows first, so the walls can be built round them. A pair to a storey front and back where there's room (the
@@ -241,7 +246,7 @@ function houseNear(K, h) {
     const wx = sd * Math.min(h.hx - (big ? 1.05 : 1.1), DOOR + 1.6), wy = fy + (big ? 0.9 : 1.2) + st * 3.3;
     if (wy + (big ? 1.6 : 1) > top || h.hx < 2.4) continue;
     if (side < 0 && hash2(id + st, 77) > 0.3) continue;
-    const lit = !ruin && r(9) < 0.8 && hash2(id + st * 3 + sd, side + 9) < (st === 0 ? 0.42 : 0.2);
+    const lit = !ruin && r(9) < 0.8 && hash2(id + st * 3 + sd, side + 9) < (st === 0 ? 0.42 : 0.3);
     const ww = big && side > 0 ? 0.4 + 0.06 * r(14) : 0.26 + 0.08 * r(14), wh = big && side > 0 ? 1.15 + 0.25 * r(15) : 0.6 + 0.2 * r(15);
     const open = !ruin && st <= (up ? 1 : 0) && wy + wh < roofY - 0.15 && Math.abs(wx) + ww < ix - 0.1;
     wins.push({ st, side, sd, q: side * f, wx, wy, ww, wh, lit, open });
@@ -264,7 +269,9 @@ function houseNear(K, h) {
     }
   };
   // Outside: the sides whole; the front and the back round their doorway and their open windows.
-  const holes = (sgn, inner) => [...(sgn === f ? [[-DOOR, DOOR, inner ? fy - 1 : lo - 1, dh]] : []), ...wins.filter((w) => w.open && w.q === sgn).map((w) => [w.wx - w.ww, w.wx + w.ww, w.wy, w.wy + w.wh])];
+  // (The doorway's hole stops at its sill outside: cut on down to the ground, a house on a slope showed the street the
+  // underside of its floor, pale voids under every door. The critics.)
+  const holes = (sgn, inner) => [...(sgn === f ? [[-DOOR, DOOR, inner ? fy - 1 : fy - 0.22, dh]] : []), ...wins.filter((w) => w.open && w.q === sgn).map((w) => [w.wx - w.ww, w.wx + w.ww, w.wy, w.wy + w.wh])];
   wallZ(h.wall, h.hz, 1, lo - 0.5, top, holes(1, false)); wallZ(h.wall, -h.hz, 1, lo - 0.5, top, holes(-1, false));
   const out = (ax, az, bx, bz, y0, y1) => K.quad(h.wall, P(ax, y0, az), P(bx, y0, bz), P(bx, y1, bz), P(ax, y1, az));
   out(h.hx, -h.hz, h.hx, h.hz, lo - 0.5, top); out(-h.hx, h.hz, -h.hx, -h.hz, lo - 0.5, top);
@@ -302,15 +309,17 @@ function houseNear(K, h) {
   for (const w of wins) {
     // (On a deep jetty, src/core/phobos-houses.js, the street front's windows from the third storey up stand out with it.)
     const { st, sd, q, wx, wy, ww, wh, lit } = w, wz = q * (h.hz + 0.05 + (q === f && st >= 2 ? jutOf(h) : 0)), d = q > 0 ? 1 : -1, N = [q * s, 0, q * c], fw = ww + 0.1;
-    const frame = (zz, nn, rev) => {
+    const frame = (zz, nn, rev, jambs = false) => {
       const Q = (x0, y0, x1, y1) => (rev ? K.quad('dark:wood', P(x0, y0, zz), P(x1, y0, zz), P(x1, y1, zz), P(x0, y1, zz), nn) : K.quad('dark:wood', P(x1, y0, zz), P(x0, y0, zz), P(x0, y1, zz), P(x1, y1, zz), nn));   // (dark: in plain wood, lit by the lamps, the frames glowed orange, the critics)
-      Q(wx - d * fw, wy - 0.12, wx + d * fw, wy); Q(wx - d * fw, wy + wh, wx + d * fw, wy + wh + 0.1);
+      if (!jambs) { Q(wx - d * fw, wy - 0.12, wx + d * fw, wy); Q(wx - d * fw, wy + wh, wx + d * fw, wy + wh + 0.1); }
       Q(wx - d * fw, wy, wx - d * ww, wy + wh); Q(wx + d * ww, wy, wx + d * fw, wy + wh);
     };
     if (w.open) {
       // Open: its surround inside and out, one mullion up the middle (never a bar across, which would make a cross of it,
       // and the cross is hers), and the light of the room, if anyone's in, falling out of it at night.
-      frame(wz, N, false); frame(q * (iz - 0.02), [-q * s, 0, -q * c], true);
+      // (Inside, its two jambs only: its head and sill, seen from the street below through the opening, lay across the
+      // mullion a little under the outer head, a transom: four panes, a cross. The critics, 2026-11-20.)
+      frame(wz, N, false); frame(q * (iz - 0.02), [-q * s, 0, -q * c], true, true);
       const [mx, , mz] = P(wx, 0, q * (h.hz - WALL / 2));
       K.box('dark:wood', mx, wy, mz, 0.045, wh, WALL / 2, h.yaw, { collide: false });
       if (lit) (K.lamps ||= []).push({ p: P(wx, wy + wh * 0.6, q * (iz - 0.6)), c: [1, 0.6, 0.3], r: 7, i: 5, flicker: 0.35, indoor: true });
@@ -322,7 +331,7 @@ function houseNear(K, h) {
     }
     // (A stone sill out under it, and one leaf of a painted pair hung back at its side, the PH2 pack's.)
     K.quad('stone', P(wx - d * fw, wy - 0.12, wz), P(wx + d * fw, wy - 0.12, wz), P(wx + d * fw, wy - 0.12, wz + q * 0.16), P(wx - d * fw, wy - 0.12, wz + q * 0.16), [0, 1, 0]);
-    if (sd !== 0 && (w.open || st === 0 || r(16 + st) < 0.5)) K.quad('p2_shutters', P(wx - d * fw, wy, wz + q * 0.03), P(wx - d * (fw + 0.34), wy, wz + q * 0.03), P(wx - d * (fw + 0.34), wy + wh, wz + q * 0.03), P(wx - d * fw, wy + wh, wz + q * 0.03), N, [[0.5, 1], [0, 1], [0, 0], [0.5, 0]]);
+    if (sd !== 0 && (w.open || st === 0 || r(16 + st) < 0.5)) K.quad(/^(pale|frost):/.test(h.wall) ? 'dark:p2_shutters' : 'p2_shutters', P(wx - d * fw, wy, wz + q * 0.03), P(wx - d * (fw + 0.34), wy, wz + q * 0.03), P(wx - d * (fw + 0.34), wy + wh, wz + q * 0.03), P(wx - d * fw, wy + wh, wz + q * 0.03), N, [[0.5, 1], [0, 1], [0, 0], [0.5, 0]]);
   }
   if (big && !ruin) {
     const NF = [f * s, 0, f * c], band = (y, t, o) => { K.quad('dark:stone', P(-h.hx, y, fz + f * o), P(h.hx, y, fz + f * o), P(h.hx, y + t, fz + f * o), P(-h.hx, y + t, fz + f * o), NF); K.quad('dark:stone', P(-h.hx, y + t, fz), P(h.hx, y + t, fz), P(h.hx, y + t, fz + f * o), P(-h.hx, y + t, fz + f * o), [0, 1, 0]); };
@@ -350,14 +359,16 @@ function houseNear(K, h) {
     const sign = r(23) < 0.9, cloth = r(21) < 0.5 ? 'cloth_red' : 'umber:cloth_oat', ay = fy + 2.75;
     let aw = Math.min(h.hx - (sign ? 0.85 : 0.3), 2.2);
     if (r(22) < 0.75 && aw > DOOR + 0.35) { K.quad(cloth, P(aw * f, ay, fz + f * 0.02), P(-aw * f, ay, fz + f * 0.02), P(-aw * f, ay - 0.5, fz + f * 1.5), P(aw * f, ay - 0.5, fz + f * 1.5)); K.quad(cloth, P(-aw * f, ay, fz + f * 0.02), P(aw * f, ay, fz + f * 0.02), P(aw * f, ay - 0.5, fz + f * 1.5), P(-aw * f, ay - 0.5, fz + f * 1.5)); } else aw = 0;
-    if (sign) shopSign(K, h, P, fy, fz, Math.floor(r(24) * SIGNS), aw ? -(aw + 0.45) : null);
+    if (sign && h.mark?.kind !== 'tavern') shopSign(K, h, P, fy, fz, Math.floor(r(24) * SIGNS), aw ? -(aw + 0.45) : null);   // (a tavern has a bigger board of its own: phobos-houses.js)
     if (r(24) < 0.45) { const g = P(DOOR + 1.6, 0, fz + f * 0.8); K.goods(g[0], g[2], 4, 0.7); }
   }
   if (!ruin) backyard(K, h, P, fy, r);
   // What's its own: its style's and its district's dress (src/core/phobos-houses.js).
   if (!ruin) { const nd = K.colliders.length; dressHouse(K, h, { P, F, fy, top, f, storeys, wins, R: roofOf(h), flag, BANNER, lamp: (p, rr, i) => (K.lamps ||= []).push({ p, c: [1, 0.62, 0.3], r: rr, i, flicker: 0.35 }) }); K.colliders.length = nd; }
   const n1 = K.colliders.length;
-  if (/poor_brick|daub|soot/.test(h.wall) && r(17) < 0.16 && h.h > 7) { const a = P(-h.hx * 0.5, 0, fz + f * 0.15), b = P(-h.hx * 0.5, 0, fz + f * 2.85); K.washing(a[0], a[2], b[0], b[2], 3.6 + r(18) * 2.4); }
+  // (No washing on tall posts out from the fronts any more: end on, two posts and a line of red and buff cloths were a pole
+  // with a yard across its head and two flags, a T down every poor street. The critics, 2026-11-20; the V and T rule. The
+  // washing's over the sills and the galleries now: src/core/phobos-houses.js.)
   if (r(19) < 0.14) { const q = P(-DOOR - 1.1, 0, fz + f * 0.5); K.barrel(q[0], q[2]); }
   else if (r(19) < 0.2) { const q = P(h.hx - 1.2, 0, fz + f * 0.45); K.woodpile(q[0], q[2], h.yaw, 0.9, 0.8, 0.3); }
   K.colliders.length = n1;
@@ -813,18 +824,22 @@ const sloughD = (x, z) => { let d = 1e9; for (let i = 0; i + 1 < SLOUGH.length; 
 // umber, soot), so from the castle the city's quarters are told apart: the burnt one soot-black, the rich slate and his
 // ox-blood, the market and the tanners old clay, the poor old tile gone black. No sage or pink: a toy town's.)
 const LOOK = {
-  barbican: { lot: [14, 12], h: [9, 14], fill: 0.5, wall: ['ph_basalt', 'dark:block'], roof: ['dark:roof_2', 'p2_slate_roof'], row: 3, alley: 6 },
-  cinder: { lot: [9, 10], h: [4, 10], fill: 0.86, wall: ['ph_burnt_wall', 'ph_soot_brick', 'ph_burnt_wall', 'p2_char_planks'], roof: [null, null, 'p2_burnt_roof', 'dark:roof_2', 'p2_burnt_roof'] },
-  rookeries: { lot: [7, 9], h: [9, 17], fill: 0.97, wall: ['ph_poor_brick', 'ph_poor_brick', 'ph_soot_brick', 'ph_daub'], roof: ['p2_shingle_roof', 'umber:roof_4', 'p2_slate_roof', 'roof_4', 'soot:p2_shingle_roof', 'soot:roof_4'], row: 5, alley: 2.4 },
-  market: { lot: [8, 11], h: [8, 13], fill: 0.95, wall: ['ph_market_wall', 'ph_market_wall', 'ph_daub'], roof: ['umber:roof_1', 'p2_shingle_roof', 'p2_slate_roof', 'umber:roof_2', 'slate:roof_2'], open: 48 },
-  wharf: { lot: [16, 13], h: [8, 11], fill: 0.9, wall: ['ph_poor_brick', 'rubble', 'p2_tar_boards'], roof: ['p2_slate_roof', 'soot:roof_4', 'p2_shingle_roof'], row: 2 },
-  tanners: { lot: [8, 10], h: [7, 11], fill: 0.94, wall: ['ph_daub', 'ph_poor_brick', 'ph_daub'], roof: ['umber:roof_3', 'p2_shingle_roof', 'roof_4', 'soot:p2_shingle_roof'] },
-  bones: { lot: [10, 13], h: [6, 10], fill: 0.3, wall: ['p2_bone_rubble', 'pale:stone', 'p2_bone_rubble'], roof: ['p2_slate_roof', 'dark:roof_2'], row: 3, alley: 7 },
-  barracks: { lot: [22, 11], h: [9, 12], fill: 0.9, wall: ['soot:block', 'slate:course'], roof: ['p2_slate_roof', 'blood:p2_blood_tiles', 'slate:roof_1'], open: 62, row: 2, alley: 5 },
-  mages: { lot: [11, 12], h: [11, 16], fill: 0.9, spireWall: 'slate:course', wall: ['slate:ph_dressed', 'ph_rich_brick', 'frost:course'], roof: ['p2_verdigris_roof', 'p2_slate_roof', 'dark:roof_2', 'p2_lead_roof'], spires: 0.06, row: 3 },
-  dukes: { lot: [15, 15], h: [10, 14], fill: 0.85, wall: ['slate:ph_dressed', 'ph_rich_brick'], roof: ['p2_lead_roof', 'blood:p2_blood_tiles', 'p2_slate_roof', 'blood:roof_2'], spires: 0.04, row: 2, alley: 5 },
-  approach: { lot: [11, 12], h: [9, 14], fill: 0.85, wall: ['ph_granite', 'slate:ph_dressed'], roof: ['blood:p2_blood_tiles', 'dark:roof_2', 'p2_slate_roof'], row: 3 },
-  other: { lot: [8, 10], h: [7, 12], fill: 0.93, wall: ['ph_market_wall', 'ph_poor_brick', 'ph_daub'], roof: ['p2_shingle_roof', 'umber:roof_4', 'p2_slate_roof', 'slate:roof_3', 'umber:roof_1', 'dark:roof_2'] },
+  // (Each quarter roofed in a colour and a stuff of its own, and built to a height of its own, so from over the roofs and from
+  // the castle the city is ten districts and not one grey sea: the critics, 2026-11-20. Dark slate at the gate; burnt black;
+  // the tenements' brown shingle, tall; the market's old clay; moss-green by the water; the dyers' olive; the Bone Yards
+  // pale and low; the garrison's blue slate, a third of it his red; the Approach's ox-blood; the Rise's verdigris, tallest; the dukes' lead.)
+  barbican: { lot: [14, 12], h: [9, 13], fill: 0.5, wall: ['ph_basalt', 'dark:block'], roof: ['dark:roof_2', 'dark:p2_slate_roof'], row: 3, alley: 6 },
+  cinder: { lot: [9, 10], h: [4, 9], fill: 0.86, wall: ['ph_burnt_wall', 'ph_soot_brick', 'ph_burnt_wall', 'p2_char_planks'], roof: [null, null, 'p2_burnt_roof', 'char:roof_4', 'p2_burnt_roof'] },
+  rookeries: { lot: [7, 9], h: [11, 20], fill: 0.97, wall: ['ph_poor_brick', 'ph_poor_brick', 'ph_soot_brick', 'ph_daub'], roof: ['p2_shingle_roof', 'p2_shingle_roof', 'soot:p2_shingle_roof', 'umber:p2_shingle_roof'], row: 5, alley: 2.4 },
+  market: { lot: [8, 11], h: [9, 14], fill: 0.95, wall: ['ph_market_wall', 'ph_market_wall', 'ph_daub'], roof: ['umber:roof_1', 'umber:roof_2', 'umber:roof_1', 'umber:roof_3'], open: 48 },
+  wharf: { lot: [16, 13], h: [6, 9], fill: 0.9, wall: ['ph_poor_brick', 'rubble', 'p2_tar_boards'], roof: ['moss:p2_shingle_roof', 'moss:roof_4', 'moss:p2_slate_roof'], row: 2 },
+  tanners: { lot: [8, 10], h: [7, 11], fill: 0.94, wall: ['ph_daub', 'ph_poor_brick', 'ph_daub'], roof: ['mire:roof_3', 'mire:p2_shingle_roof', 'mire:roof_3', 'umber:roof_3'] },
+  bones: { lot: [10, 13], h: [5, 8], fill: 0.3, wall: ['p2_bone_rubble', 'pale:stone', 'p2_bone_rubble'], roof: ['pale:p2_slate_roof', 'pale:roof_2'], row: 3, alley: 7 },
+  barracks: { lot: [22, 11], h: [8, 10], fill: 0.9, wall: ['soot:block', 'slate:course'], roof: ['slate:roof_1', 'slate:roof_1', 'blood:p2_blood_tiles'], open: 62, row: 2, alley: 5 },
+  mages: { lot: [11, 12], h: [12, 19], fill: 0.9, spireWall: 'slate:course', wall: ['slate:ph_dressed', 'ph_rich_brick', 'frost:course'], roof: ['p2_verdigris_roof', 'p2_verdigris_roof', 'frost:p2_slate_roof'], spires: 0.06, row: 3 },
+  dukes: { lot: [15, 15], h: [11, 15], fill: 0.85, wall: ['slate:ph_dressed', 'ph_rich_brick'], roof: ['p2_lead_roof', 'p2_lead_roof', 'slate:p2_slate_roof', 'blood:p2_blood_tiles'], spires: 0.04, row: 2, alley: 5 },
+  approach: { lot: [11, 12], h: [10, 15], fill: 0.85, wall: ['ph_granite', 'slate:ph_dressed'], roof: ['blood:p2_blood_tiles', 'dark:roof_2', 'blood:p2_blood_tiles'], row: 3 },
+  other: { lot: [8, 10], h: [7, 12], fill: 0.93, wall: ['ph_market_wall', 'ph_poor_brick', 'ph_daub'], roof: ['p2_slate_roof', 'slate:roof_3', 'p2_slate_roof', 'soot:roof_4'] },
 };
 function districtAt(x, z) {
   let best = 'other', q = 1.3, at = null;
