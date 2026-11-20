@@ -29,14 +29,14 @@ const PI = Math.PI;
 // and seventy long; the Vault twenty-two metres up. No room lights itself (fires: 0, hang: 0): each has two or three
 // lamps of its own, and the dark between them.)
 const rooms = [
-  R('au_door', 'the Undercroft Stair', 0, -16, 4, 24, 0, 6, { rock: 'p2_sooty_plaster', foot: 'soot:block', ground: 'flags', banners: 0, fires: 0 }),
-  R('au_still', 'the Great Stillroom', 8, -54, 15, 18, 0, 12, { rock: 'p2_sooty_plaster', foot: 'soot:block', ground: 'flags', banners: 0, fires: 0, hang: 0 }),
+  R('au_door', 'the Undercroft Stair', 0, -16, 4, 24, 0, 6, { rock: 'ph_grey_plaster', foot: 'soot:block', ground: 'flags', banners: 0, fires: 0 }),
+  R('au_still', 'the Great Stillroom', 8, -54, 15, 18, 0, 12, { rock: 'ph_grey_plaster', foot: 'soot:block', ground: 'flags', banners: 0, fires: 0, hang: 0 }),
   R('au_jars', 'the Hall of Jars', -56, -48, 16, 16, 0, 9, { rock: 'p2_jar_shelves', foot: 'soot:block', ground: 'slate:flags', banners: 0, fires: 0, hang: 0 }),
   R('au_retort', 'the Retort Room', 64, -66, 13, 11, 0, 9, { rock: 'p2_fireback', foot: 'soot:block', ground: 'flags', banners: 0, fires: 0 }),
   R('au_green', 'the Green Cellar', -56, -98, 14, 14, 0, 5, { rock: 'p2_waterline_wall', foot: 'mire:block', ground: 'p2_ash_clay_ground', banners: 0, fires: 0, hang: 0 }),
   R('au_feed', 'the Feeding Gallery', 16, -104, 5, 34, 0, 10, { rock: 'slate:ashlar', foot: 'soot:block', ground: 'p2_walk_paving', banners: 12, cloth: 'forest:cloth_red', fires: 0 }),
   R('au_cold', 'the Cold Store', 58, -112, 12, 10, 0, 5, { rock: 'slate:ashlar', foot: 'slate:block', ground: 'slate:flags', banners: 0, fires: 0 }),
-  R('au_hatch', 'the Hatch Stair', 62, -92, 6, 6, 0, 7, { rock: 'p2_sooty_plaster', foot: 'soot:block', ground: 'p2_worn_floorboards', banners: 0, fires: 0 }),
+  R('au_hatch', 'the Hatch Stair', 62, -92, 6, 6, 0, 7, { rock: 'ph_grey_plaster', foot: 'soot:block', ground: 'p2_worn_floorboards', banners: 0, fires: 0 }),
   R('au_cupboard', 'the Poison Cupboard', -86, -48, 6, 6, 0, 5, { rock: 'p2_jar_shelves', foot: 'soot:block', ground: 'p2_worn_floorboards', banners: 0, fires: 0 }),
   R('au_vault', 'the Growing Vault', 16, -160, 20, 24, 0, 22, { rock: 'p2_waterline_wall', foot: 'mire:block', ground: 'p2_ash_clay_ground', banners: 20, cloth: 'forest:cloth_red', fires: 0, hang: 0 }),
 ];
@@ -83,14 +83,15 @@ const props = [];
   // from each one's neck a pipe up to the roof and away across it, the four of them side by side and none crossing,
   // two down the south wall into the floor and two on over the Feeding Gallery to the Vault; the small work clustered
   // on benches between; two lamps. (What's seen from the stair: copper and fire to left and right, pipes overhead.)
-  add('copper', -3.2, -56, { yaw: PI / 2, r: 1.9, h: 3.3 }); add('copper', -3.4, -65, { yaw: PI / 2, r: 1.7, h: 3 });
-  add('copper', 19.2, -42, { yaw: -PI / 2, r: 1.9, h: 3.3 }); add('copper', 19.4, -51, { yaw: -PI / 2, r: 1.7, h: 3 });
-  pipe([-3.2, -56, 5.5], [-3.2, -56, 9.6], [4.5, -56, 9.6], [4.5, -71.5, 9.6], [4.5, -71.5, 0.3]);
-  pipe([-3.4, -65, 5.2], [-3.4, -65, 8.2], [1.5, -65, 8.2], [1.5, -71.5, 8.2], [1.5, -71.5, 0.3]);
-  pipe([19.2, -42, 5.5], [19.2, -42, 9.3], [13, -42, 9.3], [13, -137, 9.3]);
-  pipe([19.4, -51, 5.2], [19.4, -51, 8.4], [15.4, -51, 8.4], [15.4, -137, 8.4]);
-  add('benchstills', 7, -44, { yaw: 0.2, w: 2 }); add('benchstills', 10, -52, { yaw: PI / 2, w: 1.8 }); add('benchstills', 6, -62, { yaw: -0.15, w: 2 });
-  add('vat', 13, -62, { r: 1.1 }); add('barrels', -5, -38.5); add('crates', 21, -70); add('barrels', 21.4, -58); add('heap', -5, -70, { r: 1.1, layer: 'dark:rubble' });
+  add('copper', -1.4, -58, { yaw: PI / 2, r: 3.1, h: 5.6, solid: true }); add('copper', -4.4, -67.4, { yaw: PI / 2, r: 1.7, h: 3 });
+  add('copper', 17.4, -45.6, { yaw: -PI / 2, r: 3.1, h: 5.6, solid: true }); add('copper', 20.4, -56, { yaw: -PI / 2, r: 1.7, h: 3 });
+  add('channel', 2.2, -58, { to: [9, -71], w: 0.45 }); add('channel', 13.8, -46, { to: [11, -71], w: 0.45 });
+  pipe([-1.4, -58, 7.7], [-1.4, -58, 10.6], [5, -58, 10.6], [5, -71.5, 10.6], [5, -71.5, 0.3]);
+  pipe([-4.4, -67.4, 5.2], [-4.4, -67.4, 8.2], [0.5, -67.4, 8.2], [0.5, -71.5, 8.2], [0.5, -71.5, 0.3]);
+  pipe([17.4, -45.6, 7.7], [17.4, -45.6, 9.3], [13, -45.6, 9.3], [13, -137, 9.3]);
+  pipe([20.4, -56, 5.2], [20.4, -56, 8.4], [15.4, -56, 8.4], [15.4, -137, 8.4]);
+  add('benchstills', 6, -44, { yaw: 0.2, w: 2 }); add('benchstills', 9, -63, { yaw: -0.15, w: 2 });
+  add('vat', 13, -62, { r: 1.1 }); add('barrels', -5, -38.5); add('crates', 21, -70); add('barrels', -5, -44); add('heap', -5, -70, { r: 1.1, layer: 'dark:rubble' });
   add('jarshelf', 8, -36.3, { yaw: PI, w: 4 }); add('jarshelf', 22.7, -62, { yaw: -PI / 2, w: 3 });
   add('chandelier', 8, -46, { up: 6.2, hang: true }); add('chandelier', 9, -63, { up: 6.2, hang: true });
   add('decal', -6.95, -56, { layer: 'p2_soot_streaks', w: 3, h: 5, up: 5, yaw: PI / 2 }); add('decal', 22.95, -42, { layer: 'p2_soot_streaks', w: 3, h: 5, up: 5, yaw: -PI / 2 });
@@ -111,19 +112,20 @@ const props = [];
   add('chandelier', -86, -47, { up: 3.2, hang: true });
   // ---- the Retort Room: the great retort against its east wall, copper, twice a man's height, its pipe up and away across
   // the roof and down the west wall; the three vents in the floor, a post and a hand-wheel by each; coal; a bench.
-  add('copper', 73.8, -68, { yaw: -PI / 2, r: 2.5, h: 4 });
-  pipe([73.8, -68, 6.2], [73.8, -68, 8.2], [51.6, -68, 8.2], [51.6, -68, 0.3]); pipe([76.4, -56, 3.4], [76.4, -76.4, 3.4]);
+  add('copper', 73, -68, { yaw: -PI / 2, r: 3.4, h: 5.2 });
+  pipe([73, -68, 7.4], [73, -68, 8.4], [51.6, -68, 8.4], [51.6, -68, 0.3]); add('channel', 69.4, -70, { to: [53, -73.4], w: 0.45 });
+  add('copper', 54.6, -57.6, { yaw: 0.8, r: 1.5, h: 2.8 }); pipe([54.6, -57.6, 5], [54.6, -57.6, 7.6], [51.6, -57.6, 7.6], [51.6, -64, 7.6]); pipe([76.4, -56, 3.4], [76.4, -76.4, 3.4]);
   VENTS.forEach(([x, z], i) => {
     add('pool', x, z, { r: 1.5, up: 0.04, layer: 'iron' }); add('pool', x, z, { r: 1.0, up: 0.05, layer: 'obsidian' });
     add('column', WHEELS[i][0], WHEELS[i][1], { r: 0.34, wood: true, solid: true }); add('gear', WHEELS[i][0], WHEELS[i][1], { flat: true, r: 0.55, up: 1.2, h: 0.12, layer: 'iron' });
   });
-  add('heap', 53.4, -75, { r: 1.3, layer: 'dark:rubble' }); add('barrels', 53, -57); add('crates', 70, -57); add('benchstills', 58, -75.4, { yaw: 0, w: 1.8 });
+  add('heap', 53.4, -75, { r: 1.3, layer: 'dark:rubble' }); add('crates', 70, -57); add('benchstills', 58, -75.4, { yaw: 0, w: 1.8 });
   add('chandelier', 63, -62, { up: 5.6, hang: true }); add('brazier', 70.6, -74.6);
   add('decal', 76.95, -68, { layer: 'p2_soot_streaks', w: 6, h: 4, up: 4.5, yaw: -PI / 2 }); add('decal', 62, -70, { layer: 'p2_scorch_mark', w: 2.4, flat: true, yaw: 1 });
   // ---- the Green Cellar: low enough to touch; the beds in rows, what grows in them, roots down from above, black water.
   for (const [x, z] of [[-64, -92], [-52, -92], [-64, -104], [-50, -104]]) add('podbed', x, z, { r: 2 });
   add('caps', -46, -88, { n: 4, s: 0.9 }); add('caps', -66, -110, { n: 3, s: 0.7 }); add('roots', -58, -98, { r: 2.4 }); add('roots', -44, -100, { r: 1.6 });
-  add('flood', -57, -98, { hx: 3, hz: 2.4, lvl: 0.03, float: 0 }); add('brazier', -67.4, -87); add('brazier', -45, -109.6);
+  add('flood', -57, -98, { hx: 3, hz: 2.4, lvl: 0.03, float: 0 }); add('brazier', -67.4, -87); add('brazier', -45, -109.6); add('chandelier', -60, -98, { up: 3, hang: true }); add('chandelier', -50, -96, { up: 3, hang: true }); add('copper', -68, -98, { yaw: PI / 2, r: 1.2, h: 1.6 });
   // ---- the Feeding Gallery: a passage, the two pipes from the Stillroom along under its roof the whole way to the Vault;
   // a pump at each end (a copper cylinder, its fire, its hand-post), their own pipe along the west wall between them; the
   // channel down its middle; his green on the walls; a fire at each pump and the dark between.
@@ -131,7 +133,7 @@ const props = [];
   add('copper', 19.4, -86, { yaw: -PI / 2, r: 0.9, h: 1.7 }); add('column', 13, -84, { r: 0.4, wood: true });
   add('copper', 12.6, -122, { yaw: PI / 2, r: 0.9, h: 1.7 }); add('column', 19, -124, { r: 0.4, wood: true });
   pipe([11.5, -74, 3.2], [11.5, -136, 3.2]); pipe([20.5, -86, 3.6], [20.5, -110, 3.6]);
-  add('brazier', 12.6, -90); add('brazier', 19.4, -118); add('barrels', 19.6, -73.4); add('crates', 12.4, -135);
+  add('brazier', 12.6, -90); add('brazier', 19.4, -118); add('chandelier', 16, -78, { up: 6, hang: true }); add('chandelier', 16, -104, { up: 6, hang: true }); add('chandelier', 16, -130, { up: 6, hang: true }); add('barrels', 19.6, -73.4); add('crates', 12.4, -135);
   // ---- the Cold Store: low; what they've kept, hung from the roof in its sacking, slabs along the walls, ice in the corners.
   for (const [x, z] of [[52, -108], [58, -116], [64, -108], [66, -117]]) add('cocoon', x, z);
   add('table', 50, -119.6, { hx: 2.6, hz: 0.8 }); add('bones', 50, -117.6, { r: 0.5 }); add('heap', 68, -104, { r: 1, layer: 'pale:stone' }); add('heap', 47.5, -104, { r: 0.8, layer: 'pale:stone' });
