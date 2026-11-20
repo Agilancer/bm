@@ -23,7 +23,9 @@ import { DELVES, caveRoom, delveByKey } from '../src/core/dungeon.js';
 
 const read = (p) => JSON.parse(fs.readFileSync(new URL(`../${p}`, import.meta.url)));
 // (What the city's far build was before the houses were styled: the city alone, 2026-11-19.)
-const CITY_PC = 486802, CITY_PHONE = 306630, MORE = 40000;
+// (A PC's baseline is 486,802 and 9,968 that only moved: Castle Velscour's sixteen wall towers are built with the city's
+// towers now, src/core/phobos-towers.js, not with the castle. A phone's draws them as it did.)
+const CITY_PC = 486802 + 9968, CITY_PHONE = 306630, MORE = 40000;
 
 test('every house has a style by its district, and the roofs are of many shapes', () => {
   const H = phobosHouses().filter((h) => !h.spire), kinds = {}, by = {};

@@ -66,7 +66,7 @@ function cam(ex, ey, ez, tx, ty, tz) {
   return { x: ex, y: ey, z: ez, fx, fy, fz, ux: ux * s, uy: uy * s, uz: uz * s };
 }
 // The castle's towers, Needles and bridges (src/core/phobos-build.js castleTowers): eyes at heights over the plain.
-{ const { towers } = castleTowers(), T = Object.fromEntries(towers.map((t) => [t.key, t])), A = (x, h, z) => [x, PLAIN + h - terrainHeight(x, z), z];
+{ const { towers, bridges } = castleTowers(), T = Object.fromEntries(towers.map((t) => [t.key, t])), A = (x, h, z) => [x, PLAIN + h - terrainHeight(x, z), z];
   const deck = (k, dx, dz, to) => { const t = T[k]; return [`kt_deck_${k}`, [t.x, t.z], A(t.x + dx, t.deck + 1.8, t.z + dz), to]; };
   SHOTS.push(
     ['kt_north', [11180, -400], A(11150, 330, -470), A(11260, 440, 0)],
@@ -74,8 +74,9 @@ function cam(ex, ey, ez, tx, ty, tz) {
     ['kt_south', [11150, 330], A(11120, 300, 400), A(11300, 470, 60)],
     ['kt_yard_up', [10830, 0], [10805, 3.2, 3], A(11215, 430, 0)],
     deck('gallows', -11, 4, A(11215, 560, 0)), deck('red', -9, -9, A(11215, 600, 0)), deck('sat4', -13, 0, A(10500, 60, 0)), deck('clock', -14, 0, A(10300, 40, 0)),
-    ['kt_bridge', [11419, -142], A(11420, 481, -140), A(11468, 484, -80)],
-    ['kt_turret', [T.sat0.tx, T.sat0.tz + 14], [T.sat0.tx + 3, 2.2, T.sat0.tz + 13], [T.sat0.x, 14, T.sat0.z]],
+    (() => { const b = bridges.find((q) => q.from === 'widow' && q.to === 'gallows'), u = 0.3, v = 0.7, at = (k) => [b.a[0] + (b.b[0] - b.a[0]) * k, b.a[2] + (b.b[2] - b.a[2]) * k], [ex, ez] = at(u), [lx, lz] = at(v), y = (b.a[1] + b.b[1]) / 2 - PLAIN + b.arch * 0.84; return ['kt_bridge', [ex, ez], A(ex, y + 1.8, ez), A(lx, y + 3, lz)]; })(),
+    (() => { const t = T.sat8, c = Math.cos(t.ta), s = Math.sin(t.ta); return ['kt_turret', [t.tx + c * 12, t.tz + s * 12], [t.tx + c * 13 - s * 5, 2.4, t.tz + s * 13 + c * 5], [t.x, 16, t.z]]; })(),
+    (() => { const t = T.sat8, a = t.ta + Math.PI + 1.2, y = t.from - PLAIN + 9 * 1.19; return ['kt_stair', [t.tx, t.tz], A(t.tx + Math.cos(a) * 2.7, y + 1.7, t.tz + Math.sin(a) * 2.7), A(t.tx + Math.cos(a + 1.3) * 2.9, y + 2.6, t.tz + Math.sin(a + 1.3) * 2.9)]; })(),
     ['kt_patio', [10980, 0], A(10975, 302, 30), A(11215, 420, 0)],
   ); }
 const asked = process.argv.slice(2), which = asked.length ? SHOTS.filter((s) => asked.includes(s[0])) : SHOTS;

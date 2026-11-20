@@ -17,7 +17,7 @@ import { terrainHeight } from './terrain.js';
 import { hash2 } from './terrain-noise.js';
 import { CITY, CITY_WALL } from './east.js';
 import { PHOBOS } from './phobos-data.js';
-import { DOOR, cellOf, doorLeaf, fire, houseDoor, moatLevel, onFloor, phobosHouses, spiral, streetNear, tower, walk } from './phobos-build.js';
+import { DOOR, castleWallTowers, cellOf, doorLeaf, fire, houseDoor, moatLevel, onFloor, phobosHouses, spiral, streetNear, tower, walk } from './phobos-build.js';
 import { Kit } from './sites.js';
 
 const TAU = Math.PI * 2, Y = (x, z) => terrainHeight(x, z);
@@ -181,6 +181,9 @@ export function cityTowers() {
     const f = h.front || 1, yaw = h.yaw || 0;
     out.push(settle({ key: `spire${i}`, kind: 'study', layer: h.wall, x: h.x, z: h.z, r: h.r, h: h.h, roof: 'p2_verdigris_roof', o: { steep: 2.2 }, face: Math.atan2(f * Math.cos(yaw), f * Math.sin(yaw)), spire: true }));
   });
+  // And Castle Velscour's own wall towers (src/core/phobos-build.js castleWallTowers), last, so every door's and chest's
+  // number before them stays what it was.
+  for (const t of castleWallTowers()) if (!t.plain) out.push(settle({ ...t, castle: true }));
   let n = 0;
   for (const t of out) if (t.kind !== 'wall') t.door = 20000 + n++;
   TOWERS = out;

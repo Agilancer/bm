@@ -1594,12 +1594,15 @@ export function phobosCastle(K) {
     // (The Sally Gate, east, behind the Keep: the stretch split round its passage, sallyGate below.)
     if (i === SALLY) { const mx = (p[0] + q[0]) / 2, mz = (p[1] + q[1]) / 2, L = Math.hypot(q[0] - p[0], q[1] - p[1]), ux = (q[0] - p[0]) / L, uz = (q[1] - p[1]) / L;
       curtain(K, B, p[0], p[1], mx - ux * 8.5, mz - uz * 8.5, 5, 24, BL); curtain(K, B, mx + ux * 8.5, mz + uz * 8.5, q[0], q[1], 5, 24, BL); return; }
-    curtain(K, B, p[0], p[1], q[0], q[1], 5, 24, BL);
-    if (i % 3 === 0) tower(K, C, p[0], p[1], 8, 48 + 14 * hash2(i, 4), i % 2 ? RT : null, { steep: 2.6 });
+    // (Its towers are gone into now, src/core/phobos-towers.js by castleWallTowers below: the curtain stops at each one's
+    // face, so its room is its own.)
+    const L = Math.hypot(q[0] - p[0], q[1] - p[1]), ux = (q[0] - p[0]) / L, uz = (q[1] - p[1]) / L, a = ringTower(ring, i) ? 7.2 : 0, b = ringTower(ring, (i + 1) % ring.length) ? 7.2 : 0;
+    curtain(K, B, p[0] + ux * a, p[1] + uz * a, q[0] - ux * b, q[1] - uz * b, 5, 24, BL);
   });
   // (Only the Middle Ward's: where the High Ward's wall would run the Keep's body stands.)
   for (const [i, x0] of [[1, WARDS[1][0]]]) {
-    for (const s of [-1, 1]) { curtain(K, B, x0 - s * 46 * 0.22 - 0, s * 24, x0 - s * 250 * 0.22, s * 250, 8, 48, BL); tower(K, C, x0, s * 24, 13, 96, RT, { steep: 2.4, sides: 16 }); for (const zz of [90, 170]) tower(K, C, x0 - s * zz * 0.22, s * zz, 9, 70, zz > 100 ? R : null); }
+    // (The wall in three stretches, stopping at the faces of the towers on it: castleWallTowers.)
+    for (const s of [-1, 1]) for (const [z0, z1] of [[24 + 11.5, 90 - 8], [90 + 8, 170 - 8], [170 + 8, 250]]) { const X = (zz) => x0 - s * 46 * 0.22 - s * (zz - 24) * (204 * 0.22 / 226); curtain(K, B, X(z0), s * z0, X(z1), s * z1, 8, 48, BL); }
     K.box(S, x0, Y(x0, 0) + 14, 0, 9, 44, 16, 0, { collide: false });
   }
   // The castle's other ways in (the owner, 2026-11-19: "Give the castle other entrances too"): the Sally Gate east, out
@@ -1718,7 +1721,9 @@ export function phobosCastle(K) {
   K.box(B, 10835, Y(10835, 235) - 2, 235, 14, 18, 12, 0.25); for (const dx of [-7, 7]) K.drum(C, 10835 + dx, Y(10835, 235) + 16, 235, 2.6, 22, 8, { collide: false });   // the Forge and its stacks
   hall(K, B, R, 10850, Y(10850, -150) - 2, -150, 40, 20, 13, -0.25);         // the Kitchens and Cellars
   hall(K, B, R, 10890, Y(10890, -215) - 2, -215, 26, 14, 9, -0.25);          // the Servants' Warren
-  tower(K, C, 10905, 75, 11, 58, null);                                       // the Oubliettes' stair
+  // (The Oubliettes' stair tower at (10905, 75) is castleWallTowers' too. And the few of the walls' towers that can't be
+  // gone into, as they were.)
+  for (const t of castleWallTowers()) if (t.plain) tower(K, t.layer, t.x, t.z, t.r, t.h, t.roof, t.o);
   // The Aqueduct: a run of arches from the north side out over the cliff, dropping into the city's High Conduits.
   for (let i = 0; i < 9; i++) { const x = 10830 - i * 22, z = -110 - i * 7, top = y0 + 26; K.box(S, x, Y(x, z) - 2, z, 3, top - Y(x, z) + 2, 4, 0.3, { collide: false }); K.box(S, x + 11, top - 3, z - 3.5, 11.2, 5, 3, 0.3, { collide: false }); }
 
@@ -1947,6 +1952,30 @@ export function phobosKeep(K) {
   for (const b of CT.bridges) bridge(K, KB, b.a, b.b, b.w, { arch: b.arch, piers: b.piers, walk: true });
   // (Their decks' fires: the far build's, so they move. The braziers themselves are the near cells'.)
   for (const t of CT.towers) for (const [bx, by, bz] of deckFires(t)) fire(K, bx, by + 1.7, bz, 0.55, 1.8);
+}
+
+// ---------------------------------------------------------------- the castle's wall towers, gone into
+
+// Whether the curtain's ring has a tower at its i-th corner: every third, but the gate's and the Sally Gate's.
+const ringTower = (ring, i) => i % 3 === 0 && i !== SALLY && !(Math.abs(ring[i][1]) < 22 && ring[i][0] < CRAG.x);
+// The towers on the castle's own walls, gone into as the city's are (src/core/phobos-towers.js takes these in after its own:
+// a door toward the ward, a guardroom, a stair, a room over it, a chest): the outer curtain's fourteen, the Middle Ward
+// wall's six, and the Oubliettes' stair tower in the Lower Ward. As tower()'s own: { key, kind, layer, x, z, r, h, roof, o, face }.
+export function castleWallTowers() {
+  const C = 'soot:p2_bridge_ashlar', RT = 'p2_fishscale_slate', R = 'blood:p2_blood_tiles', out = [], ring = [];
+  for (let i = 0; i < 44; i++) { const a = i / 44 * TAU; ring.push([CRAG.x + Math.cos(a) * CRAG.a * 0.86, CRAG.z + Math.sin(a) * CRAG.b * 0.86]); }
+  ring.forEach((p, i) => { if (ringTower(ring, i)) out.push({ key: `curtain${i}`, kind: 'guard', layer: C, x: p[0], z: p[1], r: 8, h: 48 + 14 * hash2(i, 4), roof: i % 2 ? RT : null, o: { steep: 2.6 }, face: Math.atan2(CRAG.z - p[1], CRAG.x - p[0]) }); });
+  const x0 = WARDS[1][0];
+  for (const s of [-1, 1]) {
+    out.push({ key: `wardgate${s}`, kind: 'guard', layer: C, x: x0, z: s * 24, r: 13, h: 96, roof: RT, o: { steep: 2.4, sides: 16 }, face: 0 });
+    for (const zz of [90, 170]) out.push({ key: `ward${s}_${zz}`, kind: zz > 100 ? 'counting' : 'guard', layer: C, x: x0 - s * zz * 0.22, z: s * zz, r: 9, h: 70, roof: zz > 100 ? R : null, o: {}, face: 0 });
+  }
+  out.push({ key: 'oubliette', kind: 'gaol', layer: C, x: 10905, z: 75, r: 11, h: 58, roof: null, o: {}, face: Math.PI });
+  // (Five can't be gone into: the three of the curtain's that stand in the Keep's own body, and the two of the Middle Ward
+  // wall's whose only free side is a hall's wall. They stand as they did, drawn by phobosCastle.)
+  const decks = HIGH_DECKS();
+  for (const t of out) t.plain = decks.some(([x0, x1, z0, z1]) => t.x > x0 - t.r && t.x < x1 + t.r && t.z > z0 - t.r && t.z < z1 + t.r) || t.key === 'ward-1_90' || t.key === 'ward-1_170';
+  return out;
 }
 
 // ---------------------------------------------------------------- the castle's towers, climbed
