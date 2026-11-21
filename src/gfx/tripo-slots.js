@@ -2,11 +2,12 @@
 // stood there: the snapshot says which model (C.MODEL) and which palette (C.PAL), and when that changes the slot is rebuilt.
 // Until its body is ready a slot is a placeholder that draws nothing. A model's mesh is made once and shared by every slot that
 // wears it; its colour map is baked once per palette (palettes.json, the bestiary's own sums). What no slot is wearing is let go.
-import { accessor, imageBytes, parseGLB } from '../core/glb.js';
+import { accessor, parseGLB } from '../core/glb.js';
 import { C, C_HERO, C_SIZE, CHARS_START } from '../core/layout.js';
 import { ARMS, TRIPO_BASE, armIds } from '../core/tripo-monsters.js';
-import { decodeScaledBitmap, makeBuffer } from './gpu.js';
-import { monsterRule } from './picsize.js';
+import { makeBuffer } from './gpu.js';
+import { monsterRule, picSize } from './picsize.js';
+import { pictureOf } from './lean-pictures.js';
 
 const KEEP_MODELS = 10;
 const KEEP_SKINS = 12;
@@ -58,12 +59,12 @@ function handFrames(glb) {
 // big it comes out (src/gfx/picsize.js), the same as the monster's own colours.
 let baker = null, bakeId = 0;
 const bakes = new Map();
-function bakeOff(blob, rule, pal) {
+function bakeOff(blob, rule, pal, size = null) {
   if (!baker) {
     baker = new Worker(new URL('./bake.worker.js', import.meta.url), { type: 'module' });
     baker.onmessage = (e) => { const b = bakes.get(e.data.id); bakes.delete(e.data.id); if (e.data.error) b.no(new Error(e.data.error)); else b.ok(e.data.bmp); };
   }
-  return new Promise((ok, no) => { const id = ++bakeId; bakes.set(id, { ok, no }); baker.postMessage({ id, blob, rule, pal }); });
+  return new Promise((ok, no) => { const id = ++bakeId; bakes.set(id, { ok, no }); baker.postMessage({ id, blob, rule, pal, size }); });
 }
 
 export class TripoSlots {
@@ -124,8 +125,9 @@ export class TripoSlots {
   model(id) {
     let m = this.models.get(id);
     if (m) { this.models.delete(id); this.models.set(id, m); return m; }
-    const r = this.r;
-    m = fetch(`${this.base}${TRIPO_BASE}${this.roster[id]?.src || id}.glb`).then((res) => {
+    const r = this.r, url = `${this.base}${TRIPO_BASE}${this.roster[id]?.src || id}.glb`;
+    r.leanPics?.ahead(url);   // (its phone pictures start coming down beside it)
+    m = fetch(url).then((res) => {
       if (!res.ok) throw new Error(`${id}: ${res.status}`);
       return res.arrayBuffer();
     }).then(async (buf) => {
@@ -141,7 +143,7 @@ export class TripoSlots {
       // (Not the file itself: its mesh and two of its maps go to the GPU, and a new palette's skin wants only its colour
       // picture, a copy of which is all that's kept. The whole file, 3 MB on average and up to 8, was kept as long as the
       // model was, which was ten models' worth of page memory. Read before anything is made, so a bad file leaves nothing.)
-      const alb = imageBytes(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture)), hands = handFrames(glb);
+      const alb = pictureOf(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture)), hands = handFrames(glb);
       const nrmSrc = srcOf(mat.normalTexture), mrSrc = srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture);
       const base = r.makeSkinned([prim], glb.json.skins[0].joints.length);
       // (The shared mesh's own pose buffers are never drawn from: each monster gets its own, cloneSkinned in instance.
@@ -152,7 +154,7 @@ export class TripoSlots {
       // (Its normals and its metal and roughness: texCap's half on a phone, 128, however tall. Each one's bytes are read in
       // its own promise, so a map that isn't in the file fails it as a map that won't decode does, and what was made is
       // given back below.)
-      const got = await Promise.allSettled([nrmSrc, mrSrc].map(async (src) => this.picture(id, imageBytes(glb, src), 'rgba8unorm')));
+      const got = await Promise.allSettled([nrmSrc, mrSrc].map(async (src) => this.picture(id, pictureOf(glb, src), 'rgba8unorm')));
       const bad = got.find((g) => g.status === 'rejected');
       if (bad) {
         // (What was made is given back: a model that failed is asked for again, model() below, and would leave it each time.)
@@ -187,14 +189,20 @@ export class TripoSlots {
     return s;
   }
 
-  // One of a monster's pictures as a texture, sized by how tall it stands (src/gfx/picsize.js monsterRule): on a phone,
-  // one as tall as a house (TALL) is seen close, at texCapNear; the rest at texCap; a picture that isn't a colour at half
-  // that. pal: a palette baked into it on the way, in the bake worker, by the same rule. Packed on a phone (src/gfx/astc.js).
+  // One of a monster's pictures as a texture, sized by src/gfx/picsize.js monsterRule: on a phone, the colours of one as
+  // tall as a house (TALL) or an outpost's chief at texCapNear, the rest at texCap; normals and metal at texCap's half.
+  // pal: a palette baked into it on the way, in the bake worker, by the same rule. Decoded from the phone's copy of the
+  // picture where there's one, the same size made (src/gfx/lean-pictures.js); from the picture itself if the copy fails.
+  // Packed on a phone (src/gfx/astc.js).
   async picture(id, blob, format, pal = null) {
     const r = this.r;
     await r.astc.ready;
     const rule = monsterRule(r.tier, this.roster[id] || {}, { format, blocks: r.astc.on });
-    const bmp = pal ? await bakeOff(blob, rule, pal) : await decodeScaledBitmap(blob, rule.scale, rule.cap, rule.step);
+    let bmp;
+    if (pal) {
+      const src = await r.leanPics.source(blob, ([w, h]) => picSize(w, h, rule));
+      bmp = await bakeOff(src.blob, rule, pal, src.size).catch((e) => (src.size ? bakeOff(blob, rule, pal) : Promise.reject(e)));
+    } else bmp = await r.decodePicture(blob, rule.scale, rule.cap, rule.step);
     return r.pictureTexture(bmp, format);
   }
 

@@ -2,8 +2,9 @@
 // feature it offers, and a quality tier picked from what it is.
 import { lanes } from '../core/files.js';
 import { FreshViews, wantFreshViews } from './freshviews.js';
-// (How big a picture comes out is src/gfx/picsize.js's, shared with the dyed skins' worker: decodeScaledBitmap is there.)
-export { decodeScaledBitmap } from './picsize.js';
+// (How big a picture comes out is src/gfx/picsize.js's, shared with the dyed skins' worker: decodeScaledBitmap and
+// scaledSize are there.)
+export { decodeScaledBitmap, scaledSize } from './picsize.js';
 
 const WANTED_FEATURES = [
   'rg11b10ufloat-renderable', 'float32-filterable', 'timestamp-query', 'indirect-first-instance',

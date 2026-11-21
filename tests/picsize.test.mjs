@@ -5,7 +5,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { TALL, monsterRule, picRule, picSize } from '../src/gfx/picsize.js';
+import { TALL, decodeScaledBitmap, monsterRule, picRule, picSize } from '../src/gfx/picsize.js';
 import { TIERS, lighten } from '../src/gfx/gpu.js';
 import { CHIEFS, withVariants } from '../src/core/tripo-monsters.js';
 
@@ -131,7 +131,10 @@ test('a monster\'s own colours and a dye of them come out the same size, by its 
   globalThis.fetch = async () => ({ ok: true, json: async () => ({}) });
   try {
     const made = [];
-    const r = { chars: [], tier: mobile, astc: { ready: Promise.resolve(), on: true }, pictureTexture: async (bmp, format) => { made.push([bmp.width, bmp.height, format]); return { destroy() {} }; } };
+    const r = { chars: [], tier: mobile, astc: { ready: Promise.resolve(), on: true },
+      // (No phone copies here: src/gfx/lean-pictures.js, tests/lean-pictures.test.mjs.)
+      leanPics: { source: async (blob) => ({ blob, size: null }) }, decodePicture: (blob, ...rule) => decodeScaledBitmap(blob, ...rule),
+      pictureTexture: async (bmp, format) => { made.push([bmp.width, bmp.height, format]); return { destroy() {} }; } };
     const roster = { tall: { height: 3.4 }, short: { height: 2.05 } };
     const t = new TripoSlots(r, '', roster, { Base: {}, Infernal: { sat: 1.3, tint: [1, 0.32, 0.12], tamt: 0.42 } }, 0, 0);
     const m = { alb: {} };

@@ -3,7 +3,7 @@
 //
 // A save is a set of named parts, each written and read by the system it belongs to:
 //
-//   { v: SAVE_VERSION, at, summary: [lines for the slot list], parts: { player: {...}, stats: {...}, ... } }
+//   { v: SAVE_VERSION, at, summary: [lines for the slot list], card: {...}, parts: { player: {...}, stats: {...}, ... } }
 //
 // Among them (main.js): `player`, where you stand and which way you face, `stats`, the time played, `pack`, what you carry
 // and have on, and `spells`, your bar and what you've learned in the six trees. Quests and the world's own state come in later as parts of their own, with addPart. A part
@@ -28,16 +28,22 @@ const MIGRATIONS = {
 };
 
 const parts = new Map();
+let cardOf = null;
 
 /** A part of every save. save() -> data (or a promise of it); load(data or null, whole save); summary(data) -> a line
  * for the slot list, or nothing. Parts load in the order they were added. */
 export function addPart(name, part) { parts.set(name, part); }
+
+/** What a save's card in the Save and Load windows shows (src/title.js renderSlots): fn() -> { name, level, where, quest,
+ * played, thumb } (thumb: a small picture of the game as it was, a data: URL), or null. Kept beside the parts, not one of them. */
+export function setCard(fn) { cardOf = fn; }
 
 /** Everything there is to save, now. */
 export async function capture() {
   const out = { v: SAVE_VERSION, church: [CHURCH_X, CHURCH_Z], parts: {} };
   for (const [name, p] of parts) out.parts[name] = await p.save();
   out.summary = [...parts].map(([name, p]) => p.summary?.(out.parts[name])).filter(Boolean);
+  try { out.card = (await cardOf?.()) || null; } catch (e) { console.warn('save card', e); out.card = null; }
   return out;
 }
 

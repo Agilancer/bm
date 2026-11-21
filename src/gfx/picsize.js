@@ -34,6 +34,9 @@ export const monsterRule = (tier, m = {}, opts = {}) => {
   return picRule(tier, tier.texScale, { ...opts, near: near && opts.format !== 'rgba8unorm', fill: near });
 };
 
+// (As picSize, by arguments: src/gfx/renderer.js and src/gfx/lean-pictures.js's callers.)
+export const scaledSize = (width, height, scale, cap = 0, step = 1) => picSize(width, height, { scale, cap, step });
+
 // The size a picture w x h comes out at under a rule: shrunk by scale, never grown, no side over cap (0: none), each side
 // a whole number of step (rounded to the nearest, as a picture's UVs don't mind a pixel or two; never over the cap).
 export function picSize(w, h, { scale = 1, cap = 0, step = 1 } = {}) {
@@ -46,12 +49,29 @@ export function picSize(w, h, { scale = 1, cap = 0, step = 1 } = {}) {
 
 // A picture decoded at the size picSize gives (cap: no side longer, whatever scale says; 0, no cap. step: each side a whole
 // number of these). The compressed bytes are decoded once and the decoded pixels resized, the full-size bitmap closed.
-export async function decodeScaledBitmap(blob, scale, cap = 0, step = 1) {
+// size: the [width, height] of the picture this is a smaller copy of (src/gfx/lean-pictures.js), which what comes back is
+// sized from: the size it would have been, decoded from the original. A copy smaller than that is an error (one kept from
+// before, say), so the original is decoded instead, not the copy blown up. A copy is shrunk the rest of the way in halves:
+// Chrome's own shrink drops pixels unfiltered past a half (grain, and a checkered shimmer on a fine pattern), and a half at
+// a time comes out near a proper filter (at a phone's 128 or 256, 4 to 7 dB nearer a Lanczos from the original), for some
+// 3 to 5 ms a picture. (Not the originals: their halves would be 16 and 4 MB more beside the 64 of a 4096 picture.)
+export async function decodeScaledBitmap(blob, scale, cap = 0, step = 1, size = null) {
   const opts = { premultiplyAlpha: 'none', colorSpaceConversion: 'none' };
   const bmp = await createImageBitmap(blob, opts);
-  const [w, h] = picSize(bmp.width, bmp.height, { scale, cap, step });
+  const [w, h] = picSize(...(size || [bmp.width, bmp.height]), { scale, cap, step });
   if (w === bmp.width && h === bmp.height) return bmp;
+  if (size && (bmp.width < w || bmp.height < h)) { bmp.close(); throw new Error(`a copy ${bmp.width}x${bmp.height}, for ${w}x${h}`); }
+  let src = bmp;
   try {
-    return await createImageBitmap(bmp, { ...opts, resizeWidth: w, resizeHeight: h, resizeQuality: 'high' });
-  } finally { bmp.close(); }
+    if (size) {
+      while (src.width >= 2 * w && src.height >= 2 * h) {
+        const half = await createImageBitmap(src, { ...opts, resizeWidth: Math.round(src.width / 2), resizeHeight: Math.round(src.height / 2), resizeQuality: 'high' });
+        if (src !== bmp) src.close();
+        src = half;
+      }
+      if (src.width === w && src.height === h) { const done = src; src = bmp; return done; }
+    }
+    // Resize the decoded pixels instead of decoding the compressed source twice.
+    return await createImageBitmap(src, { ...opts, resizeWidth: w, resizeHeight: h, resizeQuality: 'high' });
+  } finally { bmp.close(); if (src !== bmp) src.close(); }
 }

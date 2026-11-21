@@ -25,8 +25,8 @@ import { loadOpeningStage } from './opening.js';
 import { DAWN_HOUR, DUSK_HOUR, secondsPerHour, daylight } from './daylight.js';
 import { Pines } from './pines.js';
 import { Rocks } from './rocks.js';
-import { accessor, imageBytes, parseGLB } from '../core/glb.js';
-import { dropFile, getFile, lanes, watched } from '../core/files.js';
+import { accessor, parseGLB } from '../core/glb.js';
+import { dropFile, fetchAhead, getFile, lanes, watched } from '../core/files.js';
 import { C, C_BLEEDS, C_MASKS, C_GASH, C_PALETTE, C_PROPS, C_SIZE, CHARS_START, H, MAX_CHARS, SLIMES_START, SPELL_PALETTE, VM_PALETTE, WEAPONS } from '../core/layout.js';
 import { addStumps } from './stumps.js';
 import { GEAR, ROBES, SKULLS } from '../items/items.js';
@@ -39,8 +39,9 @@ import { PATTERNS, SKINS } from '../items/skins.js';
 import { BODIES } from '../sim/undead.js';
 import { lerp, mat4Invert, mat4LookTo, mat4Mul, mat4Ortho, mat4Perspective, smoothstep } from '../core/math.js';
 import { shieldPose } from '../core/shield-pose.js';
-import { MipGen, makeBuffer, mipCountFor, loadTextureArray, decodeScaledBitmap } from './gpu.js';
+import { MipGen, makeBuffer, mipCountFor, loadTextureArray, decodeScaledBitmap, scaledSize } from './gpu.js';
 import { picRule } from './picsize.js';
+import { LeanPictures, pictureOf } from './lean-pictures.js';
 import { AstcPacker } from './astc.js';
 import { noteEvent } from '../core/lastrun.js';
 import { ARMOR, ARMOR_KIT, ARMOR_TRUE, GRASS, GRASS_CULL, ITEM, PROP, SHADOW, SKY, SKY_BAKE, STATIC, STATIC_SLOTS, TERRAIN, VIEWMODEL, VIEWMODEL_SKULL, staticSoftCut } from './materials.js';
@@ -227,6 +228,8 @@ export class Renderer {
     // this GPU doesn't read its packing back right.
     const astc = new URLSearchParams(location.search).get('astc');
     this.astc = new AstcPacker(this.device, astc === '1' || (astc !== '0' && !!gpu.tier.lean));
+    // (The phone's copies of the big pictures: none until load says where the game's files are.)
+    this.leanPics = new LeanPictures('', false, getFile);
     this.gashVersions = new Int32Array(MAX_CHARS).fill(-1);
     this.tmpV = new Float32Array(16); this.tmpP = new Float32Array(16); this.tmpVP = new Float32Array(16); this.tmpI = new Float32Array(16);
     this.emitted = [];
@@ -269,6 +272,10 @@ export class Renderer {
   async load(base, progress) {
     const { device, tier, pool } = this;
     this.base = base;
+    // (Off, ?lean=0, to set them side by side.)
+    const fits = (e) => { const [w, h] = scaledSize(e.size[0], e.size[1], tier.texScale); return w <= e.copy[0] && h <= e.copy[1]; };
+    this.leanPics = new LeanPictures(base, tier.texScale < 1 && new URLSearchParams(location.search).get('lean') !== '0', getFile, fits);
+    fetchAhead((url) => this.leanPics.ahead(url));
     const lean = !!tier.lean;
     const pictures = lanes(lean ? 2 : 6);     // pictures decoding or going up to the GPU at once, over all the arrays
     const ahead = lanes(lean ? 2 : 6);        // models fetched, waiting to be built or being built
@@ -441,7 +448,7 @@ export class Renderer {
     const self = model('assets/game/player/wizard.glb', async (glb) => {
       const [body] = await this.buildCrabs(glb, 1, 1, null, 0, true);
       const mat = glb.json.materials[glb.json.meshes[0].primitives[0].material];
-      return { body, colour: imageBytes(glb, glb.json.textures[mat.pbrMetallicRoughness.baseColorTexture.index].source) };
+      return { body, colour: pictureOf(glb, glb.json.textures[mat.pbrMetallicRoughness.baseColorTexture.index].source) };
     });
     const viewModel = (i) => model(models[i], (glb) => this.buildViewModel(glb));
     const vms = [viewModel(9), viewModel(3), viewModel(14)], spellVMs = [viewModel(12), viewModel(13)];
@@ -1055,7 +1062,18 @@ export class Renderer {
   }
 
   async imageTexture(glb, imageIndex, format, scale = 1, full = false, near = false, pack = true) {
-    return this.bitmapTexture(imageBytes(glb, imageIndex), format, scale, full, near, pack);
+    return this.bitmapTexture(pictureOf(glb, imageIndex), format, scale, full, near, pack);
+  }
+
+  // A picture decoded and shrunk (src/gfx/picsize.js decodeScaledBitmap): from its phone copy where there's one at least as big
+  // as what's to be made of it (src/gfx/lean-pictures.js), sized as from the original; from the picture itself otherwise,
+  // or if the copy can't be had.
+  async decodePicture(blob, scale, cap, step) {
+    const src = await this.leanPics.source(blob, ([w, h]) => scaledSize(w, h, scale, cap, step));
+    if (src.size) {
+      try { return await decodeScaledBitmap(src.blob, scale, cap, step, src.size); } catch (err) { console.warn('phone picture', src.file, err); }
+    }
+    return decodeScaledBitmap(blob, scale, cap, step);
   }
 
   // A picture as a texture, shrunk by scale. On a phone, of a model's pictures (those given a scale under 1): none is over
@@ -1069,7 +1087,7 @@ export class Renderer {
   async bitmapTexture(blob, format, scale, full = false, near = false, pack = true) {
     await this.astc.ready;
     const { scale: s, cap, step } = picRule(this.tier, scale, { format, full, near, blocks: pack && this.astc.on });
-    return this.pictureTexture(await decodeScaledBitmap(blob, s, cap, step), format, pack);
+    return this.pictureTexture(await this.decodePicture(blob, s, cap, step), format, pack);
   }
 
   // A picture already decoded at its size as a texture, with its mips; the bitmap's closed. Packed on a phone unless pack

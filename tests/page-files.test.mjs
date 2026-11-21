@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { parseGLB, imageBytes } from '../src/core/glb.js';
 import { HeroLooks } from '../src/gfx/herolook.js';
+import { decodeScaledBitmap } from '../src/gfx/picsize.js';
 
 const root = new URL('../', import.meta.url);
 const file = (rel) => { const b = fs.readFileSync(new URL(rel, root)); return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength); };
@@ -88,7 +89,7 @@ test('a monster model keeps its colour picture, not its whole file, and its plai
     const r = {
       chars: [], tier: { texScale: 1 }, astc: { ready: Promise.resolve(), on: false },
       makeSkinned: () => ({ srcBuf: thing(), IB: thing(), sideVB: thing(), outBuf: thing(), palette: thing(), params: thing() }), addLod: (sk) => { sk.lodIB = sk.IB; },
-      pictureTexture: async () => thing(),
+      decodePicture: (blob, ...rule) => decodeScaledBitmap(blob, ...rule), pictureTexture: async () => thing(),
     };
     const t = new TripoSlots(r, '', { [id]: roster[id] }, { plain: {} }, 0, 1);
     const m = await t.model(id);
@@ -129,7 +130,7 @@ test("a monster model or skin that failed isn't kept, gives back what it made, a
     const r = {
       chars: [], tier: { texScale: 1 }, astc: { ready: Promise.resolve(), on: false },
       makeSkinned: () => ({ srcBuf: thing('src'), IB: thing('IB'), sideVB: thing('side'), outBuf: thing('out'), palette: thing('pal'), params: thing('par') }), addLod: (sk) => { sk.lodIB = thing('lod'); },
-      pictureTexture: async (bmp) => thing(bmp.name),
+      decodePicture: (blob, ...rule) => decodeScaledBitmap(blob, ...rule), pictureTexture: async (bmp) => thing(bmp.name),
     };
     const t = new TripoSlots(r, '', { [id]: roster[id] }, { plain: {} }, 0, 1);
     for (const [why, map] of [[/no bytes/, 'map1'], [/no decode/, 'map2']]) {
