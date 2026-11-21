@@ -259,7 +259,7 @@ export const LOWER_WARD = {
   vistas: [{ id: 'aqueduct_head', name: 'the Aqueduct Head', room: 'cl_aqhead', x: -100, z: -176, r: 5 }],
   last: 'gatecaptain', tough: { hp: 22, damage: 2.5 }, pay: { xp: 36000, gold: 5200 },
   names: { "Velscour's Knights": 'GARRISON KNIGHT', 'Plague Knights': 'GATE WARDEN', 'The Possessed': 'SCULLION', Kobolds: 'TURNSPIT', 'Haunted Mannequins': 'EMPTY HARNESS', 'Night Paralysis Demons': 'FORGE-WRAITH', 'Dead Children': 'THE FORGOTTEN', 'Plague Giants': 'GAOLER' },
-  look: { wall: 'ashlar', foot: 'dark:block', floor: 'flags', banner: 'p2_banner_skull', roof: 'dark:stone', flame: 'dark:flame', light: [1, 0.4, 0.16], fire: [1, 0.44, 0.18], every: 8, high: 3, glow: 2.5, lit: true, beam: 'dark:stone', bays: 'chains' },
+  look: { fill: [0.24, 0.18, 0.14], wall: 'ashlar', foot: 'dark:block', floor: 'flags', banner: 'p2_banner_skull', roof: 'dark:stone', flame: 'dark:flame', light: [1, 0.4, 0.16], fire: [1, 0.44, 0.18], every: 8, high: 3, glow: 2.5, lit: true, beam: 'dark:stone', bays: 'chains' },
   words: { enter: "Castle Velscour: the Lower Ward. His garrison holds the gate; the servants' ways run behind the walls.", clear: 'The Gate Captain is dead! The gate is yours.', wipe: 'You fall... and wake in the Gate Passage.' },
 };
 

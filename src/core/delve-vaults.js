@@ -96,6 +96,8 @@ add('table', -26, -26, { hx: 2.6, hz: 1, solid: true, rough: true });
 add('crates', -22, -32); add('barrels', -27, -17);
 add('wreck', -12, -16, { yaw: 2.2, s: 1 });
 add('pool', -12, -27, { r: 5 }); add('reeds', -8, -14, { r: 2 }); add('reeds', -25, -29, { r: 1.5 });
+// (The mudlarks' walks: planks laid on stakes over the worst of the wet, end to end, one gone here and there.)
+for (const [x, z, yaw] of [[-12.5, -24, 0.25], [-9.6, -24.7, 0.25], [-31, -110, 1.3], [-30.4, -113, 1.3], [-29.8, -116, 1.3], [8, -126, 0.6], [10.5, -127.7, 0.6], [16, -108, 2.4]]) add('boards', x, z, { yaw });
 add('sinkhole', -21, -30, { r: 3 });
 // The long gallery: reeds in the wet, the mudlarks' heaps along it, another hole at the blind end of the bore.
 add('reeds', -19.5, -50, { r: 1.3 }); add('heap', -18.4, -74, { r: 1 }); add('reeds', -27.5, -91, { r: 1.2 });
@@ -205,6 +207,6 @@ export const VAULTS = {
   last: 'leviathan', tough: { hp: 10, damage: 2.2 }, pay: { xp: 2300, gold: 380 },
   // What its rank and file are called down here, by their kind (src/sim/tripo.js optsFor).
   names: { 'The Possessed': 'THE DROWNED', 'Dead Children': 'DROWNED CHILD', Kobolds: 'MUDLARK', Dragonlings: 'BOG DRAKE', 'Giant Spiders': 'VAULT-KEEPER' },
-  look: { wall: 'mire:rubble', floor: 'mire:rubble', roof: 'mire:stone', spike: 'mire:rubble', stone: 'mire:rubble', flame: 'mire:flame', lamp: 'wisp', still: true, light: [0.5, 1, 0.62], fire: [0.56, 1, 0.7], every: 8, lit: 0.5, span: 'pier', litter: 'mire' },
+  look: { fill: [0.2, 0.215, 0.185], stand: true, wall: 'mire:rubble', floor: 'mire:rubble', roof: 'mire:stone', spike: 'mire:rubble', stone: 'mire:rubble', flame: 'flame', lamp: 'lantern', cask: false, marsh: true, still: true, light: [1, 0.62, 0.32], fire: [1, 0.66, 0.36], every: 13, high: 2.6, glow: 1.2, out: 0.35, lit: 0.5, fog: [0.02, 0.03, 0.024, 0.016], span: 'pier', litter: 'mire' },
   words: { enter: 'The Drowned Vaults. The fen came in after the causeway, and never went out again.', clear: 'The Drowned Vaults are cleared. The Leviathan of the Mile is dead!', wipe: 'Your party falls... and wakes on the Sunken Stair.' },
 };

@@ -94,7 +94,7 @@ const westProps = [];
   // Halfway up the Barbican Main and the Overflow: a bay that's come down, its stones across the kerb.
   add('heap', -2.4, -72, { r: 1.6, layer: 'mire:rubble' }); add('slab', 2.2, -75, { yaw: 0.3, tip: 0.5 }); add('bones', 1.8, -68, { r: 0.9 });
   add('heap', 2.4, -232, { r: 1.5, layer: 'mire:rubble' }); add('slab', -2, -228, { yaw: 2.8, tip: 0.6 });
-  // The keepers' lamp: the one warm light in the Drains, by their door.
+  // The keepers' brazier by their door, where they warm their hands coming in off their rounds.
   add('brazier', 22, -150.5);
   // The Slough Gate: the sluice that shuts the West Drains off from the Slough Mains, lifted.
   add('sluicegate', 30, -292, { yaw: PI / 2, w: 2.6 });
@@ -442,3 +442,62 @@ export const HIGH_CONDUITS = {
 };
 
 export const SEWERS = [WEST_DRAINS, SLOUGH_MAINS, CHARNEL_RUNS, HIGH_CONDUITS];
+
+// ---- how they're lit (the dungeon once-over, 2026-11-20) ------------------------------------------------------------------
+// The owner: "why are there glowing green things all over the sewer dungeon? Make sure light sources make sense!" A sewer has
+// two lights and no more: the day, down through the street's grates over its mains and its halls, and the keepers' own
+// lanterns, on brackets at their rounds' corners and on poles where they work, many of them gone out. No corpse-lights, no
+// coloured lamps: each sector's mood is its stone (the West Drains' fen-green muck, the Slough's black, the Charnel Runs'
+// bone, the High Conduits' clean ashlar) and how much of the day gets down to it. The pipes the streets drain by come in
+// through the walls and run, a trickle each, down to the channel.
+const LANTERN_LOOK = { flame: 'flame', lamp: 'lantern', still: true, light: [1, 0.64, 0.32], fire: [1, 0.68, 0.36], every: 15, high: 2.6, glow: 1.3, lit: 0.5, out: 0.3, cask: false };
+function lightSewer(d, o = {}) {
+  Object.assign(d.look, LANTERN_LOOK, o.look || {});
+  const near = (x, z, r) => d.props.some((p) => Math.hypot(p.x - x, p.z - z) < r);
+  const add = (kind, x, z, q = {}) => d.props.push({ kind, x, z, ...q });
+  for (const r of d.rooms) {
+    if (r.hx === undefined) continue;
+    const along = r.hz >= r.hx, len = along ? r.hz : r.hx, half = along ? r.hx : r.hz;
+    if (half <= 4.5 && len > 20) {
+      // A main or a run: a street's grate over it, one (two, if it's a long one), off to a side of the walk and not where
+      // its middle is, so the day falls somewhere of its own; a pipe out of a wall between, side to side; and no standing
+      // lanterns in its walk, only the ones on its walls. (A grate every 24 m down the middle made every run one picture.)
+      r.fires = 0;
+      const seed = Math.abs(Math.round(r.x * 7 + r.z * 3)) % 7, n = seed % 3 === 0 ? 0 : len * 2 > (o.grateEvery || 70) ? 2 : 1;
+      for (let i = 0; i < n; i++) {
+        const t = (n === 1 ? (seed / 7 - 0.5) * 0.9 : i ? 0.55 : -0.4) * (len - 8), sd = (seed + i) % 2 ? 1 : -1;
+        const x = r.x + (along ? sd * half * 0.35 : t), z = r.z + (along ? t : sd * half * 0.35);
+        if (!near(x, z, 3)) add('streetgrate', x, z, { yaw: along ? 0 : Math.PI / 2 });
+      }
+      const m = Math.max(1, Math.round((len * 2 - 10) / 17));
+      for (let i = 0; i < m; i++) {
+        const t = ((i + 0.5) / m * 2 - 1) * (len - 5) + 5, side = i % 2 ? 1 : -1;
+        if (Math.abs(t) > len - 3) continue;
+        const x = r.x + (along ? side * (half - 0.4) : t), z = r.z + (along ? t : side * (half - 0.4));
+        if (!near(x, z, 2.5)) add('outfall', x, z, { yaw: along ? (side > 0 ? -Math.PI / 2 : Math.PI / 2) : (side > 0 ? Math.PI : 0), up: 0.9 + 0.4 * ((i * 7) % 3) / 2, dry: !o.running && i % 3 === 2 });
+        // (Each sector's own along its runs: the Slough's silt banked up the walls; the Charnel Runs' bones, washed down
+        // from the charnel and heaped where the water left them.)
+        const bx = r.x + (along ? -side * (half - 1.1) : t + 4), bz = r.z + (along ? t + 4 : -side * (half - 1.1));
+        if (o.silt && i % 2 === 0 && !near(bx, bz, 2.5)) add('heap', bx, bz, { r: 1.1 + 0.3 * (i % 3) });
+        if (o.bones && i % 2 === 1 && !near(bx, bz, 2.5)) add('bones', bx, bz, { r: 1.2 });
+      }
+    } else if (Math.min(r.hx, r.hz) >= 7) {
+      // A hall: its fires along the walls fewer (pole-lanterns, a long way apart), and a grate or two over it.
+      r.fires = r.fires ?? 18;
+      if (!d.props.some((p) => p.kind === 'daylight' && Math.abs(p.x - r.x) < r.hx && Math.abs(p.z - r.z) < r.hz)) {
+        for (const [fx, fz] of Math.max(r.hx, r.hz) >= 14 ? [[-0.4, -0.35], [0.35, 0.4]] : [[0.25, -0.2]]) {
+          const x = r.x + fx * r.hx, z = r.z + fz * r.hz;
+          if (!near(x, z, 3)) add('streetgrate', x, z, { yaw: 0.3 });
+        }
+      }
+    }
+  }
+}
+// (Each its own: the West Drains fen-green and murky; the Slough brown-black and silted, its lamps the fewest; the Charnel
+// Runs bone-pale and dry; the High Conduits clean and loud with water, every pipe running. fill: the light off its stone.)
+lightSewer(WEST_DRAINS, { look: { light: [1, 0.6, 0.3], fog: [0.026, 0.03, 0.018, 0.022], fill: [0.1, 0.105, 0.08] } });
+lightSewer(SLOUGH_MAINS, { look: { light: [1, 0.5, 0.24], out: 0.25, fog: [0.034, 0.026, 0.018, 0.018], fill: [0.15, 0.12, 0.09] }, silt: true });
+lightSewer(CHARNEL_RUNS, { look: { flame: 'flame', light: [1, 0.8, 0.58], out: 0.4, fog: [0.03, 0.03, 0.032, 0.016], fill: [0.12, 0.118, 0.115] }, grateEvery: 90, bones: true });
+lightSewer(HIGH_CONDUITS, { look: { out: 0.2, fog: [0.03, 0.022, 0.014, 0.012], fill: [0.18, 0.155, 0.125] }, running: true });
+// (Where the street fell in, the Great Grate: the day comes down the hole it left, wide.)
+WEST_DRAINS.props.push({ kind: 'daylight', x: 2, z: -152, r: 4.2, pool: false, lean: [0.14, 0.05] });

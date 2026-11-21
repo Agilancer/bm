@@ -241,7 +241,7 @@ export const UNDERCROFT = {
   names: { Kobolds: 'RETORT-BOY', 'Plague Knights': 'FEEDER', 'Plague Giants': 'PUMP-HAND', 'Giant Spiders': 'ROOT-CRAWLER', 'Dead Children': 'THE KEPT', 'The Possessed': 'THE STEEPED' },
   // (Its wall lights are green, what they burn down here, one every sixteen metres; each room's own two or three lamps are
   // fire, as the stills' are.)
-  look: { wall: 'ashlar', foot: 'dark:block', floor: 'flags', banner: 'p2_banner_green', roof: 'dark:stone', flame: 'dark:flame', light: [0.5, 1, 0.45], fire: [1, 0.66, 0.34], every: 16, high: 3, glow: 3.2, lit: true, beam: 'dark:stone', bays: 'chains' },
+  look: { fill: [0.15, 0.12, 0.09], wall: 'ashlar', foot: 'dark:block', floor: 'flags', banner: 'p2_banner_green', roof: 'dark:stone', flame: 'dark:flame', light: [1, 0.5, 0.22], fire: [1, 0.66, 0.34], fog: [0.02, 0.026, 0.016, 0.012], every: 16, high: 3, glow: 3.2, lit: true, beam: 'dark:stone', bays: 'chains' },
   words: { enter: "Castle Velscour: the Alchemists' Undercroft. Up in the wing they distil. Down here they grow.", clear: 'The Great Work is dead! The Glass Key is yours.', wipe: 'You fall... and wake on the Undercroft Stair.' },
 };
 

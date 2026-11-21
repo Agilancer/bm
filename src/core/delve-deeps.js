@@ -12,10 +12,10 @@ const rooms = [
   { id: 'hd_mouth', x: 0, z: 0, r: 9, y: 0, roof: 7, name: 'the Howling Mouth' },
   { id: 'hd_galleries', x: -34, z: -42, r: 14, y: -2, roof: 10, name: 'the Wind Galleries', seam: 'frost:course' },
   { id: 'hd_herd', x: -78, z: -92, r: 15, y: -5, roof: 10, name: 'the Frozen Herd', rock: 'frost:stone', seam: 'frost:rubble' },
-  { id: 'hd_ramshall', x: -62, z: -152, r: 21, y: -7, roof: 16, name: "the Goat-King's Hall", rock: 'frost:course', seam: 'frost:block', ground: 'frost:flags' },
+  { id: 'hd_ramshall', x: -62, z: -152, r: 21, y: -7, roof: 16, name: "the Goat-King's Hall", rock: 'frost:course', seam: 'frost:block', ground: 'slate:flags' },
   { id: 'hd_webs', x: 4, z: -180, r: 16, y: -9, roof: 11, name: 'the Webbed Gallery', seam: 'pale:rubble' },
-  { id: 'hd_falls', x: 62, z: -160, r: 14, y: -11, roof: 16, name: 'the Frozen Falls', rock: 'frost:stone', ground: 'ice' },
-  { id: 'hd_brood', x: 96, z: -218, r: 21, y: -13, roof: 15, name: 'the Brood Pit', rock: 'dark:rubble', seam: 'frost:rubble', ground: 'frost:course' },
+  { id: 'hd_falls', x: 62, z: -160, r: 14, y: -11, roof: 16, name: 'the Frozen Falls', rock: 'frost:stone', ground: 'slate:ice' },
+  { id: 'hd_brood', x: 96, z: -218, r: 21, y: -13, roof: 15, name: 'the Brood Pit', rock: 'dark:rubble', seam: 'frost:rubble', ground: 'slate:course' },
   { id: 'hd_dark', x: 52, z: -268, r: 13, y: -18, roof: 10, name: 'the Lightless Stair', fires: 0, rock: 'dark:stone', seam: 'frost:stone' },
   { id: 'hd_lake', x: 40, z: -340, r: 31, y: -21, roof: 25, name: "the Sleeper's Lake", flat: true },
 ];
@@ -138,6 +138,6 @@ export const DEEPS = {
   // The Howling Mouth (SITES.deepsmouth), facing west to the path from Frostwatch.
   portal: { x: 880, z: 3990, yaw: -Math.PI / 2, r: 2.2 },
   last: 'sleeper', tough: { hp: 5.5, damage: 1.3 }, pay: { xp: 2600, gold: 420 },
-  look: { wall: 'frost:rubble', floor: 'frost:rubble', roof: 'frost:stone', spike: 'ice', flame: 'frost:flame', cold: true, light: [0.5, 0.74, 1], fire: [0.56, 0.8, 1], every: 8, span: 'ice', litter: 'snow' },
+  look: { wall: 'frost:rubble', floor: 'slate:rubble', roof: 'frost:stone', spike: 'ice', flame: 'frost:flame', cold: true, light: [0.5, 0.74, 1], fire: [0.56, 0.8, 1], fog: [0.05, 0.06, 0.075, 0.016], every: 8, span: 'ice', litter: 'snow' },
   words: { enter: 'The Howling Deeps. The wind goes in and does not come out.', clear: 'The Howling Deeps are cleared. The Sleeper is dead!', wipe: 'Your party falls... and wakes at the Howling Mouth.' },
 };

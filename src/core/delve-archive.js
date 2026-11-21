@@ -249,7 +249,7 @@ export const DROWNED_ARCHIVE = {
   last: 'lector', tough: { hp: 26, damage: 2.8 }, pay: { xp: 70000, gold: 9600 },
   names: { "Velscour's Knights": 'SODDEN KNIGHT', 'The Possessed': 'DROWNED READER', Necromancers: 'ARCHIVIST', 'Plague Knights': 'SLUICE WARDEN', Kobolds: 'BILGE-RAT', 'Plague Giants': 'SLUICE-KEEPER', 'Giant Worms': 'INK-EEL', Harpies: 'LOOSE LEAF' },
   // (Its lamps burn cold, the drowned's blue-white, and few: a torch every twenty metres of wall, and each room's own two or three.)
-  look: { wall: 'ashlar', foot: 'dark:block', floor: 'flags', banner: 'p2_banner_blue', roof: 'dark:stone', flame: 'frost:flame', light: [0.55, 0.8, 1.1], fire: [0.8, 0.95, 1.15], every: 18, high: 3, glow: 3.6, lit: true, beam: 'dark:stone', bays: 'chains' },
+  look: { fill: [0.2, 0.165, 0.14], wall: 'ashlar', foot: 'dark:block', floor: 'flags', banner: 'p2_banner_blue', roof: 'dark:stone', flame: 'flame', light: [1, 0.72, 0.44], fire: [1, 0.76, 0.48], fog: [0.016, 0.02, 0.024, 0.014], every: 18, high: 3, glow: 3.6, lit: true, beam: 'dark:stone', bays: 'chains' },
   words: { enter: "Castle Velscour: the Drowned Archive. He had the cistern broken over the books he couldn't have unwritten. The archivists stayed.", clear: 'The Drowned Lector is dead! The Drowned Key is yours.', wipe: 'You fall... and wake at the Sunk Door.' },
 };
 

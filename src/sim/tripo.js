@@ -17,6 +17,15 @@ import { OPENING } from '../core/opening.js';
 import { inTown } from '../core/town.js';
 import { ARMS, BREATH_ELEM, GROUPS, LAIRS, MODEL_STATS, TRIPO_BASE, armIds, kindOfGroup, lairFor, lairLevel, levelTough } from '../core/tripo-monsters.js';
 import { ALL_PACKS, BOSSES, delveByKey, roomSpot } from '../core/dungeon.js';
+// A body's footprint, as the walls keep it, measured off the models (tools/dungeon/clipcheck.mjs): a spider's legs reach
+// out 0.65 of its height either side, a dragon's flanks 0.6, a worm's coils 0.3, a man's shoulders and weapon 0.25. Held to
+// 1.8 m for the packs, who go down tunnels, and narrower than their bodies there (a pack's dragonling may brush a wall); a
+// delve's boss, who keeps to its hall, as wide as it is (to 4.5 m), so a queen spider's legs aren't through the wall.
+export function bodyRadius(H, kind, boss) {
+  const k = boss ? (kind === 'dragon' ? 0.6 : kind === 'spider' ? 0.65 : kind === 'worm' ? 0.3 : 0.25) : (kind === 'dragon' ? 0.45 : kind === 'spider' ? 0.55 : kind === 'worm' ? 0.3 : 0.2);
+  return Math.min(Math.max(H * k, 0.35), boss ? 4.5 : 1.8);
+}
+
 
 // The party dungeons' packs and bosses, as lairs (src/core/dungeon.js). A pack wakes as you come into its room; a boss only
 // when its delve stands it (src/sim/dungeon.js), which is why its wake is nothing. The packs are a party's work, not one
@@ -695,7 +704,8 @@ export class TripoWorld {
       hp: s.hp * (boss ? 1.25 : 1) * (tough?.hp || 1), speed: s.speed, damage: s.damage * (tough?.damage || 1), reach: s.reach, bite: tough?.damage || 1,
       // Its kind's tricks, where the lair has them on (src/sim/moves.js).
       tricks: lair.tricks ? meta.tricks || TRICKS[meta.group] || null : null, ai: lair.ai || (breath && s.ai !== 'caster' ? 'breather' : s.ai),
-      radius: clamp(H * (meta.kind === 'dragon' ? 0.22 : meta.kind === 'spider' ? 0.38 : 0.2), 0.35, 1.8), height: H,
+      // (Its body's own footprint: bodyRadius.)
+      radius: bodyRadius(H, meta.kind, lair.bossLair), height: H,
       lootKind: s.loot, knock: H > 3 ? 4 : H > 2 ? 2.5 : 1.5, pause: s.ai === 'melee' && H < 1.5 ? 0.7 : 1,
       sight: meta.kind === 'dragon' ? 48 : s.ai === 'stalker' ? 34 : 24, leash: meta.kind === 'dragon' ? 120 : 70, roam: lair.r * 0.6 + 2,
       breathRange: s.breathRange || 7, breathDps: (s.breathDps || 12) * Math.min(tough?.damage || 1, 3), breathElem: BREATH_ELEM[breath] ?? ELEM.FIRE,

@@ -595,14 +595,26 @@ export class Renderer {
       const L = d.look, cold = L.cold || L.still ? 0.25 : 1;
       // (glow: a delve's fires burning wider and brighter than the Warrens': the keep's halls are four times the size.)
       const g = L.glow || 1;
-      for (const [x, y, z, nx, nz] of torches(d)) warrens.push({ p: [x + nx * 0.45, y + 0.3, z + nz * 0.45], c: L.light, r: 12 * g, i: 3.8 * g, flicker: 0.8 * cold });
+      // (A torch gone out gives none: src/core/dungeon.js torches. A lantern's light is where it hangs, off its bracket's end.)
+      const lant = L.lamp === 'lantern';
+      for (const [x, y, z, nx, nz, lit] of torches(d)) if (lit) warrens.push({ p: [x + nx * (lant ? 0.25 : 0.45), y + (lant ? -0.35 : 0.3), z + nz * (lant ? 0.25 : 0.45)], c: L.light, r: 12 * g, i: 3.8 * g, flicker: 0.8 * cold });
       // (A fire hung over a hall: its light from under the basket, far-reaching and strong enough to pool on a floor five
       // metres down, which falls off by the square of the way.)
+      // (A grave-lamp's ('bowl') is over its wicks, in the bowl's lap, stronger to reach the floor as far: from under it, the
+      // dish's underside was lit like a lampshade, the critics.)
+      const bowl = L.lamp === 'bowl';
       for (const [x, y, z, lift, how] of braziers(d)) warrens.push(how === 'hang'
-        ? { p: [x, y + lift - 1.6, z], c: L.fire, r: 17 * Math.min(g, 1.4), i: 30 * g, flicker: 0.5 * cold }
+        ? { p: [x, y + lift - (bowl ? 0.25 : 1.6), z], c: L.fire, r: 17 * Math.min(g, 1.4), i: (bowl ? 48 : 30) * g, flicker: 0.5 * cold }
         : { p: [x, y + (lift ?? 1.9), z], c: L.fire, r: (lift > 4 ? 22 : 15) * g, i: (lift > 4 ? 6.5 : 5.2) * g, flicker: 0.9 * cold });
       // (Daylight down a shaft or through glass, src/core/delve-build.js daylight: cold and steady, from just under the roof, and
       // kept among the frame's lights before the torches round it: the Sunk Garden's, the Library's oculus, the Conservatory.)
+      // (And the street's grates in a sewer's vault, src/core/delve-build.js streetgrate: the day down through each, cold and
+      // steady, a smaller pool than a light well's.)
+      for (const p of d.props) if (p.kind === 'streetgrate') { const x = d.x + p.x, z = d.z + p.z, fy = caveFloorY(x, z); warrens.push({ p: [x, Math.min(caveRoofY(x, z) - 1.2, fy + 5), z], c: [0.62, 0.72, 0.9], r: 13, i: 26, flicker: 0, prio: 20 }); }
+      // (A great jar of green glass with a lamp low in its stand, the Undercroft's: a soft green on what's round it.)
+      for (const p of d.props) if (p.kind === 'glassjar' && (p.r || 1) >= 1) { const x = d.x + p.x, z = d.z + p.z, fy = caveFloorY(x, z); warrens.push({ p: [x, fy + 1.0, z], c: [0.42, 0.7, 0.42], r: 6, i: 2.6, flicker: 0.1 }); }
+      // (A crowd of candles, src/core/delve-build.js candles: a small warm pool round it, tallow's, flickering.)
+      for (const p of d.props) if (p.kind === 'candles') { const x = d.x + p.x, z = d.z + p.z, fy = caveFloorY(x, z); warrens.push({ p: [x, fy + (p.up || 0) + 0.6, z], c: [1, 0.62, 0.3], r: 5 * (p.s || 1), i: 1.8 * (p.s || 1), flicker: 1 }); }
       for (const p of d.props) if (p.kind === 'daylight') { const x = d.x + p.x, z = d.z + p.z, fy = caveFloorY(x, z); warrens.push({ p: [x, Math.min(caveRoofY(x, z) - 2.2, fy + 6.5), z], c: [0.7, 0.78, 0.95], r: 20 + p.r * 2.5, i: 70 + p.r * 8, flicker: 0, prio: 80 }); }
       // (The Elder Gods' islands: the Galeward's pylons, the Cinderwell's vent, the altar, the Rimespire's claws. src/core/delve-build.js)
       if (d.style === 'void') for (const p of d.props) {
@@ -3765,7 +3777,7 @@ export class Renderer {
     this.stage = 'presentation';
     // ---- to the screen ----
     const cd = this.compData;
-    cd[0] = snap[H.DMG_FLASH]; cd[1] = snap[H.WEAK]; cd[2] = time;
+    cd[0] = window.__reviewShots ? 0 : snap[H.DMG_FLASH]; cd[1] = window.__reviewShots ? 0 : snap[H.WEAK]; cd[2] = time;
     cd[3] = tier.lean ? 0 : this.W < this.canvas.width * 0.92 ? 0.55 : 0.18;
     cd[4] = this.useShafts ? 1 : 0; cd[5] = this.useBloom ? 0.3 : 0; cd[6] = this.fade || 0;
     cd[7] = snap[H.HIT_DIR]; cd[8] = window.__reviewShots ? 0 : Math.max(0, 1 - snap[H.HIT_DIR_T] * 1.5);   // (tools/interior/walk.js photographs the place, not its own wounds)

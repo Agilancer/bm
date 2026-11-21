@@ -65,7 +65,7 @@ const props = [];
   // terrace in the east wall. A fire at the way in, one where it opens into the Long Glass.
   add('lintel', 0, -2, { hx: 4.5, stone: 'dark:ashlar' });
   add('bigmirror', -4.4, -10, { yaw: PI / 2, w: 1.4, h: 3.4 }); add('bigmirror', -4.4, -25, { yaw: PI / 2, w: 1.4, h: 3.4, broken: true }); add('bigmirror', 4.4, -26, { yaw: -PI / 2, w: 1.4, h: 3.4 });
-  add('carpet', 0, -15, { hx: 1.2, hz: 18, layer: 'dark:cloth_oat' }); add('brazier', 3.2, 2.4); add('brazier', -3.2, -34);
+  add('carpet', 0, -15, { hx: 1.2, hz: 18, layer: 'dark:cloth_oat' }); add('brazier', 3.9, -5); add('brazier', -3.2, -34);
   add('mark', 4.25, -12, { up: 3.2, r: 0.5, yaw: -PI / 2, back: -1 });
   // ---- the Long Glass: the hall of glass. Great mirrors down both walls, never two facing each other square, and one
   // the height of the room closing its far end: what you walk toward from the door. One draped, with a way behind it.

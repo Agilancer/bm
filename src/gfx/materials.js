@@ -648,14 +648,15 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
       else {
         let c = textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.21, 0.0).r;
         albedo *= mix(0.7, 1.08, smoothstep(0.46, 0.5, abs(c - 0.5) + 0.46)) * (0.9 + a.x * 0.4);
+        if (tintK == 7u) { albedo *= vec3f(0.22, 0.25, 0.3); rough = 0.6; }
         n = normalize(vec3f(a.x * 0.08, 1.0, a.y * 0.08));
       }
     }
     if (lay == 111u) {
       // The falls: streaks running down, foam where they land.
       let s = textureSampleLevel(noiseTex, repeatSmp, vec2f(in.uv.x * 3.0, in.uv.y * 0.6 - t * 0.9), 0.0);
-      albedo *= 0.55 + 0.6 * s.r;
-      emissive = albedo * 0.12 * F.sunColor.a;
+      albedo *= (0.12 + 0.75 * s.r * s.r) * vec3f(0.62, 0.7, 0.74);
+      emissive = albedo * 0.06 * F.sunColor.a;
       n = normalize(n0 + vec3f((s.g - 0.5) * 0.4, 0.0, (s.b - 0.5) * 0.4));
     }
     if (lay == 113u) {
@@ -699,6 +700,20 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
     let dayK = smoothstep(0.3, 0.9, F.sunColor.a);
     if (lay == 100u && tintK == 7u) { albedo = vec3f(0.03, 0.034, 0.042) * (0.6 + 0.8 * paneK) * mix(0.3, 1.0, dayK); metal = 0.04 * dayK; rough = mix(0.88, mix(0.5, 0.72, paneK), dayK); ao = 0.55; }   // (darker and duller: the sky full in them, they were blank paper, the critics)
     if (lay == 108u) { emissive = select(vec3f(6.0, 6.0, 5.6), vec3f(1.6, 1.6, 1.5), F.blood.w < 0.5); albedo = vec3f(0.0); }
+    // (An old mirror's silvered glass ('pale:obsidian', the Hall of Mirrors, src/core/delve-props-b.js): grey and metal, the
+    // hall's lamps glinting in it, a dim haze of the lit room in it, its silver gone in clouds. As black glass it read as a
+    // doorway into the dark, the critics.)
+    if (lay == 114u && tintK == 2u) {
+      let s = textureSampleLevel(noiseTex, repeatSmp, vec2f(p.x + p.z, p.y) * 0.3, 0.0);
+      let fres = pow(1.0 - clamp(abs(dot(n0, v)), 0.0, 1.0), 3.0);
+      let tarnish = smoothstep(0.42, 0.72, s.r);
+      albedo = mix(vec3f(0.11, 0.105, 0.095), vec3f(0.035, 0.03, 0.026), tarnish);
+      metal = 0.9; rough = mix(0.14, 0.5, tarnish);
+      emissive = vec3f(0.018, 0.016, 0.013) * (1.0 - 0.65 * tarnish) * (0.7 + 0.6 * fres);
+    }
+    // (The sky seen up a delve's light well or through a street grate ('slate:glow', src/core/delve-build.js daylight): a
+    // pale grey-blue day, bright but not a lamp: at 6 it was a strip light in the vault.)
+    if (lay == 108u && tintK == 7u) { emissive = select(vec3f(0.032, 0.038, 0.048), vec3f(0.012, 0.014, 0.018), F.blood.w < 0.5); }
     if (lay == 101u) {
       // (Its own light beside it, put out: src/gfx/homelights.js. A light the frame has no room for leaves the flame be.)
       for (var li = 0u; li < u32(F.counts.x); li++) {
@@ -722,13 +737,26 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
       // the Drowned Vaults ('mire:flame'), the Sporehold's gills ('spore:flame').)
       if (tintK == 2u) { emissive = vec3f(dot(emissive, vec3f(0.3, 0.5, 0.2))) * vec3f(0.8, 1.0, 0.74); }
       if (tintK == 4u) { emissive = emissive.grb * vec3f(0.55, 0.95, 0.6); }
-      if (tintK == 5u) { emissive = vec3f(dot(emissive, vec3f(0.3, 0.5, 0.2))) * vec3f(0.5, 0.2, 0.95); }
+      if (tintK == 5u) { emissive = vec3f(dot(emissive, vec3f(0.3, 0.5, 0.2))) * vec3f(0.24, 0.09, 0.46); }
       if (tintK == 6u) { emissive = vec3f(dot(emissive, vec3f(0.3, 0.5, 0.2))) * vec3f(0.62, 0.3, 1.0); }
       // (A window lit at evening ('eve:flame', Phobos's panes): dark glass by day, a lamp behind it as the light goes, warm
       // and a little red.)
       let night = 1.0 - smoothstep(0.3, 0.9, F.sunColor.a);
       if (tintK == 12u) { emissive *= vec3f(0.5, 0.7, 0.95) * night; }
       if (tintK == 8u) { emissive = vec3f(dot(emissive, vec3f(0.3, 0.5, 0.2))) * vec3f(0.95, 0.1, 0.035); }
+      // (A lantern's horn or glass ('umber:flame', src/core/delve-build.js lanterns): the flame seen through it, a dull warm
+      // amber, not the white heat of a flame itself: as a flame the panes read as four blown-out yellow boxes.)
+      if (tintK == 10u) { emissive = mix(vec3f(0.55, 0.22, 0.05), vec3f(1.7, 0.95, 0.36), heat) * f; }
+      // (The rest of a lantern's horn ('soot:flame'), round the bright of the flame behind it: dull and smoked, the light
+      // only coming through it, so the pane reads as horn with a flame in it and not as a lit box.)
+      if (tintK == 11u) { emissive = mix(vec3f(0.12, 0.045, 0.012), vec3f(0.42, 0.2, 0.06), heat) * f; }
+      // (Green glass with a lamp well behind it ('moss:flame', the Undercroft's jars): the glass's own colour, soft, more
+      // bottle than lamp.)
+      if (tintK == 9u) { emissive = mix(vec3f(0.006, 0.016, 0.007), vec3f(0.045, 0.09, 0.038), heat) * f; }
+      // (Green glass with its lamp inside ('forest:flame', the Undercroft's jars): bright where you look through it at the
+      // lamp, deep bottle-green toward its edges where there's more glass to see through. Dark glass with a card of glow
+      // in front of it read as a black drum with a ring of neon round its foot, the critics.)
+      if (tintK == 15u) { emissive = (vec3f(0.004, 0.016, 0.008) + vec3f(0.04, 0.12, 0.052) * face * face) * f; }
       albedo = vec3f(0.0);
       if (tintK == 12u) { albedo = vec3f(0.03, 0.034, 0.042) * (0.6 + 0.8 * paneK) * (1.0 - night); metal = 0.04 * (1.0 - night); rough = mix(0.5, 0.72, paneK); ao = mix(0.55, 1.0, night); }
     }
@@ -750,6 +778,10 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
       // Phobos's palette swaps (src/core/phobos-build.js): blue-grey slate; his blood red, ox-blood, deep and dark; old stone
       // and tile gone green-grey with lichen; umber, old fired clay; and soot, brown-black where the smoke's lain for years.
       if (tintK == 7u) { albedo = mix(albedo, vec3f(lum * 0.95) * vec3f(0.56, 0.62, 0.72), 0.85); rough = rough * 0.9; }
+      // (Standing water under a street grate or a court open to the sky ('slate:p2_puddles', src/core/delve-build.js wet): the
+      // sky over it in it, a grey-blue sheen, as the sky up the well ('slate:glow'). The bare decal was black: a hole in the
+      // floor, an oil spill, the critics.)
+      if (tintK == 7u && params.x > 0.0) { albedo = vec3f(0.025, 0.028, 0.032); rough = 0.1; emissive = select(vec3f(0.02, 0.024, 0.031), vec3f(0.008, 0.009, 0.012), F.blood.w < 0.5) * (0.75 + 0.5 * lum); }
       if (tintK == 8u) { albedo = mix(albedo, vec3f(lum * 0.72) * vec3f(0.56, 0.14, 0.12), 0.9); }
       if (tintK == 9u) { albedo = mix(albedo, vec3f(lum) * vec3f(0.55, 0.62, 0.42), 0.62); }
       if (tintK == 10u) { albedo = mix(albedo, vec3f(lum * 0.82) * vec3f(0.8, 0.53, 0.36), 0.75); }
@@ -1549,7 +1581,7 @@ fn shadeTrue(p: vec3f, n: vec3f, v: vec3f, albedo: vec3f, rough: f32, metal: f32
   var ambient = mix(F.groundAmb.rgb, F.skyAmb.rgb, up);
   if (indoor > 3.5) { ambient = voidAmbient(up) * voidTint(p, 1.0); }
   else if (indoor > 2.5) { ambient = mix(vec3f(0.36, 0.36, 0.38), vec3f(0.82, 0.83, 0.86), up); }
-  else if (indoor > 1.5) { ambient = select(select(vec3f(0.044, 0.044, 0.048), vec3f(0.095, 0.078, 0.064), indoor > 2.1), vec3f(0.15, 0.105, 0.085), indoor > 2.2); } else if (indoor > 0.5) { ambient = mix(vec3f(0.12, 0.095, 0.08), vec3f(0.2, 0.19, 0.22), up); }
+  else if (indoor > 1.5) { ambient = delveFill(p) * mix(0.8, 1.12, up); } else if (indoor > 0.5) { ambient = mix(vec3f(0.12, 0.095, 0.08), vec3f(0.2, 0.19, 0.22), up); }
   if (indoor > 1.1 && indoor < 1.5) { ambient *= mix(0.25, 1.0, clamp((F.sunColor.a - 0.1) / 0.9, 0.0, 1.0)); }
   ambient = mix(ambient, F.caveAmb.rgb * mix(0.7, 1.15, up), cave);
   let nv = max(dot(n, v), 1e-3);

@@ -1002,7 +1002,8 @@ export class SpellFX {
     const { r, glowData: g, solidData: s } = this;
     const now = performance.now(), dt = Math.min(0.05, (now - this.last) / 1000);
     this.last = now;
-    const n = snap[H.FX_N] | 0;
+    // (A review photograph of a place (tools/dungeon/survey.mjs) shows the place: no fight's marks, wards or bolts in it.)
+    const n = window.__reviewShots === 'calm' ? 0 : snap[H.FX_N] | 0;
     let nG = 0, nS = 0;
     // Marks on the ground go down first, then the light over them, and what's drawn over the hands last.
     for (const pass of [0, 1, 2]) {

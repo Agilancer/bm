@@ -103,5 +103,7 @@ export const P2_TILE = {
  "p2_wax_drips": [1.0, 1.0, 1.0],
  "p2_chain_strip": [1.0, 1.5, 1.5],
  "p2_banner_skull": [1.4, 2.1, 2.1],
- "p2_signs": [1.0, 1.0, 1.0]
+ "p2_signs": [1.0, 1.0, 1.0],
+ "p2_portraits_a": [1.0, 1.0, 1.0],
+ "p2_portraits_b": [1.0, 1.0, 1.0]
 };

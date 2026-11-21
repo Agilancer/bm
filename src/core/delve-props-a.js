@@ -7,6 +7,7 @@
 // spokes or five). No letters on a label, a spine or a card.
 import { caveFloorY, caveRoofY } from './dungeon.js';
 import { hash2 } from './terrain-noise.js';
+import { stamp } from './delve-stamps.js';
 
 const TAU = Math.PI * 2, NO = { collide: false };
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
@@ -52,6 +53,29 @@ function bust(K, F, um, sw, v, sh, liv, kind, t) {
   if (kind === 3) Q('p2_bronze_plates', [fx - fw * 1.1, f1], [fx + fw * 1.1, f1], [fx + fw * 1.4, f1 + sh * 0.09], [fx - fw * 1.4, f1 + sh * 0.09], 0.072);
   // (Horned: two, rising apart from the brow, his own V.)
   if (kind === 4) for (const e of [-1, 1]) Q('char:wood', [fx + e * fw * 0.5, f1], [fx + e * fw * 1.0, f1], [fx + e * fw * 1.9, f1 + sh * 0.16], [fx + e * fw * 1.7, f1 + sh * 0.16], 0.072);
+}
+
+// One of the Gallery's twelve oil paintings (tools/dungeon/portraits_paint.py: the house of Velscour in Blender, painted)
+// in a frame's own plane from u0 to u1 and v0 to v1, o out: cell n of the two squares p2_portraits_a and _b, six to a
+// square; cropped to the canvas's own shape (a wide one to the face and shoulders), flipped if flip. 11: the Painter's
+// unfinished one. tint: a Kit tint ('dark:') for a face gone dark under its varnish.
+const PAINTED = ['p2_portraits_a', 'p2_portraits_b'], CELL = 256 / 384, E = 0.004;
+export function painting(K, F, u0, u1, v0, v1, o, n, flip = false, tint = '') {
+  const j = ((n % 12) + 12) % 12, c = j % 6, cu = (c % 3) / 3, cv = Math.floor(c / 3) / 2, asp = (u1 - u0) / (v1 - v0);
+  let a = cu + E, b = cu + 1 / 3 - E, t = cv + E, bt = cv + 0.5 - E;
+  if (asp > CELL) { const hh = 0.5 * CELL / asp; t = Math.max(cv + E, cv + 0.5 * 0.34 - hh / 2); bt = Math.min(cv + 0.5 - E, t + hh); }
+  else { const ww = (asp / CELL) / 3, m = cu + 1 / 6; a = m - ww / 2; b = m + ww / 2; }
+  if (flip) [a, b] = [b, a];
+  face(K, tint + PAINTED[j < 6 ? 0 : 1], F, u0, u1, v0, v1, o, [[a, bt], [b, bt], [b, t], [a, t]]);
+}
+// A frame's moulding, mitred at its corners: from its back edge on the wall out to its face, a ridge, and a bevel down to
+// the canvas it holds (u0..u1, v0..v1, the canvas's own edge; wd: the moulding's width; o: the wall's face; dp: how proud
+// it stands). In flat quads it was a painted border.
+export function moulding(K, layer, F, u0, u1, v0, v1, wd, o, dp, ridge = 'dark:wood') {
+  const ring = (s, oo) => { const U0 = u0 - wd + s, U1 = u1 + wd - s, V0 = v0 - wd + s, V1 = v1 + wd - s; return [F(U0, V0, oo), F(U1, V0, oo), F(U1, V1, oo), F(U0, V1, oo)]; };
+  const R = [ring(0, o), ring(0, o + dp * 0.8), ring(wd * 0.3, o + dp), ring(wd * 0.55, o + dp * 0.9), ring(wd, o + dp * 0.35)];
+  const L = [layer, layer, ridge, layer];
+  for (let r = 0; r < 4; r++) for (let i = 0; i < 4; i++) { const j = (i + 1) % 4; K.quad(L[r], R[r][i], R[r][j], R[r + 1][j], R[r + 1][i]); }
 }
 
 export const PROPS_A = {
@@ -128,7 +152,6 @@ export const PROPS_A = {
   // s: how big they are (1; a cabinet's miniatures a third of that, a rotunda's great ones half as big again).
   hangwall(K, d, p, x, y, z) {
     const F = frame(x, y, z, p.yaw || 0), w = p.w, top = p.h || 8, lo = p.lo ?? 0.7, skip = p.skip || [], S = p.s || 1;
-    const LIV = ['royal:cloth_red', 'cloth_red', 'dark:cloth_oat', 'pale:cloth_oat', 'blood:cloth_red', 'royal:cloth_red'];
     const FR = ['dark:wood', 'p2_bronze_plates', 'char:wood', 'dark:wood'];
     let row = 0;
     for (let h0 = lo; h0 < top - 0.7 * S; row++) {
@@ -139,16 +162,17 @@ export const PROPS_A = {
         const g = 0.07 * Math.min(1, S * 1.4), u0 = u + g, u1 = u + cw - g, v0 = h0 + g, v1 = h0 + rh - g, um = (u0 + u1) / 2;
         u += cw;
         if (skip.some(([a, b]) => u1 > a && u0 < b) || k > 0.94) continue;   // (and now and then a gap: one's been taken down)
-        face(K, FR[Math.floor(k * 37) % 4], F, u0, u1, v0, v1, 0.04);
         const m = Math.min(0.11, (u1 - u0) * 0.14);
+        moulding(K, FR[Math.floor(k * 37) % 4], F, u0 + m, u1 - m, v0 + m, v1 - m, m, 0.03, Math.min(0.06, m * 0.7), (k * 41) % 1 < 0.5 ? 'p2_bronze_plates' : 'dark:wood');
         // (Now and then an empty frame, the wall through it; or a canvas slashed corner to corner, its sitter gone.)
         const fate = (k * 29) % 1;
         if (fate < 0.04) { face(K, 'char:stone', F, u0 + m, u1 - m, v0 + m, v1 - m, 0.045); continue; }
-        face(K, 'char:cloth_oat', F, u0 + m, u1 - m, v0 + m, v1 - m, 0.055);
-        if (fate < 0.06) { K.quad('pale:cloth_oat', F(u0 + m, v0 + m, 0.062), F(u0 + m + 0.09, v0 + m, 0.062), F(u1 - m, v1 - m, 0.062), F(u1 - m - 0.09, v1 - m, 0.062), F.n); continue; }
-        const iw = u1 - u0 - 2 * m, sh = v1 - v0 - 2 * m, t = (k * 11 % 1 - 0.5) * 0.12, liv = LIV[Math.floor(k * 53) % 6], kind = Math.floor(k * 71) % 7;
-        if (kind === 6) { bust(K, F, um - iw * 0.22, iw * 0.21, v0 + m, sh, liv, 0, t); bust(K, F, um + iw * 0.22, iw * 0.21, v0 + m, sh * 0.9, LIV[(Math.floor(k * 53) + 2) % 6], 2, -t); }
-        else bust(K, F, um, iw * 0.36, v0 + m, kind === 5 ? sh * 0.62 : sh, liv, kind, t);
+        // (Each one of the house painted (portraits_paint.py), twelve faces flipped and cropped so no two near are the same; a
+        // wide canvas a pair of them. Now and then slashed, corner to corner, its sitter got down out of it.)
+        const iw = u1 - u0 - 2 * m, sh = v1 - v0 - 2 * m, n = Math.floor(k * 97) % 11, fl = (k * 13) % 1 < 0.5, dim = (k * 7) % 1 < 0.25 ? 'dark:' : '';
+        if (iw / sh > 1.15) { painting(K, F, u0 + m, um - 0.01, v0 + m, v1 - m, 0.045, n, fl, dim); painting(K, F, um + 0.01, u1 - m, v0 + m, v1 - m, 0.045, (n + 5) % 11, !fl, dim); }
+        else painting(K, F, u0 + m, u1 - m, v0 + m, v1 - m, 0.045, n, fl, dim);
+        if (fate < 0.06) K.quad('char:stone', F(u0 + m, v0 + m, 0.05), F(u0 + m + 0.07, v0 + m, 0.05), F(u1 - m, v1 - m, 0.05), F(u1 - m - 0.07, v1 - m, 0.05), F.n);
       }
       h0 += rh;
     }
@@ -173,10 +197,14 @@ export const PROPS_A = {
     bar(K, 'dark:wood', F(-0.55 * k, 0, 0), F(0, h, -0.12), 0.07); bar(K, 'dark:wood', F(0.55 * k, 0, 0), F(0, h, -0.12), 0.07);
     bar(K, 'dark:wood', F(0, 0, -0.95 * k), F(0, h, -0.12), 0.06);
     { const q = F(0, 0.78 * k, 0.07); K.box('dark:wood', q[0], q[1], q[2], 0.62 * k, 0.05, 0.07, p.yaw || 0, NO); }
-    face(K, 'pale:cloth_oat', F, -0.6 * k, 0.6 * k, 0.84 * k, 2.3 * k, 0.09);
-    if (!p.sitter) return;
-    K.quad(p.sitter, F(-0.4 * k, 0.84 * k, 0.1), F(0.4 * k, 0.84 * k, 0.1), F(0.2 * k, 1.5 * k, 0.1), F(-0.2 * k, 1.5 * k, 0.1), F.n);
-    K.quad('char:cloth_oat', F(-0.13 * k, 1.55 * k, 0.1), F(0.13 * k, 1.55 * k, 0.1), F(0.15 * k, 1.95 * k, 0.1), F(-0.15 * k, 1.95 * k, 0.1), F.n);
+    // (Its stretcher's edge, then the canvas: a sitter begun is one of the house, the Painter's own great one unfinished,
+    // charcoal on the ground; a bare one primed umber, not a white sheet.)
+    face(K, 'dark:wood', F, -0.62 * k, 0.62 * k, 0.82 * k, 2.32 * k, 0.08);
+    // (Its back: the canvas's raw linen and the stretcher's bars across it, not a black slab.)
+    K.quad('cloth_oat', F(0.6 * k, 0.84 * k, 0.07), F(-0.6 * k, 0.84 * k, 0.07), F(-0.6 * k, 2.3 * k, 0.07), F(0.6 * k, 2.3 * k, 0.07), F.n.map((v) => -v));
+    for (const h of [0.86, 1.57, 2.28]) bar(K, 'dark:wood', F(-0.6 * k, h * k, 0.06), F(0.6 * k, h * k, 0.06), 0.05 * k);
+    if (!p.sitter) { face(K, 'umber:cloth_oat', F, -0.6 * k, 0.6 * k, 0.84 * k, 2.3 * k, 0.09); return; }
+    painting(K, F, -0.6 * k, 0.6 * k, 0.84 * k, 2.3 * k, 0.09, k >= 3 ? 11 : Math.floor(hash2(x, z) * 11), hash2(z, x) < 0.5);
   },
 
   // Frames stacked against a wall, facing yaw out from it: n of them one inside another's lean, each four lengths of
@@ -193,14 +221,12 @@ export const PROPS_A = {
   // Primed and bare at one end; at the other his house in rows, done; between, figures blocked in and not yet faced.
   canvaswall(K, d, p, x, y, z) {
     const F = frame(x, y, z, p.yaw || 0), w = p.w, lo = p.lo ?? 0.8, top = p.h || 10;
-    face(K, 'dark:wood', F, -w - 0.2, w + 0.2, lo - 0.2, top + 0.2, 0.03); face(K, 'pale:cloth_oat', F, -w, w, lo, top, 0.05);
-    const LIV = ['royal:cloth_red', 'cloth_red', 'dark:cloth_oat', 'blood:cloth_red'];
+    face(K, 'dark:wood', F, -w - 0.2, w + 0.2, lo - 0.2, top + 0.2, 0.03); face(K, 'umber:cloth_oat', F, -w, w, lo, top, 0.05);
     for (let row = 0, v = lo + 0.3; v + 2.6 < top; row++, v += 3) for (let u = -w + 1.2; u < w * 0.45; u += 2.3) {
       const k = hash2(Math.round(u * 3) + row * 11, x + z), done = u < -w * 0.25;
       // (Done: a sitter whole. Begun: the shoulders laid in and a ground behind, no face yet.)
-      face(K, 'char:cloth_oat', F, u - 0.95, u + 0.95, v, v + 2.5, 0.055);
-      if (done) bust(K, F, u, 0.7, v, 2.5, LIV[Math.floor(k * 4)], Math.floor(k * 23) % 5, (k - 0.5) * 0.1);
-      else K.quad(LIV[Math.floor(k * 4)], F(u - 0.7, v, 0.065), F(u + 0.7, v, 0.065), F(u + 0.3, v + 1.1, 0.065), F(u - 0.3, v + 1.1, 0.065), F.n);
+      if (done) painting(K, F, u - 0.95, u + 0.95, v, v + 2.5, 0.055, Math.floor(k * 11), k < 0.5);
+      else painting(K, F, u - 0.95, u + 0.95, v, v + 2.5, 0.055, 11, k < 0.5);
     }
   },
   // Sheets hung to dry on a line between two posts (the line from the posts' heads, the sheets under it), along yaw.
@@ -210,7 +236,7 @@ export const PROPS_A = {
     bar(K, 'dark:wood', F(-w, h, 0), F(w, h, 0), 0.04);
     for (let u = -w + 0.3; u < w - 0.6; u += 0.85) {
       const k = hash2(Math.round(u * 5) + x, z), len = 1.0 + 0.9 * k;
-      for (const sd of [-1, 1]) K.quad(k > 0.8 ? 'cloth_oat' : 'pale:cloth_oat', F(u, h - 0.04 - len, sd * 0.012), F(u + 0.7, h - 0.04 - len, sd * 0.012), F(u + 0.7, h - 0.04, sd * 0.012), F(u, h - 0.04, sd * 0.012), F.n.map((q) => q * sd));
+      for (const sd of [-1, 1]) K.quad(k > 0.6 ? 'cloth_oat' : 'umber:cloth_oat', F(u, h - 0.04 - len, sd * 0.012), F(u + 0.7, h - 0.04 - len, sd * 0.012), F(u + 0.7, h - 0.04, sd * 0.012), F(u, h - 0.04, sd * 0.012), F.n.map((q) => q * sd));
     }
   },
 
@@ -253,23 +279,11 @@ export const PROPS_A = {
   // A great vessel of banded green glass on a stone stand, as tall as p.h: three iron bands, an iron lid; and on the side
   // it faces (yaw), where a lamp of his red's been set behind it, what's in it against the light.
   glassjar(K, d, p, x, y, z) {
-    const r = p.r || 1, h = p.h || 2.8, yaw = p.yaw || 0, N = 14, y0 = y + 0.5;
-    K.box('dark:block', x, y, z, r + 0.15, 0.5, r + 0.15, yaw, NO);
-    K.drum('forest:obsidian', x, y0, z, r, h, N, { collide: false, turn: yaw });
-    for (const f of [0.04, 0.5, 0.96]) K.drum('iron', x, y0 + h * f - 0.06, z, r + 0.03, 0.12, N, { open: true, collide: false, turn: yaw });
-    K.drum('iron', x, y0 + h, z, r + 0.05, 0.16, N, { r2: r * 0.5, collide: false, turn: yaw });
-    // (The lit side: three staves of the glass with the lamp behind them, and the dark of what floats there.)
-    const F = frame(x, y0, z, yaw), o = r * Math.cos(Math.PI / N) + 0.015, hw = r * 0.62;
-    face(K, 'blood:flame', F, -hw, hw, h * 0.1, h * 0.9, o);
-    // (And the glass's shine: a pale stave up each shoulder of it.)
-    for (const sd of [-1, 1]) { const a = yaw + sd * 1.25, sx = x + Math.sin(a) * (r + 0.012), sz = z + Math.cos(a) * (r + 0.012), tx = Math.cos(a) * 0.07, tz = -Math.sin(a) * 0.07; K.quad('pale:lake', [sx - tx, y0 + h * 0.12, sz - tz], [sx + tx, y0 + h * 0.12, sz + tz], [sx + tx, y0 + h * 0.88, sz + tz], [sx - tx, y0 + h * 0.88, sz - tz], [Math.sin(a), 0, Math.cos(a)]); }
-    const P = (u, v) => F(u * r, v * h, o + 0.012), Q = (a, b, c, e) => K.quad('char:stone', P(...a), P(...b), P(...c), P(...e), F.n);
-    const k = (hash2(x * 3, z * 5) - 0.5) * 0.2;
-    // (A body hung in it: a trunk, round at both ends, and a head bowed on it. Nothing thin, nothing crossed, no limb out.)
-    Q([-0.2 + k, 0.24], [0.2 + k, 0.24], [0.32 + k, 0.36], [-0.32 + k, 0.36]);
-    Q([-0.32 + k, 0.36], [0.32 + k, 0.36], [0.3 + k, 0.56], [-0.3 + k, 0.56]);
-    Q([-0.3 + k, 0.56], [0.3 + k, 0.56], [0.14 + k, 0.64], [-0.14 + k, 0.64]);
-    Q([-0.1 + k * 1.6, 0.64], [0.16 + k * 1.6, 0.64], [0.2 + k * 1.6, 0.72], [-0.14 + k * 1.6, 0.72]);
-    Q([-0.14 + k * 1.6, 0.72], [0.2 + k * 1.6, 0.72], [0.12 + k * 1.6, 0.79], [-0.06 + k * 1.6, 0.79]);
+    const r = p.r || 1, h = p.h || 2.8, yaw = p.yaw || 0, y0 = y + 0.5;
+    // (Made in Blender, tools/dungeon/stamps.py jar: round-shouldered, banded, lidded; its lamp in its stand, low, so the
+    // green is soft and low on the glass and its shoulders dark. It was a flat green stave on a drum: an exit sign.)
+    // (Lit liquid to two-thirds up, dark empty glass over it to the shoulder: a jar of something, not a lamp. A dark shape
+    // drawn on its face read as a black hexagon stuck on a barrel, the critics; it's gone.)
+    stamp(K, d, 'jar', x, y, z, yaw, { s: r });
   },
 };

@@ -72,7 +72,7 @@ const props = [];
   // Conservatory) in the east wall. A fire at the way in, one where it opens into the rows.
   add('lintel', 0, -2, { hx: 4.5, stone: 'dark:ashlar' });
   add('hooks', -3.6, -16, { n: 4, alongZ: true, up: 1.9 }); add('barrels', -3.2, 3); add('cart', -2.6, -27, { yaw: 0.2 }); add('barrels', 3.2, -30);
-  add('brazier', 3.2, 2.4); add('brazier', -3.2, -34);
+  add('brazier', 3.9, -5); add('brazier', -3.2, -34);
   add('mark', 4.25, -12, { up: 3.2, r: 0.5, yaw: -PI / 2, back: -1 });
   add('decal', -2, -8, { layer: 'p2_blood_splashes', w: 1.8, flat: true });
   // ---- the Cage Rows: a long low hall, cages down both walls with a way between, some standing open; cages hung over the
@@ -92,7 +92,7 @@ const props = [];
   // the watchers' walk round two walls over the pit, the drain, old kills. Fire at the way down, fire on the walk.
   add('chainpost', PIT_STAKE[0], PIT_STAKE[1], { r: 1.3, h: 3.6, run: [PIT_CHAIN - 1, 3.4, 0.36] });
   add('rings', PIT_STAKE[0], PIT_STAKE[1], { r: 2.6, n: 1 });
-  add('basket', PIT_STAKE[0] + 3, PIT_STAKE[1] + 2.4, { up: 6 }); add('basket', PIT_STAKE[0] - 3, PIT_STAKE[1] - 2.4, { up: 6 }); add('daylight', PIT_STAKE[0] + 2, PIT_STAKE[1] + 0.6, { r: 1.6, pool: false });
+  add('basket', PIT_STAKE[0] + 3, PIT_STAKE[1] + 2.4, { up: 6 }); add('basket', PIT_STAKE[0] - 3, PIT_STAKE[1] - 2.4, { up: 6 }); add('daylight', PIT_STAKE[0] + 2, PIT_STAKE[1] + 0.6, { r: 1.6, pool: false, shaft: false });
   add('cage', PIT_STAKE[0] - 2, PIT_STAKE[1] - 1, { up: 5.4 });
   add('walk', -60, -34.25, { hx: 16, hz: 1.25, up: 6.5, side: -1 }); add('walk', -75.75, -50, { hx: 1.25, hz: 16, up: 6.5, side: 1 });
   add('pool', -70, -42, { r: 2, up: 0.03, layer: 'mire:water' }); add('bones', -50, -60, { r: 1.5 }); add('bones', -70, -62, { r: 1.2 }); add('bones', -58, -38, { r: 1 });
@@ -113,7 +113,7 @@ const props = [];
   add('decal', 69.95, -97, { layer: 'p2_damp_rise', w: 4, h: 3, up: 0.2, yaw: -PI / 2 });
   // ---- the Aviary: a drum as tall as the tower over it, open to the sky far up. The great cage hung in the middle of it;
   // dead trees (they stop a body, and a shriek); lesser cages; nests. Fire round the walls, so she's seen against it.
-  add('greatcage', GREAT_CAGE[0], GREAT_CAGE[1], { r: GREAT_CAGE[2], h: 7, up: 7.5 }); add('rings', GREAT_CAGE[0], GREAT_CAGE[1], { r: GREAT_CAGE[2], n: 1 }); add('daylight', -52, -112, { r: 5 });
+  add('greatcage', GREAT_CAGE[0], GREAT_CAGE[1], { r: GREAT_CAGE[2], h: 7, up: 7.5 }); add('rings', GREAT_CAGE[0], GREAT_CAGE[1], { r: GREAT_CAGE[2], n: 1 }); add('daylight', -52, -112, { r: 5, shaft: false });
   for (const [x, z, r] of AVIARY_TREES) add('deadtree', x, z, { h: r > 1.7 ? 14 : 11, r, solid: true });
   for (const [x, z, up] of [[-60, -108, 7], [-45, -116, 13], [-58, -126, 9]]) add('cage', x, z, { up });
   add('nest', -66, -126, { r: 1.4 }); add('nest', -38, -126, { r: 1.2 }); add('eggs', -66, -125, { s: 0.7 }); add('bones', -54, -118, { r: 1.4 });
@@ -135,7 +135,7 @@ const props = [];
   // ---- the Ring of Chains: the chain posts, cages hung over it, his mark on the far wall. Fire under his mark, fire at
   // the two ways in; the hung fires over the middle.
   CHAIN_POSTS.forEach(([x, z, r], i) => add('chainpost', x, z, { r, h: 3.4, solid: true, run: [(i % 2 ? -1 : 1) * 3.4, 2.6 - i, 0.22] }));
-  add('basket', -6, -160, { up: 7.5 }); add('basket', 6, -164, { up: 7.5 }); add('basket', 0, -171, { up: 7.5 }); add('daylight', 0, -163, { r: 1.8, pool: false });
+  add('basket', -6, -160, { up: 7.5 }); add('basket', 6, -164, { up: 7.5 }); add('basket', 0, -171, { up: 7.5 }); add('daylight', 0, -163, { r: 1.8, pool: false, shaft: false });
   for (const [x, z, up] of [[-14, -164, 7], [14, -160, 9], [7, -172, 10]]) add('cage', x, z, { up });
   add('mark', 0, -177.6, { up: 8, r: 2, back: 1 });
   for (const [x, z] of [[-6, -176], [10, -176], [15.4, -153], [-15.4, -152]]) add('brazier', x, z);
@@ -232,7 +232,7 @@ export const MENAGERIE = {
   ],
   last: 'keeper', tough: { hp: 34, damage: 3.6 }, pay: { xp: 88000, gold: 11000 },
   names: { 'Goat Men': 'YARD RAM', 'Giant Spiders': 'CAGE SPIDER', Werewolf: 'PIT HOUND', Dragonlings: 'TANK WYRMLING', 'The Possessed': 'FLENSER', "Velscour's Knights": "KEEPER'S HAND", 'Plague Giants': 'THE FEEDER', Harpies: 'FLEDGLING' },
-  look: { wall: 'ashlar', foot: 'dark:block', floor: 'flags', banner: 'p2_banner_blood', roof: 'dark:stone', flame: 'dark:flame', light: [1, 0.42, 0.18], fire: [1, 0.46, 0.2], every: 15, high: 3, glow: 3.5, lit: true, beam: 'dark:stone', bays: 'chains' },
+  look: { fill: [0.17, 0.125, 0.095], wall: 'ashlar', foot: 'dark:block', floor: 'flags', banner: 'p2_banner_blood', roof: 'dark:stone', flame: 'dark:flame', light: [1, 0.42, 0.18], fire: [1, 0.46, 0.2], every: 15, high: 3, glow: 3.5, lit: true, beam: 'dark:stone', bays: 'chains' },
   words: { enter: 'Castle Velscour: the Menagerie of Chains. Everything he has had caught is kept here, and fed.', clear: 'The Keeper of Chains is dead! The cages stand open.', wipe: 'You fall... and wake inside the Feeding Gate.' },
 };
 export const MENAGERIE_VARIANTS = {

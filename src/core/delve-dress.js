@@ -181,7 +181,7 @@ function scree(K, d) {
       const g = grad(mx, mz), y = caveFloorY(mx, mz) - 0.2, top = caveRoofY(mx + g[0] * 0.5, mz + g[1] * 0.5) + 0.5, H = top - y;
       // (Ribbons of it side by side down the wall, long and thin, each ending at its own height over a mound of it.)
       for (let k = 0; k < 6; k++) { const u = (k - 2.5) * 0.42, px = mx - g[1] * u + g[0] * 0.15, pz = mz + g[0] * u + g[1] * 0.15, len = H * (0.72 + 0.28 * hash2(k, mx)); K.spike('ice', px, top, pz, 0.3, -len, 4, k, [g[0] * 0.12, g[1] * 0.12]); }
-      K.drum('white', mx + g[0] * 0.3, y, mz + g[1] * 0.3, 1.7, 0.3, 8, { r2: 0.8, collide: false, turn: mz, lid: 'ice' });
+      K.drum('pale:rubble', mx + g[0] * 0.3, y, mz + g[1] * 0.3, 1.7, 0.3, 12, { r2: 0.8, collide: false, turn: mz, lid: 'slate:ice' });
     }
     // (In the cold: icicles along the head of the wall.)
     if (L.litter === 'snow' && h > 0.5) {
@@ -276,7 +276,7 @@ function litter(K, d) {
     } else if (kind === 'snow') {
       // Blown snow banked against the rock, a slick of ice, a rib of something frozen in.
       if (h < 0.3) PROPS.drift(K, d, { r: 0.9 + h * 3 }, x - g[0] * 0.5, y, z - g[1] * 0.5);
-      else if (h < 0.42) K.disc('ice', x, y + 0.05, z, 0.9 + h, 9);
+      else if (h < 0.42) K.disc('slate:ice', x, y + 0.04, z, 0.9 + h, 18);
       else { for (let k = 0; k < 3; k++) { const a = k * 2.1 + x; K.spike('ice', x + Math.cos(a) * 0.3, y - 0.1, z + Math.sin(a) * 0.3, 0.16, 0.5 + 0.5 * hash2(k, x), 4, a, [Math.cos(a) * 0.3, Math.sin(a) * 0.3]); } }
     } else if (kind === 'mire') {
       // Standing water, reeds at its edge, a block of the old work fallen in.
@@ -313,7 +313,7 @@ function underfoot(K, d) {
     const h = hash2(gx * 0.53, gz * 0.29);
     if (h > 0.6 || !clear(d, x, z, 1.2)) continue;
     const y = caveFloorY(x, z), a = h * 40;
-    const flat = (layer, r, n, up = 0.03) => { for (let k = 0; k < n; k++) { const b = k * TAU / n, c = (k + 1) * TAU / n, rr = (q) => r * (0.75 + 0.5 * hash2(x + q, z)); const P = (ang, q) => { const px = x + Math.cos(ang) * rr(q), pz = z + Math.sin(ang) * rr(q); return [px, caveFloorY(px, pz) + up, pz]; }; K.tri(layer, [x, y + up, z], P(c, (k + 1) % n), P(b, k)); } };
+    const flat = (layer, r, n, up = 0.03) => { for (let k = 0; k < n; k++) { const b = k * TAU / n, c = (k + 1) * TAU / n, rr = (q) => r * (0.75 + 0.5 * hash2(x + q, z)); const P = (ang, q) => { const px = x + Math.cos(ang) * rr(q), pz = z + Math.sin(ang) * rr(q); return [px, caveFloorY(px, pz) + up, pz]; }; const C = [x, y + up, z], A = P(c, (k + 1) % n), B = P(b, k); K.quad(layer, C, A, B, B, [0, 1, 0], [C, A, B, B].map((q) => [q[0] * 0.45, q[2] * 0.45])); } };   // (quads with floor uvs: a tri paints by x + z and height, so on a floor a texture ran in stripes)
     if (kind === 'bones') {
       // Planks thrown down over the wet, a scatter of gnawed bone, a dropped pick.
       if (h < 0.25) for (let k = 0; k < 3; k++) K.box('wood', x + Math.sin(a) * k * 0.5, y - 0.02, z + Math.cos(a) * k * 0.5, 0.16, 0.06, 1.1 + 0.3 * hash2(k, x), a + (hash2(k, z) - 0.5) * 0.3, NO);
@@ -325,7 +325,7 @@ function underfoot(K, d) {
         for (const u of [-0.42, 0.42]) { const ax = x + c * u - sn * 2.4, az = z - sn * u - c * 2.4, bx = x + c * u + sn * 2.4, bz = z - sn * u + c * 2.4; bar(K, 'iron', [ax, Y(ax, az) + 0.07, az], [bx, Y(bx, bz) + 0.07, bz], 0.03); }
       }
     } else if (kind === 'snow') {
-      if (h < 0.35) flat('ice', 1.5 + h * 3, 9, 0.04); else flat('white', 1.2 + h * 2, 8, 0.05);
+      if (h < 0.35) flat('slate:ice', 1.5 + h * 3, 14, 0.04); else flat('pale:rubble', 1.2 + h * 2, 12, 0.05);   // (old dark ice; snow with grit in it, not a flat white polygon)
     } else if (kind === 'mire') {
       if (h < 0.3) { flat('lake', 1.4 + h * 4, 9, 0.035); for (let k = 0; k < 4; k++) K.drum('mire:cloth_oat', x + Math.cos(a + k * 1.7) * (0.4 + 0.3 * k), y + 0.045, z + Math.sin(a + k * 1.7) * (0.4 + 0.3 * k), 0.22 + 0.06 * k, 0.012, 7, { collide: false, turn: k }); }
       else if (h < 0.45) for (let k = 0; k < 3; k++) K.box('pale:stone', x + Math.cos(a + k * 2) * 0.9, y - 0.14, z + Math.sin(a + k * 2) * 0.9, 0.45, 0.18, 0.3, a + k, NO);

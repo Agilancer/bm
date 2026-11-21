@@ -66,11 +66,11 @@ const props = [];
   [-36, -48, -62, -74, -86].forEach((z, i) => add('bonepier', i % 2 ? 7 : -7, z, { hx: 1.4, hz: 0.7, solid: true }));
   for (const z of [-38, -42]) add('stall', 3.6, z, { hx: 2.2, yaw: PI });
   for (const z of [-80, -84]) add('stall', -3.6, z, { hx: 2.2, yaw: PI });
-  add('daylight', 0, -60, { r: 3 }); add('rings', 0, -60, { r: 4 });
+  add('daylight', 0, -60, { r: 3, shaft: false }); add('rings', 0, -60, { r: 4 });
   // (The runner stops either side of the ring of black glass: a strip through a ring is a bar across it.)
   add('carpet', 0, -43, { hx: 1.2, hz: 11.4, layer: 'blood:cloth_red' }); add('carpet', 0, -78, { hx: 1.2, hz: 12.4, layer: 'blood:cloth_red' });
   add('bonetree', -8, -41, { h: 3.6 }); add('bonetree', 8, -66, { h: 3.6 }); add('bonetree', -8, -80, { h: 3.6 });
-  add('brazier', -3.4, -30.6); add('brazier', 3.4, -30.6); add('brazier', -5, -90.4);
+  add('brazier', -3.9, -30.6); add('brazier', 3.9, -30.6);   // (against the walls: on the way to the nave's door they stood in it, the critics) add('brazier', -5, -90.4);
   add('decal', -9.95, -88, { layer: 'p2_wax_drips', w: 2, h: 2, up: 1, yaw: PI / 2 });
   // ---- the Charnel Aisle: low. Bones in stacks down both walls, biers, a heap not yet sorted, the sorters' table. One fire.
   for (const z of [-44, -58, -72]) add('charnel', -36.3, z, { yaw: PI / 2 });
@@ -106,6 +106,7 @@ const props = [];
   // ---- the Sanctuary: the altar on its step at the far end, and behind it a wall of skulls to the roof with his mark on
   // it; the four piers of bone; the fonts; skulls up the west wall. Fire at the altar, and at the way in; a ring of candles.
   add('skullwall', ALTAR[0], -129.86, { yaw: 0, w: 12, h: 14, s: 0.36 });
+  add('candles', ALTAR[0] - 3.6, ALTAR[1] + 1.4, { s: 1.2 }); add('candles', ALTAR[0] + 3.6, ALTAR[1] + 1.4, { s: 1.2 });
   add('altar', ALTAR[0], ALTAR[1], { hx: 2.6, hz: 1 }); add('mark', ALTAR[0], -129.2, { up: 9.6, r: 2.2, back: -1 });
   for (const [x, z] of BONE_PIERS) add('bonepier', x, z, { hx: 1.4, hz: 0.7, solid: true });
   add('bonefont', 12, -123.4, { r: 0.9 }); add('bonefont', 24, -123.4, { r: 0.9 });
@@ -188,7 +189,7 @@ export const OSSUARY = {
   ],
   last: 'boneprior', tough: { hp: 37, damage: 3.95 }, pay: { xp: 110000, gold: 13000 },
   names: { "Velscour's Knights": 'OSSUARY KNIGHT', Necromancers: 'SACRIST', 'Bone Giants': 'CHARNEL-BUILT', 'Dead Children': 'CHORISTER' },
-  look: { wall: 'pale:ashlar', foot: 'pale:block', floor: 'pale:flags', banner: 'p2_banner_white', roof: 'pale:stone', flame: 'blood:flame', light: [1, 0.3, 0.16], fire: [1, 0.34, 0.18], every: 15, high: 3, glow: 3.5, lit: true, beam: 'pale:stone', bays: 'chains' },
+  look: { wall: 'pale:ashlar', foot: 'pale:block', floor: 'pale:flags', banner: 'p2_banner_white', roof: 'pale:stone', flame: 'blood:flame', light: [1, 0.3, 0.16], fire: [1, 0.34, 0.18], fog: [0.03, 0.012, 0.01, 0.01], every: 15, high: 3, glow: 3.5, lit: true, beam: 'pale:stone', bays: 'chains' },
   words: { enter: 'Castle Velscour: the Ossuary Chapel. His chapel. Everyone who built his castle is in its walls.', clear: 'The Bone Prior is dead! Nobody kneels in his chapel now.', wipe: 'You fall... and wake in the Bone Porch.' },
 };
 export const OSSUARY_VARIANTS = {
