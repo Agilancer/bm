@@ -43,10 +43,13 @@ for o in props:
     lo = Vector([min(p[i] for p in pts) for i in range(3)]); hi = Vector([max(p[i] for p in pts) for i in range(3)])
     c = (lo + hi) / 2; R = max((hi - lo).length / 2, 0.2)
     # (Wall props stand out toward -y: look at them from -y.)
-    d = Vector((0.55, -1, 0.45)).normalized() if o.name != 'streetgrate' else Vector((0.4, -0.6, -1)).normalized()
-    cam.location = c + d * R * 3.2
-    cam.rotation_euler = (c - cam.location).to_track_quat('-Z', 'Y').to_euler()
-    cam.data.lens = 50
-    sc.render.filepath = os.path.join(OUT, 'stamp_%s.png' % o.name)
-    bpy.ops.render.render(write_still=True)
-    print('rendered', sc.render.filepath)
+    # (Three-quarters, then side on, then from above and behind: the orbit the critics ask for.)
+    views = [(0.55, -1, 0.45), (1, -0.05, 0.1), (-0.5, 0.6, 0.9)] if o.name != 'streetgrate' else [(0.4, -0.6, -1), (1, 0, -0.15), (0, 0, -1)]
+    for k, v in enumerate(views):
+        d = Vector(v).normalized()
+        cam.location = c + d * R * 3.2
+        cam.rotation_euler = (c - cam.location).to_track_quat('-Z', 'Y').to_euler()
+        cam.data.lens = 50
+        sc.render.filepath = os.path.join(OUT, 'stamp_%s%s.png' % (o.name, '' if k == 0 else '_v%d' % k))
+        bpy.ops.render.render(write_still=True)
+        print('rendered', sc.render.filepath)

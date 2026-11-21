@@ -1,6 +1,7 @@
 // Whether every delve's bosses and packs fit where they stand: each model's height (and how high it flies) against the roof
 // of its room, and its body's footprint (measured off its glb) against the radius the sim keeps it off the walls by.
 //   node tools/dungeon/clipcheck.mjs
+import { bodyRadius } from '../../src/sim/tripo.js';
 import fs from 'node:fs';
 import { BOSSES, DELVES, roomOf } from '../../src/core/dungeon.js';
 import { withVariants } from '../../src/core/tripo-monsters.js';
@@ -23,7 +24,7 @@ function footOf(id) {
   const flat = e.filter((_, i) => i !== up), s = m.height / e[up];
   return (foot[id] = { half: Math.min(...flat) * s / 2, long: Math.max(...flat) * s / 2, H: m.height, hover: Math.max(0, ...Object.values(m.hover || {})) * m.height, kind: m.kind });
 }
-const radius = (f, boss) => Math.min(Math.max(f.H * (f.kind === 'dragon' ? 0.45 : f.kind === 'spider' ? 0.55 : f.kind === 'worm' ? 0.3 : 0.2), 0.35), boss ? 4.5 : 1.8);
+const radius = (f, boss) => bodyRadius(f.H, f.kind, boss);
 let bad = 0;
 for (const b of BOSSES) {
   const r = roomOf(b.room), d = DELVES.find((q) => q.key === b.delve);
