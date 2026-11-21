@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { parseGLB, imageBytes } from '../src/core/glb.js';
 import { HeroLooks } from '../src/gfx/herolook.js';
+import { decodeScaledBitmap } from '../src/gfx/picsize.js';
 
 const root = new URL('../', import.meta.url);
 const file = (rel) => { const b = fs.readFileSync(new URL(rel, root)); return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength); };
@@ -82,11 +83,13 @@ test('a monster model keeps its colour picture, not its whole file, and its plai
   globalThis.fetch = fakeFetch([]);
   try {
     const thing = () => ({ destroy() {} });
+    // (Every picture a monster has is decoded here, src/gfx/picsize.js, and made a texture by pictureTexture.)
     const given = [];
+    globalThis.createImageBitmap = async (blob) => { given.push(blob); return { width: 4, height: 4, close() {} }; };
     const r = {
       chars: [], tier: { texScale: 1 }, astc: { ready: Promise.resolve(), on: false },
       makeSkinned: () => ({ srcBuf: thing(), IB: thing(), sideVB: thing(), outBuf: thing(), palette: thing(), params: thing() }), addLod: (sk) => { sk.lodIB = sk.IB; },
-      imageTexture: async () => thing(), bitmapTexture: async (blob) => { given.push(blob); return thing(); },
+      decodePicture: (blob, ...rule) => decodeScaledBitmap(blob, ...rule), pictureTexture: async () => thing(),
     };
     const t = new TripoSlots(r, '', { [id]: roster[id] }, { plain: {} }, 0, 1);
     const m = await t.model(id);
@@ -99,9 +102,10 @@ test('a monster model keeps its colour picture, not its whole file, and its plai
     assert.ok(m.alb.size < file(`assets/monsters/tripo/${src}.glb`).byteLength / 3);
     assert.deepEqual(Buffer.from(await m.alb.arrayBuffer()), Buffer.from(await want.arrayBuffer()));
     assert.ok(m.hands.Right && m.hands.Left);
+    given.length = 0;
     await t.skin(m, id, 0);
     assert.deepEqual(given, [m.alb]);
-  } finally { globalThis.fetch = was; }
+  } finally { globalThis.fetch = was; delete globalThis.createImageBitmap; }
 });
 
 test("a monster model or skin that failed isn't kept, gives back what it made, and is fetched again when next asked for", async () => {
@@ -109,36 +113,46 @@ test("a monster model or skin that failed isn't kept, gives back what it made, a
   const roster = JSON.parse(fs.readFileSync(new URL('assets/monsters/tripo/roster.json', root), 'utf8'));
   const id = 'goblin_green_1';
   const asked = [], was = globalThis.fetch;
+  const RealBlob = globalThis.Blob;
   globalThis.fetch = fakeFetch(asked);
   try {
     const gone = [];
     const thing = (name) => ({ name, destroy() { gone.push(name); } });
-    let maps = 0, skinFails = true;
+    let maps = 0, blobs = 0, skinFails = true, skinning = false;
+    // (The first try's second map can't be read from the file (its third picture: the colours come first); the second
+    // try's second map doesn't decode; nor, the first time, the skin.)
+    globalThis.Blob = class extends RealBlob { constructor(...a) { if (++blobs === 3) throw new Error('no bytes'); super(...a); } };
+    globalThis.createImageBitmap = async () => {
+      if (skinning) { if (skinFails) throw new Error('no picture'); return { name: 'skin', width: 4, height: 4, close() {} }; }
+      maps++; if (maps === 3) throw new Error('no decode');
+      return { name: `map${maps}`, width: 4, height: 4, close() {} };
+    };
     const r = {
       chars: [], tier: { texScale: 1 }, astc: { ready: Promise.resolve(), on: false },
       makeSkinned: () => ({ srcBuf: thing('src'), IB: thing('IB'), sideVB: thing('side'), outBuf: thing('out'), palette: thing('pal'), params: thing('par') }), addLod: (sk) => { sk.lodIB = thing('lod'); },
-      // (The second map of the first try doesn't decode.)
-      imageTexture: async () => { maps++; if (maps === 2) throw new Error('no decode'); return thing(`map${maps}`); },
-      bitmapTexture: async () => { if (skinFails) throw new Error('no picture'); return thing('skin'); },
+      decodePicture: (blob, ...rule) => decodeScaledBitmap(blob, ...rule), pictureTexture: async (bmp) => thing(bmp.name),
     };
     const t = new TripoSlots(r, '', { [id]: roster[id] }, { plain: {} }, 0, 1);
-    await assert.rejects(t.model(id), /no decode/);
-    await new Promise((ok) => setTimeout(ok, 0));
-    assert.ok(!t.models.has(id));
-    // (Everything it made: its mesh, its LOD, the one map that came, and the shared mesh's unused pose buffers.)
-    assert.deepEqual(gone.sort(), ['IB', 'lod', 'map1', 'out', 'pal', 'par', 'side', 'src']);
-    gone.length = 0;
+    for (const [why, map] of [[/no bytes/, 'map1'], [/no decode/, 'map2']]) {
+      await assert.rejects(t.model(id), why);
+      await new Promise((ok) => setTimeout(ok, 0));
+      assert.ok(!t.models.has(id));
+      // (Everything it made: its mesh, its LOD, the one map that came, and the shared mesh's unused pose buffers.)
+      assert.deepEqual(gone.sort(), ['IB', 'lod', map, 'out', 'pal', 'par', 'side', 'src'], String(why));
+      gone.length = 0;
+    }
     const m = await t.model(id);
     // (A model that came gives back only those pose buffers, at once: each monster has its own, cloneSkinned.)
     assert.deepEqual(gone.sort(), ['out', 'pal', 'par']);
-    assert.equal(asked.filter(([n]) => n === (roster[id].src || id)).length, 2);
-    assert.equal(m.nrm.name, 'map3');
-    assert.equal(m.mr.name, 'map4');
+    assert.equal(asked.filter(([n]) => n === (roster[id].src || id)).length, 3);
+    assert.equal(m.nrm.name, 'map4');
+    assert.equal(m.mr.name, 'map5');
+    skinning = true;
     await assert.rejects(t.skin(m, id, 0), /no picture/);
     await new Promise((ok) => setTimeout(ok, 0));
     assert.ok(!t.skins.has(`${id}:0`));
     skinFails = false;
     assert.equal((await t.skin(m, id, 0)).name, 'skin');
     assert.ok(t.skins.has(`${id}:0`));
-  } finally { globalThis.fetch = was; }
+  } finally { globalThis.fetch = was; globalThis.Blob = RealBlob; delete globalThis.createImageBitmap; }
 });

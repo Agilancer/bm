@@ -2807,7 +2807,7 @@ pixels to the point (one the size of the screen is 11 MB). So this pass measured
   its tier's pixels (`PHONE_ONLY_STEPS` in `src/gfx/governor.js`): each step up was the screen's pictures made again,
   half as big again, with the last ones kept.
 - **Models' pictures on a phone 256 a side** (`texCap`), and 512 for what's seen close (`texCapNear`: Lisandra, your own
-  body, her book, the cave's walls and floor). After a crash, 192 (256 close), then 160 (192 close): never sharper.
+  body, her book, the cave's walls and floor; since, the monsters 2.5 m and taller, "Monsters' skins on a phone" below). After a crash, 192 (256 close), then 160 (192 close): never sharper.
 - **What came just before** (`noteEvent` in `src/core/lastrun.js`). The note the game leaves now keeps its last eight
   happenings on a phone: a touch, a turn, the screen's size, a field to type in, a skip, the picture stepped down. After a
   death the title says the last four, with the seconds between them ("Just before: touched (x3), then 4 s later size
@@ -3096,13 +3096,82 @@ it's their armour that lands a moment later, never a hero half made. If the phon
 offline, the look can't be made, and the hero stays as they were until they're next dressed, by new gear or a level
 (keeping the game on the device, the first start's question, avoids that). Monsters look as before.
 
-Left for later, as it changes what you see: a monster's skin in a palette other than its own (a dyed one) is baked in a
-worker (`src/gfx/bake.worker.js`) that doesn't hold it to the phone's cap of 256 across, as the plain skin is held. The
-necromancers, the possessed knights and the Velscour knights and lancers, whose pictures are 4096, come out 1024 across
-on a phone when dyed, and the dragons (2048) 512. Almost every named delve boss is one of these in a dye of its own (the
-Castellan of Blackvigil, the Iron Marshal, Magister Sorvane, Ossivar and others). Capping them at 256 would save roughly
-10 to 16 MB on an iPhone, but make the bosses visibly softer: it wants a change of its own, judged by eye on a phone,
-perhaps with 512 for every big monster, plain and dyed alike.
+Left for later here, a monster's dyed skin skipping the phone's cap, was done next: see the next section.
+
+#### Monsters' skins on a phone
+
+A monster's skin in a palette other than its own (a dyed one) is baked in a worker (`src/gfx/bake.worker.js`), and that
+worker shrank it by the tier's quarter and nothing else. On a phone, where every other model's picture is held to 256
+across (`texCap`), the necromancers, the possessed knights and Velscour's knights and lancers, whose pictures are 4096,
+came out 1024 when dyed (16 times the pixels of the same monster in its own colours), and the dragons 512. So which of
+two knights side by side was the sharper went by its dye, and almost every named delve boss, being one of these in a dye
+of its own, was sharp, while the undyed ones (the Elder Dragon Gods, the Toll-Giant, the Great Worm) were 256.
+
+Now a monster's pictures go by how tall it stands, one rule for its own colours and a dye of them alike
+(`src/gfx/picsize.js`, shared by the worker and the render thread, `tests/picsize.test.mjs`):
+- **As tall as a house (2.5 m or more):** its colours seen close, as Lisandra's and your own body's are: `texCapNear`,
+  512 across, whatever size Tripo made the picture (`fill`). That's the named bosses, the dragons, the giants, golems
+  and worms, the night demons, the land's great kinds and the castle's bosses: 116 of the 273 in the bestiary.
+- **An outpost's chief, however tall** (`CHIEFS` in `src/core/tripo-monsters.js`: a faction's chief that's never one of
+  the many anywhere): the same, 512. The Tomb-Lord (2.45 m) and Magister Sorvane (2.5) are one body, as are the Vigil's
+  Magister (2.4) and its Captain (2.5): by height alone one was 512 and the other 256, and the dyed ones had been 1024 on a
+  phone. Nine chiefs under 2.5 m: the goblins' and kobolds' (1.95 to 2.05), the Vigil Sergeant, the Silk Matron, the
+  Magister and the Tomb-Lord. A chief also among the many (the Grave-Caller, the Pyromancer, the Bog Witch) is not one.
+- **Everything else:** `texCap`, 256, dyed or not: the rank and file, the necromancer lords and goat-men in their packs,
+  and Velscour's knights at 2.0 to 2.2 m.
+- **Every monster's normals and metal:** 128, tall or not, as before. At 256 a tall one's showed nothing: Ossivar, whose
+  colours are 512 either way, moved 0.9% of its pixels at 7 m. They cost a third more.
+- On the lighter phones (after a crash) 192 and 256 close, then 160 and 192, as for every other model. A PC is as it was.
+
+What it does to what's held, measured on an emulated iPhone (this PC's GPU stores them plain; an iPhone packs them to
+ASTC, a quarter of that, as `src/gfx/astc.js` does):
+
+| Monster (dye) | Colours, main → now | Normals, metal | Its textures, MB (PC / iPhone) |
+| --- | --- | --- | --- |
+| The Castellan of Blackvigil, 3.4 m (Infernal) | 1024 → 512 | flat; 128 (kept plain: its alpha) | 5.42 → 1.42 / 1.42 → 0.42 |
+| The Iron Marshal, 4.0 m (Oxblood) | 1024 → 512 | flat | 5.33 → 1.33 / 1.33 → 0.33 |
+| Ossivar, 6.4 m (Bone-white) | 512 → 512 | 128 | 1.50 → 1.50 / 0.38 → 0.38 |
+| Thyrraxis, 15.5 m (its own) | 256 → 512 | 128 | 0.50 → 1.50 / 0.13 → 0.38 |
+| The Toll-Giant, 5.2 m (its own) | 256 → 512 | 128; 64 → 128 | 0.44 → 1.50 / 0.11 → 0.38 |
+| A Velscour knight, 2.05 m (Infernal) | 1024 → 256 | flat | 5.33 → 0.33 / 1.33 → 0.08 |
+| A necromancer, 1.9 m (Ashen) | 1024 → 256 | flat | 5.33 → 0.33 / 1.33 → 0.08 |
+
+Every monster texture held, at the Castellan's door in Blackvigil (him and the keep's dyed knights and lancers): 23.0 →
+3.5 MB (PC), 5.8 → 0.9 (iPhone). At the end of the run, twelve kinds held: 35.7 → 8.7, 9.0 → 2.2 (main's from a run of
+its own, whose rank and file weren't the same: a guide, not a measure). The most one skin can cost on a phone is now 512
+across (0.35 MB packed, 1.4 plain), where it was 1024 (1.4, 5.6).
+
+To see it (`tools/monsters/skins_ab.mjs`, then `tools/memory/raw.mjs` with `PHONE=iphone`, then
+`tools/monsters/skins_pairs.py`): each boss at its door in its delve, and one at a time in the Test Dungeon's white
+hall, frozen in one page and shot with its textures, then again with textures made by `main`'s rule swapped onto the
+same body, so the pose, the light and what it holds are the same and only the pictures differ. How sharp: the variance
+of the Laplacian over the monster alone, in the white hall (its pixels darker than the hall's); over the middle of the
+picture the bare hall, which doesn't change, would halve every figure.
+
+| In the white hall | Distance | Sharpness, now over main | Its pixels changed |
+| --- | --- | --- | --- |
+| The Castellan | 3 m / 6 m | −21% / −7% | 25% / 21% |
+| The Iron Marshal | 3.5 m / 7 m | −10% / −7% | 14% / 12% |
+| A dyed knight of the rank and file | 2.2 m / 4.5 m | −31% / −13% | 31% / 26% |
+| A dyed necromancer | 2.2 m / 4.5 m | −33% / −18% | 29% / 27% |
+| Ossivar | 7 m / 13 m | the same | 0% |
+| The Toll-Giant | 5.5 m / 10 m | +26% / +23% | 32% / 29% |
+| Thyrraxis | 12 m / 20 m | +9% / +15% | 31% / 19% |
+| The Castellan, as an iPhone packs it | 3 m / 6 m | −17% / −12% | 19% / 20% |
+| A dyed knight, as an iPhone packs it | 2.2 m / 4.5 m | −31% / −23% | 37% / 36% |
+
+In a delve, at the door, as a boss is fought in the third person (the camera 4 m behind you, so 6 to 7 m from the eye),
+the two can hardly be told apart: about 1% of the middle of the picture changes. Close (3 m: first person, or the
+camera wheeled in) the dyed bosses at 512 are softer than they were at 1024: the Castellan's breastplate goes mottled. A
+dyed knight of the rank and file at 256 is clearly softer up close, as it always was undyed. The Elder Dragon Gods and the
+giants, at 512 where they were 256, gain; the gods at 1024 would gain again (Thyrraxis at 12 m: +33% over main, where
+512 gives +9%; shot as a third picture), for about 1 MB more each on an iPhone (4 plain): left for the owner to choose.
+
+**Not run on an iPhone**: an emulated one in desktop Chrome, whose GPU can't read packed pictures. Packed as an iPhone
+packs them (ASTC, on SwiftShader: `FLAGS=--enable-unsafe-swiftshader Q='&soft=1&astc=1'` and a tag of its own,
+`node tools/monsters/skins_ab.mjs steps.json castellan,knight X`), the Castellan comes out 17% less sharp than at 1024 at
+3 m and 12% at 6 m, and a dyed knight 31% at 2.2 m and 23% at 4.5 m: much as plain. The packing adds no fringes of its
+own at a hue's edge (tabard against plate) that the plain pictures don't show.
 
 #### The big pictures, decoded small
 
@@ -3116,8 +3185,8 @@ Now a phone (and any tier that shrinks its pictures, as a laptop's Medium) decod
 (`tools/lean_pictures/make.py` writes them to `assets/lean/`: 158 pictures, 37 MB), and shrinks it the rest of the way
 in halves, which Chrome filters (a shrink of more than a half in one go it doesn't). What it makes is sized from the
 original's sides, not the copy's, so every texture comes out exactly the size it was (`src/gfx/renderer.js`
-`decodePicture`, `src/gfx/gpu.js` `decodeScaledBitmap`). A dyed skin's bake worker is handed the copy and the scale that
-makes it that size, where one scale on both sides can (`src/gfx/lean-pictures.js` `forScale`). A copy is used only where
+`decodePicture`, `src/gfx/picsize.js` `decodeScaledBitmap`). A dyed skin's bake worker is handed the copy and the original's
+sides, and sizes and shrinks it by the same rule (`src/gfx/tripo-slots.js` `picture`). A copy is used only where
 what's to be made is no bigger than it: the Medium tier's 2048 from a 4096 picture still comes from the original, and
 Ultra and High never look. The copies are found by the original's own bytes (`pictureKey`), not by file name, so a
 picture shared by two models has one copy, and a copy whose original has since changed is never used over the new

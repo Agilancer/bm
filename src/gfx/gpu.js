@@ -2,6 +2,9 @@
 // feature it offers, and a quality tier picked from what it is.
 import { lanes } from '../core/files.js';
 import { FreshViews, wantFreshViews } from './freshviews.js';
+// (How big a picture comes out is src/gfx/picsize.js's, shared with the dyed skins' worker: decodeScaledBitmap and
+// scaledSize are there.)
+export { decodeScaledBitmap, scaledSize } from './picsize.js';
 
 const WANTED_FEATURES = [
   'rg11b10ufloat-renderable', 'float32-filterable', 'timestamp-query', 'indirect-first-instance',
@@ -24,8 +27,9 @@ export const TIERS = {
   mobile: { name: 'Mobile', lean: true, scaleMax: 1.0, maxPixels: 750000, shadowSize: 1024, cascades: 2, splits: [20, 80, 80], msaa: 1, grassSpacing: 0.2, grassRadius: 20, grassCap: 16000, particles: 18000, ao: false, shafts: false, pom: 0, texScale: 0.25, mapScale: 0.5, texCap: 256, texCapNear: 512, terrainN: 128, bloom: 3, sim: 90, aniso: 2, lights: 2, bloodSize: 1024, emit: 0.4 },
 };
 
-// (On a phone, a model's picture is at most texCap a side, 256: the crowds, the beasts, the townsfolk, the heroes. Those seen
-// close, Lisandra and your own body, texCapNear: 512. At 512 the lot was 120 MB of an iPhone's memory, which counts the GPU's.)
+// (On a phone, a model's picture is at most texCap a side, 256: the crowds, the beasts, the townsfolk, the heroes, the
+// monsters, dyed or not. Those seen close, Lisandra, your own body and the monsters as tall as a house (src/gfx/picsize.js
+// TALL), texCapNear: 512. At 512 the lot was 120 MB of an iPhone's memory, which counts the GPU's.)
 // A phone's tier made lighter still, for one whose browser has closed the game for want of memory (src/core/lastrun.js):
 // level 1 and up, no model's picture over 192 a side (256 close; their normals half that); level 2, 160 (192 close). (Never
 // sharper close than the level before this pass had them all: 256, then 192.)
@@ -235,42 +239,6 @@ export async function loadTextureArray(device, mipgen, names, decode, format, ru
   const bad = ends.find((e) => e.status === 'rejected');
   if (bad) { tex?.destroy(); throw bad.reason; }
   return tex;
-}
-
-// (cap: no side of what comes back is longer than this, whatever scale says. 0: no cap. step: each side a whole number of
-// these, as ASTC's 4x4 blocks need (src/gfx/astc.js): rounded to the nearest, a picture's UVs don't mind a pixel or two.)
-export function scaledSize(width, height, scale, cap = 0, step = 1) {
-  if (cap) scale = Math.min(scale, cap / Math.max(width, height));
-  scale = Math.min(scale, 1);
-  const side = (n) => Math.max(step, Math.round(n * scale / step) * step);
-  return [side(width), side(height)];
-}
-
-// size: the [width, height] of the picture this is a smaller copy of (src/gfx/lean-pictures.js), which what comes back is
-// sized from: the size it would have been, decoded from the original. A copy smaller than that is an error (one kept from
-// before, say), so the original is decoded instead, not the copy blown up. A copy is shrunk the rest of the way in halves:
-// Chrome's own shrink drops pixels unfiltered past a half (grain, and a checkered shimmer on a fine pattern), and a half at
-// a time comes out near a proper filter (at a phone's 128 or 256, 4 to 7 dB nearer a Lanczos from the original), for some
-// 3 to 5 ms a picture. (Not the originals: their halves would be 16 and 4 MB more beside the 64 of a 4096 picture.)
-export async function decodeScaledBitmap(blob, scale, cap = 0, step = 1, size = null) {
-  const opts = { premultiplyAlpha: 'none', colorSpaceConversion: 'none' };
-  const bmp = await createImageBitmap(blob, opts);
-  const [w, h] = scaledSize(...(size || [bmp.width, bmp.height]), scale, cap, step);
-  if (w === bmp.width && h === bmp.height) return bmp;
-  if (size && (bmp.width < w || bmp.height < h)) { bmp.close(); throw new Error(`a copy ${bmp.width}x${bmp.height}, for ${w}x${h}`); }
-  let src = bmp;
-  try {
-    if (size) {
-      while (src.width >= 2 * w && src.height >= 2 * h) {
-        const half = await createImageBitmap(src, { ...opts, resizeWidth: Math.round(src.width / 2), resizeHeight: Math.round(src.height / 2), resizeQuality: 'high' });
-        if (src !== bmp) src.close();
-        src = half;
-      }
-      if (src.width === w && src.height === h) { const done = src; src = bmp; return done; }
-    }
-    // Resize the decoded pixels instead of decoding the compressed source twice.
-    return await createImageBitmap(src, { ...opts, resizeWidth: w, resizeHeight: h, resizeQuality: 'high' });
-  } finally { bmp.close(); if (src !== bmp) src.close(); }
 }
 
 // Build a texture array from decoded bitmaps.
