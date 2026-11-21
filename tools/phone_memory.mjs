@@ -13,18 +13,21 @@
 //             profile begun before its first line), and its typed arrays over 8 KB by where they were made
 //   PRE='js'  run in the page once the game's up (a scene: see tools/autoplay/watch.mjs)   AUTOPLAY=1  auto-play on
 //   DRAW=1    leave drawing on (the software GPU is slow, and the page may die of it with auto-play on)
-//   Q='&light=2' more query string   PORT (8481)
+//   Q='&light=2' more query string   PORT (8481)   DEBUG_PORT (unset: a free one, tools/chrome-port.mjs)
 // Needs the server (python tools/serve.py 8481) and Playwright's Chromium.
 import { createRequire } from 'node:module';
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { freePort } from './chrome-port.mjs';
 
 const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
 const wait = +(process.argv[2] || 30), TOP = +(process.env.TOP || 0), WHO = !!process.env.WHO;
 const UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1';
-const DEBUG_PORT = 9333;
+// (A port free now, not a fixed one another run may be on: Playwright keeps its profile to itself, so Chrome can't be
+// asked for port 0 and read back as tools/memory/raw.mjs does.)
+const DEBUG_PORT = await freePort();
 const MB = (x) => Math.round(x / 1048576);
 
 // Put in before the page's own code: every texture and buffer asked of the GPU, counted, by the code that asked.
