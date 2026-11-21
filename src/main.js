@@ -1376,10 +1376,9 @@ class Hud {
     this.foeHp = $('foeHp').firstElementChild;
     this.foeArm = $('foeArmor').firstElementChild;
     this.stamEl = $('stam').firstElementChild;
-    this.shown = {};
   }
 
-  reset() { this.msgShown = 0; $('msg').style.opacity = 0; $('msg').innerHTML = ''; this.shown = {}; }
+  reset() { this.msgShown = 0; $('msg').style.opacity = 0; $('msg').innerHTML = ''; }
 
   setDebug(on) { this.debug = on; $('debug').style.display = on ? 'block' : 'none'; }
 
@@ -1391,13 +1390,6 @@ class Hud {
     if (Math.abs(v - el.shown) < 0.004) return;
     el.shown = v;
     el.style.transform = `scaleX(${v.toFixed(3)})`;
-  }
-
-  // Each lesson once, at the moment it means something.
-  once(id, text, secs = 4.5) {
-    if (this.shown[id]) return;
-    this.shown[id] = true;
-    this.tip(text, secs);
   }
 
   tip(text, secs) {
@@ -2102,7 +2094,6 @@ class GameView {
         if (!this.spellSound) this.spellSound = new SpellSound(au);
         this.spellSound.gather(a);
         if (this.town) this.town.cast++;   // (The town's never seen real magic: src/folk/talk.js.)
-        this.hud.once('cast', this.input.touch ? 'Tap a spell to cast it, and hold to keep casting. Your spellbook is in the top row.' : '1 to 9 cast what is in each slot, and 0, − and + the Utility spells in the last three: hold to keep casting. B is your spellbook. Alt gives you a cursor to click them with.', 5);
         break;
       case EV.SPELL_LOOSE:
         if (!this.spellSound) this.spellSound = new SpellSound(au);
@@ -2157,7 +2148,6 @@ class GameView {
           au.play('blocked', a, b, c, 0.7, 1.2);
           r.emit(2, 42, a, b, c, d, e, f, 0.9, 1.4, 6.5, 0.0018, 0.005, 0.2, 0.6);
         }
-        this.hud.once('gash', g < 2 ? 'The plate is cut. Strike that same cut again to go through. Your X turns red over it.' : 'A cut. Strike it again to go through.');
         r.emit(6, 8, a, b, c, d, e, f, 0.6, 0.3, 1.1, 0.004, 0.01, 0.5, 1.3);
                 this.hud.crossHit();
         break;
@@ -2170,7 +2160,6 @@ class GameView {
         r.emit(0, 80, a, b, c, d, e, f, 0.1, 5.5, 9, 0.002, 0.01, 1, 2);
         r.emit(1, 22, a, b, c, d, e, f, 0.9, 0.4, 2.5, 0.03, 0.08, 0.4, 0.9);
         if (!r.chars[g]?.flesh) r.emit(2, 30, a, b, c, d, e, f, 1.0, 1, 4.5, 0.002, 0.004, 0.2, 0.5);        this.hud.crossHit();
-        if (g < 2) this.hud.once('puncture', 'Through the wound. Now it bleeds.', 3);
         break;
       }
       case EV.BLOCK:
@@ -2232,11 +2221,10 @@ class GameView {
         break;
       case EV.GLINT:
         r.emit(2, 3, a, b, c, 0, 1, 0, 2, 0.1, 0.5, 0.004, 0.008, 0.1, 0.2);
-        if (!this.deepWas) this.hud.once('glint', this.input.touch ? 'A blade flashes before it falls. Dodge, or swing into it to parry.' : 'A blade flashes before it falls. Q to dodge, or swing into it to parry.');
         break;
       case EV.JUMP: au.play(`jump_${this.underfoot}`, null, 0, 0, 0.32, 1, false); break;
       case EV.DODGE: au.play(`run_${this.underfoot}`, null, 0, 0, 0.5, 1.15, false); break;
-      case EV.HYDRA_NOTICE: this.hud.once('hydra', 'Three heads have turned your way. It has given you one warning.', 5); break;
+      case EV.HYDRA_NOTICE: break;
       case EV.FIRE: {
         // One head's breath, this instant. A hiss under it, not on every puff, and a roar of flame as a gout begins.
         if (performance.now() - (this.breathAt || 0) > 700) au.play('torchStrike', a, b, c, 1.4, 0.65);
@@ -2272,7 +2260,7 @@ class GameView {
         au.play('armorLand', a, b, c, 0.5 + d * 0.9, 0.5);
         r.emit(3, Math.ceil(30 * d), a, b + 0.05, c, 0, 1, 0, 1.3, 0.4, 2.2, 0.08, 0.2, 0.5, 1.2);
         break;
-      case EV.BEAST_NOTICE: if (!this.deepWas) this.hud.once('gravehart', 'Something in the trees has noticed you. Leave its ground and it may let you go.', 5); break;
+      case EV.BEAST_NOTICE: break;
       case EV.ROAR:
         // A stag's roar, far too big: a groan under a rasp, carrying a long way.
         au.gore(a, b, c, 1.6 * d, 1.7, 130); au.gore(a, b, c, 1.2 * d, 1.4, 240); au.gore(a, b, c, 0.5 * d, 1.1, 620);
