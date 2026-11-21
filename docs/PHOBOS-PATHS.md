@@ -65,6 +65,7 @@ layered:
 | A low wall stepped over from the high side, walked into from the low | a step up must be clear at the height it's stepped from |
 | Gallery pieces only just meeting: pinholes | overlapped by 0.2 m |
 | The city wall's corner drums: the gallery out to the higher walk laid over the stair's last treads, the top one left showing 1.5 m under it. The walks past four corners were walked onto, never back off | the gallery starts at the stair's middle line; the treads' inner halves are the way up (`towerFar`) |
+| A house's floor is at its highest corner's ground: on a hill 2,061 doors stood a metre to twelve over the street, and no one got into those houses | a flight of steps down from each such threshold, none over 0.42 m: straight out, or along the front either way where straight out would end in the house across the street (`doorFlight`) |
 
 ## Inside the sewers and the castle's delves
 
@@ -87,8 +88,12 @@ Seven of the 340 walks, on the last run before this was merged (333 got there):
 The map's other known gap: the four spires' crowns (410-640 m) are a metre over the sloped roof round them. A body
 steps up onto a crown but not back down off it, a 1.5 m drop. No target is on a crown, and the long way never goes
 through a dead end, so auto-play doesn't take anyone there. A player who climbs up there is stuck, and auto-play's ask
-from there searches the whole map for nothing (the slowest ask on the run, 26 s with twelve walks at once; from the gate
-road the slowest is 1.2 s). See the run's output before calling it done.
+from there searches the whole map for nothing (the slowest ask on the run took 8.6 s with twelve walks at once; from the
+gate road the slowest is 1.2 s).
+
+3,826 of the 75,956 floors and decks big enough to count still aren't got to, down from 8,706. In the first 400 the map lists (160 houses)
+they're 65 ruins with no doorway, upstairs floors whose stair head the map can't climb onto, and doorways with a
+shop's goods or a post on the threshold beside the steps' top. See the run's output before calling it done.
 
 ## Running it after a change
 

@@ -75,8 +75,9 @@ test('nothing of it moves a door or adds to what stops a body, and the corners a
   // (61,773 and 10,423 of the city's own, and the castle's sixteen wall towers' 212 and 60: their walls, doors, floors, stairs.
   // And 28,224 more inside the houses: their cross walls, the one upstairs and the two halves of the one down either side of
   // its doorway (src/core/phobos-rooms.js partition, docs/HOMES.md). Less 45: the curtain's runs end at its corner towers'
-  // rooms, so each is laid in fewer, longer pieces: docs/PHOBOS-PATHS.md. Nothing else moved.)
-  assert.equal(pc[1], 61773 + 212 + 28224 - 45, 'the city stops a body where it did'); assert.equal(pc[2], 10423 + 60, 'and holds one where it did');
+  // rooms, so each is laid in fewer, longer pieces: docs/PHOBOS-PATHS.md. Nothing else moved. Floors: and 2,061 flights of
+  // steps down from doors that stood a metre and more over the street, src/core/phobos-build.js doorFlight.)
+  assert.equal(pc[1], 61773 + 212 + 28224 - 45, 'the city stops a body where it did'); assert.equal(pc[2], 10423 + 60 + 2061, 'and holds one where it did');
   // (A near cell with a landmark and a street in it builds.)
   const cell = landmarks()[3].h.cell, built = buildPhobosCell(cell);
   let v = 0; for (const p of built.parts.values()) v += p.pos.length / 3;

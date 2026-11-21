@@ -58,6 +58,64 @@ export function footing(h) {
   return { lo, hi, c, s };
 }
 export const DOOR = 0.8, WALL = 0.45;   // half a doorway's width; a house wall's thickness
+// The steps down from a house's threshold to the street, where the street's more than a step under it. (The floor's at the
+// house's highest corner's ground: on a hill 2,128 doors stood a metre to six over the street, and those houses weren't gone
+// into, tools/paths/map.mjs.) Straight out from the threshold, none more than 0.42 m; where that would end in another house,
+// across a narrow street or the next one down the hill, along the front from the threshold's end, whichever way is clear.
+// [{ rect, x, z, top }], or null where none's wanted or none fits.
+const FLIGHT_TREAD = 0.42, FLIGHT_RISE = 0.42;
+let FLIGHTS = null;
+export function doorFlight(h, F) {
+  if (h.door === undefined) return null;
+  if (!FLIGHTS) FLIGHTS = new Map();
+  if (!FLIGHTS.has(h)) FLIGHTS.set(h, flightFor(h, F));
+  return FLIGHTS.get(h);
+}
+function flightFor(h, F) {
+  const fy = F.hi + 0.1, f = h.front, L = (lx, lz) => [h.x + lx * F.c + f * lz * F.s, h.z - lx * F.s + f * lz * F.c];
+  if (fy - Y(...L(0, h.hz + 1.1)) < 0.85) return null;
+  // (Its way down: where the k-th tread's middle is, how far from the threshold's edge; its half sizes across and along.)
+  // (Along the front a tread's 1.2 m out from the wall, room for a body against it with an alley's far side close by.)
+  const ways = [
+    { at: (d, e = 0) => L(0, h.hz + 0.9 + d + e), hu: DOOR + 0.3, hw: FLIGHT_TREAD / 2 + 0.01, e: FLIGHT_TREAD / 2 },
+    { at: (d, e = 0) => L(DOOR + 0.3 + d, h.hz + 0.6 + e), hu: FLIGHT_TREAD / 2 + 0.01, hw: 0.61, e: 0.6 },
+    { at: (d, e = 0) => L(-DOOR - 0.3 - d, h.hz + 0.6 + e), hu: FLIGHT_TREAD / 2 + 0.01, hw: 0.61, e: 0.6 },
+  ];
+  const H = houseGrid(), inHouse = (x, z) => {
+    for (const o of H.get(`${Math.floor(x / 30)}_${Math.floor(z / 30)}`) || []) {
+      if (o === h) continue;
+      const dx = x - o.x, dz = z - o.z, c = Math.cos(o.yaw), s = Math.sin(o.yaw);
+      if (Math.abs(dx * c - dz * s) < o.hx + 0.35 && Math.abs(dx * s + dz * c) < o.hz + 0.35) return true;
+    }
+    return false;
+  };
+  for (const w of ways) {
+    // (Down to the lowest of the ground under it: a dip at the threshold with the street higher past it is a step down too.)
+    const y1 = Y(...w.at(0.2));
+    let y0 = y1, n = 0;
+    for (let it = 0; it < 3; it++) { n = Math.max(1, Math.ceil((fy - y0) / FLIGHT_RISE) - 1); y0 = Math.min(y1, Y(...w.at(n * FLIGHT_TREAD + 0.2))); }
+    n = Math.max(1, Math.ceil((fy - y0) / FLIGHT_RISE) - 1);
+    const rise = (fy - y0) / (n + 1), out = [];
+    let ok = !inHouse(...w.at(n * FLIGHT_TREAD + 0.4));
+    for (let k = 1; k <= n && ok; k++) {
+      const [x, z] = w.at((k - 0.5) * FLIGHT_TREAD), top = fy - k * rise;
+      if (inHouse(x, z) || inHouse(...w.at((k - 0.5) * FLIGHT_TREAD, w.e + 0.1))) ok = false;
+      out.push({ x, z, top, hu: w.hu, hw: w.hw, rect: [x, z, w.hu, w.hw, h.yaw, top] });
+    }
+    if (ok) return out;
+  }
+  return null;
+}
+let HGRID = null;
+const houseGrid = () => {
+  if (HGRID) return HGRID;
+  HGRID = new Map();
+  for (const o of phobosHouses()) {
+    const R = Math.hypot(o.hx, o.hz) + 1;
+    for (let i = Math.floor((o.x - R) / 30); i <= Math.floor((o.x + R) / 30); i++) for (let j = Math.floor((o.z - R) / 30); j <= Math.floor((o.z + R) / 30); j++) (HGRID.get(`${i}_${j}`) || HGRID.set(`${i}_${j}`, []).get(`${i}_${j}`)).push(o);
+  }
+  return HGRID;
+};
 // A house's door by its walls: carved panels in dressed stone and fine brick, iron-bound in a house of stone, planks else.
 // (Iron-bound for a house of stone or a rich one, planks for the rest. Never the pack's carved door_rich: its four panels
 // are a cross with the knocker at the crossing. The V/T rule.)
@@ -143,6 +201,7 @@ function houseWalls(K, h, F) {
   const up = upstairs(h, F);
   if (up) rects.push(...up.rects);
   K.deck(rects); K.floors.at(-1).stack = true;
+  { const fl = doorFlight(h, F); if (fl) K.deck(fl.map((q) => q.rect)); }
   // (Upstairs, the boards between its two chambers, src/core/phobos-rooms.js: they stop only feet up there.)
   // (And downstairs the cross wall either side of its doorway; they stop only feet down there.)
   const pt = partition(h, F, up), seg = (x0, x1, w, y0, y1) => { if (x1 - x0 < 0.05) return; const [px, pz] = W((x0 + x1) / 2, h.front * w); K.colliders.push({ x: px, z: pz, hx: (x1 - x0) / 2, hz: 0.05, yaw: h.yaw, h: y1 - lo, t: y1, b: y0 - 0.4 }); };
@@ -314,8 +373,10 @@ function houseNear(K, h) {
   for (const sd of [-1, 1]) K.quad('wood', P(sd * DOOR, fy - 0.2, fz), P(sd * DOOR, fy - 0.2, gz), P(sd * DOOR, dh, gz), P(sd * DOOR, dh, fz));
   K.quad('wood', P(-DOOR, dh, fz), P(DOOR, dh, fz), P(DOOR, dh, gz), P(-DOOR, dh, gz), [0, -1, 0]);
   K.quad(burnt ? 'char:p2_worn_floorboards' : 'p2_worn_floorboards', P(-ix, fy, -iz), P(-ix, fy, iz), P(ix, fy, iz), P(ix, fy, -iz), [0, 1, 0]);
-  // (A step at the door where the street's lower than the floor.)
+  // (A step at the door where the street's lower than the floor; and the flight down from it, doorFlight.)
   K.quad('stone', P(-DOOR - 0.3, fy, fz), P(-DOOR - 0.3, fy, fz + f * 0.9), P(DOOR + 0.3, fy, fz + f * 0.9), P(DOOR + 0.3, fy, fz), [0, 1, 0]);
+  { const fl = doorFlight(h, F); if (fl) { const [tx, tz] = [h.x + f * (h.hz + 0.45) * s, h.z + f * (h.hz + 0.45) * c], tb = Math.min(Y(tx, tz), fl.at(-1).top) - 0.3; K.box('stone', tx, tb, tz, DOOR + 0.3, fy - tb, 0.46, h.yaw, { collide: false });
+    for (const q of fl) { const b = Math.min(Y(q.x, q.z), q.top) - 0.3; K.box('stone', q.x, b, q.z, q.hu, q.top - b, q.hw, h.yaw, { collide: false }); } } }
   if (!ruin && !up && !burnt) K.quad('wood', P(-ix, ceil, -iz), P(ix, ceil, -iz), P(ix, ceil, iz), P(-ix, ceil, iz), [0, -1, 0]);
   else if (!ruin && !up) {
     // (Burnt: the ceiling charred and come through over the rubble (phobos-rooms.js), the hole ragged with its joists' stubs.)
