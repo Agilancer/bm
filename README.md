@@ -3047,6 +3047,63 @@ pack pauses it, was made again and ready within 3 seconds while the old one was 
 0.6 seconds after the game went on. On a phone the pictures are packed (`src/gfx/astc.js`), so loot
 costs less there in textures and the same in buffers. **Not run on an iPhone.**
 
+#### Files kept in the page
+
+Two kinds of model file were kept whole in the page's own memory (which an iPhone counts with the GPU's) after their
+mesh and pictures had gone to the GPU:
+- **The monsters' files** (`src/gfx/tripo-slots.js`, `model`): a model is kept for the next monster of its kind (at most
+  10 in all, more only while more are in use, the longest unused let go first), and it kept its whole file with it, 2.9
+  MB on average and up to 8.4. All a model needs of it later is its colour picture, for a skin in a new palette. Now
+  that picture, copied out, is all that's kept: 0.46 MB on average.
+- **The party's body files** (`src/gfx/herolook.js`, `body`): a party hero's look in gear cut from other bodies is made
+  from those bodies' files, and each file was kept for good once used: 2 MB apiece, 44 bodies in all. A file is needed
+  only while a look is made from it (its mesh and pictures are copied into the look's own). Now at most 6 are kept in
+  all (more only while more are in use at once, as when the whole party is dressed together), the longest unused let go
+  first. One let go is fetched again when a look needs it, from the browser's copy (`force-cache`), or from the game's
+  own store when it's kept on the device.
+
+And a monster model or skin that failed to load is no longer kept as failed. It was, and every later monster of that
+kind (or that kind and palette) stayed invisible until it aged out. The one whose load failed is still unseen until its
+place goes to another monster, but the next of its kind loads afresh. A model that fails gives back what it had made.
+And every model's shared mesh came with three pose buffers of its own that are never drawn from (each monster gets its
+own copies), which nothing let go of, a model let go or failed included: 0.3 MB of the GPU's a model on average, up to
+1.8. They're given back as soon as the mesh is made.
+
+How much this saves depends on how long you play and how much changes. In 12 minutes of ordinary auto-play on `main`,
+these held 1 monster model (2.7 MB) and no body files at all. They fill as you meet more kinds of monster (new lands,
+delves) and as the party changes gear: up to about 114 MB on `main`. So this caps a slow pile-up in long sessions. It
+doesn't lower what a short session holds, and nothing here shows it was behind the 21-minute crash.
+
+The worst case, by script, on both, on an emulated iPhone: 12 kinds of monster loaded, then 14 looks made that between
+them use all 44 bodies.
+
+| | `main` | This branch |
+| --- | --- | --- |
+| Hero body files kept | 44, 86.0 MB | 6, 11.9 MB |
+| Monster files kept (10 models) | 28.3 MB whole | 3.4 MB of colour pictures |
+| Page heap's growth | +112 MB | +15 MB, and −1 MB in a second run |
+| Page process, before and after (MB; it wanders by up to 125 MB, above) | 992, 1057 | 999, 926; again 1011, 974 |
+
+Made a second time, all 14 looks came out with the same vertex and index counts (their pictures weren't compared). All
+44 bodies were fetched again for it: 6 kept can't hold a run through 44, so each was let go before its turn came round.
+Every one came from the browser's copy, none over the network. Three looks made at once, sharing bodies, left nothing
+marked in use and 6 kept. Plain and dyed skins of four monsters were made from the kept picture alone, at the same sizes
+as on `main`. **Not run on an iPhone.**
+
+What a player may notice: when a party hero's new gear needs a body that was let go, its file is read again, which
+takes a little longer than having it in memory. The hero keeps their old look until the new one is ready, as before, so
+it's their armour that lands a moment later, never a hero half made. If the phone has thrown that copy away and is
+offline, the look can't be made, and the hero stays as they were until they're next dressed, by new gear or a level
+(keeping the game on the device, the first start's question, avoids that). Monsters look as before.
+
+Left for later, as it changes what you see: a monster's skin in a palette other than its own (a dyed one) is baked in a
+worker (`src/gfx/bake.worker.js`) that doesn't hold it to the phone's cap of 256 across, as the plain skin is held. The
+necromancers, the possessed knights and the Velscour knights and lancers, whose pictures are 4096, come out 1024 across
+on a phone when dyed, and the dragons (2048) 512. Almost every named delve boss is one of these in a dye of its own (the
+Castellan of Blackvigil, the Iron Marshal, Magister Sorvane, Ossivar and others). Capping them at 256 would save roughly
+10 to 16 MB on an iPhone, but make the bosses visibly softer: it wants a change of its own, judged by eye on a phone,
+perhaps with 512 for every big monster, plain and dyed alike.
+
 ### What has and hasn't been tested
 
 The owner's first session on a phone found the frame rate too low, which led to the phone tier below. **That rework hasn't
