@@ -23,6 +23,8 @@ const GUTTER = 1 / 64;         // of a cell, round each body's picture in it: it
                                // far-off mip doesn't take its neighbour's colours (a red hairline down a plum shin)
 const RINGS = 8;               // texels the dye's reach is grown round each group, into what no group covers
 const CHAR_UBO = 24 * 64 + 256 + 48;   // (as renderer.js)
+const KEEP_BODIES = 6;         // body files kept in all, those a look is being made from among them (more only while more
+                               // are in use): HeroLooks.trimFiles
 const kitOf = (k) => [k.main, k.off || (k.style === 'daggers' || k.style === 'boomerang' ? k.main : null), k.back, k.lute || null];
 const KIT_KEYS = ['main', 'off', 'back', 'lute'];
 const groupOf = (name) => { const g = name.split('_')[0]; return GROUPS.includes(g) ? g : name.startsWith('mail') ? 'mail' : null; };
@@ -121,7 +123,9 @@ export class HeroLooks {
   // r: the renderer. base: where the game's files are.
   constructor(r, base) {
     this.r = r; this.base = base;
-    this.files = new Map();     // body id -> Promise of { glb, prim, pieces, ib, jc }
+    this.files = new Map();     // body id -> Promise of { glb, prim, pieces, ib, jc }, newest last
+    this.busy = new Map();      // body id -> how many looks are being made from it now
+    this.fetched = new Set();   // body ids fetched before (from the browser's cache when asked again)
     this.state = new Map();     // slot -> { key, char (the one made), orig (the renderer's own) }
     this.turns = new Map();     // slot -> the latest apply's number, so a slow one doesn't land over a later
     this.props = new Map();     // `${id}|${pal}` -> Promise of a prop model
@@ -130,8 +134,11 @@ export class HeroLooks {
 
   body(id) {
     let p = this.files.get(id);
-    if (!p) {
-      p = fetch(`${this.base}assets/game/heroes/${id}.glb`).then((res) => { if (!res.ok) throw new Error(`${id}: ${res.status}`); return res.arrayBuffer(); }).then((buf) => {
+    if (p) { this.files.delete(id); this.files.set(id, p); }
+    else {
+      const again = this.fetched.has(id) ? { cache: 'force-cache' } : undefined;
+      p = fetch(`${this.base}assets/game/heroes/${id}.glb`, again).then((res) => { if (!res.ok) throw new Error(`${id}: ${res.status}`); return res.arrayBuffer(); }).then((buf) => {
+        this.fetched.add(id);
         const glb = parseGLB(buf), pr = glb.json.meshes[0].primitives[0], a = pr.attributes;
         const prim = {
           pos: accessor(glb, a.POSITION), nrm: accessor(glb, a.NORMAL), uv: accessor(glb, a.TEXCOORD_0), idx: accessor(glb, pr.indices),
@@ -140,10 +147,20 @@ export class HeroLooks {
         const skin = glb.json.skins[0], ib = accessor(glb, skin.inverseBindMatrices);
         return { glb, prim, pieces: glb.json.scenes[0].extras?.pieces || [], ib, jc: skin.joints.length };
       });
-      p.catch(() => this.files.delete(id));
+      p.catch(() => { if (this.files.get(id) === p) this.files.delete(id); });
       this.files.set(id, p);
     }
     return p;
+  }
+
+  // At most KEEP_BODIES body files kept in all, the longest unused let go first; one a look is being made from is never let
+  // go. A file is wanted only while a look is made (compose): its mesh and pictures are copied into the look's own. Each
+  // of the 44 bodies, once used, was kept for good: about 2 MB of page memory apiece.
+  trimFiles() {
+    for (const id of this.files.keys()) {
+      if (this.files.size <= KEEP_BODIES) break;
+      if (!this.busy.has(id)) this.files.delete(id);
+    }
   }
 
   // What a hero in this slot should look like: which body each group comes from, and each group's colours. Null for as they are.
@@ -207,8 +224,17 @@ export class HeroLooks {
   // ---- the body -------------------------------------------------------------------------------------------------------
 
   async compose(rec) {
-    const { r } = this, device = r.device;
     const ids = [rec.wearer, ...[...new Set([...Object.values(rec.groups), rec.mail])].filter((b) => b !== rec.wearer)];
+    for (const id of ids) this.busy.set(id, (this.busy.get(id) || 0) + 1);
+    try { return await this.build(rec, ids); } finally {
+      for (const id of ids) { const n = this.busy.get(id) - 1; if (n > 0) this.busy.set(id, n); else this.busy.delete(id); }
+      this.trimFiles();
+    }
+  }
+
+  // The look itself, from the bodies ids (the wearer's first).
+  async build(rec, ids) {
+    const { r } = this, device = r.device;
     const files = await Promise.all(ids.map((id) => this.body(id)));
     const A = files[0], cells = ids.length, cols = cells > 1 ? 2 : 1, rows = cells > 2 ? 2 : 1;
     const gut = cells > 1 ? GUTTER : 0, inner = 1 - 2 * gut;
@@ -417,9 +443,9 @@ export class HeroLooks {
       const enc = device.createCommandEncoder();
       r.mip.generate(t, format, 1, mips, enc);
       device.queue.submit([enc.finish()]);
-      return t;
+      return r.astc.pack(t);   // (packed on a phone: src/gfx/astc.js)
     };
-    const maps = [tex(alb, 'rgba8unorm-srgb'), tex(nrm, 'rgba8unorm'), tex(mr, 'rgba8unorm')];
+    const maps = await Promise.all([tex(alb, 'rgba8unorm-srgb'), tex(nrm, 'rgba8unorm'), tex(mr, 'rgba8unorm')]);
     const sk = r.makeSkinned([prim], A.jc);
     r.addLod(sk, prim, 0.055);
     const ubo = device.createBuffer({ size: CHAR_UBO, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
@@ -436,7 +462,9 @@ export class HeroLooks {
     const mat = glb.json.materials[glb.json.meshes[0].primitives[0].material];
     const img = glb.json.textures[mat.pbrMetallicRoughness.baseColorTexture.index].source;
     const bmp = await createImageBitmap(imageBytes(glb, img), { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
-    const k = this.r.tier.texScale || 1, W = Math.max(64, Math.round(bmp.width * k)), H = Math.max(64, Math.round(bmp.height * k));
+    // (Whole blocks of 4 a side where it's packed, src/gfx/astc.js.)
+    const k = this.r.tier.texScale || 1, q = this.r.astc.on ? 4 : 1, side = (n) => Math.max(64, Math.round(n * k / q) * q);
+    const W = side(bmp.width), H = side(bmp.height);
     const cv = new OffscreenCanvas(W, H), ctx = cv.getContext('2d', { willReadFrequently: true });
     ctx.drawImage(bmp, 0, 0, W, H); bmp.close();
     if (pal && pal !== 'own' && PROP_PALS[pal]) {
@@ -491,12 +519,12 @@ export class HeroLooks {
       this.r.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture), 'rgba8unorm', k, true),
     ]);
     const prim = { pos: accessor(glb, a.POSITION), nrm: accessor(glb, a.NORMAL), uv: accessor(glb, a.TEXCOORD_0), idx: accessor(glb, pr.indices) };
-    s.lying = this.r.lyingModel(prim, this.canvasTexture(pic, 'rgba8unorm-srgb'), nrm, mr, [0, 0, 0, 0]);
+    s.lying = this.r.lyingModel(prim, await this.canvasTexture(pic, 'rgba8unorm-srgb'), nrm, mr, [0, 0, 0, 0]);
     s.tip = 0;
     s.ready = true;
   }
 
-  canvasTexture(pic, format) {
+  async canvasTexture(pic, format) {
     const { device } = this.r, mips = mipCountFor(pic.W, pic.H);
     const t = device.createTexture({ size: [pic.W, pic.H], format, mipLevelCount: mips, usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT });
     if (pic.px) device.queue.writeTexture({ texture: t }, pic.px, { bytesPerRow: pic.W * 4 }, [pic.W, pic.H]);
@@ -504,7 +532,8 @@ export class HeroLooks {
     const enc = device.createCommandEncoder();
     this.r.mip.generate(t, format, 1, mips, enc);
     device.queue.submit([enc.finish()]);
-    return t;
+    // (Packed on a phone, src/gfx/astc.js; not one with its metal in the alpha, which would share the colour's few steps.)
+    return pic.px ? t : this.r.astc.pack(t);
   }
 
   async kitGlb(id) { return parseGLB(await fetch(`${this.base}assets/game/heroes/kit/${id}.glb`).then((res) => { if (!res.ok) throw new Error(`kit ${id}: ${res.status}`); return res.arrayBuffer(); })); }
@@ -518,7 +547,7 @@ export class HeroLooks {
         const glb = await this.kitGlb(id);
         if (!pal || pal === 'own') return this.r.buildProp(glb);
         const made = await this.r.buildProp(glb);
-        const t = this.canvasTexture(await this.propPicture(glb, pal, true), 'rgba8unorm-srgb');
+        const t = await this.canvasTexture(await this.propPicture(glb, pal, true), 'rgba8unorm-srgb');
         made.bg = this.r.device.createBindGroup({ layout: this.r.bglProp, entries: [{ binding: 0, resource: t.createView() }, { binding: 1, resource: { buffer: made.ubo } }] });
         // (Its glint's y: 1, its metal is in its picture's alpha, its own steel's before it was painted.)
         this.r.device.queue.writeBuffer(made.ubo, 0, new Float32Array([0, 1, 0, 0]));
@@ -548,7 +577,7 @@ export class HeroLooks {
     const glb = await this.kitGlb(prop);
     const pr = glb.json.meshes[0].primitives[0], a = pr.attributes;
     const prim = { pos: accessor(glb, a.POSITION), nrm: accessor(glb, a.NORMAL), uv: accessor(glb, a.TEXCOORD_0), idx: accessor(glb, pr.indices) };
-    const alb = this.canvasTexture(await this.propPicture(glb, pal), 'rgba8unorm-srgb');
+    const alb = await this.canvasTexture(await this.propPicture(glb, pal), 'rgba8unorm-srgb');
     // (Its colour is all a hero's prop has: a flat normal, and a matte, half metal finish.)
     const flat = (rgba) => { const t = this.r.device.createTexture({ size: [1, 1], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST }); this.r.device.queue.writeTexture({ texture: t }, new Uint8Array(rgba), { bytesPerRow: 4 }, [1, 1]); return t; };
     s.lying = this.r.lyingModel(prim, alb, flat([128, 128, 255, 255]), flat([255, 150, 90, 255]), [0, 0, 0, 0]);

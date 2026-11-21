@@ -1,0 +1,154 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>ASTC check</title>
+<style>body { background: #222; color: #ddd; font: 13px monospace; } canvas { image-rendering: pixelated; display: block; margin: 6px 0; }</style>
+<pre id="log">working...</pre>
+<script type="module">
+// The game's ASTC packer (src/gfx/astc.js) checked against a decoder that isn't it: each picture made as the game makes it
+// (decoded, shrunk to a phone's size, mips drawn), packed, then both read back through the GPU and compared, mip by mip.
+// Needs a GPU that reads ASTC: on a PC, Chrome's software one (?soft=1, with --enable-unsafe-swiftshader). tools/astc/README.md.
+//   ?soft=1  ?size=256  ?pics=assets/game/tex/bark_c.webp,...
+//   A model's pictures: glb:<path>#<image index>[:srgb], e.g. glb:assets/game/lisandra/witch.glb#0:srgb
+import { MipGen, mipCountFor } from '../../src/gfx/gpu.js';
+import { AstcPacker } from '../../src/gfx/astc.js';
+import { parseGLB, imageBytes } from '../../src/core/glb.js';
+
+const q = new URLSearchParams(location.search);
+const out = [];
+const say = (s) => { out.push(s); document.getElementById('log').textContent = out.join('\n'); };
+const PICS = (q.get('pics') || [
+  'assets/game/tex/bark_c.webp', 'assets/game/tex/bark_d.webp', 'assets/game/tex/ashlar_c.webp', 'assets/game/tex/ashlar_d.webp',
+  'assets/game/tex/leaves_2_c.webp', 'assets/game/tex/grass_1_c.webp', 'assets/game/fx/lancer_shields.webp',
+  'assets/game/folk/skinner_c.webp', 'assets/game/folk/skinner_n.webp', 'assets/game/folk/skinner_m.webp',
+].join(',')).split(',');
+const SIZE = +(q.get('size') || 256);
+
+try {
+  const adapter = await navigator.gpu.requestAdapter(q.get('soft') ? { forceFallbackAdapter: true } : {});
+  if (!adapter) throw new Error('no adapter');
+  const info = adapter.info || {};
+  say(`adapter: ${info.vendor} ${info.architecture} ${info.description || ''}; astc: ${adapter.features.has('texture-compression-astc')}`);
+  if (!adapter.features.has('texture-compression-astc')) throw new Error('this GPU has no ASTC');
+  const device = await adapter.requestDevice({ requiredFeatures: ['texture-compression-astc'] });
+  device.addEventListener('uncapturederror', (e) => say(`GPU ERROR: ${e.error.message}`));
+  const mip = new MipGen(device), packer = new AstcPacker(device, true);
+  // (Its own check first, as the game's: a little picture packed and read back. Off means this GPU failed it.)
+  await packer.ready;
+  say(`the packer's own check: ${packer.on ? 'passed' : `FAILED, ${packer.why}`}`);
+  if (!packer.on) throw new Error(`the packer turned itself off: ${packer.why}`);
+
+  // A texture's level read back as bytes, through a draw (textureLoad) into a target of the same colour space.
+  const blitMod = device.createShaderModule({ code: `
+    @group(0) @binding(0) var t: texture_2d<f32>;
+    @vertex fn vs(@builtin(vertex_index) i: u32) -> @builtin(position) vec4f {
+      var p = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3)); return vec4f(p[i], 0, 1);
+    }
+    @fragment fn fs(@builtin(position) p: vec4f) -> @location(0) vec4f { return textureLoad(t, vec2u(p.xy), 0); }` });
+  const pipes = {};
+  const blitPipe = (format) => pipes[format] ||= device.createRenderPipeline({ layout: 'auto', vertex: { module: blitMod, entryPoint: 'vs' },
+    fragment: { module: blitMod, entryPoint: 'fs', targets: [{ format }] }, primitive: { topology: 'triangle-list' } });
+  async function readLevel(tex, level, format) {
+    const w = Math.max(1, tex.width >> level), h = Math.max(1, tex.height >> level), bpr = Math.ceil(w * 4 / 256) * 256;
+    const target = device.createTexture({ size: [w, h], format, usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC });
+    const buf = device.createBuffer({ size: bpr * h, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ });
+    const enc = device.createCommandEncoder();
+    const pipe = blitPipe(format);
+    const pass = enc.beginRenderPass({ colorAttachments: [{ view: target.createView(), loadOp: 'clear', storeOp: 'store', clearValue: [0, 0, 0, 0] }] });
+    pass.setPipeline(pipe);
+    pass.setBindGroup(0, device.createBindGroup({ layout: pipe.getBindGroupLayout(0), entries: [{ binding: 0, resource: tex.createView({ dimension: '2d', baseMipLevel: level, mipLevelCount: 1 }) }] }));
+    pass.draw(3); pass.end();
+    enc.copyTextureToBuffer({ texture: target }, { buffer: buf, bytesPerRow: bpr }, [w, h]);
+    device.queue.submit([enc.finish()]);
+    await buf.mapAsync(GPUMapMode.READ);
+    const rows = new Uint8Array(buf.getMappedRange()), px = new Uint8Array(w * h * 4);
+    for (let y = 0; y < h; y++) px.set(rows.subarray(y * bpr, y * bpr + w * 4), y * w * 4);
+    buf.destroy(); target.destroy();
+    return { w, h, px };
+  }
+  // (seen: only the texels whose plain alpha is at least half, the ones a cut-out shows.)
+  const psnr = (a, b, chans, seen = false) => {
+    let se = 0, n = 0, worst = 0;
+    for (let i = 0; i < a.length; i += 4) {
+      if (seen && a[i + 3] < 128) continue;
+      for (const c of chans) { const d = a[i + c] - b[i + c]; se += d * d; n++; worst = Math.max(worst, Math.abs(d)); }
+    }
+    const mse = se / Math.max(1, n);
+    return { db: mse ? 10 * Math.log10(255 * 255 / mse) : 99, worst };
+  };
+  // A texel as it shows: over mid grey through its own alpha (a cut-out's edge as it's drawn).
+  const over = (px, i, c) => Math.round(px[i + c] * px[i + 3] / 255 + 128 * (1 - px[i + 3] / 255));
+
+  const results = [], sheets = [];
+  for (const path of PICS) {
+    const fromGlb = path.match(/^glb:(.+)#(\d+)(:srgb)?$/);
+    const blob = fromGlb
+      ? imageBytes(parseGLB(await fetch(`../../${fromGlb[1]}`).then((r) => r.arrayBuffer())), +fromGlb[2])
+      : await fetch(`../../${path}`).then((r) => { if (!r.ok) throw new Error(`${path}: ${r.status}`); return r.blob(); });
+    const srgb = fromGlb ? !!fromGlb[3] : /_c\.|lancer|_c$/.test(path) && !/_n\.|_m\.|_d\./.test(path);
+    const format = srgb ? 'rgba8unorm-srgb' : 'rgba8unorm';
+    let bmp = await createImageBitmap(blob, { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+    // (Shrunk as a phone has it: to dims if given, as the land's arrays are, else no side over size.)
+    const k = Math.min(1, SIZE / Math.max(bmp.width, bmp.height)), dims = q.get('dims')?.split('x').map(Number);
+    const [rw, rh] = dims || [Math.round(bmp.width * k), Math.round(bmp.height * k)];
+    if (rw !== bmp.width || rh !== bmp.height) { const b2 = await createImageBitmap(bmp, { premultiplyAlpha: 'none', colorSpaceConversion: 'none', resizeWidth: rw, resizeHeight: rh, resizeQuality: 'high' }); bmp.close(); bmp = b2; }
+    const mips = mipCountFor(bmp.width, bmp.height);
+    const src = device.createTexture({ size: [bmp.width, bmp.height], format, mipLevelCount: mips, usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT });
+    device.queue.copyExternalImageToTexture({ source: bmp }, { texture: src, premultipliedAlpha: false }, [bmp.width, bmp.height]);
+    bmp.close();
+    let enc = device.createCommandEncoder();
+    mip.generate(src, format, 1, mips, enc);
+    device.queue.submit([enc.finish()]);
+    if (!packer.can(src)) { say(`${path}: ${src.width}x${src.height} can't be packed`); continue; }
+    const dst = packer.target(src.width, src.height, 1, mips, format);
+    enc = device.createCommandEncoder();
+    const { spent, seen } = packer.encode(enc, src, dst);
+    const flag = device.createBuffer({ size: 4, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+    enc.copyBufferToBuffer(seen, 0, flag, 0, 4);
+    device.queue.submit([enc.finish()]);
+    await device.queue.onSubmittedWorkDone();
+    spent.forEach((b) => b.destroy());
+    // (Any block with alpha under 255: a map that isn't sRGB, the game keeps plain, as its alpha may be a mask: astc.js pack.)
+    await flag.mapAsync(GPUMapMode.READ);
+    const alphaSeen = new Uint32Array(flag.getMappedRange())[0] !== 0;
+    flag.destroy();
+    if (alphaSeen && !srgb) say(`${path}: has alpha and isn't sRGB, so the game keeps it plain (measured anyway)`);
+    const line = [];
+    for (let m = 0; m < mips; m++) {
+      const a = await readLevel(src, m, format), b = await readLevel(dst, m, format);
+      const rgb = psnr(a.px, b.px, [0, 1, 2]), al = psnr(a.px, b.px, [3]);
+      const ch = [0, 1, 2, 3].map((c) => psnr(a.px, b.px, [c]).db.toFixed(1)).join('/');
+      // (A picture with alpha: its colour where it's seen as well, alpha half or more.)
+      const cut = a.px.some((v, i) => (i & 3) === 3 && v < 255), seen = cut ? psnr(a.px, b.px, [0, 1, 2], true) : null;
+      if (m < 3 || m === mips - 1) line.push(`mip${m} ${a.w}x${a.h}: rgb ${rgb.db.toFixed(1)} dB (worst ${rgb.worst}), alpha ${al.db.toFixed(1)} dB (worst ${al.worst})${seen ? `, rgb where seen ${seen.db.toFixed(1)} dB (worst ${seen.worst})` : ''}; r/g/b/a ${ch}`);
+      if (m === 0) {
+        results.push({ path, w: a.w, h: a.h, rgb: +rgb.db.toFixed(2), alpha: +al.db.toFixed(2), worstRgb: rgb.worst, worstAlpha: al.worst, channels: ch,
+          ...(seen ? { rgbSeen: +seen.db.toFixed(2), worstSeen: seen.worst } : {}) });
+        // Side by side, twice the size: plain, packed, and the difference x4. A picture with alpha is shown as it's drawn,
+        // over grey through its alpha, and the difference is of that.
+        const cv = document.createElement('canvas'); cv.width = a.w * 3; cv.height = a.h;
+        const ctx = cv.getContext('2d'), img = ctx.createImageData(a.w * 3, a.h);
+        for (let y = 0; y < a.h; y++) for (let x = 0; x < a.w; x++) {
+          const i = (y * a.w + x) * 4;
+          for (let c = 0; c < 4; c++) {
+            const pa = c < 3 ? (cut ? over(a.px, i, c) : a.px[i + c]) : 255, pb = c < 3 ? (cut ? over(b.px, i, c) : b.px[i + c]) : 255;
+            img.data[(y * a.w * 3 + x) * 4 + c] = pa;
+            img.data[(y * a.w * 3 + a.w + x) * 4 + c] = pb;
+            img.data[(y * a.w * 3 + 2 * a.w + x) * 4 + c] = c < 3 ? Math.min(255, Math.abs(pa - pb) * 4 + (cut ? 0 : Math.abs(a.px[i + 3] - b.px[i + 3]) * 2)) : 255;
+          }
+        }
+        ctx.putImageData(img, 0, 0);
+        cv.style.width = `${a.w * 6}px`;
+        document.body.append(cv);
+        sheets.push({ path: path.replace(/^glb:/, '').replace(/[#:]/g, '_'), url: cv.toDataURL('image/png') });
+      }
+    }
+    say(`${path} (${format}):\n  ${line.join('\n  ')}`);
+    src.destroy(); dst.destroy();
+  }
+  window.__result = { ok: true, results, sheets };
+  say('done');
+} catch (e) {
+  say(`FAILED: ${e.message}`);
+  window.__result = { ok: false, error: e.message, log: out };
+}
+</script>

@@ -674,9 +674,10 @@ async function loadBook(renderer, base) {
   const src = (texture) => glb.json.textures[texture.index].source;
   const texScale = renderer.tier.texScale;
   const [alb, nrm, mr] = await Promise.all([
-    renderer.imageTexture(glb, src(pbr.baseColorTexture), 'rgba8unorm-srgb', texScale),
-    renderer.imageTexture(glb, src(mat.normalTexture), 'rgba8unorm', texScale),
-    renderer.imageTexture(glb, src(pbr.metallicRoughnessTexture), 'rgba8unorm', texScale),
+    // (Near: it's read up close.)
+    renderer.imageTexture(glb, src(pbr.baseColorTexture), 'rgba8unorm-srgb', texScale, false, true),
+    renderer.imageTexture(glb, src(mat.normalTexture), 'rgba8unorm', texScale, false, true),
+    renderer.imageTexture(glb, src(pbr.metallicRoughnessTexture), 'rgba8unorm', texScale, false, true),
   ]);
   const model = (select, origin) => item(renderer.lyingModel(part(...geo, select, origin), alb, nrm, mr, [0.025, 0.010, 0.045, 0.7]), false);
   // The source holds two poses of the book in one mesh: the open one's leaves turn on the spine, the shut one's its cover.
@@ -698,12 +699,14 @@ const PORTAL_MESH = {
 // are built (her board, below, is one of its sword()s, which are fitted to them).
 export async function loadOpeningStage(renderer, base) {
   const scale = renderer.tier.texScale;
-  const tex = async (name, srgb) => renderer.bitmapTexture(await getFile(base + TEX + name + '.webp', 'blob'), srgb ? 'rgba8unorm-srgb' : 'rgba8unorm', scale);
+  // (Held to a phone's near cap, not its far one: they're the walls and floor the whole way down, and tile across the screen.)
+  // (srgb: a colour, packed to ASTC on a phone, src/gfx/astc.js; the detail maps not: each channel's its own.)
+  const tex = async (name, srgb) => renderer.bitmapTexture(await getFile(base + TEX + name + '.webp', 'blob'), srgb ? 'rgba8unorm-srgb' : 'rgba8unorm', scale, false, true, !!srgb);
   const flat = renderer.flatNormal || (renderer.flatNormal = renderer.pixel('rgba8unorm', [128, 128, 255, 255]));
   const rough = (r, m = 0) => renderer.pixel('rgba8unorm', [255, r, m, 255]);
   const book = loadBook(renderer, base);
   book.catch(() => {});
-  const land = async (name, srgb) => renderer.bitmapTexture(await getFile(base + LAND_TEX + name + '.webp', 'blob'), srgb ? 'rgba8unorm-srgb' : 'rgba8unorm', scale);
+  const land = async (name, srgb) => renderer.bitmapTexture(await getFile(base + LAND_TEX + name + '.webp', 'blob'), srgb ? 'rgba8unorm-srgb' : 'rgba8unorm', scale, false, true, !!srgb);
   const pair = (name, from = tex) => Promise.all([from(name + '_c', true), from(name + '_d')]);
   // The rock is the hill's own granite, inside and out; the floor trodden earth; her steps split limestone, her walls
   // fieldstone. Her things are
@@ -776,7 +779,7 @@ class OpeningStage {
     this.yaw = 0; this.last = null;
     // The shield she rides down the road when you ride yours: an old tree on green, nobody's colours (never a V or a T).
     this.herBoard = { sword: HER_BOARD, mat: new Float32Array(16), slot: -1, model: null };
-    r.sword(HER_BOARD);   // (Loaded now, so it's there the moment she jumps on.)
+    r.sword(HER_BOARD, true);   // (Loaded now, so it's there the moment she jumps on; and kept, as she may not for a while.)
     // The lights: the portal, the book, her glamour (a key and a rim), the candles, the cauldron.
     const L = (c, r, i, flicker) => ({ p: [...PARKED], r, c, i, flicker });
     this.lights = {

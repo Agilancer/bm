@@ -1,6 +1,7 @@
 // Getting the most out of whatever GPU is there: the high-performance adapter, every limit and useful
 // feature it offers, and a quality tier picked from what it is.
 import { lanes } from '../core/files.js';
+import { FreshViews, wantFreshViews } from './freshviews.js';
 
 const WANTED_FEATURES = [
   'rg11b10ufloat-renderable', 'float32-filterable', 'timestamp-query', 'indirect-first-instance',
@@ -20,17 +21,21 @@ export const TIERS = {
   // GPU pays dearly for. Also the Low setting on a PC.
   // Start without MSAA: dropping it after warmup rebuilds pipelines, shadows,
   // particles and grass while the original GPU resources are still resident.
-  mobile: { name: 'Mobile', lean: true, scaleMax: 1.0, maxPixels: 750000, shadowSize: 1024, cascades: 2, splits: [20, 80, 80], msaa: 1, grassSpacing: 0.2, grassRadius: 20, grassCap: 16000, particles: 18000, ao: false, shafts: false, pom: 0, texScale: 0.25, mapScale: 0.5, texCap: 512, terrainN: 128, bloom: 3, sim: 90, aniso: 2, lights: 2, bloodSize: 1024, emit: 0.4 },
+  mobile: { name: 'Mobile', lean: true, scaleMax: 1.0, maxPixels: 750000, shadowSize: 1024, cascades: 2, splits: [20, 80, 80], msaa: 1, grassSpacing: 0.2, grassRadius: 20, grassCap: 16000, particles: 18000, ao: false, shafts: false, pom: 0, texScale: 0.25, mapScale: 0.5, texCap: 256, texCapNear: 512, terrainN: 128, bloom: 3, sim: 90, aniso: 2, lights: 2, bloodSize: 1024, emit: 0.4 },
 };
 
+// (On a phone, a model's picture is at most texCap a side, 256: the crowds, the beasts, the townsfolk, the heroes. Those seen
+// close, Lisandra and your own body, texCapNear: 512. At 512 the lot was 120 MB of an iPhone's memory, which counts the GPU's.)
 // A phone's tier made lighter still, for one whose browser has closed the game for want of memory (src/core/lastrun.js):
-// level 1 and up, no model's picture over 256 a side (its normals 128).
+// level 1 and up, no model's picture over 192 a side (256 close; their normals half that); level 2, 160 (192 close). (Never
+// sharper close than the level before this pass had them all: 256, then 192.)
 // Level 2, for one closed again after that: smaller still, and less of everything the GPU holds or draws that isn't the
 // game itself: a quarter fewer pixels, shadows a quarter the size, half the grass and the sparks.
 export function lighten(tier, level) {
   if (level <= 0) return tier;
-  if (level === 1) return { ...tier, texCap: Math.min(tier.texCap || 256, 256) };
-  return { ...tier, texCap: Math.min(tier.texCap || 192, 192), shadowSize: Math.min(tier.shadowSize, 512), maxPixels: Math.round((tier.maxPixels || 750000) * 0.75),
+  const near = (n) => Math.min(tier.texCapNear || tier.texCap || n, n);
+  if (level === 1) return { ...tier, texCap: Math.min(tier.texCap || 192, 192), texCapNear: near(256) };
+  return { ...tier, texCap: Math.min(tier.texCap || 160, 160), texCapNear: near(192), shadowSize: Math.min(tier.shadowSize, 512), maxPixels: Math.round((tier.maxPixels || 750000) * 0.75),
     grassCap: Math.round(tier.grassCap / 2), particles: Math.round(tier.particles / 2), bloodSize: Math.min(tier.bloodSize, 512) };
 }
 
@@ -96,7 +101,9 @@ export function isMobileDevice() {
 // (src/core/lastrun.js). A tier the Graphics setting names is kept as it is.
 export async function initGPU(tierOverride = 'auto', { light = 0 } = {}) {
   if (!navigator.gpu) throw new Error('This browser has no WebGPU.');
-  let adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
+  // (?soft=1, for tests: the browser's software GPU, which on a PC is the one that reads a phone's ASTC: src/gfx/astc.js.)
+  const soft = new URLSearchParams(globalThis.location?.search || '').has('soft');
+  let adapter = await navigator.gpu.requestAdapter(soft ? { forceFallbackAdapter: true } : { powerPreference: 'high-performance' });
   if (!adapter) adapter = await navigator.gpu.requestAdapter();
   if (!adapter) throw new Error('No WebGPU adapter is available.');
   const requiredFeatures = WANTED_FEATURES.filter((f) => adapter.features.has(f));
@@ -111,6 +118,8 @@ export async function initGPU(tierOverride = 'auto', { light = 0 } = {}) {
   } catch (e) {
     device = await adapter.requestDevice({ requiredFeatures });
   }
+  // (Before anything's made on it: WebKit's views made again now and then, src/gfx/freshviews.js.)
+  const fresh = wantFreshViews() ? new FreshViews(device) : null;
   const info = adapter.info || {};
   const vendor = (info.vendor || '').toLowerCase();
   const mobile = isMobileDevice();
@@ -126,7 +135,7 @@ export async function initGPU(tierOverride = 'auto', { light = 0 } = {}) {
   const picked = autoTier({ mobile, shared, discrete, laptop, mem });
   const tierName = TIERS[tierOverride] ? tierOverride : autoTier({ mobile, shared, discrete, laptop, mem, light: mobile ? 0 : light });
   return {
-    adapter, device, info, mobile, tierName, name, shared, laptop, mem,
+    adapter, device, info, mobile, tierName, name, shared, laptop, mem, fresh,
     // (Lighter than Auto would have picked, for the browser's closing the game last time: said on the title, src/main.js.)
     lightened: tierName !== picked && !TIERS[tierOverride],
     tier: { ...TIERS[tierName] },
@@ -189,26 +198,37 @@ export const mipCountFor = (w, h) => Math.floor(Math.log2(Math.max(w, h))) + 1;
 // Decode, upload and release each layer before its lane takes the next. Worker count does not bound asynchronous image
 // decodes; queuing the whole manifest exhausts iOS memory. So `run` (src/core/files.js lanes) says how many layers are in
 // hand at once, across however many arrays share it: one lane, the default, is one layer at a time, in order.
-export async function loadTextureArray(device, mipgen, names, decode, format, run = lanes(1)) {
-  let tex, w, h, mips, failed = false;
+// packer (src/gfx/astc.js), on a phone: the array packed to ASTC, a layer at a time as it comes (each drawn with its mips in
+// a plain texture of its own, packed into its layer, and let go), so the whole plain array is never held.
+export async function loadTextureArray(device, mipgen, names, decode, format, run = lanes(1), packer = null) {
+  let tex, w, h, mips, packing = false, failed = false;
+  if (packer) await packer.ready;   // (its check done: it may have turned itself off)
   const layerIn = async (layer) => {
     if (failed) return;
     const bmp = await decode(names[layer]);
+    let plain = null;
     try {
       if (failed) return;   // (another layer failed while this one was decoding)
       if (!tex) {
         w = bmp.width; h = bmp.height; mips = mipCountFor(w, h);
-        tex = device.createTexture({ size: [w, h, names.length], format, mipLevelCount: mips,
+        packing = !!packer?.fits(format, w, h);
+        if (packer?.on && !packing) packer.stats.kept += names.length;   // (a side not a whole number of blocks: plain)
+        tex = packing ? packer.target(w, h, names.length, mips, format) : device.createTexture({ size: [w, h, names.length], format, mipLevelCount: mips,
           usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT });
       }
       if (bmp.width !== w || bmp.height !== h) throw new Error(`Texture layer size mismatch: ${names[layer]}`);
-      device.queue.copyExternalImageToTexture({ source: bmp }, { texture: tex, origin: [0, 0, layer], premultipliedAlpha: false }, [w, h]);
+      if (packing) plain = device.createTexture({ size: [w, h, 1], format, mipLevelCount: mips, usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT });
+      device.queue.copyExternalImageToTexture({ source: bmp }, { texture: plain || tex, origin: [0, 0, plain ? 0 : layer], premultipliedAlpha: false }, [w, h]);
     } finally { bmp.close(); }
     const enc = device.createCommandEncoder();
-    mipgen.generate(tex, format, 1, mips, enc, layer);
+    mipgen.generate(plain || tex, format, 1, mips, enc, plain ? 0 : layer);
+    const { spent } = plain ? packer.encode(enc, plain, tex, 0, layer, 1) : { spent: [] };
     device.queue.submit([enc.finish()]);
     // Bound GPU staging memory as well as decoded bitmaps.
     await device.queue.onSubmittedWorkDone();
+    // (The plain layer and the packing's buffers let go once the GPU's through with them.)
+    for (const b of spent) b.destroy();
+    if (plain) { packer.count(plain, 1); plain.destroy(); }
   };
   // Every layer is seen through, or let go, before a failure is passed on: none is left writing to a texture that's gone.
   const ends = await Promise.allSettled(names.map((_, layer) => run(() => layerIn(layer)).catch((error) => { failed = true; throw error; })));
@@ -217,16 +237,19 @@ export async function loadTextureArray(device, mipgen, names, decode, format, ru
   return tex;
 }
 
-// (cap: no side of what comes back is longer than this, whatever scale says. 0: no cap.)
-export async function decodeScaledBitmap(blob, scale, cap = 0) {
+// (cap: no side of what comes back is longer than this, whatever scale says. 0: no cap. step: each side a whole number of
+// these, as ASTC's 4x4 blocks need (src/gfx/astc.js): rounded to the nearest, a picture's UVs don't mind a pixel or two.)
+export async function decodeScaledBitmap(blob, scale, cap = 0, step = 1) {
   const opts = { premultiplyAlpha: 'none', colorSpaceConversion: 'none' };
   const bmp = await createImageBitmap(blob, opts);
   if (cap) scale = Math.min(scale, cap / Math.max(bmp.width, bmp.height));
-  if (scale >= 1) return bmp;
+  scale = Math.min(scale, 1);
+  const side = (n) => Math.max(step, Math.round(n * scale / step) * step);
+  const w = side(bmp.width), h = side(bmp.height);
+  if (w === bmp.width && h === bmp.height) return bmp;
   try {
     // Resize the decoded pixels instead of decoding the compressed source twice.
-    return await createImageBitmap(bmp, { ...opts, resizeWidth: Math.max(1, Math.round(bmp.width * scale)),
-      resizeHeight: Math.max(1, Math.round(bmp.height * scale)), resizeQuality: 'high' });
+    return await createImageBitmap(bmp, { ...opts, resizeWidth: w, resizeHeight: h, resizeQuality: 'high' });
   } finally { bmp.close(); }
 }
 

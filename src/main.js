@@ -1,6 +1,6 @@
 // Boot: the permission gate, threads, GPU, assets, and the render thread's loop.
 import { setOpeningTerrain } from './core/terrain.js';
-import { GROUPS, GROUP_KEYS, TRIPO_KIND } from './core/tripo-monsters.js';
+import { GROUPS, GROUP_KEYS, TRIPO_KIND, landLevel } from './core/tripo-monsters.js';
 import { BOSSES as DELVE_BOSSES, DELVE as DELVE_CODE, LATCHES as DELVE_LATCHES, delveOf, inDungeon as inDelve } from './core/dungeon.js';
 import { KEYS as CASTLE_KEYS, latchWord } from './core/castle-keys.js';
 import { castleVistas, vistaAt } from './core/castle-finds.js';
@@ -11,11 +11,11 @@ import { QuestTrail } from './ui/trail.js';
 import { Audio } from './audio.js';
 import { Music } from './music.js';
 import { inTown } from './core/town.js';
-import { C, C_BLEEDS, C_SIZE, CHARS_START, CTRL, EV, EV_CAPACITY, EV_FLOATS, H, INPUT, MAX_CHARS, SNAP_FLOATS, STATE_NAMES, TACTICS, TOTAL_BYTES, WEAPONS, mapShared } from './core/layout.js';
+import { C, C_BLEEDS, C_SIZE, CHARS_START, CTRL, EV, EV_CAPACITY, EV_FLOATS, H, INPUT, MAX_CHARS, MAX_SLIMES, SLIME_FLOATS, SLIMES_START, SNAP_FLOATS, STATE_NAMES, TACTICS, TOTAL_BYTES, WEAPONS, mapShared } from './core/layout.js';
 import { clamp, damp, lerp, smoothstep, wrapAngle } from './core/math.js';
 import { FileWatch, getFile, watchFiles } from './core/files.js';
 import { initGPU, isMobileDevice, lighten } from './gfx/gpu.js';
-import { Governor } from './gfx/governor.js';
+import { Governor, PHONE_ONLY_STEPS } from './gfx/governor.js';
 import { STEPS as DESK_STEPS, deskStep } from './gfx/deskscale.js';
 import { RenderDiagnostics } from './gfx/render-diagnostics.js';
 import { Clock } from './clock.js';
@@ -67,8 +67,11 @@ import { DmgNums } from './ui/dmgnums.js';
 import { Arrange } from './ui/arrange.js';
 import { groundAt, setHomes } from './ui/places.js';
 import { HallUI } from './ui/testhall.js';
-import { HALL, SPAWN, hallAt } from './core/testhall.js';
-import { beginRun, deathWords, noteRun } from './core/lastrun.js';
+import { HALL, SPAWN, hallAt, inHall } from './core/testhall.js';
+import { CritterField, lineClear, meshHeight, REACH as CRITTER_REACH } from './core/critters.js';
+import { CritterLook } from './gfx/critters.js';
+import { CritterWords } from './ui/critterwords.js';
+import { beginRun, deathWords, noteEvent, noteRun, trailSentence } from './core/lastrun.js';
 import { HUB_SMOKE } from './core/phobos-hubs.js';
 import { Beacon } from './ui/beacon.js';
 
@@ -395,6 +398,7 @@ async function boot(plan, poolSize) {
   let gpuErrors = 0, outOfMemory = false;
   gpu.device.addEventListener('uncapturederror', (e) => {
     window.__gpuErrors = ++gpuErrors; renderDiagnostics.fail(e.error, 'GPU validation'); if (gpuErrors < 6) console.error('GPU error:', e.error.message);
+    gpu.fresh?.suspect(e.error);   // (just after views were made fresh: theirs, likely, so that stops: src/gfx/freshviews.js)
     // The GPU saying it has no memory left for something asked of it: what's drawn with that is missing or black from here
     // on, and the next thing may be the device lost. Noted, so the next start loads lighter (src/core/lastrun.js), and the
     // game kept now, while it can be.
@@ -472,11 +476,11 @@ async function boot(plan, poolSize) {
   const pendingEvents = [];
   const hz = gpu.tier.sim;
   // The other Tessariels this session (src/core/heroes.js): who they are is kept, so the same people are about next time.
-  // How many: by the tier, the setting, or ?heroes=N for tests.
+  // How many: HERO_SLOTS, unless the player's own setting says fewer (or ?heroes=N for tests).
   const heroCount = params.has('heroes') ? Number(params.get('heroes')) : settings.heroes === 'off' ? 0
-    // (Never fewer for a browser that closed the game last time, src/core/lastrun.js: the party for the Warrens is hired from
-    // these, four with a tank and a healer, and a cast cut to two or four left none to be had, or no choice of who.)
-    : Math.min(settings.heroes === 'few' ? 8 : 99, HERO_SLOTS[gpu.tier.lean ? 'lean' : 'desktop']);
+    // (The same on every device and tier, and never fewer for a browser that closed the game last time: OWNER RULE, "DO NOT
+    // REDUCE THE NUMBER OF NPC PLAYERS". The party for the Warrens is hired from these, too. tests/crash-party.test.mjs.)
+    : settings.heroes === 'few' ? 8 : HERO_SLOTS;
   let cast = [];
   if (heroCount > 0) {
     try {
@@ -488,7 +492,7 @@ async function boot(plan, poolSize) {
       try { kept = JSON.parse(localStorage.getItem('bm.heroes') || 'null'); } catch { /* none */ }
       const seed = kept?.seed || Math.floor(Math.random() * 2 ** 31);
       try { localStorage.setItem('bm.heroes', JSON.stringify({ ...(kept || {}), seed })); } catch { /* full */ }
-      cast = withBrokers(makeCast(roster, kit, names, Math.min(heroCount, 16), seed, params.get('bodies')?.split(',') || null), roster, kit, !!gpu.tier.lean);
+      cast = withBrokers(makeCast(roster, kit, names, Math.min(heroCount, HERO_SLOTS), seed, params.get('bodies')?.split(',') || null), roster, kit, !!gpu.tier.lean);
     } catch (e) { console.warn('heroes', e); cast = []; }
   }
   renderer.heroCast = cast;
@@ -510,6 +514,10 @@ async function boot(plan, poolSize) {
     return;
   }
   const loadMs = performance.now() - start;
+  if (renderer.astc.on) {
+    const a = renderer.astc.stats;
+    console.info(`graphics: ${a.packed} pictures packed to ASTC on the GPU, ${Math.round(a.plainMB)} MB to ${Math.round(a.packedMB)}; ${a.kept} kept plain, ${a.masks} of them for a mask in their alpha (src/gfx/astc.js)`);
+  }
   pool.takeBack(lent);
   setProgress(0.99, 'Opening the gates...');
   // Tasks for the pool once the load is done: thinking about the fight.
@@ -549,6 +557,13 @@ async function boot(plan, poolSize) {
   // What of the land you've seen.
   addPart('map', { save: () => worldMap.save(), load: (d) => worldMap.load(d) });
   game.gemFx = new GemFx(renderer);
+  // The gilded critters crawling about the hillsides (src/core/critters.js; drawn by src/gfx/critters.js). A click on one, or
+  // a tap, catches it for what it's worth: input.onPick, game.pickCritter. (Sat on the ground as it's drawn, its own grid.)
+  game.critters = new CritterField({ ground: (x, z) => meshHeight(x, z, renderer.terrainCell || 2) });
+  game.critterLook = new CritterLook(renderer);
+  game.critterWords = new CritterWords({ renderer });
+  input.onPick = (sx, sy, how) => game.pickCritter(sx, sy, how);
+  input.onHover = (sx, sy) => game.hoverCritter(sx, sy);
   const GEM_COLOR = (g) => ({ ruby: '#d8362c', topaz: '#e2a63a', emerald: '#3fb56a', sapphire: '#3f7fe0', amethyst: '#a45ad6', diamond: '#cfe6ee' }[g.kind]);
   // (bm.wear('crimson_regalia') dresses the whole body in one set, to look at it; bm.wear() goes back to what's worn.)
   let forcedSkin = null;
@@ -815,6 +830,9 @@ async function boot(plan, poolSize) {
   game.beacon = new Beacon({ pack, shared, input, hud, renderer, audio, cmd: (...a) => lands.o.cmd(...a), party: () => game.party,
     firstHero: () => renderer.firstHero, gameState: () => game.gameState(), snap: () => game.currentSnap(), testing: () => testMode, saved: () => autosave() });
   window.bm = game.api(shared, simWorker, buffer, pool);
+  // (For tests: bm.critters is the field, its list each of them; bm.pickCritter(x, y) clicks the screen there.)
+  window.bm.critters = game.critters;
+  window.bm.pickCritter = (x, y, how = 'cursor') => game.pickCritter(x, y, how);
   // How long the start took, part by part (tools/load_time.mjs).
   window.bm.loadLaps = [['the simulation ready', Math.round(simMs)], ...renderer.loadLaps];
   gpuNote = () => `Before it went, the GPU took ${Math.round(renderer.stats.busyMs || 0)} ms a frame (${Math.round(renderer.worstMs)} ms at worst), with ${renderer.inFlight} frames waiting; the picture was ${renderer.W}x${renderer.H}.`;
@@ -835,7 +853,7 @@ async function boot(plan, poolSize) {
     input.menu = false;
     simWorker.postMessage({ type: 'openingName' });
     if (!input.touch && !AUTO) input.lock();
-  }, { audio, renderer, log: chatLog, onSkip: () => simWorker.postMessage({ type: 'openingSkip' }) }) : null;
+  }, { audio, renderer, log: chatLog, touch: input.touch, onSkip: () => { noteEvent('held to skip'); simWorker.postMessage({ type: 'openingSkip' }); } }) : null;
   const enter = async (fresh = true) => {
     noteRun({ stage: 'playing' });
     title.hide();
@@ -965,6 +983,7 @@ async function boot(plan, poolSize) {
     await new Promise((r) => setTimeout(r, 700));
     const kept = !!saves.newest();
     const text = `The browser closed the game last time, ${deathWords(RUN.died)}. It does that when a page wants more memory than the device has to give.`
+      + `${RUN.died.trail?.length ? ` ${trailSentence(RUN.died)}` : ''}`
       + `${gpu.mobile && RUN.light ? ' This time the game is using less memory: smaller pictures on the models.' : ''}`
       + `${lighterWords()}`
       + `${kept ? ' Continue picks up from where the game was last kept.' : ''}`;
@@ -1233,6 +1252,10 @@ async function boot(plan, poolSize) {
     const up = input.touch && window.innerHeight > window.innerWidth;
     if (up === !!game.upright) return;
     game.upright = up;
+    // (And what's over the world goes too, not only covered: a phone keeps a picture of each piece, at the old size and the
+    // new as it turns, under the cover as much as over the world. index.html body.upright.)
+    document.body.classList.toggle('upright', up);
+    noteEvent(up ? 'turned upright' : 'turned back sideways');
     if (!input.enabled) return;     // (under the title, the world's held still already)
     if (up) input.releaseControls();
     shared.input[INPUT.PAUSE] = up || awayHeld() || state.paused ? 1 : 0;
@@ -1240,6 +1263,12 @@ async function boot(plan, poolSize) {
   window.addEventListener('resize', turned);
   window.addEventListener('orientationchange', turned);
   turned();
+  // What came just before, if the browser closes the game (src/core/lastrun.js noteEvent): a touch, a size, a field typed in.
+  if (input.touch) {
+    addEventListener('touchstart', () => noteEvent('touched'), { capture: true, passive: true });
+    addEventListener('resize', () => noteEvent(`size ${innerWidth}x${innerHeight}`), { passive: true });
+    addEventListener('focusin', (e) => { if (e.target?.matches?.('input, textarea')) noteEvent('typing'); });
+  }
   // The game's own panels (the talk, the shops, the seals, the skull's menu, the book, the pack): a tick under the pointer and a
   // click as one's pressed (MenuSFX, by Kevin Fowler). The title and the pause menu have their own (src/title.js chime, tick).
   let uiHover = null;
@@ -1366,10 +1395,9 @@ class Hud {
     this.foeHp = $('foeHp').firstElementChild;
     this.foeArm = $('foeArmor').firstElementChild;
     this.stamEl = $('stam').firstElementChild;
-    this.shown = {};
   }
 
-  reset() { this.msgShown = 0; $('msg').style.opacity = 0; $('msg').innerHTML = ''; this.shown = {}; }
+  reset() { this.msgShown = 0; $('msg').style.opacity = 0; $('msg').innerHTML = ''; }
 
   setDebug(on) { this.debug = on; $('debug').style.display = on ? 'block' : 'none'; }
 
@@ -1381,13 +1409,6 @@ class Hud {
     if (Math.abs(v - el.shown) < 0.004) return;
     el.shown = v;
     el.style.transform = `scaleX(${v.toFixed(3)})`;
-  }
-
-  // Each lesson once, at the moment it means something.
-  once(id, text, secs = 4.5) {
-    if (this.shown[id]) return;
-    this.shown[id] = true;
-    this.tip(text, secs);
   }
 
   tip(text, secs) {
@@ -1411,6 +1432,9 @@ class Hud {
       this.fps = this.frames * 1000 / (now - this.lastFpsT);
       this.frames = 0; this.lastFpsT = now;
       this.worstShown = this.worst; this.worst = 0;
+      // (And the worst of the last 20 s, which would show a stall every so often, as a round of src/gfx/freshviews.js might.)
+      (this.worsts ||= []).push(this.worstShown); if (this.worsts.length > 40) this.worsts.shift();
+      this.worst20 = Math.max(...this.worsts);
     }
     this.worst = Math.max(this.worst, dt * 1000);
     this.t += dt;
@@ -1455,8 +1479,9 @@ class Hud {
     }
     if (this.debug) {
       const k = this.gpu.tier;
-      $('debug').textContent = `${this.fps.toFixed(0)} fps   worst ${this.worstShown.toFixed(0)} ms   gpu busy ${stats.busyMs.toFixed(1)} ms${stats.gpuMs > 0 ? `   timer ${stats.gpuMs.toFixed(1)} ms` : ''}
-${this.gpu.info.vendor || ''} ${this.gpu.info.architecture || ''}  tier ${k.name}
+      const fv = this.gpu.fresh;
+      $('debug').textContent = `${this.fps.toFixed(0)} fps   worst ${this.worstShown.toFixed(0)} ms (${(this.worst20 || 0).toFixed(0)} in 20 s)   gpu busy ${stats.busyMs.toFixed(1)} ms${stats.gpuMs > 0 ? `   timer ${stats.gpuMs.toFixed(1)} ms` : ''}
+${this.gpu.info.vendor || ''} ${this.gpu.info.architecture || ''}  tier ${k.name}${fv ? `  views made fresh: ${fv.on ? `${fv.rounds} rounds` : `off (${fv.why})`}` : ''}
 render ${stats.W}x${stats.H}  scale ${stats.scale.toFixed(2)}  msaa ${stats.msaa}  effects -${stats.demoted}  refresh ${stats.vsync.toFixed(1)} ms
 threads ${this.plan.cores} logical, ${this.poolSize + 2} used, shared ${this.isolated ? 'yes' : 'no'}
 sim ${stats.sim ? `${stats.sim.ms.toFixed(1)} ms a tick, worst ${stats.sim.worst.toFixed(1)}, ${stats.sim.rate.toFixed(0)} a second${stats.sim.paced ? ', by the frames' : ` (own clock, ${k.sim} Hz)`}` : `${k.sim} Hz`}${stats.sim?.town ? `  town ${stats.sim.town.ms.toFixed(1)} ms, ${stats.sim.town.rate.toFixed(0)} a second` : ''}  planner rollouts ${(snap[H.ROLLOUTS] / 1000).toFixed(0)}k
@@ -1511,7 +1536,7 @@ class GameView {
     this.unpaced = gpu.mobile || params.has('unpaced');
     this.paceAt = -1; this.snapSlot = 0; this.snapUs = 0; this.pacedSnap = false;
     this.simT = 0; this.simStats = { ms: 0, worst: 0, rate: 0, paced: false };
-    if (gpu.mobile || gpu.tier.lean) this.governor = new Governor({ apply: (s) => { renderer.scale = s; }, demote: () => renderer.demote() });
+    if (gpu.mobile || gpu.tier.lean) this.governor = new Governor({ apply: (s) => { if (renderer.scale !== s && gpu.mobile) noteEvent(`picture x${s}`); renderer.scale = s; }, demote: () => renderer.demote(), ...(gpu.mobile ? { steps: PHONE_ONLY_STEPS, start: 0 } : {}) });
     this.busySum = 0; this.busyN = 0; this.timed = []; this.benched = false;
     renderer.onBusy = (ms) => {
       this.busySum += ms; this.busyN++;
@@ -1631,6 +1656,129 @@ class GameView {
     this.drops.take(d);
     this.nearDrop = null;
     if (this.onTaken) this.onTaken();
+  }
+
+  // The gilded critters: about you while you're out on the land (not in the opening, a delve, the Test Dungeon, or under the
+  // ground), still while the game is, and drawn either way.
+  updateCritters(dt, snap) {
+    const f = this.critters, look = this.critterLook;
+    if (!f || !look) return;
+    const px = snap[H.PX], py = snap[H.PY], pz = snap[H.PZ], o = snap[H.OPENING], cell = this.renderer.terrainCell || 2;
+    const out = !(o > 0 && o < OPENING.ESCORT) && !inDelve(px, pz) && !inHall(px, pz) && py > meshHeight(px, pz, cell) - 2.5;
+    const still = !!this.shared.input[INPUT.PAUSE] || !!this.idle;
+    // (A Prismatic Wisp come near you: its own chord, low.)
+    f.onRipe ||= (c) => { const s = this.currentSnap(); if (c.K.one && s && Math.hypot(c.x - s[H.PX], c.z - s[H.PZ]) < 34) this.audio.chime?.('prism', -7, 0.7); };
+    if (!still) f.step(dt, out ? { x: px, z: pz, fx: this.cam.fx, fz: this.cam.fz } : null);
+    // The crosshair over one a click would catch: a gold grab mark, and it lights up. (Fifteen times a second.)
+    if ((this.critterAimT = (this.critterAimT || 0) - dt) <= 0) {
+      this.critterAimT = 1 / 15;
+      const aiming = out && !still && !this.input.loose && !this.input.soft && !this.input.touch && document.pointerLockElement === this.input.canvas;
+      const u = aiming ? this.critterUnder(-1, -1, 'aim') : null, grab = !!(u && u.reach);
+      document.getElementById('cross')?.classList.toggle('grab', grab);
+      if (!this.input.loose) look.hover = grab ? u.c : null;
+    }
+    look.step(still ? 0 : dt, f, this.overrideCam || this.cam, out, cell, px, pz);
+    // The first one near enough to see well: what they are, once.
+    if (out && !still && !this.critterTold && this.input.enabled && !this.input.menu) {
+      const c = f.list.find((q) => q.alive && q.born > 0.9 && Math.hypot(q.x - px, q.z - pz) < 16);
+      if (c) {
+        this.critterTold = true;
+        let told = false;
+        try { told = localStorage.getItem('bm.critterTold') === '1'; localStorage.setItem('bm.critterTold', '1'); } catch { /* no storage */ }
+        if (!told) this.hud.tip(`Gilded critters! A red arrow marks a ripe one: ${this.input.touch ? 'tap' : 'click'} it when its arrow turns gold, before it gets away. Ripe ones pay well; a Golden Scarab pays gold.`, 7);
+      }
+    }
+  }
+
+  // The gilded critter at (sx, sy) on the screen that a click there (how: 'aim', the crosshair; 'cursor', the free mouse;
+  // 'soft', Alt's; 'tap', a thumb looking about; 'stick', a thumb on the stick's side) would be on, if any, as { c, reach }
+  // (reach: near enough you to be caught). Not one you can't see (behind a trunk, a boulder or the brow of the hill), and
+  // with the crosshair never in a fight: a foe within 25 m, or on the screen within 40 pixels of it, and the click's a shot.
+  critterUnder(sx, sy, how) {
+    const f = this.critters, m = this.renderer.frameData, s = this.currentSnap();
+    if (!f || !f.list.length || !m || !s || this.input.menu || this.shared.input[INPUT.PAUSE]) return null;
+    const W = innerWidth, Ht = innerHeight, py = m[37];
+    const screen = (x, y, z) => {
+      const cx = m[0] * x + m[4] * y + m[8] * z + m[12], cy = m[1] * x + m[5] * y + m[9] * z + m[13], cw = m[3] * x + m[7] * y + m[11] * z + m[15];
+      if (cw < 0.1) return null;
+      return [(cx / cw * 0.5 + 0.5) * W, (0.5 - cy / cw * 0.5) * Ht, (py * Ht * 0.5) / cw];
+    };
+    if (how === 'aim') {
+      const r = document.getElementById('cross')?.getBoundingClientRect();
+      sx = r && r.width ? r.left + r.width / 2 : W / 2; sy = r && r.width ? r.top + r.height / 2 : Ht / 2;
+      if (this.foeNear(s, screen, sx, sy)) return null;
+    }
+    const eye = [m[144], m[145], m[146]], cell = this.renderer.terrainCell || 2, ground = (x, z) => meshHeight(x, z, cell);
+    const seen = (c) => { const q = c.middle(); return lineClear(eye[0], eye[1], eye[2], q[0], q[1] + 0.04, q[2], ground); };
+    // (The crosshair: its body, or 10 pixels round it if that's more. A pointer, a little round it; a thumb, more round a ripe
+    // one than one not.)
+    const room = how === 'tap' ? (q) => (q.ripe ? 46 : 24) : how === 'stick' ? (q) => (q.ripe ? 30 : 18) : how === 'aim' ? 10 : 24;
+    const c = f.pick(screen, sx, sy, room, seen, how === 'aim' ? 1 : 1.35);
+    return c ? { c, reach: Math.hypot(c.x - s[H.PX], c.z - s[H.PZ]) <= CRITTER_REACH } : null;
+  }
+
+  // A foe near you (within 25 m), or on the screen near (sx, sy). screen(x, y, z): where a point is on it.
+  foeNear(s, screen, sx, sy) {
+    const px = s[H.PX], pz = s[H.PZ];
+    const near = (x, y, z) => { if (Math.hypot(x - px, z - pz) < 25) return true; const q = screen(x, y, z); return !!q && Math.hypot(q[0] - sx, q[1] - sy) < 40; };
+    for (let i = 0; i < s[H.NCHARS]; i++) {
+      const o = CHARS_START + i * C_SIZE;
+      if (s[o + C.ACTIVE] < 0.5 || s[o + C.STATE] === 10 || !s[o + C.HOSTILE] || !(s[o + C.HP] > 0)) continue;
+      if (near(s[o + C.X], s[o + C.Y] + 1, s[o + C.Z])) return true;
+    }
+    for (let i = 0; i < MAX_SLIMES; i++) {
+      const o = SLIMES_START + i * SLIME_FLOATS;
+      if (s[o] >= 0.5 && near(s[o + 1], s[o + 2] + 0.4, s[o + 3])) return true;
+    }
+    return false;
+  }
+
+  // The free mouse over the screen at (sx, sy): a gilded critter under it in reach lights up and the pointer's a hand; one
+  // out of reach, the pointer says not yet.
+  hoverCritter(sx, sy) {
+    const u = this.input.loose ? this.critterUnder(sx, sy, 'cursor') : null;
+    if (this.critterLook) this.critterLook.hover = u && u.reach ? u.c : null;
+    if (this.input.canvas) this.input.canvas.style.cursor = u ? (u.reach ? 'pointer' : 'not-allowed') : '';
+  }
+
+  // A click or a tap on the screen at (sx, sy), how as critterUnder: if a gilded critter's there, it's caught, and what it was
+  // worth is yours. True if one was (or one too far off was, and there's a word for it).
+  pickCritter(sx, sy, how) {
+    const u = this.critterUnder(sx, sy, how);
+    if (!u) return false;
+    const c = u.c;
+    if (!u.reach) {
+      // (Too far off: the crosshair's click is a shot as ever, and a thumb on the stick's side moves you; the mouse's or a
+      // look-about thumb's, a word.)
+      if (how === 'aim' || how === 'stick') return false;
+      // (Said once in eight seconds at most.)
+      const now = performance.now();
+      if (!(now - (this.critterFarT || -1e9) < 8000)) {
+        this.critterFarT = now;
+        this.hud.tip(c.ripe ? `Too far off to catch. Get nearer: its arrow turns gold when it's in reach.` : `Too far off to catch. Get nearer.`, 2);
+      }
+      return true;
+    }
+    const m = c.middle(), got = this.critters.take(c, landLevel(c.x, c.z));
+    if (!got) return false;
+    this.critterLook.caught(c);
+    if (this.critterLook.hover === c) this.critterLook.hover = null;
+    // A run of ripe catches, each within four seconds of the one before: each one's bell a semitone higher, up to eight. (One
+    // not ripe rings low and soft, and is no part of a run.)
+    const now = performance.now() / 1000, ch = (this.critterChain ||= { n: -1, t: -9 });
+    if (c.ripe) { ch.n = now - ch.t < 4 ? Math.min(8, ch.n + 1) : 0; ch.t = now; }
+    this.audio.chime?.(c.key, c.ripe ? ch.n : 0, c.ripe ? 1 : got.none ? 0.25 : 0.45);
+    // (Not ripe, and caught so many of late it's worth nothing: a word, no more.)
+    if (got.none) { this.critterWords.add(m[0], m[1] + 0.25, m[2], 'tired', '#9a9a9a', 0.6); return true; }
+    const pack = this.pack;
+    if (got.gold) { pack.gold += got.gold; this.audio.play('coin', null, 0, 0, c.ripe ? 0.9 : 0.5, 1, false); }
+    else this.addXp(got.xp);
+    const color = got.gold ? '#ffd040' : c.K.color;
+    this.critterWords.add(m[0], m[1] + 0.25, m[2], `+${got.gold || got.xp} ${got.gold ? 'gold' : 'XP'}`, color, c.ripe ? 1 : 0.7);
+    // Its motes fly to where it went: the level's medal for experience, the pack for gold.
+    this.critterWords.fly(m[0], m[1], m[2], got.gold ? 'bPack' : 'levelBox', color, c.ripe ? 8 : 3);
+    if (c.ripe) this.chatLog?.system(`Caught a ${c.K.name}: ${got.gold || got.xp} ${got.gold ? 'gold' : 'experience'}${got.tired ? ', half: you have caught a great many of late' : ''}.`);
+    return true;
   }
 
   updateDrops(dt, snap) {
@@ -1762,6 +1910,7 @@ class GameView {
       this.beacon?.frame(dt, snap);
       this.updateTrail(dt, snap);
       this.updateDrops(dt, snap);
+      this.updateCritters(dt, snap);
       this.autoplay?.frame(dt, snap);
       this.firstSight?.frame(dt, snap);
       const c = this.overrideCam || this.cam;
@@ -1792,6 +1941,7 @@ class GameView {
       this.hud.update(dt, snap, hs);
       this.foeBars?.update(snap, !this.idle && !this.input.menu && this.input.enabled);
       this.dmgNums?.update(dt, !this.idle && !this.input.menu);
+      this.critterWords?.update(dt, !this.idle && !this.input.menu);
       this.clock.set(r.hour);
       // (Down a delve there's no sun to tell the hour by, and nothing of the land's to track: the clock is put away.)
       const deep = inDelve(snap[H.PX], snap[H.PZ]);
@@ -2120,7 +2270,6 @@ class GameView {
         if (!this.spellSound) this.spellSound = new SpellSound(au);
         this.spellSound.gather(a);
         if (this.town) this.town.cast++;   // (The town's never seen real magic: src/folk/talk.js.)
-        this.hud.once('cast', this.input.touch ? 'Tap a spell to cast it, and hold to keep casting. Your spellbook is in the top row.' : '1 to 9 cast what is in each slot, and 0, − and + the Utility spells in the last three: hold to keep casting. B is your spellbook. Alt gives you a cursor to click them with.', 5);
         break;
       case EV.SPELL_LOOSE:
         if (!this.spellSound) this.spellSound = new SpellSound(au);
@@ -2175,7 +2324,6 @@ class GameView {
           au.play('blocked', a, b, c, 0.7, 1.2);
           r.emit(2, 42, a, b, c, d, e, f, 0.9, 1.4, 6.5, 0.0018, 0.005, 0.2, 0.6);
         }
-        this.hud.once('gash', g < 2 ? 'The plate is cut. Strike that same cut again to go through. Your X turns red over it.' : 'A cut. Strike it again to go through.');
         r.emit(6, 8, a, b, c, d, e, f, 0.6, 0.3, 1.1, 0.004, 0.01, 0.5, 1.3);
                 this.hud.crossHit();
         break;
@@ -2188,7 +2336,6 @@ class GameView {
         r.emit(0, 80, a, b, c, d, e, f, 0.1, 5.5, 9, 0.002, 0.01, 1, 2);
         r.emit(1, 22, a, b, c, d, e, f, 0.9, 0.4, 2.5, 0.03, 0.08, 0.4, 0.9);
         if (!r.chars[g]?.flesh) r.emit(2, 30, a, b, c, d, e, f, 1.0, 1, 4.5, 0.002, 0.004, 0.2, 0.5);        this.hud.crossHit();
-        if (g < 2) this.hud.once('puncture', 'Through the wound. Now it bleeds.', 3);
         break;
       }
       case EV.BLOCK:
@@ -2250,11 +2397,10 @@ class GameView {
         break;
       case EV.GLINT:
         r.emit(2, 3, a, b, c, 0, 1, 0, 2, 0.1, 0.5, 0.004, 0.008, 0.1, 0.2);
-        if (!this.deepWas) this.hud.once('glint', this.input.touch ? 'A blade flashes before it falls. Dodge, or swing into it to parry.' : 'A blade flashes before it falls. Q to dodge, or swing into it to parry.');
         break;
       case EV.JUMP: au.play(`jump_${this.underfoot}`, null, 0, 0, 0.32, 1, false); break;
       case EV.DODGE: au.play(`run_${this.underfoot}`, null, 0, 0, 0.5, 1.15, false); break;
-      case EV.HYDRA_NOTICE: this.hud.once('hydra', 'Three heads have turned your way. It has given you one warning.', 5); break;
+      case EV.HYDRA_NOTICE: break;
       case EV.FIRE: {
         // One head's breath, this instant. A hiss under it, not on every puff, and a roar of flame as a gout begins.
         if (performance.now() - (this.breathAt || 0) > 700) au.play('torchStrike', a, b, c, 1.4, 0.65);
@@ -2290,7 +2436,7 @@ class GameView {
         au.play('armorLand', a, b, c, 0.5 + d * 0.9, 0.5);
         r.emit(3, Math.ceil(30 * d), a, b + 0.05, c, 0, 1, 0, 1.3, 0.4, 2.2, 0.08, 0.2, 0.5, 1.2);
         break;
-      case EV.BEAST_NOTICE: if (!this.deepWas) this.hud.once('gravehart', 'Something in the trees has noticed you. Leave its ground and it may let you go.', 5); break;
+      case EV.BEAST_NOTICE: break;
       case EV.ROAR:
         // A stag's roar, far too big: a groan under a rasp, carrying a long way.
         au.gore(a, b, c, 1.6 * d, 1.7, 130); au.gore(a, b, c, 1.2 * d, 1.4, 240); au.gore(a, b, c, 0.5 * d, 1.1, 620);

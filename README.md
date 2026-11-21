@@ -2483,6 +2483,50 @@ Measured on the one machine in the table below, at 1024x768: the forest adds abo
 
 A day is 24 minutes (`src/gfx/daylight.js`: an hour is `SECONDS_PER_HOUR`, the colours are the keys at the top). It starts at 15:00, runs only while the world does, and is kept in a save. The sun gets as far as 6 degrees above the horizon and no lower, so shadows stay within the maps; between sun and moon, the light swaps while there's none of it to see. The sky is painted again every 10 s of play (30 s on a phone). The clock in the corner is `src/clock.js`. In the console: `bm.setTime(21)`.
 
+### Gilded critters
+
+VELSCOUR's clickable critters, in 3D: twenty of them crawl, walk and drift about you on open ground wherever you are, never in a town, on a seal or portal dais, in water or on ground steeper than about 40 degrees. There are four kinds:
+
+- **The Gilded Wisp** (45 in a hundred). A faceted crystal shell round a gold heart, with gold rings and beads, and a tail of nine flame beads. The shell is drawn as light (`src/gfx/critterglass.js`): lit at its rim, along its edges and by the sun.
+- **The Starmoth** (25). Indigo-to-silver wings with gold eye spots. It crawls with them spread, and flutters up and off a few metres every few seconds.
+- **The Golden Scarab** (22). Bronze-to-gold wing cases with gold flecks and a turquoise seam and inlay, on six legs in a tripod gait. It pays gold.
+- **The Prismatic Wisp.** A tall rainbow crystal round a pink heart: the rare one. It isn't one of the odds but comes on its own clock: the first 2 to 3⅓ minutes after you're out among them, then 3 to 5 minutes after the last has gone. It turns up ripe, 14 to 24 m ahead of you, with a chord.
+
+All twenty glow, and the ones not ripe wink with the sun every few seconds, so they show across a hillside. Only up to three at a time are **ripe**, as VELSCOUR's few were. A ripe one has a red arrow over it (gold for a Prismatic Wisp), a beacon ring on the ground, rising glitter and its own two lights. Where a pine's boughs or the brow of a hill is in front of the arrow, a ghost of it shows through, so a ripe one can always be found. A new one ripens every 7 to 13 s, 9 to 30 m off, and stays ripe for 14 to 20 s (a Prismatic Wisp for 12 to 15 s). In its last 5 s its ring beats fast and it flashes, and then it gets away: a wisp rises, a moth flies off, a scarab digs in. One that comes in where you can see it comes no nearer than 15 m, and comes down out of the sky or up out of the ground; one left 52 m behind fades.
+
+**Catching one.** Click it, or tap it on a phone, within 16 m of you: in reach, its arrow turns gold-white and beats. That works with the cursor while auto-play plays (or once Tab frees the mouse), and with the crosshair. With the crosshair it must be on the body itself (or within 10 pixels), in plain sight of your eye (ground, trunks and rocks are in the way), and with no foe within 25 m of you or near the crosshair. Otherwise the click is a shot. The crosshair turns to a gold plus when a click would catch, and the free cursor shows a hand. On a phone only a tap catches (the thumb up again inside 300 ms, having moved less than 12 pixels), never a drag to look about or move. A caught one flashes and bursts, its motes fly to the level medal (or the pack, for gold), its worth rises in words, and a bell rings that goes up a step for each ripe catch within 4 s of the last.
+
+**What one is worth** comes from the land it was caught on (`landLevel`), not from you. A kill-scale of 18 + 3 for each land level past the first:
+
+| Kind | Ripe | Land 1 |
+|---|---|---|
+| Wisp | 0.8 of the scale | about 14 XP |
+| Moth | the scale | about 18 XP |
+| Prismatic Wisp | 4 times the scale | about 72 XP |
+| Scarab | 11 + 1 gold per land level | — |
+
+One not ripe pays 15% of that. After 8 ripe catches in two minutes, they pay half; after 8 not ripe in a minute, those pay nothing.
+
+Auto-play leaves them alone.
+
+The rules and numbers are in `src/core/critters.js` (on the render thread), and the bodies are in `src/core/critter-models.js`. The look is in `src/gfx/critters.js`, the words, motes and grab mark in `src/ui/critterwords.js`, and the bells in `audio.chime`. In the console:
+- `bm.critters`: the field.
+- `bm.pickCritter(x, y)`: click a point on the screen.
+
+`node --test tests/critters.test.mjs` checks:
+- the twenty, their shares and where they may be;
+- how near one turns up;
+- the ripe three, and the Prismatic Wisp's clock;
+- turning, heights and shyness;
+- picking and line of sight;
+- what each is worth, and the caps;
+- the bodies.
+
+Not tested:
+- a real phone (only Chrome emulating one, where a tap catches on both halves of the screen and one too far off gives a word);
+- the sound, by ear;
+- the phone graphics tier.
+
 ### The world build-out: what has and hasn't been seen
 
 Blackvigil Keep, the Howling Deeps, the Warrens' dressing, the rebuilt places and the two small towns, the villagers
@@ -2501,6 +2545,75 @@ three minutes there; `tools/autoplay/watch.mjs` for auto-play).
   not measured. The white ground in some headless pictures is the far land's map still baking after a teleport, there
   before any of this.
 - **Nobody has played any of it by hand.** No new line has a recorded voice.
+
+### Textures without their repeat
+
+The owner (November 2026): "far too many shots where it's just the same textures repeated over and over again on the
+ground, houses, castles". Every painting tiles, and the eye finds the tile: the same blotch in a grid across a meadow,
+the same stone in the same place up a curtain, the same stain in every bay of a timbered front. What's done about it, in
+`src/gfx/materials.js` and the paintings themselves:
+
+- **The ground** (TERRAIN, on a PC): every ground painting is laid by `untile()`, not read once. The land is cut into
+  patches along the contours of a slow noise; each patch has its own copy of the painting, slid its own way; where two
+  meet, the copy that stands higher there by the painting's own height shows, over an edge a few hundredths wide, so a
+  join runs round a stone or a tussock and never cross-fades one painting through the other (that ghosted the flagstones'
+  joints and greyed the grass). What blending there is keeps the painting's contrast (mixed about its own mean and scaled
+  back up). The second read is paid only along the joins. Setts, flags and planks laid square to their way are slid only
+  along it. Cliff faces take their painting from the two sides blended by how much they face each, and only what's steep
+  is a face. Over it, the meadows' own lie, some tens of metres a patch: dry stretches gone to straw, lush dark ones, worn
+  places where plain grey-brown earth shows, more where the ground tilts. On a phone the one painting each ground reads is
+  bent out of line by a slow warp instead (a couple of metres over some tens: no grid, and no more reads of the paintings).
+- **The houses, the castles and the places** (STATIC). Their masonry, roofs and boards read two copies of the tile, slid
+  along their courses by a noise laid in the world's own space, meeting in the mortar (as Phobos's already did; now
+  everywhere, the delves too). Then, outdoors, weather where weather puts it, never in clouds: each stone, shingle or board
+  its own tone on its face, the joints left dark; a slow drift of tone so no two houses or stretches of curtain are one
+  stone; damp risen and dirt splashed up the foot of a wall, a ragged band to about a metre, greener on what faces north
+  (where the ground under it is known: each place's levelled pad and the town, `GROUNDS`; nowhere else); thin rain runs
+  down masonry here and there along it; lichen on wall tops; on roofs, runs down the fall line, moss in the hollows of the
+  north slopes, and each roof a little its own colour. A timbered front's timber and glass are never touched: only its
+  plaster varies, bay by bay, its painted stains kept in some bays and lifted in others, with a line of dirt where it meets
+  the timber. The church's own masonry (`wall_ashlar`, `wall_rough`, `src/gfx/interior.js`) takes the slide and the
+  stone-by-stone tone and no weather, since the same stone lines its inside. On a phone, the drift of tone only.
+- **The land's walls** (`src/core/sites.js`): a long wall is built of boxes some eight metres long, overlapping. Each began
+  its painting its own way, so a curtain read as panels with a seam every eight metres; now u runs on along the wall's
+  line by the metre, and round a drum it's a whole number of repeats. The ends between two boxes of one wall aren't built
+  (seen edge on, flush with the face, they drew a thin dark line down every join). The coursed stone (`course`) is laid half
+  again as big, about 40 cm a course.
+- **The paintings** (`python tools/world/unrepeat_tex.py`, reading each from the commit before, so it can be run again):
+  the grass's pale netting strands toned down and their relief eased; the masonry's broad light and dark half divided out,
+  so no blotch marks the period of the tile; the pale plaster of the fourteen timbered fronts evened, its dark rims and
+  stains lifted (only ever lightened), the dirt splashed at each panel's foot left, the timber, glass and stone infill as
+  painted. Same sizes, so nothing more is held: no memory measured, none added.
+
+**Looked at:** `tools/world/repeats.mjs <round>` photographs the same fourteen places every round (the square, a lane, a long
+timbered house near and far, the roofs from above, the meadow by the church, the hill road, the downs, Blackvigil,
+Gatewatch, Greywarden, Frostwatch, the abbey, Khel) in a real Chromium window on a virtual screen with a software GPU,
+about four minutes a picture; `BASE=<commit>` serves every changed game file, the textures included, as it was then, for
+a place's "before"; `python tools/world/repeats_sheet.py <before> <after>` lays two rounds side by side.
+
+**Three rounds, two critics** (2026-11-20). After each round two reviewers, briefed apart, each with thirty years of
+level design and texturing behind them, judged the fourteen places against the original: one for the scene as a whole
+(art direction and level design), one for the materials up close. Round 1 (the ground's offset copies, the slide on all
+masonry, weathering in world space) broke the repeat but laid grime in clouds with no cause, camouflage on Greywarden,
+with a hard cut down every round tower where its projection switched, and a cross-fade that ghosted flagstones; the
+owner, seeing it: the timbered fronts looked awful, a soot cloud dragged across a gable's beams. Round 2 put the weather
+where weather goes, left the fronts' timber and glass alone, made the ground's joins height-led, and evened the paintings;
+both found it much cleaner but turned it down for rain streaks that ran as pinstripes, flat stone at Greywarden, dark lines
+at Blackvigil's joins (there in the original: the boxes' ends), an orange stain by the abbey's stairs, the khaki of the
+meadow's dry grass, and the downs still one carpet. Round 3 fixed those. **The level designer approved it; the texture
+critic did not**, though calling it better than the original nearly everywhere and fit to ship. Left, and said by them:
+
+- **The timbered fronts' framing** on some houses is mapped at a different scale from storey to storey (a gable's lower
+  band of braces at half the scale of the storey above) and a few painted studs run down over the stone plinth. It's in
+  the village's own modelled UVs (`tools/village/build_village.py`, in Blender), as it was before, and wants a pass there:
+  the framed faces at one density in metres, rails at the storeys' heights, the framing cut at the sill. Not done here.
+- Greywarden's curtain still lines its joints up in columns at one stone's width (they'd stagger the courses); a faint tan
+  ring by the abbey's stairs; a small streak in the corner of the near ground at Khel; the downs' patches could be
+  stronger; the two lower windows of the long house still drip the same stain.
+- Seen only in pictures from a software GPU at 1280 by 720. Not looked at on a real GPU or a phone, and not measured for
+  frame time: the ground reads two copies only along its joins, and a wall's weather is a few more reads of the small
+  noise and the PH2 pack's decals. After the last round the older roofs' grey was warmed (a cool one read lilac beside red
+  shingles), seen in two pictures, not by the critics.
 
 ### When the GPU is lost
 
@@ -2564,7 +2677,8 @@ found). Run it after anything that adds to what's loaded.
   sounds it decodes as they're first heard, a phone keeps 24 MB, the longest unheard going first
   (`tests/audio-kept.test.mjs`).
 - **Models' pictures on a phone** (`mapScale`, `texCap` on the Mobile tier in `src/gfx/gpu.js`; `bitmapTexture` in
-  `src/gfx/renderer.js`). None is over 512 a side (some bodies' colours came 4096 across, 1024 after the tier's shrink),
+  `src/gfx/renderer.js`). None is over 256 a side, or 512 for what's seen close (`texCapNear`, since the third pass below;
+  some bodies' colours came 4096 across, 1024 after the tier's shrink),
   and a body's normals and its metal and roughness are half its colours' size again. The arms and what's held in them
   keep theirs.
 - **A body built once for all who wear it** (`cloneCharacter`). The seven quartermasters each had a body of their own;
@@ -2579,10 +2693,11 @@ and the woods loaded at the start, where the models themselves would have to be 
 doing as it goes: loading, at the title, playing, for how long and where, every eight seconds of play. Leaving the page or
 putting it away marks the note; one found unmarked at the next start is a page the browser killed. The title then says so
 (when, and where you stood), offers **Continue** from the last autosave, and on a phone loads lighter: no model's picture
-over 256 a side. It never has fewer of the other heroes about: a party for the Warrens is
-hired from them (four, with a tank and a healer), so a cast cut down would leave no way into a dungeon. The
-level is kept in this browser (`velscour.light`); `?light=0` puts it back, `?light=2` tries the lightest. If it still
-happens, what the title says is what to pass on: whether it died loading or playing, and after how long.
+over 192 a side (256 for what's seen close), and after another, 160 (192). It never has fewer of the other heroes about: a
+party for the Warrens is hired from them (four, with a tank and a healer), so a cast cut down would leave no way into a
+dungeon. The level is kept in this browser (`velscour.light`); `?light=0` puts it back, `?light=2` tries the lightest. If it
+still happens, what the title says is what to pass on: whether it died loading or playing, after how long, and (since the
+third pass below) the last few things that happened just before, a touch, a turn, the screen's size, a field to type in.
 
 **Measured again, honestly (November 2026, the second pass).** The owner said it was still crashing, on phones and on
 laptops whose GPU is on the processor. Two things were wrong with the numbers above. The game had grown (Phobos, the
@@ -2634,6 +2749,360 @@ After that: the skinned bodies' buffers (100 bytes a corner), the interiors (36 
 
 **Not known:** which of these the owner's phone was dying of, or how much it allows. Nothing here has been run on a phone:
 the pictures looked at were the town and three delves in headless Chromium at a phone's settings.
+
+**The third pass: a touch, or a turn (November 2026).** Still white and back to the start, the owner said, after three to
+five minutes of the story playing itself, the moment the screen was touched or the phone turned. It's an iPhone, the game
+played from its home screen (the owner said so): an app put there never keeps to the sideways the manifest asks for (iOS
+doesn't lock a web app's turn), so every accidental turn is a real one, and a white page that loads again is WebKit's way
+when it ends one for its memory. (Such an app has no browser bar, and its storage is its own, Safari's apart: the note
+below is kept in the app. The site on GitHub Pages has no `files.json`, so the service worker fetches every file fresh:
+the app runs what's on `main`.) An iPhone counts against the page more than a PC's browser
+does: every texture and buffer the game asks of the GPU, and a picture for every layer the page is drawn in, at three
+pixels to the point (one the size of the screen is 11 MB). So this pass measured those as well
+(`tools/memory/README.md`: `layers`, `GPUDUMP=1`, `snap`), in plain Chrome made an iPhone, 60 s into the story:
+
+| | Before | After |
+| --- | --- | --- |
+| The page's process, once garbage is collected | 790 MB | about 700 MB |
+| From the title by New Game, 45 s into the story (collected) | 897 MB | 765 to 807 MB |
+| Layers, at an iPhone's three pixels to the point | 82 MB | 36 MB |
+| Layers a touch adds | 23 MB | none |
+| Textures asked of the GPU | 290 MB | 240 MB |
+| The simulation's buffers | 166 MB | 125 MB |
+
+- **Pictures over the picture.** Each see-through thing over the game's canvas is a layer of its own, and an iPhone keeps a
+  picture of it. Several were the size of the screen and showed nothing:
+  - the opening's white flash at nothing;
+  - the townsfolk's words and marks, whose boxes were the screen (now a point at its corner, what's in them hung off it);
+  - the tail of her speech bubble, drawn from the screen's corner, and over the bubble's own layer, so the compositor gave it
+    one as big as the screen (now inside the bubble and the size of the tail: `src/ui/speech.js`; the bubble keeps a small
+    layer of its own, so the story's isn't painted again each frame it moves);
+  - the loading screen, faded to nothing but still there over everything, with its gradient (now hidden once it's faded);
+  - the emergency bar, up out of sight with its grain running forever (now still, and not painted, while it's up).
+
+  And a blur of what's behind (`backdrop-filter`) over a live canvas copies and blurs the screen every frame, and lays
+  everything over it in layers of their own. The waking haze in the opening blurs only while it's there (its first
+  seconds), and on a touch screen the spell book and the cards are dark glass rather than frosted.
+- **Overlays put away while the phone's upright** (`body.upright` in `index.html`, set by `turned` in `src/main.js`). Turned
+  the wrong way, a cover asks for it back; what was under it is no longer painted, so a turn doesn't keep a dozen layers at
+  the new size under it. The cover's painted picture sits above its words (it was laid over them) and nods the way to turn.
+- **A field to type in leaves the picture be** (`resize` in `src/gfx/renderer.js`). An iPhone's keyboard takes half the
+  screen's height in landscape, and a height held for 0.3 s was the screen's pictures made again at it, and again when the
+  keyboard went. The name the story asks for, where it waits for as long as it takes, was such a field. While a text field
+  in sight has the keys, the picture is kept and only the view takes the shorter screen's shape, so nothing's squashed; and
+  on Answer the field lets go of them and the page goes back to its top (`src/ui/opening.js`).
+- **A hold skips only on the words that say so, on a touch screen** (`src/ui/opening.js`: "Hold here to skip"). Any finger
+  held a second anywhere was a skip, and a skip in the story's middle moves you to the road and builds it at once. The
+  words are a pill to hold, 44 points at least, and clear of the strip at the screen's foot an iPhone keeps for its home
+  swipe (`index.html`, `env(safe-area-inset-bottom)`).
+- **Sound in one channel on a phone** (`slim` in `src/audio.js`, the title's too). A place's sounds go through a panner,
+  which hears one; the beds lose a width a phone's speakers barely had. The two are summed at 1/√2 each, so a sound
+  through the panner is as loud as it was. Half of 75 to 95 MB.
+- **Clips at their own rate** (`ArmsRig` in `src/sim/anim.js`). The monsters' clips are keyed at 24 or 30 a second and were
+  made again at 60: the same curve in twice the memory. The grid is now the closest two keys' rate, if every key falls on
+  it, and 60 a second if not. The witch's keys are at a rate that doesn't go into 60, and a 60 Hz grid cut across them by
+  up to ten degrees; now every clip tested is within a twentieth of a degree of its keys. And all a clip's tracks in one
+  block, not forty thousand (`tests/arms-rig-rate.test.mjs`).
+- **One set of the screen's pictures on a phone** (`resize` in `src/gfx/renderer.js`), and a phone's governor never above
+  its tier's pixels (`PHONE_ONLY_STEPS` in `src/gfx/governor.js`): each step up was the screen's pictures made again,
+  half as big again, with the last ones kept.
+- **Models' pictures on a phone 256 a side** (`texCap`), and 512 for what's seen close (`texCapNear`: Lisandra, your own
+  body, her book, the cave's walls and floor). After a crash, 192 (256 close), then 160 (192 close): never sharper.
+- **What came just before** (`noteEvent` in `src/core/lastrun.js`). The note the game leaves now keeps its last eight
+  happenings on a phone: a touch, a turn, the screen's size, a field to type in, a skip, the picture stepped down. After a
+  death the title says the last four, with the seconds between them ("Just before: touched (x3), then 4 s later size
+  844x190, then…"), which is what to pass on. Nothing notes the kill itself, so how long after the last it came isn't known.
+- **The browser's bar leaves the picture be** (`resize` in `src/gfx/renderer.js`). Sideways, an iPhone shows its bar for a
+  tap near the screen's edge: the same width, a few dozen points less height, and every target was made again for it,
+  and again when it went. A phone's picture is the same number of pixels whatever the screen's shape, so it's kept, and
+  only the view takes the screen's shape (`viewAspect`; the sim's aim too, `VIEW_ASPECT` in `src/input.js`).
+- **Every one of the other Tessariels on a phone** (`HERO_SLOTS` in `src/core/heroes.js`). OWNER RULE: "DO NOT REDUCE
+  THE NUMBER OF NPC PLAYERS". A phone had eight to a PC's sixteen, and a PC stepped down to the Mobile tier after a crash
+  had eight too. Now it's sixteen everywhere, each in a body of their own, and only the player's own setting has fewer
+  (the setting now reads "All of them (16)"). Sixteen in eight bodies was tried first and dropped: twins with the same
+  weapons side by side read as a fault. The eight more bodies cost about 19 MB of the GPU's memory, measured as an iPhone
+  (buffers 288 to 307 MB, textures 240 to 243) (`tests/crash-party.test.mjs`).
+
+Turned upright and back, and touched, in the story: the page's memory, the layers and the GPU's textures and buffers
+stayed where they were, and no render target was made again. **Not known, still:** whether the owner's iPhone now holds.
+None of this has run on one, and Chrome made to look like one is not WebKit: its layers, its sound and its garbage are its
+own. What's left, biggest first: the GPU's buffers (some 290 MB: the bodies of the undead, the land, the townsfolk, the
+interiors), the land's map papers (21 MB of canvas), and the threads' heaps.
+
+**A phone's pictures packed (November 2026).** On a phone, the game's pictures now take less than half the memory they
+did: in the story, the graphics chip's pictures came to 109 MB where they were 229. Nothing about how it looks was meant to
+change: side by side, the packed pictures are hard to tell from the plain ones; grass and leaves are a little softer up
+close. **It has not run on a real iPhone yet.** On one, look out for pictures gone black, rainbow-coloured or speckled with
+noise: that would be the packing read wrong. To guard against that, the game packs a little test picture of its own
+before it loads anything, reads it back, and if this phone doesn't give it back as it was, it packs nothing and plays on
+plain pictures, as before (the crash line on the title then says "phone pictures left unpacked"). A home-screen app can't
+take an address with `?astc=0` on it, so that check is the way out. A PC's graphics chip can't read packed pictures at
+all, so a PC is just as it was.
+
+For the code (`src/gfx/astc.js`; `tools/astc/README.md` has the working). The format is ASTC, 16 bytes for every 4x4
+block, a quarter of plain 8-bit colour; every iPhone with WebGPU reads it, and so do most Android phones. The files are
+unchanged: each picture is made as before (decoded, shrunk, mips drawn), then a compute pass on the phone's own GPU packs
+it and the plain one is let go once the GPU's done with it; a land array is packed a layer at a time.
+
+- **Packed:** the land's and the interiors' colours, the cave's colours, every model's colour, normal and metal-roughness
+  picture, the heroes' painted pictures, the worn skins and the crowds' tinted skins. In the story, as an iPhone on
+  Chrome's software GPU (the one GPU on a PC that reads ASTC): 568 pictures, 164 MB to 41, and the GPU's textures 229 MB
+  to 109; in the village, 242 to 108, and the GPU process 1015 MB to 801.
+- **Kept plain:** Lisandra's pictures, as the owner made her (`buildCrabs`' `plain`). The detail maps of the land and the
+  cave: their normal, roughness and height are each their own, and one line through a block's four channels kept too
+  little of them. A normal or metal-roughness map with anything in its alpha: a shader may read it as a mask (the
+  possessed knights' eyes), so the packer looks, and keeps it plain if so. Data the game writes as it goes; render targets.
+- **The check** (`check`/`trial` in `src/gfx/astc.js`): a 12x8 picture of six blocks the packing should give back near
+  exactly, sRGB and not, with mips down to 1x1, into the second layer of an array, read back through a draw as the game
+  reads its pictures. Any error the GPU raises, a shader that won't build, or a read-back that's off turns the packing
+  off; tried with the packing broken on purpose, it does. Its error scopes close round its own calls only, so the game's
+  errors still reach the game. It reads through a draw, not a compute pass: Chrome's software GPU reads a packed texture
+  as all zeros in a compute pass, though it draws it right.
+- **How close**, each picture packed and read back by a decoder that isn't the packer's (SwiftShader's), mip by mip
+  (`tools/astc/check.html`), in PSNR, where over 40 dB is hard to see and the low 30s only up close: an archer's colour
+  41.0 dB at 512, its normals 38.3; a possessed knight's colour 41.2; the townsfolk's colour 37.0; the land's colours at
+  a phone's 448x256 37-42 (bark, stone), grass 33.4, leaves 35.0 where they're seen. (Lisandra's, before she was kept
+  plain: 40.6.) The village side by side, from one moment with the clock stopped, packed and plain: the timber, plaster,
+  stone, road and the oak's leaves the same.
+- **Load time:** not measured on a phone. On the software GPU, as an iPhone, the story was up in 13.1 s packed and 16.9 s
+  plain, so the packing at least isn't the slow part there. On a phone, it waits for the GPU after each picture, packed or
+  not, as the load always did.
+- `?astc=0` turns it off; `?astc=1` turns it on for any tier whose GPU reads ASTC. `?soft=1` runs the game on the software
+  GPU (slowly), which is how it's seen on a PC.
+
+**Looked at, left:** the interface's layers in play. Four elements the size of the screen (`#hud`, `#touch`, `#spells`
+and the auto-play banner) hold the buttons and bars at its corners, and each is a picture of the whole screen in Chrome,
+11 MB at an iPhone's 3x. Each cluster given a layer of its own changed nothing: the containers stay screen-sized. Making
+them as small as what's in them means laying out the interface again, the Move Buttons positions with it, and how WebKit
+makes its layers can't be measured here.
+
+**Twenty-one minutes in: the iPhone's browser keeping a note of every frame (November 2026).**
+
+*For the owner, in short.* The likeliest reason the phone closed the game at 21 minutes is a fault in the iPhone's
+browser: it keeps a small note of every frame the game draws and never throws them away, so after twenty minutes or so
+they use up the memory the phone allows the game. The game now clears those notes itself every twenty seconds, on an
+iPhone or iPad (and Safari on a Mac) only. Nothing on screen should change; a stutter or the picture going soft every
+twenty seconds, or black flashes, would mean it's costing something it shouldn't. **It hasn't run on an iPhone yet**:
+everything below was measured on a PC acting as one. The home-screen app has no switch to turn it off; it turns itself
+off if the phone's graphics ever object to it.
+
+To try it: close the app fully (swipe it away) and open it again, so it loads the new game. In the game's Settings, under
+Everything else, set Frame rate readout to On: its second line should say "views made fresh" with a count that goes up
+every 20 seconds (if it says "off", take a screenshot). Then play for 30 minutes or more. If it lasts, say so. If it
+closes again, take a screenshot of the message the game shows when it opens again, and note how long you'd played,
+whether the phone was hot, and the iOS version (Settings > General > About).
+
+And if you can, the phone's own record of a crash: Settings > Privacy & Security > Analytics & Improvements > Analytics
+Data, the newest file whose name begins `JetsamEvent`. Tap it, then the share button, and send it. (If the list is
+empty, turn on Share iPhone Analytics on the page before it; it only keeps what happens after.) That says which part of
+the browser was too big, which settles whether this was the cause. The one from the 21-minute crash may still be there.
+
+*What was found.* With the pictures packed, the owner played 21 minutes before the phone closed the game, where it had
+been three to five. The title said what came just before: the picture's size stepping back up, x0.66 to x1, four seconds
+a step. That step is real, but small: the picture's targets and the canvas are some 9 MB more at x1 than at x0.66 on a
+phone. Standing in the town, nothing the game holds grows: as an iPhone in Chrome, ten minutes in, it asked the GPU for
+the same 246 MB of textures and 301 of buffers as at the start. Out questing it does grow, as new places and what's in
+them load: over 25 minutes of auto-play, from 245 to 276 MB of textures and 298 to 348 of buffers, some 80 MB, against
+the hundreds the bug below adds. Whether that levels off over a longer journey hasn't been looked at yet.
+
+What likely grows is in WebKit, the engine of Safari and of every browser on an iPhone. A bug in its WebGPU
+(bugs.webkit.org 329399, reported on iOS 27.2 in October 2026, fixed in WebKit's code on 4 November; in no iOS yet that
+we know of) has every texture view keep the number of every command encoder it was used in (as a pass's attachment, or
+in a bind group set in a pass) and let none go while the view lives. Its reporter measured 65 MB for 32 views over
+70,000 frames, about 30 bytes a number. The game makes its views once, as it loads, and draws with them every frame:
+about 277 views an encoder in the town, at 66 encoders a second, some 18,000 numbers a second: 23 million by 21 minutes,
+about 650 MB that the game never asked for. That is the likeliest reading, **not proven**: the numbers are kept in
+WebKit's GPU process, not the page, and had iOS closed only that, the game would have lost its GPU and said "the
+graphics reset", where it said the browser had closed it. iOS may have closed the page with it, or the cause is
+elsewhere. The `JetsamEvent` file above would say. The reporter also had runs with no growth at all: it doesn't happen
+every time, which may be why one session lasts longer than another. Chrome on a PC or an Android phone has its own engine, no such bug,
+and doesn't run what follows; Chrome on an iPhone is WebKit, and does.
+
+*What the game does now* (`src/gfx/freshviews.js`, on WebKit only). Every 20 seconds it makes again the views and bind
+groups used since the last round, and hands passes the new ones; the old ones are let go, and WebKit's numbers with them
+once the browser tidies them away (the bug's reporter saw the memory come back that way). A view made again is the same texture seen the same way, so nothing looks different. The game itself goes on holding
+and using what it made, untouched; bind groups it makes after a round are made with the newest views.
+
+- A round is spread over frames: at most a millisecond's work before each frame's encoder.
+- What's under five seconds old, destroyed, or the canvas's own is left alone.
+- Nothing made is handed out until the GPU has said it was made without error (no validation, out-of-memory or internal
+  error). If it says it is out of memory, the next start loads lighter, as any other time it does; any objection at all
+  puts everything back as the game made it, for good, and the crash title then says "views no longer made fresh". So
+  does an error in a round's own code, and any GPU error in the three seconds after stand-ins are handed out (one that
+  shows only when they're used).
+- `?fresh=0` turns it off, `?fresh=1` on anywhere (as with `?light`, a home-screen app can't be given either).
+- The Frame rate readout's first line gives the worst frame of the last 20 seconds; its second says how many rounds have
+  run, or why it stopped.
+
+Tried as an iPhone in Chrome, with the bug modelled (`tools/memory/init.js` keeps each view's numbers until the view is
+collected; `__leak()` counts them):
+
+| | Without | With |
+| --- | --- | --- |
+| Numbers held after 45 s, in the town (collection forced) | 2.2 million (63 MB at 30 bytes) | 0.6 million (17 MB) |
+| After 5 minutes, in the town (collection forced) | 7.1 million (203 MB), rising 19,500 a second | 0.3 to 0.55 million (9 to 16 MB) |
+| 25 minutes of auto-play questing, no collection forced | some 27 million (770 MB), at that rate | 0.24 to 0.44 million (7 to 13 MB), no climb: 0.41 million at the end, 75 rounds |
+| Encoders a second | 66 | 65 |
+| GPU errors | 0 | 0 |
+
+With the PC's processor slowed four times, a round's work came to about 5 ms in all, a millisecond a frame over five
+frames (the first round, with everything made since the load, takes longer). The worst frames around the rounds were
+23.5 and 8.1 ms, where the game's own worst elsewhere in the same minute were 38 and 275 ms. The story's opening and the
+village look as they did, and `node --test tests/freshviews.test.mjs` holds the swapping on a stand-in WebGPU. **Not
+tried on an iPhone**: Chrome can't show WebKit's numbers, only the model of them. And the 25-minute run counts on
+Chrome's collector letting the old views and bind groups go; on an iPhone it's Safari's, and WebKit's numbers go only when
+it collects them. If it does that seldom, a round's worth (some 10 MB) gathers for each 20 seconds between its
+collections. That is the main thing left to see on a phone.
+
+The crash title now says the picture's size as its sharpness, and steps the same way, no more than ten seconds apart, as
+one: "the picture's sharpness eased back up, 66% to 100% over 12 s" (a turn the other way reads on, "..., then back up,
+76% to 100% over 8 s"; a gap of a minute and a half or more is said in minutes). And from the note kept every eight
+seconds while the game is seen, it says whether the game kept going after the last thing it noted: "Just before: ..." if
+not, else "The last things the game noted: ... It kept going about 3 more minutes after that." So the last thing noted
+reads as the cause only when it was.
+
+**Looked at, left:** the picture's size climbing back. Each step makes the picture's targets again, at most about 9 MB
+more on a phone. The way to make it nothing would be targets made once at the full size and drawn into smaller, which
+reaches into every pass; with the views made fresh, the step is small beside what it's spared.
+
+#### What a long quest kept
+
+The 25-minute run above counted the game's own asks of the GPU too, and those grew as it travelled: about 80 MB.
+Followed for 40 minutes of auto-play questing, with each thing on the GPU traced to what made it, they grew 190 MB
+(textures 255 to 318 MB, buffers 301 to 428), and were still rising at the end. About 100 MB of it was loot:
+- Every weapon, shield, staff and piece of gear that ever fell was loaded onto the GPU the first time it lay on the
+  ground, and kept there for good. Picking it up, selling it or walking away let none of it go.
+- Each was loaded whole: for the ground, and for the hand and the raised arm as well, though most loot is never held.
+  The hand's models take about three times the GPU memory of the one on the ground.
+
+The fix is in `src/gfx/renderer.js` (`sword`, `trimSwords`, `armSword`):
+- **Let go when no longer asked for.** The game asks for a drop's model every frame while it's in the list of what lies
+  on the ground (up to 64, anywhere in the land, not only what's on screen), so walking away still lets nothing go. What
+  is picked up, sold, cleared away, or pushed off the 64 by newer loot stops being asked for. One not asked for in 30
+  seconds is let go, but for the eight most recently asked for, kept for a quick swap back. What's worn (in either hand,
+  the board, the skull), the arms' own models and Lisandra's board are kept; one still loading is left be. What's let go
+  is destroyed two seconds later, as a frame already on its way may still draw it.
+- **The hand only when it's held.** Loot has only its ground model until a hand wants it. Equip it and its hand is made
+  then, from its file again. With the game kept on the device (the first start's question), the file is there. If not,
+  the browser's own copy is used if it still has one, however old (GitHub Pages tells the browser to keep a file only
+  ten minutes, but the game asks for its copy anyway, with `force-cache`); only with none is it downloaded again. The
+  same goes for one let go and made again.
+- **A file that failed to load is tried again**, after 5 seconds, then twice as long each time up to 2 minutes. This goes
+  for what's worn too: it's the one way something worn is let go, and it's made again at once.
+- The file is read, and its three pictures found in it, before any picture is made, and if one picture fails, those
+  already made are destroyed, so a bad file leaves nothing behind.
+
+What a player may notice: something let go and then asked for again (equipped, or dropped again) is loaded again, so it
+appears a fraction of a second late, as anything seen for the first time does. Equipping is done in the pack, which
+pauses the game, and what you put on is made while it's open, so it's there when you close it.
+
+The monsters' weapons (`src/gfx/tripo-slots.js`) were the same. Their models and skins were already let go past 10 and 12
+not in use, but the weapons they hold were kept for good, one for each new pair of monster and weapon. Now at most 16
+are kept in all (more only while more are in use at once), the longest unused let go first. And a monster that changes
+from A to B and back to A quickly no longer puts in the first A when that finishes loading late (its weapon may have
+been let go meanwhile): each change is counted, only the latest load is put in, and the others are freed.
+
+| 40 minutes of auto-play questing, emulated iPhone | Before | After |
+| --- | --- | --- |
+| Growth of the game's own GPU asks | 190 MB (textures +63, buffers +127) | 99 MB (textures +36, buffers +63) |
+| Of which loot | about 100 MB, still rising | about 18 MB, level from 20 to 40 minutes: 30 kept, with 49 to 54 lying about |
+
+That is the growth about halved, not stopped. Two auto-play runs don't go the same way, so the monsters' share differs
+between them (about 35 MB in the first, 50 in the second); their models, skins and now weapons are each capped. The rest
+of the 99 MB is the party's looks (one each, made again when their gear changes), the delve under the player (one at a
+time) and the delves' fires (made once): each is bounded, but 40 minutes isn't long enough to show them level off. The
+party's own props (`src/gfx/herolook.js`, a hero's weapon in a new colour) are still kept for good: about 2 MB in the 40
+minutes.
+
+Auto-play doesn't go the same way twice, and in the second 40-minute run the page process (the browser's own count of
+the page, which an iPhone also holds to a limit) ended higher than in the first (1462 MB against 1142). So the same
+thing was done by script on both, round after round: 12 weapons never dropped before laid down around the player, 8
+seconds, cleared away, one of them equipped, 40 seconds. Memory was read after a forced collection, every 4 rounds, on
+an emulated iPhone. From round 9 on the 107 weapons come round again, so on this branch nearly each is one let go and
+made again: far more loot let go and made again than a quest asks for. (It drops only weapons: the monsters' weapons,
+let go now too, aren't in it.)
+
+| | `main`, 12 rounds | This branch, 12 rounds | This branch, 24 rounds |
+| --- | --- | --- | --- |
+| Items kept at the end (the arms', shield and staff with them) | 110 | 12 | 12 |
+| Growth of the game's GPU asks | +218 MB (textures +111, buffers +107) | +13 MB | +11 MB |
+| GPU process, every 4 rounds (MB) | 1599, 1751, 1781 | 1471, 1471, 1476 | 1468, 1474, 1472, 1470, 1470, 1469 |
+| Page process, every 4 rounds (MB) | 797, 860, 877 | 762, 770, 849 | 787, 810, 854, 740, 729, 778 |
+| GPU errors | 0 | 0 | 0 |
+
+The page process wanders, by as much as 125 MB between readings. In 12 rounds it rose on both, by about the same (80 MB
+on `main`, 87 on the branch), the branch's a little lower at each reading, which is within that wander. Over 24 rounds
+(288 weapons dropped, most of them let go and made again) it didn't climb: 787 at the fourth round, 778 at the last. So
+making things again leaves nothing behind in the page that shows at this scale (a whole file kept each time would be
+some 10 MB a round; under half a megabyte a weapon wouldn't show), and the second long run's higher page doesn't look
+like the weapons' letting go. What it was, two runs that don't go the same way can't say.
+
+`node --test tests/sword-trim.test.mjs` (7 tests) holds the letting go, the trying again, the hand's waiting, the
+monsters' cap and the A-to-B-to-A guard. In the game (an emulated iPhone, with the shield raised to bring the weapon
+out, as it's put away outside a fight): the starting staff, a staff never seen before equipped from nothing, and a sword
+with the shield up all look as on `main`. Twelve weapons dropped and then cleared away left 13 not asked for (the
+riptide staff, equipped earlier, too); 45 seconds on, 5 had been let go and the 8 newest kept; one of them equipped
+again was made again; no GPU errors came of any of it. A staff let go and then equipped with the game paused, as the
+pack pauses it, was made again and ready within 3 seconds while the old one was still in the hand, and was in the hand
+0.6 seconds after the game went on. On a phone the pictures are packed (`src/gfx/astc.js`), so loot
+costs less there in textures and the same in buffers. **Not run on an iPhone.**
+
+#### Files kept in the page
+
+Two kinds of model file were kept whole in the page's own memory (which an iPhone counts with the GPU's) after their
+mesh and pictures had gone to the GPU:
+- **The monsters' files** (`src/gfx/tripo-slots.js`, `model`): a model is kept for the next monster of its kind (at most
+  10 in all, more only while more are in use, the longest unused let go first), and it kept its whole file with it, 2.9
+  MB on average and up to 8.4. All a model needs of it later is its colour picture, for a skin in a new palette. Now
+  that picture, copied out, is all that's kept: 0.46 MB on average.
+- **The party's body files** (`src/gfx/herolook.js`, `body`): a party hero's look in gear cut from other bodies is made
+  from those bodies' files, and each file was kept for good once used: 2 MB apiece, 44 bodies in all. A file is needed
+  only while a look is made from it (its mesh and pictures are copied into the look's own). Now at most 6 are kept in
+  all (more only while more are in use at once, as when the whole party is dressed together), the longest unused let go
+  first. One let go is fetched again when a look needs it, from the browser's copy (`force-cache`), or from the game's
+  own store when it's kept on the device.
+
+And a monster model or skin that failed to load is no longer kept as failed. It was, and every later monster of that
+kind (or that kind and palette) stayed invisible until it aged out. The one whose load failed is still unseen until its
+place goes to another monster, but the next of its kind loads afresh. A model that fails gives back what it had made.
+And every model's shared mesh came with three pose buffers of its own that are never drawn from (each monster gets its
+own copies), which nothing let go of, a model let go or failed included: 0.3 MB of the GPU's a model on average, up to
+1.8. They're given back as soon as the mesh is made.
+
+How much this saves depends on how long you play and how much changes. In 12 minutes of ordinary auto-play on `main`,
+these held 1 monster model (2.7 MB) and no body files at all. They fill as you meet more kinds of monster (new lands,
+delves) and as the party changes gear: up to about 114 MB on `main`. So this caps a slow pile-up in long sessions. It
+doesn't lower what a short session holds, and nothing here shows it was behind the 21-minute crash.
+
+The worst case, by script, on both, on an emulated iPhone: 12 kinds of monster loaded, then 14 looks made that between
+them use all 44 bodies.
+
+| | `main` | This branch |
+| --- | --- | --- |
+| Hero body files kept | 44, 86.0 MB | 6, 11.9 MB |
+| Monster files kept (10 models) | 28.3 MB whole | 3.4 MB of colour pictures |
+| Page heap's growth | +112 MB | +15 MB, and −1 MB in a second run |
+| Page process, before and after (MB; it wanders by up to 125 MB, above) | 992, 1057 | 999, 926; again 1011, 974 |
+
+Made a second time, all 14 looks came out with the same vertex and index counts (their pictures weren't compared). All
+44 bodies were fetched again for it: 6 kept can't hold a run through 44, so each was let go before its turn came round.
+Every one came from the browser's copy, none over the network. Three looks made at once, sharing bodies, left nothing
+marked in use and 6 kept. Plain and dyed skins of four monsters were made from the kept picture alone, at the same sizes
+as on `main`. **Not run on an iPhone.**
+
+What a player may notice: when a party hero's new gear needs a body that was let go, its file is read again, which
+takes a little longer than having it in memory. The hero keeps their old look until the new one is ready, as before, so
+it's their armour that lands a moment later, never a hero half made. If the phone has thrown that copy away and is
+offline, the look can't be made, and the hero stays as they were until they're next dressed, by new gear or a level
+(keeping the game on the device, the first start's question, avoids that). Monsters look as before.
+
+Left for later, as it changes what you see: a monster's skin in a palette other than its own (a dyed one) is baked in a
+worker (`src/gfx/bake.worker.js`) that doesn't hold it to the phone's cap of 256 across, as the plain skin is held. The
+necromancers, the possessed knights and the Velscour knights and lancers, whose pictures are 4096, come out 1024 across
+on a phone when dyed, and the dragons (2048) 512. Almost every named delve boss is one of these in a dye of its own (the
+Castellan of Blackvigil, the Iron Marshal, Magister Sorvane, Ossivar and others). Capping them at 256 would save roughly
+10 to 16 MB on an iPhone, but make the bosses visibly softer: it wants a change of its own, judged by eye on a phone,
+perhaps with 512 for every big monster, plain and dyed alike.
 
 ### What has and hasn't been tested
 

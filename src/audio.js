@@ -12,6 +12,21 @@ const KEPT_BYTES = PHONE ? 24e6 : 0;
 // A loop silent this long (seconds) is stopped and let go (Audio.bed, Audio.spot): it comes back the moment it's wanted.
 const QUIET = 10;
 
+/** On a phone, a decoded sound kept as one channel, not two: half the memory. Decoded, the sound a phone held in the cave
+ *  was 75 to 95 MB. (src/title.js uses this for its song too.) The beds lose their width, which a phone's speakers, an inch
+ *  apart, hardly had to give; earbuds hear them in the middle.
+ *  The channels are summed at 1/sqrt(n), not averaged, so a sound keeps its loudness: a wide bed's two sides are mostly
+ *  unlike, and halved they'd lose 3 dB; and a panner (a sound from a place) gives one channel 0.71 of itself each side at
+ *  the middle where it gave two all of theirs, so a sound alike in both would lose 3 dB the other way. Alike in both and not
+ *  through a panner, it's 3 dB up. */
+export function slim(ctx, buf) {
+  if (!PHONE || !buf || buf.numberOfChannels < 2) return buf;
+  const one = ctx.createBuffer(1, buf.length, buf.sampleRate), out = one.getChannelData(0);
+  const n = buf.numberOfChannels, k = 1 / Math.sqrt(n);
+  for (let c = 0; c < n; c++) { const d = buf.getChannelData(c); for (let i = 0; i < d.length; i++) out[i] += d[i] * k; }
+  return one;
+}
+
 const n = (base, k) => Array.from({ length: k }, (_, i) => `${base}_${i + 1}`);
 // Decoded at load, before the game starts: what a fight and a walk on the dirt need the instant they happen.
 const BANKS = {
@@ -115,7 +130,7 @@ export class Audio {
     const nd = this.noise.getChannelData(0);
     for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
     await Promise.all([...CORE].map(async (n) => {
-      this.buffers[n] = await ctx.decodeAudioData(await getFile(`${this.base}assets/game/audio/${n}.mp3`));
+      this.buffers[n] = slim(ctx, await ctx.decodeAudioData(await getFile(`${this.base}assets/game/audio/${n}.mp3`)));
     }));
     this.lastAt = {};
     this.ready = true;
@@ -201,7 +216,7 @@ export class Audio {
   fetchBuffer(name) {
     if (this.buffers[name]) { this.touched(name); return Promise.resolve(this.buffers[name]); }
     this.pending = this.pending || {};
-    return this.pending[name] || (this.pending[name] = fetch(`${this.base}assets/game/audio/${name}.mp3`).then((r) => r.arrayBuffer()).then((a) => this.ctx.decodeAudioData(a))
+    return this.pending[name] || (this.pending[name] = fetch(`${this.base}assets/game/audio/${name}.mp3`).then((r) => r.arrayBuffer()).then((a) => this.ctx.decodeAudioData(a)).then((b) => slim(this.ctx, b))
       .then((buf) => { this.buffers[name] = buf; this.touched(name); this.trim(name); return buf; })
       // (The promise isn't kept once it's answered: it would hold the sound after the sound's been let go.)
       .finally(() => { delete this.pending[name]; }));
@@ -493,6 +508,39 @@ export class Audio {
     air.connect(mouth); mouth.connect(gain);
     air.start(now, 0.17); air.stop(now + duration);
     air.onended = () => { air.disconnect(); mouth.disconnect(); gain.disconnect(); pan.disconnect(); };
+  }
+
+  // A gilded critter caught (src/main.js pickCritter): a little bell of its own, made here. step: how many were caught one
+  // after another before it, each a semitone higher. (A wisp's is bright, a moth's softer and lower, a scarab's a struck
+  // coin's ring, a prismatic wisp's a chord.)
+  chime(kind, step = 0, gain = 1) {
+    if (!this.ready || this.ctx.state !== 'running') return;
+    const ctx = this.ctx, now = ctx.currentTime, up = 2 ** (step / 12);
+    const notes = { wisp: [784], moth: [587], scarab: [1047], prism: [659, 831, 988] }[kind] || [784];
+    const out = ctx.createGain(), send = ctx.createGain();
+    out.gain.value = 0.11 * gain; send.gain.value = 0.35;
+    out.connect(this.master); out.connect(send); send.connect(this.reverb);
+    notes.forEach((f0, i) => {
+      const t0 = now + i * 0.045;
+      for (const [mul, g, d] of [[1, 1, 0.9], [2.76, 0.3, 0.45], [5.4, 0.08, 0.25]]) {
+        const o = ctx.createOscillator(), e = ctx.createGain();
+        o.type = 'sine'; o.frequency.value = f0 * up * mul;
+        e.gain.setValueAtTime(0.0001, t0); e.gain.exponentialRampToValueAtTime(g, t0 + 0.006); e.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+        o.connect(e); e.connect(out); o.start(t0); o.stop(t0 + d + 0.05);
+        o.onended = () => { o.disconnect(); e.disconnect(); };
+      }
+    });
+    // Under the bell, a soft low pop for weight: a breath of low noise and a 220 Hz thump, 60 ms.
+    const pop = ctx.createGain(), lp = ctx.createBiquadFilter(), n = ctx.createBufferSource(), o = ctx.createOscillator(), og = ctx.createGain();
+    lp.type = 'lowpass'; lp.frequency.value = 700;
+    n.buffer = this.noise; n.connect(lp); lp.connect(pop);
+    o.type = 'sine'; o.frequency.setValueAtTime(220, now); o.frequency.exponentialRampToValueAtTime(140, now + 0.06); o.connect(og); og.connect(pop);
+    og.gain.value = 0.8;
+    pop.gain.setValueAtTime(0.0001, now); pop.gain.exponentialRampToValueAtTime(0.5, now + 0.004); pop.gain.exponentialRampToValueAtTime(0.0001, now + 0.06);
+    pop.connect(out);
+    n.start(now, Math.random() * 0.5); n.stop(now + 0.08); o.start(now); o.stop(now + 0.08);
+    o.onended = () => { n.disconnect(); lp.disconnect(); o.disconnect(); og.disconnect(); pop.disconnect(); };
+    setTimeout(() => { out.disconnect(); send.disconnect(); }, 1500);
   }
 
   // A burst of filtered noise: the wet sound of a wound opening, or a spurt on each heartbeat.

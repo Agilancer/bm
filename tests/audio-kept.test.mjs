@@ -19,12 +19,19 @@ function audio() {
     createGain: node,
     createPanner: () => ({ ...node(), setPosition() {} }),
     createBufferSource: () => { const s = { ...node(), start() { this.on = true; }, stop() { this.on = false; } }; made.push(s); return s; },
-    // (A loop: 45 s of stereo at 48 kHz, 17 MB. Anything else: a second of mono.)
-    decodeAudioData: async (f) => (/forest|cave|inside/.test(f.url) ? { length: 45 * 48000, numberOfChannels: 2, duration: 45 } : { length: 48000 * 30, numberOfChannels: 1, duration: 30 }),
+    // (A loop: 45 s of stereo at 48 kHz, 17 MB. Anything else: 30 s of mono. Their samples are a few, standing for the lot:
+    // what's counted is length and channels.)
+    decodeAudioData: async (f) => (/forest|cave|inside/.test(f.url) ? fakeBuffer(2, 45 * 48000) : fakeBuffer(1, 48000 * 30)),
+    createBuffer: (channels, length, sampleRate) => fakeBuffer(channels, length, sampleRate, true),
   };
   a.base = ''; a.buffers = {}; a.ready = true; a.amb = node();
   return a;
 }
+// (blank: as a context's createBuffer makes one, silent.)
+const fakeBuffer = (numberOfChannels, length, sampleRate = 48000, blank = false) => {
+  const data = Array.from({ length: numberOfChannels }, (_, c) => new Float32Array(blank ? 4 : [0.5, -0.25, c, 0]));
+  return { length, numberOfChannels, sampleRate, duration: length / sampleRate, getChannelData: (c) => data[c] };
+};
 const settle = () => new Promise((r) => setTimeout(r, 5));
 
 test('a bed that falls silent is stopped and its sound let go, and comes back when it\'s wanted', async () => {
@@ -49,6 +56,18 @@ test('a bed that falls silent is stopped and its sound let go, and comes back wh
   a.bed('forest_day', 0.5);
   await settle();
   assert.ok(a.buffers.forest_day && a.beds.forest_day.src.on);
+});
+
+test('a phone keeps a loop as one channel, the two summed into it at the same loudness (half the memory)', async () => {
+  const a = audio();
+  a.bed('forest_day', 0.5);
+  await settle();
+  const b = a.buffers.forest_day;
+  assert.equal(b.numberOfChannels, 1);
+  assert.equal(b.length, 45 * 48000);
+  // (Summed at 1/sqrt(2), so it keeps its loudness: src/audio.js slim.)
+  const k = Math.SQRT1_2;
+  [0.5 * 2 * k, -0.25 * 2 * k, 1 * k, 0].forEach((v, i) => assert.ok(Math.abs(b.getChannelData(0)[i] - v) < 1e-6, `sample ${i}`));
 });
 
 test('a bed let go while its sound was still coming never starts', async () => {
