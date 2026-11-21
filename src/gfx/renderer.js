@@ -119,6 +119,16 @@ const FLAT = { iron: 100, flame: 101, water: 102, fruit: 103, fruit2: 104, white
 const TINTS = { dark: 1, pale: 2, frost: 3, mire: 4, spore: 5, void: 6, slate: 7, blood: 8, moss: 9, umber: 10, soot: 11, eve: 12, char: 13, royal: 14, forest: 15 };
 // (Room for the gilded critters' parts too, src/gfx/critters.js: each kind's part one batch, its instances side by side.)
 const MAX_GROUND = 512;
+// A weapon, shield, staff or piece of gear is loaded the first time it's seen (sword), on the ground or in a hand, and was
+// kept for good: every new drop of a long quest added its pictures and models, about 80 MB over 25 minutes. Now one
+// that's gone unseen this long is let go (trimSwords), but for the most recently seen few of those, kept for a quick swap
+// back, and what's worn and the arms' own, which never are.
+const SWORD_IDLE = 30000;    // ms
+const SWORD_SPARE = 8;
+const SWORD_KEEP = new Set(['skull_arm', 'surf_arm', 'shield_arm', 'skull_gems']);
+// (One whose file didn't come, as a phone's connection may drop just as it's equipped, is tried again: after 5 s, then
+// twice as long each time it fails again, up to 2 minutes.)
+const SWORD_RETRY = 5000, SWORD_RETRY_MAX = 120000;
 // The portals (portalModel): the Warrens' three in their walls, at these spots (src/core/sites.js portalWall), and a seal's at
 // every seal (seal_*). How big each is drawn is PORTAL_MODELS's. SWIRL: each one's whirl for the shader (src/gfx/materials.js
 // ITEM), its middle and radius in the model's own units (tools/portal/pack.py) and which it is; and where its motes go round
@@ -1294,15 +1304,68 @@ export class Renderer {
     p.pos = pos; p.nrm = nrm;
   }
 
-  // A sword, by its id: { ready } until its file is in, and then what it takes in the hand and on the ground.
-  sword(id) {
+  // A sword, by its id: what lies on the ground (lying) once its file is in, and { ready } once all it needs is made.
+  // keep: never let go (one asked for ahead of when it's needed, as Lisandra's board is). hand: wanted in the hand or on
+  // the arm. Until one is, a weapon or a shield has only what lies on the ground, and isn't ready: its held models are
+  // about three times the GPU memory of that one, and most drops are never held (armSword).
+  sword(id, keep = false, hand = false) {
     let s = this.swords.get(id);
     if (!s) {
       s = { ready: false };
       this.swords.set(id, s);
-      this.buildSword(id, s).catch((e) => console.error(`sword ${id}`, e));
+      this.swordWork(id, s, () => this.buildSword(id, s));
+    }
+    s.seen = performance.now();
+    if (keep) (this.swordKeeps ||= new Set()).add(id);   // (by id, so it holds for one made again after a failure)
+    if (hand && !s.wantHand) {
+      s.wantHand = true;
+      if (s.later && !s.busy) this.swordWork(id, s, () => this.armSword(id, s));
     }
     return s;
+  }
+
+  // (busy while it's being made, and so not let go; once the ground's is done, the hand's if it was wanted meanwhile.
+  // failed: when it last didn't come; swordFails, how many times running, for when it's tried again: trimSwords.)
+  swordWork(id, s, fn) {
+    s.busy = true;
+    const fails = (this.swordFails ||= new Map());
+    fn().then(() => { fails.delete(id); }, (e) => {
+      s.failed = performance.now();
+      fails.set(id, (fails.get(id) || 0) + 1);
+      console.error(`sword ${id}`, e);
+    }).finally(() => {
+      s.busy = false;
+      if (s.wantHand && s.later && s.failed == null) this.swordWork(id, s, () => this.armSword(id, s));
+    });
+  }
+
+  // Let go of the swords not seen for SWORD_IDLE (see it), every few seconds. One still being made is left be, and
+  // what's let go is destroyed a moment later, as a frame on its way may still draw it. Asked for again, it's made anew.
+  // One that failed is let go once its wait is up (SWORD_RETRY), worn or not, so the next frame that wants it tries again.
+  trimSwords(now) {
+    if (now - (this.swordsTrimmed || 0) < 5000) return;
+    this.swordsTrimmed = now;
+    const worn = [this.heldId, this.mainHand, this.offHand, this.board?.sword, this.skull];
+    const idle = [], retry = [];
+    for (const [id, s] of this.swords) {
+      if (s.busy) continue;
+      if (s.failed != null) { if (now - s.failed >= Math.min(SWORD_RETRY_MAX, SWORD_RETRY * 2 ** ((this.swordFails?.get(id) || 1) - 1))) retry.push([id, s]); continue; }
+      if (!this.swordKeeps?.has(id) && !SWORD_KEEP.has(id) && !worn.includes(id) && now - s.seen > SWORD_IDLE) idle.push([id, s]);
+    }
+    idle.sort((a, b) => b[1].seen - a[1].seen);
+    for (const [id, s] of [...retry, ...idle.slice(SWORD_SPARE)]) {
+      this.swords.delete(id);
+      setTimeout(() => this.freeSword(s), 2000);
+    }
+  }
+
+  // Everything a sword was given: on the ground (each of its glows too), in the hand, on the raised arm.
+  freeSword(s) {
+    const gone = new Set(), kill = (o) => { if (o && !gone.has(o)) { gone.add(o); o.destroy(); } };
+    for (const m of s.lying ? [s.lying, ...s.lying.tints.values()] : []) { kill(m.VB); kill(m.IB); kill(m.glowUbo); }
+    for (const t of s.lying?.maps || []) kill(t);
+    for (const h of [s.hand, s.up?.hand]) if (h) for (const k of ['srcBuf', 'sideVB', 'IB', 'lodIB', 'outBuf', 'palette', 'params']) kill(h[k]);
+    kill(s.ubo);
   }
 
   async buildSword(id, s) {
@@ -1310,20 +1373,29 @@ export class Renderer {
     if (id.startsWith('kit/')) { await this.heroLooks.lyingProp(id, s); return; }
     if (id.startsWith('dye/')) { await this.heroLooks.lyingDyed(id, s); return; }
     const { device } = this;
-    const w = WEAPONS.find((x) => x && x.id === id);
-    const buf = await fetch(`${this.base}assets/game/items/${id}.glb`).then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); });
+    // (Made before and let go since, it's this session's own file again: the browser's copy, however old, if it has one.
+    // That works with no connection, as armSword does.)
+    const made = (this.swordsMade ||= new Set());
+    const buf = await fetch(`${this.base}assets/game/items/${id}.glb`, made.has(id) ? { cache: 'force-cache' } : undefined).then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); });
     const glb = parseGLB(buf);
+    made.add(id);
     const pr = glb.json.meshes[0].primitives[0];
     const a = pr.attributes;
     const mat = glb.json.materials[pr.material];
     const srcOf = (t) => glb.json.textures[t.index].source;
     const scale = this.tier.texScale;
-    const [alb, nrm, mr] = await Promise.all([   // (full: held before the eye, as the arms are)
-      this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture), 'rgba8unorm-srgb', scale, true),
-      this.imageTexture(glb, srcOf(mat.normalTexture), 'rgba8unorm', scale, true),
-      this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture), 'rgba8unorm', scale, true),
-    ]);
+    // (Its shape and its three pictures found before any picture is made, and those it made let go if one of them fails:
+    // tried again after a failure, a bad file, or one with a picture missing, would otherwise leave pictures behind each time.)
     const prim = { pos: accessor(glb, a.POSITION), nrm: accessor(glb, a.NORMAL), uv: accessor(glb, a.TEXCOORD_0), idx: accessor(glb, pr.indices) };
+    const srcs = [mat.pbrMetallicRoughness.baseColorTexture, mat.normalTexture, mat.pbrMetallicRoughness.metallicRoughnessTexture].map(srcOf);
+    const got = await Promise.allSettled([   // (full: held before the eye, as the arms are)
+      this.imageTexture(glb, srcs[0], 'rgba8unorm-srgb', scale, true),
+      this.imageTexture(glb, srcs[1], 'rgba8unorm', scale, true),
+      this.imageTexture(glb, srcs[2], 'rgba8unorm', scale, true),
+    ]);
+    const bad = got.find((g) => g.status === 'rejected');
+    if (bad) { for (const g of got) if (g.status === 'fulfilled') g.value.destroy(); throw bad.reason; }
+    const [alb, nrm, mr] = got.map((g) => g.value);
     s.lying = this.lyingModel(prim, alb, nrm, mr, [0, 0, 0, 0]);
     s.tip = prim.pos.reduce((best, v, i) => (i % 3 === 1 ? Math.max(best, v) : best), 0);
     // (A piece of a suit is only ever seen on the ground, or in a slot. So is a skull, for now: the arm in the left hand has its own, fused to it.)
@@ -1343,6 +1415,25 @@ export class Renderer {
       s.ready = true;
       return;
     }
+    // (A weapon or a shield: what it is in the hand, now if one wants it, else when one does.)
+    if (!s.wantHand) { s.later = true; return; }
+    await this.armSword(id, s, glb, prim);
+  }
+
+  // A weapon's or a shield's models for the hand, and the raised arm's: from its file again if the ground's was made
+  // first (sword). Its pictures are the ground one's. (The file as the browser has it, however old, if it has it: that
+  // works with no connection, and keeps the shape the pictures were made for if the game's been updated since.)
+  async armSword(id, s, glb = null, prim = null) {
+    s.later = false;
+    const { device } = this;
+    const w = WEAPONS.find((x) => x && x.id === id);
+    if (!glb) {
+      glb = parseGLB(await fetch(`${this.base}assets/game/items/${id}.glb`, { cache: 'force-cache' }).then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); }));
+      const pr = glb.json.meshes[0].primitives[0], at = pr.attributes;
+      prim = { pos: accessor(glb, at.POSITION), nrm: accessor(glb, at.NORMAL), uv: accessor(glb, at.TEXCOORD_0), idx: accessor(glb, pr.indices) };
+    }
+    const a = glb.json.meshes[0].primitives[0].attributes;
+    const [alb, nrm, mr] = s.lying.maps;
     const vm = this.vms[w ? w.hands : 1];
     if (w) {
       // Carry the staff kind alongside its original model coordinates. Other gear stays untagged.
@@ -1447,7 +1538,7 @@ export class Renderer {
     const bg = device.createBindGroup({ layout: this.bglArmor, entries: [
       { binding: 0, resource: { buffer: ubo } }, { binding: 1, resource: alb.createView() }, { binding: 2, resource: nrm.createView() }, { binding: 3, resource: mr.createView() },
     ] });
-    return { VB: makeBuffer(device, v, GPUBufferUsage.VERTEX), IB: makeBuffer(device, indices, GPUBufferUsage.INDEX), count: indices.length, bg, maps: [alb, nrm, mr], tints: new Map(), radius: reachOf(P) };
+    return { VB: makeBuffer(device, v, GPUBufferUsage.VERTEX), IB: makeBuffer(device, indices, GPUBufferUsage.INDEX), count: indices.length, bg, glowUbo: ubo, maps: [alb, nrm, mr], tints: new Map(), radius: reachOf(P) };
   }
 
   // The same model, glowing a colour: its rarity's, when it's dropped.
@@ -1460,7 +1551,7 @@ export class Renderer {
     const glow = [1, 3, 5].map((i) => (parseInt(hex.slice(i, i + 2), 16) / 255) ** 2.2 * k);
     const ubo = device.createBuffer({ size: 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     device.queue.writeBuffer(ubo, 0, new Float32Array([...glow, 1]));
-    t = { ...model, bg: device.createBindGroup({ layout: this.bglArmor, entries: [
+    t = { ...model, glowUbo: ubo, bg: device.createBindGroup({ layout: this.bglArmor, entries: [
       { binding: 0, resource: { buffer: ubo } }, ...model.maps.map((m, i) => ({ binding: i + 1, resource: m.createView() })),
     ] }) };
     model.tints.set(key, t);
@@ -3045,8 +3136,12 @@ export class Renderer {
     // View model: the arms the snapshot posed, and what's in them.
     const weapon = WEAPONS[snap[H.WEAPON] | 0] || null;
     this.vm = this.vms[weapon ? weapon.hands : 1];
-    const held = weapon && weapon.id !== 'greatsword' ? this.sword(weapon.id) : null;
+    const held = weapon && weapon.id !== 'greatsword' ? this.sword(weapon.id, false, true) : null;
     this.held = held && held.ready ? held : null;
+    this.heldId = weapon?.id;
+    // (A staff just put on in the pack is in the hand only once the pack's shut, the game paused while it's open: so its
+    // hand is asked for now, made behind the pack, and there the moment the pack goes.)
+    if (this.mainHand && this.mainHand !== weapon?.id) this.sword(this.mainHand, false, true);
     // (On the shield the staff's arm rides as it holds it, the staff itself left out: src/sim/player.js poseForSurf.)
     if (snap[H.SURF] > 0.5 && weapon?.hands === 3) this.held = null;
     this.holdingOld = !!weapon && weapon.id === 'greatsword';
@@ -3070,7 +3165,7 @@ export class Renderer {
     this.shieldParts = this.shieldParts || [];
     this.shieldParts.length = 0;
     const surf = snap[H.SURF], shieldUp = snap[H.SHIELD_UP];
-    const shield = this.offHand ? this.sword(this.offHand) : null;
+    const shield = this.offHand ? this.sword(this.offHand, false, true) : null;
     // (A staff's arms have no left of their own, so with one the shield stays on this arm through the jump onto it, until it's the board.)
     if (shield && (surf < 0.5 || (surf < 1.5 && weapon?.hands === 3)) && (!weapon || weapon.hands === 3 || shieldUp > 0)) {
       const arm = this.sword('shield_arm');
@@ -3266,6 +3361,7 @@ export class Renderer {
       if (model.radius !== undefined) { placeSphere(g, g.mat, 0, model.radius); g.inView = inView(this.planes, g.sx, g.sy, g.sz, g.sr); } else { g.sr = -1; g.inView = true; }
     }
     if (nGround) q.writeBuffer(this.itemInstances, 0, this.itemData, 0, nGround * 16);
+    this.trimSwords(performance.now());
 
     // Grass culling input.
     const g = this.grassData;
