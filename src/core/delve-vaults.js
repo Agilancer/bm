@@ -96,6 +96,8 @@ add('table', -26, -26, { hx: 2.6, hz: 1, solid: true, rough: true });
 add('crates', -22, -32); add('barrels', -27, -17);
 add('wreck', -12, -16, { yaw: 2.2, s: 1 });
 add('pool', -12, -27, { r: 5 }); add('reeds', -8, -14, { r: 2 }); add('reeds', -25, -29, { r: 1.5 });
+// (The mudlarks' walks: planks laid on stakes over the worst of the wet, end to end, one gone here and there.)
+for (const [x, z, yaw] of [[-12.5, -24, 0.25], [-9.6, -24.7, 0.25], [-31, -110, 1.3], [-30.4, -113, 1.3], [-29.8, -116, 1.3], [8, -126, 0.6], [10.5, -127.7, 0.6], [16, -108, 2.4]]) add('boards', x, z, { yaw });
 add('sinkhole', -21, -30, { r: 3 });
 // The long gallery: reeds in the wet, the mudlarks' heaps along it, another hole at the blind end of the bore.
 add('reeds', -19.5, -50, { r: 1.3 }); add('heap', -18.4, -74, { r: 1 }); add('reeds', -27.5, -91, { r: 1.2 });

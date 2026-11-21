@@ -260,7 +260,8 @@ export const PROPS_A = {
     K.drum('iron', x, y0 + h, z, r + 0.05, 0.16, N, { r2: r * 0.5, collide: false, turn: yaw });
     // (The lit side: three staves of the glass with the lamp behind them, and the dark of what floats there.)
     const F = frame(x, y0, z, yaw), o = r * Math.cos(Math.PI / N) + 0.015, hw = r * 0.62;
-    face(K, 'blood:flame', F, -hw, hw, h * 0.1, h * 0.9, o);
+    // (The lamp seen through green glass is green: it was 'blood:flame', a red door in the wall with a man in it.)
+    face(K, 'mire:flame', F, -hw, hw, h * 0.1, h * 0.9, o);
     // (And the glass's shine: a pale stave up each shoulder of it.)
     for (const sd of [-1, 1]) { const a = yaw + sd * 1.25, sx = x + Math.sin(a) * (r + 0.012), sz = z + Math.cos(a) * (r + 0.012), tx = Math.cos(a) * 0.07, tz = -Math.sin(a) * 0.07; K.quad('pale:lake', [sx - tx, y0 + h * 0.12, sz - tz], [sx + tx, y0 + h * 0.12, sz + tz], [sx + tx, y0 + h * 0.88, sz + tz], [sx - tx, y0 + h * 0.88, sz - tz], [Math.sin(a), 0, Math.cos(a)]); }
     const P = (u, v) => F(u * r, v * h, o + 0.012), Q = (a, b, c, e) => K.quad('char:stone', P(...a), P(...b), P(...c), P(...e), F.n);

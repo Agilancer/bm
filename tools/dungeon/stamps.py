@@ -2,7 +2,7 @@
 # src/core/delve-stamps-data.js, and laid into a delve's own geometry by src/core/delve-stamps.js (K.stamp), on the
 # game's own tiled paintings, so they cost no draw and no texture of their own.
 #
-# Run in Blender (Blender MCP's execute_blender_code, or blender --background --python tools/dungeon/stamps.py):
+# Run in Blender (Blender MCP's execute_blender_code, or in the background: tools/dungeon/stamps_bg.py says how):
 #   exec(open(r'<repo>/tools/dungeon/stamps.py').read()); build(); export(r'<repo>/src/core/delve-stamps-data.js')
 #
 # Each prop is one object in the collection "stamps". Its materials are named for the game's layers ('iron', 'wood',
@@ -88,8 +88,9 @@ class Mesh:
                 t = i / n * math.tau
                 pts.append(end + (u * math.cos(t) + v * math.sin(t)) * rr)
         faces = [(i, (i + 1) % n, n + (i + 1) % n, n + i) for i in range(n)]
-        if cap:
-            faces.append(tuple(reversed(range(n))))
+        if cap:   # (cap='top': the far end's only, where the near one sits on something and is never seen)
+            if cap != 'top':
+                faces.append(tuple(reversed(range(n))))
             faces.append(tuple(range(n, 2 * n)))
         self._add(m, pts, faces)
 
@@ -214,8 +215,11 @@ def outfall():
         a0, a1 = i / n * math.tau, (i + 1) / n * math.tau
         am = (a0 + a1) / 2
         M.box('$foot', (math.cos(am) * (R + 0.12), -0.08, math.sin(am) * (R + 0.12)), (0.2, 0.2, 0.3), (0, -am, 0))
-    M.cyl('dark:stone', (0, 0.05, 0), (0, -0.16, 0), R, n, cap=False)   # (the bore, dark, going in)
-    M.box('dark:rubble', (0, 0.3, 0), (2 * R, 0.05, 2 * R))   # (and black behind it)
+    # The bore: a short tube of sooted brick in front of the wall's face (the wall isn't cut), shut at its back by a disc
+    # of black, so the mouth reads as a hole going in and not as a ring stuck on the stone.
+    M.cyl('char:stone', (0, -0.035, 0), (0, -0.2, 0), R, n, cap=False)
+    M.cyl('char:rubble', (0, -0.03, 0), (0, -0.04, 0), R * 1.02, n)
+    M.cyl('dark:stone', (0, -0.2, 0), (0, -0.21, 0), R + 0.02, n, R + 0.02, cap=False)
     M.box('$foot', (0, -0.3, -R - 0.12), (1.0, 0.5, 0.12))
     M.box('moss:rubble', (0, -0.42, -R - 0.17), (0.5, 0.25, 0.04))
     M.spot('lip', (0, -0.5, -R - 0.06))
@@ -223,6 +227,42 @@ def outfall():
 
 
 BUILDERS = [lantern_wall, lantern_hang, streetgrate, outfall]
+
+
+def candles():
+    """The grave-singers' candles: a rough slab with a crowd of tallow candles stuck to it in their own wax, burnt down to
+    different heights, wax run down them and pooled. Spots f0.. at each wick (src/core/delve-build.js lights the tallest)."""
+    M = Mesh('candles')
+    M.box('dark:rubble', (0, 0, 0.05), (0.62, 0.44, 0.1), (0, 0, 0.1))
+    M.cyl('white', (0.02, 0.0, 0.1), (0.02, 0.0, 0.115), 0.26, 9, 0.22, cap='top')   # (the wax all run together)
+    cs = [(-0.16, -0.08, 0.34), (0.0, 0.06, 0.26), (0.15, -0.05, 0.2), (-0.05, -0.12, 0.14), (0.2, 0.1, 0.11), (-0.2, 0.1, 0.22), (0.08, -0.15, 0.08)]
+    for i, (x, y, h) in enumerate(cs):
+        r = 0.028 + 0.006 * (i % 3)
+        M.cyl('white', (x, y, 0.11), (x, y, 0.11 + h), r, 6, r * 0.92, cap='top')
+        M.cyl('white', (x + 0.01, y, 0.11), (x + 0.012, y, 0.11 + h * 0.55), r * 1.2, 4, r * 1.02, cap='top')   # (a run of wax down it)
+        M.cyl('dark:iron', (x, y, 0.11 + h), (x, y, 0.11 + h + 0.018), 0.004, 3, cap=False)
+        M.spot('f%d' % i, (x, y, 0.11 + h + 0.012))
+    return M.done()
+
+
+def boards():
+    """A mudlarks' walk: three metres of planks laid across two runners on stakes driven into the mud, one plank gone.
+    The origin at the walk's middle, its top at z = 0.28; it runs along x."""
+    M = Mesh('boards')
+    for sy in (-0.42, 0.42):
+        M.box('dark:wood', (0, sy, 0.17), (3.0, 0.1, 0.09), (0.02 * sy, 0, 0))
+        for sx in (-1.3, 0.0, 1.3):
+            M.box('dark:wood', (sx, sy + 0.06, 0.02), (0.08, 0.08, 0.5), (0.08 * sx, 0.1 * sy, 0))
+    for i in range(12):
+        if i == 7:
+            continue
+        x = -1.38 + i * 0.25
+        M.box('wood', (x, 0.03 * ((i * 5) % 3 - 1), 0.245 + 0.012 * ((i * 3) % 2)), (0.22, 1.05 + 0.08 * (i % 3), 0.04), (0.03 * ((i * 7) % 3 - 1), 0, 0.04 * ((i * 5) % 3 - 1)))
+    M.box('wood', (0.38, -0.55, 0.06), (0.22, 0.9, 0.04), (0.5, 0.2, 1.2))   # (the one that's gone, in the mud beside)
+    return M.done()
+
+
+BUILDERS += [candles, boards]
 
 
 def build(only=None):

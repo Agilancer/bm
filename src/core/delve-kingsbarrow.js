@@ -74,6 +74,8 @@ add('doorslab', 0, -13.4, { w: 3, h: 4.6 }); add('shields', -7.8, -4, { yaw: Mat
 for (let z = -62; z <= -30; z += 8) { add('lintel', 0, z, { hx: 5 }); add('urn', z % 16 ? -4 : 4, z + 4); }
 // The South Walk: the head of the king's stair, a ringstone either side of it, the seal's two lamps.
 add('ringstone', -9, -87, { r: 0.7 }); add('ringstone', 9, -87, { r: 0.7 }); add('brazier', -8, -78.5); add('brazier', 8, -78.5);
+// (And the singers' own lights round the seal they keep: tallow, stuck down in crowds on the stone, burnt low in a ring.)
+for (const [x, z] of [[-6.5, -82.5], [6.5, -82.5], [-2.6, -77.6], [2.6, -77.6], [-6, -86.6], [6, -86.6]]) add('candles', x, z, { s: 1.3 });
 // The walks: lintels across them, urns along them. The east walk is the guard's: his dead stood in their mail down both
 // walls of it. The west is the bone-walk: stacked to head height the length of it. (Told apart at a glance, coming back.)
 for (const x of [-30, -18, 18, 30]) { add('lintel', x, -82, { hz: 6 }); add('lintel', x, -178, { hz: 6 }); }
@@ -85,7 +87,7 @@ for (const z of [-154, -108]) { add('bonestack', -49.6, z, { yaw: Math.PI / 2 })
 // king's hounds on their sides; the shields of the guard who stood.
 for (const [x, z] of [[44, -84], [44, -176], [-44, -176], [-44, -84]]) add('ringstone', x + (x > 0 ? 6 : -6), z + (z > -100 ? 6 : -6), { r: 0.6 });
 add('table', 51, -90, { hx: 1, hz: 3, solid: true, rough: true }); add('gravegoods', 47, -78, { r: 1.6 }); add('urn', 37, -91);
-for (const x of [47, 50, 53]) add('bier', x, -172, { hx: 0.9, hz: 2.2, solid: true });
+for (const x of [47, 50, 53]) add('bier', x, -172, { hx: 0.9, hz: 2.2, solid: true }); for (const x of [47, 50, 53]) add('candles', x, -168.9);
 add('gravegoods', 37, -170, { r: 1.3 });
 for (let i = 0; i < 5; i++) { const a = 2.2 + i * 0.8; add('houndbones', -44 + Math.round(Math.sin(a) * 6), -176 - Math.round(Math.cos(a) * 6), { yaw: a }); }
 add('shields', -53.8, -84, { yaw: Math.PI / 2 }); add('shields', -44, -93.8, { yaw: 0 }); add('urn', -50, -77);

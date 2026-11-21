@@ -223,7 +223,7 @@ export const PROPS_B = {
     for (let k = 0; k < N; k++) { const a = Math.PI - k / N * Math.PI, b = Math.PI - (k + 1) / N * Math.PI; K.quad(glass, F(0, up + h, 0.04), F(Math.cos(a) * w, up + h + Math.sin(a) * w * 0.6, 0.04), F(Math.cos(b) * w, up + h + Math.sin(b) * w * 0.6, 0.04), F(Math.cos(b) * w, up + h + Math.sin(b) * w * 0.6, 0.04), F.n); }
     // (Paler toward its head on one side, as a glass is that has a light somewhere before it.)
     if (!p.broken && !p.draped) K.quad('frost:ph_grey_plaster', F(-w * 0.9, up + h * 0.45, 0.045), F(w * 0.1, up + h * 0.97, 0.045), F(-w * 0.9, up + h * 0.97, 0.045), F(-w * 0.9, up + h * 0.97, 0.045), F.n);
-    if (!p.broken && !p.draped) { K.quad('pale:flame', F(-w * 0.8, up + h * 0.3, 0.05), F(-w * 0.76, up + h * 0.3, 0.05), F(-w * 0.52, up + h * 0.86, 0.05), F(-w * 0.56, up + h * 0.86, 0.05), F.n); K.quad('pale:stone', F(-w * 0.6, up + h * 0.2, 0.05), F(-w * 0.56, up + h * 0.2, 0.05), F(-w * 0.3, up + h * 0.8, 0.05), F(-w * 0.34, up + h * 0.8, 0.05), F.n); }
+    if (!p.broken && !p.draped) { K.quad('white', F(-w * 0.8, up + h * 0.3, 0.05), F(-w * 0.76, up + h * 0.3, 0.05), F(-w * 0.52, up + h * 0.86, 0.05), F(-w * 0.56, up + h * 0.86, 0.05), F.n); K.quad('pale:stone', F(-w * 0.6, up + h * 0.2, 0.05), F(-w * 0.56, up + h * 0.2, 0.05), F(-w * 0.3, up + h * 0.8, 0.05), F(-w * 0.34, up + h * 0.8, 0.05), F.n); }
     if (p.broken) for (let k = 0; k < 5; k++) { const q = F(-w + (k + 0.5) * w * 0.4, 0, 0.5 + (k % 3) * 0.35); K.spike('ice', q[0], q[1], q[2], 0.14 + (k % 2) * 0.08, 0.3 + (k % 3) * 0.2, 3, k); }
     if (p.draped) { K.quad(p.cloth || 'dark:cloth_oat', F(-w - 0.3, up + h * 0.2, 0.2), F(w + 0.3, up + h * 0.2, 0.2), F(w + 0.2, up + h + w * 0.6, 0.12), F(-w - 0.2, up + h + w * 0.6, 0.12), F.n); }
   },
@@ -299,7 +299,7 @@ export const PROPS_B = {
     const yaw = p.yaw || 0, F = frame(x, y, z, yaw), hx = p.hx || 2.2;
     K.box('dark:p2_worn_floorboards', x, y, z, hx, 0.9, 0.7, yaw, NO);
     for (let k = 0; k < 3; k++) { const u = -hx + 0.7 + k * (hx * 0.62); K.quad('slate:ice', F(u - 0.5, 0.93 + k * 0.02, -0.4), F(u + 0.5, 0.93 + k * 0.02, -0.5), F(u + 0.6, 0.93 + k * 0.02, 0.3), F(u - 0.4, 0.93 + k * 0.02, 0.4), [0, 1, 0]); }
-    for (let k = 0; k < 2; k++) { const u = -hx * 0.5 + k * hx; K.quad('slate:ice', F(u - 0.6, 0.9, -0.6), F(u + 0.6, 0.9, -0.6), F(u + 0.6, 2.3, -0.5), F(u - 0.6, 2.3, -0.5), F.n); K.quad('pale:flame', F(u - 0.4, 1.5, -0.59), F(u - 0.36, 1.5, -0.59), F(u - 0.2, 2.2, -0.49), F(u - 0.24, 2.2, -0.49), F.n); }
+    for (let k = 0; k < 2; k++) { const u = -hx * 0.5 + k * hx; K.quad('slate:ice', F(u - 0.6, 0.9, -0.6), F(u + 0.6, 0.9, -0.6), F(u + 0.6, 2.3, -0.5), F(u - 0.6, 2.3, -0.5), F.n); K.quad('white', F(u - 0.4, 1.5, -0.59), F(u - 0.36, 1.5, -0.59), F(u - 0.2, 2.2, -0.49), F(u - 0.24, 2.2, -0.49), F.n); }
     // (The frame: two gilt sides and an arched head, nothing in it, leant on the bench's end.)
     const G = (u, v) => F(hx + 0.25 + v * 0.22, v, u);
     bar(K, 'gold', G(-0.5, 0), G(-0.5, 1.7), 0.1); bar(K, 'gold', G(0.5, 0), G(0.5, 1.7), 0.1);

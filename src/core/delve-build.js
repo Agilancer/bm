@@ -858,12 +858,13 @@ export const PROPS = {
       K.quad(p.layer || 'cloth_red', P(u0, -b), P(u1, -b), P(u1, b), P(u0, b), [0, 1, 0]);
     }
   },
+  // A crowd of tallow candles stuck in their own wax on a slab, burnt down to different heights (modelled in Blender:
+  // tools/dungeon/stamps.py candles). Their flames are tallow's, whatever the delve's own; the tallest gives the glow, and
+  // the group its light (src/gfx/renderer.js). p.yaw turns it (else a turn of its own); p.s sizes it.
   candles(K, d, p, x, y, z) {
-    const y0 = y + (p.up || 0);
-    for (const [ox, oz, h] of [[0, 0, 0.5], [0.22, 0.1, 0.34], [-0.1, 0.24, 0.42], [0.1, -0.2, 0.26]]) {
-      K.drum('pale:stone', x + ox, y0, z + oz, 0.05, h, 5, NO);
-      fire(K, d, x + ox, y0 + h, z + oz, 0.05, 0.16, { glow: ox ? 0 : 0.5 });
-    }
+    const y0 = y + (p.up || 0), yaw = p.yaw ?? hash2(x * 1.7, z * 2.3) * TAU, s = p.s || 1;
+    const sp = stamp(K, d, 'candles', x, y0, z, yaw, { s });
+    for (const [k, [fx, fy, fz]] of Object.entries(sp)) fire(K, d, fx, fy, fz, 0.035 * s, 0.11 * s, { hue: 'tallow', glow: k === 'f0' ? 0.45 * s : 0 });
   },
   // A circle cut in the floor and filled with black glass: where a working is made.
   circle(K, d, p, x, y, z) {
@@ -1438,6 +1439,9 @@ export const PROPS = {
   },
   // A pipe's mouth in a wall, a little water out of it over its lip and down into a puddle (tools/dungeon/stamps.py outfall).
   // yaw: the way out of the wall; up: its middle over the floor. Found on the wall behind x, z along -yaw.
+  // A mudlarks' walk of planks on stakes over wet ground (modelled in Blender: tools/dungeon/stamps.py boards), along
+  // p.yaw (0: along x). Not solid: it's walked over, a hand above the mud.
+  boards(K, d, p, x, y, z) { stamp(K, d, 'boards', x, y - 0.06, z, p.yaw || 0, { s: p.s || 1 }); },
   outfall(K, d, p, x, y, z) {
     const nx = Math.sin(p.yaw || 0), nz = Math.cos(p.yaw || 0);
     let wx = x, wz = z;

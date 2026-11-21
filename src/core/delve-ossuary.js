@@ -106,6 +106,7 @@ const props = [];
   // ---- the Sanctuary: the altar on its step at the far end, and behind it a wall of skulls to the roof with his mark on
   // it; the four piers of bone; the fonts; skulls up the west wall. Fire at the altar, and at the way in; a ring of candles.
   add('skullwall', ALTAR[0], -129.86, { yaw: 0, w: 12, h: 14, s: 0.36 });
+  add('candles', ALTAR[0] - 3.6, ALTAR[1] + 1.4, { s: 1.2 }); add('candles', ALTAR[0] + 3.6, ALTAR[1] + 1.4, { s: 1.2 });
   add('altar', ALTAR[0], ALTAR[1], { hx: 2.6, hz: 1 }); add('mark', ALTAR[0], -129.2, { up: 9.6, r: 2.2, back: -1 });
   for (const [x, z] of BONE_PIERS) add('bonepier', x, z, { hx: 1.4, hz: 0.7, solid: true });
   add('bonefont', 12, -123.4, { r: 0.9 }); add('bonefont', 24, -123.4, { r: 0.9 });

@@ -596,6 +596,10 @@ export class Renderer {
       // (And the street's grates in a sewer's vault, src/core/delve-build.js streetgrate: the day down through each, cold and
       // steady, a smaller pool than a light well's.)
       for (const p of d.props) if (p.kind === 'streetgrate') { const x = d.x + p.x, z = d.z + p.z, fy = caveFloorY(x, z); warrens.push({ p: [x, Math.min(caveRoofY(x, z) - 1.2, fy + 5), z], c: [0.62, 0.72, 0.9], r: 13, i: 26, flicker: 0, prio: 20 }); }
+      // (A great jar of green glass with a lamp behind it, the Undercroft's: its own green on what's round it.)
+      for (const p of d.props) if (p.kind === 'glassjar' && (p.r || 1) >= 1) { const x = d.x + p.x, z = d.z + p.z, fy = caveFloorY(x, z); warrens.push({ p: [x, fy + 2, z], c: [0.3, 0.85, 0.4], r: 7, i: 4, flicker: 0.1 }); }
+      // (A crowd of candles, src/core/delve-build.js candles: a small warm pool round it, tallow's, flickering.)
+      for (const p of d.props) if (p.kind === 'candles') { const x = d.x + p.x, z = d.z + p.z, fy = caveFloorY(x, z); warrens.push({ p: [x, fy + (p.up || 0) + 0.6, z], c: [1, 0.62, 0.3], r: 5 * (p.s || 1), i: 1.8 * (p.s || 1), flicker: 1 }); }
       for (const p of d.props) if (p.kind === 'daylight') { const x = d.x + p.x, z = d.z + p.z, fy = caveFloorY(x, z); warrens.push({ p: [x, Math.min(caveRoofY(x, z) - 2.2, fy + 6.5), z], c: [0.7, 0.78, 0.95], r: 20 + p.r * 2.5, i: 70 + p.r * 8, flicker: 0, prio: 80 }); }
       // (The Elder Gods' islands: the Galeward's pylons, the Cinderwell's vent, the altar, the Rimespire's claws. src/core/delve-build.js)
       if (d.style === 'void') for (const p of d.props) {
