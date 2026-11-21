@@ -1597,7 +1597,8 @@ class GameView {
     this.busySum = 0; this.busyN = 0; this.timed = []; this.benched = false;
     renderer.onBusy = (ms) => {
       this.busySum += ms; this.busyN++;
-      if (this.idle && !this.benched) this.timeFrame(ms);
+      // (Not a frame that finishes after the phone's stood upright: what it's drawn into is let go then, Renderer.rest.)
+      if (this.idle && !this.benched && !this.upright) this.timeFrame(ms);
     };
   }
 

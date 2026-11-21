@@ -3187,11 +3187,11 @@ The owner's iPhone again (the home-screen app, with the pictures above): closed 
 (8, -36), the note's last things a touch, then the phone turned upright. The turn and the new size are one event, noted
 at once; the note is kept again every 8 s, and "Just before" means it wasn't kept 10 s after, so the page went at the
 turn or within some 16 s of it. In Chrome made an iPhone (956 x 440 at three pixels to the point, the Mobile tier) a turn
-costs nothing that can be measured: nothing the page holds grows. On an iPhone it's the moment the page is held twice,
-every layer at the old size and the new while it's laid out again, and a page near the end of what it's allowed goes
-then. What an iPhone allows a page is reported (Apple's developer forum, from the phones' own reports) as about 2 GB
+costs nothing that can be measured: nothing the page holds grows. On an iPhone it's thought to be the moment the page is
+held twice, every layer at the old size and the new while it's laid out again, so that a page near the end of what it's
+allowed would go then. That hasn't been seen on an iPhone; the phone's own report of the kill (below) would say. What an iPhone allows a page is reported (Apple's developer forum, from the phones' own reports) as about 2 GB
 whatever the phone has, `ActiveHard 2048 MB` (older guidance said 1.5), counting what's asked of the GPU with the page's
-own memory: in the town here, the page's process 1.0 GB just collected and up to 1.6 between, and some 560 MB asked of
+own memory: in the town here (in Chrome made an iPhone), the page's process 1.0 GB just collected and up to 1.6 between, and some 560 MB asked of
 the GPU.
 
 The game had grown since the twenty-one minutes above (25377a5d), measured the same way in the town: the page's process
@@ -3208,7 +3208,7 @@ thread, a heap snapshot each side (`snap` in `tools/memory/raw.mjs`) said: Phobo
 - **Nothing to draw into while upright** (`Renderer.rest`, from `turned` in `src/main.js`). Upright nothing's drawn, so on
   a phone the screen's targets are let go and the canvas is made a pixel. They go once the GPU's done with what it was
   sent, so not at the very moment of the turn. Turned back, the next frame makes them at the screen's size, as at the
-  start; under the title too, which draws a few frames again so the village is back behind it.
+  start; under the title too, which draws its few frames again.
 - **The damage numbers and the foes' life bars put away upright** (`index.html`), with the rest of what's over the
   world. Upright the frame stops, so whatever numbers were up stood frozen under the cover.
 
@@ -3231,13 +3231,15 @@ for 10 s and back:
 
 | | `main` | Now |
 | --- | --- | --- |
+| Loading and the first minute | 1,597 and 1,591 MB | 1,606 and 1,717 MB |
 | 30 s sideways, before the turn | 1,417 and 1,362 MB | 1,421 and 1,400 MB |
 | The 10 s upright | 1,304 and 1,272 MB | 1,309 and 1,281 MB |
 | The 30 s after turning back | 1,302 and 1,277 MB | 1,309 and 1,318 MB |
 | 30 to 60 s after | 1,412 and 1,315 MB | 1,308 and 1,432 MB |
 | Turned back | | the picture back at once, no GPU errors |
 
-So what this saves is real once collected, and lost in the swing between collections: in Chrome the page makes some 55 MB
+(The 1,717 is one run of two; whether it's more than the runs' spread isn't known, and loading isn't when the game
+went.) So what this saves is real once collected, and lost in the swing between collections: in Chrome the page makes some 55 MB
 a second of things it throws away, and the simulation's thread some 44 (`sample` in `tools/memory/raw.mjs`), and the
 process rises 130 MB in the 20 s after a collection. Some of that may not be made on an iPhone at all: Chrome keeps many
 a number as a small object of its own, and makes an array of every `Math.hypot`'s arguments, which Safari's engine

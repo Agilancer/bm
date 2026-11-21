@@ -2544,8 +2544,8 @@ export class Renderer {
   }
 
   // A phone stood upright draws nothing till it's turned back (src/main.js turned), so for the while it lets go of what it
-  // draws into: the screen's targets, and the canvas's own pictures, the canvas made a pixel. An iPhone turning makes every
-  // piece of the page again at the new size while it still holds the old, and a game near its memory's end can go then.
+  // draws into: the screen's targets, and the canvas's own pictures, the canvas made a pixel. An iPhone turning is thought to
+  // make every piece of the page again at the new size while it still holds the old, when a game near its memory's end can go.
   // Turned back, the next frame's resize makes them as at the start.
   rest() {
     if (!this.gpu.mobile) return;
