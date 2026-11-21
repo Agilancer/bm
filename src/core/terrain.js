@@ -9,6 +9,7 @@ import { OLD_CHURCH_GROUND, oldChurchGround } from './town.js';
 import { PORTAL, PORTAL_PAD } from './dungeon.js';
 import { HUNT_PATHS } from './hunts.js';
 import { bedHeight } from './roadbed.js';
+import { chasmBank } from './east.js';
 
 export let openingTerrain = false;
 export function setOpeningTerrain(enabled) { openingTerrain = !!enabled; }
@@ -109,7 +110,10 @@ export function groundBase(x, z) { return landHeight(x, z, wild(x, z)); }
 
 export function terrainHeight(x, z) {
   // The land, and every way out in it laid level across and eased along (src/core/roadbed.js).
-  let level = bedHeight(x, z, landHeight(x, z, wild(x, z)));
+  const base = landHeight(x, z, wild(x, z));
+  let level = bedHeight(x, z, base);
+  // (But never cut back into the Chasm's walls, which stand sheer from its floor: src/core/east.js chasmBank.)
+  if (x > 7400 && x < 9000) level = chasmBank(x, z, level, base);
   // The hill's top levelled, and its roads cut and banked into it, on over that.
   if (x < -20) {
     const top = Math.hypot(x - SUMMIT.x, z - SUMMIT.z);

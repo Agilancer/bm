@@ -15,6 +15,7 @@ import { PORTAL_MODELS, buildSites, buildSitesApart, buildUnder, dropSiteGeometr
 import { PhobosNear } from './phobos-near.js';
 import { adoptCityDoors } from '../core/phobos-towers.js';
 import { StairsNear } from './stairs-near.js';
+import { CliffSkin } from './cliffs.js';
 import { DELVES, PORTAL_SPOTS, braziers, caveFloorY, caveRoofY, delveAt, inDungeon, torches } from '../core/dungeon.js';
 import { DOOR, HALL, hallLights, inHall } from '../core/testhall.js';
 import { SlimeBodies } from './slimes.js';
@@ -43,7 +44,7 @@ import { MipGen, makeBuffer, mipCountFor, loadTextureArray, decodeScaledBitmap, 
 import { LeanPictures, pictureOf } from './lean-pictures.js';
 import { AstcPacker } from './astc.js';
 import { noteEvent } from '../core/lastrun.js';
-import { ARMOR, ARMOR_KIT, ARMOR_TRUE, GRASS, GRASS_CULL, ITEM, PROP, SHADOW, SKY, SKY_BAKE, STATIC, STATIC_SLOTS, TERRAIN, VIEWMODEL, VIEWMODEL_SKULL, staticSoftCut } from './materials.js';
+import { ARMOR, ARMOR_KIT, ARMOR_TRUE, GRASS, GRASS_CULL, ITEM, PROP, SHADOW, SKY, SKY_BAKE, STATIC, STATIC_SLOTS, TERRAIN, TERRAIN_CLIFF, VIEWMODEL, VIEWMODEL_SKULL, staticSoftCut } from './materials.js';
 import { AO, BLOOM, COMPOSITE, PARTICLE_DRAW, PARTICLE_SIM, SHAFTS, STAIN, TRAIL } from './post.js';
 import { SpellFX } from './spellfx.js';
 import { bodyRadius, inCascade } from './shadowcull.js';
@@ -718,6 +719,8 @@ export class Renderer {
       { binding: 4, visibility: VF, texture: { sampleType: 'float' } },
       { binding: 5, visibility: VF, buffer: { type: 'read-only-storage' } },
       { binding: 6, visibility: VF, buffer: { type: 'read-only-storage' } },
+      { binding: 7, visibility: VF, texture: { sampleType: 'float', viewDimension: '2d-array' } },
+      { binding: 8, visibility: VF, texture: { sampleType: 'float', viewDimension: '2d-array' } },
     ] });
     this.bglStatic = device.createBindGroupLayout({ entries: [
       { binding: 0, visibility: VF, texture: { sampleType: 'float', viewDimension: '2d-array' } },
@@ -758,6 +761,9 @@ export class Renderer {
       { binding: 4, resource: this.farKind.createView() },
       { binding: 5, resource: { buffer: this.roadIdx } },
       { binding: 6, resource: { buffer: this.roadSeg } },
+      // (The PH2 pack: the stone the cliffs round Phobos are painted in, materials.js TERRAIN.)
+      { binding: 7, resource: this.p2Color.createView({ dimension: '2d-array' }) },
+      { binding: 8, resource: this.p2Detail.createView({ dimension: '2d-array' }) },
     ] });
   }
 
@@ -2137,11 +2143,25 @@ export class Renderer {
     const layout = (...g) => device.createPipelineLayout({ bindGroupLayouts: g });
     const module = (code) => this.shader(code);
 
-    const terrainMod = module(TERRAIN.replaceAll('FAR_SPAN', FAR_SPAN_WGSL).replaceAll('FAR_ORG', FAR_ORG_WGSL));
+    // (The cliffs' stone by its layer in the PH2 pack: src/gfx/materials.js TERRAIN.)
+    const p2L = (name) => String(Math.max(0, this.p2.names.indexOf(name)));
+    const landCode = (code) => code.replaceAll('FAR_SPAN', FAR_SPAN_WGSL).replaceAll('FAR_ORG', FAR_ORG_WGSL)
+      .replaceAll('P2_CLIFF_L', p2L('p2_granite_cliff')).replaceAll('P2_COLS_L', p2L('p2_basalt_columns'))
+      .replaceAll('P2_SCREE_L', p2L('p2_scree')).replaceAll('P2_GRASS_L', p2L('p2_dead_grass'));
+    const terrainMod = module(landCode(TERRAIN));
     this.pTerrain = device.createRenderPipeline({
       layout: layout(this.bgl0, this.bglArr2),
       vertex: { module: terrainMod, entryPoint: 'vs', buffers: [{ arrayStride: 24, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }, { shaderLocation: 1, offset: 12, format: 'float32x3' }] }] },
       fragment: { module: terrainMod, entryPoint: 'fs', targets },
+      primitive: { topology: 'triangle-list', cullMode: 'back' },
+      depthStencil: depth(), multisample: ms,
+    });
+    // The cliffs' skin round Phobos (src/gfx/cliffs.js): the land's own shader, its vertices a little toward the eye.
+    const cliffMod = module(landCode(TERRAIN_CLIFF));
+    this.pTerrainCliff = device.createRenderPipeline({
+      layout: layout(this.bgl0, this.bglArr2),
+      vertex: { module: cliffMod, entryPoint: 'vs', buffers: [{ arrayStride: 36, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }, { shaderLocation: 1, offset: 12, format: 'float32x3' }, { shaderLocation: 2, offset: 24, format: 'float32x3' }] }] },
+      fragment: { module: cliffMod, entryPoint: 'fs', targets },
       primitive: { topology: 'triangle-list', cullMode: 'back' },
       depthStencil: depth(), multisample: ms,
     });
@@ -2267,6 +2287,7 @@ export class Renderer {
     const shLayout = layout(this.bglShadow);
     const posVB = (stride) => [{ arrayStride: stride, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }] }];
     this.pShTerrain = device.createRenderPipeline({ layout: shLayout, vertex: { module: shMod, entryPoint: 'vsPos', buffers: posVB(24) }, primitive: { cullMode: 'none' }, depthStencil: shDepth });
+    this.pShCliff = device.createRenderPipeline({ layout: shLayout, vertex: { module: shMod, entryPoint: 'vsPos', buffers: posVB(36) }, primitive: { cullMode: 'none' }, depthStencil: shDepth });
     this.pShStatic = device.createRenderPipeline({ layout: shLayout, vertex: { module: shMod, entryPoint: 'vsPos', buffers: posVB(36) }, primitive: { cullMode: 'none' }, depthStencil: shDepth });
     this.pShSkin = device.createRenderPipeline({ layout: shLayout, vertex: { module: shMod, entryPoint: 'vsSkin', buffers: [{ arrayStride: 16, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x4' }] }] }, primitive: { cullMode: 'none' }, depthStencil: shDepth });
     this.pShProp = device.createRenderPipeline({
@@ -2723,6 +2744,8 @@ export class Renderer {
     this.phobosNear.smoke(this.frameDt || 1 / 60, cam);
     // (The ways' flights of steps near the eye: src/gfx/stairs-near.js.)
     (this.stairsNear ||= new StairsNear(this)).update(cam);
+    // (The cliffs' skin round Phobos: src/gfx/cliffs.js.)
+    (this.cliffSkin ||= new CliffSkin(this)).update(cam);
     this.crows(cam);
     this.ash(cam);
     this.slimeBodies?.update(snap, snap[H.TIME], cam);
@@ -2992,6 +3015,7 @@ export class Renderer {
       sp.setVertexBuffer(0, this.terrainVB);
       sp.setIndexBuffer(this.terrainIB, 'uint32');
       sp.drawIndexed(this.terrainCount);
+      if (this.cliffSkin?.count) { sp.setPipeline(this.pShCliff); this.cliffSkin.draw(sp); }
     }
     sp.setPipeline(this.pShStatic);
     this.drawUnderShadow(sp);
@@ -3024,6 +3048,7 @@ export class Renderer {
         sp.setVertexBuffer(0, this.terrainVB);
         sp.setIndexBuffer(this.terrainIB, 'uint32');
         sp.drawIndexed(this.terrainCount);
+        if (this.cliffSkin?.count) { sp.setPipeline(this.pShCliff); this.cliffSkin.draw(sp); }
       }
       sp.setPipeline(this.pShStatic);
       this.drawUnderShadow(sp);
@@ -3709,8 +3734,10 @@ export class Renderer {
       mp.setVertexBuffer(0, this.grassFar);
       mp.drawIndirect(this.grassFarArgs, 0);
     }
-    mp.setPipeline(this.pTerrain);
     mp.setBindGroup(1, this.terrainBG);
+    // (The cliffs' skin first: the land's own face behind it is then never shaded.)
+    if (this.cliffSkin?.count) { mp.setPipeline(this.pTerrainCliff); this.cliffSkin.draw(mp); }
+    mp.setPipeline(this.pTerrain);
     mp.setVertexBuffer(0, this.terrainVB);
     mp.setIndexBuffer(this.terrainIB, 'uint32');
     mp.drawIndexed(this.terrainCount);
