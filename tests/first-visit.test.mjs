@@ -6,7 +6,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { QuestBook, RULES, areaAt, hasArea, placeSpot } from '../src/folk/quests.js';
-import { DOOR_STEP, FIRST_VISIT, FIRST_VISIT_LEVELS, FIRST_VISIT_RULES, SILL_DOOR } from '../src/folk/first-visit.js';
+import { DOOR_DUE, DOOR_STEP, FIRST_VISIT, FIRST_VISIT_LEVELS, FIRST_VISIT_RULES, SILL_DOOR } from '../src/folk/first-visit.js';
 import { QUESTS } from '../src/folk/lines/quests.js';
 import { LINES, QUESTS as FV_QUESTS } from '../src/folk/lines/first-visit.js';
 import { FOLK, POSTED } from '../src/folk/people.js';
@@ -41,6 +41,17 @@ test('the first visit follows Bram\'s first errand, and stays at a new player\'s
   for (const k of ['sill_gibbets', 'sill_carrion']) { const l = LAIRS.find((q) => q.key === k); assert.ok(l && l.lvl <= 5, `${k}: level ${l?.lvl}`); }
   assert.ok(REDOUBT.level <= 6 && REDOUBT.party === false);
   assert.equal(DOOR_STEP.length > 0, true);
+});
+
+test("Lisandra's door is due at twelve minutes played, Bram's errand done or not", () => {
+  assert.ok(DOOR_DUE <= 12 * 60);
+  const b = book();
+  b.begin('lisandra_work');
+  assert.ok(!b.offers('lisandra').includes('the_door_east'), 'offered before its time');
+  b.flags.add(FIRST_VISIT_RULES.the_door_east.due);
+  assert.ok(b.offers('lisandra').includes('the_door_east'), 'not offered once due');
+  b.follow = 'door';
+  assert.equal(b.followed(), 'door');
 });
 
 test('Wenna stands on the Sill by the door, clear of the city\'s lairs, with all her words', () => {

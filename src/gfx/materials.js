@@ -731,7 +731,7 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
       if (tintK == 8u) { emissive = vec3f(dot(emissive, vec3f(0.3, 0.5, 0.2))) * vec3f(0.95, 0.1, 0.035); }
       // (The sky seen up a slot cut in a roof ('slate:flame', the Redoubt under the Sill's court and hall): a steady pale
       // overcast, no flicker and no flame's heat in it. src/core/delve-build.js daylight.)
-      if (tintK == 7u) { emissive = vec3f(1.15, 1.22, 1.36); }
+      if (tintK == 7u) { emissive = vec3f(0.6, 0.65, 0.74); }   // (a mid grey, not white: at 1.2 it burnt out to a flat blob)
       albedo = vec3f(0.0);
       if (tintK == 12u) { albedo = vec3f(0.03, 0.034, 0.042) * (0.6 + 0.8 * paneK) * (1.0 - night); metal = 0.04 * (1.0 - night); rough = mix(0.5, 0.72, paneK); ao = mix(0.55, 1.0, night); }
     }

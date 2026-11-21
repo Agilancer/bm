@@ -56,6 +56,7 @@ import { HeroPlayUI } from './ui/heroplay.js';
 import { PartyBook } from './ui/partybook.js';
 import { fits, partyDrops, useKit } from './items/partygear.js';
 import { TownClient } from './folk/client.js';
+import { DOOR_DUE } from './folk/first-visit.js';
 import { FolkBodies } from './gfx/folk.js';
 import { TownUI } from './ui/folk.js';
 import { BOSS_CHEST, LAST_CHEST, hands, matName, RARITIES } from './items/items.js';
@@ -976,6 +977,15 @@ async function boot(plan, poolSize) {
     }
     if (!input.enabled || state.paused) return;
     played += dt; playT += dt; runT += dt; noteT += dt;
+    // Lisandra's door east, due at twelve minutes played whatever Bram's errand has come to: the first visit to Phobos is to
+    // come in the game's first quarter hour (src/folk/first-visit.js DOOR_DUE). Once her own work's taken, so she's met.
+    const Q = townUI.quests;
+    if (played > DOOR_DUE && Q.q.lisandra_work && !Q.q.the_door_east && !Q.done('bed_and_bell') && !Q.flags.has('door_due')) {
+      Q.flags.add('door_due');
+      if (Q.follow !== 'off') Q.follow = 'door';
+      townUI.note('Lisandra has a door to show you. She waits where the Long Road comes into town.', 'quest');
+      Q.on.change();
+    }
     if (playT > AUTOSAVE_EVERY) { playT = 0; autosave(); }
     // The run's note (src/core/lastrun.js): how long it's been played and where you stand, for the start after a death.
     if (noteT > 8) {

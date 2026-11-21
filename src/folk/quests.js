@@ -162,7 +162,7 @@ export class QuestBook {
     if (this.follow === 'off') return null;
     if (this.follow === 'start' && !this.started()) return 'start';
     // (Bram's errand done: Lisandra, with her door east, till it's taken. src/folk/first-visit.js.)
-    if (this.follow === 'door' && this.done('bed_and_bell') && !this.q.the_door_east && RULES.the_door_east) return 'door';
+    if (this.follow === 'door' && this.needsMet('the_door_east') && !this.q.the_door_east && RULES.the_door_east) return 'door';
     const live = this.active();
     if (live.includes(this.follow)) return this.follow;
     if (live.length) return live[live.length - 1];
@@ -183,7 +183,13 @@ export class QuestBook {
     // (Out there on your first visit, long before you're fit for it, the city's own don't offer you their work: Fennick
     // says as much. src/folk/first-visit.js.)
     const visiting = !!this.q.the_door_east && !this.done('fv_home');
-    return Object.keys(RULES).filter((id) => QUESTS[id].giver === who && !this.q[id] && (!RULES[id].needs || this.done(RULES[id].needs)) && !(visiting && PHOBOS_RULES[id]));
+    return Object.keys(RULES).filter((id) => QUESTS[id].giver === who && !this.q[id] && this.needsMet(id) && !(visiting && PHOBOS_RULES[id]));
+  }
+
+  // Whether what a quest needs first is done: or, for one with a `due` flag, that flag's set (src/folk/first-visit.js).
+  needsMet(id) {
+    const r = RULES[id];
+    return !r?.needs || this.done(r.needs) || (!!r.due && this.flags.has(r.due));
   }
 
   begin(id) {

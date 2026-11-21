@@ -1094,14 +1094,21 @@ export const PROPS = {
     for (const [ox, oz, h] of [[0, 0, 0.8], [0.3, 0.15, 0.55], [-0.25, -0.1, 0.6]]) fire(K, d, x + ox, y + 0.08, z + oz, 0.3, h, { hue: 'flame', ember: !ox, glow: ox ? 0 : 1.6 });
   },
   // A seat for a goblin who calls himself a king: piled stone, a back of bones.
+  // (s: how big, for whoever sits in it: 2 for the Redoubt's Rothgar, 3.5 m. plinth: up two steps of dark block first.)
   stonethrone(K, d, p, x, y, z) {
-    const yaw = p.yaw || 0, c = Math.cos(yaw), s = Math.sin(yaw);
-    K.box('rubble', x, y - 0.2, z, 1.2, 0.5, 1.2, yaw, NO);
-    K.box('dark:rubble', x, y + 0.3, z, 0.8, 0.6, 0.7, yaw, NO);
-    K.box('dark:rubble', x - 0.55 * s, y + 0.9, z - 0.55 * c, 0.8, 1.9, 0.18, yaw, NO);
-    for (let k = -2; k <= 2; k++) K.spike('pale:stone', x + k * 0.33 * c - 0.55 * s, y + 2.8, z - k * 0.33 * s - 0.55 * c, 0.09, 0.7 + (2 - Math.abs(k)) * 0.25, 4, k, [k * 0.08 * c, -k * 0.08 * s]);
-    skull(K, x + 0.95 * c, y + 0.3, z - 0.95 * s, 0.17, 1); skull(K, x - 0.95 * c, y + 0.3, z + 0.95 * s, 0.17, 2);
-    K.box(p.cloth || 'cloth_red', x, y + 0.9, z + 0.02, 0.5, 0.04, 0.5, yaw, NO);
+    const yaw = p.yaw || 0, c = Math.cos(yaw), s = Math.sin(yaw), S = p.s || 1;
+    if (p.plinth) {
+      // (Its front toward yaw: a step, then the plinth the seat stands on.)
+      K.box('dark:block', x + 1.9 * S * s, y - 0.1, z + 1.9 * S * c, 1.6 * S, 0.4, 0.45 * S, yaw, NO);
+      K.box('dark:block', x, y - 0.1, z, 1.7 * S, 0.8, 1.5 * S, yaw);
+      y += 0.7;
+    }
+    K.box('rubble', x, y - 0.2 * S, z, 1.2 * S, 0.5 * S, 1.2 * S, yaw, NO);
+    K.box('dark:rubble', x, y + 0.3 * S, z, 0.8 * S, 0.6 * S, 0.7 * S, yaw, NO);
+    K.box('dark:rubble', x - 0.55 * S * s, y + 0.9 * S, z - 0.55 * S * c, 0.8 * S, 1.9 * S, 0.18 * S, yaw, NO);
+    for (let k = -2; k <= 2; k++) K.spike('pale:stone', x + k * 0.33 * S * c - 0.55 * S * s, y + 2.8 * S, z - k * 0.33 * S * s - 0.55 * S * c, 0.09 * S, (0.7 + (2 - Math.abs(k)) * 0.25) * S, 4, k, [k * 0.08 * c, -k * 0.08 * s]);
+    skull(K, x + 0.95 * S * c, y + 0.3 * S, z - 0.95 * S * s, 0.17 * S, 1); skull(K, x - 0.95 * S * c, y + 0.3 * S, z + 0.95 * S * s, 0.17 * S, 2);
+    K.box(p.cloth || 'cloth_red', x, y + 0.9 * S, z + 0.02, 0.5 * S, 0.04, 0.5 * S, yaw, NO);
   },
   // A hide tent: a goblin's nest.
   tent(K, d, p, x, y, z) {
@@ -1367,8 +1374,14 @@ export const PROPS = {
     // (shaft: the sky white through a slot cut in the roof, a frame of dark stone round it, and the light's own column down
     // through the room's air to the floor, faint, a stack of soft rounds. The Redoubt under the Sill's: src/core/delve-redoubt.js.)
     if (p.shaft) {
-      K.drum('slate:flame', x, top - 0.12, z, r, 0.1, 16, { collide: false });
-      K.drum('dark:stone', x, top - 2.4, z, r + 0.9, 2.3, 16, { r2: r + 0.9, open: true, collide: false });
+      // (A slot, long and narrow, square in a reveal of dark stone down into the room: a round one read as a white oval, a
+      // lamp or a hole in the texture. The critics.)
+      const ax = r * 0.5, az = r * 1.15, lip = 0.35, deep = 2.2;
+      K.box('slate:flame', x, top - 0.12, z, ax, 0.1, az, 0, NO);
+      for (const sd of [-1, 1]) {
+        K.box('dark:stone', x + sd * (ax + lip), top - deep, z, lip, deep, az + lip * 2, 0, NO);
+        K.box('dark:stone', x, top - deep, z + sd * (az + lip), ax, deep, lip, 0, NO);
+      }
       // (Close and dim, so they run together into one column: spaced wide, each round's bright middle showed, a string of beads.)
       const n = Math.max(6, Math.ceil((top - y) / (r * 0.5)));
       for (let k = 0; k < n; k++) { const t = (k + 0.5) / n; K.fires.push({ delve: d.key, hue: 'day:flame', kind: 'glow', x, y: top - 0.8 - (top - y - 1.4) * t, z, w: r * (1.05 + 0.35 * t), h: r * (1.05 + 0.35 * t), ember: 0, seed: 0 }); }

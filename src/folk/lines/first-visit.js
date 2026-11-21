@@ -16,7 +16,7 @@ export const LINES = {
         "First light on the Keep. Pretty, isn't it, from up here. Everything's pretty from far enough off.",
       ],
       day: [
-        "Fourteen lamps from here to the gate. I walk them twice a day. Somebody has to, and nobody else wants the view.",
+        "Every lamp from here to the gate is mine. I walk them twice a day. Somebody has to, and nobody else wants the view.",
         "Wind's from the city. You can smell the Cinder Quarter on a day like this.",
       ],
       evening: [
@@ -67,7 +67,7 @@ export const QUESTS = {
     giverName: 'Lisandra',
     about: "Lisandra means you to see what you're up against before you start believing you can win. She'll open a door of candles to the Sill, the shelf above Velscour's city, where an old apprentice of hers keeps the lamps.",
     offer: [
-      "A skull in your hand. Good. Now you can be frightened properly. Come here.",
+      "You've had a day of Bellmourn. Good. Now you can be frightened properly. Come here.",
       "You've seen Bellmourn. Small, poor, and frightened. Now see what it's frightened of. East, past the Marches, there's his city. Phobos. Days on foot. Or one of my candles.",
       "There's a woman on the Sill above it keeps the lamps. Wenna. She was mine once. My apprentice, I mean; don't make that face. Tell her I sent you, and do what she asks. Then she'll send you back.",
     ],
@@ -153,7 +153,7 @@ export const QUESTS = {
     ],
     done: [
       "Quiet. I can hear the wind on the plain again. I'd forgotten it did that.",
-      "Here. And go and look at the cliff below us, the north side. There's a gate in it. Now you've done that, we should talk about the gate.",
+      "Here. Five fewer walking. Look at the north cliff below us on your way about: there's a gate cut in it. His.",
     ],
   },
 

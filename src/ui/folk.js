@@ -567,7 +567,8 @@ export class TownUI {
         out.push(have >= st.n ? { label: `Here: ${st.n} ${matName(st.bring, st.n)}.`, cls: 'q', run: () => this.handIn(qid) }
           : { label: `${text.title} (${Math.min(have, st.n)} of ${st.n} ${matName(st.bring, st.n)})`, cls: 'q', run: () => this.progress(qid) });
       } else if (st?.back) out.push({ label: st.say || `${text.title}: it's done.`, cls: 'q', run: () => this.handIn(qid) });
-      else out.push({ label: text.title, cls: 'q', run: () => this.progress(qid) });
+      // (A door's quest under way, its door offered again below: that one line, not its title as well. The critics.)
+      else if (!RULES[qid].door) out.push({ label: text.title, cls: 'q', run: () => this.progress(qid) });
     }
     for (const qid of Q.offers(id)) out.push({ label: QUESTS[qid].title, cls: 'offer', run: () => this.offer(qid, 0) });
     // What they've to say about someone else's quest under way.
@@ -711,6 +712,9 @@ export class TownUI {
       f.textContent = kind === 'home' ? 'The candles gutter, all at once. Burnt hair, and Bellmourn.'
         : night ? 'The candles burn down all night long, and gutter all at once. Burnt hair, and a cold dawn wind off a long drop.'
           : 'The candles gutter, all at once. Burnt hair, and a cold wind off a long drop.';
+      // (And shut whatever was opened in the fade: auto-play, still at her elbow for that second, spoke to her again, and her
+      // menu rode through the door and stood over all five minutes of Phobos's first sight. The critics.)
+      this.close(false);
       this.act.door?.(to, kind !== 'home');
     }, 1200);
     setTimeout(() => { f.textContent = ''; f.style.opacity = 0; this.note(kind === 'home' ? "Bellmourn. Lisandra's waiting." : 'The Sill, above City State Phobos.', 'hint'); }, 3400);

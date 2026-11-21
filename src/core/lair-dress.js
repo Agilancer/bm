@@ -57,20 +57,21 @@ export function dressLairs(K, seals = []) {
     // along a, spilled from a fallen cage (or picked to the ribs by the birds: `picked`).
     const hung = (x, y, z, a) => {
       const c = Math.cos(a), s = Math.sin(a);
-      K.beam('cloth_oat', [x, y + 0.12, z], [x + c * 0.08, y + 0.78, z + s * 0.08], 0.17);
+      // (Grey and gone: in a warm cloth, lit by the sun, a hanged man in his cage read as a lamp in its glass.)
+      K.beam('dark:cloth_oat', [x, y + 0.12, z], [x + c * 0.08, y + 0.78, z + s * 0.08], 0.17);
       K.box('pale:stone', x + c * 0.14, y + 0.8, z + s * 0.14, 0.1, 0.2, 0.11, a, { collide: false });
       for (const sd of [-1, 1]) {
-        K.beam('cloth_oat', [x - s * sd * 0.09, y + 0.14, z + c * sd * 0.09], [x - s * sd * 0.12 + c * 0.05, y - 0.42, z + c * sd * 0.12 + s * 0.05], 0.06);
+        K.beam('dark:cloth_oat', [x - s * sd * 0.09, y + 0.14, z + c * sd * 0.09], [x - s * sd * 0.12 + c * 0.05, y - 0.42, z + c * sd * 0.12 + s * 0.05], 0.06);
         K.beam('pale:stone', [x - s * sd * 0.2, y + 0.7, z + c * sd * 0.2], [x - s * sd * 0.24 + c * 0.1, y + 0.2, z + c * sd * 0.24 + s * 0.1], 0.04);
       }
     };
     const body = (x, z, a, picked) => {
       const c = Math.cos(a), s = Math.sin(a), y = Y(x, z) + 0.1;
-      if (!picked) K.beam('cloth_oat', [x - c * 0.45, y, z - s * 0.45], [x + c * 0.3, y + 0.04, z + s * 0.3], 0.16);
+      if (!picked) K.beam('dark:cloth_oat', [x - c * 0.45, y, z - s * 0.45], [x + c * 0.3, y + 0.04, z + s * 0.3], 0.16);
       else for (let k = 0; k < 5; k++) for (const sd of [-1, 1]) { const u = -0.35 + k * 0.15; K.spike('pale:stone', x + c * u - s * sd * 0.14, y - 0.05, z + s * u + c * sd * 0.14, 0.03, 0.34 - Math.abs(k - 2) * 0.05, 4, k, [-s * sd * 0.3, c * sd * 0.3]); }
       K.box('pale:stone', x + c * 0.48, y - 0.02, z + s * 0.48, 0.11, 0.18, 0.1, a, { collide: false });
       for (const sd of [-1, 1]) {
-        K.beam(picked ? 'pale:stone' : 'cloth_oat', [x - c * 0.4 - s * sd * 0.1, y, z - s * 0.4 + c * sd * 0.1], [x - c * 1.15 - s * sd * 0.16, y - 0.04, z - s * 1.15 + c * sd * 0.16], picked ? 0.035 : 0.065);
+        K.beam(picked ? 'pale:stone' : 'dark:cloth_oat', [x - c * 0.4 - s * sd * 0.1, y, z - s * 0.4 + c * sd * 0.1], [x - c * 1.15 - s * sd * 0.16, y - 0.04, z - s * 1.15 + c * sd * 0.16], picked ? 0.035 : 0.065);
         K.beam('pale:stone', [x + c * 0.2 - s * sd * 0.2, y, z + s * 0.2 + c * sd * 0.2], [x - c * 0.15 - s * sd * 0.5, y - 0.04, z - s * 0.15 + c * sd * 0.5], 0.035);
       }
     };
@@ -159,8 +160,10 @@ export function dressLairs(K, seals = []) {
         K.spike('bark', x, y - 0.4, z, 0.15, hh + 0.4, 5, i);
         K.beam('bark', base, [x + Math.cos(a) * 0.75, y + hh + 0.55, z + Math.sin(a) * 0.75], 0.08);
         K.beam('bark', base, [x + Math.cos(b) * 0.6, y + hh + 0.35, z + Math.sin(b) * 0.6], 0.07);
-        // (Under the Sill, his carrion's: a nest of sticks in the fork of every other one. src/folk/first-visit.js fv_carrion.)
-        if (l.key === 'sill_carrion' && i % 2 === 0) for (let k = 0; k < 7; k++) { const c0 = k / 7 * TAU, c1 = c0 + 1.8; K.beam('bark', [x + Math.cos(c0) * 0.45, base[1] + 0.12 + (k % 3) * 0.05, z + Math.sin(c0) * 0.45], [x + Math.cos(c1) * 0.45, base[1] + 0.16 + (k % 2) * 0.05, z + Math.sin(c1) * 0.45], 0.05); }
+        // (Under the Sill, his carrion's: a nest of sticks in the fork of every other one. src/folk/first-visit.js fv_carrion.
+        // A bowl sat up between the arms, no wider than they spread: a ring of sticks round the pole under the fork, seen from
+        // the side, was a bar across it, a cross. The critics, docs/FIRST-VISIT.md.)
+        if (l.key === 'sill_carrion' && i % 2 === 0) K.drum('bark', x, base[1] + 0.2, z, 0.12, 0.24, 7, { r2: 0.3, collide: false });
       }
       // (And what they've been at: one of the hanged, cut down off the gibbets and dragged here, picked to the ribs.)
       if (l.key === 'sill_carrion') { const [x, z] = at(h(60), R * 0.55); if (free(x, z, 1)) body(x, z, h(61) * TAU, true); }
@@ -192,10 +195,13 @@ export function dressLairs(K, seals = []) {
         const [x, z] = at(i / 5 + h(1) * 0.08, R + 1.6 + h(i + 2) * 1.2);
         if (!free(x, z, 0.4)) continue;
         const y = Y(x, z), hh = 3.8 + h(i + 6) * 0.7, a = h(i + 10) * TAU, ax = x + Math.cos(a) * 1.25, az = z + Math.sin(a) * 1.25;
-        K.spike('dark:wood', x, y - 0.4, z, 0.13, hh + 0.4, 5, i);
-        K.beam('dark:wood', [x, y + hh - 0.15, z], [ax, y + hh - 0.05, az], 0.08);
+        // (A post of squared timber and its arm, a brace under the arm from the post: heavy, a gallows. As a pole and an arm
+        // they read as Wenna's lamps on the Sill. The critics.)
+        K.box('dark:wood', x, y - 0.4, z, 0.16, hh + 0.4, 0.16, a);
+        K.beam('dark:wood', [x, y + hh - 0.15, z], [ax, y + hh - 0.05, az], 0.12);
+        K.beam('dark:wood', [x + Math.cos(a) * 0.1, y + hh - 1.05, z + Math.sin(a) * 0.1], [x + Math.cos(a) * 0.8, y + hh - 0.12, z + Math.sin(a) * 0.8], 0.07);
         if (h(i + 14) > 0.3) {
-          K.beam('iron', [ax, y + hh - 0.1, az], [ax, y + hh - 0.85, az], 0.02);
+          K.beam('dark:wood', [ax, y + hh - 0.1, az], [ax, y + hh - 0.85, az], 0.035);
           cage(ax, y + hh - 2.0, az, 0.38, 1.15, false, i);
           // (Who was hanged in it, slumped in the bars, the legs through its open foot. The others walk: the lair's own.)
           hung(ax, y + hh - 2.0, az, a);

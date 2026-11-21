@@ -59,15 +59,19 @@ function shot(beat, u, e, hx, hy, hz) {
     return { eye: over(along(path, e), 6), at: along(look, e), line: pick(['City State Phobos', 'The Barbican', 'The Rookeries', 'The Drowned Wharf', "The Tanners' Water Gate"], e) };
   }
   if (beat === 2) {
-    // Up the Castle Approach and over the three ward walls, each higher.
-    const path = [[10240, PLAIN + 70, 60], [10600, PLAIN + 78, 20], [WARDS[0][0] + 30, PLAIN + WARDS[0][1] + 30, -20], [WARDS[1][0] + 30, PLAIN + WARDS[1][1] + 34, 10], [WARDS[2][0] + 20, PLAIN + WARDS[2][1] + 40, 0]];
-    const look = [[10700, PLAIN + 70, 0], [10850, PLAIN + 80, 0], [11050, PLAIN + 100, 0], [11200, PLAIN + 140, 0], [KEEP.x, PLAIN + 200, 0]];
+    // Up the Castle Approach and over the three ward walls, each higher: alongside them to the south and well up, looking in.
+    // (It flew through the castle at thirty metres over each ward's wall, from before the wards were built up: a minute of
+    // close brick. The critics, docs/FIRST-VISIT.md.)
+    // (Out past the crag's south edge, and climbing over the towers' tops: the castle's grown up and out since, CASTLE grand.)
+    const path = [[10150, PLAIN + 160, 380], [10500, PLAIN + 220, 420], [WARDS[0][0] + 40, PLAIN + 300, 440], [WARDS[1][0] + 50, PLAIN + 380, 420], [WARDS[2][0], PLAIN + 440, 380]];
+    const look = [[10650, PLAIN + 60, 0], [WARDS[0][0], PLAIN + WARDS[0][1], 0], [WARDS[1][0], PLAIN + WARDS[1][1], 0], [WARDS[2][0], PLAIN + WARDS[2][1], 0], [KEEP.x, PLAIN + 280, 0]];
     return { eye: over(along(path, e), 8), at: along(look, e), line: e < 0.2 ? 'Castle Velscour' : e < 0.5 ? 'The Lower Ward' : e < 0.75 ? 'The Middle Ward' : 'The High Ward' };
   }
   if (beat === 3) {
     // Round the Keep, climbing, inside the basin's head: from the west by the north, the east and the south. What it looks at
     // slides from spire to spire as each is passed, and each is named.
-    const a = Math.PI + e * Math.PI * 1.75, r = 215 - e * 35, y = lerp(KEEP.base + 60, KEEP.top - 20, e);
+    // (Out past the spires and over their tops: at 215 m in and under the Keep's top it went through the spires' walls.)
+    const a = Math.PI + e * Math.PI * 1.75, r = 520 - e * 40, y = lerp(KEEP.top + 110, KEEP.top + 90, e);
     const f = e * 4, i = Math.min(3, Math.floor(f)), k = ease(f - i), p = SPIRES[i], q = SPIRES[i + 1];
     const sx = lerp(p[1], q[1], k), sz = lerp(p[2], q[2], k), sy = lerp(p[3], q[3], k);
     return { eye: over([KEEP.x + Math.cos(a) * r, y, KEEP.z + Math.sin(a) * r], 14), at: [lerp(KEEP.x, sx, 0.5), lerp(KEEP.base + 60, PLAIN + sy, 0.5 + 0.3 * e), lerp(KEEP.z, sz, 0.5)], line: SPIRES[Math.min(4, Math.round(f))][0] };
@@ -75,10 +79,10 @@ function shot(beat, u, e, hx, hy, hz) {
   // The Throne Tower's top, close; then all the way back down to him.
   if (u < 0.42) {
     const k = ease(u / 0.42);
-    return { eye: [KEEP.x - 120 + k * 62, KEEP.top + 14 - k * 9, 46 - k * 30], at: [KEEP.x + 5, KEEP.top - 2, 0], line: k > 0.15 ? 'The Throne Tower' : '' };
+    return { eye: [KEEP.x - 520 + k * 120, KEEP.top + 130 - k * 30, 220 - k * 60], at: [KEEP.x, KEEP.top + 20, 0], line: k > 0.15 ? 'The Throne Tower' : '' };
   }
   const k = ease((u - 0.42) / 0.58);
-  const path = [[KEEP.x - 58, KEEP.top + 5, 16], [CRAG.x - 500, PLAIN + 240, 0], [9700, PLAIN + 170, -40], [SILL.x + 220, SILL.y + 60, 10], [hx - 4.4, hy + 1.85, hz + 0.8]];
+  const path = [[KEEP.x - 400, KEEP.top + 100, 160], [CRAG.x - 500, PLAIN + 240, 0], [9700, PLAIN + 170, -40], [SILL.x + 220, SILL.y + 60, 10], [hx - 4.4, hy + 1.85, hz + 0.8]];
   return { eye: over(along(path, k), 1.2), at: [lerp(KEEP.x, hx + 60, k * k), lerp(KEEP.top - 20, hy + 1.2, k), lerp(0, hz, k)], line: '' };
 }
 
@@ -95,7 +99,8 @@ export class FirstSight {
 #firstSight .fs-black{position:absolute;inset:0;background:#000;opacity:0}
 #firstSight .fs-bar{position:absolute;left:0;right:0;height:9vh;background:#000}#firstSight .fs-bar.top{top:0}#firstSight .fs-bar.bottom{bottom:0}
 #firstSight .fs-line{position:absolute;left:0;right:0;bottom:12vh;text-align:center;font-style:italic;font-size:clamp(18px,2.6vw,34px);letter-spacing:.06em;text-shadow:0 2px 8px #000,0 0 2px #000;transition:opacity .9s}
-#firstSight .fs-skip{position:absolute;right:2.2vw;bottom:2.6vh;font-size:13px;opacity:.55}`;
+#firstSight .fs-skip{position:absolute;right:2.2vw;bottom:2.6vh;font-size:13px;opacity:.55;animation:fsSkip 7s ease-in}
+@keyframes fsSkip{0%,70%{right:50%;bottom:44vh;transform:translateX(50%);font-size:20px;opacity:1}100%{right:2.2vw;bottom:2.6vh;transform:none;font-size:13px;opacity:.55}}`;
     document.head.appendChild(css); document.body.appendChild(el);
     this.lineEl = el.querySelector('.fs-line'); this.blackEl = el.querySelector('.fs-black');
     const skip = (e) => { if (this.active && this.t > 1.5) { this.end(); e.preventDefault?.(); } };

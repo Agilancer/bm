@@ -29,6 +29,7 @@ const rnd = (a, b) => a + Math.random() * (b - a);
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const BOSS_ROOM_PAD = 8;       // a boss notices you this far inside its room's edge
 const RESET_AFTER = 900;       // seconds out of the Warrens before its dead stand again
+const LESSON_GAP = 30;         // seconds before a boss's opening lesson is said again (begin)
 // Skrit's fire pots' pools: what standing in one costs a second, and how long it burns (the moves' own are 29 and 6). The
 // healer mends some 22 a second: at 29 for 6 a player who stood in one lived through every fight, at 40 for 8 they fell in
 // 22 to 47 s, and at 50 for 12 to the first pots, in 13.
@@ -424,10 +425,12 @@ export class Warrens {
     for (const m of live) { m.notice(sim); m.hp = m.maxHp; }
     const [c0, c1] = live.map((m) => m.id);
     sim.event(EV.DELVE, DELVE.BOSS, BOSSES.indexOf(b), c0 ?? -1, c1 ?? -1);
-    if (b.key === 'twins') this.warn(3);
-    if (b.key === 'venomaw') this.warn(7);
+    // (A boss's opening lesson once, not again when the fight starts over a breath later: you backed out of the room and
+    // came straight back in, and the lesson stood on the screen twice.)
+    if (b.key === 'twins') this.warn(3, LESSON_GAP);
+    if (b.key === 'venomaw') this.warn(7, LESSON_GAP);
     const spec = this.fight.spec;
-    if (spec?.open) this.warn(WARN[spec.open]);
+    if (spec?.open) this.warn(WARN[spec.open], LESSON_GAP);
     spec?.begin?.(this, this.fight, live);
   }
 
@@ -1070,6 +1073,8 @@ export class Warrens {
     }
     if (m.cmd === 'hurt' && b) for (const k of this.bossBodies(b.key)) if (!k.dead) k.hp = k.maxHp * (m.frac ?? 0.05);
     if (m.cmd === 'reset') this.resetAll(m.delve ? d : null);
+    // (calm: the delve's packs put to sleep and counted cleared, for pictures of its rooms.)
+    if (m.cmd === 'calm' && sim.tripo) for (const l of sim.tripo.lairs) if (l.dungeon && l.delve === d.key && !l.bossLair) { if (l.state === 'awake') sim.tripo.sleep(l); l.state = 'cleared'; }
   }
 
   // The fight as the page needs it, a few times a second (auto-play reads it, and the boss's frame).

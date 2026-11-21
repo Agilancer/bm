@@ -80,7 +80,13 @@ const props = [];
   add('decal', -6, -52, { layer: 'p2_cracks', w: 3, flat: true });
   // ---- the Debtors' Pens: cells of iron down both long walls, as tall as a man and more, their doors open; in some of them
   // whoever couldn't pay, sat down against the bars and not got up. Chains from the roof, a pit of black water, bones, straw.
-  PEN_CELLS.forEach((x, k) => { add('cell', x, -34, { yaw: PI, held: k === 1 ? 0 : k + 1 }); add('cell', x, -58, { yaw: 0, held: k + 4 }); add('chain', x, -46, { up: 7 }); });
+  // (A row of them shoulder to shoulder down each wall, the Pen-Warden's doors (PEN_CELLS) among them: three apiece, ten
+  // metres apart, read as an empty room. The critics, docs/FIRST-VISIT.md.)
+  for (let k = 0; k < 9; k++) {
+    const x = -62 + k * 2.5;
+    add('cell', x, -34, { yaw: PI, held: k % 3 === 2 ? k + 1 : 0 }); add('cell', x, -58, { yaw: 0, held: k % 4 === 1 ? k + 4 : 0 });
+  }
+  for (const x of [-62, -57, -52, -47, -42]) for (const z of [-43, -49]) add('chain', x + (z > -46 ? 0 : 2.5), z, { up: 7 });
   add('pit', -60, -46, { r: 1.6 });
   add('bones', -46, -50, { r: 1.2 }); add('bones', -56, -40, { r: 0.9 }); add('heap', -64, -52, { r: 1.1, layer: 'p2_straw_ground' });
   add('decal', -50, -46, { layer: 'p2_blood_splashes', w: 2.4, flat: true });
@@ -95,7 +101,8 @@ const props = [];
   add('skullmark', 54, -75.6, { up: 6, r: 1.3, back: -1 });
   // ---- the Cut Court: open to the sky through its shafts, the light down on the flags; a dead tree in the middle, the lancers'
   // posts in two lines, sand round them; his banner hung on the cliff.
-  for (const [x, z, r] of [[-11, -102, 4.5], [11, -118, 4.5], [0, -110, 3.4], [-12, -122, 3]]) add('daylight', x, z, { r, shaft: true });
+  // (None on the dead tree: one there lit its bed white, a glowing plinth. The critics.)
+  for (const [x, z, r] of [[-11, -102, 4.5], [11, -118, 4.5], [-12, -122, 3]]) add('daylight', x, z, { r, shaft: true });
   // (A wall-walk round its two long sides, high up, fire baskets along it; racks of the lancers' arms at its feet, their
   // barrels and crates by the ways in.)
   add('walk', -21, -110, { hx: 1, hz: 17, up: 9, side: 1 }); add('walk', 21, -110, { hx: 1, hz: 17, up: 9, side: -1 });
@@ -116,7 +123,9 @@ const props = [];
   add('decal', -54, -96, { layer: 'p2_scorch_mark', w: 3, flat: true });
   // (The quench, and his plate hung up half made along the north wall, not yet blacked.)
   add('trough', -54, -97, { hx: 1.8, hz: 0.5 });
-  add('platerack', -50, -91, { yaw: PI, n: 4 }); add('platerack', -61, -91, { yaw: PI, n: 3 });
+  // (On the far wall, facing the way in from the court, so they're the first thing seen past the pit: on the north wall they
+  // were out of sight from the door. The critics.)
+  add('platerack', -66.5, -99, { yaw: PI / 2, n: 4 }); add('platerack', -66.5, -109, { yaw: PI / 2, n: 4 });
   // ---- the Red Chapel: his altar at the far end under his great mark, pews either side of a red carpet, candles, a ring of
   // his priests' drawn in the floor before the altar.
   add('altar', 54, -128.6, { hx: 2.2, hz: 0.9 });
@@ -131,11 +140,13 @@ const props = [];
   // ---- the Commander's Hall: his war table with Castle Velscour carved on it, his seat on its dais, his banners on the
   // columns, the cliff cut through high in the south wall (the light down from it), chandeliers.
   add('maptable', -11, -191, { hx: 4.2, hz: 2.2 });
-  add('stonethrone', 0, -211, { yaw: 0, cloth: 'cloth_red' });
+  // (Made for him, 3.5 m: twice a man's, up two steps on a plinth. A man's seat on a half-metre dais read small. The critics.)
+  add('stonethrone', 0, -211.2, { yaw: 0, cloth: 'cloth_red', s: 2, plinth: true });
   for (const z of [-184, -198]) { add('column', -14, z, { r: 1.4, solid: true }); add('column', 14, z, { r: 1.4, solid: true }); }
-  add('daylight', 0, -203, { r: 3.2, shaft: true });
+  // (The light down on the dais's foot, where his banner's planted at the turn of the fight: BANNER_AT.)
+  add('daylight', 0, -205.5, { r: 3, shaft: true });
   add('chandelier', -8, -192, { up: 11 }); add('chandelier', 8, -192, { up: 11 });
-  add('skullmark', 0, -213.6, { up: 8, r: 2.4, back: -1 });
+  add('skullmark', 0, -213.6, { up: 4.6, r: 2.4, back: -1 });
   add('shields', -21.4, -196, { yaw: PI / 2 }); add('shields', 21.4, -196, { yaw: -PI / 2 });
   add('decal', 0, -182, { layer: 'p2_blood_splashes', w: 2, flat: true });
 }
@@ -154,7 +165,7 @@ const packs = [
   { key: 'rd_clerks', room: 'rd_toll', pick: CLERKS, n: 2, elite: ['necromancer_lord'], pal: ['Oxblood', 'Sable'], ai: 'caster', at: [6, -12], r: 3 },
   { key: 'rd_lancers', room: 'rd_court', pick: LANCERS.concat(KNIGHTS), n: 3, elite: ['velscour_lancer_3'], pal: ['Oxblood'], at: [-6, -10], r: 6 },
   // (The bellows-imps' overseers come out of the back of the forge to them.)
-  { key: 'rd_bellows', room: 'rd_forge', pick: BELLOWS, n: 4, pal: ['Emberhide'], at: [0, 0], r: 4, more: { n: 2, pick: KNIGHTS, from: [-64, -114], when: 0.6 } },
+  { key: 'rd_bellows', room: 'rd_forge', pick: BELLOWS, n: 4, pal: ['Emberhide'], at: [6.5, -1], r: 2, more: { n: 2, pick: KNIGHTS, from: [-64, -114], when: 0.6 } },
   { key: 'rd_priests', room: 'rd_chapel', pick: PRIESTS, n: 3, pal: ['Oxblood', 'Sable'], ai: 'caster', at: [0, -2], r: 3 },
   // (The pair on the Commander's door, at the stair's head, come down to them when they're hard pressed.)
   { key: 'rd_stairguard', room: 'rd_stair', pick: KNIGHTS, n: 2, pal: ['Sable'], at: [0, 4], r: 1.5, more: { n: 2, pick: KNIGHTS, from: [-6, -163], when: 0.6 } },
@@ -201,6 +212,8 @@ export const REDOUBT = {
   party: false, castle: true, dungeon: true,
   // (Its portal out on the Sill burns his red, not the cold blue of the rest: src/gfx/renderer.js EMBER.)
   portalHue: 'ember',
+  // (Its portal's in a gatehouse with rock either side: auto-play comes at it from the front, src/ui/autowarrens.js.)
+  approach: { out: 12, side: 11.5 },
   rooms, tunnels, daises, props, packs, bosses, warnings,
   turnWarn: { penwarden: 'pen_turn', carrow: 'car_turn', rothgar: 'rot_turn' },
   entry: { x: 0, z: 2.5, yaw: PI }, exitIn: { x: 0, z: 5.4 }, exitOut: { x: 16, z: -206 },

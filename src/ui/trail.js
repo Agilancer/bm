@@ -92,7 +92,9 @@ export class QuestTrail {
     // Work to take on from each of a list of people: the nearest you've still to see (one with work to give you first).
     if (st.start) {
       const left = st.start.filter((p) => !(s.seen || []).includes(p)).map((p) => [p, person(p)]).filter(([, at]) => at);
-      const by = (a, b) => (Q.offers(b[0]).length > 0) - (Q.offers(a[0]).length > 0) || Math.hypot(a[1].x - px, a[1].z - pz) - Math.hypot(b[1].x - px, b[1].z - pz);
+      // (Bram first while his errand's not taken: it opens Lisandra's door east, src/folk/first-visit.js. Then whoever has work.)
+      const bram = (p) => (p === 'bram' && !Q.state('bed_and_bell') ? 1 : 0);
+      const by = (a, b) => bram(b[0]) - bram(a[0]) || (Q.offers(b[0]).length > 0) - (Q.offers(a[0]).length > 0) || Math.hypot(a[1].x - px, a[1].z - pz) - Math.hypot(b[1].x - px, b[1].z - pz);
       return left.sort(by)[0]?.[1] ?? null;
     }
     const below = (to) => {

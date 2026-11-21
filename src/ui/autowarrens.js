@@ -256,6 +256,18 @@ export function doWarrens(b, m, foes) {
       return;
     }
     b.say(`To ${d.name}, with the party.`);
+    // (A portal set back between rock, as the Redoubt's is in its cliff (approach): out in front of it first, then lined up
+    // and straight in. Coming along the cliff's foot it walked into the rock beside the gatehouse and stood there.)
+    const A = d.approach;
+    if (A && far < 60) {
+      const fx = Math.sin(d.portal.yaw), fz = Math.cos(d.portal.yaw), ox = m.x - d.portal.x, oz = m.z - d.portal.z;
+      const out = ox * fx + oz * fz, lat = ox * fz - oz * fx;
+      if (Math.abs(lat) > 2.2) {
+        const side = out < A.out - 2 ? Math.max(-A.side, Math.min(A.side, lat)) : 0;
+        b.goTo(d.portal.x + fx * A.out + fz * side, d.portal.z + fz * A.out - fx * side, 1.2, true);
+        return;
+      }
+    }
     b.goTo(d.portal.x, d.portal.z, 0.6, true);
     return;
   }
