@@ -113,6 +113,8 @@ def copy_of(data):
         raise ValueError(f"a {data[24]}-bit PNG")
     if kind == "WEBP" and webp_lossless(data):
         raise ValueError("a lossless WebP")
+    if "transparency" in im.info:
+        raise ValueError("see-through by a colour or palette key")
     sampling = JpegImagePlugin.get_sampling(im) if kind == "JPEG" else None
     if im.mode not in ("RGB", "RGBA", "L"):
         im = im.convert("RGBA" if "A" in im.mode or "transparency" in im.info else "RGB")

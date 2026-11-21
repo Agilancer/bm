@@ -8,8 +8,9 @@
 // and a copy whose original has changed is never found, so it's never shown over the new one.
 
 const SAMPLE = 4096;
-// A copy fetched ahead and not asked for in this long is let go (asked for after, it's fetched again).
-const AHEAD_MS = 60000;
+// A copy fetched ahead and not asked for in this long is let go (asked for after, it's fetched again). Long enough for a
+// big monster's file to come down on a slow line beside it.
+const AHEAD_MS = 180000;
 const keys = new WeakMap();
 
 /** As tools/lean_pictures/make.py picture_key: the length, and FNV-1a over the first, middle and last 4 KB. */

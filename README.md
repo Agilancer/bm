@@ -3106,59 +3106,61 @@ perhaps with 512 for every big monster, plain and dyed alike.
 
 #### The big pictures, decoded small
 
-What this changes is how much picture work a phone does, and how its models' pictures look; not how much memory the
-page holds at its height, which came out the same, and it is not shown to help the iPhone's crashes. A model's pictures
-come inside its file at 2048 or 4096 a side, and a phone shows none of them over 1024: a quarter of the picture, and no
-more than 256 or 512 across after that (the phone tier's `texScale`, `texCap` and `texCapNear`, `src/gfx/gpu.js`). To
-shrink a picture the game first decoded it whole, 64 MB for a 4096 picture and 16 MB for a 2048, and a load decoded 94
-of them.
+What this changes is how much picture work a phone does, and how its models' pictures look; not how much memory the page
+holds at its height, which came out the same, and it is not shown to help the iPhone's crashes. A model's pictures come
+inside its file at 2048 or 4096 a side, and a phone shows none of them over 1024: a quarter of the picture, and no more
+than 256 or 512 across after that (the phone tier's `texScale`, `texCap` and `texCapNear`, `src/gfx/gpu.js`). To shrink
+a picture the game first decoded it whole, 64 MB for a 4096 picture and 16 MB for a 2048, and a load decoded 94 of them.
 
 Now a phone (and any tier that shrinks its pictures, as a laptop's Medium) decodes a copy made at 1024 instead
-(`tools/lean_pictures/make.py` writes them to `assets/lean/`: 158 pictures, 37 MB), and shrinks it the rest of the way in
-halves, which Chrome filters (a shrink of more than a half in one go it doesn't). What it makes is sized from the
+(`tools/lean_pictures/make.py` writes them to `assets/lean/`: 158 pictures, 37 MB), and shrinks it the rest of the way
+in halves, which Chrome filters (a shrink of more than a half in one go it doesn't). What it makes is sized from the
 original's sides, not the copy's, so every texture comes out exactly the size it was (`src/gfx/renderer.js`
 `decodePicture`, `src/gfx/gpu.js` `decodeScaledBitmap`). A dyed skin's bake worker is handed the copy and the scale that
-makes it that size, where one scale on both sides can (`src/gfx/lean-pictures.js` `forScale`). A copy is used only
-where what's to be made is no bigger than it: the Medium tier's 2048 from a 4096 picture still comes from the original,
-and Ultra and High never look. The copies are found by the original's own bytes (`pictureKey`), not by file name, so a
+makes it that size, where one scale on both sides can (`src/gfx/lean-pictures.js` `forScale`). A copy is used only where
+what's to be made is no bigger than it: the Medium tier's 2048 from a 4096 picture still comes from the original, and
+Ultra and High never look. The copies are found by the original's own bytes (`pictureKey`), not by file name, so a
 picture shared by two models has one copy, and a copy whose original has since changed is never used over the new
 picture. If a copy can't be fetched or decoded, or decodes smaller than its list says, the original is decoded as
-before. A model's copies start coming down as its file is asked for (`src/core/files.js` `fetchAhead`, and the
-monsters' own fetch in `src/gfx/tripo-slots.js`), so on a slow line they aren't waited for one model at a time as the
-models are built. `?lean=0` turns them off, to set the two side by side (in Safari: the home-screen app can't be given
-it).
+before. A model's copies start coming down as its file is asked for (`src/core/files.js` `fetchAhead`, and the monsters'
+own fetch in `src/gfx/tripo-slots.js`), so on a slow line they aren't waited for one model at a time as the models are
+built. `?lean=0` turns them off, to set the two side by side (in Safari: the home-screen app can't be given it).
 
 Not Lisandra's (`assets/game/lisandra/`): she is shown as the owner made her, file for file, and no copy is made of any
 picture that is also hers. So her four 4096 pictures and two 2048 are still decoded whole in every load, and in a new
 game's opening so are her spellbook's three 4096 pictures.
 
-The tool leaves alone, and the game decodes as before, any picture a copy would change: one turned by its EXIF, one
-with a see-through pixel (a resize mixes colour by its alpha, and some maps keep data there), a CMYK JPEG, a 16-bit PNG
-or a lossless WebP (none of the game's is, today). Run `python tools/lean_pictures/make.py` again whenever a model's
-pictures change. `node --test tests/lean-pictures.test.mjs` fails if a big picture has no copy and isn't left for a
-reason, if a copy has no picture, or if any picture of Lisandra's would be found a copy.
+The tool leaves alone, and the game decodes as before, any picture a copy would change: one turned by its EXIF, one with
+a see-through pixel or a colour keyed see-through (a resize mixes colour by its alpha, and some maps keep data there), a
+CMYK JPEG, a 16-bit PNG or a lossless WebP (none of the game's is, today). Run `python tools/lean_pictures/make.py`
+again whenever a model's pictures change. `node --test tests/lean-pictures.test.mjs` fails if a big picture has no copy
+and isn't left for a reason, if a copy has no picture, or if any picture of Lisandra's would be found a copy.
 
-On an emulated iPhone (desktop Chrome, the same build, `?lean=0` against the copies, taken in turn, the PC otherwise
-idle):
+On an emulated iPhone (desktop Chrome, this build, `?lean=0` against the copies, three loads each, taken in turn):
 
 | | Before | Now |
 | --- | --- | --- |
 | Pictures of 2048 or more decoded whole in a load | 94 | 6 (Lisandra's) |
-| The browser's time decoding pictures in a load | 7.2 to 7.7 s | 4.2 s (3.3 to 3.5 before the halves) |
 | Pixels decoded in a load | 580 million (2.3 GB) | 234 million (0.9 GB) |
+| The browser's time decoding pictures in a load | 6.6 and 9.1 s | 4.4 and 5.0 s |
+| Start to playable | 16.4 and 16.9 s (53.8 with the PC busy) | 16.4 to 24.4 s |
+| Page process at its height in a load | 1317 to 1521 MB | 1402 to 1484 MB |
+| Downloaded in a load | 323 to 326 MB | 344 to 345 MB (91 copies, 20.1 MB; 2 fetched ahead and not used) |
 | Decoded pictures alive at once as a new big monster is made (necromancer lord, possessed knight, Velscour knight; each counted as width × height × 4) | 64.3 MB | 4.3 MB |
 | One 4096 colour picture made the phone's 256, or 1024 | 188 or 227 ms | 50 or 110 ms (and 3 to 5 for the halves) |
-| Start to playable | 14.0 to 17.5 s | 13.4 to 16.3 s |
-| Page process at its height in a load | 1236 to 1258 MB | 1246 to 1299 MB |
-| Downloaded in a load | 321 to 323 MB | 340 to 345 MB (91 copies, 20.1 MB; 2 fetched ahead and not used) |
 | Building the models, waiting on copies, with 150 ms added to every fetch (summed over the load) | | 16 to 22 s fetched as wanted; 1.4 to 8.3 s fetched ahead (72 of 89 ahead: the first-person arms', the portals', the doors' and one zombie's are fetched another way) |
 | Every texture's size | | the same: 8 models' pictures at 3 or 4 phone sizes, and the dyed skins |
 
-The load comes no sooner: the decoding it saves ran beside other work, and the network was this PC. The page's height
-in a load is the same within the runs' spread. In runs on a busy PC it was some 140 MB higher with the copies until the
-page was collected; with a collection forced every second, the same either way (1229 and 1135 MB against 1157 and
-1278), and so 30 s after the load (661 and 604 MB against 644 and 641). That doesn't make it safe on an iPhone: what's
-not yet collected still counts against what the phone allows a page, and Safari collects on its own time.
+(Two of the six loads were caught before they'd finished, so their decode times are left out. The PC wasn't steady
+through these; on the first build, before the halves and fetching ahead, three loads each with it idle took 7.2 to 7.7 s
+decoding against 3.3 to 3.5, 14.0 to 17.5 s to playable against 13.4 to 16.3, and 1236 to 1258 MB at the height against
+1246 to 1299.)
+
+The load comes no sooner: the decoding it saves ran beside other work, and the network was this PC. The page's height in
+a load is the same within the runs' spread. In runs on a busy PC with the first build it was some 140 MB higher with the
+copies until the page was collected; with a collection forced every second, the same either way (1229 and 1135 MB
+against 1157 and 1278), and so 30 s after the load (661 and 604 MB against 644 and 641). That doesn't make it safe on an
+iPhone: what's not yet collected still counts against what the phone allows a page, and Safari collects on its own time.
 
 The pictures look better. Chrome's own shrink of a picture by more than a half drops pixels unfiltered, which shows as
 grain, as speckle in a normal map's lighting, and as a checkered shimmer on fine patterns such as the silver knight's
@@ -3176,10 +3178,10 @@ original (PSNR against a Lanczos made straight from the original, as a phone mak
 Safari may shrink with a filter of its own, so on an iPhone the old pictures may not have been as grainy, and there the
 change would be smaller.
 
-What a player may notice: the models' pictures less grainy, less work for the phone through a load and as each big
-monster first turns up, and 20 MB more to download, kept on the device if the game is (Settings, "Keep Bellmourn on this
-device"), otherwise fetched again once the browser lets them go. **Not run on an iPhone**: on one, Safari decodes the
-pictures, not Chrome.
+What a player may notice: close up, the models' pictures cleaner (in play, at a phone's size, the two are hard to tell
+apart), less work for the phone through a load and as each big monster first turns up, and 20 MB more to download, kept
+on the device if the game is (Settings, "Keep Bellmourn on this device"), otherwise fetched again once the browser lets
+them go. **Not run on an iPhone**: on one, Safari decodes the pictures, not Chrome.
 
 ### What has and hasn't been tested
 

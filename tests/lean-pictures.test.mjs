@@ -73,6 +73,8 @@ test("every big picture in a model has its phone copy, found by its own bytes, a
     found.add(key);
   }
   assert.deepEqual(Object.keys(list.pictures).filter((k) => !found.has(k)), [], 'copies no model holds');
+  const held = new Set(all.map(([, , , key]) => key));
+  assert.deepEqual(Object.keys(list.left).filter((k) => !held.has(k)), [], 'pictures left that no model holds');
   const files = new Set(Object.values(list.pictures).map((e) => e.file));
   assert.deepEqual(fs.readdirSync(new URL('lean/', assets)).filter((f) => f !== 'pictures.json' && !files.has(f)), [], 'files not in the list');
 });
