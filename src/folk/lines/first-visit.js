@@ -68,7 +68,7 @@ export const QUESTS = {
     about: "Lisandra means you to see what you're up against before you start believing you can win. She'll open a door of candles to the Sill, the shelf above Velscour's city, where an old apprentice of hers keeps the lamps.",
     offer: [
       "A skull in your hand. Good. Now you can be frightened properly. Come here.",
-      "You've seen Bellmourn. Small, poor, and frightened. Now see what it's frightened of. East, past the Marches, there's his city. Phobos. A fortnight's walk. Or one of my candles.",
+      "You've seen Bellmourn. Small, poor, and frightened. Now see what it's frightened of. East, past the Marches, there's his city. Phobos. Days on foot. Or one of my candles.",
       "There's a woman on the Sill above it keeps the lamps. Wenna. She was mine once. My apprentice, I mean; don't make that face. Tell her I sent you, and do what she asks. Then she'll send you back.",
     ],
     accept: 'Light the candle.',
@@ -115,7 +115,7 @@ export const QUESTS = {
       "Barbican. Chainmarket. Then Lowe. Keep to the busy streets.",
     ],
     done: [
-      "Take this. Lowe's coin, mine, his; it all goes round. Come back up to the Sill when you've had your look. Wenna won't have gone anywhere. She never does.",
+      "Take this. Mine, or Wenna's, or his; coin goes round the same few hands down here. Go back up to the Sill when you've had your look. She won't have gone anywhere. She never does.",
     ],
     heard: {
       'ph:barbican': "Through the gate. A clerk in red writes something down as you pass, and doesn't look up.",
@@ -124,7 +124,7 @@ export const QUESTS = {
     others: {
       ph_penny: [
         "Wenna's lamps are lit? ...In. Off the street. Quick.",
-        "Wenna Coyle doesn't send anyone. Thirty years she's kept those lamps and never sent one soul down to me. You must be something.",
+        "Wenna Coyle doesn't send anyone. Forty years she's kept those lamps and never sent one soul down to me. You must be something.",
         "Here. If you're Wenna's, you're welcome in this yard. You're not ready for the work I've got. Not yet. Come back when you've teeth.",
       ],
     },

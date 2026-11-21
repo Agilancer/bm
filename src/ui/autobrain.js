@@ -2296,11 +2296,12 @@ export class Brain {
     return !(w.busy === 12 || w.busy === 13) && (w.level | 0) <= 0 && w.y < 2.2;
   }
 
-  // Out on the first visit to Phobos (src/folk/first-visit.js): Lisandra's door taken and the way home not yet, and either
-  // within a mile and a half of the Sill or back through the door with the word for her still to say.
+  // Out on the first visit to Phobos (src/folk/first-visit.js): Lisandra's door taken (from the moment it's taken: the
+  // city's own givers stand about the Sill too, and Wenna's first) and the way home not yet, and either within a mile and
+  // a half of the Sill or back through the door with the word for her still to say.
   firstVisit(m) {
     const Q = this.o.townUI.quests, last = FIRST_VISIT[FIRST_VISIT.length - 1];
-    return Q.done(FIRST_VISIT[0]) && !Q.done(last) && (dist(m.x, m.z, SILL_DOOR.x, SILL_DOOR.z) < 1500 || Q.state(last)?.stage === 'active');
+    return !!Q.state(FIRST_VISIT[0]) && !Q.done(last) && (dist(m.x, m.z, SILL_DOOR.x, SILL_DOOR.z) < 1500 || Q.state(last)?.stage === 'active');
   }
 
   offerJob(m, only = null) {

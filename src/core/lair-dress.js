@@ -126,8 +126,17 @@ export function dressLairs(K, seals = []) {
       for (let i = 0; i < 6; i++) bones(...at(h(30 + i), B * (0.35 + h(36 + i) * 0.7)), 40 + i * 12);
       for (let i = 0; i < 5; i++) { const [x, z] = at(h(120 + i), B * (0.5 + h(125 + i) * 0.6)); if (free(x, z, 0.3)) K.spike('obsidian', x, Y(x, z) - 0.1, z, 0.14, 0.4 + h(130 + i) * 0.5, 4, i, [(h(135 + i) - 0.5) * 0.5, (h(140 + i) - 0.5) * 0.5]); }
     } else if (kind === 'roost') {
-      // Perches: bare poles with a cross-piece, a nest of sticks on the ground, droppings of bone, pale stones.
-      for (let i = 0; i < 4; i++) { const [x, z] = at(i / 4 + h(1), R + 2 + h(i + 2) * 1.5); if (!free(x, z, 0.3)) continue; const y = Y(x, z), hh = 3 + h(i + 6) * 1.5, a = h(i + 10) * TAU; K.spike('bark', x, y - 0.4, z, 0.15, hh + 0.4, 5, i); K.beam('bark', [x - Math.cos(a) * 0.8, y + hh * 0.78, z - Math.sin(a) * 0.8], [x + Math.cos(a) * 0.8, y + hh * 0.82, z + Math.sin(a) * 0.8], 0.09); }
+      // Perches: bare poles forked at the top like a dead sapling, a nest of sticks on the ground, droppings of bone, pale
+      // stones. (Forked, two arms up and out, not one across: a pole with a cross-piece is a cross, and a roost stands in
+      // his country too, on the Sill. Nothing of hers.)
+      for (let i = 0; i < 4; i++) {
+        const [x, z] = at(i / 4 + h(1), R + 2 + h(i + 2) * 1.5);
+        if (!free(x, z, 0.3)) continue;
+        const y = Y(x, z), hh = 3 + h(i + 6) * 1.5, a = h(i + 10) * TAU, b = a + 2.2 + h(i + 14) * 0.8, base = [x, y + hh * 0.86, z];
+        K.spike('bark', x, y - 0.4, z, 0.15, hh + 0.4, 5, i);
+        K.beam('bark', base, [x + Math.cos(a) * 0.75, y + hh + 0.55, z + Math.sin(a) * 0.75], 0.08);
+        K.beam('bark', base, [x + Math.cos(b) * 0.6, y + hh + 0.35, z + Math.sin(b) * 0.6], 0.07);
+      }
       { const [x, z] = at(h(20), R * 0.3); if (free(x, z, 1.2)) { const y = Y(x, z); for (let i = 0; i < 9; i++) { const a = i / 9 * TAU + h(i + 21), b = a + 1.9; K.beam('bark', [x + Math.cos(a) * 1.0, y + 0.08 + (i % 3) * 0.09, z + Math.sin(a) * 1.0], [x + Math.cos(b) * 1.0, y + 0.12 + (i % 3) * 0.09, z + Math.sin(b) * 1.0], 0.08); } for (let i = 0; i < 3; i++) K.spike('pale:stone', x + (h(i + 31) - 0.5) * 0.5, y + 0.1, z + (h(i + 34) - 0.5) * 0.5, 0.15, 0.24, 5, i); } }
       for (let i = 0; i < 5; i++) bones(...at(h(40 + i), R * (0.4 + h(45 + i) * 0.8)), 50 + i * 12);
       for (let i = 0; i < 4; i++) stone(...at(h(110 + i), R + 1 + h(114 + i) * 2), 118 + i * 3, 'pale:rubble', 0.45, 0.4);
