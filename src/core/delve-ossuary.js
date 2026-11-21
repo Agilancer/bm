@@ -66,11 +66,11 @@ const props = [];
   [-36, -48, -62, -74, -86].forEach((z, i) => add('bonepier', i % 2 ? 7 : -7, z, { hx: 1.4, hz: 0.7, solid: true }));
   for (const z of [-38, -42]) add('stall', 3.6, z, { hx: 2.2, yaw: PI });
   for (const z of [-80, -84]) add('stall', -3.6, z, { hx: 2.2, yaw: PI });
-  add('daylight', 0, -60, { r: 3 }); add('rings', 0, -60, { r: 4 });
+  add('daylight', 0, -60, { r: 3, shaft: false }); add('rings', 0, -60, { r: 4 });
   // (The runner stops either side of the ring of black glass: a strip through a ring is a bar across it.)
   add('carpet', 0, -43, { hx: 1.2, hz: 11.4, layer: 'blood:cloth_red' }); add('carpet', 0, -78, { hx: 1.2, hz: 12.4, layer: 'blood:cloth_red' });
   add('bonetree', -8, -41, { h: 3.6 }); add('bonetree', 8, -66, { h: 3.6 }); add('bonetree', -8, -80, { h: 3.6 });
-  add('brazier', -3.4, -30.6); add('brazier', 3.4, -30.6); add('brazier', -5, -90.4);
+  add('brazier', -3.9, -30.6); add('brazier', 3.9, -30.6);   // (against the walls: on the way to the nave's door they stood in it, the critics) add('brazier', -5, -90.4);
   add('decal', -9.95, -88, { layer: 'p2_wax_drips', w: 2, h: 2, up: 1, yaw: PI / 2 });
   // ---- the Charnel Aisle: low. Bones in stacks down both walls, biers, a heap not yet sorted, the sorters' table. One fire.
   for (const z of [-44, -58, -72]) add('charnel', -36.3, z, { yaw: PI / 2 });

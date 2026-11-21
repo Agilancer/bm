@@ -39,7 +39,7 @@ function eyes(d, r) {
   const X = d.x + r.x, Z = d.z + r.z;
   let ex, ez, tx, tz;
   // (The way in, where the portal stands at one end: from its middle, so the eye isn't inside the portal's stone.)
-  if (r === d.rooms[0] && r.hx !== undefined) { ex = X; ez = Z; tx = X; tz = Z - Math.max(r.hz, 6); }
+  if (r === d.rooms[0] && r.hx !== undefined) { ex = X; ez = Z - 3; tx = X; tz = Z - Math.max(r.hz, 6) - 3; }
   else if (r.hx === undefined) { ex = X + r.r * 0.55; ez = Z + r.r * 0.55; tx = X - r.r * 0.3; tz = Z - r.r * 0.3; }
   else if (r.hz >= r.hx) { ex = X + r.hx * 0.35; ez = Z + r.hz - Math.min(4, r.hz * 0.3); tx = X - r.hx * 0.1; tz = Z - r.hz * 0.6; }
   else { ex = X + r.hx - Math.min(4, r.hx * 0.3); ez = Z + r.hz * 0.35; tx = X - r.hx * 0.6; tz = Z - r.hz * 0.1; }

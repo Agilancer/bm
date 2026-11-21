@@ -876,6 +876,16 @@
     "name": "p2_signs",
     "kind": "single",
     "cutout": false
+   },
+   {
+    "name": "p2_portraits_a",
+    "kind": "single",
+    "cutout": false
+   },
+   {
+    "name": "p2_portraits_b",
+    "kind": "single",
+    "cutout": false
    }
   ]
  }

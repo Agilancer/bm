@@ -20,6 +20,13 @@ for m in bpy.data.materials:
         base = [min(1, c * TINT[pre]) for c in base[:3]] + [1]
     if 'glow' in m.name:
         base = [0.75, 0.85, 1, 1]
+    # (The game's own colours for the layers Workbench can't guess: the Undercroft's green glass and a gown's cloth.)
+    if m.name == 'forest:flame':
+        base = [0.16, 0.5, 0.24, 1]
+    elif m.name == 'forest:obsidian':
+        base = [0.03, 0.1, 0.06, 1]
+    elif m.name == '$cloth':
+        base = [0.42, 0.07, 0.08, 1]
     m.diffuse_color = base
 sc = bpy.context.scene
 try:

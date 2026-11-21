@@ -187,6 +187,10 @@ def main():
     # (And the shops' signs after them, painted, not one of the pack's: signs.py.)
     import signs
     signs.main()
+    # (And the Gallery of a Thousand Portraits' paintings after those: tools/dungeon/portraits_paint.py.)
+    sys.path.insert(0, os.path.join(ROOT, "tools", "dungeon"))
+    import portraits_paint
+    portraits_paint.wire()
 
 
 if __name__ == "__main__":

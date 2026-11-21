@@ -72,7 +72,7 @@ const props = [];
   // Conservatory) in the east wall. A fire at the way in, one where it opens into the rows.
   add('lintel', 0, -2, { hx: 4.5, stone: 'dark:ashlar' });
   add('hooks', -3.6, -16, { n: 4, alongZ: true, up: 1.9 }); add('barrels', -3.2, 3); add('cart', -2.6, -27, { yaw: 0.2 }); add('barrels', 3.2, -30);
-  add('brazier', 3.2, 2.4); add('brazier', -3.2, -34);
+  add('brazier', 3.9, -5); add('brazier', -3.2, -34);
   add('mark', 4.25, -12, { up: 3.2, r: 0.5, yaw: -PI / 2, back: -1 });
   add('decal', -2, -8, { layer: 'p2_blood_splashes', w: 1.8, flat: true });
   // ---- the Cage Rows: a long low hall, cages down both walls with a way between, some standing open; cages hung over the

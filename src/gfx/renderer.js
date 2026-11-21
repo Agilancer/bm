@@ -588,8 +588,11 @@ export class Renderer {
       for (const [x, y, z, nx, nz, lit] of torches(d)) if (lit) warrens.push({ p: [x + nx * (lant ? 0.25 : 0.45), y + (lant ? -0.35 : 0.3), z + nz * (lant ? 0.25 : 0.45)], c: L.light, r: 12 * g, i: 3.8 * g, flicker: 0.8 * cold });
       // (A fire hung over a hall: its light from under the basket, far-reaching and strong enough to pool on a floor five
       // metres down, which falls off by the square of the way.)
+      // (A grave-lamp's ('bowl') is over its wicks, in the bowl's lap, stronger to reach the floor as far: from under it, the
+      // dish's underside was lit like a lampshade, the critics.)
+      const bowl = L.lamp === 'bowl';
       for (const [x, y, z, lift, how] of braziers(d)) warrens.push(how === 'hang'
-        ? { p: [x, y + lift - 1.6, z], c: L.fire, r: 17 * Math.min(g, 1.4), i: 30 * g, flicker: 0.5 * cold }
+        ? { p: [x, y + lift - (bowl ? 0.25 : 1.6), z], c: L.fire, r: 17 * Math.min(g, 1.4), i: (bowl ? 48 : 30) * g, flicker: 0.5 * cold }
         : { p: [x, y + (lift ?? 1.9), z], c: L.fire, r: (lift > 4 ? 22 : 15) * g, i: (lift > 4 ? 6.5 : 5.2) * g, flicker: 0.9 * cold });
       // (Daylight down a shaft or through glass, src/core/delve-build.js daylight: cold and steady, from just under the roof, and
       // kept among the frame's lights before the torches round it: the Sunk Garden's, the Library's oculus, the Conservatory.)

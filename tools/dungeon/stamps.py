@@ -230,6 +230,7 @@ def outfall():
     M.box('$foot', (0, -0.3, -R - 0.12), (1.0, 0.5, 0.12))
     M.box('moss:rubble', (0, -0.42, -R - 0.17), (0.5, 0.25, 0.04))
     M.spot('lip', (0, -0.5, -R - 0.06))
+    M.spot('mouth', (0, -0.22, -R + 0.03))
     return M.done()
 
 
@@ -299,42 +300,48 @@ def oculus():
 
 
 def jar():
-    """One of the Undercroft's great vessels: a jar of green glass a man high, round-shouldered, an iron lid and three iron
-    bands; a stand of stone under it; a lamp set in the stand's hollow (spot 'lamp'): its glow, low behind the dark green
+    """One of the Undercroft's great vessels: a jar of green glass a man high, straight-sided, round-shouldered, an iron lid
+    and two iron bands, lit liquid two-thirds up it; a stand of stone under it; a lamp set in the stand's hollow (spot 'lamp'): its glow, low behind the dark green
     glass, is a card the game puts there (src/core/delve-props-a.js glassjar). Unit: 1 m radius at its belly, 2.8 m of glass."""
     M = Mesh('jar')
-    n = 16
-    prof = [(0.0, 0.62), (0.1, 0.9), (0.35, 1.0), (1.05, 1.0), (1.6, 1.0), (2.2, 0.92), (2.55, 0.66), (2.75, 0.5), (2.8, 0.5)]
+    n = 28
+    # (A specimen jar, straight-sided, not a barrel: no band round its belly. Lit liquid to LIQ, dark empty glass above it
+    # to the shoulder, a thin bright meniscus at the line.)
+    LIQ = 1.95
+    prof = [(0.0, 0.7), (0.1, 0.95), (0.25, 1.0), (LIQ - 0.04, 1.0), (LIQ, 1.0), (2.3, 1.0), (2.5, 0.84), (2.68, 0.58), (2.8, 0.5)]
     z0 = 0.5
     for (h0, r0), (h1, r1) in zip(prof, prof[1:]):
-        M.cyl('forest:obsidian', (0, 0, z0 + h0), (0, 0, z0 + h1), r0, n, r1, cap=False)
+        lay = 'forest:flame' if 0.1 <= h0 < LIQ else 'forest:obsidian'
+        M.cyl(lay, (0, 0, z0 + h0), (0, 0, z0 + h1), r0, n, r1, cap=False)
+    M.cyl('forest:flame', (0, 0, z0 + LIQ - 0.005), (0, 0, z0 + LIQ + 0.005), 0.985, n, 0.985)   # (the liquid's top, seen through the glass over it)
     M.cyl('iron', (0, 0, z0 + 2.8), (0, 0, z0 + 2.96), 0.56, n, 0.3)
     M.cyl('iron', (0, 0, z0 + 2.96), (0, 0, z0 + 3.04), 0.12, 8)
-    for h, r in ((0.12, 0.93), (1.3, 1.0), (2.3, 0.88)):
+    for h, r in ((0.12, 0.96), (2.42, 0.9)):   # (a band at the foot and one at the shoulder)
         M.cyl('iron', (0, 0, z0 + h - 0.05), (0, 0, z0 + h + 0.05), r + 0.025, n, r + 0.025, cap=False)
     M.cyl('dark:block', (0, 0, 0), (0, 0, z0), 1.15, 8, 1.05)
-    # (What's in it against the light: a body hung curled, a dark shape, seen through the glass: drawn on the glass's face
-    # by src/core/delve-props-a.js, since the glass isn't clear.)
     M.spot('lamp', (0, 0, 0.3))
     return M.done()
 
 
 def gravelamp():
     """The Kingsbarrow's hung grave-lamp: a wide dished bowl of dark iron on three chains from a ring, tallow in it and a
-    crowd of wicks round its rim (spots w0..w5). Origin at the ring, the bowl 0.9 m under it."""
+    stub of three wicks in it (spots w0..w2). Origin at the ring, the bowl 0.9 m under it."""
     M = Mesh('gravelamp')
     M.ring('iron', (0, 0, 0), 0.09, 0.015, 'Z', 10, 4)
     for k in range(3):
         a = k / 3 * math.tau
         M.path('iron', [(0, 0, -0.02), (math.cos(a) * 0.6, math.sin(a) * 0.6, -0.86)], 0.012, 4)
-    M.cyl('dark:iron', (0, 0, -0.88), (0, 0, -1.08), 0.64, 14, 0.22, cap='top')   # (the bowl's dish, open at the top)
-    M.cyl('dark:iron', (0, 0, -0.9), (0, 0, -0.86), 0.66, 14, 0.66, cap=False)   # (its lip)
-    M.cyl('umber:white', (0, 0, -0.93), (0, 0, -0.92), 0.6, 14)                   # (the tallow in it)
-    M.cyl('dark:iron', (0, 0, -1.08), (0, 0, -1.2), 0.18, 8, 0.05)               # (a drop under it)
-    for k in range(6):
-        a = (k + 0.5) / 6 * math.tau
-        M.cyl('dark:iron', (math.cos(a) * 0.5, math.sin(a) * 0.5, -0.92), (math.cos(a) * 0.5, math.sin(a) * 0.5, -0.9), 0.006, 3, cap=False)
-        M.spot('w%d' % k, (math.cos(a) * 0.5, math.sin(a) * 0.5, -0.89))
+    M.cyl('char:p2_heavy_rust', (0, 0, -0.88), (0, 0, -1.08), 0.64, 14, 0.22, cap='top')   # (the bowl's dish, open at the top)
+    M.cyl('char:p2_heavy_rust', (0, 0, -0.91), (0, 0, -0.84), 0.68, 14, 0.66, cap=False)   # (its lip, a heavy rolled rim)
+    M.cyl('char:p2_heavy_rust', (0, 0, -0.84), (0, 0, -0.835), 0.68, 14, 0.6, cap=False)
+    M.cyl('soot:ph_grey_plaster', (0, 0, -0.93), (0, 0, -0.92), 0.6, 14)                   # (the tallow in it, old, smoked dark)
+    M.cyl('char:p2_heavy_rust', (0, 0, -1.08), (0, 0, -1.2), 0.18, 8, 0.05)               # (a drop under it)
+    for k in range(3):   # (three thick wicks, each in a stub of its own tallow, burning apart)
+        a = (k + 0.25) / 3 * math.tau
+        cx, cy = math.cos(a) * 0.34, math.sin(a) * 0.34
+        M.cyl('umber:ph_grey_plaster', (cx, cy, -0.92), (cx, cy, -0.8), 0.07, 7, 0.055, cap='top')
+        M.cyl('dark:iron', (cx, cy, -0.8), (cx, cy, -0.77), 0.008, 3, cap=False)
+        M.spot('w%d' % k, (cx, cy, -0.765))
     return M.done()
 
 
@@ -342,20 +349,58 @@ def cocoon():
     """What the Spider Queen keeps: a body wound in silk and hung by a rope of it, lumpy, the wraps in bands round it.
     The origin at its top (where the rope meets it), 1.72 m long, hanging down -z."""
     M = Mesh('cocoon')
-    prof = [(0, 0.06), (0.15, 0.2), (0.4, 0.3), (0.75, 0.34), (1.05, 0.3), (1.35, 0.33), (1.6, 0.2), (1.72, 0.05)]
+    prof = [(0, 0.05), (0.1, 0.16), (0.24, 0.24), (0.4, 0.3), (0.58, 0.27), (0.75, 0.33), (0.92, 0.35), (1.08, 0.3),
+            (1.22, 0.32), (1.38, 0.3), (1.52, 0.22), (1.64, 0.13), (1.72, 0.04)]
+    sag = lambda h: 0.09 * math.sin(h / 1.72 * math.pi) + 0.03 * math.sin(h * 7.0)   # (the weight in it pulls it over)
     for i, ((h0, r0), (h1, r1)) in enumerate(zip(prof, prof[1:])):
-        M.cyl('white' if i % 2 else 'pale:cloth_oat', (0.02 * (i % 3 - 1), 0, -h0), (0.02 * ((i + 1) % 3 - 1), 0, -h1), r0, 8, r1, cap=False)
-    for h, r in ((0.5, 0.32), (0.9, 0.33), (1.2, 0.32)):   # (the wraps across it)
-        M.cyl('pale:cloth_oat', (0, 0, -h + 0.03), (0, 0, -h - 0.03), r + 0.012, 8, r + 0.012, cap=False)
-    M.cyl('white', (0, 0, -1.72), (0, 0, -1.74), 0.05, 6)
-    for k in range(3):   # (silk strands from its shoulders up to the rope)
-        a = k / 3 * math.tau
-        M.path('white', [(math.cos(a) * 0.18, math.sin(a) * 0.18, -0.16), (0, 0, 0.25)], 0.006, 3)
+        M.cyl('cloth_oat' if i % 3 == 1 else 'umber:cloth_oat', (sag(h0), 0.02 * math.sin(h0 * 5), -h0), (sag(h1), 0.02 * math.sin(h1 * 5), -h1), r0, 12, r1, cap=False)
+    for h, r in ((0.36, 0.3), (0.62, 0.29), (0.86, 0.36), (1.15, 0.32), (1.42, 0.28)):   # (the wraps round it, slanting)
+        M.cyl('dark:cloth_oat', (sag(h) - 0.01, 0, -h + 0.04), (sag(h) + 0.01, 0, -h - 0.02), r + 0.014, 12, r + 0.014, cap=False)
+    for k in range(4):   # (silk strands from its shoulders gathered up into the rope)
+        a = k / 4 * math.tau + 0.3
+        M.path('cloth_oat', [(math.cos(a) * 0.2, math.sin(a) * 0.2, -0.22), (math.cos(a) * 0.07, math.sin(a) * 0.07, 0.05), (0, 0, 0.3)], 0.008, 3)
     M.spot('top', (0, 0, 0))
     return M.done()
 
 
-BUILDERS += [oculus, jar, gravelamp, cocoon]
+def loft(M, m, rings, n, cap_top=False):
+    """A skin through rings of (z, rx, ry[, fold]): each an ellipse round the z axis, n round; fold a ripple of that much."""
+    pts = []
+    for ring in rings:
+        z, rx, ry = ring[:3]; fold = ring[3] if len(ring) > 3 else 0
+        for i in range(n):
+            t = i / n * math.tau; k = 1 + fold * math.sin(t * 7 + z * 3)
+            pts.append((math.cos(t) * rx * k, math.sin(t) * ry * k, z))
+    faces = [(r * n + i, r * n + (i + 1) % n, (r + 1) * n + (i + 1) % n, (r + 1) * n + i) for r in range(len(rings) - 1) for i in range(n)]
+    if cap_top:
+        faces.append(tuple(range((len(rings) - 1) * n, len(rings) * n)))
+    M._add(m, pts, faces)
+
+
+def dressform():
+    """The Playhouse wardrobe's dress forms: a padded linen torso (hips, a waist pulled in, the bust, sloped shoulders, a
+    neck and its turned cap) on a turned pole and three feet; a gown half made on it, the bodice pinned to the front and
+    a skirt falling in folds to the floor, of the company's cloth ('$cloth', src/core/delve-stamps.js). Faces -y."""
+    M = Mesh('dressform')
+    loft(M, 'umber:cloth_oat', [(0.98, 0.2, 0.15), (1.08, 0.21, 0.16), (1.2, 0.155, 0.12), (1.33, 0.19, 0.15), (1.43, 0.215, 0.17),
+                                 (1.52, 0.2, 0.13), (1.57, 0.14, 0.1), (1.6, 0.055, 0.05), (1.67, 0.05, 0.05)], 14)
+    M.cyl('dark:wood', (0, 0, 1.67), (0, 0, 1.72), 0.065, 8, 0.03)                        # (the neck's turned cap)
+    M.cyl('dark:wood', (0, 0, 0.12), (0, 0, 0.98), 0.03, 6, cap=False)                    # (the pole)
+    M.cyl('dark:wood', (0, 0, 0.12), (0, 0, 0.22), 0.06, 8, 0.035, cap='top')
+    for k in range(3):
+        a = k / 3 * math.tau
+        M.path('dark:wood', [(0, 0, 0.14), (math.cos(a) * 0.36, math.sin(a) * 0.36, 0.02)], 0.024, 4)
+        M.cyl('dark:wood', (math.cos(a) * 0.36, math.sin(a) * 0.36, 0.0), (math.cos(a) * 0.36, math.sin(a) * 0.36, 0.04), 0.035, 6, cap='top')
+    # The gown: a bodice over the torso's front half (a little proud of it), a skirt from the waist in folds to the floor.
+    loft(M, '$cloth', [(1.16, 0.168, 0.132), (1.33, 0.2, 0.162), (1.44, 0.226, 0.182), (1.5, 0.21, 0.15)], 14)
+    loft(M, '$cloth', [(1.2, 0.17, 0.135, 0.0), (1.05, 0.26, 0.22, 0.04), (0.8, 0.36, 0.32, 0.08), (0.45, 0.46, 0.42, 0.1), (0.08, 0.56, 0.52, 0.12)], 20)
+    M.cyl('dark:cloth_oat', (0, 0, 1.17), (0, 0, 1.22), 0.175, 14, 0.17, cap=False)       # (its sash at the waist)
+    for k in range(5):                                                                     # (pins down the front)
+        M.cyl('iron', (0.02 * (k - 2), -0.17 - 0.01 * (k % 2), 1.24 + 0.05 * k), (0.02 * (k - 2), -0.2, 1.24 + 0.05 * k), 0.006, 3)
+    return M.done()
+
+
+BUILDERS += [oculus, jar, gravelamp, cocoon, dressform]
 
 
 def build(only=None):

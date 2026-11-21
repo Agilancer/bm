@@ -15,11 +15,16 @@ import { hash2, vnoise } from './terrain-noise.js';
 import { tileOf } from './sites.js';
 import { dress } from './delve-dress.js';
 import { PROPS_B } from './delve-props-b.js';
-import { PROPS_A } from './delve-props-a.js';
+import { PROPS_A, moulding, painting } from './delve-props-a.js';
 import { stamp } from './delve-stamps.js';
 import { DELVES, DUNGEON_CELL, GRID_UNIT, bannerSpots, braziers, caveFloorY, caveRoofY, caveRoom, grid, torches } from './dungeon.js';
 
 const TAU = Math.PI * 2;
+// A wet patch on a floor at y, w across, turned a: the PH2 pack's puddles laid flat (a cut-out, so its edge breaks up).
+function wet(K, x, y, z, w, a) {
+  const c = Math.cos(a) * w / 2, s = Math.sin(a) * w / 2;
+  K.quad('slate:p2_puddles', [x - c - s, y + 0.025, z + s - c], [x + c - s, y + 0.025, z - s - c], [x + c + s, y + 0.025, z - s + c], [x - c + s, y + 0.025, z + s + c], [0, 1, 0], [[0, 0], [1, 0], [1, 1], [0, 1]]);
+}
 const NO = { collide: false };
 
 // ---- the shell ------------------------------------------------------------------------------------------------------------
@@ -589,7 +594,7 @@ function fires(K, d) {
         // wicks round its rim. (It was a bowl of pale stone with a sheet of flame for a lid: a crystal hung in the dark.)
         rod(K, 'iron', x, top, z, x, h + 0.55, z, 0.022);
         const sp = stamp(K, d, 'gravelamp', x, h + 0.55, z, x, { s: 1.25 });
-        for (const [k, [fx, fy, fz]] of Object.entries(sp)) fire(K, d, fx, fy, fz, 0.06, 0.2, { hue: 'tallow', glow: k === 'w0' ? 1.8 : 0 });
+        for (const [k, [fx, fy, fz]] of Object.entries(sp)) fire(K, d, fx, fy, fz, 0.08, 0.28, { hue: 'tallow', glow: 0.3 });   // (three flames apart: one glow a metre across, the bowl cut it into a halo, the critics)
       } else {
         // A basket of iron bars on a chain, three more chains from its rim, coals in it.
         rod(K, 'iron', x, top, z, x, h + 0.9, z, 0.025);
@@ -1209,8 +1214,9 @@ export const PROPS = {
 
   // ---- the Deeps ----
   drift(K, d, p, x, y, z) {
-    K.drum('white', x, y - 0.15, z, p.r, p.r * 0.3, 8, { r2: p.r * 0.35, collide: false, turn: x });
-    K.cone('white', x + p.r * 0.1, y + p.r * 0.14, z, p.r * 0.4, p.r * 0.14, 7, z);
+    // (A mound, no flat top: a drum's lid read as a pale polygon laid on the floor.)
+    K.cone('slate:rubble', x, y - 0.12, z, p.r, p.r * 0.32, 16, x);
+    K.cone('slate:rubble', x + p.r * 0.35, y - 0.1, z - p.r * 0.2, p.r * 0.55, p.r * 0.26, 12, z);
   },
   // A pillar of ice from floor to roof, thin at its waist.
   icepillar(K, d, p, x, y, z) {
@@ -1220,9 +1226,9 @@ export const PROPS = {
     for (let k = 0; k < 3; k++) { const a = k * 2.1 + z; K.spike('ice', x + Math.cos(a) * r * 1.3, y - 0.1, z + Math.sin(a) * r * 1.3, 0.3, 0.9 + k * 0.4, 4, a, [Math.cos(a) * 0.2, Math.sin(a) * 0.2]); }
   },
   // Ice lying over the floor: a sheet of it.
-  sheet(K, d, p, x, y, z) { K.disc('ice', x, y + 0.14, z, p.r, 12); },
+  sheet(K, d, p, x, y, z) { K.disc('slate:ice', x, y + 0.06, z, p.r, 28); },
   // The frozen lake, shore to shore.
-  lake(K, d, p, x, y, z) { K.disc('ice', x, y + 0.04, z, p.r, 36); },
+  lake(K, d, p, x, y, z) { K.disc('slate:ice', x, y + 0.04, z, p.r, 48); },
   // Something dark under the ice.
   shape(K, d, p, x, y, z) { for (const [ox, oz, r] of [[0, 0, 2.2], [1.8, 0.6, 1.5], [-1.9, -0.4, 1.3], [3.2, 1.3, 0.8]]) K.disc('lake', x + ox * p.s, y + 0.06, z + oz * p.s, r * p.s, 9); },
   // A beast caught in the ice where it stood: its horns and ribs standing out of the block.
@@ -1266,7 +1272,8 @@ export const PROPS = {
   cocoon(K, d, p, x, y, z) {
     const top = caveRoofY(x, z), h = Math.min(top - 1.6, y + 2.4 + hash2(x | 0, z | 0) * 1.5);
     // (A body wound in silk, lumpy, banded: it was a six-sided point of white, a crystal.)
-    rod(K, 'white', x, top + 0.2, z, x, h + 1.7, z, 0.02);
+    rod(K, 'pale:cloth_oat', x, top + 0.2, z, x, h + 1.7, z, 0.025);
+    for (let k = 0; k < 3; k++) { const a = hash2(z, k) * TAU, o = 1.2 + k * 0.6; rod(K, 'pale:cloth_oat', x, h + 2.0, z, x + Math.cos(a) * o, caveRoofY(x + Math.cos(a) * o, z + Math.sin(a) * o) + 0.1, z + Math.sin(a) * o, 0.008); }
     stamp(K, d, 'cocoon', x, h + 1.72, z, hash2(x, z) * TAU, { s: 1.05 });
   },
   // A river caught as it fell: a curtain of ice down the wall, facing yaw.
@@ -1428,10 +1435,10 @@ export const PROPS = {
   streetgrate(K, d, p, x, y, z) {
     const top = caveRoofY(x, z);
     stamp(K, d, 'streetgrate', x, top, z, p.yaw || 0);
-    K.fires.push({ delve: d.key, hue: 'day', kind: 'shaft', x, y: top - 0.4, z, w: 1.0, h: top - y + 0.2, lean: p.lean || [0.1, 0.06], i: 0.26, ember: 0, seed: hash2(x, z) });
+    if (p.shaft !== false) K.fires.push({ delve: d.key, hue: 'day', kind: 'shaft', x, y: top - 0.4, z, w: 0.8, h: top - y + 0.2, lean: p.lean || [0.1, 0.06], i: 0.1, ember: 0, seed: hash2(x, z) });
     // (Where the rain comes down through it the floor's wet and washed pale: it was a disc of 'lake', which takes the dark
     // of the vault over it and read as a hole.)
-    K.drum('pale:flags', x + 0.2, y + 0.012, z + 0.1, 1.35, 0.01, 12, { collide: false });
+    wet(K, x + 0.2, y, z + 0.1, 2.6, hash2(x, z) * TAU);
     K.drum('moss:rubble', x - 0.9, y - 0.02, z + 0.6, 0.45, 0.04, 7, { r2: 0.3, collide: false, turn: x });
   },
   // A pipe's mouth in a wall, a little water out of it over its lip and down into a puddle (tools/dungeon/stamps.py outfall).
@@ -1445,31 +1452,41 @@ export const PROPS = {
     for (let k = 0; k < 40 && caveRoom(wx, wz) > 0.02; k++) { wx -= nx * 0.1; wz -= nz * 0.1; }
     const fy = caveFloorY(x, z), up = p.up ?? 1.1;
     const sp = stamp(K, d, 'outfall', wx, fy + up, wz, p.yaw || 0);
-    const [lx, ly, lz] = sp.lip, tx = -nz * 0.045, tz = nx * 0.045;
+    const [lx, ly, lz] = sp.lip, [mx, my, mz] = sp.mouth, tx = -nz * 0.045, tz = nx * 0.045;
     // (Its foot stained, wet or not: the green-brown of years of it on the floor and up the wall's foot.)
     K.drum('moss:flags', lx + nx * 0.45, fy + 0.012, lz + nz * 0.45, 0.8, 0.01, 10, { collide: false });
     if (p.dry) return;
-    // (A trickle, a hand wide, two ways so it's a thread of water from any side: a quarter-metre-wide white card was a blade.)
-    for (const [ax, az] of [[tx, tz], [nx * 0.045, nz * 0.045]]) K.quad('falls', [lx - ax, ly, lz - az], [lx + ax, ly, lz + az], [lx + ax + nx * 0.16, fy + 0.02, lz + az + nz * 0.16], [lx - ax + nx * 0.16, fy + 0.02, lz - az + nz * 0.16]);
-    K.drum('dark:lake', lx + nx * 0.3, fy + 0.016, lz + nz * 0.3, 0.32, 0.01, 8, { collide: false });
+    // (Out of the bore's floor, along the ledge to its lip, off it and down in an arc, a splash where it lands: it stood on
+    // the floor a metre off the pipe, a white stick, the critics.)
+    const w = 0.07, ux = -nz * w, uz = nx * w, top = ly + 0.065;
+    K.quad('falls', [mx - ux, my - 0.02, mz - uz], [mx + ux, my - 0.02, mz + uz], [lx + ux, top, lz + uz], [lx - ux, top, lz - uz], [0, 1, 0]);
+    let px = lx, py = top, pz = lz;
+    for (let i = 1; i <= 5; i++) {
+      const t = i / 5, qx = lx + nx * 0.22 * t, qy = top + (fy + 0.02 - top) * t * t, qz = lz + nz * 0.22 * t, ww = 0.05 - 0.015 * t;
+      for (const [ax, az] of [[-nz * ww, nx * ww], [nx * ww * 0.6, nz * ww * 0.6]]) K.quad('falls', [px - ax, py, pz - az], [px + ax, py, pz + az], [qx + ax, qy, qz + az], [qx - ax, qy, qz - az]);
+      px = qx; py = qy; pz = qz;
+    }
+    K.drum('falls', px, fy + 0.012, pz, 0.16, 0.03, 8, { collide: false });
+    K.drum('dark:lake', px + nx * 0.15, fy + 0.016, pz + nz * 0.15, 0.42, 0.01, 9, { collide: false });
   },
   daylight(K, d, p, x, y, z) {
     const top = caveRoofY(x, z), r = p.r;
     if (r >= 6) {
       // (A court open to the sky over its middle: the day itself up there, grey-blue, not a lamp; no beam, the whole court
       // is in it. At 'glow' it was a strip light in the vault, white.)
-      K.drum('slate:glow', x, top - 0.25, z, r, 0.2, 24, { collide: false });
-      K.drum('pale:stone', x, top - 0.45, z, r + 0.5, 0.2, 24, { r2: r, open: true, collide: false });
+      K.drum('slate:glow', x, top - 0.25, z, r, 0.2, 32, { collide: false });
+      K.drum(d.look.foot || 'dark:stone', x, top - 0.9, z, r + 0.7, 0.7, 32, { r2: r, open: true, collide: false });
+      K.drum('dark:stone', x, top - 0.25, z, r + 0.05, 0.5, 32, { r2: r + 0.05, open: true, collide: false });
     } else {
       // A light well's mouth in the vault, made (tools/dungeon/stamps.py oculus): its moulding, its throat, a grille across
       // it, the day beyond. A beam down from it only where it's a well worth the name (a hand-wide hole in a dome lets in
       // a spot, not a shaft), and dim: dust in the day, not a searchlight.
       stamp(K, d, 'oculus', x, top, z, hash2(x, z) * TAU, { s: r });
-      if (p.shaft !== false && r >= 1.4) K.fires.push({ delve: d.key, hue: 'day', kind: 'shaft', x, y: top - 0.5 * r, z, w: r * 0.9, h: top - y, lean: p.lean || [0.08, 0.04], i: 0.22, ember: 0, seed: hash2(x, z) });
+      if (p.shaft !== false && r >= 1.4) K.fires.push({ delve: d.key, hue: 'day', kind: 'shaft', x, y: top - 0.5 * r, z, w: r * 0.9, h: top - y, lean: p.lean || [0.08, 0.04], i: 0.09, ember: 0, seed: hash2(x, z) });
     }
     // (pool: false, no pale round on the floor under it: its own cold light lights the floor, src/gfx/renderer.js. The round
     // that's there is worn stone, bleached, not a light of its own.)
-    if (p.pool !== false) K.drum('pale:flags', x, y + 0.01, z, r * 1.15, 0.02, 16, { collide: false });
+    if (p.pool !== false) wet(K, x, y, z, Math.min(5, r * 1.6), hash2(z, x) * TAU);
   },
   sluicegate(K, d, p, x, y, z) {
     const c = Math.cos(p.yaw), s = Math.sin(p.yaw), w = p.w;
@@ -1589,9 +1606,16 @@ export const PROPS = {
   // the cloth of their livery (no letters, no plaque); then its frame dark iron, and sz so much bigger.)
   portrait(K, d, p, x, y, z) {
     const c = Math.cos(p.yaw), s = Math.sin(p.yaw), k = p.sz || 1, q = (u, h, o) => [x + u * k * c + o * s, y + (h - 1.5) * k + 1.5 + (p.up || 0), z - u * k * s + o * c];
-    K.quad(p.sitter ? 'dark:wood' : 'wood', q(-0.8, 1.5, 0.03), q(0.8, 1.5, 0.03), q(0.8, 3.7, 0.03), q(-0.8, 3.7, 0.03), [s, 0, c]);
-    K.quad('dark:cloth_oat', q(-0.62, 1.68, 0.06), q(0.62, 1.68, 0.06), q(0.62, 3.52, 0.06), q(-0.62, 3.52, 0.06), [s, 0, c]);
-    if (!p.sitter) return;
+    // (A moulded frame, gilt or dark, and one of the house painted in it: tools/dungeon/portraits_paint.py. Flat cut-paper
+    // shapes before, the critics' "clip art".)
+    {
+      const up = p.up || 0, F = (u, h, o = 0) => [x + u * c + o * s, y + h + up, z - u * s + o * c]; F.n = [s, 0, c];
+      const h0 = (1.68 - 1.5) * k + 1.5, h1 = (3.52 - 1.5) * k + 1.5;
+      const n = Math.floor(hash2(x * 3, z * 7) * 11), gilt = hash2(z, x * 5) < 0.45;
+      moulding(K, gilt ? 'p2_bronze_plates' : 'dark:wood', F, -0.62 * k, 0.62 * k, h0, h1, 0.18 * k, 0.03, 0.08 * k, gilt ? 'umber:p2_bronze_plates' : 'p2_bronze_plates');
+      painting(K, F, -0.62 * k, 0.62 * k, h0, h1, 0.05, n, hash2(x, z) < 0.5, p.sitter ? '' : 'dark:');
+      return;
+    }
     // The sitter, head and shoulders: sloped shoulders in their cloth, a collar, a neck, a face narrowed to the chin, hair
     // over the brow and down one side; turned a little one way or the other (turn).
     const t = p.turn || 0, Q = (u, h, o) => q(u + t * (h - 1.7) * 0.06, h, o);
@@ -1667,11 +1691,10 @@ export const PROPS = {
   },
   // A dress form on its stand, half a costume pinned to it: thick enough to stand behind.
   dressform(K, d, p, x, y, z) {
-    const r = p.r;
-    K.drum('wood', x, y, z, r * 0.9, 0.14, 8, NO); K.drum('wood', x, y + 0.14, z, 0.09, 0.9, 6, NO);
-    K.drum('cloth_oat', x, y + 1.0, z, r * 0.62, 0.7, 8, { r2: r * 0.86, collide: false }); K.drum('cloth_oat', x, y + 1.7, z, r * 0.86, 0.5, 8, { r2: r * 0.5, collide: false });
-    K.drum('spore:cloth_oat', x, y + 0.3, z, r * 1.25, 0.75, 9, { r2: r * 0.66, open: true, collide: false });
-    K.drum('wood', x, y + 2.2, z, 0.1, 0.16, 6, NO);
+    // (Made in Blender, tools/dungeon/stamps.py dressform: a padded torso on its pole, a gown half made on it in the company's
+    // cloth. It was three drums of flat cloth: "pastel lumps", the critics.)
+    const k = hash2(x * 3, z * 5), cloth = ['blood:cloth_red', 'royal:cloth_red', 'dark:cloth_red', 'p2_dyed_cloth', 'umber:p2_wool_blanket'][Math.floor(k * 5)];
+    stamp(K, d, 'dressform', x, y, z, k * TAU, { s: 1.12 * (p.r || 0.75) / 0.75, cloth });
   },
   // Bolts of cloth stood on end and stacked.
   bolts(K, d, p, x, y, z) {

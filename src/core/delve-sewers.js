@@ -463,7 +463,7 @@ function lightSewer(d, o = {}) {
       // its middle is, so the day falls somewhere of its own; a pipe out of a wall between, side to side; and no standing
       // lanterns in its walk, only the ones on its walls. (A grate every 24 m down the middle made every run one picture.)
       r.fires = 0;
-      const n = len * 2 > (o.grateEvery || 70) ? 2 : 1, seed = Math.abs(Math.round(r.x * 7 + r.z * 3)) % 7;
+      const seed = Math.abs(Math.round(r.x * 7 + r.z * 3)) % 7, n = seed % 3 === 0 ? 0 : len * 2 > (o.grateEvery || 70) ? 2 : 1;
       for (let i = 0; i < n; i++) {
         const t = (n === 1 ? (seed / 7 - 0.5) * 0.9 : i ? 0.55 : -0.4) * (len - 8), sd = (seed + i) % 2 ? 1 : -1;
         const x = r.x + (along ? sd * half * 0.35 : t), z = r.z + (along ? t : sd * half * 0.35);
@@ -495,9 +495,9 @@ function lightSewer(d, o = {}) {
 }
 // (Each its own: the West Drains fen-green and murky; the Slough brown-black and silted, its lamps the fewest; the Charnel
 // Runs bone-pale and dry; the High Conduits clean and loud with water, every pipe running. fill: the light off its stone.)
-lightSewer(WEST_DRAINS, { look: { light: [1, 0.6, 0.3], fog: [0.026, 0.03, 0.018, 0.022], fill: [0.07, 0.075, 0.058] } });
-lightSewer(SLOUGH_MAINS, { look: { light: [1, 0.62, 0.32], out: 0.25, fog: [0.032, 0.028, 0.02, 0.018], fill: [0.13, 0.11, 0.085] }, silt: true });
-lightSewer(CHARNEL_RUNS, { look: { flame: 'flame', light: [1, 0.58, 0.3], out: 0.4, fog: [0.03, 0.026, 0.024, 0.016], fill: [0.085, 0.078, 0.07] }, grateEvery: 90, bones: true });
-lightSewer(HIGH_CONDUITS, { look: { out: 0.2, fog: [0.03, 0.022, 0.014, 0.012], fill: [0.09, 0.08, 0.066] }, running: true });
+lightSewer(WEST_DRAINS, { look: { light: [1, 0.6, 0.3], fog: [0.026, 0.03, 0.018, 0.022], fill: [0.1, 0.105, 0.08] } });
+lightSewer(SLOUGH_MAINS, { look: { light: [1, 0.5, 0.24], out: 0.25, fog: [0.034, 0.026, 0.018, 0.018], fill: [0.15, 0.12, 0.09] }, silt: true });
+lightSewer(CHARNEL_RUNS, { look: { flame: 'flame', light: [1, 0.8, 0.58], out: 0.4, fog: [0.03, 0.03, 0.032, 0.016], fill: [0.12, 0.118, 0.115] }, grateEvery: 90, bones: true });
+lightSewer(HIGH_CONDUITS, { look: { out: 0.2, fog: [0.03, 0.022, 0.014, 0.012], fill: [0.18, 0.155, 0.125] }, running: true });
 // (Where the street fell in, the Great Grate: the day comes down the hole it left, wide.)
 WEST_DRAINS.props.push({ kind: 'daylight', x: 2, z: -152, r: 4.2, pool: false, lean: [0.14, 0.05] });

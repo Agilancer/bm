@@ -205,7 +205,7 @@ const WARRENS = {
   key: 'warrens', tag: 'hf', name: DUNGEON.name, short: 'the Warrens', x: DUNGEON.x, z: DUNGEON.z, y: DUNGEON.y, level: 7, style: 'cave',
   rooms: ROOMS, tunnels: TUNNELS, pillars: PILLARS, packs: PACKS, props: WARRENS_PROPS,
   entry: ENTRY, exitIn: EXIT_IN, exitOut: EXIT_OUT, portal: PORTAL, last: 'venomaw', tough: PACK_TOUGH, pay: { xp: 1500, gold: 250 },
-  look: { fill: [0.12, 0.09, 0.065], wall: 'rubble', floor: 'rubble', roof: 'dark:stone', spike: 'dark:rubble', flame: 'flame', light: [1, 0.56, 0.24], fire: [1, 0.6, 0.28], lit: 0.5, span: 'timber', litter: 'bones', out: 0.15, fog: [0.03, 0.02, 0.012, 0.012] },
+  look: { fill: [0.25, 0.185, 0.135], wall: 'rubble', floor: 'rubble', roof: 'dark:stone', spike: 'dark:rubble', flame: 'flame', light: [1, 0.56, 0.24], fire: [1, 0.6, 0.28], lit: 0.5, span: 'timber', litter: 'bones', out: 0.15, fog: [0.03, 0.02, 0.012, 0.012] },
   words: { enter: 'The Hollowfang Warrens. Kobolds dug it; goblins took it; something old sleeps at the bottom.', clear: 'The Hollowfang Warrens are cleared. Venomaw is dead!', wipe: "Your party falls... and wakes at the Warrens' mouth." },
 };
 // (In the order they were made: a delve's place in this list is sent with EV.DELVE and kept, so new ones go on the end.)

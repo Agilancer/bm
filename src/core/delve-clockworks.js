@@ -70,7 +70,7 @@ const props = [];
   // Horn Galleries) in the east wall. One fire at the way in, one where it opens into the shaft.
   add('lintel', 0, -2, { hx: 4.5, stone: 'dark:ashlar' });
   add('tools', -4, -20, { yaw: PI / 2 }); add('crates', 3.2, -30); add('stand', -3.4, -8); add('barrels', -3.2, -28);
-  add('brazier', 3.2, 2.4); add('brazier', -3.2, -32.4);
+  add('brazier', 3.9, -5); add('brazier', -3.2, -32.4);
   add('mark', 4.25, -12, { up: 3.2, r: 0.5, yaw: -PI / 2, back: -1 });
   // ---- the Weight Shaft: three times as tall as it's wide. The great dial of the works high on its far wall, seen as you
   // come in under it; the weights hung down the shaft over their pits; wheels up both walls as big as houses.
