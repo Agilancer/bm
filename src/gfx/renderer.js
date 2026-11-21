@@ -32,6 +32,7 @@ import { addStumps } from './stumps.js';
 import { GEAR, ROBES, SKULLS } from '../items/items.js';
 import { SkullEyes } from './skulleyes.js';
 import { BoardMarks } from './boardmarks.js';
+import { CritterGlass } from './critterglass.js';
 import { ShadowCache } from './shadowcache.js';
 import { GEM_CUTS, SKULL_ANCHORS } from './skullgemdata.js';
 import { PATTERNS, SKINS } from '../items/skins.js';
@@ -116,7 +117,8 @@ export const SKIN_PARAMS = 48;
 const FLAT = { iron: 100, flame: 101, water: 102, fruit: 103, fruit2: 104, white: 106, tile: 107, glow: 108, lake: 110, falls: 111, ice: 112, seal: 113, obsidian: 114, gold: 115, voidglass: 116, magma: 117, rune: 118, storm: 119 };
 // A painting in another light (src/core/sites.js): its layer plus a thousand times which (materials.js STATIC).
 const TINTS = { dark: 1, pale: 2, frost: 3, mire: 4, spore: 5, void: 6, slate: 7, blood: 8, moss: 9, umber: 10, soot: 11, eve: 12, char: 13, royal: 14, forest: 15 };
-const MAX_GROUND = 160;
+// (Room for the gilded critters' parts too, src/gfx/critters.js: each kind's part one batch, its instances side by side.)
+const MAX_GROUND = 512;
 // A weapon, shield, staff or piece of gear is loaded the first time it's seen (sword), on the ground or in a hand, and was
 // kept for good: every new drop of a long quest added its pictures and models, about 80 MB over 25 minutes. Now one
 // that's gone unseen this long is let go (trimSwords), but for the most recently seen few of those, kept for a quick swap
@@ -2193,6 +2195,8 @@ export class Renderer {
     this.skullEyes = new SkullEyes(device, this.bgl0, targets, DEPTH, this.msaa, module);
     // The shield's track on the ground, where it's ridden (src/gfx/boardmarks.js): what's been laid is kept through a rebuild.
     (this.boardMarks ||= new BoardMarks(device)).build(this.bgl0, targets, DEPTH, this.msaa, module);
+    // A gilded wisp's crystal (src/gfx/critterglass.js): light over the world, after it.
+    (this.critterGlass ||= new CritterGlass(device)).build(this.bgl0, targets, DEPTH, this.msaa, module);
     const vmSkullMod = module(VIEWMODEL_SKULL);
     this.pVMSkull = device.createRenderPipeline({
       layout: layout(this.bgl0, this.bglArmor),
@@ -2608,8 +2612,9 @@ export class Renderer {
 
   // ---- particles from the CPU -------------------------------------------------------------------------
 
-  // Emit a burst. kind: 0 droplet, 1 mist, 2 spark, 3 dust, 4 smoke, 5 mote, 6 ember, 7 flame.
-  emit(kind, count, x, y, z, dx, dy, dz, spread, sp0, sp1, sz0, sz1, life0, life1) {
+  // Emit a burst. kind: 0 droplet, 1 mist, 2 spark, 3 dust, 4 smoke, 5 mote, 6 ember, 7 flame, 14 a critter's glitter (pad:
+  // its colour, r + g * 256 + b * 65536, src/gfx/critters.js).
+  emit(kind, count, x, y, z, dx, dy, dz, spread, sp0, sp1, sz0, sz1, life0, life1, pad = 0) {
     const f = this.emitF, u = this.emitU, cap = this.emitF.length / 12;
     // (Blood is what this game is about, so it's the last thing to go thin.)
     if (this.tier.emit !== 1) count = Math.floor(count * (kind < 2 ? 0.8 : this.tier.emit) + Math.random());
@@ -2630,7 +2635,7 @@ export class Renderer {
       // Mostly small with a few large: the way any spray of liquid breaks up.
       f[o + 8] = sz0 + (sz1 - sz0) * Math.random() ** 3;
       u[o + 9] = kind;
-      f[o + 10] = Math.random(); f[o + 11] = 0;
+      f[o + 10] = Math.random(); f[o + 11] = pad;
       this.emitN++;
     }
   }
@@ -2791,6 +2796,11 @@ export class Renderer {
     let spellLights = this.spellfx.frame(snap, d, O.LIGHTS, take);
     // The light off the gems you carry. src/gfx/gemfx.js.
     for (const L of this.gemLights || []) {
+      if (take + spellLights >= MAX_LIT) break;
+      putLight(d, O.LIGHTS + (take + spellLights++) * 8, L, L.i);
+    }
+    // The gilded critters' (src/gfx/critters.js), the nearest few.
+    for (const L of this.critterLights || []) {
       if (take + spellLights >= MAX_LIT) break;
       putLight(d, O.LIGHTS + (take + spellLights++) * 8, L, L.i);
     }
@@ -3317,6 +3327,8 @@ export class Renderer {
     this.stallItems ||= this.makeStalls();
     for (const g of this.stallItems) if (this.stallsOpen.has(g.id) === g.open) drawn.push(g);
     if (this.dishes) for (const g of this.dishes.values()) drawn.push(g);
+    // The gilded critters (src/gfx/critters.js): a batch each part, g.n of them, their matrices g.mats and a ball round all.
+    for (const g of this.critterItems || []) if (g.n) drawn.push(g);
     if (snap[H.SURF] > 1.5 && this.board.sword && !this.third) drawn.push(this.board);
     // In third person, what your body holds: the staff, the left hand's (the skull, or the shield on the arm), and the
     // shield on the back or under the feet. The sim says where (a matrix each, none if there's nothing: PlayerBody.hold).
@@ -3336,8 +3348,14 @@ export class Renderer {
       let model = g.openingModel ?? g.mesh ?? (g.portal ? this.portalModels?.[g.off ? `${g.portal}_off` : g.portal] : g.door ? this.doorModels?.[g.piece] : g.bell ? this.bellModels?.[g.piece] : g.ware ? this.ware(g.ware) : g.piece ? this.chestModels?.[g.piece] : g.coins ? this.coins() : g.stuff ? this.stuff(g.stuff) : g.gem ? this.gem(g.gem) : this.sword(g.sword).lying);
       if (model && g.glow) model = this.tinted(model, g.glow, g.glowK ?? 1);
       g.model = model;
-      if (!model || nGround >= MAX_GROUND) { g.slot = -1; continue; }
+      const k = g.batch ? g.n : 1;
+      if (!model || !k || nGround + k > MAX_GROUND) { g.slot = -1; continue; }
       g.slot = nGround;
+      if (g.batch) {
+        this.itemData.set(g.mats.subarray(0, k * 16), nGround * 16); nGround += k;
+        g.sx = g.ball[0]; g.sy = g.ball[1]; g.sz = g.ball[2]; g.sr = g.ball[3]; g.inView = inView(this.planes, g.sx, g.sy, g.sz, g.sr);
+        continue;
+      }
       this.itemData.set(g.mat, nGround++ * 16);
       // (Where it lies, for the same: out of view it isn't drawn, and it's in no cascade its shadow can't reach.)
       if (model.radius !== undefined) { placeSphere(g, g.mat, 0, model.radius); g.inView = inView(this.planes, g.sx, g.sy, g.sz, g.sr); } else { g.sr = -1; g.inView = true; }
@@ -3476,7 +3494,7 @@ export class Renderer {
           if (g.sr >= 0 && !inCascade(cm, co, g.sx, g.sy, g.sz, g.sr)) continue;
           sp.setVertexBuffer(0, g.model.VB);
           sp.setIndexBuffer(g.model.IB, 'uint32');
-          sp.drawIndexed(g.model.count, 1, 0, 0, g.slot);
+          sp.drawIndexed(g.model.count, g.batch ? g.n : 1, 0, 0, g.slot);
         }
       }
       sp.end();
@@ -3625,7 +3643,7 @@ export class Renderer {
         mp.setBindGroup(1, g.model.bg);
         mp.setVertexBuffer(0, g.model.VB);
         mp.setIndexBuffer(g.model.IB, 'uint32');
-        mp.drawIndexed(g.model.count, 1, 0, 0, g.slot);
+        mp.drawIndexed(g.model.count, g.batch ? g.n : 1, 0, 0, g.slot);
       }
     }
     const vis = visibility(this.interior.data.f0, this.camNow);
@@ -3676,6 +3694,7 @@ export class Renderer {
     // (And Phobos's, out in the open: the Approach's braziers and the fire bowls on its towers. src/core/phobos-build.js fire().)
     else if (!vis.warrens && cam.x > 8700 && cam.x < 11700 && Math.abs(cam.z) < 1400) drawDelveFires(this, mp, this.interior, this.delveFires ||= buildDelveFires(this, buildSites().fires), 'phobos');
     this.openingStage?.drawGlow(mp);
+    this.critterGlass?.draw(mp);
     this.trail?.draw(mp);
     if (tier.lean) {
       mp.setPipeline(this.pDraw);

@@ -2483,6 +2483,50 @@ Measured on the one machine in the table below, at 1024x768: the forest adds abo
 
 A day is 24 minutes (`src/gfx/daylight.js`: an hour is `SECONDS_PER_HOUR`, the colours are the keys at the top). It starts at 15:00, runs only while the world does, and is kept in a save. The sun gets as far as 6 degrees above the horizon and no lower, so shadows stay within the maps; between sun and moon, the light swaps while there's none of it to see. The sky is painted again every 10 s of play (30 s on a phone). The clock in the corner is `src/clock.js`. In the console: `bm.setTime(21)`.
 
+### Gilded critters
+
+VELSCOUR's clickable critters, in 3D: twenty of them crawl, walk and drift about you on open ground wherever you are, never in a town, on a seal or portal dais, in water or on ground steeper than about 40 degrees. There are four kinds:
+
+- **The Gilded Wisp** (45 in a hundred). A faceted crystal shell round a gold heart, with gold rings and beads, and a tail of nine flame beads. The shell is drawn as light (`src/gfx/critterglass.js`): lit at its rim, along its edges and by the sun.
+- **The Starmoth** (25). Indigo-to-silver wings with gold eye spots. It crawls with them spread, and flutters up and off a few metres every few seconds.
+- **The Golden Scarab** (22). Bronze-to-gold wing cases with gold flecks and a turquoise seam and inlay, on six legs in a tripod gait. It pays gold.
+- **The Prismatic Wisp.** A tall rainbow crystal round a pink heart: the rare one. It isn't one of the odds but comes on its own clock: the first 2 to 3⅓ minutes after you're out among them, then 3 to 5 minutes after the last has gone. It turns up ripe, 14 to 24 m ahead of you, with a chord.
+
+All twenty glow, and the ones not ripe wink with the sun every few seconds, so they show across a hillside. Only up to three at a time are **ripe**, as VELSCOUR's few were. A ripe one has a red arrow over it (gold for a Prismatic Wisp), a beacon ring on the ground, rising glitter and its own two lights. Where a pine's boughs or the brow of a hill is in front of the arrow, a ghost of it shows through, so a ripe one can always be found. A new one ripens every 7 to 13 s, 9 to 30 m off, and stays ripe for 14 to 20 s (a Prismatic Wisp for 12 to 15 s). In its last 5 s its ring beats fast and it flashes, and then it gets away: a wisp rises, a moth flies off, a scarab digs in. One that comes in where you can see it comes no nearer than 15 m, and comes down out of the sky or up out of the ground; one left 52 m behind fades.
+
+**Catching one.** Click it, or tap it on a phone, within 16 m of you: in reach, its arrow turns gold-white and beats. That works with the cursor while auto-play plays (or once Tab frees the mouse), and with the crosshair. With the crosshair it must be on the body itself (or within 10 pixels), in plain sight of your eye (ground, trunks and rocks are in the way), and with no foe within 25 m of you or near the crosshair. Otherwise the click is a shot. The crosshair turns to a gold plus when a click would catch, and the free cursor shows a hand. On a phone only a tap catches (the thumb up again inside 300 ms, having moved less than 12 pixels), never a drag to look about or move. A caught one flashes and bursts, its motes fly to the level medal (or the pack, for gold), its worth rises in words, and a bell rings that goes up a step for each ripe catch within 4 s of the last.
+
+**What one is worth** comes from the land it was caught on (`landLevel`), not from you. A kill-scale of 18 + 3 for each land level past the first:
+
+| Kind | Ripe | Land 1 |
+|---|---|---|
+| Wisp | 0.8 of the scale | about 14 XP |
+| Moth | the scale | about 18 XP |
+| Prismatic Wisp | 4 times the scale | about 72 XP |
+| Scarab | 11 + 1 gold per land level | — |
+
+One not ripe pays 15% of that. After 8 ripe catches in two minutes, they pay half; after 8 not ripe in a minute, those pay nothing.
+
+Auto-play leaves them alone.
+
+The rules and numbers are in `src/core/critters.js` (on the render thread), and the bodies are in `src/core/critter-models.js`. The look is in `src/gfx/critters.js`, the words, motes and grab mark in `src/ui/critterwords.js`, and the bells in `audio.chime`. In the console:
+- `bm.critters`: the field.
+- `bm.pickCritter(x, y)`: click a point on the screen.
+
+`node --test tests/critters.test.mjs` checks:
+- the twenty, their shares and where they may be;
+- how near one turns up;
+- the ripe three, and the Prismatic Wisp's clock;
+- turning, heights and shyness;
+- picking and line of sight;
+- what each is worth, and the caps;
+- the bodies.
+
+Not tested:
+- a real phone (only Chrome emulating one, where a tap catches on both halves of the screen and one too far off gives a word);
+- the sound, by ear;
+- the phone graphics tier.
+
 ### The world build-out: what has and hasn't been seen
 
 Blackvigil Keep, the Howling Deeps, the Warrens' dressing, the rebuilt places and the two small towns, the villagers

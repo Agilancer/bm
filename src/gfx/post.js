@@ -109,6 +109,11 @@ fn main(@builtin(global_invocation_id) id: vec3u) {
       let t = S.time * 0.8 + p.seed * 40.0;
       p.vel = S.wind.xyz * 0.25 + vec3f(sin(t), sin(t * 0.7 + 1.0) * 0.5, cos(t * 1.1)) * 0.11;
     }
+    case 14u: {
+      // A gilded critter's glitter (src/gfx/critters.js): rising slowly off it, wavering, slowing as it goes.
+      let t = S.time * 2.1 + p.seed * 40.0;
+      p.vel = vec3f(p.vel.x * (1.0 - 1.8 * dt) + sin(t) * 0.25 * dt, p.vel.y * (1.0 - 0.9 * dt) + 0.22 * dt, p.vel.z * (1.0 - 1.8 * dt) + cos(t * 1.3) * 0.25 * dt);
+    }
     case 13u: {
       // Ash, falling: on the wind, slow, turning over as it comes down (the Cinder quarter, src/gfx/renderer.js ash).
       let t = S.time * 0.9 + p.seed * 50.0;
@@ -245,6 +250,13 @@ struct V {
       let show = smoothstep(0.0, 0.12, k) * (1.0 - smoothstep(0.7, 1.0, k));
       let hot = mix(vec3f(0.08, 0.3, 1.8), vec3f(0.6, 1.3, 3.0), fract(pt.seed * 3.7) * 0.6 + 0.4 * (1.0 - k));
       col = vec4f(hot * show * min(1.0, 0.03 / max(pt.size, 0.01)) * mix(1.0, 0.5, haze), 0.0);
+    }
+    case 14u: {
+      // Its colour packed in pad; bright as it's let go, twinkling, and gone softly.
+      let pk = u32(pt.pad + 0.5);
+      let rgb = vec3f(f32(pk & 255u), f32((pk >> 8u) & 255u), f32((pk >> 16u) & 255u)) / 255.0;
+      let tw = 0.65 + 0.35 * sin(F.camPos.w * 17.0 + pt.seed * 60.0);
+      col = vec4f(rgb * rgb * (1.5 + a * 5.0) * tw * smoothstep(0.0, 0.25, a) * min(1.0, 0.03 / max(pt.size, 0.004)), 0.0);
     }
     case 13u: {
       let lit = sun * 0.3 + amb * 0.7;
