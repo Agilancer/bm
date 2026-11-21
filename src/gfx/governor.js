@@ -5,6 +5,10 @@
 
 export const PHONE_STEPS = [1.5, 1.25, 1, 0.88, 0.76, 0.66, 0.55];
 export const PHONE_START = 2;
+// A phone's own: never over its pixels (the tier's maxPixels). Each rung up was the screen's pictures made again at a size
+// half as big again or more, with the last ones kept as well: memory an iPhone, which counts the GPU's against the page,
+// didn't have to give.
+export const PHONE_ONLY_STEPS = PHONE_STEPS.filter((s) => s <= 1);
 
 export class Governor {
   constructor({ apply, demote, steps = PHONE_STEPS, start = PHONE_START, targetMs = 1000 / 60 }) {

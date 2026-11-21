@@ -32,6 +32,7 @@ import { addStumps } from './stumps.js';
 import { GEAR, ROBES, SKULLS } from '../items/items.js';
 import { SkullEyes } from './skulleyes.js';
 import { BoardMarks } from './boardmarks.js';
+import { CritterGlass } from './critterglass.js';
 import { ShadowCache } from './shadowcache.js';
 import { GEM_CUTS, SKULL_ANCHORS } from './skullgemdata.js';
 import { PATTERNS, SKINS } from '../items/skins.js';
@@ -39,6 +40,8 @@ import { BODIES } from '../sim/undead.js';
 import { lerp, mat4Invert, mat4LookTo, mat4Mul, mat4Ortho, mat4Perspective, smoothstep } from '../core/math.js';
 import { shieldPose } from '../core/shield-pose.js';
 import { MipGen, makeBuffer, mipCountFor, loadTextureArray, decodeScaledBitmap } from './gpu.js';
+import { AstcPacker } from './astc.js';
+import { noteEvent } from '../core/lastrun.js';
 import { ARMOR, ARMOR_KIT, ARMOR_TRUE, GRASS, GRASS_CULL, ITEM, PROP, SHADOW, SKY, SKY_BAKE, STATIC, STATIC_SLOTS, TERRAIN, VIEWMODEL, VIEWMODEL_SKULL, staticSoftCut } from './materials.js';
 import { AO, BLOOM, COMPOSITE, PARTICLE_DRAW, PARTICLE_SIM, SHAFTS, STAIN, TRAIL } from './post.js';
 import { SpellFX } from './spellfx.js';
@@ -115,7 +118,18 @@ export const SKIN_PARAMS = 48;
 const FLAT = { iron: 100, flame: 101, water: 102, fruit: 103, fruit2: 104, white: 106, tile: 107, glow: 108, lake: 110, falls: 111, ice: 112, seal: 113, obsidian: 114, gold: 115, voidglass: 116, magma: 117, rune: 118, storm: 119 };
 // A painting in another light (src/core/sites.js): its layer plus a thousand times which (materials.js STATIC).
 const TINTS = { dark: 1, pale: 2, frost: 3, mire: 4, spore: 5, void: 6, slate: 7, blood: 8, moss: 9, umber: 10, soot: 11, eve: 12, char: 13, royal: 14, forest: 15 };
-const MAX_GROUND = 160;
+// (Room for the gilded critters' parts too, src/gfx/critters.js: each kind's part one batch, its instances side by side.)
+const MAX_GROUND = 512;
+// A weapon, shield, staff or piece of gear is loaded the first time it's seen (sword), on the ground or in a hand, and was
+// kept for good: every new drop of a long quest added its pictures and models, about 80 MB over 25 minutes. Now one
+// that's gone unseen this long is let go (trimSwords), but for the most recently seen few of those, kept for a quick swap
+// back, and what's worn and the arms' own, which never are.
+const SWORD_IDLE = 30000;    // ms
+const SWORD_SPARE = 8;
+const SWORD_KEEP = new Set(['skull_arm', 'surf_arm', 'shield_arm', 'skull_gems']);
+// (One whose file didn't come, as a phone's connection may drop just as it's equipped, is tried again: after 5 s, then
+// twice as long each time it fails again, up to 2 minutes.)
+const SWORD_RETRY = 5000, SWORD_RETRY_MAX = 120000;
 // The portals (portalModel): the Warrens' three in their walls, at these spots (src/core/sites.js portalWall), and a seal's at
 // every seal (seal_*). How big each is drawn is PORTAL_MODELS's. SWIRL: each one's whirl for the shader (src/gfx/materials.js
 // ITEM), its middle and radius in the model's own units (tools/portal/pack.py) and which it is; and where its motes go round
@@ -206,6 +220,12 @@ export class Renderer {
     this.time = 0;
     this.scale = 1;
     this.mip = new MipGen(this.device);
+    // A phone's colour, normal and roughness pictures packed to ASTC on the GPU as they come in, a quarter the memory
+    // (src/gfx/astc.js). Not the land's detail maps, whose four channels are each their own (load, the world's pictures). ?astc=0 off,
+    // ?astc=1 on a PC tier too (where the GPU reads ASTC). It checks itself first (astc.ready), and turns itself off if
+    // this GPU doesn't read its packing back right.
+    const astc = new URLSearchParams(location.search).get('astc');
+    this.astc = new AstcPacker(this.device, astc === '1' || (astc !== '0' && !!gpu.tier.lean));
     this.gashVersions = new Int32Array(MAX_CHARS).fill(-1);
     this.tmpV = new Float32Array(16); this.tmpP = new Float32Array(16); this.tmpVP = new Float32Array(16); this.tmpI = new Float32Array(16);
     this.emitted = [];
@@ -327,10 +347,14 @@ export class Renderer {
     // The PH2 pack, the second array (tools/phobos/textures/wire_ph2.py): square, smaller, its layers 200 on (layerOf).
     const p2 = manifest.ph2;
     this.p2 = { names: p2.layers.map((l) => l.name), layers: p2.layers };
-    const p2w = Math.round(p2.size[0] * tier.texScale), p2d = Math.round(p2.detail[0] * tier.texScale);
-    const tw = Math.round(manifest.size[0] * tier.texScale), th = Math.round(manifest.size[1] * tier.texScale);
+    // (The colours whole blocks of 4 a side where they're packed, src/gfx/astc.js: its check done first, as it may be off.)
+    await this.astc.ready;
+    if (this.astc.why) { console.warn(`graphics: pictures left plain, the ASTC packing turned itself off: ${this.astc.why}`); noteEvent('phone pictures left unpacked'); }
+    const q = this.astc.on ? 4 : 1, sized = (n) => Math.max(q, Math.round(n * tier.texScale / q) * q);
+    const p2w = sized(p2.size[0]), p2d = Math.round(p2.detail[0] * tier.texScale);
+    const tw = sized(manifest.size[0]), th = sized(manifest.size[1]);
     const dw = Math.round(manifest.detail[0] * tier.texScale), dh = Math.round(manifest.detail[1] * tier.texScale);
-    const gs = Math.round(1024 * tier.texScale), gd = Math.round(512 * tier.texScale);
+    const gs = sized(1024), gd = Math.round(512 * tier.texScale);
 
     // ---- the land, in the pool's threads ----
     // Terrain and the ground maps, cut into bands of a few rows: a thread is never long on one, so the pictures it's also
@@ -365,11 +389,14 @@ export class Renderer {
       return watched(url, pool.run('decode', { url, ...(shrink ? { width, height } : {}) })).then((b) => { tick(); return b; });
     };
     const worldPictures = timed('the world\'s pictures', Promise.all([
-      loadTextureArray(device, this.mip, layerNames, (n) => decode(`${n}_c`, tw, th), 'rgba8unorm-srgb', pictures),
+      // (The colours packed on a phone; the detail maps not: their normal, roughness and height are each their own, and
+      // one line through a block's four channels lost too much of them, 19-29 dB against 34-41 for the colours,
+      // tools/astc/check.html.)
+      loadTextureArray(device, this.mip, layerNames, (n) => decode(`${n}_c`, tw, th), 'rgba8unorm-srgb', pictures, this.astc),
       loadTextureArray(device, this.mip, layerNames, (n) => decode(`${n}_d`, dw, dh), 'rgba8unorm', pictures),
-      loadTextureArray(device, this.mip, manifest.ground, (n) => decode(`${n}_c`, gs, gs), 'rgba8unorm-srgb', pictures),
+      loadTextureArray(device, this.mip, manifest.ground, (n) => decode(`${n}_c`, gs, gs), 'rgba8unorm-srgb', pictures, this.astc),
       loadTextureArray(device, this.mip, manifest.ground, (n) => decode(`${n}_d`, gd, gd), 'rgba8unorm', pictures),
-      loadTextureArray(device, this.mip, this.p2.names, (n) => decode(`${p2.dir}${n}_c`, p2w, p2w), 'rgba8unorm-srgb', pictures),
+      loadTextureArray(device, this.mip, this.p2.names, (n) => decode(`${p2.dir}${n}_c`, p2w, p2w), 'rgba8unorm-srgb', pictures, this.astc),
       loadTextureArray(device, this.mip, this.p2.names, (n) => decode(`${p2.dir}${n}_d`, p2d, p2d), 'rgba8unorm', pictures),
     ]));
     worldPictures.catch(() => {});
@@ -406,12 +433,12 @@ export class Renderer {
           skirtDirection[v] = Math.round((angle / (2 * Math.PI) + 0.5) * 65535);
         }
         return { ...prim, flex: Float32Array.from(skirt, (weight) => -weight), skirtDirection };
-      }, SKIRT_PALETTE_JOINTS);
+      }, SKIRT_PALETTE_JOINTS, true, true);   // (near; and plain: her pictures as they came, never packed)
       return { form, jaw: glb.json.scenes[0].extras?.jaw };
     }));
     // (Your own body, and its colour picture as it came, for the gear painted onto it: src/gfx/bodyskin.js.)
     const self = model('assets/game/player/wizard.glb', async (glb) => {
-      const [body] = await this.buildCrabs(glb, 1, 1);
+      const [body] = await this.buildCrabs(glb, 1, 1, null, 0, true);
       const mat = glb.json.materials[glb.json.meshes[0].primitives[0].material];
       return { body, colour: imageBytes(glb, glb.json.textures[mat.pbrMetallicRoughness.baseColorTexture.index].source) };
     });
@@ -1026,18 +1053,23 @@ export class Renderer {
     this.stats.staticTris = ni / 3;
   }
 
-  async imageTexture(glb, imageIndex, format, scale = 1, full = false) {
-    return this.bitmapTexture(imageBytes(glb, imageIndex), format, scale, full);
+  async imageTexture(glb, imageIndex, format, scale = 1, full = false, near = false, pack = true) {
+    return this.bitmapTexture(imageBytes(glb, imageIndex), format, scale, full, near, pack);
   }
 
   // A picture as a texture, shrunk by scale. On a phone, of a model's pictures (those given a scale under 1): none is over
   // tier.texCap a side (some bodies' colours came 4096 across, 1024 after the shrink: 5 MB apiece), and its normals and its
   // metal and roughness, the two that aren't colours, are tier.mapScale of that again: there are two of them to every
   // colour picture, uncompressed, and at a phone's size they were a third of all its textures. full: as scale says.
-  async bitmapTexture(blob, format, scale, full = false) {
-    const lean = this.tier.lean && scale < 1 && !full && this.tier.texCap;
+  // near: one seen close (Lisandra, your own body), held to tier.texCapNear instead.
+  // Packed to ASTC on a phone (src/gfx/astc.js): its sides made whole blocks of 4 as it's shrunk, which the packing needs.
+  // pack false: kept plain even there (a detail map whose four channels are each their own; Lisandra, as the owner made her).
+  async bitmapTexture(blob, format, scale, full = false, near = false, pack = true) {
+    await this.astc.ready;
+    const cap = near ? this.tier.texCapNear || this.tier.texCap : this.tier.texCap;
+    const lean = this.tier.lean && scale < 1 && !full && cap;
     const k = lean && format === 'rgba8unorm' ? this.tier.mapScale : 1;
-    const bmp = await decodeScaledBitmap(blob, scale * k, lean ? this.tier.texCap * k : 0);
+    const bmp = await decodeScaledBitmap(blob, scale * k, lean ? cap * k : 0, pack && this.astc.on ? 4 : 1);
     const mips = mipCountFor(bmp.width, bmp.height);
     const tex = this.device.createTexture({ size: [bmp.width, bmp.height], format, mipLevelCount: mips, usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT });
     try {
@@ -1046,6 +1078,8 @@ export class Renderer {
     const enc = this.device.createCommandEncoder();
     this.mip.generate(tex, format, 1, mips, enc);
     this.device.queue.submit([enc.finish()]);
+    // (Packed on a phone, which waits on the GPU as below; elsewhere, or kept plain, the wait that paces the load.)
+    if (pack && this.astc.on) return this.astc.pack(tex);
     await this.device.queue.onSubmittedWorkDone();
     return tex;
   }
@@ -1144,7 +1178,9 @@ export class Renderer {
     return { ...base, outBuf, palette, params, bg };
   }
 
-  async buildCrabs(glb, count, scale, prepare, paletteExtra = 0) {
+  // near: seen close, its pictures held to the tier's texCapNear rather than texCap (bitmapTexture). plain: its pictures never
+  // packed to ASTC on a phone (Lisandra: shipped as the owner made her, src/gfx/astc.js).
+  async buildCrabs(glb, count, scale, prepare, paletteExtra = 0, near = false, plain = false) {
     const pr = glb.json.meshes[0].primitives[0];
     const a = pr.attributes;
     const pos = accessor(glb, a.POSITION).slice();
@@ -1157,9 +1193,9 @@ export class Renderer {
     const srcOf = (t) => glb.json.textures[t.index].source;
     const texScale = this.tier.texScale;
     const [alb, nrm, mr] = await Promise.all([
-      this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture), 'rgba8unorm-srgb', texScale),
-      this.imageTexture(glb, srcOf(mat.normalTexture), 'rgba8unorm', texScale),
-      this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture), 'rgba8unorm', texScale),
+      this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture), 'rgba8unorm-srgb', texScale, false, near, !plain),
+      this.imageTexture(glb, srcOf(mat.normalTexture), 'rgba8unorm', texScale, false, near, !plain),
+      this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture), 'rgba8unorm', texScale, false, near, !plain),
     ]);
     const out = [];
     for (let i = 0; i < count; i++) {
@@ -1271,15 +1307,68 @@ export class Renderer {
     p.pos = pos; p.nrm = nrm;
   }
 
-  // A sword, by its id: { ready } until its file is in, and then what it takes in the hand and on the ground.
-  sword(id) {
+  // A sword, by its id: what lies on the ground (lying) once its file is in, and { ready } once all it needs is made.
+  // keep: never let go (one asked for ahead of when it's needed, as Lisandra's board is). hand: wanted in the hand or on
+  // the arm. Until one is, a weapon or a shield has only what lies on the ground, and isn't ready: its held models are
+  // about three times the GPU memory of that one, and most drops are never held (armSword).
+  sword(id, keep = false, hand = false) {
     let s = this.swords.get(id);
     if (!s) {
       s = { ready: false };
       this.swords.set(id, s);
-      this.buildSword(id, s).catch((e) => console.error(`sword ${id}`, e));
+      this.swordWork(id, s, () => this.buildSword(id, s));
+    }
+    s.seen = performance.now();
+    if (keep) (this.swordKeeps ||= new Set()).add(id);   // (by id, so it holds for one made again after a failure)
+    if (hand && !s.wantHand) {
+      s.wantHand = true;
+      if (s.later && !s.busy) this.swordWork(id, s, () => this.armSword(id, s));
     }
     return s;
+  }
+
+  // (busy while it's being made, and so not let go; once the ground's is done, the hand's if it was wanted meanwhile.
+  // failed: when it last didn't come; swordFails, how many times running, for when it's tried again: trimSwords.)
+  swordWork(id, s, fn) {
+    s.busy = true;
+    const fails = (this.swordFails ||= new Map());
+    fn().then(() => { fails.delete(id); }, (e) => {
+      s.failed = performance.now();
+      fails.set(id, (fails.get(id) || 0) + 1);
+      console.error(`sword ${id}`, e);
+    }).finally(() => {
+      s.busy = false;
+      if (s.wantHand && s.later && s.failed == null) this.swordWork(id, s, () => this.armSword(id, s));
+    });
+  }
+
+  // Let go of the swords not seen for SWORD_IDLE (see it), every few seconds. One still being made is left be, and
+  // what's let go is destroyed a moment later, as a frame on its way may still draw it. Asked for again, it's made anew.
+  // One that failed is let go once its wait is up (SWORD_RETRY), worn or not, so the next frame that wants it tries again.
+  trimSwords(now) {
+    if (now - (this.swordsTrimmed || 0) < 5000) return;
+    this.swordsTrimmed = now;
+    const worn = [this.heldId, this.mainHand, this.offHand, this.board?.sword, this.skull];
+    const idle = [], retry = [];
+    for (const [id, s] of this.swords) {
+      if (s.busy) continue;
+      if (s.failed != null) { if (now - s.failed >= Math.min(SWORD_RETRY_MAX, SWORD_RETRY * 2 ** ((this.swordFails?.get(id) || 1) - 1))) retry.push([id, s]); continue; }
+      if (!this.swordKeeps?.has(id) && !SWORD_KEEP.has(id) && !worn.includes(id) && now - s.seen > SWORD_IDLE) idle.push([id, s]);
+    }
+    idle.sort((a, b) => b[1].seen - a[1].seen);
+    for (const [id, s] of [...retry, ...idle.slice(SWORD_SPARE)]) {
+      this.swords.delete(id);
+      setTimeout(() => this.freeSword(s), 2000);
+    }
+  }
+
+  // Everything a sword was given: on the ground (each of its glows too), in the hand, on the raised arm.
+  freeSword(s) {
+    const gone = new Set(), kill = (o) => { if (o && !gone.has(o)) { gone.add(o); o.destroy(); } };
+    for (const m of s.lying ? [s.lying, ...s.lying.tints.values()] : []) { kill(m.VB); kill(m.IB); kill(m.glowUbo); }
+    for (const t of s.lying?.maps || []) kill(t);
+    for (const h of [s.hand, s.up?.hand]) if (h) for (const k of ['srcBuf', 'sideVB', 'IB', 'lodIB', 'outBuf', 'palette', 'params']) kill(h[k]);
+    kill(s.ubo);
   }
 
   async buildSword(id, s) {
@@ -1287,20 +1376,29 @@ export class Renderer {
     if (id.startsWith('kit/')) { await this.heroLooks.lyingProp(id, s); return; }
     if (id.startsWith('dye/')) { await this.heroLooks.lyingDyed(id, s); return; }
     const { device } = this;
-    const w = WEAPONS.find((x) => x && x.id === id);
-    const buf = await fetch(`${this.base}assets/game/items/${id}.glb`).then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); });
+    // (Made before and let go since, it's this session's own file again: the browser's copy, however old, if it has one.
+    // That works with no connection, as armSword does.)
+    const made = (this.swordsMade ||= new Set());
+    const buf = await fetch(`${this.base}assets/game/items/${id}.glb`, made.has(id) ? { cache: 'force-cache' } : undefined).then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); });
     const glb = parseGLB(buf);
+    made.add(id);
     const pr = glb.json.meshes[0].primitives[0];
     const a = pr.attributes;
     const mat = glb.json.materials[pr.material];
     const srcOf = (t) => glb.json.textures[t.index].source;
     const scale = this.tier.texScale;
-    const [alb, nrm, mr] = await Promise.all([   // (full: held before the eye, as the arms are)
-      this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture), 'rgba8unorm-srgb', scale, true),
-      this.imageTexture(glb, srcOf(mat.normalTexture), 'rgba8unorm', scale, true),
-      this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture), 'rgba8unorm', scale, true),
-    ]);
+    // (Its shape and its three pictures found before any picture is made, and those it made let go if one of them fails:
+    // tried again after a failure, a bad file, or one with a picture missing, would otherwise leave pictures behind each time.)
     const prim = { pos: accessor(glb, a.POSITION), nrm: accessor(glb, a.NORMAL), uv: accessor(glb, a.TEXCOORD_0), idx: accessor(glb, pr.indices) };
+    const srcs = [mat.pbrMetallicRoughness.baseColorTexture, mat.normalTexture, mat.pbrMetallicRoughness.metallicRoughnessTexture].map(srcOf);
+    const got = await Promise.allSettled([   // (full: held before the eye, as the arms are)
+      this.imageTexture(glb, srcs[0], 'rgba8unorm-srgb', scale, true),
+      this.imageTexture(glb, srcs[1], 'rgba8unorm', scale, true),
+      this.imageTexture(glb, srcs[2], 'rgba8unorm', scale, true),
+    ]);
+    const bad = got.find((g) => g.status === 'rejected');
+    if (bad) { for (const g of got) if (g.status === 'fulfilled') g.value.destroy(); throw bad.reason; }
+    const [alb, nrm, mr] = got.map((g) => g.value);
     s.lying = this.lyingModel(prim, alb, nrm, mr, [0, 0, 0, 0]);
     s.tip = prim.pos.reduce((best, v, i) => (i % 3 === 1 ? Math.max(best, v) : best), 0);
     // (A piece of a suit is only ever seen on the ground, or in a slot. So is a skull, for now: the arm in the left hand has its own, fused to it.)
@@ -1320,6 +1418,25 @@ export class Renderer {
       s.ready = true;
       return;
     }
+    // (A weapon or a shield: what it is in the hand, now if one wants it, else when one does.)
+    if (!s.wantHand) { s.later = true; return; }
+    await this.armSword(id, s, glb, prim);
+  }
+
+  // A weapon's or a shield's models for the hand, and the raised arm's: from its file again if the ground's was made
+  // first (sword). Its pictures are the ground one's. (The file as the browser has it, however old, if it has it: that
+  // works with no connection, and keeps the shape the pictures were made for if the game's been updated since.)
+  async armSword(id, s, glb = null, prim = null) {
+    s.later = false;
+    const { device } = this;
+    const w = WEAPONS.find((x) => x && x.id === id);
+    if (!glb) {
+      glb = parseGLB(await fetch(`${this.base}assets/game/items/${id}.glb`, { cache: 'force-cache' }).then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); }));
+      const pr = glb.json.meshes[0].primitives[0], at = pr.attributes;
+      prim = { pos: accessor(glb, at.POSITION), nrm: accessor(glb, at.NORMAL), uv: accessor(glb, at.TEXCOORD_0), idx: accessor(glb, pr.indices) };
+    }
+    const a = glb.json.meshes[0].primitives[0].attributes;
+    const [alb, nrm, mr] = s.lying.maps;
     const vm = this.vms[w ? w.hands : 1];
     if (w) {
       // Carry the staff kind alongside its original model coordinates. Other gear stays untagged.
@@ -1424,7 +1541,7 @@ export class Renderer {
     const bg = device.createBindGroup({ layout: this.bglArmor, entries: [
       { binding: 0, resource: { buffer: ubo } }, { binding: 1, resource: alb.createView() }, { binding: 2, resource: nrm.createView() }, { binding: 3, resource: mr.createView() },
     ] });
-    return { VB: makeBuffer(device, v, GPUBufferUsage.VERTEX), IB: makeBuffer(device, indices, GPUBufferUsage.INDEX), count: indices.length, bg, maps: [alb, nrm, mr], tints: new Map(), radius: reachOf(P) };
+    return { VB: makeBuffer(device, v, GPUBufferUsage.VERTEX), IB: makeBuffer(device, indices, GPUBufferUsage.INDEX), count: indices.length, bg, glowUbo: ubo, maps: [alb, nrm, mr], tints: new Map(), radius: reachOf(P) };
   }
 
   // The same model, glowing a colour: its rarity's, when it's dropped.
@@ -1437,7 +1554,7 @@ export class Renderer {
     const glow = [1, 3, 5].map((i) => (parseInt(hex.slice(i, i + 2), 16) / 255) ** 2.2 * k);
     const ubo = device.createBuffer({ size: 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     device.queue.writeBuffer(ubo, 0, new Float32Array([...glow, 1]));
-    t = { ...model, bg: device.createBindGroup({ layout: this.bglArmor, entries: [
+    t = { ...model, glowUbo: ubo, bg: device.createBindGroup({ layout: this.bglArmor, entries: [
       { binding: 0, resource: { buffer: ubo } }, ...model.maps.map((m, i) => ({ binding: i + 1, resource: m.createView() })),
     ] }) };
     model.tints.set(key, t);
@@ -2081,6 +2198,8 @@ export class Renderer {
     this.skullEyes = new SkullEyes(device, this.bgl0, targets, DEPTH, this.msaa, module);
     // The shield's track on the ground, where it's ridden (src/gfx/boardmarks.js): what's been laid is kept through a rebuild.
     (this.boardMarks ||= new BoardMarks(device)).build(this.bgl0, targets, DEPTH, this.msaa, module);
+    // A gilded wisp's crystal (src/gfx/critterglass.js): light over the world, after it.
+    (this.critterGlass ||= new CritterGlass(device)).build(this.bgl0, targets, DEPTH, this.msaa, module);
     const vmSkullMod = module(VIEWMODEL_SKULL);
     this.pVMSkull = device.createRenderPipeline({
       layout: layout(this.bgl0, this.bglArmor),
@@ -2293,6 +2412,8 @@ export class Renderer {
     this.grassFarArgs = device.createBuffer({ size: 16, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.INDIRECT | GPUBufferUsage.COPY_DST });
     this.grassU = device.createBuffer({ size: 192, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     this.grassData = new Float32Array(48);
+    // (It reads only maps made as the game goes, never packed. A picture packed to ASTC on a phone, src/gfx/astc.js, read in
+    // a compute pass comes back all zeros on Chrome's software GPU, though it draws right: test any such read on it.)
     const cull = this.shader(GRASS_CULL);
     this.pGrassCull = device.createComputePipeline({ layout: 'auto', compute: { module: cull, entryPoint: 'main' } });
     this.grassBG = device.createBindGroup({ layout: this.pGrassCull.getBindGroupLayout(0), entries: [
@@ -2317,16 +2438,30 @@ export class Renderer {
     let cw = Math.max(2, Math.floor(canvas.clientWidth * dpr)), ch = Math.max(2, Math.floor(canvas.clientHeight * dpr));
     const screen = `${cw}x${ch}`;
     if (this.screen !== screen) {
+      // (Only a phone keeps a picture of another shape than the screen's: viewAspect, the screen's own, for the view.)
+      let keep = false;
       if (gpu.mobile && this.activeKey) {
         // A phone turning goes through a run of sizes, and each would be every target thrown away and made again. Upright
         // it keeps the sideways picture it has (nothing's drawn then: src/main.js turned); any other size is taken once
         // it's held for a moment.
         if (ch > cw) return;
-        if (this.wantScreen !== screen) { this.wantScreen = screen; this.wantAt = performance.now(); }
-        if (performance.now() - this.wantAt < 300) return;
+        // Nor for the browser's own bar, shown and put away: the same width, a little less height or more. (An iPhone held
+        // sideways shows it for a tap near the screen's edge: a touch was every target made again.) Nor while a word's
+        // being typed, however much height the keyboard takes: it gives it back when it goes, and each was the canvas and
+        // every target made again, for the length of a name. A phone's picture is the same number of pixels whatever the
+        // screen's shape (maxPixels), so it's kept, and only the view takes the screen's shape: the browser stretches the
+        // picture to it, and nothing in the world is drawn squashed.
+        const f = document.activeElement;
+        const typing = !!f?.matches?.('textarea, input:not([type]), input[type=text], input[type=search], input[type=email]') && f.offsetParent !== null;
+        keep = cw === this.screenW && (typing || Math.abs(ch - this.screenH) <= this.screenH * 0.25);
+        if (!keep) {
+          if (this.wantScreen !== screen) { this.wantScreen = screen; this.wantAt = performance.now(); }
+          if (performance.now() - this.wantAt < 300) return;
+        }
       }
-      this.screen = screen; this.wantScreen = null; this.dropTargetSets();
-    }
+      if (keep) { this.viewAspect = cw / ch; cw = this.screenW; ch = this.screenH; }
+      else { this.screen = screen; this.screenW = cw; this.screenH = ch; this.viewAspect = 0; this.wantScreen = null; this.dropTargetSets(); }
+    } else this.viewAspect = 0;
     let W, H_;
     if (tier.maxPixels) {
       // The canvas itself is only as big as the picture, and the browser stretches it to the screen for nothing. Scale
@@ -2343,8 +2478,11 @@ export class Renderer {
     if (!this.targetSets) this.targetSets = new Map();
     let set = this.targetSets.get(key);
     if (!set) {
-      // Two sets at most: the one in use and the one before it.
-      if (this.targetSets.size >= 2) {
+      // Two sets at most: the one in use and the one before it. (On a phone, only the one in use: an iPhone counts the GPU's
+      // memory as the page's, and the set before was a screen's worth of pictures kept for a step back that may not come.)
+      // (What's been sent to the GPU with them still finishes: a texture let go is let go once that's done.)
+      if (gpu.mobile) this.dropTargetSets();
+      else if (this.targetSets.size >= 2) {
         const oldest = [...this.targetSets.keys()].find((k) => k !== this.activeKey);
         for (const t of this.targetSets.get(oldest).textures) t.destroy();
         this.targetSets.delete(oldest);
@@ -2477,8 +2615,9 @@ export class Renderer {
 
   // ---- particles from the CPU -------------------------------------------------------------------------
 
-  // Emit a burst. kind: 0 droplet, 1 mist, 2 spark, 3 dust, 4 smoke, 5 mote, 6 ember, 7 flame.
-  emit(kind, count, x, y, z, dx, dy, dz, spread, sp0, sp1, sz0, sz1, life0, life1) {
+  // Emit a burst. kind: 0 droplet, 1 mist, 2 spark, 3 dust, 4 smoke, 5 mote, 6 ember, 7 flame, 14 a critter's glitter (pad:
+  // its colour, r + g * 256 + b * 65536, src/gfx/critters.js).
+  emit(kind, count, x, y, z, dx, dy, dz, spread, sp0, sp1, sz0, sz1, life0, life1, pad = 0) {
     const f = this.emitF, u = this.emitU, cap = this.emitF.length / 12;
     // (Blood is what this game is about, so it's the last thing to go thin.)
     if (this.tier.emit !== 1) count = Math.floor(count * (kind < 2 ? 0.8 : this.tier.emit) + Math.random());
@@ -2499,7 +2638,7 @@ export class Renderer {
       // Mostly small with a few large: the way any spray of liquid breaks up.
       f[o + 8] = sz0 + (sz1 - sz0) * Math.random() ** 3;
       u[o + 9] = kind;
-      f[o + 10] = Math.random(); f[o + 11] = 0;
+      f[o + 10] = Math.random(); f[o + 11] = pad;
       this.emitN++;
     }
   }
@@ -2532,7 +2671,8 @@ export class Renderer {
   writeFrame(cam, snap) {
     const d = this.frameData;
     const { W, H: Ht } = this;
-    const aspect = W / Ht;
+    // (The screen's shape, which on a phone with its browser's bar out isn't quite the picture's: resize.)
+    const aspect = this.viewAspect || W / Ht;
     // (A cinematic camera can narrow the lens: cam.fov, in radians.)
     const fov = cam.fov || WORLD_FOV;
     mat4Perspective(this.tmpP, fov, aspect, 0.08);
@@ -2663,6 +2803,11 @@ export class Renderer {
     let spellLights = this.spellfx.frame(snap, d, O.LIGHTS, take);
     // The light off the gems you carry. src/gfx/gemfx.js.
     for (const L of this.gemLights || []) {
+      if (take + spellLights >= MAX_LIT) break;
+      putLight(d, O.LIGHTS + (take + spellLights++) * 8, L, L.i);
+    }
+    // The gilded critters' (src/gfx/critters.js), the nearest few.
+    for (const L of this.critterLights || []) {
       if (take + spellLights >= MAX_LIT) break;
       putLight(d, O.LIGHTS + (take + spellLights++) * 8, L, L.i);
     }
@@ -3001,8 +3146,12 @@ export class Renderer {
     // View model: the arms the snapshot posed, and what's in them.
     const weapon = WEAPONS[snap[H.WEAPON] | 0] || null;
     this.vm = this.vms[weapon ? weapon.hands : 1];
-    const held = weapon && weapon.id !== 'greatsword' ? this.sword(weapon.id) : null;
+    const held = weapon && weapon.id !== 'greatsword' ? this.sword(weapon.id, false, true) : null;
     this.held = held && held.ready ? held : null;
+    this.heldId = weapon?.id;
+    // (A staff just put on in the pack is in the hand only once the pack's shut, the game paused while it's open: so its
+    // hand is asked for now, made behind the pack, and there the moment the pack goes.)
+    if (this.mainHand && this.mainHand !== weapon?.id) this.sword(this.mainHand, false, true);
     // (On the shield the staff's arm rides as it holds it, the staff itself left out: src/sim/player.js poseForSurf.)
     if (snap[H.SURF] > 0.5 && weapon?.hands === 3) this.held = null;
     this.holdingOld = !!weapon && weapon.id === 'greatsword';
@@ -3026,7 +3175,7 @@ export class Renderer {
     this.shieldParts = this.shieldParts || [];
     this.shieldParts.length = 0;
     const surf = snap[H.SURF], shieldUp = snap[H.SHIELD_UP];
-    const shield = this.offHand ? this.sword(this.offHand) : null;
+    const shield = this.offHand ? this.sword(this.offHand, false, true) : null;
     // (A staff's arms have no left of their own, so with one the shield stays on this arm through the jump onto it, until it's the board.)
     if (shield && (surf < 0.5 || (surf < 1.5 && weapon?.hands === 3)) && (!weapon || weapon.hands === 3 || shieldUp > 0)) {
       const arm = this.sword('shield_arm');
@@ -3125,7 +3274,7 @@ export class Renderer {
     vmData[12] = vmX; vmData[13] = vmY; vmData[14] = vmZ;
     if (this.shieldParts.length) {
       const pal = this.shieldPal || (this.shieldPal = new Float32Array(8));
-      shieldPose(pal, shieldUp, this.W / this.H);
+      shieldPose(pal, shieldUp, this.viewAspect || this.W / this.H);
       // The stride, moved in view space: half of it times the board's rotation, on the dual part.
       const hx = this.carryX, hy = this.carryY;
       pal[4] += hx * pal[3] + hy * pal[2]; pal[5] += hy * pal[3] - hx * pal[2]; pal[6] += hx * pal[1] - hy * pal[0]; pal[7] -= hx * pal[0] + hy * pal[1];
@@ -3188,6 +3337,8 @@ export class Renderer {
     this.stallItems ||= this.makeStalls();
     for (const g of this.stallItems) if (this.stallsOpen.has(g.id) === g.open) drawn.push(g);
     if (this.dishes) for (const g of this.dishes.values()) drawn.push(g);
+    // The gilded critters (src/gfx/critters.js): a batch each part, g.n of them, their matrices g.mats and a ball round all.
+    for (const g of this.critterItems || []) if (g.n) drawn.push(g);
     if (snap[H.SURF] > 1.5 && this.board.sword && !this.third) drawn.push(this.board);
     // In third person, what your body holds: the staff, the left hand's (the skull, or the shield on the arm), and the
     // shield on the back or under the feet. The sim says where (a matrix each, none if there's nothing: PlayerBody.hold).
@@ -3207,13 +3358,20 @@ export class Renderer {
       let model = g.openingModel ?? g.mesh ?? (g.portal ? this.portalModels?.[g.off ? `${g.portal}_off` : g.portal] : g.door ? this.doorModels?.[g.piece] : g.bell ? this.bellModels?.[g.piece] : g.ware ? this.ware(g.ware) : g.piece ? this.chestModels?.[g.piece] : g.coins ? this.coins() : g.stuff ? this.stuff(g.stuff) : g.gem ? this.gem(g.gem) : this.sword(g.sword).lying);
       if (model && g.glow) model = this.tinted(model, g.glow, g.glowK ?? 1);
       g.model = model;
-      if (!model || nGround >= MAX_GROUND) { g.slot = -1; continue; }
+      const k = g.batch ? g.n : 1;
+      if (!model || !k || nGround + k > MAX_GROUND) { g.slot = -1; continue; }
       g.slot = nGround;
+      if (g.batch) {
+        this.itemData.set(g.mats.subarray(0, k * 16), nGround * 16); nGround += k;
+        g.sx = g.ball[0]; g.sy = g.ball[1]; g.sz = g.ball[2]; g.sr = g.ball[3]; g.inView = inView(this.planes, g.sx, g.sy, g.sz, g.sr);
+        continue;
+      }
       this.itemData.set(g.mat, nGround++ * 16);
       // (Where it lies, for the same: out of view it isn't drawn, and it's in no cascade its shadow can't reach.)
       if (model.radius !== undefined) { placeSphere(g, g.mat, 0, model.radius); g.inView = inView(this.planes, g.sx, g.sy, g.sz, g.sr); } else { g.sr = -1; g.inView = true; }
     }
     if (nGround) q.writeBuffer(this.itemInstances, 0, this.itemData, 0, nGround * 16);
+    this.trimSwords(performance.now());
 
     // Grass culling input.
     const g = this.grassData;
@@ -3346,7 +3504,7 @@ export class Renderer {
           if (g.sr >= 0 && !inCascade(cm, co, g.sx, g.sy, g.sz, g.sr)) continue;
           sp.setVertexBuffer(0, g.model.VB);
           sp.setIndexBuffer(g.model.IB, 'uint32');
-          sp.drawIndexed(g.model.count, 1, 0, 0, g.slot);
+          sp.drawIndexed(g.model.count, g.batch ? g.n : 1, 0, 0, g.slot);
         }
       }
       sp.end();
@@ -3495,7 +3653,7 @@ export class Renderer {
         mp.setBindGroup(1, g.model.bg);
         mp.setVertexBuffer(0, g.model.VB);
         mp.setIndexBuffer(g.model.IB, 'uint32');
-        mp.drawIndexed(g.model.count, 1, 0, 0, g.slot);
+        mp.drawIndexed(g.model.count, g.batch ? g.n : 1, 0, 0, g.slot);
       }
     }
     const vis = visibility(this.interior.data.f0, this.camNow);
@@ -3548,6 +3706,7 @@ export class Renderer {
     // (And Phobos's, out in the open: the Approach's braziers and the fire bowls on its towers. src/core/phobos-build.js fire().)
     else if (!vis.warrens && cam.x > 8700 && cam.x < 11700 && Math.abs(cam.z) < 1400) drawDelveFires(this, mp, this.interior, this.delveFires ||= buildDelveFires(this, buildSites().fires), 'phobos');
     this.openingStage?.drawGlow(mp);
+    this.critterGlass?.draw(mp);
     this.trail?.draw(mp);
     if (tier.lean) {
       mp.setPipeline(this.pDraw);

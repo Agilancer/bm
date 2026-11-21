@@ -9,6 +9,8 @@ import { makeBuffer, mipCountFor } from './gpu.js';
 
 const KEEP_MODELS = 10;
 const KEEP_SKINS = 12;
+// (And what they hold, which was kept for good: a new pair of monster and weapon each, about 18 MB in 40 minutes' questing.)
+const KEEP_PROPS = 16;
 const placeholder = () => ({ pending: true, seen: false, casts: false, inCascade: false, far: false });
 // How far down the shaft the fist closes, as a share of the weapon's length (the bestiary's GRIP).
 const GRIP = { staff: 0.42, sword: 0.1, dagger: 0.14, axe: 0.18, mace: 0.18, spear: 0.42, lance: 0.3, great_axe: 0.3, great_mace: 0.3, bow: 0.5, boomerang: 0.5 };
@@ -73,6 +75,9 @@ export class TripoSlots {
     this.models = new Map();   // id -> Promise of { base, nrm, mr, glb, albSrc }, newest last
     this.skins = new Map();    // 'id:pal' -> Promise of an albedo texture, newest last
     this.want = new Array(count).fill(0);
+    // (Each slot's changes counted: a monster made for an A that went to B and back to A is the first A's, whose mesh,
+    // skin or weapon may have been let go meanwhile, and is let go itself. Only the latest of the slot's is put in.)
+    this.gens = new Array(count).fill(0);
     this.arms = armIds(roster);
     this.props = new Map();    // 'model:weapon:side' -> Promise of a prop, its grip baked in
     this.weapons = fetch(`${base}assets/game/weapons/weapons.json`).then((res) => res.json());
@@ -98,12 +103,13 @@ export class TripoSlots {
       const key = `${model}:${pal}:${armR}:${armL}`;
       if (this.want[i] === key) continue;
       this.want[i] = key;
+      const gen = ++this.gens[i];
       this.free(r.chars[this.first + i]);
       r.chars[this.first + i] = placeholder();
       const pb = this.propBase + i * 2;
       r.props[pb] = { empty: true, owner: this.first + i }; r.props[pb + 1] = { empty: true, owner: this.first + i };
       this.instance(this.ids[model - 1], pal, armR, armL).then(([ch, right, left]) => {
-        if (this.want[i] !== key) { this.free(ch); return; }
+        if (this.gens[i] !== gen) { this.free(ch); return; }
         ch.propBase = pb; ch.propCount = 2;
         r.props[pb] = right ? { ...right, owner: this.first + i } : { empty: true, owner: this.first + i };
         r.props[pb + 1] = left ? { ...left, owner: this.first + i } : { empty: true, owner: this.first + i };
@@ -162,7 +168,7 @@ export class TripoSlots {
       const enc = r.device.createCommandEncoder();
       r.mip.generate(tex, fmt, 1, mips, enc);
       r.device.queue.submit([enc.finish()]);
-      return tex;
+      return r.astc.pack(tex);   // (packed on a phone: src/gfx/astc.js)
     })();
     this.skins.set(key, s);
     this.trim(this.skins, KEEP_SKINS, (k) => this.inUse((wk) => { const [mo, pa] = wk.split(':'); return `${this.ids[mo - 1]}:${pa}` === k; }), (t) => t.destroy());
@@ -179,7 +185,7 @@ export class TripoSlots {
   prop(m, armIndex, left) {
     const id = this.arms[armIndex - 1], key = `${m.id}:${id}:${left ? 'L' : 'R'}`;
     let p = this.props.get(key);
-    if (p) return p;
+    if (p) { this.props.delete(key); this.props.set(key, p); return p; }
     const r = this.r, fr = m.hands[left ? 'Left' : 'Right'];
     if (!id || !fr) return Promise.resolve(null);
     p = this.weapons.then(async (W) => {
@@ -218,13 +224,21 @@ export class TripoSlots {
       const tex = await r.imageTexture(glb, glb.json.textures[mat.pbrMetallicRoughness.baseColorTexture.index].source, 'rgba8unorm-srgb', r.tier.texScale);
       const ubo = r.device.createBuffer({ size: 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
       const bg = r.device.createBindGroup({ layout: r.bglProp, entries: [{ binding: 0, resource: tex.createView() }, { binding: 1, resource: { buffer: ubo } }] });
-      return { VB: makeBuffer(r.device, v, GPUBufferUsage.VERTEX), IB: makeBuffer(r.device, indices, GPUBufferUsage.INDEX), count: indices.length, bg, ubo };
+      return { VB: makeBuffer(r.device, v, GPUBufferUsage.VERTEX), IB: makeBuffer(r.device, indices, GPUBufferUsage.INDEX), count: indices.length, bg, ubo, tex };
     }).catch((e) => { console.error('tripo arm', id, e); return null; });
     this.props.set(key, p);
+    this.trim(this.props, KEEP_PROPS, (k) => this.propInUse(k), (v) => { if (v) for (const o of [v.VB, v.IB, v.ubo, v.tex]) o.destroy(); });
     return p;
   }
 
   inUse(match) { return this.want.some((k) => k && match(k)); }
+  // (A prop's key, 'model id:weapon id:side', against what each slot wants: 'model:palette:right arm:left arm', by number.)
+  propInUse(k) {
+    return this.inUse((wk) => {
+      const [mo, , aR, aL] = wk.split(':'), who = this.ids[mo - 1];
+      return k === `${who}:${this.arms[aR - 1]}:R` || k === `${who}:${this.arms[aL - 1]}:L`;
+    });
+  }
 
   // Past the cap, the oldest that no slot wants goes.
   trim(map, keep, used, free) {

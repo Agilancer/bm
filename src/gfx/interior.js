@@ -162,12 +162,16 @@ export async function loadInterior(r, base, pool, tier, pictures, steps) {
   const scale = tier.texScale;
   const tileNames = man.layers.map((l) => l.name), atlasNames = man.atlases.map((l) => l.name);
   steps.add((tileNames.length + atlasNames.length) * 2);
-  const px = (s) => Math.max(64, Math.round(s * scale));
+  // (Whole blocks of 4 a side where the colours are packed, src/gfx/astc.js, once its check has said it can.)
+  await r.astc.ready;
+  const step = r.astc.on ? 4 : 1;
+  const px = (s) => Math.max(64, Math.round(s * scale / step) * step);
   const decode = (n, s) => {
     const url = `${dir}${n}.webp`;
     return watched(url, pool.run('decode', { url, ...(scale !== 1 ? { width: px(s), height: px(s) } : {}) })).then((b) => { steps.tick(); return b; });
   };
-  const array = (names, size, kind, format) => loadTextureArray(r.device, r.mip, names, (n) => decode(`${n}_${kind}`, size), format, pictures);
+  // (The colours packed on a phone, src/gfx/astc.js, not the detail maps: as the world's, renderer.js load.)
+  const array = (names, size, kind, format) => loadTextureArray(r.device, r.mip, names, (n) => decode(`${n}_${kind}`, size), format, pictures, kind === 'c' ? r.astc : null);
   const [tc, td, ac, ad, glbBuf] = await Promise.all([
     array(tileNames, man.tile[0], 'c', 'rgba8unorm-srgb'), array(tileNames, man.tile[1], 'd', 'rgba8unorm'),
     array(atlasNames, man.atlas[0], 'c', 'rgba8unorm-srgb'), array(atlasNames, man.atlas[1], 'd', 'rgba8unorm'), glbFile,
@@ -183,7 +187,9 @@ export async function loadInterior(r, base, pool, tier, pictures, steps) {
     { binding: 3, resource: none }, { binding: 4, resource: none }] });
   const pom = tier.pom > 0 ? 1 : 0;
   const tiles = makeSet(r, glb, nodes, tileNames);
-  tiles.bg = bindGroup(tc, td, uniform((p) => man.layers.forEach((l, i) => { p[i * 4 + 1] = pom * (l.pom || POM[l.kind] || 0); p[i * 4 + 2] = -(l.deep || 0); })));
+  // (The church's own masonry, -3 in w: laid without its repeat and stone by stone its own tone, as the land's is
+  // (materials.js STATIC), but none of the weather, since the same stone lines its inside.)
+  tiles.bg = bindGroup(tc, td, uniform((p) => man.layers.forEach((l, i) => { p[i * 4 + 1] = pom * (l.pom || POM[l.kind] || 0); p[i * 4 + 2] = -(l.deep || 0); p[i * 4 + 3] = /^wall_(ashlar|rough)$/.test(l.name) ? -3 : 0; })));
   const atlas = makeSet(r, glb, nodes, atlasNames);
   atlas.bg = bindGroup(ac, ad, uniform((p) => man.atlases.forEach((l, i) => { p[i * 4] = 1; p[i * 4 + 2] = l.kind === 'glass' ? (l.rose ? 4 : 2) : 0; })));
   // The glow quads, the townsfolk's houses' first (their hearths, candles and windows: drawn wherever you are, since a house is
