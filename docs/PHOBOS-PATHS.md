@@ -64,6 +64,31 @@ layered:
 | The bank under the drawbridge's edge, a metre under its deck: the sim lifts feet onto the deck | 1.2 m of head room to stand anywhere (`headroom`) |
 | A low wall stepped over from the high side, walked into from the low | a step up must be clear at the height it's stepped from |
 | Gallery pieces only just meeting: pinholes | overlapped by 0.2 m |
+| The city wall's corner drums: the gallery out to the higher walk laid over the stair's last treads, the top one left showing 1.5 m under it. The walks past four corners were walked onto, never back off | the gallery starts at the stair's middle line; the treads' inner halves are the way up (`towerFar`) |
+
+## Inside the sewers and the castle's delves
+
+The four sewers (the West Drains, the Slough Mains, the Charnel Runs, the High Conduits) and the castle's delves are delves:
+levels of their own, walked by the delves' own map (`CaveNav`, src/core/dungeon.js). This map takes auto-play to their
+grates and portals (tests/east-paths.test.mjs: a way to every portal and way in); `node tools/dungeon/check.mjs` walks
+every room of each from its way in ("The delves hold together").
+
+## What trips.mjs still doesn't get to
+
+Seven of the 340 walks, on the last run before this was merged (333 got there):
+
+- the Sally Tower's deck, 465 m up: still climbing when the run's 900 s ran out (auto-play itself has no limit, only 30 s
+  without getting nearer);
+- two from the Shrike Turret's stair head, 311 m, where the turret's top tread is 1.1 m under the wide flight over it;
+- one from the Blood Spire's crown (490 m), which nothing from the gate gets to: "no way there";
+- three that stall for 30 s: by the Charnel Gate's spire (105 m), on the Bone Spire's bridge to its step (392 m), and on
+  the way to the Cistern Turret (265 m).
+
+The map's other known gap: the four spires' crowns (410-640 m) are a metre over the sloped roof round them. A body
+steps up onto a crown but not back down off it, a 1.5 m drop. No target is on a crown, and the long way never goes
+through a dead end, so auto-play doesn't take anyone there. A player who climbs up there is stuck, and auto-play's ask
+from there searches the whole map for nothing (the slowest ask on the run, 26 s with twelve walks at once; from the gate
+road the slowest is 1.2 s). See the run's output before calling it done.
 
 ## Running it after a change
 
@@ -81,5 +106,5 @@ into a new wall; it just takes the long way round.
 
 Scratch probes (not part of the run): `probe.mjs x0 z0 x1 z1 step` (places along a line), `_what.mjs x z` (floors
 and boxes at a point), `_layer.mjs`, `_cells.mjs`, `_tower.mjs`, `_walls.mjs`, `_house.mjs`, `_at.mjs x y z target` (the route from a spot),
-`_cpath.mjs` (its long way), `_edges.mjs` (east.bin's steps at a spot), `_holes.mjs` (holes in a deck), `_walk.mjs` / `_wk.mjs`
+`_cpath.mjs` (its long way), `_edges.mjs` (east.bin's steps at a spot), `_holes.mjs` (holes in a deck), `_walk.mjs` / `_wk.mjs`, `_fine.mjs`, `_spiral.mjs`, `_tread.mjs` (a stair's treads), `_border.mjs` (where a trap meets the rest), `_asks.mjs` (how long each ask takes)
 (the sim's body and `walkable` along a line).

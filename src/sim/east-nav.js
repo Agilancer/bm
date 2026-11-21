@@ -21,8 +21,10 @@ export const BODY = 0.36, RISE = 3, STEEP = 0.75, DROP = 1.1;
 // a way along a steep side was one-way across it, and auto-play walked to and fro under the castle's crag for good.)
 // (Room over the head: nothing walked on or stood on from a step over the feet to 1.2 m. Under a drawbridge's edge, a deck a
 // metre up, the way walked on along the bank while the sim's feet were lifted onto the deck at every step. Not higher: a
-// spiral's third tread over its foot is 1.5 m up, and its foot must be stood on.)
-export const headroom = (w, x, z, y) => Math.max(w.heightFor(x, z, y + 0.5), w.topUnder(x, z, y + 1.2)) <= y + 0.75;
+// spiral's third tread over its foot is 1.5 m up, and its foot must be stood on. On the land only: a stair's last treads
+// run in under the landing they come up to, and are walked, the feet lifted onto it: so they were lost, and with them every
+// corner tower's stair up to the city's walk.)
+export const headroom = (w, x, z, y) => y > w.landAt(x, z) + 0.05 || Math.max(w.heightFor(x, z, y + 0.5), w.topUnder(x, z, y + 1.2)) <= y + 0.75;
 export const dropOf = (fromLand, toLand) => (fromLand && toLand ? RISE : DROP);
 // (Onto a floor, a stair's tread or a deck, from one half-metre cell to the next: no more than this. The sim lifts the feet
 // onto a floor only within 0.7 of them, a tick at a time; on the land there's no such limit, RISE.)
@@ -276,7 +278,9 @@ export class EastNav {
     // The nodes it can start from: those near it that the half-metre walk gets to first.
     let near = this.nodesNear(fx, fz, fy, 7, 4);
     if (!near.length) return null;
-    { const on = near.filter((n) => this.live[n]); if (on.length) near = on; }
+    // (Only places got to from the gate: and none so near, the nearest further off that are, as a spire's crown is a step or
+    // two from its deck's: "no way there" from where it stood, else.)
+    { let on = near.filter((n) => this.live[n]); if (!on.length) on = this.nodesNear(fx, fz, fy, 20, 6).filter((n) => this.live[n]); if (on.length) near = on; }
     const start = this.fine(fx, fy, fz, near.slice(0, 24).map((n) => [this.x[n], this.z[n], this.y[n], 0.6]), [fx - 10, fz - 10], [fx + 10, fz + 10], left(6000));
     const s0 = start ? near[start.mark] : near[0];
     const ends = this.nodesNear(tx, tz, ty, Math.max(4, Math.min(r + 2, 30)), ty === null ? 1e9 : 3).filter((n) => this.live[n]);
