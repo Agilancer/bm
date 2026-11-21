@@ -10,6 +10,7 @@ import { stairDip } from '../core/roadbed.js';
 import { roadEdge, rocksAround } from '../core/rocks.js';
 import { COUNTRIES, COUNTRY_KEYS, MOUNT, SITES, SITE_KEYS, countryWeights, groundCover, routeDist } from '../core/lands.js';
 import { cityIn } from '../core/east.js';
+import { buildCliffSkin } from '../core/cliff-skin.js';
 
 async function decode(url, flags) {
   const r = await fetch(url);
@@ -409,6 +410,10 @@ self.addEventListener('message', async (e) => {
       case 'rocks':
         result = rocksAround(args.cx, args.cz, args.sreach, args.breach);
         transfer = [result.stones.buffer, result.boulders.buffer];
+        break;
+      case 'cliffs':
+        result = buildCliffSkin(args);
+        transfer = [result.verts.buffer, result.idx.buffer];
         break;
       case 'farground':
         result = buildFarRows(args);

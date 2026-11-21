@@ -364,6 +364,8 @@ struct V {
   var albedo = col * 1.45 * (0.82 + 0.36 * in.look.w) * mix(vec3f(1.0), in.tint, 0.5);
   // (Even the blackest stone in full light isn't a hole: basalt and ash stone kept off black.)
   albedo = max(albedo, vec3f(0.12, 0.115, 0.108) * mix(vec3f(1.0), in.tint, 0.5));
+  // (The east's stone is its cliffs' own, dark: its pale ash stones lay on the dark highland like popcorn. The critics.)
+  albedo *= mix(1.0, 0.55, smoothstep(7000.0, 7150.0, p.x));
   // Bands in the stone, as it was laid down: level, wandering a little.
   let strata = textureSampleLevel(noiseTex, repeatSmp, vec2f(p.x * 0.013 + p.z * 0.011, p.y * 0.55), 0.0);
   albedo *= 0.84 + 0.32 * strata.g;
