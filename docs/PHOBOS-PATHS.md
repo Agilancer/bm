@@ -91,7 +91,7 @@ through a dead end, so auto-play doesn't take anyone there. A player who climbs 
 from there searches the whole map for nothing (the slowest ask on the run took 8.6 s with twelve walks at once; from the
 gate road the slowest is 1.2 s).
 
-3,826 of the 75,956 floors and decks big enough to count still aren't got to, down from 8,706. In the first 400 the map lists (160 houses)
+3,826 of the 75,956 floors and decks big enough to count still aren't got to, down from 8,706. In the first 400 the map lists (160 houses),
 they're 65 ruins with no doorway, upstairs floors whose stair head the map can't climb onto, and doorways with a
 shop's goods or a post on the threshold beside the steps' top. See the run's output before calling it done.
 
