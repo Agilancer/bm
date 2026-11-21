@@ -239,13 +239,19 @@ export async function loadTextureArray(device, mipgen, names, decode, format, ru
 
 // (cap: no side of what comes back is longer than this, whatever scale says. 0: no cap. step: each side a whole number of
 // these, as ASTC's 4x4 blocks need (src/gfx/astc.js): rounded to the nearest, a picture's UVs don't mind a pixel or two.)
-export async function decodeScaledBitmap(blob, scale, cap = 0, step = 1) {
-  const opts = { premultiplyAlpha: 'none', colorSpaceConversion: 'none' };
-  const bmp = await createImageBitmap(blob, opts);
-  if (cap) scale = Math.min(scale, cap / Math.max(bmp.width, bmp.height));
+export function scaledSize(width, height, scale, cap = 0, step = 1) {
+  if (cap) scale = Math.min(scale, cap / Math.max(width, height));
   scale = Math.min(scale, 1);
   const side = (n) => Math.max(step, Math.round(n * scale / step) * step);
-  const w = side(bmp.width), h = side(bmp.height);
+  return [side(width), side(height)];
+}
+
+// size: the [width, height] of the picture this is a smaller copy of (src/gfx/lean-pictures.js), which what comes back is
+// sized from: the size it would have been, decoded from the original.
+export async function decodeScaledBitmap(blob, scale, cap = 0, step = 1, size = null) {
+  const opts = { premultiplyAlpha: 'none', colorSpaceConversion: 'none' };
+  const bmp = await createImageBitmap(blob, opts);
+  const [w, h] = scaledSize(...(size || [bmp.width, bmp.height]), scale, cap, step);
   if (w === bmp.width && h === bmp.height) return bmp;
   try {
     // Resize the decoded pixels instead of decoding the compressed source twice.
