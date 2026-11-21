@@ -89,17 +89,19 @@ function flightFor(h, F) {
     }
     return false;
   };
-  for (const w of ways) {
+  // (First a way that leaves 1.5 m of the street clear past it, so an alley isn't shut by its doors' steps; only if none
+  // does, one that only just fits.)
+  for (const pass of [1.5, 0.1]) for (const w of ways) {
     // (Down to the lowest of the ground under it: a dip at the threshold with the street higher past it is a step down too.)
     const y1 = Y(...w.at(0.2));
     let y0 = y1, n = 0;
     for (let it = 0; it < 3; it++) { n = Math.max(1, Math.ceil((fy - y0) / FLIGHT_RISE) - 1); y0 = Math.min(y1, Y(...w.at(n * FLIGHT_TREAD + 0.2))); }
     n = Math.max(1, Math.ceil((fy - y0) / FLIGHT_RISE) - 1);
     const rise = (fy - y0) / (n + 1), out = [];
-    let ok = !inHouse(...w.at(n * FLIGHT_TREAD + 0.4));
+    let ok = !inHouse(...w.at(n * FLIGHT_TREAD + 0.4)) && (pass < 1 || !inHouse(...w.at(n * FLIGHT_TREAD + 0.4 + pass)));
     for (let k = 1; k <= n && ok; k++) {
       const [x, z] = w.at((k - 0.5) * FLIGHT_TREAD), top = fy - k * rise;
-      if (inHouse(x, z) || inHouse(...w.at((k - 0.5) * FLIGHT_TREAD, w.e + 0.1))) ok = false;
+      if (inHouse(x, z) || inHouse(...w.at((k - 0.5) * FLIGHT_TREAD, w.e + pass))) ok = false;
       out.push({ x, z, top, hu: w.hu, hw: w.hw, rect: [x, z, w.hu, w.hw, h.yaw, top] });
     }
     if (ok) return out;
@@ -2100,8 +2102,12 @@ export function phobosKeep(K) {
       K.drum('dark:p2_bridge_ashlar', sx, dy - 0.02, sz, RD - 0.6, 0.04, 24, { r2: RD - 0.6, collide: false });
       for (let k = 0; k < 16; k++) { const t = (k + 0.5) / 16 * TAU; K.spike(G, sx + Math.cos(t) * (RD - 1.2), dy - 1.2, sz + Math.sin(t) * (RD - 1.2), 1.1, -6, 4, -t); }
       const segs = 28;
+      // (Open where its bridge to the next leaves, from the deck's rim at the deck's height: laid from the spire's wall, under
+      // the deck, the bridge came out past the parapet a metre and more under it, a step up and no step back. map.mjs.)
+      const si = SPIRES.findIndex((q) => q[0] === key), nx = SPIRES[si + 1] || [null, x, z], ba = Math.atan2(nx[2] - sz, nx[1] - sx), gap = (5.5 / 2 + 0.6) / RD;
       for (let k = 0; k < segs; k++) {
         const t = (k + 0.5) / segs * TAU, px = sx + Math.cos(t) * (RD - 0.3), pz = sz + Math.sin(t) * (RD - 0.3), half = Math.PI * (RD - 0.3) / segs + 0.05;
+        if (Math.abs(Math.atan2(Math.sin(t - ba), Math.cos(t - ba))) < gap + Math.PI / segs) continue;
         K.box(G, px, dy, pz, 0.3, 1.1, half, -t);
         if (!K.lean) K.vee(G, px, dy + 1.1, pz, 0.3, 1.3, half * 0.55, -t);
       }
@@ -2112,7 +2118,8 @@ export function phobosKeep(K) {
   tops.forEach(([ax, az, ar, , atop], i) => {
     const nx = tops[i + 1] || [x, z, 33, 0, 590], [bx, bz, br] = nx, bfoot = i < 4 ? tops[i + 1][3] + (tops[i + 1][4] - tops[i + 1][3]) * 0.34 : 560;
     const d = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / d, uz = (bz - az) / d;
-    bridge(K, KB, [ax + ux * ar, P(atop) - 20, az + uz * ar], [bx - ux * br, P(bfoot), bz - uz * br], 5.5, { arch: 6, piers: true, walk: true, dress: true });
+    const ad = ar + 12.4 - 0.4;   // (from its viewing deck's rim, RD: see the deck)
+    bridge(K, KB, [ax + ux * ad, P(atop) - 20, az + uz * ad], [bx - ux * br, P(bfoot), bz - uz * br], 5.5, { arch: 6, piers: true, walk: true, dress: true });
     // (Each spire's tie back to the Keep's body is walked now, to a step's lip: castleTowers.)
   });
   // The lesser towers: the satellites out on the crag's rim and between the spires, the turrets on the curtain and the

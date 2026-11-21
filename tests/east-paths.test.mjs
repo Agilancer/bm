@@ -22,8 +22,18 @@ const from = nav.nodesNear(dx, dz, dy, 7, 4);
 const gets = (t) => {
   // (Only places got to from the gate are a way's end, as EastNav.route has it: a spire's crown over its deck isn't.)
   const ends = nav.nodesNear(t.x, t.z, t.y, Math.max(4, Math.min(t.r + 2, 30)), t.y === null ? 1e9 : 3).filter((n) => nav.live[n]);
-  return ends.length > 0 && nav.coarse(from.slice(0, 4).map((n) => [n, 0]), new Set(ends.slice(0, 64)), t.x, t.z) !== null;
+  return ends.length > 0 && nav.coarse(from.slice(0, 4).map((n) => [n, 0]), new Set(ends.slice(0, 64)), t.x, t.z) !== null
+    // (And back: a place got to and not left is a trap, not a place to send anyone. Known one way, docs/PHOBOS-PATHS.md: the
+    // Blood Spire's deck, its stair's head under the deck and its bridge down to the Keep no way back.)
+    && (ONE_WAY.has(`${t.kind} ${t.name}`) || nav.coarse(ends.slice(0, 4).map((n) => [n, 0]), new Set(from.slice(0, 64)), dx, dz) !== null);
 };
+const ONE_WAY = new Set(['castle tower deck the Blood Spire']);
+test('the places known to be one way still are (take them off ONE_WAY once fixed)', () => {
+  for (const k of ONE_WAY) {
+    const t = T.find((q) => `${q.kind} ${q.name}` === k), ends = nav.nodesNear(t.x, t.z, t.y, Math.max(4, Math.min(t.r + 2, 30)), t.y === null ? 1e9 : 3).filter((n) => nav.live[n]);
+    assert.equal(nav.coarse(ends.slice(0, 4).map((n) => [n, 0]), new Set(from.slice(0, 64)), dx, dz), null, `${k} has a way back now`);
+  }
+});
 
 test('the gate road is on the map', () => {
   assert.ok(from.length > 0, 'no node by the Drawbridge Gate road');

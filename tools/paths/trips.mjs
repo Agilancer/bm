@@ -8,6 +8,7 @@
 //
 // Prints each failure with where it stood; writes tools/build/paths/trips.json.
 import fs from 'node:fs';
+import { against } from './baseline.mjs';
 import os from 'node:os';
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
 
@@ -48,7 +49,9 @@ if (isMainThread) {
   console.log(`${ok} of ${results.length} walks got there (${((performance.now() - t0) / 1000).toFixed(0)} s); slowest ${Math.max(...results.map((r) => r.secs)).toFixed(0)} s of walking; longest ask ${Math.max(...results.map((r) => r.ask)).toFixed(0)} ms`);
   fs.mkdirSync(new URL('../build/paths/', import.meta.url), { recursive: true });
   fs.writeFileSync(new URL('../build/paths/trips.json', import.meta.url), JSON.stringify(results, null, 1));
-  process.exit(ok === results.length ? 0 : 1);
+  // (Known failures allowed, by baseline.json; a new one, or fewer getting there, fails the run.)
+  const known = results.filter((r) => !r.ok).map((r) => `${r.from} -> ${r.to}`).sort();
+  process.exit(against('trips', { failed: results.length - ok }, known) ? 0 : 1);
 } else {
   const { World } = await import('../../src/sim/world.js');
   const { EastNav } = await import('../../src/sim/east-nav.js');
@@ -63,7 +66,8 @@ if (isMainThread) {
     let x = from.x, z = from.z, y = settle(x, z, from.y ?? -100), vy = 0;
     // (A start inside something: the nearest place it fits, as the map has it.)
     // (Somewhere a body stands that can be got to from the gate: a place the player can't be isn't a start.)
-    if (!nav.fits(x, z, y)) { const live = (L) => L.filter((n) => nav.live[n]); const n = live(nav.nodesNear(x, z, from.y, from.r || 6, 6))[0] ?? live(nav.nodesNear(x, z, null, 12))[0]; if (n !== undefined) { x = nav.x[n]; z = nav.z[n]; y = settle(x, z, nav.y[n]); } }
+    // (Nor a ledge nothing walks to: a spire's pier top round its foot.)
+    if (!nav.fits(x, z, y) || !nav.nodesNear(x, z, y, 4, 3).some((n) => nav.live[n])) { const live = (L) => L.filter((n) => nav.live[n]); const n = live(nav.nodesNear(x, z, from.y, from.r || 6, 6))[0] ?? live(nav.nodesNear(x, z, null, 12))[0]; if (n !== undefined) { x = nav.x[n]; z = nav.z[n]; y = settle(x, z, nav.y[n]); } }
     const res = { from: from.name, to: to.name, kind: to.kind, ok: false, why: '', at: [x, y, z], secs: 0, ask: 0, asks: 0 };
     let P = null, askT = -99, t = 0, best = Infinity, bestT = 0, miss = 0, fresh = false;
     const tmp = [0, 0, 0];

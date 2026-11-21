@@ -7,6 +7,7 @@
 //
 // Also writes tools/build/paths/reach.bin (per place: 1 got to and back, 2 got to only, 0 never) for tools/paths/draw.py.
 import fs from 'node:fs';
+import { against } from './baseline.mjs';
 import { CELL, W, H, X0, Z0 } from './grid.mjs';
 import { buildSites } from '../../src/core/sites.js';
 import { DELVES } from '../../src/core/dungeon.js';
@@ -157,5 +158,6 @@ if (import.meta.url === `file:///${process.argv[1].replace(/\\/g, '/')}` || proc
   for (const m of report.missing) byKind[m.kind] = (byKind[m.kind] || 0) + 1;
   console.log('not got to:', byKind, `decks ${decksMissed} of ${decks}`, `trap squares ${report.traps.length}`);
   for (const m of report.missing.filter((m) => m.kind !== 'deck')) console.log(' ', m.kind, m.name, m.x, m.z, m.y ?? '');
-  fs.writeFileSync(process.argv[2] || new URL('../build/paths/report.json', import.meta.url), JSON.stringify(report, null, 1));
+  fs.writeFileSync(process.argv[2]?.startsWith('--') ? new URL('../build/paths/report.json', import.meta.url) : process.argv[2] || new URL('../build/paths/report.json', import.meta.url), JSON.stringify(report, null, 1));
+  if (!against('map', { trapped: only, decksMissed, trapSquares: report.traps.length, missing: report.missing.filter((m) => m.kind !== 'deck').length })) process.exitCode = 1;
 }

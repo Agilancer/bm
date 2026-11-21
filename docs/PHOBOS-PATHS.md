@@ -66,6 +66,8 @@ layered:
 | Gallery pieces only just meeting: pinholes | overlapped by 0.2 m |
 | The city wall's corner drums: the gallery out to the higher walk laid over the stair's last treads, the top one left showing 1.5 m under it. The walks past four corners were walked onto, never back off | the gallery starts at the stair's middle line; the treads' inner halves are the way up (`towerFar`) |
 | A house's floor is at its highest corner's ground: on a hill 2,061 doors stood a metre to twelve over the street, and no one got into those houses | a flight of steps down from each such threshold, none over 0.42 m: straight out, or along the front either way where straight out would end in the house across the street (`doorFlight`) |
+| Door flights crowding a narrow alley: stone blocks across it | a flight that leaves 1.5 m of the street clear past it is taken first; one that only just fits only where none does |
+| Each spire's bridge to the next laid from its wall, under its viewing deck: it came out past the parapet a metre and more under the deck. The decks (410-640 m) were stepped up onto, never back off | the bridge leaves from the deck's rim at its height, through a gap in the parapet; trap cells 57k → 24k |
 
 ## Inside the sewers and the castle's delves
 
@@ -74,36 +76,40 @@ levels of their own, walked by the delves' own map (`CaveNav`, src/core/dungeon.
 grates and portals (tests/east-paths.test.mjs: a way to every portal and way in); `node tools/dungeon/check.mjs` walks
 every room of each from its way in ("The delves hold together").
 
-## What trips.mjs still doesn't get to
+## What's still not right
 
-Seven of the 340 walks, on the last run before this was merged (333 got there):
+trips.mjs, on main with the Phobos cliffs: 333 of 340 walks get there. The seven that don't (all in tools/paths/baseline.json, so
+a new one fails the run): the Sally Tower's deck (465 m), still climbing when the run's 900 s ran out (auto-play itself has
+no limit, only 30 s without getting nearer); three from or to the Shrike Turret, stalled 30 s at its stair head (311 m)
+and on its stair (259 m); one from the Blood Spire's deck, "no way there" (below); and 30 s stalls by the Charnel Gate's
+spire (105 m) and on the way to the Cistern Turret (265 m).
 
-- the Sally Tower's deck, 465 m up: still climbing when the run's 900 s ran out (auto-play itself has no limit, only 30 s
-  without getting nearer);
-- two from the Shrike Turret's stair head, 311 m, where the turret's top tread is 1.1 m under the wide flight over it;
-- one from the Blood Spire's crown (490 m), which nothing from the gate gets to: "no way there";
-- three that stall for 30 s: by the Charnel Gate's spire (105 m), on the Bone Spire's bridge to its step (392 m), and on
-  the way to the Cistern Turret (265 m).
-
-The map's other known gap: the four spires' crowns (410-640 m) are a metre over the sloped roof round them. A body
-steps up onto a crown but not back down off it, a 1.5 m drop. No target is on a crown, and the long way never goes
-through a dead end, so auto-play doesn't take anyone there. A player who climbs up there is stuck, and auto-play's ask
-from there searches the whole map for nothing (the slowest ask on the run took 8.6 s with twelve walks at once; from the
-gate road the slowest is 1.2 s).
-
-3,826 of the 75,956 floors and decks big enough to count still aren't got to, down from 8,706. In the first 400 the map lists (160 houses),
-they're 65 ruins with no doorway, upstairs floors whose stair head the map can't climb onto, and doorways with a
-shop's goods or a post on the threshold beside the steps' top. See the run's output before calling it done.
+- **The Blood Spire's deck (640 m)** is got to but not got back from: its stair's head is under the deck (the corner
+  drums' fault, above, not yet fixed on the spires: the others get away with it, as their bridge on to the next spire is a
+  way back), and its bridge goes on down to the Keep with no way back up. tests/east-paths.test.mjs lists it in `ONE_WAY`,
+  and fails once it has a way back so it can be taken off.
+- **The Shrike Turret's stair head** (311 m): the map walks it both ways; the walker stalls there for 30 s. Not traced yet.
+- 3,726 of the 75,956 floors and decks big enough to count aren't got to (8,706 before the door flights). In the first
+  400 the map lists (160 houses): 65 ruins with no doorway, upstairs floors whose stair head the map can't climb onto, and
+  doorways with a shop's goods or a post on the threshold beside the steps' top.
+- 24,040 cells are got into and not out of (169k before), the Blood Spire's deck the most of them.
+- A player who stands somewhere not on the map makes auto-play's ask search the whole of it for nothing (12.6 s, the
+  slowest on the last run, with twelve walks at once; from the gate road the slowest is 1.2 s). A phone's worker is slower.
+- Not yet watched in the game itself: tools/paths/ingame.mjs is written for it (auto-play's jobs replaced by a list of
+  places, nothing able to hurt the player) but hasn't been run.
 
 ## Running it after a change
 
 ```
 node tools/paths/bake.mjs 14                 # or a box round what changed
-node tools/paths/map.mjs                     # "not got to" should be empty but for decks
+node tools/paths/map.mjs                     # fails if anything's worse than tools/paths/baseline.json
 node tools/paths/graph.mjs                   # assets/game/nav/east.bin
-node tools/paths/trips.mjs                   # every walk should get there
+node tools/paths/trips.mjs                   # fails on a walk failing that the baseline doesn't list
+node tools/paths/ingame.mjs                  # auto-play in the game itself, to a list of places
 node --test tests/east-paths.test.mjs
 ```
+
+`--baseline` on map.mjs or trips.mjs writes that run's numbers as the new baseline: only after looking them over.
 
 east.bin must be rebuilt after any change to what's stood on in the east, or auto-play's long route will lead
 through places that aren't there any more. The fine stretches it walks out use the live world, so it won't walk
