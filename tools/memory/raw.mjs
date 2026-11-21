@@ -2,13 +2,15 @@
 // each thread downloads, which is hundreds of MB that a player's browser never holds). Spoken to over the debugger's socket
 // only: the page target for emulation and evaluation; worker threads are attached only when a step asks (ATTACH=1).
 //   node raw.mjs steps.json
-// Env: PORT (8861)  PHONE=pixel|iphone|small|tablet|'' (desk)  Q='&light=1'  NOAUTO=1  TIMEOUT (s, 600)  W,H  DEBUG_PORT
+// Env: PORT (8861)  PHONE=pixel|iphone|small|tablet|'' (desk)  Q='&light=1'  NOAUTO=1  TIMEOUT (s, 600)  W,H
 //      ATTACH=1 (watch worker threads' heaps; a little memory of its own)  CHROME (path)  FLAGS  OUT
+//      DEBUG_PORT (unset: a free one of Chrome's choosing, said at the start; set: refused if taken; tools/chrome-port.mjs)
 // steps: [{eval}|{wait}|{shot}|{log}|{mem}|{regions}|{dump}|{threads}|{gc}|{top}|{x}|{touch:[type,x,y,id]}|{tap:[x,y]}|{key}]
 import { spawn, execSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { portFlag, chromeSocket, openSocket } from '../chrome-port.mjs';
 
 const here = path.dirname(process.argv[1]);
 const steps = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
@@ -23,7 +25,6 @@ const PHONES = {
 };
 const ph = PHONES[process.env.PHONE || ''];
 const W = ph ? ph.w : +(process.env.W || 1280), H = ph ? ph.h : +(process.env.H || 720);
-const DEBUG_PORT = +(process.env.DEBUG_PORT || 9351);
 const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'bm-raw-'));
 const tag = path.basename(profile);
 const MB = (x) => Math.round(x / 1048576);
@@ -32,14 +33,17 @@ const chromePath = process.env.CHROME || ['C:/Program Files/Google/Chrome/Applic
 
 const INIT = fs.readFileSync(path.join(here, 'init.js'), 'utf8');
 
-const chrome = spawn(chromePath, [`--user-data-dir=${profile}`, `--remote-debugging-port=${DEBUG_PORT}`, '--enable-unsafe-webgpu', '--ignore-gpu-blocklist', '--no-first-run', '--no-default-browser-check',
+const debugFlag = await portFlag().catch((e) => { console.log(e.message); process.exit(1); });
+const chrome = spawn(chromePath, [`--user-data-dir=${profile}`, debugFlag, '--enable-unsafe-webgpu', '--ignore-gpu-blocklist', '--no-first-run', '--no-default-browser-check',
   '--window-position=-3000,0', `--window-size=${Math.max(W + 40, 500)},${H + 160}`, '--autoplay-policy=no-user-gesture-required', '--disable-features=CalculateNativeWinOcclusion',
   ...(process.env.FLAGS ? process.env.FLAGS.split(' ') : []), 'about:blank'], { stdio: 'ignore' });
-let ver = null;
-for (let i = 0; i < 60 && !ver; i++) { await sleep(250); ver = await fetch(`http://127.0.0.1:${DEBUG_PORT}/json/version`).then((r) => r.json()).catch(() => null); }
-if (!ver) { console.log('chrome did not start'); process.exit(1); }
-const ws = new WebSocket(ver.webSocketDebuggerUrl);
-await new Promise((r) => { ws.onopen = r; });
+let chromeGone = false;
+chrome.on('exit', () => { chromeGone = true; });
+// (This Chrome's own socket, from its profile: never another run's Chrome, whatever port it's on.)
+const dbg = await chromeSocket(profile, { seconds: 15, alive: () => !chromeGone });
+if (!dbg) { console.log('chrome did not start'); try { chrome.kill(); } catch { /* */ } process.exit(1); }
+console.log(`debugger on port ${dbg.port}`);
+const ws = await openSocket(dbg.url).catch((e) => { console.log(e.message); try { chrome.kill(); } catch { /* */ } process.exit(1); });
 let snapChunks = null, lastLayers = null;
 let id = 0; const waits = new Map(), threads = new Map(), traced = []; let traceDone = null;
 const send = (method, params = {}, sessionId, timeout = 60000) => new Promise((res, rej) => {
