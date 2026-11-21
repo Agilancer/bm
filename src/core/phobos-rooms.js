@@ -393,9 +393,11 @@ function fill(put, g, span, share, list, free = []) {
     const it = list[k % list.length];
     if (!put(it.k, { walls: ['L', 'R', 'B', 'Fr'], pad: 0.35, ...it, wspan: ws }, it.extra || {})) miss++;
   } };
+  const placed = new Set();   // (a piece marked once: one to a room, a rich hall's one dining table)
   const middle = (n) => { for (let k = 0, miss = 0; k < n && miss < 2 && g.used(span[0], span[1]) < want; k++) {
     const it = free[k % Math.max(1, free.length)]; if (!it) break;
-    if (!put(it.k, { at: 'free', pad: 0.5, side: 0.45, ...it, wspan: ws }, it.extra || {})) miss++;
+    if (it.once && placed.has(it)) continue;
+    if (!put(it.k, { at: 'free', pad: 0.5, side: 0.45, ...it, wspan: ws }, it.extra || {})) miss++; else placed.add(it);
   } };
   if (big) { middle(free.length * 2); put('candlestand', { hu: 0.15, hv: 0.15, at: 'free', pad: 0.1, side: 0.3, wspan: ws }); }
   walls(want);
@@ -422,7 +424,9 @@ const CHAMBER_FILL = [
 ];
 const T_ = (k, hu, extra) => P_(k, hu, 0.42, { F: [0, 1], pad: 0.55, side: 0.5, extra });
 const FREE_FRONT = [[T_('trestle', 0.8, { benches: true }), P_('heap', 0.45, 0.45, { pad: 0.1, extra: { rags: true } })], [T_('table', 0.75, { lit: false, set: 0.3 }), P_('loom', 0.7, 0.45, { pad: 0.6 })], [P_('rug', 0.9, 0.6, { pad: 0, side: 0, extra: { floor: true, wool: 'dark:cloth_red' } }), T_('table', 0.8, { lit: false, set: 0.8 })]];
-const FREE_HALL = [[T_('trestle', 0.8, { benches: true })], [T_('table', 0.8, { lit: false, set: 0.5 }), P_('rug', 0.9, 0.6, { pad: 0, side: 0, extra: { floor: true } })], [P_('longtable', 0.5, 1.6, { F: [0, 1], pad: 0.7, side: 0.55, extra: { benches: true } }), P_('rug', 1.1, 0.7, { pad: 0, side: 0, extra: { floor: true, wool: 'dark:cloth_red' } })]];
+const FREE_HALL = [[T_('trestle', 0.8, { benches: true })], [T_('table', 0.8, { lit: false, set: 0.5 }), P_('rug', 0.9, 0.6, { pad: 0, side: 0, extra: { floor: true } })], [P_('rug', 1.1, 0.7, { pad: 0, side: 0, once: true, extra: { floor: true, wool: 'dark:cloth_red' } }), P_('longtable', 0.5, 1.6, { F: [0, 1], pad: 0.7, side: 0.6, once: true, extra: { dine: true } })]];
+// (A rich hall's table is the family's board: chairs down it, plates, a cloth, candles. Two long tables with benches and
+// papers had read as a schoolroom, the critics, round 3.)
 const FREE_CHAMBER = [P_('rug', 0.8, 0.55, { pad: 0, side: 0, extra: { floor: true } }), T_('table', 0.6, { lit: false, set: 0.2 })];
 // Blankets: madder, undyed brown, moss, oatmeal, rust (src/gfx/blankets.js's, as layers). Never blue with gold.
 // (No plain oatmeal: undyed, flat on a bed by day, it reads as the bare tick.)
@@ -531,19 +535,44 @@ export function furnish(K, h, plan, P, lean, lamp) {
           if (lean) break;
           // (Its seats: benches along both long sides, or two stools at the near side and a bench against the far.)
           const off = S2 + 0.3, bench = (sd, len) => { const [u, v] = longU ? [0, sd * off] : [sd * off, 0], [bu, bv] = longU ? [len, 0.15] : [0.15, len]; pb('wood', u, y0 + 0.4, v, bu, 0.05, bv); for (const e of [-1, 1]) { if (longU) leg('dark:wood', e * (len - 0.12), y0, sd * off, 0.035, 0.4, 0.13); else leg('dark:wood', sd * off, y0, e * (len - 0.12), 0.13, 0.4, 0.035); } };
-          if (it.coffin) { /* (a coffin maker's trestle: nothing to sit at) */ } else if (it.benches || it.k !== 'table' || it.set < 0.5) { bench(-1, L2 - 0.1); bench(1, L2 - 0.1); }
+          const C2 = (a, b) => (longU ? [b, a] : [a, b]);
+          const seat = (a, b, sd, wide) => {   // a chair, its back to the room: sd the side of the table it's at, across or along
+            const W2 = wide ? 0.26 : 0.21, [u, v] = sd.along ? C2(b, a) : C2(a, b), dimA = (ha, hb) => (sd.along ? C2(hb, ha) : C2(ha, hb));
+            const [su, sv] = dimA(0.2, W2); pb('wood', u, y0 + 0.44, v, su, 0.04, sv);
+            for (const e of [-1, 1]) { const [lu, lv] = sd.along ? C2(b + e * (W2 - 0.03), a) : C2(a, b + e * (W2 - 0.03)), [du, dv] = dimA(0.19, 0.025); leg('dark:wood', lu, y0, lv, du, 0.44, dv); }
+            const [bu, bv] = sd.along ? C2(b, a + sd.s * 0.19) : C2(a + sd.s * 0.19, b), [ku, kv] = dimA(0.025, W2 - 0.01); pb('dark:wood', bu, y0 + 0.48, bv, ku, wide ? 0.78 : 0.62, kv);
+          };
+          if (it.dine && !lean) {
+            const m = Math.max(2, Math.floor((L2 * 2 - 0.2) / 0.72)), off = S2 + 0.24;
+            for (const sd of [-1, 1]) for (let k = 0; k < m; k++) { const b = -L2 + 0.1 + (k + 0.5) * (L2 * 2 - 0.2) / m; seat(sd * off, b, { s: sd }); pd('pale:stone', ...C2(sd * (S2 - 0.17), b), y0 + th, 0.1, 0.012, 10); }
+            for (const sd of [-1, 1]) { seat(sd * (L2 + 0.27), 0, { along: true, s: sd }, true); pd('pale:stone', ...C2(0, sd * (L2 - 0.17)), y0 + th, 0.11, 0.012, 10); }
+          }
+          if (it.coffin || it.dine) { /* (a coffin maker's trestle: nothing to sit at; a dining table's chairs, above) */ } else if (it.benches || it.k !== 'table' || it.set < 0.5) { bench(-1, L2 - 0.1); bench(1, L2 - 0.1); }
           else { bench(-1, L2 - 0.1); for (const e of [-0.5, 0.5]) { const [u, v] = longU ? [e * L2, off] : [off, e * L2]; pd('wood', u, y0, v, 0.17, 0.46, 5); } }
           // What's on it: a candle, bread on a board, a jug and cups; tankards in a tavern; papers at a guild's.
           const ty = y0 + th;
-          if (it.lit !== false && it.k !== 'trestle') { candle(0, ty, 0); lamp(Lat(0, 0, y0 + 1.25), 8, 6); }
+          if (it.dine) {
+            // (Its runner, and the candles in two clusters on their dishes, no arms to them: a branched candlestick is a cross.)
+            if (!lean) pb('dark:cloth_red', ...C2(0, 0), ty, ...(longU ? [L2 - 0.12, 0.006, 0.17] : [0.17, 0.006, L2 - 0.12]));
+            for (const e of [-0.45, 0.45]) { const [cu, cv] = C2(0, e * L2); pd('iron', cu, ty, cv, 0.12, 0.02, 8); if (!lean) for (let j = 0; j < 3; j++) { const hh = 0.12 + 0.06 * j, a = j * 2.09; pd('pale:stone', cu + Math.cos(a) * 0.06, ty + 0.02, cv + Math.sin(a) * 0.06, 0.024, hh, 5); pc('flame', cu + Math.cos(a) * 0.06, ty + 0.02 + hh, cv + Math.sin(a) * 0.06, 0.022, 0.07, 3); } }
+            lamp(Lat(0, 0, y0 + 1.35), 11, 10);
+          }
+          else if (it.lit !== false && it.k !== 'trestle') { candle(0, ty, 0); lamp(Lat(0, 0, y0 + 1.25), 8, 6); }
           if (it.tank) for (let k = 0; k < it.tank; k++) pd('dark:wood', (k - (it.tank - 1) / 2) * 0.45, ty, (k % 2 ? 0.15 : -0.12), 0.055, 0.15, 5);
-          else if (it.k === 'longtable') { for (let k = -1; k <= 1; k++) pb('pale:stone', 0.12 * k, ty, k * L2 * 0.5, 0.16, 0.01, 0.12); pb('dark:cloth_red', 0, ty, -L2 * 0.8, 0.2, 0.06, 0.14); }
+          else if (it.k === 'longtable' && !it.dine) { for (let k = -1; k <= 1; k++) pb('pale:stone', 0.12 * k, ty, k * L2 * 0.5, 0.16, 0.01, 0.12); pb('dark:cloth_red', 0, ty, -L2 * 0.8, 0.2, 0.06, 0.14); }
           else if (it.coffin) {
             // (A coffin on it, its lid set on askew a hand: the shape of one, not a box.)
             prism('wood', coffinPts(0.3, 0.92), (q, t) => Lat(q[0], q[1], ty + t * 0.32), [0, 1]);
             prism('dark:wood', coffinPts(0.34, 0.97), (q, t) => Lat(q[0] + 0.07, q[1] + 0.06, ty + 0.32 + t * 0.045), [0, 1]);
             prism('soot:wood', coffinPts(0.24, 0.8), (q, t) => Lat(q[0] + 0.07, q[1] + 0.06, ty + 0.365 + t * 0.02), [1]);
-            if (!lean) for (let k = 0; k < 7; k++) pb('pale:wood', ((k * 37) % 9 - 4) * 0.12, y0, ((k * 53) % 11 - 5) * 0.16, 0.06, 0.012, 0.03);
+            // (Shavings: curls of plain wood heaped at its working end and a few strayed under it. Seven pale chips in a
+            // ruled spread had read as white dots on the floor, round 3.)
+            if (!lean) for (let k = 0; k < 18; k++) {
+              const hk = (n) => ((Math.sin((k + 1) * n) * 43758.5453) % 1 + 1) % 1, heap = k < 12, r = heap ? 0.32 * Math.sqrt(hk(12.9)) : 0.5 * hk(4.1), a = hk(78.2) * 6.283;
+              const cu = (heap ? 0.55 * hu : (hk(9.7) - 0.5) * 1.4 * hu) + Math.cos(a) * r, cv = (heap ? 0.12 : (hk(3.3) - 0.5) * 0.6) + Math.sin(a) * r, ro = hk(5.5) * 6.283, ca = Math.cos(ro), sa = Math.sin(ro), sz = 0.05 + 0.04 * hk(2.2);
+              const curl = [[-1, 0], [-0.7, 0.55], [0, 0.8], [0.7, 0.55], [1, 0], [0.55, 0.3], [0, 0.45], [-0.55, 0.3]].map(([x, y]) => [x * sz, y * sz * 0.6]);
+              prism(k % 3 ? 'wood' : 'umber:wood', curl, (q, t) => Lat(cu + q[0] * ca - q[1] * sa, cv + q[0] * sa + q[1] * ca, y0 + 0.004 + t * (0.01 + 0.01 * hk(7.1))), [1]);
+            }
           }
           else if (it.set !== undefined) { const v = it.set; if (v < 0.4) { pb('wood', -0.35, ty, 0.05, 0.2, 0.012, 0.14); pd('umber:cloth_oat', -0.35, ty + 0.012, 0.05, 0.12, 0.08, 5, { r2: 0.08 }); } else if (v < 0.7) { pd('dark:stone', 0.3, ty, 0.08, 0.07, 0.2, 5); pd('dark:wood', 0.05, ty, 0.15, 0.045, 0.09, 4); } else { pd('iron', 0.25, ty, 0, 0.14, 0.12, 6, { lid: 'dark:water' }); pb('pale:stone', -0.3, ty, 0.1, 0.12, 0.012, 0.12); } }
           break;
@@ -670,13 +699,20 @@ export function furnish(K, h, plan, P, lean, lamp) {
           // A peg rail on the wall: its board, two pegs, a cloak and a hood hung straight down from them.
           pb('dark:wood', 0, y0 + 1.55, -hv + 0.02, hu, 0.08, 0.02);
           for (const u of [-hu + 0.22, hu - 0.3]) pb('wood', u, y0 + 1.57, -hv + 0.08, 0.02, 0.02, 0.05, OPEN);
-          // (Hung with some body to them, the cloak gathered at the peg and falling wider to its hem, a fold down it; the hood a
-          // bag of cloth off the other: as two cards they'd read as paper pinned up, the critics.)
-          { const cu = -hu + 0.22, cl = [[-0.07, 0], [0.07, 0], [0.19, -0.78], [0.02, -0.82], [-0.19, -0.76]];
-            prism('dark:cloth_red', cl, (q, t) => Lat(cu + q[0], -hv + 0.05 + t * (0.07 + 0.06 * Math.min(1, -q[1])), y0 + 1.57 + q[1]), [1]);
-            prism('dark:cloth_red', [[-0.03, -0.1], [0.03, -0.1], [0.06, -0.8], [-0.04, -0.8]], (q, t) => Lat(cu + 0.05 + q[0], -hv + 0.12 + t * 0.06 * Math.min(1, -q[1]), y0 + 1.57 + q[1]), [1]); }
-          pd('umber:cloth_oat', hu - 0.3, y0 + 1.22, -hv + 0.13, 0.08, 0.34, 7, { r2: 0.13 });
-          pd('umber:cloth_oat', hu - 0.3, y0 + 1.56, -hv + 0.13, 0.13, 0.04, 7, { r2: 0.03 });
+          // (A woollen cloak gathered at its peg, broad at the shoulders and falling wider to its hem, two folds down it and its
+          // hood lying down its back; a felt hat by its brim on the other peg. A black wedge and a tan cup had read as
+          // placeholders, the critics, round 3.)
+          { const cu = -hu + 0.22, d0 = -hv + 0.04, bul = (y) => 0.05 + 0.05 * Math.min(1, -y);
+            const at3 = (u0, dz, th) => (q, t) => Lat(u0 + q[0], d0 + dz(q[1]) + t * th(q[1]), y0 + 1.57 + q[1]);
+            prism('p2_wool_blanket', [[-0.06, 0], [0.06, 0], [0.18, -0.14], [0.22, -0.95], [0.0, -1.0], [-0.21, -0.93], [-0.17, -0.14]], at3(cu, () => 0, bul), [1]);
+            for (const [fu, fw] of [[-0.08, 0.025], [0.09, 0.03]]) prism('dark:p2_wool_blanket', [[-fw, -0.2], [fw, -0.2], [fw * 1.8, -0.96], [-fw * 1.6, -0.96]], at3(cu + fu, bul, () => 0.012), [1]);
+            prism('p2_wool_blanket', [[-0.13, -0.05], [0.13, -0.05], [0.12, -0.24], [0.05, -0.36], [-0.05, -0.36], [-0.12, -0.24]], at3(cu, bul, () => 0.03), [1]);
+            prism('dark:p2_wool_blanket', [[-0.04, -0.07], [0.04, -0.07], [0.035, -0.16], [-0.035, -0.16]], at3(cu, (y) => bul(y) + 0.03, () => 0.006), [1]);
+            const ring = (r, n = 12) => Array.from({ length: n }, (_, k) => [r * Math.cos(-k / n * Math.PI * 2), r * Math.sin(-k / n * Math.PI * 2)]);
+            const hcu = hu - 0.3, hy = y0 + 1.47, hat = (dz, th) => (q, t) => Lat(hcu + q[0], -hv + dz + t * th, hy + q[1]);
+            prism('soot:cloth_oat', ring(0.19, 9), hat(0.04, 0.022), [1]);
+            prism('soot:cloth_oat', ring(0.1, 7), hat(0.062, 0.085), [1]);
+            prism('dark:cloth_red', ring(0.104, 7), hat(0.062, 0.02), [1]); }
           break;
         }
         case 'hanging': face(it.cloth, -hu, hu, y0 + 0.9, y0 + 0.9 + (it.cloth === 'p2_tapestry_hunt' ? hu * 1.2 : 1.6), -hv + 0.02, it.cloth === 'p2_tapestry_hunt' ? [[0, 1], [1, 1], [1, 0], [0, 0]] : null); break;
@@ -684,7 +720,8 @@ export function furnish(K, h, plan, P, lean, lamp) {
         case 'pots': {
           // By the fire: a pot on its trivet, a pan.
           // (Round-bellied, wider than it's tall, a lip at its mouth: a six-sided can of black iron read as a block, the critics.)
-          pd('iron', 0.05, y0, 0, 0.12, 0.1, 3, { open: true });
+          // (Its trivet three legs; a three-sided drum had read as a cone under it, round 3.)
+          for (let k = 0; k < 3; k++) pd('iron', 0.05 + Math.cos(k * 2.09) * 0.1, y0, Math.sin(k * 2.09) * 0.1, 0.014, 0.11, 3, { open: true });
           pd('iron', 0.05, y0 + 0.1, 0, 0.13, 0.1, 10, { r2: 0.2, open: true }); pd('iron', 0.05, y0 + 0.2, 0, 0.2, 0.1, 10, { r2: 0.15, lid: 'dark:water' });
           pd('slate:iron', 0.05, y0 + 0.3, 0, 0.165, 0.025, 10, { open: true });
           pd('iron', -0.24, y0, 0.1, 0.1, 0.14, 9, { r2: 0.12, lid: 'soot:iron' }); pd('dark:wood', -0.24, y0 + 0.14, 0.1, 0.012, 0.18, 4);

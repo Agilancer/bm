@@ -419,9 +419,18 @@ function houseNear(K, h) {
   // What's in it, room by room, and where its people sleep (src/core/phobos-rooms.js): kept off the stair, out of the way in
   // and the floor before the fire. (Nothing in it stops you. On a phone, only the beds, the tables and the counters.)
   if (!ruin) {
-    let nl = 0;
-    const lamp = (p, rr, i) => { if (nl++ < (h.hx * h.hz > 30 ? 3 : 2)) (K.lamps ||= []).push({ p, c: [1, 0.78, 0.5], r: Math.max(rr, Math.min(10, h.hx + h.hz)), i, flicker: 0.25, indoor: true }); };
+    // (Its strongest lights kept, not its first ones: a rich hall's table had lost its light to a candle by the door. The
+    // biggest houses keep a fourth, round 3: their halls fell off into black.)
+    const want = [], cap = h.hx * h.hz > 45 ? 4 : h.hx * h.hz > 30 ? 3 : 2;
+    const lamp = (p, rr, i) => want.push({ p, c: [1, 0.78, 0.5], r: Math.max(rr, Math.min(10, h.hx + h.hz)), i, flicker: 0.25, indoor: true });
     furnish(K, h, roomPlan(h, F, up), P, !!K.leanNear, lamp);
+    // (And one of them upstairs where there's a light up there, so the chambers aren't black round their sleepers, round 3.)
+    if (want.length) {
+      const order = want.map((l, k) => [l, k]).sort((a, b) => b[0].i - a[0].i || a[1] - b[1]).map((q) => q[0]), keep = order.slice(0, cap);
+      const upper = (l) => up && l.p[1] > up.uy - 0.3, best = order.find(upper);
+      if (best && !keep.some(upper) && keep.length === cap) keep[cap - 1] = best;
+      (K.lamps ||= []).push(...keep);
+    }
   }
 }
 // A house's fireplaces: a chimney breast out of the side wall across from the stair, up through every floor to the stack,

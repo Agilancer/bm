@@ -79,7 +79,7 @@ function vilView(i, view) {
   const stand = P(0, 0, hd + 2.5);
   let e, t;
   if (view === 'g') { e = P(ix - 0.3, F + 1.55, iz - 0.3); t = P(-ix * 0.3, F + 0.8, -iz); }
-  else if (view === 'gb') { e = P(-ix * 0.45, F + 1.55, -iz + 0.75); t = P(ix * 0.3, F + 0.9, iz); }
+  else if (view === 'gb') { e = P(-ix * 0.15, F + 1.6, -iz * 0.3); t = P(ix * 0.25, F + 0.9, iz); }   // (from the middle of the back half: its corner was inside a partition or the stair in six homes, round 3)
   else if (view === 'u') { e = P(ix - 0.3, U + 1.5, iz - 0.3); t = P(-ix * 0.3, U + 0.7, -iz); }
   else if (view === 'ub') { e = P(-ix + 0.3, U + 1.5, -iz + 0.3); t = P(ix * 0.3, U + 0.8, iz); }
   else if (view.startsWith('at')) {

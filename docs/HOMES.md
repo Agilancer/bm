@@ -37,18 +37,28 @@ Both critics said these must stay:
 - a hearth on each storey;
 - every street person with a bed.
 
-## Still open (round 3)
+## After round 3 (2026-11-21)
+
+The owner asked to continue. Done since round 3:
+- **Peg rail:** a woollen cloak, gathered at its peg, with folds and its hood down its back, and a felt hat on the other peg. They replace the flat wedge and cup.
+- **Rich halls:** one dining table with high-backed chairs, carver chairs at the ends, plates, a runner and armless candle clusters. It replaces two long tables with benches and papers. The guildhall keeps its long tables.
+- **Lights:**
+  - each house keeps its strongest lights, not its first ones;
+  - the biggest 5% of houses get a fourth;
+  - one slot is saved for an upstairs light when there is one.
+- **Small defects:**
+  - the coffin-maker's chips are now curled shavings;
+  - the pot's trivet is three legs;
+  - the blanket tents over the toes.
+- **Review tool:** the Bellmourn `gb` view now stands mid back-half. vil2 and vil7 use hand-placed views. Bed shots need `WAIT=40000`, so sleepers have walked home.
+
+No critic round was run on these.
+
+## Still open
 
 1. **Every Phobos house has the same plan:** the stair always on the left wall, the hearth always on the right, the cross wall in the same place. Mirroring half the houses is the fix, but the exterior build ties the stack and stair to one side as well.
-2. **The peg rail with a cloak and hood** on the partition reads as flat placeholder shapes (a dark wedge and a tan cup). It needs a real shape and texture, or should be removed.
-3. **Rich homes (3513, 4185) read as empty halls:** long benches in a dim room. They want a parlour: rug, high-backed chair, plate dresser, warmer light.
-4. **The sleep shots are too dark to see the sleepers,** and the shell (264) is almost black. A moonlight fill from the windows would help.
-5. **The Bellmourn `gb` review camera in `shots.mjs` still starts inside walls** for vil2, 3, 7, 8, 11 and 12. This is only a problem with the review tool, not the game.
-6. **Small defects:**
-   - white chips on the coffin-maker's floor (the shavings);
-   - a cone under the pot by the trestle;
-   - the cradle's rockers can't be seen from the close-up angle;
-   - the hides were never shown in a shot.
+2. **Upstairs bedrooms are still dark at night** (the lady's, the maid's, the keys'). Their only lights are small candles. A moonlight fill from the windows would help. The burnt shell (264) is almost black.
+3. **The cradle (vil3) still reads mostly as a box from above.** Its rockers sit right under it.
 
 ## Checks
 
@@ -56,5 +66,5 @@ Both critics said these must stay:
   - The `spec.json` test was already failing before this pass.
   - `auto-roads` "a way is worked out in a few milliseconds" is a timing flake. It also fails on the base commit when the machine is busy.
 - Auto-play: `node tools/autoplay/check.mjs` passes.
-- Phone memory at Phobos wharf, 23h: page 848 MB, GPU buffers 417 MB, textures 303 MB. Round 2 measured the same.
-- PC near-cell cost: about 317k vertices per cell. It was about 175k before the pass.
+- Phone memory at Phobos wharf, 23h: page 841 MB, GPU buffers 415 MB, textures 303 MB. Rounds 2 and 3 measured the same.
+- PC near-cell cost (`node tools/homes/audit.mjs`, 40 cells): 373k vertices and 261 lamps per cell. That's 363k and 258 at the round 3 commit, and about 175k before the pass. Round 3's write-up said 317k, which was an out-of-date figure.

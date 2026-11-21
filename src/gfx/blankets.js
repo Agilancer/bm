@@ -116,7 +116,7 @@ export class Blankets {
     // it's over somebody: a soft rise, highest over the chest, lower over the legs, a little lift where the toes are; round
     // across, as wool lies over a body, not flat-topped.
     const H = floor ? 0.16 : small ? 0.12 : 0.17, sig = (who.length > 1 ? 0.2 : 0.23) * (small ? 0.75 : 1), sc = small ? 0.68 : 1;
-    const ALONG = [[-0.62, 0.45], [-0.45, 0.85], [-0.25, 1.0], [0.05, 0.86], [0.4, 0.66], [0.72, 0.56], [0.88, 0.72], [0.98, 0.6], [1.1, 0.0]];
+    const ALONG = [[-0.62, 0.45], [-0.45, 0.85], [-0.25, 1.0], [0.05, 0.86], [0.4, 0.66], [0.72, 0.56], [0.88, 0.82], [0.97, 0.86], [1.05, 0.5], [1.14, 0.0]];   // (the toes tented higher: an innkeeper's came up through his pallet's, round 3)
     const along = (u) => {
       const t = u / sc;
       if (t <= ALONG[0][0]) return ALONG[0][1];
