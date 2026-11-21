@@ -205,7 +205,7 @@ const WARRENS = {
   key: 'warrens', tag: 'hf', name: DUNGEON.name, short: 'the Warrens', x: DUNGEON.x, z: DUNGEON.z, y: DUNGEON.y, level: 7, style: 'cave',
   rooms: ROOMS, tunnels: TUNNELS, pillars: PILLARS, packs: PACKS, props: WARRENS_PROPS,
   entry: ENTRY, exitIn: EXIT_IN, exitOut: EXIT_OUT, portal: PORTAL, last: 'venomaw', tough: PACK_TOUGH, pay: { xp: 1500, gold: 250 },
-  look: { wall: 'rubble', floor: 'rubble', roof: 'dark:stone', spike: 'dark:rubble', flame: 'flame', light: [1, 0.56, 0.24], fire: [1, 0.6, 0.28], lit: 0.5, span: 'timber', litter: 'bones' },
+  look: { wall: 'rubble', floor: 'rubble', roof: 'dark:stone', spike: 'dark:rubble', flame: 'flame', light: [1, 0.56, 0.24], fire: [1, 0.6, 0.28], lit: 0.5, span: 'timber', litter: 'bones', out: 0.15, fog: [0.03, 0.02, 0.012, 0.012] },
   words: { enter: 'The Hollowfang Warrens. Kobolds dug it; goblins took it; something old sleeps at the bottom.', clear: 'The Hollowfang Warrens are cleared. Venomaw is dead!', wipe: "Your party falls... and wakes at the Warrens' mouth." },
 };
 // (In the order they were made: a delve's place in this list is sent with EV.DELVE and kept, so new ones go on the end.)
@@ -546,6 +546,12 @@ function roomEdge(r, step, inset) {
   return out;
 }
 
+// A delve's air (src/gfx/shaders.js delveAir): [r, g, b, how thick a metre]. Its look's fog where it has one; else by what
+// it is: a cave's smoke and dust, a castle's hearth-smoke, the void its own (the shader's). Dark, all of them: it's what
+// the far end of a hall goes into, not a light of its own.
+const AIR = { cave: [0.022, 0.016, 0.011, 0.012], castle: [0.026, 0.017, 0.011, 0.008], void: [0, 0, 0, 0] };
+export function delveAir(d) { return d.look.fog || AIR[d.style] || AIR.cave; }
+
 // Torches on the walls: every so far along each room's edge and down each tunnel, a little in from the rock. [x, y, z, nx, nz]
 // (nx, nz: the way out from the wall). The same on every thread, so what's drawn is what's lit. (In the Deeps they're
 // shards of ice with a cold light in them: the delve's look says.)
@@ -565,7 +571,11 @@ export function torches(d = WARRENS) {
     // (Not on a table or a pew: on the wall.)
     if (solids(d).some((b) => blockOut(b, x - d.x, z - d.z) < 0.9)) return;
     if (TORCHES.some((t) => Math.hypot(t[0] - x, t[2] - z) < every * 0.6)) return;
-    TORCHES.push([x, caveFloorY(x, z) + high, z, gx / L, gz / L]);
+    // (The sixth: whether it burns. A delve whose look says out: so many of its torches gone out, the same ones on every
+    // thread (src/core/delve-build.js builds them cold, src/gfx/renderer.js gives them no light). Rows of lights all alike,
+    // every one burning, read as a corridor of street lamps: the critics.)
+    const out = d.look.out || 0, lit = out && hash2(x * 0.37 + 3.1, z * 0.71 - 1.7) < out ? 0 : 1;
+    TORCHES.push([x, caveFloorY(x, z) + high, z, gx / L, gz / L, lit]);
   };
   // (A torch every seven metres or so round each room's wall, and every six down the tunnels.)
   for (const r of d.rooms) for (const [lx, lz] of roomEdge(r, every, 0.6)) place(d.x + lx, d.z + lz);
@@ -595,7 +605,7 @@ export function braziers(d = WARRENS) {
   const keep = [d.entry, d.exitIn, d.exitOut].map((q) => [d.x + q.x, d.z + q.z]);
   // (A brazier as any other; the rest build their own fires, and say how high over the floor their light is.)
   // (A chandelier that says hang lights the floor under it as a hall's hung fire does: a reading room's, a hall's.)
-  for (const p of d.props) if (p.kind in LIT) BRAZIERS.push(p.kind === 'brazier' ? [d.x + p.x, caveFloorY(d.x + p.x, d.z + p.z), d.z + p.z] : p.hang ? [d.x + p.x, caveFloorY(d.x + p.x, d.z + p.z), d.z + p.z, p.up + 0.6, 'hang'] : [d.x + p.x, caveFloorY(d.x + p.x, d.z + p.z), d.z + p.z, LIT[p.kind] ?? p.up]);
+  for (const p of d.props) if (p.kind in LIT && !(d.sewer && p.kind === 'greatcap')) BRAZIERS.push(p.kind === 'brazier' ? [d.x + p.x, caveFloorY(d.x + p.x, d.z + p.z), d.z + p.z] : p.hang ? [d.x + p.x, caveFloorY(d.x + p.x, d.z + p.z), d.z + p.z, p.up + 0.6, 'hang'] : [d.x + p.x, caveFloorY(d.x + p.x, d.z + p.z), d.z + p.z, LIT[p.kind] ?? p.up]);
   for (const r of d.rooms) {
     if (r.fires === 0) continue;
     if (r.hx !== undefined) {

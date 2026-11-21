@@ -204,6 +204,6 @@ export const PLAYHOUSE = {
   post: { body: 'bard_f3', name: 'Sergeant Maud Halloway', say: "A company of players wintered under this grove and never came up. There's music down there still, some nights. I wouldn't go to see that play alone: four at your back." },
   last: 'dollmaker', tough: { hp: 10.5, damage: 2 }, pay: { xp: 3800, gold: 620 },
   names: { 'Haunted Mannequins': 'THE COMPANY', 'The Possessed': 'PATRON', 'Dead Children': 'DOLL', 'Night Paralysis Demons': 'STAGEHAND', Necromancers: 'PROMPTER' },
-  look: { wall: 'wall_09', foot: 'wood', floor: 'wood', roof: 'dark:wood', flame: 'flame', lamp: 'candle', banner: 'spore:cloth_oat', light: [1, 0.72, 0.42], fire: [1, 0.76, 0.46], every: 9, high: 2.6, glow: 1.6, lit: 0.5, bays: 'props' },
+  look: { wall: 'wall_09', foot: 'wood', floor: 'wood', roof: 'dark:wood', flame: 'flame', lamp: 'candle', banner: 'spore:cloth_oat', light: [1, 0.72, 0.42], fire: [1, 0.76, 0.46], fog: [0.03, 0.024, 0.018, 0.009], every: 9, high: 2.6, glow: 1.6, lit: 0.5, bays: 'props' },
   words: { enter: 'The Hollow Playhouse. One play, all winter, to whoever came. The company is still in rehearsal.', clear: 'The Hollow Playhouse is cleared. The Dollmaker is dead!', wipe: 'Your party falls... and wakes in the Foyer.' },
 };

@@ -729,6 +729,9 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
       let night = 1.0 - smoothstep(0.3, 0.9, F.sunColor.a);
       if (tintK == 12u) { emissive *= vec3f(0.5, 0.7, 0.95) * night; }
       if (tintK == 8u) { emissive = vec3f(dot(emissive, vec3f(0.3, 0.5, 0.2))) * vec3f(0.95, 0.1, 0.035); }
+      // (A lantern's horn or glass ('umber:flame', src/core/delve-build.js lanterns): the flame seen through it, a dull warm
+      // amber, not the white heat of a flame itself: as a flame the panes read as four blown-out yellow boxes.)
+      if (tintK == 10u) { emissive = mix(vec3f(0.55, 0.22, 0.05), vec3f(1.7, 0.95, 0.36), heat) * f; }
       albedo = vec3f(0.0);
       if (tintK == 12u) { albedo = vec3f(0.03, 0.034, 0.042) * (0.6 + 0.8 * paneK) * (1.0 - night); metal = 0.04 * (1.0 - night); rough = mix(0.5, 0.72, paneK); ao = mix(0.55, 1.0, night); }
     }

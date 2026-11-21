@@ -253,19 +253,35 @@ export function drawOpaque(r, mp, it, vis) {
 }
 
 // The delves' fires as glow quads (src/core/delve-build.js fire()): one buffer, each delve's a run of it. { VB, runs: { key: [first, count] } }.
-const HUES = { 'flame': [1, 0.5, 0.13], 'dark:flame': [1, 0.2, 0.045], 'blood:flame': [0.85, 0.07, 0.03], 'frost:flame': [0.42, 0.72, 1], 'pale:flame': [0.5, 1, 0.6], 'mire:flame': [0.3, 1, 0.45], 'spore:flame': [0.72, 0.4, 1.25] };
-const KINDS = { flame: 104, glow: 105, wisp: 106 };
+const HUES = { 'flame': [1, 0.5, 0.13], 'dark:flame': [1, 0.2, 0.045], 'blood:flame': [0.85, 0.07, 0.03], 'frost:flame': [0.42, 0.72, 1], 'pale:flame': [0.5, 1, 0.6], 'mire:flame': [0.3, 1, 0.45], 'spore:flame': [0.72, 0.4, 1.25],
+  // (Daylight down a shaft, a grate or through a crack: the light well's dust, cold. A marsh light, low and dim.)
+  'day': [0.3, 0.34, 0.4], 'marsh': [0.32, 0.6, 0.4], 'tallow': [1, 0.62, 0.26] };
+const KINDS = { flame: 104, glow: 105, wisp: 106, shaft: 102 };
+// (A shaft of light: three upright cards crossed about its line, from its top (x, y, z) down h, w wide, leaning by lean
+// [dx, dz] a metre down: drawn as the cathedral's light wells are, dust drifting in it.)
+const SHAFT_CARDS = 3;
 export function buildDelveFires(r, fires) {
   const by = new Map();
   for (const f of fires) { if (!by.has(f.delve)) by.set(f.delve, []); by.get(f.delve).push(f); }
-  const out = new Float32Array(fires.length * 54), runs = {};
+  const nv = fires.reduce((n, f) => n + (f.kind === 'shaft' ? 6 * SHAFT_CARDS : 6), 0);
+  const out = new Float32Array(nv * 9), runs = {};
   let o = 0;
   for (const [key, list] of by) {
-    runs[key] = [o / 9, list.length * 6];
+    const v0 = o / 9;
     // (The glows first, so a flame is drawn over its own.)
     list.sort((a, b) => (b.kind === 'glow') - (a.kind === 'glow'));
     for (const f of list) {
       const c = HUES[f.hue] || HUES.flame, layer = KINDS[f.kind] + 0.02 + f.seed * 0.45, g = f.kind === 'glow';
+      if (f.kind === 'shaft') {
+        const lx = f.lean?.[0] || 0, lz = f.lean?.[1] || 0, k = f.i ?? 1;
+        for (let j = 0; j < SHAFT_CARDS; j++) {
+          const a = j * Math.PI / SHAFT_CARDS + f.seed, ux = Math.cos(a) * f.w, uz = Math.sin(a) * f.w;
+          // [x, y, z, u, v]: across the card, and v 1 at the top, 0 at its foot.
+          const q = [[f.x - ux, f.y, f.z - uz, 0, 1], [f.x + ux, f.y, f.z + uz, 1, 1], [f.x + ux + lx * f.h, f.y - f.h, f.z + uz + lz * f.h, 1, 0], [f.x - ux + lx * f.h, f.y - f.h, f.z - uz + lz * f.h, 0, 0]];
+          for (const kk of [0, 1, 2, 0, 2, 3]) { const [x, y, z, u, v] = q[kk]; out[o++] = x; out[o++] = y; out[o++] = z; out[o++] = u; out[o++] = v; out[o++] = c[0] * k; out[o++] = c[1] * k; out[o++] = c[2] * k; out[o++] = layer; }
+        }
+        continue;
+      }
       // (uv: how far out the corner goes, and for a flame 0 at its tip, 1 at its root.)
       const corner = g ? [[-f.w, -f.h, 0], [f.w, -f.h, 0], [f.w, f.h, 0], [-f.w, f.h, 0]] : [[-f.w, 1, 0], [f.w, 1, 0], [f.w, 0, f.h], [-f.w, 0, f.h]];
       for (const k of [0, 1, 2, 0, 2, 3]) {
@@ -273,6 +289,7 @@ export function buildDelveFires(r, fires) {
         out[o++] = f.x; out[o++] = f.y + up; out[o++] = f.z; out[o++] = u; out[o++] = v; out[o++] = c[0]; out[o++] = c[1]; out[o++] = c[2]; out[o++] = layer;
       }
     }
+    runs[key] = [v0, o / 9 - v0];
   }
   return { VB: makeBuffer(r.device, out, GPUBufferUsage.VERTEX), runs };
 }

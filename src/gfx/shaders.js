@@ -1,6 +1,6 @@
 // WGSL shared by the world's pipelines: the frame block, lighting, shadows, fog.
 import { CHURCH_X, CHURCH_Z, SEXTON } from '../core/church.js';
-import { DELVES } from '../core/dungeon.js';
+import { DELVES, delveAir } from '../core/dungeon.js';
 import { MAW_DIR, VOID_TINTS } from '../core/delve-elder.js';
 import { HALL_BOX } from '../core/testhall.js';
 import { INDOORS as BELL_INDOORS } from '../core/belltower.js';
@@ -186,6 +186,13 @@ fn inHome(p: vec3f, x: f32, z: f32, hx: f32, hz: f32, jx: f32, jz: f32, y1: f32,
   return p.y < top && abs(p.x - x) < hx + select(0.0, jx, up) && abs(p.z - z) < hz + select(0.0, jz, up);
 }
 
+// Each delve's air: its colour, and how thick it is (src/core/dungeon.js DELVE_AIR). The old one for all of them was a near
+// black, 0.003 a metre: the far end of a hall as clear as the near one, nothing in the air at all.
+fn delveAir(p: vec3f) -> vec4f {
+${DELVES.map((d) => { const a = delveAir(d); return `  if (p.x > ${f32(d.box.x0)} && p.x < ${f32(d.box.x1)} && p.z > ${f32(d.box.z0)} && p.z < ${f32(d.box.z1)}) { return vec4f(${a.map((v) => v.toFixed(4)).join(', ')}); }`; }).join('\n')}
+  return vec4f(0.012, 0.007, 0.0045, 0.003);
+}
+
 fn indoorAt(p: vec3f) -> f32 {
   // The party dungeons, out past the world's edge and deep under it (src/core/dungeon.js DELVES): the Hollowfang Warrens,
   // Blackvigil Keep, the Howling Deeps. (A delve whose look is lit, the keep's great halls, has a warmer and brighter
@@ -348,6 +355,14 @@ fn applyFog(c: vec3f, p: vec3f, viewDir: vec3f, dist: f32) -> vec3f {
   if (indoor > 2.5) {
     // The Test Dungeon: a faint white haze down the length of the arena, no more.
     return mix(c, vec3f(0.7, 0.72, 0.75), clamp(1.0 - exp(-dist * 0.0025), 0.0, 1.0));
+  }
+  if (indoor > 1.5 && indoor < 2.5) {
+    // A delve's own air (its look.fog: src/core/dungeon.js DELVE_AIR): the Drains' murk, the Vaults' fen mist, the Deeps'
+    // cold breath, the keeps' smoke. Thicker low down, where it lies (under the eye's height), so a floor across a hall
+    // goes into it before the roof does.
+    let air = delveAir(p);
+    let low = 1.0 + 1.6 * smoothstep(0.5, -2.5, p.y - (F.camPos.y - 1.2));
+    return mix(c, air.rgb, clamp(1.0 - exp(-dist * air.a * low), 0.0, 0.92));
   }
   if (indoor > 0.5) {
     // Dust, and at the bottom of the stair a damp that swallows the far end of a long gallery.

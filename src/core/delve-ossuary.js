@@ -188,7 +188,7 @@ export const OSSUARY = {
   ],
   last: 'boneprior', tough: { hp: 37, damage: 3.95 }, pay: { xp: 110000, gold: 13000 },
   names: { "Velscour's Knights": 'OSSUARY KNIGHT', Necromancers: 'SACRIST', 'Bone Giants': 'CHARNEL-BUILT', 'Dead Children': 'CHORISTER' },
-  look: { wall: 'pale:ashlar', foot: 'pale:block', floor: 'pale:flags', banner: 'p2_banner_white', roof: 'pale:stone', flame: 'blood:flame', light: [1, 0.3, 0.16], fire: [1, 0.34, 0.18], every: 15, high: 3, glow: 3.5, lit: true, beam: 'pale:stone', bays: 'chains' },
+  look: { wall: 'pale:ashlar', foot: 'pale:block', floor: 'pale:flags', banner: 'p2_banner_white', roof: 'pale:stone', flame: 'blood:flame', light: [1, 0.3, 0.16], fire: [1, 0.34, 0.18], fog: [0.03, 0.012, 0.01, 0.01], every: 15, high: 3, glow: 3.5, lit: true, beam: 'pale:stone', bays: 'chains' },
   words: { enter: 'Castle Velscour: the Ossuary Chapel. His chapel. Everyone who built his castle is in its walls.', clear: 'The Bone Prior is dead! Nobody kneels in his chapel now.', wipe: 'You fall... and wake in the Bone Porch.' },
 };
 export const OSSUARY_VARIANTS = {
