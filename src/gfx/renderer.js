@@ -47,6 +47,7 @@ import { ARMOR, ARMOR_KIT, ARMOR_TRUE, GRASS, GRASS_CULL, ITEM, PROP, SHADOW, SK
 import { AO, BLOOM, COMPOSITE, PARTICLE_DRAW, PARTICLE_SIM, SHAFTS, STAIN, TRAIL } from './post.js';
 import { SpellFX } from './spellfx.js';
 import { bodyRadius, inCascade } from './shadowcull.js';
+import { bucketLand, drawLandInCascade, drawLandInView } from './landcells.js';
 import { buildDelveFires, buildGlowPipeline, drawDelveFires, drawGlow, drawOpaque, loadInterior, visibility } from './interior.js';
 import { TrailFX } from './trail.js';
 import { HomeLights } from './homelights.js';
@@ -1016,6 +1017,8 @@ export class Renderer {
       });
       this.landScenery.set(k, { gone: false, runs: made });
     }
+    // (Its triangles in order of the ground they stand on, so a pass draws only the squares it sees: src/gfx/landcells.js.)
+    this.landCells = { land: bucketLand(f, indices, 0, runs[0]), landCut: bucketLand(f, indices, runs[0], runs[0] + runs[1]) };
     this.staticVB = makeBuffer(device, new Float32Array(verts), GPUBufferUsage.VERTEX);
     this.staticIB = makeBuffer(device, indices, GPUBufferUsage.INDEX);
     // (The countries' corners are on the GPU now: the lists they were built in are let go.)
@@ -1973,7 +1976,7 @@ export class Renderer {
   portalOpen(d) { const W = this.delveState; return !!W && W.delve === d.key && !!W.down?.includes(d.last); }
   // A gate between delves shut till a boss has died: open once it has, now (the sim's word) or ever (the quests': bossFlags,
   // from src/main.js). As src/sim/dungeon.js open.
-  gateOpen(key) { return !!this.bossFlags?.has(`boss:${key}`) || !!this.delveState?.down?.includes(key); }
+  gateOpen(key) { return !!this.bossFlags?.has(key.includes(':') ? key : `boss:${key}`) || !!this.delveState?.down?.includes(key); }
 
   makePortals() {
     const { spots } = buildSites(), out = [];
@@ -2801,7 +2804,11 @@ export class Renderer {
     // (And a fire or a candle indoors, src/core/phobos-build.js houseNear's, counts as further off again from out in the
     // street, where its light is all on the inside of a wall: the street's lanterns are kept before it.)
     for (const e of lit) { const dd = Math.hypot(e.L.p[0] - cam.x, e.L.p[2] - cam.z); e.d = dd - e.L.r * 0.5 + ((e.L.p[0] - cam.x) * cam.fx + (e.L.p[2] - cam.z) * cam.fz < 0 ? 12 : 0) + (e.L.indoor && dd > 9 ? 24 : 0) - (e.L.prio || 0); }
-    if (take < lit.length) lit.sort((a, b) => a.d - b.d);
+    // (A few wanted of thousands, as on a phone in Phobos, two of five thousand: the nearest picked out to the front, not
+    // the lot put in order every frame. The performance critic, 2026-11-20.)
+    if (take < lit.length && take <= 6) {
+      for (let i = 0; i <= take; i++) { let m = i; for (let j = i + 1; j < lit.length; j++) if (lit[j].d < lit[m].d) m = j; if (m !== i) { const t = lit[i]; lit[i] = lit[m]; lit[m] = t; } }
+    } else if (take < lit.length) lit.sort((a, b) => a.d - b.d);
     const nextD = take < lit.length ? lit[take].d : 1e9;
     for (let i = 0; i < take; i++) {
       const L = lit[i].L;
@@ -2990,10 +2997,13 @@ export class Renderer {
     this.stairsNear?.draw(sp);
     sp.setVertexBuffer(0, this.staticVB);
     sp.setIndexBuffer(this.staticIB, 'uint32');
-    sp.drawIndexed(this.staticRuns.land[1]);
+    // (Only the land's squares that reach this cascade's square: src/gfx/landcells.js.)
+    const cm = this.frameData, co = O.CASC + c * 16, LC = this.landCells;
+    let drawn = LC ? drawLandInCascade(sp, LC.land, cm, co) : (sp.drawIndexed(this.staticRuns.land[1]), this.staticRuns.land[1]);
     sp.setPipeline(this.pShCut);
     sp.setBindGroup(1, this.shCutBG);
-    sp.drawIndexed(this.staticRuns.landCut[1], 1, this.staticRuns.landCut[0]);
+    drawn += LC ? drawLandInCascade(sp, LC.landCut, cm, co) : (sp.drawIndexed(this.staticRuns.landCut[1], 1, this.staticRuns.landCut[0]), this.staticRuns.landCut[1]);
+    this.stats['landShadow' + c] = drawn;
     if (this.camNow.y > -6) this.pines.drawShadow(sp, c, last, this.shCutBG);
     if (this.camNow.y > -6 && this.rocksOn !== false) this.rocks.drawShadow(sp, last);
     sp.setPipeline(this.pShStatic);
@@ -3673,12 +3683,14 @@ export class Renderer {
     mp.setVertexBuffer(0, U ? U.VB : this.staticVB);
     mp.setIndexBuffer(U ? U.IB : this.staticIB, 'uint32');
     const [so, sc] = U ? [[0, U.opaque], [U.opaque, U.cut]] : [this.staticRuns.land, this.staticRuns.landCut];
-    mp.drawIndexed(so[1], 1, so[0]);
+    // (On the land, only its squares in view: src/gfx/landcells.js.)
+    const LC = !U && this.landCells;
+    if (LC) this.stats.landDrawn = drawLandInView(mp, LC.land, this.planes); else mp.drawIndexed(so[1], 1, so[0]);
     if (sc[1]) {
       mp.setPipeline(this.pStaticCut);
-      mp.drawIndexed(sc[1], 1, sc[0]);
+      if (LC) this.stats.landDrawn += drawLandInView(mp, LC.landCut, this.planes); else mp.drawIndexed(sc[1], 1, sc[0]);
     }
-    if (!U && this.phobosNear?.count) { mp.setPipeline(this.pStatic); this.phobosNear.draw(mp); }
+    if (!U && this.phobosNear?.count) { mp.setPipeline(this.pStatic); this.phobosNear.draw(mp, true); }
     if (!U && this.stairsNear?.count) { mp.setPipeline(this.pStatic); this.stairsNear.draw(mp); }
     if (this.slimeBodies?.count) { mp.setPipeline(this.pStatic); this.slimeBodies.draw(mp); }
     // (Down the Warrens nothing of the land above can be seen: its rock is all there is.)

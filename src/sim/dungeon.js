@@ -13,7 +13,7 @@
 // goes off, a patch that burns while you stand in it, a ring to jump, shots to step between; most of it by the named moves
 // of src/sim/moves.js. The hired party (src/sim/hero.js companion) reads the same marks and the same calls: out of the
 // shapes, at the dragon's sides, behind a pillar.
-import { ADDS, BOSSES, DELVE, DELVES, HOLES, PARTY, PERCH, PILLARS, TURN_WARN, WARN, caveClear, caveFloorY, caveRoom, delveByKey, delveOf, roomOf, roomSpot, toWorld } from '../core/dungeon.js';
+import { ADDS, BOSSES, DELVE, DELVES, HOLES, LATCHES, PARTY, PERCH, PILLARS, TURN_WARN, WARN, caveClear, caveFloorY, caveRoom, delveByKey, delveOf, roomOf, roomSpot, toWorld } from '../core/dungeon.js';
 import { FIGHTS } from './delve-fights.js';
 import { markOut } from '../core/perils.js';
 import { MOVES, tipBody } from './moves.js';
@@ -148,6 +148,8 @@ export class Warrens {
       // (Not a ward gone into only from another: its portal is that one's, src/core/delve-castle.js within.)
       const d = DELVES.find((q) => !q.within && (near(q.portal.x, q.portal.z, q.portal.r) || (way = (q.ways || []).find((w) => near(w.x, w.z, q.portal.r)))));
       if (!d) return;
+      // (A dungeon's own door out on the land, locked till its key's had: src/core/castle-keys.js; a delve's shutBy.)
+      if (d.shutBy && !this.ever.has(d.shutBy)) { this.portalCd = 3; this.warn(WARN[d.shutWord], 12); return; }
       const r = this.ready();
       this.portalCd = 3;
       if (!r.ok && d.party !== false) { sim.event(EV.DELVE, DELVE.NEED, r.n, r.tanks, r.heals); return; }
@@ -163,7 +165,11 @@ export class Warrens {
     if (link) {
       const o = delveByKey(link.to), back = o.links[link.n], [bx, bz] = toWorld(back.x, back.z, o);
       this.portalCd = 3; this.leftAt[d.key] = sim.time;
+      // (A way barred from its far side: come through it from this one and it's unbarred for good. src/core/dungeon.js LATCHES.)
+      if (link.opens && !this.ever.has(link.opens)) { this.ever.add(link.opens); sim.event(EV.DELVE, DELVE.LATCH, LATCHES.indexOf(link.opens)); }
       this.carry(bx + Math.sin(back.yaw) * 4, bz + Math.cos(back.yaw) * 4, back.yaw);
+      // (A door between two rooms of the one delve: nothing's entered.)
+      if (o === d) return;
       this.delve = o;
       sim.event(EV.DELVE, DELVE.ENTER, this.downIn(o), DELVES.indexOf(o));
       return;
@@ -1046,6 +1052,13 @@ export class Warrens {
           if (caveRoom(qx, qz) < 1.2) continue;
           const dd = nav.walkDist(qx, qz, x, z, sim.time);
           if (dd < bd) { bd = dd; best = [qx, qz]; }
+        }
+        // (A room behind a lock, no walk to it from the way in: where its own door sets you down. src/core/delve-highward.js.)
+        if (!best) for (const l of d.links || []) {
+          const back = l.to === d.key ? d.links[l.n] : null;
+          if (!back) continue;
+          const [qx, qz] = toWorld(back.x + Math.sin(back.yaw) * 4, back.z + Math.cos(back.yaw) * 4, d);
+          if (Math.abs(qx - rx) < (r.hx ?? r.r) && Math.abs(qz - rz) < (r.hz ?? r.r)) best = [qx, qz];
         }
         if (best) { [x, z] = best; yaw = Math.atan2(rx - x, rz - z); }
         for (const q of mine.slice(0, mine.indexOf(b))) this.down.add(q.key);
