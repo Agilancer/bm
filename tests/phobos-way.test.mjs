@@ -155,6 +155,12 @@ test("a house is walked into off the street, and its stair climbed to the room u
     y = walk(door, foot, y, worst); y = walk(foot, head, y, worst); y = walk(head, room, y, worst);
     assert.ok(Math.abs(y - up.uy) < 0.01, `house ${k}: came out at ${y.toFixed(2)}, upstairs is ${up.uy.toFixed(2)}`);
     assert.ok(worst.up < 0.62, `house ${k}: a step of ${worst.up.toFixed(2)} on the stair`);
+    // (And up either side of the flight, not only its middle: its treads were once a hand-wide strip down the middle.)
+    for (const dx of [-0.3, 0.3]) {
+      const f0 = P(sx + dx, f * (up.iz - 0.25)), h0 = P(sx + dx, f * (up.hole[0] - 0.4));
+      const w2 = { up: 0 }, y2 = walk(f0, h0, up.fy, w2);
+      assert.ok(Math.abs(y2 - up.uy) < 0.35 && w2.up < 0.62, `house ${k}: up the stair ${dx > 0 ? 'room' : 'wall'} side came to ${y2.toFixed(2)} (upstairs ${up.uy.toFixed(2)}), a step of ${w2.up.toFixed(2)}`);
+    }
   }
   assert.ok(n >= 30, `only ${n} houses tried`);
 });

@@ -8,6 +8,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { Brain, planWay, stairsOf } from '../src/ui/autobrain.js';
+import { inEast } from '../src/sim/east-nav.js';
 import { allWays, nearestRoad, roadGraph } from '../src/core/roads.js';
 import { SITES } from '../src/core/lands.js';
 import { SEALS, portalStair } from '../src/core/sites.js';
@@ -33,7 +34,10 @@ function score(a, way) {
   let on = 0, all = 0, run = 0, worst = 0, px = a.x, pz = a.z;
   for (const q of way) {
     const L = Math.hypot(q.x - px, q.z - pz), n = Math.ceil(L / 2);
-    for (let k = 0; k < n; k++) {
+    // (Within City State Phobos and Castle Velscour the way's walked out by the east's own map of its streets, stairs and
+    // bridges, from the road before the Drawbridge Gate: src/sim/east-nav.js, tests/east-paths.test.mjs. Not a stretch off-road.)
+    const inside = inEast(px, pz) && inEast(q.x, q.z);
+    for (let k = 0; k < n && !inside; k++) {
       const x = px + (q.x - px) * (k + 0.5) / n, z = pz + (q.z - pz) * (k + 0.5) / n;
       all += L / n;
       if (offRoad(x, z) < 3) { on += L / n; run = 0; } else worst = Math.max(worst, run += L / n);

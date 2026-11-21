@@ -390,6 +390,15 @@ export class World {
   }
 
   // The boxes of the places out in the land within a cell of x, z (or null).
+  // A box's top: its own `t`, or its height over the ground at its middle. A site's box (the land's places, Phobos: tens of
+  // thousands, a few hundred to a 64 m cell) keeps it once worked out, since the ground under it never changes; every body's
+  // step in the city asked the ground's height under each box near it, every tick.
+  boxTop(c) {
+    if (c.t !== undefined) return c.t;
+    if (c.site) return (c.top0 ??= c.h + 0.02 + this.height(c.x, c.z));
+    return c.h + 0.02 + this.height(c.x, c.z);
+  }
+
   sitesNear(x, z) {
     return this.siteBoxes.get(siteKey(Math.floor(x / SITE_CELL), Math.floor(z / SITE_CELL))) || null;
   }
@@ -404,7 +413,7 @@ export class World {
     const push = (c) => {
       const dx = x - c.x, dz = z - c.z;
       if (Math.abs(dx) + Math.abs(dz) > c.hx + c.hz + r + 1) return;
-      if (feet > (c.t ?? c.h + 0.02 + this.height(c.x, c.z)) || feet < c.b) return;
+      if (feet > this.boxTop(c) || feet < c.b) return;
       if (c.under && (above ??= this.onLand(x, z, feet))) return;
       const lx = dx * c.co - dz * c.s, lz = dx * c.s + dz * c.co;
       const qx = Math.abs(lx) - c.hx, qz = Math.abs(lz) - c.hz;
@@ -458,7 +467,7 @@ export class World {
     let best = -Infinity, above;
     const on = (c) => {
       if (Math.abs(x - c.x) + Math.abs(z - c.z) > (c.hx + c.hz) * 1.42) return;   // (a turned box reaches that far)
-      const top = c.t ?? c.h + 0.02 + this.height(c.x, c.z);
+      const top = this.boxTop(c);
       if (top > feet || top <= best || feet < c.b) return;
       if (c.under && (above ??= this.onLand(x, z, feet))) return;
       const dx = x - c.x, dz = z - c.z;
