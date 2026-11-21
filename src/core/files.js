@@ -2,10 +2,13 @@
 // (src/main.js, src/title.js). Each thread has its own copy of this: the render thread watches its own fetches, and the
 // simulation thread passes its to the render thread (src/sim/sim.worker.js).
 
-let watcher = null;
+let watcher = null, ahead = null;
 
 /** fn({ name, state }): state 'start' as a file is asked for, 'done' when all of it is here (or it failed). */
 export function watchFiles(fn) { watcher = fn; }
+
+/** fn(url) as a file is asked for, to start on what goes with it (src/gfx/lean-pictures.js: a model's phone pictures). */
+export function fetchAhead(fn) { ahead = fn; }
 
 /** What the loading screen calls a file: its path under assets/, or under the game's folder. */
 export function fileName(url) {
@@ -19,6 +22,7 @@ export function fileName(url) {
 export async function getFile(url, as = 'buffer') {
   const name = fileName(url);
   watcher?.({ name, state: 'start' });
+  ahead?.(url);
   try {
     const r = await fetch(url);
     if (!r.ok) throw new Error(`${name}: ${r.status}`);

@@ -103,7 +103,7 @@ export class FirstSight {
 #firstSight .fs-bar{position:absolute;left:0;right:0;height:9vh;background:#000}#firstSight .fs-bar.top{top:0}#firstSight .fs-bar.bottom{bottom:0}
 #firstSight .fs-line{position:absolute;left:0;right:0;bottom:12vh;text-align:center;font-style:italic;font-size:clamp(18px,2.6vw,34px);letter-spacing:.06em;text-shadow:0 2px 8px #000,0 0 2px #000;transition:opacity .9s}
 #firstSight .fs-skip{position:absolute;right:2.2vw;bottom:2.6vh;font-size:13px;opacity:.55;animation:fsSkip 7s ease-in}
-body.firstsight :is(#autoBtn, #autoStatus, #autoLog, #vskull, #vskullTag, #wildTrack, #partyFrames, #folkMarks){visibility:hidden !important}
+body.firstsight :is(#autoBtn, #autoStatus, #autoLog, #vskull, #vskullTag, #wildTrack, #qTrack, #partyFrames, #folkMarks){visibility:hidden !important}
 @keyframes fsSkip{0%,70%{right:50%;bottom:44vh;transform:translateX(50%);font-size:20px;opacity:1}100%{right:2.2vw;bottom:2.6vh;transform:none;font-size:13px;opacity:.55}}`;
     document.head.appendChild(css); document.body.appendChild(el);
     this.lineEl = el.querySelector('.fs-line'); this.blackEl = el.querySelector('.fs-black');

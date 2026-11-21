@@ -58,6 +58,66 @@ export function footing(h) {
   return { lo, hi, c, s };
 }
 export const DOOR = 0.8, WALL = 0.45;   // half a doorway's width; a house wall's thickness
+// The steps down from a house's threshold to the street, where the street's more than a step under it. (The floor's at the
+// house's highest corner's ground: on a hill 2,128 doors stood a metre to six over the street, and those houses weren't gone
+// into, tools/paths/map.mjs.) Straight out from the threshold, none more than 0.42 m; where that would end in another house,
+// across a narrow street or the next one down the hill, along the front from the threshold's end, whichever way is clear.
+// [{ rect, x, z, top }], or null where none's wanted or none fits.
+const FLIGHT_TREAD = 0.42, FLIGHT_RISE = 0.42;
+let FLIGHTS = null;
+export function doorFlight(h, F) {
+  if (h.door === undefined) return null;
+  if (!FLIGHTS) FLIGHTS = new Map();
+  if (!FLIGHTS.has(h)) FLIGHTS.set(h, flightFor(h, F));
+  return FLIGHTS.get(h);
+}
+function flightFor(h, F) {
+  const fy = F.hi + 0.1, f = h.front, L = (lx, lz) => [h.x + lx * F.c + f * lz * F.s, h.z - lx * F.s + f * lz * F.c];
+  if (fy - Y(...L(0, h.hz + 1.1)) < 0.85) return null;
+  // (Its way down: where the k-th tread's middle is, how far from the threshold's edge; its half sizes across and along.)
+  // (Along the front a tread's 1.2 m out from the wall, room for a body against it with an alley's far side close by.)
+  const ways = [
+    { at: (d, e = 0) => L(0, h.hz + 0.9 + d + e), hu: DOOR + 0.3, hw: FLIGHT_TREAD / 2 + 0.01, e: FLIGHT_TREAD / 2 },
+    { at: (d, e = 0) => L(DOOR + 0.3 + d, h.hz + 0.6 + e), hu: FLIGHT_TREAD / 2 + 0.01, hw: 0.61, e: 0.6 },
+    { at: (d, e = 0) => L(-DOOR - 0.3 - d, h.hz + 0.6 + e), hu: FLIGHT_TREAD / 2 + 0.01, hw: 0.61, e: 0.6 },
+  ];
+  const H = houseGrid(), inHouse = (x, z) => {
+    for (const o of H.get(`${Math.floor(x / 30)}_${Math.floor(z / 30)}`) || []) {
+      if (o === h) continue;
+      const dx = x - o.x, dz = z - o.z, c = Math.cos(o.yaw), s = Math.sin(o.yaw);
+      if (Math.abs(dx * c - dz * s) < o.hx + 0.35 && Math.abs(dx * s + dz * c) < o.hz + 0.35) return true;
+    }
+    return false;
+  };
+  // (First a way that leaves 1.5 m of the street clear past it, so an alley isn't shut by its doors' steps; only if none
+  // does, one that only just fits.)
+  for (const pass of [1.5, 0.1]) for (const w of ways) {
+    // (Down to the lowest of the ground under it: a dip at the threshold with the street higher past it is a step down too.)
+    const y1 = Y(...w.at(0.2));
+    let y0 = y1, n = 0;
+    for (let it = 0; it < 3; it++) { n = Math.max(1, Math.ceil((fy - y0) / FLIGHT_RISE) - 1); y0 = Math.min(y1, Y(...w.at(n * FLIGHT_TREAD + 0.2))); }
+    n = Math.max(1, Math.ceil((fy - y0) / FLIGHT_RISE) - 1);
+    const rise = (fy - y0) / (n + 1), out = [];
+    let ok = !inHouse(...w.at(n * FLIGHT_TREAD + 0.4)) && (pass < 1 || !inHouse(...w.at(n * FLIGHT_TREAD + 0.4 + pass)));
+    for (let k = 1; k <= n && ok; k++) {
+      const [x, z] = w.at((k - 0.5) * FLIGHT_TREAD), top = fy - k * rise;
+      if (inHouse(x, z) || inHouse(...w.at((k - 0.5) * FLIGHT_TREAD, w.e + pass))) ok = false;
+      out.push({ x, z, top, hu: w.hu, hw: w.hw, rect: [x, z, w.hu, w.hw, h.yaw, top] });
+    }
+    if (ok) return out;
+  }
+  return null;
+}
+let HGRID = null;
+const houseGrid = () => {
+  if (HGRID) return HGRID;
+  HGRID = new Map();
+  for (const o of phobosHouses()) {
+    const R = Math.hypot(o.hx, o.hz) + 1;
+    for (let i = Math.floor((o.x - R) / 30); i <= Math.floor((o.x + R) / 30); i++) for (let j = Math.floor((o.z - R) / 30); j <= Math.floor((o.z + R) / 30); j++) (HGRID.get(`${i}_${j}`) || HGRID.set(`${i}_${j}`, []).get(`${i}_${j}`)).push(o);
+  }
+  return HGRID;
+};
 // A house's door by its walls: carved panels in dressed stone and fine brick, iron-bound in a house of stone, planks else.
 // (Iron-bound for a house of stone or a rich one, planks for the rest. Never the pack's carved door_rich: its four panels
 // are a cross with the knocker at the crossing. The V/T rule.)
@@ -84,7 +144,9 @@ export function upstairs(h, F) {
   for (let k = 1; k <= n; k++) {
     const lz = f * (z0 - (k - 0.5) * TREAD), y = fy + k * RISE;
     steps.push([sx, lz, y]);
-    rects.push([...W(sx, lz), TREAD / 2 + 0.02, SW / 2, yaw, y]);
+    // (Across the stair, local x, its width; along it, z, its depth. They were the other way about: each tread a strip a
+    // hand wide down the middle of the flight, the treads over each other along it, a tightrope up: tools/paths/map.mjs.)
+    rects.push([...W(sx, lz), SW / 2, TREAD / 2 + 0.02, yaw, y]);
   }
   // (The floor: all of it beside the stair; and past its head, and over its foot, on its own side.)
   rects.push([...W(SW / 2, 0), ix - SW / 2, iz, yaw, uy]);
@@ -141,6 +203,7 @@ function houseWalls(K, h, F) {
   const up = upstairs(h, F);
   if (up) rects.push(...up.rects);
   K.deck(rects); K.floors.at(-1).stack = true;
+  { const fl = doorFlight(h, F); if (fl) K.deck(fl.map((q) => q.rect)); }
   // (Upstairs, the boards between its two chambers, src/core/phobos-rooms.js: they stop only feet up there.)
   // (And downstairs the cross wall either side of its doorway; they stop only feet down there.)
   const pt = partition(h, F, up), seg = (x0, x1, w, y0, y1) => { if (x1 - x0 < 0.05) return; const [px, pz] = W((x0 + x1) / 2, h.front * w); K.colliders.push({ x: px, z: pz, hx: (x1 - x0) / 2, hz: 0.05, yaw: h.yaw, h: y1 - lo, t: y1, b: y0 - 0.4 }); };
@@ -312,8 +375,10 @@ function houseNear(K, h) {
   for (const sd of [-1, 1]) K.quad('wood', P(sd * DOOR, fy - 0.2, fz), P(sd * DOOR, fy - 0.2, gz), P(sd * DOOR, dh, gz), P(sd * DOOR, dh, fz));
   K.quad('wood', P(-DOOR, dh, fz), P(DOOR, dh, fz), P(DOOR, dh, gz), P(-DOOR, dh, gz), [0, -1, 0]);
   K.quad(burnt ? 'char:p2_worn_floorboards' : 'p2_worn_floorboards', P(-ix, fy, -iz), P(-ix, fy, iz), P(ix, fy, iz), P(ix, fy, -iz), [0, 1, 0]);
-  // (A step at the door where the street's lower than the floor.)
+  // (A step at the door where the street's lower than the floor; and the flight down from it, doorFlight.)
   K.quad('stone', P(-DOOR - 0.3, fy, fz), P(-DOOR - 0.3, fy, fz + f * 0.9), P(DOOR + 0.3, fy, fz + f * 0.9), P(DOOR + 0.3, fy, fz), [0, 1, 0]);
+  { const fl = doorFlight(h, F); if (fl) { const [tx, tz] = [h.x + f * (h.hz + 0.45) * s, h.z + f * (h.hz + 0.45) * c], tb = Math.min(Y(tx, tz), fl.at(-1).top) - 0.3; K.box('stone', tx, tb, tz, DOOR + 0.3, fy - tb, 0.46, h.yaw, { collide: false });
+    for (const q of fl) { const b = Math.min(Y(q.x, q.z), q.top) - 0.3; K.box('stone', q.x, b, q.z, q.hu, q.top - b, q.hw, h.yaw, { collide: false }); } } }
   if (!ruin && !up && !burnt) K.quad('wood', P(-ix, ceil, -iz), P(ix, ceil, -iz), P(ix, ceil, iz), P(-ix, ceil, iz), [0, -1, 0]);
   else if (!ruin && !up) {
     // (Burnt: the ceiling charred and come through over the rubble (phobos-rooms.js), the hole ragged with its joists' stubs.)
@@ -716,7 +781,7 @@ export function tower(K, layer, x, z, r, h, roof, o = {}) {
   }
   return y + h;
 }
-// A bridge between two points in the air: a deck, a parapet either side, and pointed hangers under it. Not stood on yet.
+// A bridge between two points in the air: a deck, a parapet either side, and pointed hangers under it.
 function bridge(K, layer, a, b, w = 3, o = {}) {
   const dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2], L = Math.hypot(dx, dz), yaw = Math.atan2(-dz, dx), n = Math.max(1, Math.round(L / 14));
   // Its deck, sides and parapets drawn as faces that follow its fall, its hump and its arch underneath, a span a few metres
@@ -758,6 +823,18 @@ function bridge(K, layer, a, b, w = 3, o = {}) {
     const m = Math.ceil((L + 4) / 0.9), rects = [];
     for (let k = 0; k < m; k++) { const u = ((k + 0.5) * 0.9 - 2) / L, v = Math.min(1, Math.max(0, u)); rects.push([a[0] + dx * u, a[2] + dz * u, 0.5, w - 0.4, yaw, a[1] + dy * v + (o.arch ? Math.sin(v * Math.PI) * o.arch : 0)]); }
     walk(K, rects);
+    // Its parapets stop you, as they look to: a box down each side a span at a time, from under the deck to a little over the
+    // parapet's top (so a jump doesn't clear it), and nothing below that, so the street or the yard under it is walked as
+    // before. The deck ran to a hand inside a parapet nothing stood in, and a step to the side was a fall of a hundred metres.
+    // (Not over its ends' last metre and a half, where it runs into its tower's gallery.)
+    const e0 = Math.min(0.3, 1.5 / L), q = Math.max(2, Math.round(L / 3));
+    for (let k = 0; k < q; k++) {
+      const u0 = e0 + (1 - 2 * e0) * k / q, u1 = e0 + (1 - 2 * e0) * (k + 1) / q, t0 = top(u0), t1 = top(u1), um = (u0 + u1) / 2;
+      for (const s of [-1, 1]) {
+        const c = at(um, s * w, 0);
+        K.colliders.push({ x: c[0], z: c[2], hx: L * (u1 - u0) / 2 + 0.15, hz: 0.3, yaw, h: Math.max(t0, t1) + 1.9 - Y(c[0], c[2]), b: Math.min(t0, t1) - 0.8, t: Math.max(t0, t1) + 1.9 });
+      }
+    }
   }
 }
 // Decks to stand on, high over ground that's walked on too (the patio, the Keep's steps, the stairs): [x, z, half across,
@@ -839,6 +916,10 @@ function stairs(K, layer, face, zc, y0, y1, side = -1) {
   }
   // The foot: a landing on the ground it starts from.
   K.box(layer, mid, y0 - 1.5, zc + half + 2.6, HW * 2 + 0.6, 1.5, 2.6, 0, { collide: false });
+  // (And a spine wall up between its two lanes, from the foot to a rail's height over the top flight, the landings open
+  // past its ends: there was a slot a body's width between the flights, open from the top to the ground, that you fell
+  // down cutting the corner from one flight to the next. tools/paths/trips.mjs.)
+  if (flights > 1) K.box(layer, mid, y0 - 0.5, zc, 0.32, y1 + 1.1 - y0 + 0.5, half, 0);
 }
 // A tall pointed window on a wall's face: its middle (cx, cz) on the face, (nx, nz) out from it; half as wide as w, its
 // sill at y0, springing at y1 and its point over that. Lit at evening (leaded glass with a fire behind it: 'eve:flame',
@@ -942,7 +1023,12 @@ function wall(K) {
   const run = (a, b) => {
     const len = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / len, uz = (b[1] - a[1]) / len, yaw = Math.atan2(-uz, ux);
     if (len < 4) return;
-    K.wall(L, a[0], a[1], b[0], b[1], T, H, { crenel: true, y: top - 0.06 - H, skip: (x, z) => !!wallTowerAt(x, z) });
+    // (Its body from a corner's drum's room outward, not through it: where the two walks meeting there aren't at one
+    // height, the higher's wall had stood in the room as a block, between the stair and the doorway to the lower walk, so
+    // nothing went from one side of the city's wall to the next: tools/paths/map.mjs.)
+    const trim = (p) => { const t = wallTowerAt(p[0], p[1]); return t && t.key.startsWith('corner') && Math.hypot(t.x - p[0], t.z - p[1]) < 1 ? towerInner(t) + 0.3 : 0; };
+    const ta = Math.min(trim(a), len / 2), tb = Math.min(trim(b), len / 2);
+    K.wall(L, a[0] + ux * ta, a[1] + uz * ta, b[0] - ux * tb, b[1] - uz * tb, T, H, { crenel: true, y: top - 0.06 - H, skip: (x, z) => !!wallTowerAt(x, z) });
     // (The walk stops inside each tower's doorway: its room's floor is the tower's.)
     const cuts = cityTowers().filter((t) => t.kind === 'wall' && segD(t.x, t.z, a, b) < 3).map((t) => { const p = (t.x - a[0]) * ux + (t.z - a[1]) * uz, w = towerInner(t) - 0.3; return [p - w, p + w]; }).sort((p, q) => p[0] - q[0]);
     let u0 = -1;
@@ -1968,9 +2054,14 @@ export function phobosKeep(K) {
     a = spiral(K, G, x, z, 26.6, P(580), P(630), a, 1, { enclose: S }); ring(K, null, x, z, 0, 29, P(630)); }
   // The Grand Patio (the Crown Court): the first step's top carried on out west over the Middle Ward on tall piers, 190 m
   // wide, a row of pinnacles along its lip.
-  { const py = P(300), px = x - 110 - 74;
-    K.box(G, px, py - 7, z, 74, 7, 104, 0, { collide: false });
-    walk(K, [[px, z, 74, 104, 0, py]]);
+  // (Its deck and slab are cut open over the first great stair, which climbs up through it at its east edge: laid whole, the
+  // patio's floor ran on over the stairwell, so the stair was climbed onto the patio and never walked down again, a body
+  // up there walking on air over the flights and off the far edge: tools/paths/map.mjs.)
+  { const py = P(300), px = x - 110 - 74, x0 = px - 74, x1 = px + 74, z0 = z - 104, z1 = z + 104;
+    const [wx, , wz0, wz1] = patioWell();
+    const pieces = [[x0, wx, z0, z1], [wx, x1, z0, wz0], [wx, x1, wz1, z1]];
+    for (const [a0, a1, b0, b1] of pieces) K.box(G, (a0 + a1) / 2, py - 7, (b0 + b1) / 2, (a1 - a0) / 2, 7, (b1 - b0) / 2, 0, { collide: false });
+    walk(K, pieces.map(([a0, a1, b0, b1]) => [(a0 + a1) / 2, (b0 + b1) / 2, (a1 - a0) / 2, (b1 - b0) / 2, 0, py]));
     for (const dx of [-66, -22, 22]) for (let k = -3; k <= 3; k++) { const fx = px + dx, fz = z + k * 33, fy = Y(fx, fz); K.box(S, fx, fy, fz, 5, py - 7 - fy, 5, 0, { collide: false }); if (k < 3) K.box(G, fx, py - 21, fz + 16.5, 3, 14, 12, 0, { collide: false }); }
     for (let i = -10; i <= 10; i++) K.spike(R, px - 73, py, z + i * 10, 2, 13, 4, 0);
     for (const sz of [-1, 1]) { K.drum(C, px - 70, py - 40, z + sz * 100, 9, 100, 10, { collide: false }); K.cone(R, px - 70, py + 60, z + sz * 100, 11, 40, 10); } }
@@ -2011,8 +2102,12 @@ export function phobosKeep(K) {
       K.drum('dark:p2_bridge_ashlar', sx, dy - 0.02, sz, RD - 0.6, 0.04, 24, { r2: RD - 0.6, collide: false });
       for (let k = 0; k < 16; k++) { const t = (k + 0.5) / 16 * TAU; K.spike(G, sx + Math.cos(t) * (RD - 1.2), dy - 1.2, sz + Math.sin(t) * (RD - 1.2), 1.1, -6, 4, -t); }
       const segs = 28;
+      // (Open where its bridge to the next leaves, from the deck's rim at the deck's height: laid from the spire's wall, under
+      // the deck, the bridge came out past the parapet a metre and more under it, a step up and no step back. map.mjs.)
+      const si = SPIRES.findIndex((q) => q[0] === key), nx = SPIRES[si + 1] || [null, x, z], ba = Math.atan2(nx[2] - sz, nx[1] - sx), gap = (5.5 / 2 + 0.6) / RD;
       for (let k = 0; k < segs; k++) {
         const t = (k + 0.5) / segs * TAU, px = sx + Math.cos(t) * (RD - 0.3), pz = sz + Math.sin(t) * (RD - 0.3), half = Math.PI * (RD - 0.3) / segs + 0.05;
+        if (Math.abs(Math.atan2(Math.sin(t - ba), Math.cos(t - ba))) < gap + Math.PI / segs) continue;
         K.box(G, px, dy, pz, 0.3, 1.1, half, -t);
         if (!K.lean) K.vee(G, px, dy + 1.1, pz, 0.3, 1.3, half * 0.55, -t);
       }
@@ -2023,7 +2118,8 @@ export function phobosKeep(K) {
   tops.forEach(([ax, az, ar, , atop], i) => {
     const nx = tops[i + 1] || [x, z, 33, 0, 590], [bx, bz, br] = nx, bfoot = i < 4 ? tops[i + 1][3] + (tops[i + 1][4] - tops[i + 1][3]) * 0.34 : 560;
     const d = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / d, uz = (bz - az) / d;
-    bridge(K, KB, [ax + ux * ar, P(atop) - 20, az + uz * ar], [bx - ux * br, P(bfoot), bz - uz * br], 5.5, { arch: 6, piers: true, walk: true, dress: true });
+    const ad = ar + 12.4 - 0.4;   // (from its viewing deck's rim, RD: see the deck)
+    bridge(K, KB, [ax + ux * ad, P(atop) - 20, az + uz * ad], [bx - ux * br, P(bfoot), bz - uz * br], 5.5, { arch: 6, piers: true, walk: true, dress: true });
     // (Each spire's tie back to the Keep's body is walked now, to a step's lip: castleTowers.)
   });
   // The lesser towers: the satellites out on the crag's rim and between the spires, the turrets on the curtain and the
@@ -2151,6 +2247,13 @@ const HIGH_DECKS = () => [...STEPS.map(([hx, hz, , b], i) => [KEEP.x + 40 - i * 
 const TURN = 9, RT = 2.7, HW = 1.35;
 const stairOf = (t) => { const re = t.square ? t.r * 1.36 : t.r; return { re, rg: re + 3.3, rd: re + 5.6, dt: re + RT + HW + 0.45 }; };
 
+// The well in the Grand Patio over great stair 0's head: [x0, x1, z0, z1]. (Its edges a hand over the head landing's, so
+// there's no slot between them to drop through. Nothing's to stand in it: a stair turret put over it had no floor.)
+export function patioWell() {
+  const x = KEEP.x, z = KEEP.z, f0 = x + 40 - STEPS[0][0], P0 = stairPlan(f0, Y(f0 - 8, STAIR_Z[0]), PLAIN + STEPS[0][3]);
+  const wx = P0.lanes[1] - P0.HW - 0.1, wz = P0.half + 5.0, zc = z + STAIR_Z[0];
+  return [wx, x - 110, zc - wz, zc + wz];   // (east to the patio's own edge)
+}
 let TOWERS = null;
 // Every lesser tower of the castle and every bridge between them: { towers: [{ key, kind, name, x, z, r, top, fy, cell,
 // base (what its stair starts from, over the plain: the ground, a deck it stands through, or null: reached only by a
@@ -2192,12 +2295,13 @@ export function castleTowers() {
     // Where its stair turret stands: the side nearest the way it should (toward the Keep on a deck, toward the crag's
     // middle on the ground, away from it out on the cliff) that's clear of every higher deck and every other tower.
     const s = stairOf(t), want = t.base !== null && t.base > 290 ? Math.atan2(z - t.z, x - t.x) : Math.atan2(CRAG.z - t.z, CRAG.x - t.x) + (t.base === null ? Math.PI : 0);
-    const lo = t.base ?? -Infinity, R = RT + HW + 0.6, rectD = (px, pz, [x0, x1, z0, z1]) => Math.hypot(Math.max(x0 - px, 0, px - x1), Math.max(z0 - pz, 0, pz - z1));
+    const lo = t.base ?? -Infinity, R = RT + HW + 0.6, well = patioWell(), rectD = (px, pz, [x0, x1, z0, z1]) => Math.hypot(Math.max(x0 - px, 0, px - x1), Math.max(z0 - pz, 0, pz - z1));
     t.ta = null;
     for (let k = 0; k < 24 && t.ta === null; k++) {
       const a = want + ((k + 1) >> 1) * (k & 1 ? -1 : 1) * TAU / 24, cx = t.x + Math.cos(a) * s.dt, cz = t.z + Math.sin(a) * s.dt;
       if (decks.some((d) => d[4] > lo + 1 && rectD(cx, cz, d) < R)) continue;
       if (t.base !== null && t.base > 290 && !decks.some((d) => d[4] === t.base && cx > d[0] + R && cx < d[1] - R && cz > d[2] + R && cz < d[3] - R)) continue;
+      if (t.base !== null && t.base > 290 && rectD(cx, cz, well) < R) continue;
       if (t.base !== null && t.base <= 290 && Math.hypot((cx - CRAG.x) / CRAG.a, (cz - CRAG.z) / CRAG.b) > 0.82) continue;
       if (T.some((q) => q !== t && Math.hypot(q.x - cx, q.z - cz) < (q.square ? q.r * 1.36 : q.r) + R + (q.kind === 'spire' ? 9 : 1))) continue;
       t.ta = a;
@@ -2281,8 +2385,11 @@ function climb(K, t, draw) {
   const y0 = t.from ?? stops.shift(), top = P(t.deck), G = 'dark:p2_bridge_ashlar', seen = K.geometry !== false;
   // (Every flight starts and ends on the side facing the tower: TURN to a turn.)
   const a0 = t.ta + Math.PI, R = RT + HW + 0.4;
-  const gallery = (h, rOut, deck) => {
-    walk(K, ringRects(t.x, t.z, s.re - 0.5, rOut, h));
+  // (Floored over the stair's well where no flight comes up through it: the lowest gallery of one reached by its bridges was
+  // cut open there, a 400 m drop at the foot of its stair. tools/paths/trips.mjs.)
+  const gallery = (h, rOut, deck, floored = false) => {
+    walk(K, ringRects(t.x, t.z, s.re - 0.5, rOut, h, [t.tx, t.tz, floored ? 0 : RT + HW - 0.25]));
+    if (floored) walk(K, ringRects(t.tx, t.tz, 0, R, h));
     if (!seen) return;
     // (From far a band; on a phone only the deck's.)
     if (!draw) {
@@ -2305,6 +2412,9 @@ function climb(K, t, draw) {
   };
   const build = () => {
     let y = y0;
+    // (One reached only by its bridges: its stair starts at its lowest gallery, which is laid too, or that bridge ended at
+    // nothing: tools/paths/map.mjs.)
+    if (t.from === null) gallery(y0, y0 === top ? s.rd : s.rg, y0 === top, true);
     for (const h of stops) {
       if (h <= y + 1) continue;
       const turn = Math.max(1, Math.round((h - y) / TURN)) * TAU;
@@ -2363,8 +2473,23 @@ function climb(K, t, draw) {
     (K.lamps ||= []).push({ p: [fx, fy + 3.4, fz], c: [1, 0.5, 0.22], r: 24, i: 36, flicker: 0.35 });
   }
 }
-// A gallery's floor round (cx, cz), from r0 out to r1, at y.
-function ringRects(cx, cz, r0, r1, y) { const N = 16, out = []; for (let i = 0; i < N; i++) { const a = (i + 0.5) / N * TAU; out.push([cx + Math.cos(a) * (r0 + r1) / 2, cz + Math.sin(a) * (r0 + r1) / 2, (r1 - r0) / 2 + 0.2, Math.PI * r1 / N + 0.4, -a, y]); } return out; }
+// A gallery's floor round (cx, cz), from r0 out to r1, at y. hole [x, z, r]: none of it over that (its stair turret's
+// well: a floor laid over the stair's head was stepped up onto and never down off, tools/paths/map.mjs found: a trap at
+// the top of every tower). In pieces a metre or so across, so what's left round the well still meets its wall.
+function ringRects(cx, cz, r0, r1, y, hole = null) {
+  if (!hole) { const N = 16, out = []; for (let i = 0; i < N; i++) { const a = (i + 0.5) / N * TAU; out.push([cx + Math.cos(a) * (r0 + r1) / 2, cz + Math.sin(a) * (r0 + r1) / 2, (r1 - r0) / 2 + 0.2, Math.PI * r1 / N + 0.4, -a, y]); } return out; }
+  const M = Math.max(1, Math.ceil((r1 - r0) / 1.2)), out = [];
+  for (let m = 0; m < M; m++) {
+    const ra = r0 + (r1 - r0) * m / M, rb = r0 + (r1 - r0) * (m + 1) / M, rm = (ra + rb) / 2, N = Math.max(16, Math.ceil(TAU * rb / 1.2));
+    for (let i = 0; i < N; i++) {
+      const a = (i + 0.5) / N * TAU, px = cx + Math.cos(a) * rm, pz = cz + Math.sin(a) * rm;
+      if (Math.hypot(px - hole[0], pz - hole[1]) < hole[2]) continue;
+      // (Overlapped well: turned pieces only just meeting left pinholes a body's point dropped through, 18 m down a tower.)
+      out.push([px, pz, (rb - ra) / 2 + 0.2, Math.PI * rb / N + 0.2, -a, y]);
+    }
+  }
+  return out;
+}
 // Where a tower's deck's braziers stand: [x, y (the deck's floor), z] each. (A spire's are phobosKeep's own.)
 function deckFires(t) {
   if (t.kind === 'spire' || t.buried) return [];

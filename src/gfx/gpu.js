@@ -239,18 +239,38 @@ export async function loadTextureArray(device, mipgen, names, decode, format, ru
 
 // (cap: no side of what comes back is longer than this, whatever scale says. 0: no cap. step: each side a whole number of
 // these, as ASTC's 4x4 blocks need (src/gfx/astc.js): rounded to the nearest, a picture's UVs don't mind a pixel or two.)
-export async function decodeScaledBitmap(blob, scale, cap = 0, step = 1) {
-  const opts = { premultiplyAlpha: 'none', colorSpaceConversion: 'none' };
-  const bmp = await createImageBitmap(blob, opts);
-  if (cap) scale = Math.min(scale, cap / Math.max(bmp.width, bmp.height));
+export function scaledSize(width, height, scale, cap = 0, step = 1) {
+  if (cap) scale = Math.min(scale, cap / Math.max(width, height));
   scale = Math.min(scale, 1);
   const side = (n) => Math.max(step, Math.round(n * scale / step) * step);
-  const w = side(bmp.width), h = side(bmp.height);
+  return [side(width), side(height)];
+}
+
+// size: the [width, height] of the picture this is a smaller copy of (src/gfx/lean-pictures.js), which what comes back is
+// sized from: the size it would have been, decoded from the original. A copy smaller than that is an error (one kept from
+// before, say), so the original is decoded instead, not the copy blown up. A copy is shrunk the rest of the way in halves:
+// Chrome's own shrink drops pixels unfiltered past a half (grain, and a checkered shimmer on a fine pattern), and a half at
+// a time comes out near a proper filter (at a phone's 128 or 256, 4 to 7 dB nearer a Lanczos from the original), for some
+// 3 to 5 ms a picture. (Not the originals: their halves would be 16 and 4 MB more beside the 64 of a 4096 picture.)
+export async function decodeScaledBitmap(blob, scale, cap = 0, step = 1, size = null) {
+  const opts = { premultiplyAlpha: 'none', colorSpaceConversion: 'none' };
+  const bmp = await createImageBitmap(blob, opts);
+  const [w, h] = scaledSize(...(size || [bmp.width, bmp.height]), scale, cap, step);
   if (w === bmp.width && h === bmp.height) return bmp;
+  if (size && (bmp.width < w || bmp.height < h)) { bmp.close(); throw new Error(`a copy ${bmp.width}x${bmp.height}, for ${w}x${h}`); }
+  let src = bmp;
   try {
+    if (size) {
+      while (src.width >= 2 * w && src.height >= 2 * h) {
+        const half = await createImageBitmap(src, { ...opts, resizeWidth: Math.round(src.width / 2), resizeHeight: Math.round(src.height / 2), resizeQuality: 'high' });
+        if (src !== bmp) src.close();
+        src = half;
+      }
+      if (src.width === w && src.height === h) { const done = src; src = bmp; return done; }
+    }
     // Resize the decoded pixels instead of decoding the compressed source twice.
-    return await createImageBitmap(bmp, { ...opts, resizeWidth: w, resizeHeight: h, resizeQuality: 'high' });
-  } finally { bmp.close(); }
+    return await createImageBitmap(src, { ...opts, resizeWidth: w, resizeHeight: h, resizeQuality: 'high' });
+  } finally { bmp.close(); if (src !== bmp) src.close(); }
 }
 
 // Build a texture array from decoded bitmaps.

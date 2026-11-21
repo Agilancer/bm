@@ -186,11 +186,13 @@ export class HeroPlayUI {
     this.callsAt = at;
     this.callsEl.style.left = `${Math.round(f.left)}px`;
     this.callsEl.style.top = `${Math.round(f.bottom + 6)}px`;
-    // (The chat's lines, under them, grow up only so far as the calls: the oldest go out of sight at the top.)
+    // (The chat's lines, under them, grow up only so far as the calls, or the quest tracker under those (src/ui/tracker.js
+    // capChat, by the same rule): the oldest go out of sight at the top.)
     const chat = document.getElementById('heroChat');
     if (chat) {
       const c = this.callsEl.getBoundingClientRect(), bottom = innerHeight - (parseFloat(getComputedStyle(chat).bottom) || 0);
-      chat.style.maxHeight = `${Math.max(40, Math.round(bottom - c.bottom - 4))}px`;
+      const t = document.getElementById('qTrack')?.getBoundingClientRect(), over = t?.height && t.top >= c.top ? t.bottom + 2 : 0;
+      chat.style.maxHeight = `${Math.max(40, Math.round(bottom - Math.max(c.bottom, over) - 4))}px`;
     }
   }
 

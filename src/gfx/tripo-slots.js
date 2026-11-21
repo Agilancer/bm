@@ -2,10 +2,11 @@
 // stood there: the snapshot says which model (C.MODEL) and which palette (C.PAL), and when that changes the slot is rebuilt.
 // Until its body is ready a slot is a placeholder that draws nothing. A model's mesh is made once and shared by every slot that
 // wears it; its colour map is baked once per palette (palettes.json, the bestiary's own sums). What no slot is wearing is let go.
-import { accessor, imageBytes, parseGLB } from '../core/glb.js';
+import { accessor, parseGLB } from '../core/glb.js';
 import { C, C_HERO, C_SIZE, CHARS_START } from '../core/layout.js';
 import { ARMS, TRIPO_BASE, armIds } from '../core/tripo-monsters.js';
 import { makeBuffer, mipCountFor } from './gpu.js';
+import { pictureOf } from './lean-pictures.js';
 
 const KEEP_MODELS = 10;
 const KEEP_SKINS = 12;
@@ -124,8 +125,9 @@ export class TripoSlots {
   model(id) {
     let m = this.models.get(id);
     if (m) { this.models.delete(id); this.models.set(id, m); return m; }
-    const r = this.r;
-    m = fetch(`${this.base}${TRIPO_BASE}${this.roster[id]?.src || id}.glb`).then((res) => {
+    const r = this.r, url = `${this.base}${TRIPO_BASE}${this.roster[id]?.src || id}.glb`;
+    r.leanPics?.ahead(url);   // (its phone pictures start coming down beside it)
+    m = fetch(url).then((res) => {
       if (!res.ok) throw new Error(`${id}: ${res.status}`);
       return res.arrayBuffer();
     }).then(async (buf) => {
@@ -141,7 +143,7 @@ export class TripoSlots {
       // (Not the file itself: its mesh and two of its maps go to the GPU, and a new palette's skin wants only its colour
       // picture, a copy of which is all that's kept. The whole file, 3 MB on average and up to 8, was kept as long as the
       // model was, which was ten models' worth of page memory. Read before anything is made, so a bad file leaves nothing.)
-      const alb = imageBytes(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture)), hands = handFrames(glb);
+      const alb = pictureOf(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture)), hands = handFrames(glb);
       const nrmSrc = srcOf(mat.normalTexture), mrSrc = srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture);
       const base = r.makeSkinned([prim], glb.json.skins[0].joints.length);
       // (The shared mesh's own pose buffers are never drawn from: each monster gets its own, cloneSkinned in instance.
@@ -177,7 +179,10 @@ export class TripoSlots {
     const r = this.r, p = this.palettes[pal] || {};
     const plain = !p.hue && (p.sat ?? 1) === 1 && (p.val ?? 1) === 1 && !p.tamt;
     s = plain ? r.bitmapTexture(m.alb, 'rgba8unorm-srgb', r.tier.texScale) : (async () => {
-      const cv = await bakeOff(m.alb, r.tier.texScale, p);
+      // (From the phone's copy of the picture where there's one, the same size made, src/gfx/lean-pictures.js; from the
+      // picture itself if the copy fails.)
+      const src = await r.leanPics.forScale(m.alb, r.tier.texScale);
+      const cv = await bakeOff(src.blob, src.scale, p).catch((e) => (src.blob === m.alb ? Promise.reject(e) : bakeOff(m.alb, r.tier.texScale, p)));
       const fmt = 'rgba8unorm-srgb', mips = mipCountFor(cv.width, cv.height);
       const tex = r.device.createTexture({ size: [cv.width, cv.height], format: fmt, mipLevelCount: mips, usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT });
       r.device.queue.copyExternalImageToTexture({ source: cv }, { texture: tex, premultipliedAlpha: false }, [cv.width, cv.height]);

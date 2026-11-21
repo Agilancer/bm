@@ -15,6 +15,7 @@ import { PORTAL_MODELS, buildSites, buildSitesApart, buildUnder, dropSiteGeometr
 import { PhobosNear } from './phobos-near.js';
 import { adoptCityDoors } from '../core/phobos-towers.js';
 import { StairsNear } from './stairs-near.js';
+import { CliffSkin } from './cliffs.js';
 import { DELVES, PORTAL_SPOTS, braziers, caveFloorY, caveRoofY, delveAt, inDungeon, torches } from '../core/dungeon.js';
 import { DOOR, HALL, hallLights, inHall } from '../core/testhall.js';
 import { SlimeBodies } from './slimes.js';
@@ -25,8 +26,8 @@ import { loadOpeningStage } from './opening.js';
 import { DAWN_HOUR, DUSK_HOUR, secondsPerHour, daylight } from './daylight.js';
 import { Pines } from './pines.js';
 import { Rocks } from './rocks.js';
-import { accessor, imageBytes, parseGLB } from '../core/glb.js';
-import { dropFile, getFile, lanes, watched } from '../core/files.js';
+import { accessor, parseGLB } from '../core/glb.js';
+import { dropFile, fetchAhead, getFile, lanes, watched } from '../core/files.js';
 import { C, C_BLEEDS, C_MASKS, C_GASH, C_PALETTE, C_PROPS, C_SIZE, CHARS_START, H, MAX_CHARS, SLIMES_START, SPELL_PALETTE, VM_PALETTE, WEAPONS } from '../core/layout.js';
 import { addStumps } from './stumps.js';
 import { GEAR, ROBES, SKULLS } from '../items/items.js';
@@ -39,10 +40,11 @@ import { PATTERNS, SKINS } from '../items/skins.js';
 import { BODIES } from '../sim/undead.js';
 import { lerp, mat4Invert, mat4LookTo, mat4Mul, mat4Ortho, mat4Perspective, smoothstep } from '../core/math.js';
 import { shieldPose } from '../core/shield-pose.js';
-import { MipGen, makeBuffer, mipCountFor, loadTextureArray, decodeScaledBitmap } from './gpu.js';
+import { MipGen, makeBuffer, mipCountFor, loadTextureArray, decodeScaledBitmap, scaledSize } from './gpu.js';
+import { LeanPictures, pictureOf } from './lean-pictures.js';
 import { AstcPacker } from './astc.js';
 import { noteEvent } from '../core/lastrun.js';
-import { ARMOR, ARMOR_KIT, ARMOR_TRUE, GRASS, GRASS_CULL, ITEM, PROP, SHADOW, SKY, SKY_BAKE, STATIC, STATIC_SLOTS, TERRAIN, VIEWMODEL, VIEWMODEL_SKULL, staticSoftCut } from './materials.js';
+import { ARMOR, ARMOR_KIT, ARMOR_TRUE, GRASS, GRASS_CULL, ITEM, PROP, SHADOW, SKY, SKY_BAKE, STATIC, STATIC_SLOTS, TERRAIN, TERRAIN_CLIFF, VIEWMODEL, VIEWMODEL_SKULL, staticSoftCut } from './materials.js';
 import { AO, BLOOM, COMPOSITE, PARTICLE_DRAW, PARTICLE_SIM, SHAFTS, STAIN, TRAIL } from './post.js';
 import { SpellFX } from './spellfx.js';
 import { bodyRadius, inCascade } from './shadowcull.js';
@@ -230,6 +232,8 @@ export class Renderer {
     // this GPU doesn't read its packing back right.
     const astc = new URLSearchParams(location.search).get('astc');
     this.astc = new AstcPacker(this.device, astc === '1' || (astc !== '0' && !!gpu.tier.lean));
+    // (The phone's copies of the big pictures: none until load says where the game's files are.)
+    this.leanPics = new LeanPictures('', false, getFile);
     this.gashVersions = new Int32Array(MAX_CHARS).fill(-1);
     this.tmpV = new Float32Array(16); this.tmpP = new Float32Array(16); this.tmpVP = new Float32Array(16); this.tmpI = new Float32Array(16);
     this.emitted = [];
@@ -272,6 +276,10 @@ export class Renderer {
   async load(base, progress) {
     const { device, tier, pool } = this;
     this.base = base;
+    // (Off, ?lean=0, to set them side by side.)
+    const fits = (e) => { const [w, h] = scaledSize(e.size[0], e.size[1], tier.texScale); return w <= e.copy[0] && h <= e.copy[1]; };
+    this.leanPics = new LeanPictures(base, tier.texScale < 1 && new URLSearchParams(location.search).get('lean') !== '0', getFile, fits);
+    fetchAhead((url) => this.leanPics.ahead(url));
     const lean = !!tier.lean;
     const pictures = lanes(lean ? 2 : 6);     // pictures decoding or going up to the GPU at once, over all the arrays
     const ahead = lanes(lean ? 2 : 6);        // models fetched, waiting to be built or being built
@@ -444,7 +452,7 @@ export class Renderer {
     const self = model('assets/game/player/wizard.glb', async (glb) => {
       const [body] = await this.buildCrabs(glb, 1, 1, null, 0, true);
       const mat = glb.json.materials[glb.json.meshes[0].primitives[0].material];
-      return { body, colour: imageBytes(glb, glb.json.textures[mat.pbrMetallicRoughness.baseColorTexture.index].source) };
+      return { body, colour: pictureOf(glb, glb.json.textures[mat.pbrMetallicRoughness.baseColorTexture.index].source) };
     });
     const viewModel = (i) => model(models[i], (glb) => this.buildViewModel(glb));
     const vms = [viewModel(9), viewModel(3), viewModel(14)], spellVMs = [viewModel(12), viewModel(13)];
@@ -715,6 +723,8 @@ export class Renderer {
       { binding: 4, visibility: VF, texture: { sampleType: 'float' } },
       { binding: 5, visibility: VF, buffer: { type: 'read-only-storage' } },
       { binding: 6, visibility: VF, buffer: { type: 'read-only-storage' } },
+      { binding: 7, visibility: VF, texture: { sampleType: 'float', viewDimension: '2d-array' } },
+      { binding: 8, visibility: VF, texture: { sampleType: 'float', viewDimension: '2d-array' } },
     ] });
     this.bglStatic = device.createBindGroupLayout({ entries: [
       { binding: 0, visibility: VF, texture: { sampleType: 'float', viewDimension: '2d-array' } },
@@ -755,6 +765,9 @@ export class Renderer {
       { binding: 4, resource: this.farKind.createView() },
       { binding: 5, resource: { buffer: this.roadIdx } },
       { binding: 6, resource: { buffer: this.roadSeg } },
+      // (The PH2 pack: the stone the cliffs round Phobos are painted in, materials.js TERRAIN.)
+      { binding: 7, resource: this.p2Color.createView({ dimension: '2d-array' }) },
+      { binding: 8, resource: this.p2Detail.createView({ dimension: '2d-array' }) },
     ] });
   }
 
@@ -1068,7 +1081,18 @@ export class Renderer {
   }
 
   async imageTexture(glb, imageIndex, format, scale = 1, full = false, near = false, pack = true) {
-    return this.bitmapTexture(imageBytes(glb, imageIndex), format, scale, full, near, pack);
+    return this.bitmapTexture(pictureOf(glb, imageIndex), format, scale, full, near, pack);
+  }
+
+  // A picture decoded and shrunk (src/gfx/gpu.js decodeScaledBitmap): from its phone copy where there's one at least as big
+  // as what's to be made of it (src/gfx/lean-pictures.js), sized as from the original; from the picture itself otherwise,
+  // or if the copy can't be had.
+  async decodePicture(blob, scale, cap, step) {
+    const src = await this.leanPics.source(blob, ([w, h]) => scaledSize(w, h, scale, cap, step));
+    if (src.size) {
+      try { return await decodeScaledBitmap(src.blob, scale, cap, step, src.size); } catch (err) { console.warn('phone picture', src.file, err); }
+    }
+    return decodeScaledBitmap(blob, scale, cap, step);
   }
 
   // A picture as a texture, shrunk by scale. On a phone, of a model's pictures (those given a scale under 1): none is over
@@ -1083,7 +1107,7 @@ export class Renderer {
     const cap = near ? this.tier.texCapNear || this.tier.texCap : this.tier.texCap;
     const lean = this.tier.lean && scale < 1 && !full && cap;
     const k = lean && format === 'rgba8unorm' ? this.tier.mapScale : 1;
-    const bmp = await decodeScaledBitmap(blob, scale * k, lean ? cap * k : 0, pack && this.astc.on ? 4 : 1);
+    const bmp = await this.decodePicture(blob, scale * k, lean ? cap * k : 0, pack && this.astc.on ? 4 : 1);
     const mips = mipCountFor(bmp.width, bmp.height);
     const tex = this.device.createTexture({ size: [bmp.width, bmp.height], format, mipLevelCount: mips, usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT });
     try {
@@ -2137,11 +2161,25 @@ export class Renderer {
     const layout = (...g) => device.createPipelineLayout({ bindGroupLayouts: g });
     const module = (code) => this.shader(code);
 
-    const terrainMod = module(TERRAIN.replaceAll('FAR_SPAN', FAR_SPAN_WGSL).replaceAll('FAR_ORG', FAR_ORG_WGSL));
+    // (The cliffs' stone by its layer in the PH2 pack: src/gfx/materials.js TERRAIN.)
+    const p2L = (name) => String(Math.max(0, this.p2.names.indexOf(name)));
+    const landCode = (code) => code.replaceAll('FAR_SPAN', FAR_SPAN_WGSL).replaceAll('FAR_ORG', FAR_ORG_WGSL)
+      .replaceAll('P2_CLIFF_L', p2L('p2_granite_cliff')).replaceAll('P2_COLS_L', p2L('p2_basalt_columns'))
+      .replaceAll('P2_SCREE_L', p2L('p2_scree')).replaceAll('P2_GRASS_L', p2L('p2_dead_grass'));
+    const terrainMod = module(landCode(TERRAIN));
     this.pTerrain = device.createRenderPipeline({
       layout: layout(this.bgl0, this.bglArr2),
       vertex: { module: terrainMod, entryPoint: 'vs', buffers: [{ arrayStride: 24, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }, { shaderLocation: 1, offset: 12, format: 'float32x3' }] }] },
       fragment: { module: terrainMod, entryPoint: 'fs', targets },
+      primitive: { topology: 'triangle-list', cullMode: 'back' },
+      depthStencil: depth(), multisample: ms,
+    });
+    // The cliffs' skin round Phobos (src/gfx/cliffs.js): the land's own shader, its vertices a little toward the eye.
+    const cliffMod = module(landCode(TERRAIN_CLIFF));
+    this.pTerrainCliff = device.createRenderPipeline({
+      layout: layout(this.bgl0, this.bglArr2),
+      vertex: { module: cliffMod, entryPoint: 'vs', buffers: [{ arrayStride: 36, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }, { shaderLocation: 1, offset: 12, format: 'float32x3' }, { shaderLocation: 2, offset: 24, format: 'float32x3' }] }] },
+      fragment: { module: cliffMod, entryPoint: 'fs', targets },
       primitive: { topology: 'triangle-list', cullMode: 'back' },
       depthStencil: depth(), multisample: ms,
     });
@@ -2267,6 +2305,7 @@ export class Renderer {
     const shLayout = layout(this.bglShadow);
     const posVB = (stride) => [{ arrayStride: stride, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }] }];
     this.pShTerrain = device.createRenderPipeline({ layout: shLayout, vertex: { module: shMod, entryPoint: 'vsPos', buffers: posVB(24) }, primitive: { cullMode: 'none' }, depthStencil: shDepth });
+    this.pShCliff = device.createRenderPipeline({ layout: shLayout, vertex: { module: shMod, entryPoint: 'vsPos', buffers: posVB(36) }, primitive: { cullMode: 'none' }, depthStencil: shDepth });
     this.pShStatic = device.createRenderPipeline({ layout: shLayout, vertex: { module: shMod, entryPoint: 'vsPos', buffers: posVB(36) }, primitive: { cullMode: 'none' }, depthStencil: shDepth });
     this.pShSkin = device.createRenderPipeline({ layout: shLayout, vertex: { module: shMod, entryPoint: 'vsSkin', buffers: [{ arrayStride: 16, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x4' }] }] }, primitive: { cullMode: 'none' }, depthStencil: shDepth });
     this.pShProp = device.createRenderPipeline({
@@ -2723,6 +2762,8 @@ export class Renderer {
     this.phobosNear.smoke(this.frameDt || 1 / 60, cam);
     // (The ways' flights of steps near the eye: src/gfx/stairs-near.js.)
     (this.stairsNear ||= new StairsNear(this)).update(cam);
+    // (The cliffs' skin round Phobos: src/gfx/cliffs.js.)
+    (this.cliffSkin ||= new CliffSkin(this)).update(cam);
     this.crows(cam);
     this.ash(cam);
     this.slimeBodies?.update(snap, snap[H.TIME], cam);
@@ -2992,6 +3033,7 @@ export class Renderer {
       sp.setVertexBuffer(0, this.terrainVB);
       sp.setIndexBuffer(this.terrainIB, 'uint32');
       sp.drawIndexed(this.terrainCount);
+      if (this.cliffSkin?.count) { sp.setPipeline(this.pShCliff); this.cliffSkin.draw(sp); }
     }
     sp.setPipeline(this.pShStatic);
     this.drawUnderShadow(sp);
@@ -3024,6 +3066,7 @@ export class Renderer {
         sp.setVertexBuffer(0, this.terrainVB);
         sp.setIndexBuffer(this.terrainIB, 'uint32');
         sp.drawIndexed(this.terrainCount);
+        if (this.cliffSkin?.count) { sp.setPipeline(this.pShCliff); this.cliffSkin.draw(sp); }
       }
       sp.setPipeline(this.pShStatic);
       this.drawUnderShadow(sp);
@@ -3709,8 +3752,10 @@ export class Renderer {
       mp.setVertexBuffer(0, this.grassFar);
       mp.drawIndirect(this.grassFarArgs, 0);
     }
-    mp.setPipeline(this.pTerrain);
     mp.setBindGroup(1, this.terrainBG);
+    // (The cliffs' skin first: the land's own face behind it is then never shaded.)
+    if (this.cliffSkin?.count) { mp.setPipeline(this.pTerrainCliff); this.cliffSkin.draw(mp); }
+    mp.setPipeline(this.pTerrain);
     mp.setVertexBuffer(0, this.terrainVB);
     mp.setIndexBuffer(this.terrainIB, 'uint32');
     mp.drawIndexed(this.terrainCount);

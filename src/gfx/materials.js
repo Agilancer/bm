@@ -1,7 +1,7 @@
 // WGSL for everything drawn in the world pass.
 import { COMMON } from './shaders.js';
 import { CHURCH_SITE, CHURCH_Z } from '../core/church.js';
-import { CRAG } from '../core/east.js';
+import { CRAG, PLAIN } from '../core/east.js';
 import { SITES } from '../core/lands.js';
 import { terrainHeight } from '../core/terrain.js';
 import { RD_CELL, RD_HALF, RD_MAX, RD_N, RD_NX } from '../core/roads.js';
@@ -35,7 +35,7 @@ fn groundUnder(p: vec3f) -> f32 {
 }
 `;
 
-export const TERRAIN = COMMON + /* wgsl */ `
+const TERRAIN_BASE = COMMON + /* wgsl */ `
 @group(1) @binding(0) var groundColor: texture_2d_array<f32>;
 @group(1) @binding(1) var groundDetail: texture_2d_array<f32>;
 @group(1) @binding(2) var farMap: texture_2d<f32>;
@@ -45,6 +45,9 @@ export const TERRAIN = COMMON + /* wgsl */ `
 // lists; and each stretch as two vec4: (ax, az, bx, bz), (half-width, what it's laid with, how far along its way a is, length).
 @group(1) @binding(5) var<storage, read> roadIdx: array<u32>;
 @group(1) @binding(6) var<storage, read> roadSeg: array<vec4f>;
+// The PH2 pack's paintings (renderer.js p2Color/p2Detail), for the east's cliffs: P2_CLIFF etc. are their layers in it.
+@group(1) @binding(7) var p2Color: texture_2d_array<f32>;
+@group(1) @binding(8) var p2Detail: texture_2d_array<f32>;
 const RD_HALF = ${RD_HALF.toFixed(1)}; const RD_CELL = ${RD_CELL.toFixed(1)}; const RD_N = ${RD_N}; const RD_NX = ${RD_NX}; const RD_MAX = ${RD_MAX}u;
 
 // The nearest way to q: how far outside its edge (less than nothing: on it), its half-width, what it's laid with, how far
@@ -71,16 +74,59 @@ fn roadAt(q: vec2f) -> RoadHit {
   return h;
 }
 
-struct V { @builtin(position) pos: vec4f, @location(0) p: vec3f, @location(1) n: vec3f, @location(2) viewZ: f32 };
-@vertex fn vs(@location(0) p: vec3f, @location(1) n: vec3f) -> V {
-  var o: V;
-  o.pos = F.viewProj * vec4f(p, 1.0);
-  o.p = p; o.n = n;
-  o.viewZ = -(F.view * vec4f(p, 1.0)).z;
-  return o;
-}
+// (cl: the cliffs' skin's own, src/core/cliff-skin.js: how open the rock is to the sky, and which bed it's in, signed by
+// whether that's a hard one. The land's own has x under nothing.)
+struct V { @builtin(position) pos: vec4f, @location(0) p: vec3f, @location(1) n: vec3f, @location(2) viewZ: f32, @location(3) cl: vec3f, @location(4) @interpolate(flat) bed: f32 };
+//__TERRAIN_VS__
 
 fn rot(p: vec2f, a: f32) -> vec2f { let c = cos(a); let s = sin(a); return vec2f(c * p.x - s * p.y, s * p.x + c * p.y); }
+
+// The east's rock's cracks (the cliffs, below): cells about a unit across, each with its point somewhere in it, and how far
+// (x, y) is from the edge between the two nearest points, in cells (F2 - F1, Worley's): near 0 on a crack.
+fn crackH(i: vec2f) -> vec2f {
+  let q = vec2u(vec2i(i) + vec2i(65536));
+  var n = (q.x * 1597334677u) ^ (q.y * 3812015801u);
+  n = (n ^ (n >> 16u)) * 2246822519u; n = n ^ (n >> 13u);
+  let m = n * 3266489917u;
+  return vec2f(f32(n & 65535u), f32(m >> 16u)) / 65535.0;
+}
+fn crackE(q: vec2f) -> f32 {
+  let i = floor(q); let f = q - i;
+  var d1 = 9.0; var d2 = 9.0;
+  for (var y = -1; y <= 1; y++) {
+    for (var x = -1; x <= 1; x++) {
+      let g = vec2f(f32(x), f32(y));
+      let r = g + 0.1 + 0.8 * crackH(i + g) - f;
+      let d = dot(r, r);
+      if (d < d1) { d2 = d1; d1 = d; } else if (d < d2) { d2 = d; }
+    }
+  }
+  return sqrt(d2) - sqrt(d1);
+}
+// The joints of a hard bed seen on a face (h along it, t up it along the beds, metres; bv the bed's number; w a pixel's
+// width in metres): it's laid in courses a few metres high, each bed's its own, each course split by joints about half its
+// height apart, standing near upright, each a little askew, some missing, offset course to course like a wall's bricks;
+// the partings between the courses fainter. How dark (0 to about a half). (As a net of cells all round, the critics' dried
+// mud and turtle shell, round 3: real joints run up the bed and stop at its partings.)
+fn crackB(h: f32, t: f32, bv: f32, w: f32) -> f32 {
+  let rh = 3.0 + 4.0 * fract(bv * 13.7);
+  let rf = t / rh + fract(bv * 5.3);
+  let row = floor(rf); let fy = rf - row;
+  let rk = crackH(vec2f(row, floor(bv * 997.0)));
+  let cw = rh * (0.4 + 0.35 * rk.x);
+  let hx = h / cw + rk.y * 7.0;
+  let ei = floor(hx + 0.5);
+  let eh = crackH(vec2f(ei, row + 77.0));
+  let off = (fy - 0.5) * (eh.y - 0.5) * 0.5 + sin(t * 1.7 + eh.x * 20.0) * 0.04;
+  let dj = abs(hx - ei - off) * cw;
+  let dp = min(fy, 1.0 - fy) * rh;
+  let ww = max(0.04, w * 1.2);
+  // (A joint missing now and then, and one now and then running only part way up its course.)
+  let reach = select(1.0, 1.0 - smoothstep(eh.x * 0.9 - 0.05, eh.x * 0.9 + 0.05, fy), eh.y > 0.78);
+  let j = (1.0 - smoothstep(ww * 0.3, ww * 1.3, dj)) * step(0.3, eh.x) * reach * (0.55 + 0.45 * eh.y);
+  let pt = 1.0 - smoothstep(ww * 0.3, ww * 1.1, dp);
+  return min(0.5, j * 0.5 + pt * 0.22);
+}
 
 // A ground painting laid without its repeat (on a PC). The land is cut into patches along the contours of a slow noise (k,
 // 0 to 1, read once for here); each patch has its own copy of the painting, slid its own way, and where two patches meet
@@ -352,17 +398,172 @@ fn untileC(l: i32, uv: vec2f, dx: vec2f, dy: vec2f, k: f32) -> vec4f {
     rockCol = vec3f(grey) * vec3f(0.72, 0.72, 0.76) * (0.75 + 0.5 * dirtDet.a);
   }
   albedo = mix(albedo, rockCol * (1.0 + 0.18 * fk.a), rockAmt);
+  // The east's cliffs: the basin's walls and the crag, the Chasm's walls (their skin, src/core/cliff-skin.js, and the land's
+  // own faces out there). The rock in its beds (src/core/cliffs.js), each a shade of its own, cold grey to charcoal (the
+  // soft ones a darker, browner shale), some of them columns of basalt: painted across each face from its side and, where
+  // a face lies back, from above too, never drawn out down it; a broad painting over a close one, each bed's set off on its
+  // own so no repeat lines up from bed to bed; lichen and stains in patches tens of metres across, long dark runs down from
+  // the ledges; the ledges and the slopes at the walls' feet heaped with scree and dead grass; the skin's hollows and the
+  // undersides of its lips deep in shade. (The critics, round 1: the granite at six metres a tile, stretched over curved
+  // faces, read as wood grain and fingerprints; the rock too warm, khaki, for this country.)
+  let skin = in.cl.x >= 0.0;
+  let eastK = smoothstep(7000.0, 7150.0, p.x);
+  var cliffK = smoothstep(0.32, 0.55, steep) * eastK;
+  // (The skin's rock all over, but where it's laid back over the land behind a rim: there it goes into the land's own ground.)
+  if (skin) { cliffK = in.cl.z; }
+  let tB = p.y - 0.03 * (p.x - 10000.0);
+  // (Sharply: blended over a broad turn of the face, two paintings at once crossed in herringbones.)
+  let cwx = pow(abs(in.n.x), 6.0); let cwz = pow(abs(in.n.z), 6.0); let cfx = cwx / max(cwx + cwz, 1e-5);
+  // Which bed: the skin knows (signed: hard beds over nothing); the land's own faces take one by their height.
+  var bedV = abs(in.bed); var hardB = in.bed > 0.0;
+  if (!skin) { bedV = fract(sin(floor(tB / 23.0) * 12.9898) * 43758.547); hardB = true; }
+  // (High up, on the mountains, no beds' bands at all, nor the runs down from them: across each other they were the critics'
+  // tartan, round 3. The land's own faces only: the skin's are the walls'.)
+  let peakK = select(smoothstep(370.0, 470.0, p.y + (textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.003 + 0.17, 0.0).r - 0.5) * 120.0), 0.0, skin);
+  // (Its painting, too, one bed's all the way up: a band's own offset and now and then the basalt's columns drew the bands.)
+  if (peakK > 0.5) { bedV = 0.43; }
+  let bOff = vec2f(fract(bedV * 37.1), fract(bedV * 91.7)) * 4.0;
+  let uXa = vec2f(p.z, -p.y) / 14.0 + bOff; let uZa = vec2f(p.x, -p.y) / 14.0 + bOff.yx;
+  let uXb = vec2f(p.z, -p.y) / 4.7 + vec2f(0.37, 0.11) + bOff * 2.3; let uZb = vec2f(p.x, -p.y) / 4.7 + vec2f(0.61, 0.29) + bOff.yx * 2.3;
+  let uYa = p.xz / 14.0 + bOff;
+  let uT = p.xz / 5.5;
+  let dXa1 = dpdx(uXa); let dXa2 = dpdy(uXa); let dZa1 = dpdx(uZa); let dZa2 = dpdy(uZa);
+  let dXb1 = dpdx(uXb); let dXb2 = dpdy(uXb); let dZb1 = dpdx(uZb); let dZb2 = dpdy(uZb);
+  let dYa1 = dpdx(uYa); let dYa2 = dpdy(uYa);
+  let dT1 = dpdx(uT); let dT2 = dpdy(uT);
+  let dP1 = dpdx(p); let dP2 = dpdy(p);
+  var geoN = normalize(cross(dP1, dP2));
+  if (dot(geoN, in.n) < 0.0) { geoN = -geoN; }
+  // (Far off, the land's cells are tens of metres: one that runs from a floor up a wall keeps the wall's lean at its corners
+  // and paints the floor with rock drawn out along it. By the cell's own lie as well as its corners', and gently, or the
+  // cells of a far slope came out rock and ground by turns, in squares and zigzags.)
+  if (!skin) { cliffK *= 1.0 - 0.85 * smoothstep(0.7, 0.95, geoN.y); }
+  var cliffN = normalize(in.n);
+  var cliffDet = vec4f(0.5, 0.5, 0.85, 0.5);
+  // The high ground out east and the slopes at the walls' feet: dead grass and scree, dark, never the pale ash of the
+  // country west of the ridge, so the rock and the ground over it are the one country. (Never on a way.)
+  let highK = eastK * smoothstep(${(PLAIN + 55).toFixed(1)}, ${(PLAIN + 95).toFixed(1)}, p.y) * (1.0 - roadIn) * (1.0 - cliffK);
+  // (The talus at the walls' feet too, lying at a gentle slope: left the country's pale ash, it read as a snowdrift.)
+  let footK = eastK * smoothstep(0.04, 0.15, steep) * (1.0 - roadIn) * (1.0 - cliffK);
+  if (highK + footK > 0.01) {
+    let gn = textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.011 + 0.23, 0.0);
+    let sc = textureSampleGrad(p2Color, repeatSmp, uT, P2_SCREE_L, dT1, dT2).rgb;
+    let gr = textureSampleGrad(p2Color, repeatSmp, uT * 0.6, P2_GRASS_L, dT1 * 0.6, dT2 * 0.6).rgb;
+    // (Its dead grass in patches on the flats only, and close to the scree's own value: in brown blotches over everything it
+    // read as camouflage paint.)
+    let ground = mix(sc * vec3f(0.7, 0.72, 0.77), gr * vec3f(0.56, 0.55, 0.5), 0.6 * smoothstep(0.45, 0.66, gn.g) * (1.0 - smoothstep(0.04, 0.12, steep)));
+    // (The high ground near flat: bedrock showing through in pavements, its joints a net across it. Untextured, it read as
+    // grey clay: the critics, round 3.)
+    var pave = 1.0;
+    if (!LEAN && highK > 0.01) {
+      let pw = 0.5 * (abs(dP1.x) + abs(dP2.x) + abs(dP1.z) + abs(dP2.z));
+      let pf = (1.0 - smoothstep(0.15, 0.6, pw)) * smoothstep(0.4, 0.6, gn.r) * (1.0 - smoothstep(0.1, 0.25, steep));
+      if (pf > 0.01) { let e = crackE(p.xz / 3.1 + 0.37); pave = 1.0 - 0.4 * pf * (1.0 - smoothstep(max(0.03, pw / 3.1) * 0.4, max(0.03, pw / 3.1) * 1.6, e)); }
+    }
+    albedo = mix(albedo, ground * (0.74 + 0.28 * gn.b) * pave, max(highK * 0.92, footK * 0.85));
+  }
+  if (cliffK > 0.002) {
+    let lay = select(P2_CLIFF_L, P2_COLS_L, hardB && bedV < 0.2);
+    // (From above as well where the face lies back: a slope painted from its side alone was drawn out down it.)
+    let wy = smoothstep(0.42, 0.78, abs(in.n.y)) * select(1.0, 0.0, LEAN);
+    var face = vec4f(0.0); var fine = vec4f(0.0); var fdX = vec4f(0.5); var fdZ = vec4f(0.5);
+    if (cfx > 0.03) {
+      face += textureSampleGrad(p2Color, repeatSmp, uXa, lay, dXa1, dXa2) * cfx;
+      if (!LEAN) { fine += textureSampleGrad(p2Color, repeatSmp, uXb, lay, dXb1, dXb2) * cfx; fdX = textureSampleGrad(p2Detail, repeatSmp, uXb, lay, dXb1, dXb2); }
+    }
+    if (cfx < 0.97) {
+      face += textureSampleGrad(p2Color, repeatSmp, uZa, lay, dZa1, dZa2) * (1.0 - cfx);
+      if (!LEAN) { fine += textureSampleGrad(p2Color, repeatSmp, uZb, lay, dZb1, dZb2) * (1.0 - cfx); fdZ = textureSampleGrad(p2Detail, repeatSmp, uZb, lay, dZb1, dZb2); }
+    }
+    if (wy > 0.01) { face = mix(face, textureSampleGrad(p2Color, repeatSmp, uYa, lay, dYa1, dYa2), wy); }
+    let fd = mix(fdZ, fdX, cfx);
+    var col = face.rgb;
+    // (The close painting's light and dark over the broad one's, gently: at full strength its swirls were fingerprints.)
+    // (Gentler still: its swirls, at any strength, read as fingerprints and a maze. The rock's breaks are its cracks, below.)
+    if (!LEAN) { col *= 1.12 + 0.26 * (dot(fine.rgb, vec3f(0.3, 0.6, 0.1)) / max(dot(face.rgb, vec3f(0.3, 0.6, 0.1)), 0.04) - 1.0); }
+    col = clamp(col, vec3f(0.0), vec3f(1.0));
+    // The rock's colour: grey going cold, each bed lighter or darker, a few near black; the soft beds a darker brown shale.
+    let lum = dot(col, vec3f(0.3, 0.6, 0.1));
+    col = mix(col, vec3f(lum), 0.62) * vec3f(0.88, 0.92, 1.0);
+    let shade = mix(0.66 + 0.44 * fract(bedV * 7.31), 0.86, peakK);
+    col *= shade * mix(select(1.0, 0.58, fract(bedV * 5.17) > 0.82), 1.0, peakK) * mix(vec3f(0.97, 0.99, 1.03), vec3f(1.04, 1.0, 0.95), fract(bedV * 3.7));
+    if (!hardB) { col = vec3f(dot(col, vec3f(0.3, 0.6, 0.1))) * vec3f(1.04, 0.95, 0.84) * 0.78; }
+    // Broad stretches lighter and darker across the walls, lichen and old stains in patches tens of metres across; and the
+    // runs down them, long and dark, from the ledges.
+    // (Each read across the face both ways, along x and along z, and the two blended by how it faces, as its paintings are:
+    // read at one place between the two, x thousands of metres from z, the least turn of the face slid it metres, and every
+    // triangle drew its own nested rings of lines.)
+    let broad = mix(textureSampleLevel(noiseTex, repeatSmp, vec2f(p.x * 0.0037, tB * 0.006) + 0.13, 0.0), textureSampleLevel(noiseTex, repeatSmp, vec2f(p.z * 0.0037, tB * 0.006) + 0.13, 0.0), cfx);
+    col *= 0.78 + 0.4 * broad.b;
+    let lich = mix(textureSampleLevel(noiseTex, repeatSmp, vec2f(p.x, tB) * 0.0165 + 0.71, 0.0), textureSampleLevel(noiseTex, repeatSmp, vec2f(p.z, tB) * 0.0165 + 0.71, 0.0), cfx);
+    col = mix(col, col * vec3f(0.92, 1.04, 0.82) * 1.12, smoothstep(0.56, 0.74, lich.g) * 0.55);
+    col *= 1.0 - smoothstep(0.6, 0.8, lich.r) * 0.3;
+    let run = mix(textureSampleLevel(noiseTex, repeatSmp, vec2f(p.x * 0.04, tB * 0.0042) + 0.57, 1.5), textureSampleLevel(noiseTex, repeatSmp, vec2f(p.z * 0.04, tB * 0.0042) + 0.57, 1.5), cfx);
+    col *= 1.0 - smoothstep(0.52, 0.8, run.r) * 0.62 * (1.0 - 0.8 * peakK);
+    col = mix(col, col * vec3f(1.2, 0.9, 0.7), smoothstep(0.78, 0.94, run.g) * 0.25);
+    // Its ledges: scree (and dead grass in patches) on whatever lies back enough to hold it.
+    // (Looked down on where it lies near flat; seen from the side, as the face is, where it lies back at a slope: from above
+    // it was drawn out down the slope into streaks like a board's grain.)
+    let ledge = smoothstep(0.55, 0.8, in.n.y);
+    if (ledge > 0.01) {
+      let top = smoothstep(0.78, 0.95, in.n.y);
+      let sx = cfx > 0.5;
+      let scS = textureSampleGrad(p2Color, repeatSmp, select(uZb, uXb, sx) * 1.4, P2_SCREE_L, select(dZb1, dXb1, sx) * 1.4, select(dZb2, dXb2, sx) * 1.4).rgb;
+      let sc = mix(scS, textureSampleGrad(p2Color, repeatSmp, uT, P2_SCREE_L, dT1, dT2).rgb, top);
+      let gr = textureSampleGrad(p2Color, repeatSmp, uT * 0.7, P2_GRASS_L, dT1 * 0.7, dT2 * 0.7).rgb;
+      let gk = smoothstep(0.45, 0.68, textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.021 + 0.4, 0.0).g) * top;
+      col = mix(col, mix(sc * vec3f(0.78, 0.8, 0.84), gr * vec3f(0.8, 0.76, 0.64), gk), ledge);
+    }
+    // Its cracks: the joints across each bed a few metres apart and the partings along it (cells wider than tall), thin and
+    // dark; and a coarser set, the blocks a face breaks into. Faded out where a pixel's as wide as a crack's worth, never on
+    // a ledge's scree. (The pixel's width in cells from the derivatives taken above, out here in a branch.)
+    // (The hard beds' only, crackB: and not everywhere, in patches, half the face or so.)
+    if (!LEAN && hardB) {
+      let fwm = 0.5 * max(mix(abs(dP1.x) + abs(dP2.x), abs(dP1.z) + abs(dP2.z), cfx), 0.6 * (abs(dP1.y - 0.03 * dP1.x) + abs(dP2.y - 0.03 * dP2.x)));
+      let fade = (1.0 - smoothstep(0.12, 0.5, fwm)) * (1.0 - ledge) * (1.0 - peakK) * (0.35 + 0.65 * smoothstep(0.35, 0.6, lich.b));
+      if (fade > 0.01) {
+        var ck = 0.0;
+        if (cfx > 0.03) { ck += crackB(p.z + bOff.x * 9.0, tB, bedV, fwm) * cfx; }
+        if (cfx < 0.97) { ck += crackB(p.x + bOff.y * 9.0, tB, bedV, fwm) * (1.0 - cfx); }
+        col *= 1.0 - ck * fade;
+      }
+    }
+    // The skin's own shade: its hollows, the backs of its ledges, the undersides of its lips, deep.
+    if (skin) { col *= pow(clamp(in.cl.x, 0.2, 1.1), 1.35); }
+    albedo = mix(albedo, col, cliffK);
+    // Its relief, the close painting's, across the face as it's painted; and (the skin) a little of its facets' own lie, so
+    // a lip's edge breaks sharp instead of rolling round like a moulding's.
+    if (!LEAN) {
+      let nX = perturbD(cliffN, dP1, dP2, dXb1, dXb2, fdX.rg, 0.7);
+      let nZ = perturbD(cliffN, dP1, dP2, dZb1, dZb2, fdZ.rg, 0.7);
+      cliffN = normalize(mix(nZ, nX, cfx));
+      if (skin) { cliffN = normalize(mix(cliffN, geoN, 0.45)); }
+    }
+    cliffDet = vec4f(fd.rg, 0.88, fd.a);
+  }
+  // Snow on the mountains' tops, over six hundred metres, where it can lie.
+  // (Where it can lie, by a slope taken broadly, the vertex's and the cell's together, and its edge broken: by the cell's
+  // alone it lay along every ledge in ribbons.) A cold blue-grey, never paper white.
+  // (Lower and holding on steeper ground than it did, in couloirs and on ledges, and the brightest thing on the mountains:
+  // a smudge, round 3, the critics.)
+  // (And over the top fifth of the tallest, a cap: all but the sheerest under it.)
+  let snowLine = p.y + (textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.004 + 0.31, 0.0).r - 0.5) * 150.0;
+  let peakSnow = eastK * smoothstep(530.0, 620.0, snowLine)
+    * smoothstep(mix(0.55, 0.3, smoothstep(680.0, 780.0, snowLine)), mix(0.74, 0.5, smoothstep(680.0, 780.0, snowLine)),
+      0.6 * in.n.y + 0.4 * geoN.y + (textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.023 + 0.6, 0.0).g - 0.5) * 0.25);
   // (The castle's crag, src/core/east.js CRAG, inside its curtain and down its banks: rock and gravel near half as dark, a
   // dull brown-black. Pale, its slopes in the yard and the wards were snow against the black walls, the gate lost on them.
-  // The critics.)
+  // The critics.) (Its cliffs a little less: they're the castle's rock, its beds wanted to be seen.)
   let cragD = (p.xz - vec2f(${CRAG.x.toFixed(1)}, ${CRAG.z.toFixed(1)})) / vec2f(${CRAG.a.toFixed(1)}, ${CRAG.b.toFixed(1)});
   let cragE = dot(cragD, cragD);   // (not pow: of a negative it's nothing, and the crag's ground went white)
-  albedo *= mix(vec3f(0.5, 0.48, 0.45), vec3f(1.0), smoothstep(0.85, 1.15, cragE));
+  albedo *= mix(mix(vec3f(0.5, 0.48, 0.45), vec3f(0.66, 0.63, 0.6), cliffK), vec3f(1.0), smoothstep(0.85, 1.15, cragE));
   det = mix(det, rockDet, rockAmt * select(0.0, 1.0, haveRock));
+  det = mix(det, cliffDet, cliffK * select(0.0, 1.0, !LEAN));
   // Snow over all, thinning where the slope's too steep to hold it.
   var snowCol = vec3f(0.84, 0.87, 0.93) * (0.88 + 0.16 * grassDet.a);
   if (haveSnow) { snowCol = snowTex.rgb * mix(vec3f(1.04, 1.05, 1.08), vec3f(1.0), snowTex.a); }
   albedo = mix(albedo, snowCol, snowAmt);
+  albedo = mix(albedo, snowCol * vec3f(0.93, 0.96, 1.0), peakSnow * (1.0 - snowAmt));
   // Under the pines, old needles in the dark (less where the snow's got in).
   // (Where the stand's thick, the whole floor is needles, its edge wandering out into the grass.)
   let floorAmt = select(fm.g, smoothstep(0.12, 0.55, fm.g + (macro2.g - 0.5) * 0.3), haveFloor) * (1.0 - dirt * 0.7) * (1.0 - snowAmt * 0.6) * (1.0 - roadIn);
@@ -373,6 +574,7 @@ fn untileC(l: i32, uv: vec2f, dx: vec2f, dy: vec2f, k: f32) -> vec4f {
   var rough = mix(mix(0.95, det.b, 0.7), 0.55, snowAmt * 0.6 + ft.a * 0.3);
   rough = mix(rough, 0.25, rut * ft.a);
   var n = perturb(normalize(in.n), p, uvA, det.rg, 0.9 - 0.5 * smoothstep(8.0, 30.0, dist));
+  if (cliffK > 0.002) { n = normalize(mix(n, cliffN, cliffK)); }
 
   // Blood soaked into the earth.
   let bUv = (p.xz - F.blood.xy) * F.blood.z;
@@ -405,6 +607,35 @@ fn untileC(l: i32, uv: vec2f, dx: vec2f, dy: vec2f, k: f32) -> vec4f {
   return o;
 }
 `;
+
+// The land's vertex shader, and the cliffs' skin's (src/gfx/cliffs.js): the skin's corners carry two more numbers, and it's
+// drawn a little nearer the eye than it stands, more the farther off it is (two in a hundred of the distance; on a phone,
+// whose land is coarser, four and a half), so the land's own face behind it, which out there is drawn with cells tens of
+// metres across and can lean out of the true face by half of one, never shows through. (Only where it's drawn: its light
+// and paint are from where it stands.)
+const TERRAIN_VS = /* wgsl */ `
+@vertex fn vs(@location(0) p: vec3f, @location(1) n: vec3f) -> V {
+  var o: V;
+  o.pos = F.viewProj * vec4f(p, 1.0);
+  o.p = p; o.n = n;
+  o.viewZ = -(F.view * vec4f(p, 1.0)).z;
+  o.cl = vec3f(-1.0, 0.0, 0.0); o.bed = 0.0;
+  return o;
+}`;
+const CLIFF_VS = /* wgsl */ `
+@vertex fn vs(@location(0) p: vec3f, @location(1) n: vec3f, @location(2) e: vec3f) -> V {
+  var o: V;
+  let toC = F.camPos.xyz - p;
+  let d = length(toC);
+  let q = p + toC / max(d, 1e-3) * min(d * select(0.02, 0.045, LEAN), 70.0);
+  o.pos = F.viewProj * vec4f(q, 1.0);
+  o.p = p; o.n = n;
+  o.viewZ = -(F.view * vec4f(p, 1.0)).z;
+  o.cl = e; o.bed = e.y;
+  return o;
+}`;
+export const TERRAIN = TERRAIN_BASE.replace('//__TERRAIN_VS__', TERRAIN_VS);
+export const TERRAIN_CLIFF = TERRAIN_BASE.replace('//__TERRAIN_VS__', CLIFF_VS);
 
 // How many entries STATIC's per-layer table holds: the first array's 64, then the PH2 pack's (renderer.js; interior.js
 // fills its own).

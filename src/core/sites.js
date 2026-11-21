@@ -30,6 +30,7 @@ import { P2_TILE } from './phobos-p2.js';
 import { buildHouse, buildTower } from './belltower.js';
 
 const TAU = Math.PI * 2;
+const EAST_FROM = 8900; // (City State Phobos and Castle Velscour lie east of here: see Kit.collide.)
 // World metres to one repeat of each kind of painting, across and up.
 // (The four from the catacombs, tools/village/more_stone.py, hold three of their painting across and two up: a third number is
 // how far one repeat goes on a floor's other way, where a floor would otherwise stretch it.)
@@ -171,13 +172,19 @@ export class Kit {
       this.quad(sideL, P(ax, 0, az), P(bx, 0, bz), P(bx, h, bz), P(ax, h, az));
     }
     if (topL) this.quad(topL, P(-hx, h, -hz), P(-hx, h, hz), P(hx, h, hz), P(hx, h, -hz), [0, 1, 0]);
-    if (o.collide !== false) this.collide(x, z, hx, hz, yaw, y + h, o.under);
+    if (o.collide !== false) this.collide(x, z, hx, hz, yaw, y + h, o.under, y);
   }
 
   // A collider: a box on the ground to height top (world y). (World.resolve takes h over the land at its middle.)
-  collide(x, z, hx, hz, yaw, top, under = 0) {
-    const h = top - terrainHeight(x, z) + under;
-    if (h > 0.05) this.colliders.push({ x, z, hx, hz, yaw, h });
+  // base: where the thing itself starts. In City State Phobos and Castle Velscour, one that starts high over the land (a
+  // turret's drum on a deck, a corbel under a gallery, a block on a tower's crown) stops a body only from there up, as a
+  // bridge's parapet does: from the ground it stood as a pillar no one could see through whatever was under it, a stair's
+  // head landing, a street (tools/paths/map.mjs found them). Elsewhere, as it always was.
+  collide(x, z, hx, hz, yaw, top, under = 0, base = null) {
+    const g = terrainHeight(x, z), h = top - g + under;
+    if (h <= 0.05) return;
+    if (base !== null && x > EAST_FROM && base - g > 2.5) this.colliders.push({ x, z, hx, hz, yaw, h, b: base - 0.3, t: top });
+    else this.colliders.push({ x, z, hx, hz, yaw, h });
   }
 
   // A pitched roof over a w by d plan, ridge along its length (x before the turn), eaves at y, rising rise; gable ends in wall.
@@ -243,7 +250,7 @@ export class Kit {
         this.tri(lid, [x, y + h, z], [x + Math.cos(b) * r2, y + h, z + Math.sin(b) * r2], [x + Math.cos(a) * r2, y + h, z + Math.sin(a) * r2]);
       }
     }
-    if (o.collide !== false) this.collide(x, z, r * 0.8, r * 0.8, 0, y + h);
+    if (o.collide !== false) this.collide(x, z, r * 0.8, r * 0.8, 0, y + h, 0, y);
   }
 
   cone(layer, x, y, z, r, h, sides = 12, turn = 0) { this.drum(layer, x, y, z, r, h, sides, { r2: 0.001, open: true, collide: false, turn }); }
@@ -346,7 +353,7 @@ export class Kit {
     }
     // (soft: while it's set, a spike stops nothing: a corbel under a bridge, a pinnacle on a crown, which would else stand
     // as a pillar from the ground to itself. src/core/phobos-build.js.)
-    if (r > 0.6 && !this.soft) this.collide(x, z, r * 0.7, r * 0.7, 0, y + h * 0.6);
+    if (r > 0.6 && !this.soft) this.collide(x, z, r * 0.7, r * 0.7, 0, Math.max(y, y + h * 0.6), 0, Math.min(y, y + h));
     return p;
   }
 
