@@ -25,10 +25,13 @@ import { CHURCH_DOOR, churchAt } from './church.js';
 import { POSTS } from './dungeon.js';
 import { SITES } from './lands.js';
 
-// How many hero bodies the world holds at once: each is a slot in the snapshot and a skinned model on the GPU. (And the
-// Free Company's quartermasters and the Test Dungeon's keeper besides, BROKERS below.)
-// (Eight on a phone: one of every class, so any of them can be hired there too.)
-export const HERO_SLOTS = { desktop: 16, lean: 8 };
+// How many of the other Tessariels the world holds at once: each is a slot in the snapshot and a skinned model on the GPU.
+// (And the Free Company's quartermasters and the Test Dungeon's keeper besides, BROKERS below.) The same on every device
+// and every tier, and never fewer after a crash: OWNER RULE, "DO NOT REDUCE THE NUMBER OF NPC PLAYERS" (2026-11-20). Each
+// in a body of its own on a phone too: the eight more a phone had none of are some 19 MB of the GPU's at a phone's
+// pictures (measured, iPhone-sized), and sixteen people in eight bodies, twins with the same weapons side by side in the
+// square, read as a fault.
+export const HERO_SLOTS = 16;
 
 // The Free Company's quartermasters, who hire out a party (src/ui/party.js): one in town by the square, one at the
 // Hollowfang Warrens' portal (src/core/dungeon.js BROKER_SPOTS). Bodies of the heroes' own, people of their own. While the

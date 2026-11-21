@@ -59,7 +59,10 @@ const OLD = "She wasn't beautiful. She was old.";
 
 const STYLE = `
 body.folk-talking #cross, body.folk-talking #take { visibility: hidden; }
-#folkSay { position: fixed; inset: 0; pointer-events: none; z-index: 6; }
+/* (The words and the marks are placed from the screen's corner, so their holders are a point there, not the whole screen.
+   Over the world's picture, a holder the screen's size is a picture of its own the screen's size: 11 MB on an iPhone, made
+   again each time it's shown.) */
+#folkSay { position: fixed; left: 0; top: 0; width: 0; height: 0; overflow: visible; pointer-events: none; z-index: 6; }
 .fb { position: absolute; transform: translate(-50%, -100%); width: max-content; max-width: min(270px, 60vw); padding: 7px 11px 8px; background: #f3e5c3; color: #2a1a0e;
   border: 1.5px solid #c9a96a; border-radius: 8px; outline: 2px solid #19100d; box-shadow: 0 4px 10px #0008; font: 600 14.5px/1.28 "Alegreya Sans", "Segoe UI", sans-serif; text-align: center; transition: opacity .25s; }
 .fb::after { content: ""; position: absolute; left: calc(50% - 6px); bottom: -9px; width: 11px; height: 11px; background: #f3e5c3; border-right: 1.5px solid #19100d; border-bottom: 1.5px solid #19100d; transform: rotate(45deg); }
@@ -182,14 +185,14 @@ body.touch #folkBook .ql-head .menu-x { width: 34px; height: 34px; }
 .fn.quest, .fn.done { color: #f1d78f; border-color: rgba(232,193,90,.7); font-size: 16px; }
 .fn.mat { font-size: 14px; }
 .fn.gone { opacity: 0; transform: translateY(-6px); }
-#folkMarks { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
+#folkMarks { position: fixed; left: 0; top: 0; width: 0; height: 0; overflow: visible; pointer-events: none; z-index: 5; }
 body:not(.playing) #folkMarks, body.cinematic #folkMarks { display: none; }
 .qm { position: absolute; transform: translate(-50%, -100%); font: 900 var(--s, 44px)/1 Georgia, "Times New Roman", serif; color: #ffd21f;
   -webkit-text-stroke: .09em #2a1700; paint-order: stroke fill; text-shadow: 0 0 .18em #000c, 0 .06em .1em #000; }
 .qm span { display: block; animation: qmBob 1.6s ease-in-out infinite; }
 .qm.busy { color: #b9b6ae; -webkit-text-stroke-color: #1a1a1a; }
 @keyframes qmBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-.12em); } }
-#folkFade { position: fixed; inset: 0; z-index: 11; background: #000; opacity: 0; pointer-events: none; transition: opacity 1.1s; display: flex; align-items: center; justify-content: center; font: italic 18px Georgia, serif; color: #cdbd98; }
+#folkFade { position: fixed; inset: 0; z-index: 11; background: #000; opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 1.1s; display: flex; align-items: center; justify-content: center; font: italic 18px Georgia, serif; color: #cdbd98; }
 `;
 
 // Small drawings for the things sold that aren't items in the pack.
@@ -946,6 +949,8 @@ export class TownUI {
   // A night at the Bell: the dark comes down, the bell goes three, and it's dawn.
   sleep() {
     this.fade.textContent = '';
+    // (Not there at all but while it's used: a black screen at nothing, over the world, was a screen-sized picture kept for good.)
+    this.fade.style.visibility = 'visible';
     this.fade.style.opacity = 1;
     setTimeout(() => {
       // (The cathedral's bell, out along the east road, till its warden's put down: src/folk/lines/quests.js toll_of_bell.)
@@ -953,6 +958,7 @@ export class TownUI {
       this.act.sleep();
     }, 1200);
     setTimeout(() => { this.fade.textContent = ''; this.fade.style.opacity = 0; this.note('You wake at dawn, mended.', 'hint'); }, 3600);
+    setTimeout(() => { if (this.fade.style.opacity === '0') this.fade.style.visibility = ''; }, 3600 + 1250);
   }
 
   // ---- closing ----

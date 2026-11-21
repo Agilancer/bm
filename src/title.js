@@ -12,6 +12,7 @@
 
 import { SLOT_COUNT, saves } from './saves.js';
 import { isMobileDevice } from './gfx/gpu.js';
+import { slim } from './audio.js';
 
 const LOGOS = {
   blastorama: 'assets/title/blastorama.webp',
@@ -105,7 +106,7 @@ const SETTINGS = `
     <div class="t-sub">What auto-play sees to by itself</div>
     ${AI_PARTS.map(([k, name, on, off]) => `<label><span>${name}</span><select data-k="${k}"><option value="on">${on}</option><option value="off">${off}</option></select></label>`).join('')}
     <div class="t-sub">Everything else</div>
-    <label><span>Other Tessariels</span><select data-k="heroes"><option value="auto">As many as the graphics allow</option><option value="few">A few</option><option value="off">None</option></select></label>
+    <label><span>Other Tessariels</span><select data-k="heroes"><option value="auto">All of them (16)</option><option value="few">A few</option><option value="off">None</option></select></label>
     <label><span>Frame rate readout</span><select data-k="perf"><option value="off">Off</option><option value="on">On</option></select></label>
     <label><span>Game files</span><select data-k="keep"><option value="yes">Kept on this device</option><option value="no">Downloaded each time</option><option value="ask" hidden>Not asked yet</option></select></label>
   </div>
@@ -231,7 +232,8 @@ export class Title {
 
   async decode(url) {
     if (!this.ctx) return null;
-    try { const r = await fetch(url); return await this.ctx.decodeAudioData(await r.arrayBuffer()); } catch (e) { console.warn('title audio', url, e); return null; }
+    // (One channel on a phone, src/audio.js slim: the song decoded is tens of MB, held while the game loads under it.)
+    try { const r = await fetch(url); return slim(this.ctx, await this.ctx.decodeAudioData(await r.arrayBuffer())); } catch (e) { console.warn('title audio', url, e); return null; }
   }
 
   // ------------------------------------------------------------------ the screen

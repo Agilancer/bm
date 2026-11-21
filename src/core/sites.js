@@ -32,8 +32,10 @@ const TAU = Math.PI * 2;
 // World metres to one repeat of each kind of painting, across and up.
 // (The four from the catacombs, tools/village/more_stone.py, hold three of their painting across and two up: a third number is
 // how far one repeat goes on a floor's other way, where a floor would otherwise stretch it.)
+// (course: its stones half again as big as they were, about 40 cm a course; at 29 they read as small brick laid like wallpaper
+// on a keep, the critics.)
 const TILE = { wall: [7, 4.2], roof: [4, 2.3], stone: [3, 1.7], rubble: [3, 1.7], wood: [2.4, 1.4], door: [1.8, 2.6], cloth: [2, 2],
-  block: [8.1, 4.1, 5.4], course: [8.1, 4.1, 5.4], ashlar: [8.4, 4.2, 5.6], flags: [8.1, 4.2, 5.4] };
+  block: [8.1, 4.1, 5.4], course: [11.3, 5.7, 7.6], ashlar: [8.4, 4.2, 5.6], flags: [8.1, 4.2, 5.4] };
 export const tileOf = (layer) => {
   const n = layer.replace(/^(dark|pale|frost|mire|spore|void|slate|blood|moss|umber|soot|eve|char|royal|forest):/, '');
   if (n.startsWith('ph_')) return PH_TILE[n] || TILE.stone;   // (Phobos's own: tools/phobos/textures/wire_layers.py)
@@ -104,7 +106,15 @@ export class Kit {
       const w = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]), h = Math.hypot(d[0] - a[0], d[1] - a[1], d[2] - a[2]);
       // (Horizontal faces take world x and z, so floors and tops run on across their joins.)
       if (Math.abs(nrm[1]) > 0.9) { const td = tileOf(layer)[2] || tw; uvs = [a, b, c, d].map((q) => [q[0] / tw, q[2] / td]); }
-      else { const u0 = (a[0] + a[2]) / tw * 0.37; uvs = [[u0, a[1] / -th], [u0 + w / tw, b[1] / -th], [u0 + w / tw, (b[1] + h) / -th], [u0, (a[1] + h) / -th]]; }
+      else {
+        // (Across a wall, u runs on by the metre along its line, so the boxes a long wall is built of meet with no seam in
+        // the stone: each started its own way, and a curtain read as panels with a light line between every eight metres.
+        // Wrapped every 512 repeats, which is kilometres, to keep the number small enough to be exact on the GPU.)
+        const hl = Math.hypot(b[0] - a[0], b[2] - a[2]), span = tw * 512;
+        const along = hl > 1e-3 ? (a[0] * (b[0] - a[0]) + a[2] * (b[2] - a[2])) / hl : (a[0] + a[2]) * 0.37;
+        const u0 = (((along % span) + span) % span) / tw;
+        uvs = [[u0, a[1] / -th], [u0 + w / tw, b[1] / -th], [u0 + w / tw, (b[1] + h) / -th], [u0, (a[1] + h) / -th]];
+      }
     }
     for (const q of [a, b, c, d]) p.pos.push(q[0], q[1], q[2]);
     for (let k = 0; k < 4; k++) p.nrm.push(nrm[0], nrm[1], nrm[2]);
@@ -148,6 +158,10 @@ export class Kit {
     const sideL = o.side || layer, topL = o.top === false ? null : o.top || layer;
     const corners = [[-hx, -hz], [hx, -hz], [hx, hz], [-hx, hz]];
     for (let i = 0; i < 4; i++) {
+      // (ends: false leaves off the two ends across its x, where it's one of a run of boxes that overlap: Kit.wall.)
+      if (o.ends === false && (i === 1 || i === 3)) continue;
+      if (o.ends === 'start' && i === 1) continue;
+      if (o.ends === 'end' && i === 3) continue;
       const [ax, az] = corners[i], [bx, bz] = corners[(i + 1) % 4];
       this.quad(sideL, P(ax, 0, az), P(bx, 0, bz), P(bx, h, bz), P(ax, h, az));
     }
@@ -209,8 +223,9 @@ export class Kit {
       const nn = [[Math.cos(a), (r - r2) / h, Math.sin(a)], [Math.cos(b), (r - r2) / h, Math.sin(b)], [Math.cos(b), (r - r2) / h, Math.sin(b)], [Math.cos(a), (r - r2) / h, Math.sin(a)]];
       for (const q of pts) p.pos.push(...q);
       for (const q of nn) { const l = Math.hypot(...q); p.nrm.push(q[0] / l, q[1] / l, q[2] / l); }
-      const u = i * arc / tw;
-      p.uv.push(u, -y / th, u + arc / tw, -y / th, u + arc / tw, -(y + h) / th, u, -(y + h) / th);
+      // (A whole number of repeats round, so the stone meets itself where the drum closes: one seam down every tower.)
+      const ua = arc / tw * Math.max(1, Math.round(sides * arc / tw)) / (sides * arc / tw), u = i * ua;
+      p.uv.push(u, -y / th, u + ua, -y / th, u + ua, -(y + h) / th, u, -(y + h) / th);
       // (Wound to agree with its normals, which point out: wound the other way, the shader took every side for its back
       // seen and turned the normal round, and every drum and cone in the game was lit from its far side. A tower in the
       // sun stood dark beside a lit wall, and one in shade pale beside a dark one.)
@@ -249,7 +264,13 @@ export class Kit {
       const y = Math.min(terrainHeight(x - (bx - ax) / n / 2, z - (bz - az) / n / 2), terrainHeight(x + (bx - ax) / n / 2, z + (bz - az) / n / 2)) - 0.5;
       const top = (o.y ?? y + 0.5) + h;
       const hh = o.ruin ? h * (0.35 + 0.65 * hash2(Math.round(x), Math.round(z))) : h;
-      this.box(layer, x, y, z, len / n / 2 + 0.05, (o.y ?? y + 0.5) + hh - y, t / 2, yaw);
+      // (A whole wall's boxes overlap a little; the ends between two of them are inside the wall, and seen edge on they
+      // drew a thin dark line down it at every join, where the end met the face in one plane. Only a run's two ends, a
+      // gap's sides and a ruin's broken heights keep theirs.)
+      const gapAt = (k) => o.gap && Math.abs((k + 0.5) / n - 0.5) * len < o.gap;
+      const first = i === 0 || gapAt(i - 1), last = i === n - 1 || gapAt(i + 1);
+      const ends = o.ruin ? true : first && last ? true : first ? 'start' : last ? 'end' : false;
+      this.box(layer, x, y, z, len / n / 2 + 0.05, (o.y ?? y + 0.5) + hh - y, t / 2, yaw, { ends });
       if (o.crenel && !o.ruin) for (let k = 0; k < 2; k++) {
         const v = (k - 0.5) * len / n / 2, mx = x + Math.cos(yaw) * v, mz = z - Math.sin(yaw) * v;
         // (skip: none where the wall runs into a tower, whose room its walk goes through.)
