@@ -42,6 +42,25 @@ const SPOTS = [
   ['khel', -3620, '+2', -640, -3700, '+6', -700, 14, 16],
 ];
 
+// HOUSES=2,3,9 (with names=houses or a list that has houses in it): the town's houses by their number in village.json's
+// homes, each three-quarters on from the front at a few metres off, out of every other house, as tools/village/shots.mjs
+// stands them.
+if (process.env.HOUSES) {
+  const v = JSON.parse((await import('node:fs')).readFileSync(path.join(ROOT, 'assets/game/village.json'), 'utf8'));
+  const inHouse = (x, z) => v.footprints.some((c) => { const co = Math.cos(c.yaw), si = Math.sin(c.yaw), dx = x - c.x, dz = z - c.z; return Math.abs(dx * co - dz * si) < c.hx + 1.5 && Math.abs(dx * si + dz * co) < c.hz + 1.5; });
+  for (const n of process.env.HOUSES.split(',').map(Number)) {
+    const h = v.homes[n - 1], [mx, mz] = h.mid, size = Math.max(h.w, h.d) * h.k, base = h.yaw + 0.6, dist = size * 1.1 + 3;
+    let a = base, d = dist;
+    search: for (const sc of [1, 0.85, 1.2, 0.7]) for (const off of [0, -0.25, 0.25, -0.5, 0.5]) {
+      const x = mx + Math.sin(base + off) * dist * sc, z = mz + Math.cos(base + off) * dist * sc;
+      let ok = !inHouse(x, z);
+      for (let t = 0.15; t < 0.6 && ok; t += 0.1) ok = !inHouse(x + (mx - x) * t, z + (mz - z) * t) || Math.hypot(mx - x, mz - z) * (1 - t) < size * 0.75;
+      if (ok) { a = base + off; d = dist * sc; break search; }
+    }
+    SPOTS.push([`house${String(n).padStart(2, '0')}`, mx + Math.sin(a) * d, '+2.2', mz + Math.cos(a) * d, mx, '+3.4', mz, 11, 3]);
+  }
+}
+
 function cam(ex, ey, ez, tx, ty, tz) {
   let fx = tx - ex, fy = ty - ey, fz = tz - ez;
   const l = Math.hypot(fx, fy, fz); fx /= l; fy /= l; fz /= l;
@@ -78,7 +97,7 @@ console.log('up in', Math.round((Date.now() - t0) / 1000), 's');
 await page.evaluate(() => { bm.fixScale(1); bm.renderer.hideVM = true; bm.view.lands.cheats.noDamage = true; });
 await page.waitForTimeout(3000);
 for (const [name, ex, ey, ez, tx, ty, tz, hour, settle] of SPOTS) {
-  if (pick && !pick.includes(name)) continue;
+  if (pick && !pick.includes(name) && !(pick.includes('houses') && name.startsWith('house'))) continue;
   const c = cam(ex, Y(ey, ex, ez), ez, tx, Y(ty, tx, tz), tz);
   // (The player stands at the eye, so the land, the grass and the places round it are built; then the eye is set.)
   await page.evaluate(([x, z, cm, h]) => { bm.cmd(19, 0, x, z); bm.setTime(h); bm.setCam(cm); }, [ex, ez, c, hour]);

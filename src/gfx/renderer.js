@@ -1025,7 +1025,8 @@ export class Renderer {
       params[i * 4 + 2] = l.kind === 'wall' ? 1 : 0;
       // (w: 1 foliage, which stirs; -1 a tiled masonry, -2 a roof or boards, which Phobos takes apart so no two tiles are
       // the same and weathers, masonry the most, materials.js STATIC. Never a door, a banner or a picture laid once.)
-      params[i * 4 + 3] = /^(leaves|pine|pine_far)(_\d)?$/.test(l.name) ? 1 : /^(wall|stone)$/.test(l.kind) ? -1 : l.kind === 'roof' || (l.kind === 'wood' && !/bark/.test(l.name)) ? -2 : 0;
+      // (A roof's painting is -2.25, told from boards, so materials.js can leave every roof as it was painted.)
+      params[i * 4 + 3] = /^(leaves|pine|pine_far)(_\d)?$/.test(l.name) ? 1 : /^(wall|stone)$/.test(l.kind) ? -1 : l.kind === 'roof' ? -2.25 : l.kind === 'wood' && !/bark/.test(l.name) ? -2 : 0;
     });
     // (The PH2 pack's from entry 64: its relief by what it is; its stained glass lit by the day behind it, its lit
     // windows by a lamp at night. materials.js STATIC.)
