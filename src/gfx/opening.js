@@ -779,7 +779,7 @@ class OpeningStage {
     this.yaw = 0; this.last = null;
     // The shield she rides down the road when you ride yours: an old tree on green, nobody's colours (never a V or a T).
     this.herBoard = { sword: HER_BOARD, mat: new Float32Array(16), slot: -1, model: null };
-    r.sword(HER_BOARD);   // (Loaded now, so it's there the moment she jumps on.)
+    r.sword(HER_BOARD, true);   // (Loaded now, so it's there the moment she jumps on; and kept, as she may not for a while.)
     // The lights: the portal, the book, her glamour (a key and a rim), the candles, the cauldron.
     const L = (c, r, i, flicker) => ({ p: [...PARKED], r, c, i, flicker });
     this.lights = {

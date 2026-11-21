@@ -2921,6 +2921,88 @@ reads as the cause only when it was.
 more on a phone. The way to make it nothing would be targets made once at the full size and drawn into smaller, which
 reaches into every pass; with the views made fresh, the step is small beside what it's spared.
 
+#### What a long quest kept
+
+The 25-minute run above counted the game's own asks of the GPU too, and those grew as it travelled: about 80 MB.
+Followed for 40 minutes of auto-play questing, with each thing on the GPU traced to what made it, they grew 190 MB
+(textures 255 to 318 MB, buffers 301 to 428), and were still rising at the end. About 100 MB of it was loot:
+- Every weapon, shield, staff and piece of gear that ever fell was loaded onto the GPU the first time it lay on the
+  ground, and kept there for good. Picking it up, selling it or walking away let none of it go.
+- Each was loaded whole: for the ground, and for the hand and the raised arm as well, though most loot is never held.
+  The hand's models take about three times the GPU memory of the one on the ground.
+
+The fix is in `src/gfx/renderer.js` (`sword`, `trimSwords`, `armSword`):
+- **Let go when no longer asked for.** The game asks for a drop's model every frame while it's in the list of what lies
+  on the ground (up to 64, anywhere in the land, not only what's on screen), so walking away still lets nothing go. What
+  is picked up, sold, cleared away, or pushed off the 64 by newer loot stops being asked for. One not asked for in 30
+  seconds is let go, but for the eight most recently asked for, kept for a quick swap back. What's worn (in either hand,
+  the board, the skull), the arms' own models and Lisandra's board are kept; one still loading is left be. What's let go
+  is destroyed two seconds later, as a frame already on its way may still draw it.
+- **The hand only when it's held.** Loot has only its ground model until a hand wants it. Equip it and its hand is made
+  then, from its file again. With the game kept on the device (the first start's question), the file is there. If not,
+  the browser's own copy is used if it still has one, however old (GitHub Pages tells the browser to keep a file only
+  ten minutes, but the game asks for its copy anyway, with `force-cache`); only with none is it downloaded again. The
+  same goes for one let go and made again.
+- **A file that failed to load is tried again**, after 5 seconds, then twice as long each time up to 2 minutes. This goes
+  for what's worn too: it's the one way something worn is let go, and it's made again at once.
+- The file is read, and its three pictures found in it, before any picture is made, and if one picture fails, those
+  already made are destroyed, so a bad file leaves nothing behind.
+
+What a player may notice: something let go and then asked for again (equipped, or dropped again) is loaded again, so it
+appears a fraction of a second late, as anything seen for the first time does. Equipping is done in the pack, which
+pauses the game, and what you put on is made while it's open, so it's there when you close it.
+
+The monsters' weapons (`src/gfx/tripo-slots.js`) were the same. Their models and skins were already let go past 10 and 12
+not in use, but the weapons they hold were kept for good, one for each new pair of monster and weapon. Now at most 16
+are kept in all (more only while more are in use at once), the longest unused let go first. And a monster that changes
+from A to B and back to A quickly no longer puts in the first A when that finishes loading late (its weapon may have
+been let go meanwhile): each change is counted, only the latest load is put in, and the others are freed.
+
+| 40 minutes of auto-play questing, emulated iPhone | Before | After |
+| --- | --- | --- |
+| Growth of the game's own GPU asks | 190 MB (textures +63, buffers +127) | 99 MB (textures +36, buffers +63) |
+| Of which loot | about 100 MB, still rising | about 18 MB, level from 20 to 40 minutes: 30 kept, with 49 to 54 lying about |
+
+That is the growth about halved, not stopped. Two auto-play runs don't go the same way, so the monsters' share differs
+between them (about 35 MB in the first, 50 in the second); their models, skins and now weapons are each capped. The rest
+of the 99 MB is the party's looks (one each, made again when their gear changes), the delve under the player (one at a
+time) and the delves' fires (made once): each is bounded, but 40 minutes isn't long enough to show them level off. The
+party's own props (`src/gfx/herolook.js`, a hero's weapon in a new colour) are still kept for good: about 2 MB in the 40
+minutes.
+
+Auto-play doesn't go the same way twice, and in the second 40-minute run the page process (the browser's own count of
+the page, which an iPhone also holds to a limit) ended higher than in the first (1462 MB against 1142). So the same
+thing was done by script on both, round after round: 12 weapons never dropped before laid down around the player, 8
+seconds, cleared away, one of them equipped, 40 seconds. Memory was read after a forced collection, every 4 rounds, on
+an emulated iPhone. From round 9 on the 107 weapons come round again, so on this branch nearly each is one let go and
+made again: far more loot let go and made again than a quest asks for. (It drops only weapons: the monsters' weapons,
+let go now too, aren't in it.)
+
+| | `main`, 12 rounds | This branch, 12 rounds | This branch, 24 rounds |
+| --- | --- | --- | --- |
+| Items kept at the end (the arms', shield and staff with them) | 110 | 12 | 12 |
+| Growth of the game's GPU asks | +218 MB (textures +111, buffers +107) | +13 MB | +11 MB |
+| GPU process, every 4 rounds (MB) | 1599, 1751, 1781 | 1471, 1471, 1476 | 1468, 1474, 1472, 1470, 1470, 1469 |
+| Page process, every 4 rounds (MB) | 797, 860, 877 | 762, 770, 849 | 787, 810, 854, 740, 729, 778 |
+| GPU errors | 0 | 0 | 0 |
+
+The page process wanders, by as much as 125 MB between readings. In 12 rounds it rose on both, by about the same (80 MB
+on `main`, 87 on the branch), the branch's a little lower at each reading, which is within that wander. Over 24 rounds
+(288 weapons dropped, most of them let go and made again) it didn't climb: 787 at the fourth round, 778 at the last. So
+making things again leaves nothing behind in the page that shows at this scale (a whole file kept each time would be
+some 10 MB a round; under half a megabyte a weapon wouldn't show), and the second long run's higher page doesn't look
+like the weapons' letting go. What it was, two runs that don't go the same way can't say.
+
+`node --test tests/sword-trim.test.mjs` (7 tests) holds the letting go, the trying again, the hand's waiting, the
+monsters' cap and the A-to-B-to-A guard. In the game (an emulated iPhone, with the shield raised to bring the weapon
+out, as it's put away outside a fight): the starting staff, a staff never seen before equipped from nothing, and a sword
+with the shield up all look as on `main`. Twelve weapons dropped and then cleared away left 13 not asked for (the
+riptide staff, equipped earlier, too); 45 seconds on, 5 had been let go and the 8 newest kept; one of them equipped
+again was made again; no GPU errors came of any of it. A staff let go and then equipped with the game paused, as the
+pack pauses it, was made again and ready within 3 seconds while the old one was still in the hand, and was in the hand
+0.6 seconds after the game went on. On a phone the pictures are packed (`src/gfx/astc.js`), so loot
+costs less there in textures and the same in buffers. **Not run on an iPhone.**
+
 ### What has and hasn't been tested
 
 The owner's first session on a phone found the frame rate too low, which led to the phone tier below. **That rework hasn't
