@@ -17,8 +17,8 @@ export const FIRST_VISIT_RULES = {
   the_door_east: { needs: 'bed_and_bell', due: 'door_due', door: 'sill', steps: [{ talk: 'fv_wenna', say: 'Lisandra sent me. Through a door of candles.', end: true }], gold: 30, xp: 60 },
   // Wenna's four: the hunts on the plain first, straight after the long look at the city from the Sill, then the walk down
   // into it, and the Redoubt last.
-  fv_gibbet_field: { needs: 'the_door_east', steps: [{ kill: 'lair:sill_gibbets', n: 5 }, { back: true, say: 'The hanged are down again. All of them.' }], gold: 45, xp: 110 },
-  fv_carrion: { needs: 'the_door_east', steps: [{ kill: 'lair:sill_carrion', n: 3 }, { back: true, say: 'The birds under the Sill are dead.' }], gold: 45, xp: 80 },
+  fv_gibbet_field: { needs: 'the_door_east', steps: [{ kill: 'lair:sill_gibbets', n: 8 }, { back: true, say: 'The hanged are down again. All of them.' }], gold: 45, xp: 110 },
+  fv_carrion: { needs: 'the_door_east', steps: [{ kill: 'lair:sill_carrion', n: 5 }, { back: true, say: 'The birds under the Sill are dead.' }], gold: 45, xp: 80 },
   fv_the_way_down: { needs: 'the_door_east', steps: [{ visit: ['ph:barbican', 'ph:market'] }, { talk: 'ph_penny', say: 'Wenna Coyle of the Sill says her lamps are lit.', end: true }], gold: 40, xp: 100 },
   fv_the_redoubt: { needs: ['fv_gibbet_field', 'fv_carrion'], steps: [{ enter: 'redoubt' }, { boss: 'rothgar' }, { back: true, say: 'The Red Hand is dead. His Redoubt is broken.' }], gold: 120, xp: 200, item: 'staff', named: "Wenna's Lamp-Iron", seed: 0xf1a5e },
   // And home: Wenna opens Lisandra's door back, and you tell Lisandra.

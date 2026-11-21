@@ -9,8 +9,8 @@ full of Velscour's Knights and other things worth seeing early. Then you go back
 | Quest | Giver | What | Level | Pays |
 |---|---|---|---|---|
 | A Door in the East (`the_door_east`) | Lisandra | Once Bram's first errand (`bed_and_bell`) is done, she opens a **door of candles** (violet fade, `src/ui/folk.js lisDoor`) and you, with your party, are set down on the Sill above Phobos, in the morning (out of the dark or the evening, the candles burn all night). The Sill's seal wakes, so you can travel back. Talk to Wenna. | 1 | 30 g, 60 xp |
-| The Gibbet Field (`fv_gibbet_field`) | Wenna | Put down the five hanged debtors walking under the gibbets on the plain (lair `sill_gibbets`, level 3, new `gibbets` lair dress: the hanged in the cages, the fallen ones' dead beside them). | 3 | 45 g, 110 xp |
-| Carrion on the Sill (`fv_carrion`) | Wenna | Kill three carrion birds (lair `sill_carrion`, now level 4, was 20; nests in the perches, a picked body under them). | 3 | 45 g, 80 xp |
+| The Gibbet Field (`fv_gibbet_field`) | Wenna | Put down the eight hanged debtors walking under the gibbets on the plain (lair `sill_gibbets`, level 3, new `gibbets` lair dress: the hanged in the cages, the fallen ones' dead beside them). | 3 | 45 g, 110 xp |
+| Carrion on the Sill (`fv_carrion`) | Wenna | Kill five carrion birds (lair `sill_carrion`, now level 4, was 20; nests in the perches, a picked body under them). | 3 | 45 g, 80 xp |
 | The Way Down (`fv_the_way_down`) | Wenna Coyle | Walk in through the Drawbridge Gate and the Barbican to the Chainmarket (overheard lines on the way), then find Fennick Lowe of the Pennyless. | 3 | 40 g, 100 xp |
 | The Redoubt under the Sill (`fv_the_redoubt`) | Wenna (after the Gibbet Field and the carrion: the last of hers) | Go into **the Redoubt under the Sill**, past his two gate-wards (lair `redoubt_gate`), and kill Knight-Commander Rothgar. | 4 | 120 g, 200 xp, staff "Wenna's Lamp-Iron" |
 | The Candle Door (`fv_home`) | Wenna | She opens Lisandra's door back; you're set down a stride from Lisandra in Bellmourn and tell her what you saw. | 4 | 60 g, 80 xp, a scroll |
@@ -175,3 +175,16 @@ uses where she waits: the Long Road's end, `routeAt(ESCORT_LEN)` from `src/core/
   back.
 - `tools/dungeon/check.mjs` fails on the Iron Barracks, on main too, so the failure isn't from this work.
 - In a git worktree, `tests/touch-hud.test.mjs`'s spec.json check fails on CRLF line endings. That's an old trap.
+- The critics never approved. Round 1: 6/6/6. Round 2: 6.5/7/6.5. Round 3: 7/7.5/7. Round 4's fixes went in without a
+  fourth review, on the owner's word to finish. Left from their lists:
+  - the forge's plate racks still read as buckets;
+  - the Pens' cells read as a railing, and their floor shackles as pans;
+  - the Hall of Harness's stands are a drum and a box on a post;
+  - Rothgar is the slim possessed knight with a glaive (his calls now say glaive);
+  - no fill light on bodies down in the dark;
+  - the landing ring is small, and Wenna's lantern post isn't at it;
+  - the lettered signs on The Way Down (older Phobos work);
+  - a pack full at the reward, and no trader on the Sill.
+- Rothgar's banner: a standard (pole, flag and iron socket) rises beside its bearer when the fight turns
+  (`src/core/delve-props-rd.js standard`, scenery `rd_banner_up`/`rd_banner_down`). A second bar, "His banner", sits under
+  his (`DELVE.BARS`, `src/ui/party.js`), and the call on the ticker begins "CUT DOWN HIS BANNER!".

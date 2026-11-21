@@ -73,6 +73,7 @@ export class PartyUI {
       #bossFrame { position: fixed; left: 50%; top: 52px; transform: translateX(-50%); z-index: 6; width: min(560px, 82vw); display: none; pointer-events: none; font-family: Cinzel, Georgia, serif; text-align: center; }
       #bossFrame .bn { font-size: 17px; color: #f1d68a; letter-spacing: .08em; text-shadow: 0 0 4px #000, 0 1px 2px #000; }
       #bossFrame .bb { height: 12px; margin-top: 4px; background: rgba(0,0,0,.7); border: 1px solid rgba(140,115,68,.7); border-radius: 2px; overflow: hidden; }
+      #bossFrame .bs { font-size: 13px; margin-top: 7px; color: #e9a58f; letter-spacing: .1em; text-shadow: 0 0 4px #000, 0 1px 2px #000; }
       #bossFrame .bb i { display: block; height: 100%; background: linear-gradient(#d0402c, #7c1a10); transition: width .2s; }
       #raidWarn { position: fixed; left: 50%; top: 22%; transform: translateX(-50%); z-index: 7; width: min(760px, 92vw); text-align: center; pointer-events: none;
         font: 700 22px/1.3 Georgia, serif; color: #ffcf6a; text-shadow: 0 0 6px #000, 0 2px 3px #000, 0 0 14px rgba(120,30,0,.8); }
@@ -588,7 +589,8 @@ export class PartyUI {
     const b = BOSSES[i];
     if (!b) return;
     this.boss = { key: b.key, ids: ids.filter((x) => x >= 0), w: [], bars: [] };
-    this.bossEl.innerHTML = `<div class="bn">${esc(b.name)}</div>` + this.boss.ids.map(() => '<div class="bb"><i></i></div>').join('');
+    // (A second bar under his with its own name, where the boss has one: Rothgar's banner. src/core/delve-redoubt.js)
+    this.bossEl.innerHTML = `<div class="bn">${esc(b.name)}</div>` + this.boss.ids.map((_, k) => (k && b.second ? `<div class="bs">${esc(b.second)}</div>` : '') + '<div class="bb"><i></i></div>').join('');
     this.boss.bars = [...this.bossEl.querySelectorAll('.bb i')];
     this.bossEl.style.display = 'block';
   }
@@ -613,6 +615,7 @@ export class PartyUI {
       case DELVE.CLEAR: this.hideBoss(); this.warn(d.words.clear, 7); this.clearsBy[d.key] = (this.clearsBy[d.key] || 0) + 1; if (d.key === 'warrens') this.clears++; this.cleared?.(d); break;
       case DELVE.WARN: this.call(a | 0); break;
       case DELVE.BOSS: this.showBoss(a | 0, [b | 0, c | 0]); this.warn(`${BOSSES[a | 0]?.name || ''}!`, 3); break;
+      case DELVE.BARS: this.showBoss(a | 0, [b | 0, c | 0]); break;
       case DELVE.BOSS_DOWN: this.hideBoss(); this.warn(`${BOSSES[a | 0]?.name || 'The boss'} is dead!`, 5); this.bossDown?.(BOSSES[a | 0]?.key); break;
       case DELVE.WIPE: this.wipes = (this.wipes || 0) + 1; this.hideBoss(); this.ticker.clear(); this.warn(d.words.wipe, 5); break;
       default: break;

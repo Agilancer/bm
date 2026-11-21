@@ -1376,7 +1376,8 @@ export const PROPS = {
     if (p.shaft) {
       // (A slot, long and narrow, square in a reveal of dark stone down into the room: a round one read as a white oval, a
       // lamp or a hole in the texture. The critics.)
-      const ax = r * 0.5, az = r * 1.15, lip = 0.35, deep = 2.2;
+      // (deep: the reveal down from the roof, so from across the room the slot's lost in its stone and reads as a hole.)
+      const ax = r * 0.5, az = r * 1.15, lip = 0.35, deep = 3.6;
       K.box('slate:flame', x, top - 0.12, z, ax, 0.1, az, 0, NO);
       for (const sd of [-1, 1]) {
         K.box('dark:stone', x + sd * (ax + lip), top - deep, z, lip, deep, az + lip * 2, 0, NO);

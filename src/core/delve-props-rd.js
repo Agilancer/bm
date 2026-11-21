@@ -51,6 +51,27 @@ export const PROPS_RD = {
     for (let k = 1; k <= 4; k++) { const t = k / 4.4, bx = hinge[0] + (out[0] - hinge[0]) * t, bz = hinge[2] + (out[2] - hinge[2]) * t; rod(K, 'iron', bx, y + 0.15, bz, bx, y + h - 0.12, bz, 0.024); }
     if (p.held) debtor(K, F, -w + 0.3, p.held);
   },
+  // His standard, set up before his seat when the fight turns (src/sim/redoubt-fights.js rothgar): a tall black pole in an
+  // iron socket, his skull banner hung down its upper length out to one side, a spike at its head; and, once it's cut down,
+  // the pole across the floor with the banner trailing off it. Only the socket's there till then (scenery that comes:
+  // Kit.group, `${tag}_banner_up` and `_down`). No bar across its head: a pole and a bar read as a T (the V and T rule).
+  standard(K, d, p, x, y, z) {
+    const yaw = p.yaw || 0, F = frame(x, y, z, yaw), H = p.h || 7.6, fw = 2.0, fh = 3.0, n = [Math.sin(yaw), 0, Math.cos(yaw)];
+    K.drum('iron', x, y, z, 0.34, 0.32, 8, { r2: 0.24, collide: false });
+    K.group(`${d.tag}_banner_up`, false, () => {
+      K.drum('dark:wood', x, y + 0.3, z, 0.08, H - 0.3, 6, { collide: false });
+      K.cone('iron', x, y + H, z, 0.12, 0.6, 6);
+      const top = H - 0.3, a = F(0.1, top, 0), b = F(0.1 + fw, top - 0.15, 0), c = F(0.1 + fw, top - fh - 0.35, 0), e = F(0.1, top - fh, 0);
+      // (Both faces painted, each the right way round from its own side.)
+      K.quad('p2_banner_skull', a, b, c, e, n, [[0, 0], [1, 0], [1, 1], [0, 1]]);
+      K.quad('p2_banner_skull', b, a, e, c, n.map((v) => -v), [[0, 0], [1, 0], [1, 1], [0, 1]]);
+    });
+    K.group(`${d.tag}_banner_down`, false, () => {
+      const P = (t, s, h) => F(-0.51 * t + 0.86 * s, h, 0.86 * t + 0.51 * s);
+      bar(K, 'dark:wood', P(0.3, 0, 0.12), P(H - 0.3, 0, 0.1), 0.08);
+      K.quad('p2_banner_skull', P(H - 3.8, 0.1, 0.05), P(H - 3.6, 2.1, 0.06), P(H - 0.9, 2.3, 0.04), P(H - 0.6, 0.1, 0.05), [0, 1, 0], [[0, 0], [1, 0], [1, 1], [0, 1]]);
+    });
+  },
   // A trough of black water for the quench: dark stone, long.
   trough(K, d, p, x, y, z) {
     K.box('dark:block', x, y, z, p.hx, 0.75, p.hz, p.yaw || 0, NO);

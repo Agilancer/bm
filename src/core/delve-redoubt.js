@@ -34,8 +34,10 @@ const rooms = [
   R('rd_forge', 'the Red Forge', -54, -104, 14, 14, 0, 11, { rock: 'p2_fireback', foot: 'soot:block', ground: 'p2_ash_street', banners: 0, fires: 14 }),
   R('rd_chapel', 'the Red Chapel', 54, -116, 12, 16, 0, 14, { rock: 'p2_keep_basalt', foot: 'dark:course', ground: 'p2_bone_joint_flags', banners: 10, cloth: 'p2_banner_skull', fires: 10 }),
   // (Up the cliff inside: its floor 0 at the court's end, 6 at the hall's.)
-  R('rd_stair', 'the Watch Stair', -6, -150, 4, 14, 3, 9, { tz: -6 / 28, fires: 9, rock: 'p2_curtain_granite', foot: 'dark:block' }),
-  R('rd_hall', "the Commander's Hall", 0, -196, 22, 18, 6, 16, { rock: 'p2_keep_basalt', foot: 'dark:course', ground: 'p2_bone_joint_flags', banners: 18, cloth: 'p2_banner_skull', fires: 13 }),
+  // (No standing fires on the stair: two strides in from walls four metres off, they stood on the tread. Its cressets light it.)
+  R('rd_stair', 'the Watch Stair', -6, -150, 4, 14, 3, 9, { tz: -6 / 28, fires: 0, rock: 'p2_curtain_granite', foot: 'dark:block' }),
+  // (None before his seat: the floor where his banner's planted, BANNER_AT, and the shaft of light, are the fight's.)
+  R('rd_hall', "the Commander's Hall", 0, -196, 22, 18, 6, 16, { rock: 'p2_keep_basalt', foot: 'dark:course', ground: 'p2_bone_joint_flags', banners: 18, cloth: 'p2_banner_skull', fires: 13, noFire: [[0, -207, 9]] }),
 ];
 
 // The ways between them, wide enough for his men in pairs. (The Toll Hall's west way north of its middle, its east way south
@@ -58,6 +60,9 @@ export const PEN_DOORS = PEN_CELLS.map((x) => [x, -36.4]);
 export const HARNESS_ROWS = [[44, -50], [44, -60], [44, -70], [64, -50], [64, -60], [64, -70]];
 // The Commander's banner, set in its socket before his seat (redoubt-fights.js rothgar).
 export const BANNER_AT = [0, -206];
+// (And the standard itself, beside its bearer: the bearer alone, a mannequin in the dark, read as one more knight and not
+// as a banner. Its flag hangs out over the bearer's head. The critics.)
+export const STANDARD_AT = [-1.3, -205.6];
 
 const props = [];
 {
@@ -135,13 +140,12 @@ const props = [];
   for (const z of [-106, -111, -116]) { add('pew', 48, z, { hx: 3.2, hz: 0.5 }); add('pew', 60, z, { hx: 3.2, hz: 0.5 }); }
   add('circle', 54, -123, { r: 2 });
   add('chandelier', 54, -114, { up: 9 });
-  // ---- the Watch Stair: braziers at the foot and the head.
-  add('brazier', -9, -138); add('brazier', -3, -162);
   // ---- the Commander's Hall: his war table with Castle Velscour carved on it, his seat on its dais, his banners on the
   // columns, the cliff cut through high in the south wall (the light down from it), chandeliers.
   add('maptable', -11, -191, { hx: 4.2, hz: 2.2 });
   // (Made for him, 3.5 m: twice a man's, up two steps on a plinth. A man's seat on a half-metre dais read small. The critics.)
   add('stonethrone', 0, -211.2, { yaw: 0, cloth: 'cloth_red', s: 2, plinth: true });
+  add('standard', STANDARD_AT[0], STANDARD_AT[1]);
   for (const z of [-184, -198]) { add('column', -14, z, { r: 1.4, solid: true }); add('column', 14, z, { r: 1.4, solid: true }); }
   // (The light down on the dais's foot, where his banner's planted at the turn of the fight: BANNER_AT.)
   add('daylight', 0, -205.5, { r: 3, shaft: true });
@@ -177,7 +181,7 @@ const packs = [
 const bosses = [
   { key: 'penwarden', room: 'rd_pens', name: 'The Pen-Warden', models: ['rd_penwarden'], pal: ['Rust'], hp: 1500, damage: 15, reach: 3.0, loot: 8 },
   { key: 'carrow', room: 'rd_harness', name: 'Sir Oswin Carrow, Master of Harness', models: ['rd_carrow'], pal: ['Oxblood'], hp: 1700, damage: 16, reach: 3.2, loot: 8 },
-  { key: 'rothgar', room: 'rd_hall', name: 'Knight-Commander Rothgar, the Red Hand', models: ['rd_rothgar'], pal: ['Oxblood'], hp: 2200, damage: 17, reach: 3.6, loot: 0, needs: ['penwarden', 'carrow'], shut: 'rot_shut' },
+  { key: 'rothgar', room: 'rd_hall', name: 'Knight-Commander Rothgar, the Red Hand', second: 'His banner', models: ['rd_rothgar'], pal: ['Oxblood'], hp: 2200, damage: 17, reach: 3.6, loot: 0, needs: ['penwarden', 'carrow'], shut: 'rot_shut' },
 ];
 const warnings = {
   pen_open: 'The Pen-Warden. He lets his debtors out of their cages to stand between you: cut them down, or they drag at you. When he swings his keys, get out of the ring.',
@@ -196,12 +200,12 @@ const warnings = {
   car_enrage: 'Sir Oswin is enraged!',
   rot_shut: "The Commander's Hall is shut. Its doors open only to the deaths of his two: the Pen-Warden and Sir Oswin Carrow.",
   rot_open: 'Knight-Commander Rothgar, the Red Hand. He calls his guard to him; at the turn of the fight an empty harness plants his banner before his seat, and while it stands, he mends. Cut it down.',
-  rot_cleave: 'The Red Hand sweeps his blade! Out of the arc.',
+  rot_cleave: 'The Red Hand sweeps his glaive! Out of the arc.',
   rot_charge: 'He charges! Out of the line.',
-  rot_quake: 'He drives his blade into the floor! Jump the ring.',
+  rot_quake: 'He drives his glaive into the floor! Jump the ring.',
   rot_brand: 'He brands the floor with his fire! Out of the circles.',
   rot_guard: 'His guard comes to him!',
-  rot_banner: 'HIS BANNER IS PLANTED! While its bearer stands, he mends: cut it down!',
+  rot_banner: 'CUT DOWN HIS BANNER! It stands before his seat, and while its bearer stands, he mends.',
   rot_fallen: 'His banner falls! He mends no more.',
   rot_turn: 'The Red Hand turns on you! Keep moving.',
   rot_enrage: 'Knight-Commander Rothgar is enraged!',

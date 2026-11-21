@@ -137,7 +137,9 @@ const SWORD_RETRY = 5000, SWORD_RETRY_MAX = 120000;
 // face and radius.
 const SWIRL = { dungeon: [0, 0.37, 0.3, -2], ground: [0, 0, 0.267, -3] };
 // A delve whose portal out in the land burns red (portalHue 'ember': the Redoubt under the Sill, his), not the cold blue.
-const EMBER = new Set(DELVES.filter((d) => d.portalHue === 'ember').map((d) => `${d.tag}_portal`));
+// (Its ways out inside too, `_in` by the way in and `_out` down in his hall: blue there, after a red one in, read as somebody
+// else's door. The critics.)
+const EMBER = new Set(DELVES.filter((d) => d.portalHue === 'ember').flatMap((d) => [`${d.tag}_portal`, `${d.tag}_in`, `${d.tag}_out`]));
 const MOTES = { dungeon: { mid: 0.37, rim: -0.17, deck: 0.107 }, ground: { face: 0.086, r: 0.267 } };
 // A PC's far bodies (addLod, bodyDetail): the coarse mesh's cell in metres, and how much of a pixel a cell must have shrunk
 // to before that mesh is drawn. At 4.5 cm it keeps 95% or more of a body's outline (a fifth of the triangles); a coarser
@@ -754,6 +756,16 @@ export class Renderer {
       { binding: 5, resource: { buffer: this.roadIdx } },
       { binding: 6, resource: { buffer: this.roadSeg } },
     ] });
+  }
+
+  // Whether the land round (x, z) is laid and drawn: its grid, the fine ground and the city's near cells. After a long step
+  // (Lisandra's door, nine kilometres) the old land is drawn round where you were for some seconds, and you stand on white:
+  // her door's fade and the first sight of Phobos wait on this. (src/ui/folk.js lisDoor, src/ui/firstsight.js.)
+  landReady(x, z) {
+    if (this.landBusy) return false;
+    const at = this.landAt, here = this.landHere, near = Math.abs(x) < 700 && Math.abs(z) < 700;
+    const far = near ? at[0] !== 0 || at[1] !== 0 : Math.hypot(x - at[0], z - at[1]) >= FOLLOW_AT;
+    return !far && !!here && Math.max(Math.abs(x - here[0]), Math.abs(z - here[1])) <= HERE_STEP * 1.5 && !this.phobosNear?.waiting;
   }
 
   // Out in the countries the land's grid and the pines are laid again round you, a few hundred metres at a time, in the pool's
@@ -3361,7 +3373,7 @@ export class Renderer {
       }
     }
     for (const g of drawn) {
-      let model = g.openingModel ?? g.mesh ?? (g.portal ? this.portalModels?.[g.off ? `${g.portal}_off` : g.portal] : g.door ? this.doorModels?.[g.piece] : g.bell ? this.bellModels?.[g.piece] : g.ware ? this.ware(g.ware) : g.piece ? this.chestModels?.[g.piece] : g.coins ? this.coins() : g.stuff ? this.stuff(g.stuff) : g.gem ? this.gem(g.gem) : this.sword(g.sword).lying);
+      let model = g.openingModel ?? g.mesh ?? (g.portal ? this.portalModels?.[g.off ? `${g.portal.replace('_ember', '')}_off` : g.portal] : g.door ? this.doorModels?.[g.piece] : g.bell ? this.bellModels?.[g.piece] : g.ware ? this.ware(g.ware) : g.piece ? this.chestModels?.[g.piece] : g.coins ? this.coins() : g.stuff ? this.stuff(g.stuff) : g.gem ? this.gem(g.gem) : this.sword(g.sword).lying);
       if (model && g.glow) model = this.tinted(model, g.glow, g.glowK ?? 1);
       g.model = model;
       const k = g.batch ? g.n : 1;

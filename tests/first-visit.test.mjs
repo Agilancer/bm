@@ -129,3 +129,18 @@ test('each first-visit quest can be taken, walked through as the game reports it
     }
   }
 });
+
+test("the visit's kills don't count as Bellmourn's woods, so Corran's pines are still to do back home", () => {
+  for (const l of LAIRS.filter((q) => ['sill_gibbets', 'sill_carrion', 'redoubt_gate'].includes(q.key))) {
+    assert.ok(!areaAt('woods', l.x, terrainHeight(l.x, l.z), l.z), `${l.key} is not the woods`);
+  }
+  assert.ok(!areaAt('woods', SILL_DOOR.x, terrainHeight(SILL_DOOR.x, SILL_DOOR.z), SILL_DOOR.z), 'the Sill is not the woods');
+  // (The woods the pines quest and auto-play's grinding mean, outside Bellmourn: still the woods.)
+  assert.ok(areaAt('woods', -45, terrainHeight(-45, 150), 150), 'the pines by Bellmourn are the woods');
+  const q = book();
+  q.begin('pines');
+  for (const l of LAIRS.filter((k) => k.key === 'sill_gibbets')) for (let i = 0; i < 5; i++) q.kill(l.x, terrainHeight(l.x, l.z), l.z, 0, 'The Possessed');
+  assert.equal(q.q.pines.n, 0, 'five kills on the Sill move nothing');
+  q.kill(-45, terrainHeight(-45, 150), 150, 0, 'The Possessed');
+  assert.equal(q.q.pines.n, 1, 'one in the pines does');
+});

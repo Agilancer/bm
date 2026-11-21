@@ -53,16 +53,19 @@ export function dressLairs(K, seals = []) {
     const R = Math.max(3, l.r);
 
     // ---- the pieces
-    // One of his hanged debtors, in rags: hunched in a gibbet's cage at (x, y, z), facing a; or lying on the ground at (x, z),
+    // One of his hanged debtors, in rags: hanging from a gibbet's arm at (x, top, z), facing a; or lying on the ground at (x, z),
     // along a, spilled from a fallen cage (or picked to the ribs by the birds: `picked`).
-    const hung = (x, y, z, a) => {
-      const c = Math.cos(a), s = Math.sin(a);
-      // (Grey and gone: in a warm cloth, lit by the sun, a hanged man in his cage read as a lamp in its glass.)
-      K.beam('dark:cloth_oat', [x, y + 0.12, z], [x + c * 0.08, y + 0.78, z + s * 0.08], 0.17);
-      K.box('pale:stone', x + c * 0.14, y + 0.8, z + s * 0.14, 0.1, 0.2, 0.11, a, { collide: false });
+    // A hanged man on a rope from a gibbet's arm, full size: head, body, arms down and legs hanging, his feet a man's height
+    // off the grass. (top: the arm's underside.) In a cage a metre high he read as nothing at forty metres. The critics.
+    const hanged = (x, top, z, a) => {
+      const c = Math.cos(a), s = Math.sin(a), hy = top - 0.95;
+      K.beam('dark:wood', [x, top, z], [x, hy + 0.26, z], 0.028);
+      K.box('pale:stone', x + c * 0.03, hy, z + s * 0.03, 0.1, 0.25, 0.11, a + 0.3, { collide: false });
+      K.beam('dark:cloth_oat', [x, hy - 0.02, z], [x + c * 0.05, hy - 0.72, z + s * 0.05], 0.19);
       for (const sd of [-1, 1]) {
-        K.beam('dark:cloth_oat', [x - s * sd * 0.09, y + 0.14, z + c * sd * 0.09], [x - s * sd * 0.12 + c * 0.05, y - 0.42, z + c * sd * 0.12 + s * 0.05], 0.06);
-        K.beam('pale:stone', [x - s * sd * 0.2, y + 0.7, z + c * sd * 0.2], [x - s * sd * 0.24 + c * 0.1, y + 0.2, z + c * sd * 0.24 + s * 0.1], 0.04);
+        K.beam('dark:cloth_oat', [x - s * sd * 0.1, hy - 0.66, z + c * sd * 0.1], [x - s * sd * 0.08 + c * 0.06, hy - 1.56, z + c * sd * 0.08 + s * 0.06], 0.072);
+        K.beam('dark:cloth_oat', [x - s * sd * 0.21, hy - 0.06, z + c * sd * 0.21], [x - s * sd * 0.23, hy - 0.62, z + c * sd * 0.23], 0.05);
+        K.beam('pale:stone', [x - s * sd * 0.23, hy - 0.62, z + c * sd * 0.23], [x - s * sd * 0.23, hy - 0.76, z + c * sd * 0.23], 0.04);
       }
     };
     const body = (x, z, a, picked) => {
@@ -201,10 +204,10 @@ export function dressLairs(K, seals = []) {
         K.beam('dark:wood', [x, y + hh - 0.15, z], [ax, y + hh - 0.05, az], 0.12);
         K.beam('dark:wood', [x + Math.cos(a) * 0.1, y + hh - 1.05, z + Math.sin(a) * 0.1], [x + Math.cos(a) * 0.8, y + hh - 0.12, z + Math.sin(a) * 0.8], 0.07);
         if (h(i + 14) > 0.3) {
-          K.beam('dark:wood', [ax, y + hh - 0.1, az], [ax, y + hh - 0.85, az], 0.035);
-          cage(ax, y + hh - 2.0, az, 0.38, 1.15, false, i);
-          // (Who was hanged in it, slumped in the bars, the legs through its open foot. The others walk: the lair's own.)
-          hung(ax, y + hh - 2.0, az, a);
+          // (Who was hanged from it, on the rope; the cage they were put in after is down in the grass by the post. The others
+          // walk: the lair's own.)
+          hanged(ax, y + hh - 0.1, az, a);
+          cage(x - Math.cos(a) * 0.9 - 0.55, y, z - Math.sin(a) * 0.9, 0.38, 1.1, true, i);
         } else { cage(ax + 0.4 - 0.55, y, az + 0.3, 0.38, 1.1, true, i); body(ax + 0.2, az + 1.3, a + 1.2, false); }
         bones(ax + 0.3, az - 0.2, 200 + i * 7);
       }

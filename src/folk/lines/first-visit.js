@@ -87,7 +87,7 @@ export const QUESTS = {
     others: {
       fv_wenna: [
         "Lisandra? ...Of course it's Lisandra. Nobody else's door smells like that. She's alive, then. And sending children through it again.",
-        "No, don't apologise, I was a child through it too. Look. Go on, look at it. Everyone has to look, the first time.",
+        "No, don't apologise, I was a child through it too. You looked, didn't you. Everyone has to look, the first time.",
         "That's Phobos. That's his. The wall, the city, the castle, and the Keep on top of the castle, and him somewhere at the top of that. Now you know. Now. There's work, if you're staying.",
       ],
     },
@@ -134,11 +134,11 @@ export const QUESTS = {
     title: 'The Gibbet Field',
     giver: 'fv_wenna',
     giverName: 'Wenna Coyle',
-    about: "Velscour's knights hang the debtors from his gate on the plain north of the Sill, where the travellers coming down can see them. They don't stay hanged. Put them down, five of them, and go back to Wenna.",
+    about: "Velscour's knights hang the debtors from his gate on the plain north of the Sill, where the travellers coming down can see them. They don't stay hanged. Put them down, eight of them, and go back to Wenna.",
     offer: [
       "See the posts out on the plain, north of the path? Gibbets. The Red Hand hangs whoever can't pay the toll there, so the next ones down see them.",
       "They don't stay hanged. Something in his country won't let a body lie. They get down and walk, and the next ones down meet them on the way.",
-      "Put them down. Five, there's about five. I'd do it myself but I've the lamps, and I'm sixty-one, and I don't want to.",
+      "Put them down. Eight, there's about eight. I'd do it myself but I've the lamps, and I'm sixty-one, and I don't want to.",
     ],
     accept: "I'll put them down.",
     acceptLine: "Thank you. They were somebody's. Most of them still owed money, but they were somebody's.",
@@ -153,7 +153,7 @@ export const QUESTS = {
     ],
     done: [
       "Quiet. I can hear the wind on the plain again. I'd forgotten it did that.",
-      "Here. Five fewer walking. Look at the north cliff below us on your way about: there's a gate cut in it. His.",
+      "Here. Eight fewer walking. Look at the north cliff below us on your way down: there's a gate cut in it. His.",
     ],
   },
 
@@ -161,17 +161,17 @@ export const QUESTS = {
     title: 'Carrion on the Sill',
     giver: 'fv_wenna',
     giverName: 'Wenna Coyle',
-    about: "Dead birds that won't stay dead roost on the plain under the Sill, south of the path, and they come at the lamps and anyone carrying one. Kill three of them and go back to Wenna.",
+    about: "Dead birds that won't stay dead roost on the plain under the Sill, south of the path, and they come at the lamps and anyone carrying one. Kill five of them and go back to Wenna.",
     offer: [
       "The birds south of the path. Not birds. Were birds. Now they're bones with opinions, and they've a taste for lamp-oil and the people carrying it.",
-      "Three of them. Knock them out of the air and they'll stay down a while. A good while, if you do it properly.",
+      "Five of them. Knock them out of the air and they'll stay down a while. A good while, if you do it properly.",
     ],
     accept: "I'll knock them down.",
     acceptLine: "Mind their claws. They go for the eyes. Everything round here goes for the eyes.",
     decline: 'Not yet.',
     declineLine: "Mind them on your way down, then.",
     journal: [
-      "Kill three of the dead birds roosting on the plain south of the path down from the Sill.",
+      "Kill five of the dead birds roosting on the plain south of the path down from the Sill.",
       "The carrion under the Sill is dead. Go back up to Wenna.",
     ],
     progress: [

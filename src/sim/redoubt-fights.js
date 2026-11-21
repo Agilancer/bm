@@ -5,7 +5,7 @@
 //     line; and at so much of his life he opens the cages, and his debtors come at you.
 //   Sir Oswin Carrow, Master of Harness: his charge and his sweep, a stamp to jump; and at his word the empty harness on
 //     the stands down his hall gets up and walks, twice, two by two.
-//   Knight-Commander Rothgar, the Red Hand: blade, charge, quake, his fire branded on the floor; his guard comes to him; and
+//   Knight-Commander Rothgar, the Red Hand: glaive, charge, quake, his fire branded on the floor; his guard comes to him; and
 //     at the turn of the fight his banner set up before his seat, which mends him while it stands: cut it down.
 // Gone in alone (party: false), so their calls speak to one: you.
 import { MOVES } from './moves.js';
@@ -88,7 +88,7 @@ export const REDOUBT_FIGHTS = {
     },
   },
 
-  // ---- Knight-Commander Rothgar, the Red Hand: blade, charge, quake, brand, his guard, his banner ------------------------------
+  // ---- Knight-Commander Rothgar, the Red Hand: glaive, charge, quake, brand, his guard, his banner ------------------------------
   rothgar: {
     open: 'rot_open', pace: [4.4, 3.4, 0.3], turn: [22, 4], enrage: [300, 2, 'rot_enrage'],
     deck: (f) => (f.banner && !f.fallen ? ['brand', 'cleave', 'quake', 'charge'] : ['cleave', 'charge', 'brand', 'cleave', 'quake']),
@@ -111,14 +111,18 @@ export const REDOUBT_FIGHTS = {
       if (!f.banner && life < 0.5) {
         const [x, z] = at(W, BANNER_AT);
         f.banner = { asked: true };
-        W.spawnAdds('rot_banner', ['rd_banner'], [x, z], 1, (k) => { k.hp = k.maxHp = 420; k.opts.damage = 0; k.opts.speed = 0; k.opts.name = 'THE RED HAND\'S BANNER'; k.standard = true; k.aggro = true; k.opts.leash = 400; k.opts.sight = 80; f.banner = k; }, ['Oxblood']);
+        W.spawnAdds('rot_banner', ['rd_banner'], [x, z], 1, (k) => { k.hp = k.maxHp = 420; k.opts.damage = 0; k.opts.speed = 0; k.opts.name = 'THE RED HAND\'S BANNER'; k.standard = true; k.aggro = true; k.opts.leash = 400; k.opts.sight = 80; f.banner = k; W.bars(m.id, k.id); }, ['Oxblood']);
+        // (His standard up beside its bearer, and a second bar under his for it: src/core/delve-props-rd.js standard.)
+        W.flip('rd_banner_up');
         W.warn(WARN.rot_banner, 5);
         W.sim.casting.burst(FX.PUFF, FIRE, x, W.sim.world.height(x, z) + 2, z, 1.2, 8, 0.6);
       }
       const st = f.banner?.asked ? null : f.banner;
       if (st && !st.dead && st.hp > 0) m.hp = Math.min(m.maxHp, m.hp + m.maxHp * 0.004 * dt);
-      else if (st && !f.fallen) { f.fallen = true; W.warn(WARN.rot_fallen, 4); }
+      else if (st && !f.fallen) { f.fallen = true; W.warn(WARN.rot_fallen, 4); W.flip('rd_banner_up', false); W.flip('rd_banner_down'); W.bars(m.id); }
     },
+    // (The fight over or started again: his standard down, as it was built.)
+    end(W) { W.flip('rd_banner_up', false); W.flip('rd_banner_down', false); },
     // While the banner stands: to it (unless he's turned on you; getting out of his reach comes first).
     order(W, f, b, [m]) {
       const st = f.banner;

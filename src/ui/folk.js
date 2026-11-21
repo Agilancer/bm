@@ -184,6 +184,7 @@ body.touch #folkBook .ql-head .menu-x { width: 34px; height: 34px; }
   #folkBook .qd { font-size: 13px; }
   #folkBook .foot { margin-top: 6px; }
 }
+body.noted #wildTrack.on { opacity: 0; }
 #folkNotes { position: fixed; left: 50%; top: 13vh; transform: translateX(-50%); z-index: 7; display: flex; flex-direction: column; align-items: center; gap: 5px; pointer-events: none; }
 .fn { padding: 5px 14px; background: rgba(8,6,4,.72); border: 1px solid rgba(140,115,68,.45); font: 15px Georgia, serif; letter-spacing: .02em; color: var(--bone); transition: opacity .6s, transform .6s; }
 .fn.quest, .fn.done { color: #f1d78f; border-color: rgba(232,193,90,.7); font-size: 16px; }
@@ -717,8 +718,14 @@ export class TownUI {
       this.close(false);
       this.act.door?.(to, kind !== 'home');
     }, 1200);
-    setTimeout(() => { f.textContent = ''; f.style.opacity = 0; this.note(kind === 'home' ? "Bellmourn. Lisandra's waiting." : 'The Sill, above City State Phobos.', 'hint'); }, 3400);
-    setTimeout(() => { if (f.style.opacity === '0') { f.style.visibility = ''; f.style.background = ''; } }, 3400 + 1250);
+    // (Up again once the land's laid where you've come to: nine kilometres off, it's seconds coming, and the fade lifted on
+    // white ground with the candles floating on it. Twelve seconds more at most.)
+    const lift = (tries = 0) => {
+      if (tries < 60 && this.act.landReady && !this.act.landReady()) { setTimeout(() => lift(tries + 1), 200); return; }
+      f.textContent = ''; f.style.opacity = 0; this.note(kind === 'home' ? "Bellmourn. Lisandra's waiting." : 'The Sill, above City State Phobos.', 'hint');
+      setTimeout(() => { if (f.style.opacity === '0') { f.style.visibility = ''; f.style.background = ''; } }, 1250);
+    };
+    setTimeout(lift, 3400);
   }
 
   // A line or a run of them about a step that's someone else's to hear (Silas for Bram; Elowen for Cedric).
@@ -1140,8 +1147,11 @@ export class TownUI {
     d.textContent = text;
     this.notes.appendChild(d);
     while (this.notes.children.length > 4) this.notes.firstChild.remove();
+    // (The land's bounty line stands in the same place, top and centre, src/ui/wilds.js: it steps aside while a note's up.
+    // "Lisandra has a door to show you" came up under "BOUNTY · SILK DELL" and neither could be read.)
+    document.body.classList.add('noted');
     setTimeout(() => d.classList.add('gone'), kind === 'quest' || kind === 'done' ? 4800 : 3200);
-    setTimeout(() => d.remove(), kind === 'quest' || kind === 'done' ? 5500 : 3900);
+    setTimeout(() => { d.remove(); if (!this.notes.children.length) document.body.classList.remove('noted'); }, kind === 'quest' || kind === 'done' ? 5500 : 3900);
   }
 
   // Something put down, somewhere: for the quests' counts.

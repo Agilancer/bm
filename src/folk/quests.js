@@ -72,7 +72,9 @@ export const isNight = (h) => h >= 21 || h < 4.5;
 
 const AREAS = {
   catacombs: (x, y, z) => y < -6 && inChurch(x, y + 1, z),
-  woods: (x, y, z) => y > -3 && !inTown(x, z, 10) && !inChurch(x, y + 1, z),
+  // (Bellmourn's own country, the Darkwood: not anywhere out of town. A run's kills on the Sill above Phobos, nine kilometres
+  // east, put down Corran's twelve in the pines for him.)
+  woods: (x, y, z) => y > -3 && !inTown(x, z, 10) && !inChurch(x, y + 1, z) && countryAt(x, z) === 'darkwood',
   bellcrypt: inCrypt,
 };
 // Out past the town: within reach of a named place (src/core/lands.js SITES), its radius stretched by s.

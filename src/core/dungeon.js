@@ -184,7 +184,7 @@ export const PERCH = { x: 0, z: -348, up: 3 };
 export const PARTY = { size: 4, tanks: ['lancer'], healers: ['paladin'] };
 export const roleOf = (cls) => (PARTY.tanks.includes(cls) ? 'tank' : PARTY.healers.includes(cls) ? 'heal' : 'dps');
 // The Delve's codes, sent from the sim as EV.DELVE (code, a, b, c).
-export const DELVE = { NEED: 0, ENTER: 1, LEAVE: 2, WARN: 3, BOSS: 4, BOSS_DOWN: 5, WIPE: 6, CLEAR: 7, RESET: 8, LATCH: 9 };
+export const DELVE = { NEED: 0, ENTER: 1, LEAVE: 2, WARN: 3, BOSS: 4, BOSS_DOWN: 5, WIPE: 6, CLEAR: 7, RESET: 8, LATCH: 9, BARS: 10 };
 
 // Where you come in, and where the portals inside stand (local).
 export const ENTRY = { x: 0, z: 3, yaw: Math.PI };
@@ -613,6 +613,8 @@ export function braziers(d = WARRENS) {
         }
       }
       for (const [lx, lz] of roomEdge(r, r.fires || 10, 2.2)) {
+        // (noFire: [[x, z, r]], ground a room keeps clear of standing fires: before a throne, down a stair's tread.)
+        if (r.noFire?.some(([fx, fz, fr]) => Math.hypot(lx - fx, lz - fz) < fr)) continue;
         const x = d.x + lx, z = d.z + lz, ox = Math.abs(lx - r.x) > r.hx - 2.3 ? Math.sign(lx - r.x) : 0, oz = ox ? 0 : Math.sign(lz - r.z);
         if (caveRoom(x + ox * 5, z + oz * 5) > -0.5 || caveRoom(x, z) < 1.6) continue;
         if (keep.some(([kx, kz]) => Math.hypot(kx - x, kz - z) < 6) || BRAZIERS.some((b) => Math.hypot(b[0] - x, b[2] - z) < 5)) continue;

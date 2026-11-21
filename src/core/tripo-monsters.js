@@ -245,13 +245,15 @@ export const LAIRS = [
   // on the Sill at about level three, src/folk/first-visit.js. So they're low, whichever way you came.)
   // (xpScale: a kill's share of what its kind is worth, src/main.js gainXp: the birds and the hanged are the city's own kinds, made
   // low for a new player, and paid as such.)
-  { key: 'sill_carrion', lvl: 4, x: 9050, z: -160, r: 9, pick: ['harpy_undead_1', 'harpy_undead_2'], n: 3, pal: ['Base', 'Ashen'], xpScale: 0.4, names: { Harpies: 'CARRION BIRD' } },
+  { key: 'sill_carrion', lvl: 4, x: 9050, z: -160, r: 9, pick: ['harpy_undead_1', 'harpy_undead_2'], n: 5, pal: ['Base', 'Ashen'], xpScale: 0.4, names: { Harpies: 'CARRION BIRD' } },
   // His gate-wards, posted outside the Redoubt under the Sill (src/core/delve-redoubt.js), at the foot of its steps.
   // (tough: a step over the delve's own packs, { hp: 0.9, damage: 0.45 }. By the land's level 4 they hit two and a half times
   // as hard as any knight inside, and took a level-5 player alone down to a sliver of life.)
-  { key: 'redoubt_gate', lvl: 4, x: 9052, z: 262, r: 4, pick: VKNIGHTS, n: 2, pal: ['Oxblood'], dress: 'gate', xpScale: 0.25, tough: { hp: 1, damage: 0.6 }, names: { "Velscour's Knights": 'REDOUBT KNIGHT' } },
+  // (Out on the open ground before the gate square, the city behind them: at its foot they drew the fight back into the rock
+  // cheeks, and the camera with it. The critics.)
+  { key: 'redoubt_gate', lvl: 4, x: 9061, z: 262, r: 4, pick: VKNIGHTS, n: 2, pal: ['Oxblood'], dress: 'gate', xpScale: 0.25, tough: { hp: 1, damage: 0.6 }, names: { "Velscour's Knights": 'REDOUBT KNIGHT' } },
   // His debtors, hanged on the plain in sight of the gate and walking again: gibbets, and what was left in them.
-  { key: 'sill_gibbets', lvl: 3, x: 9160, z: 236, r: 10, pick: POSSESSED, n: 5, pal: ['Ashen', 'Bone-white'], dress: 'gibbets', xpScale: 0.5, names: { 'The Possessed': 'HANGED DEBTOR' } },
+  { key: 'sill_gibbets', lvl: 3, x: 9160, z: 236, r: 10, pick: POSSESSED, n: 8, pal: ['Ashen', 'Bone-white'], dress: 'gibbets', xpScale: 0.5, names: { 'The Possessed': 'HANGED DEBTOR' } },
   // City State Phobos (src/core/east.js HAUNTS): where the dead, the Loyal and the other horrors keep inside the wall. The
   // street crowd keeps away from these (src/folk/people.js CROWD). His own in blood red, as everywhere in his area.
   { ...HAUNT('phobos_boneyards'), lvl: 24, boss: ['skeleton_knight_giant', 'bone_golem'], pick: CHILDREN.concat(['plague_knight_black']), n: 5, pal: ['Bone-white', 'Ashen'] },

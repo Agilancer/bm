@@ -237,6 +237,9 @@ export class Warrens {
   // Scenery that comes and goes (src/core/sites.js Kit.group), turned the other way from how it was built, or back: a
   // standing stone broken, its rubble lying. Sent with the party's post; put back when the fight's lost or the delve stands again.
   flip(key, on = true) { if (on) this.flipped.add(key); else this.flipped.delete(key); }
+  // The boss's bars over again, for what's come into his fight since it began (a second bar under his: Rothgar's banner,
+  // src/sim/redoubt-fights.js), or one fewer once it's gone. No words with it, as at the fight's start.
+  bars(a, b) { if (this.fight) this.sim.event(EV.DELVE, DELVE.BARS, BOSSES.indexOf(this.fight.boss), a ?? -1, b ?? -1); }
 
   // Whether a gate between delves will let you through: one shut till a boss has died (shut: its key) opens once it has, now
   // or ever. And a ward's gate back down to the one it opens from is always open (only its far side is shut).

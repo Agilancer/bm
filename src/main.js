@@ -747,6 +747,8 @@ async function boot(plan, poolSize) {
       // The quest log: what auto-play is working on (src/ui/autoplay.js), and the big map framed on where a quest is.
       auto: () => game.autoplay?.current(),
       map: (p) => { if (!worldMap.open) toggleMap(); worldMap.showPlace(p); },
+      // (Whether the land's laid round you: Lisandra's door holds its fade till it is. renderer.landReady)
+      landReady: () => { const s = game.currentSnap(); return !s || renderer.landReady(s[H.PX], s[H.PZ]); },
       // Lisandra's door of candles (src/ui/folk.js lisDoor): you and your party set down at `to` (out of any delve), or, with
       // nowhere given, home by Bellmourn's seal. Through it to the Sill, and the Sill's seal knows you: you can travel back.
       door: (to, morning = false) => {
