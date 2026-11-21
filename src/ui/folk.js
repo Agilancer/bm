@@ -4,6 +4,7 @@
 // stands where the Long Road comes in and is talked to here too (src/folk/lines/lisandra.js). What's said is src/folk/lines/;
 // quests' workings src/folk/quests.js; trade src/folk/shops.js.
 import { CROWD, FOLK, PEOPLE, POSTED, first as firstName } from '../folk/people.js';
+import { afterHush, hushed } from './hush.js';
 import { LINES as LA } from '../folk/lines/town_a.js';
 import { LINES as LB } from '../folk/lines/town_b.js';
 import { LINES as LC } from '../folk/lines/town_c.js';
@@ -700,15 +701,17 @@ export class TownUI {
       const L = this.lisandra(), [ex, ez] = routeAt(ESCORT_LEN), lx = L ? L.x : ex, lz = L ? L.z : ez, d = Math.hypot(lx, lz) || 1;
       to = { x: lx - lx / d * 2.2, z: lz - lz / d * 2.2, yaw: Math.atan2(lx, lz) };
     }
-    const f = this.fade;
+    const f = this.fade, h = this.act.hour?.() ?? 12, night = kind !== 'home' && (h < 6.5 || h > 16.5);
     f.textContent = '';
     f.style.background = 'radial-gradient(circle, #5a2e86 0%, #24103c 55%, #07030c 100%)';
     f.style.visibility = 'visible';
     f.style.opacity = 1;
     this.act.sound?.('unlock');
     setTimeout(() => {
-      f.textContent = kind === 'home' ? 'The candles gutter, all at once. Burnt hair, and Bellmourn.' : 'The candles gutter, all at once. Burnt hair, and a cold wind off a long drop.';
-      this.act.door?.(to);
+      f.textContent = kind === 'home' ? 'The candles gutter, all at once. Burnt hair, and Bellmourn.'
+        : night ? 'The candles burn down all night long, and gutter all at once. Burnt hair, and a cold dawn wind off a long drop.'
+          : 'The candles gutter, all at once. Burnt hair, and a cold wind off a long drop.';
+      this.act.door?.(to, kind !== 'home');
     }, 1200);
     setTimeout(() => { f.textContent = ''; f.style.opacity = 0; this.note(kind === 'home' ? "Bellmourn. Lisandra's waiting." : 'The Sill, above City State Phobos.', 'hint'); }, 3400);
     setTimeout(() => { if (f.style.opacity === '0') { f.style.visibility = ''; f.style.background = ''; } }, 3400 + 1250);
@@ -994,7 +997,11 @@ export class TownUI {
       this.fade.textContent = this.quests.done('toll_of_bell') ? 'Midnight comes. The bell keeps its peace.' : 'Out along the east road, the bell goes three.';
       this.act.sleep();
     }, 1200);
-    setTimeout(() => { this.fade.textContent = ''; this.fade.style.opacity = 0; this.note('You wake at dawn, mended.', 'hint'); }, 3600);
+    setTimeout(() => {
+      this.fade.textContent = ''; this.fade.style.opacity = 0; this.note('You wake at dawn, mended.', 'hint');
+      // (Bram's errand just done: Lisandra's door east is next. src/folk/first-visit.js.)
+      if (this.quests.followed() === 'door') this.note('Lisandra has a door to show you. She waits where the Long Road comes into town.', 'quest');
+    }, 3600);
     setTimeout(() => { if (this.fade.style.opacity === '0') this.fade.style.visibility = ''; }, 3600 + 1250);
   }
 
@@ -1123,6 +1130,7 @@ export class TownUI {
   // ---- notes as things happen ----
 
   note(text, kind = '') {
+    if (hushed()) { afterHush(() => this.note(text, kind)); return; }
     const d = document.createElement('div');
     d.className = `fn ${kind}`;
     d.textContent = text;

@@ -10,6 +10,7 @@
 // as you do, and for every four levels you've gone past where you last had them along they come by a piece of middling
 // gear of their own (catchUp), so one you haven't asked for in twenty levels is still fit to stand beside you.
 import { art } from './skin.js';
+import { LESSON, hush } from './hush.js';
 import { CAPS, HG_STATS, SHIELD_PLACE, catchUp, fits, gearStats, kindsOf, score } from '../items/partygear.js';
 import { autoSpend, freshTree, treeMods } from '../core/partytree.js';
 import { makeRng } from '../items/items.js';
@@ -529,6 +530,7 @@ export class PartyUI {
     const god = GOD_SAY.exec(text);
     if (god) { this.godSpeak(god[1], god[2], id); this.warned?.(text); return; }
     d.textContent = text;
+    if (text.length > LESSON) hush(secs);
     this.warnEl.appendChild(d);
     while (this.warnEl.children.length > 3) this.warnEl.firstChild.remove();
     setTimeout(() => { d.style.opacity = 0; setTimeout(() => d.remove(), 700); }, secs * 1000);
@@ -576,6 +578,8 @@ export class PartyUI {
     const text = WARNINGS[i] || '';
     if (!text) return;
     if (WARN_CALM.has(i) || GOD_SAY.test(text)) { this.warn(text, 5, i); return; }
+    // (A boss's opening lesson: read by itself. src/ui/hush.js.)
+    if (text.length > LESSON) hush(7);
     this.ticker.push(text);
     this.warned?.(text);
   }

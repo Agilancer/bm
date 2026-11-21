@@ -92,7 +92,7 @@ export const KNOWN = new Set([
   'ib_stairguard', 'ib_rank_w', 'ib_rank_e', 'ib_drill', 'ib_officers', 'ib_defaulters', 'kennelmaster', 'quartermaster', 'ironmarshal',
   // (The Redoubt under the Sill: plain packs; the Pen-Warden's debtors and Carrow's harness are adds, Rothgar's banner an
   // order (to it), the rest marks, rings and lines, as any.)
-  'rd_gateguard', 'rd_tollmen', 'rd_clerks', 'rd_lancers', 'rd_bellows', 'rd_priests', 'rd_stairguard', 'rd_round', 'penwarden', 'carrow', 'rothgar',
+  'rd_gateguard', 'rd_tollmen', 'rd_clerks', 'rd_lancers', 'rd_bellows', 'rd_priests', 'rd_stairguard', 'rd_round', 'rd_gaolers', 'penwarden', 'carrow', 'rothgar',
 ]);
 // (And every pack and boss of a delve that carries its own way: fought as any are, their calls marks, shots, rings, adds
 // and orders.)

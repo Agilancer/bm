@@ -153,13 +153,16 @@ export class QuestBook {
   state(id) { return this.q[id] || null; }
   step(id) { const s = this.q[id]; return s && s.stage === 'active' ? RULES[id].steps[s.step] : null; }
   active() { return Object.keys(this.q).filter((id) => this.q[id].stage !== 'done'); }
-  done(id) { return this.q[id]?.stage === 'done'; }
+  // (id: or a list of them, all done: a rule's needs may be two. src/folk/first-visit.js fv_the_redoubt.)
+  done(id) { return Array.isArray(id) ? id.every((k) => this.done(k)) : this.q[id]?.stage === 'done'; }
 
   // The quest you're following: the one picked in the quest log while it's under way, else the newest under way; before
   // anything's asked of you, 'start' (go and see Bram Kettle). Null when you've put the trail away.
   followed() {
     if (this.follow === 'off') return null;
     if (this.follow === 'start' && !this.started()) return 'start';
+    // (Bram's errand done: Lisandra, with her door east, till it's taken. src/folk/first-visit.js.)
+    if (this.follow === 'door' && this.done('bed_and_bell') && !this.q.the_door_east && RULES.the_door_east) return 'door';
     const live = this.active();
     if (live.includes(this.follow)) return this.follow;
     if (live.length) return live[live.length - 1];
@@ -177,7 +180,10 @@ export class QuestBook {
 
   // The quests this person has to give, now.
   offers(who) {
-    return Object.keys(RULES).filter((id) => QUESTS[id].giver === who && !this.q[id] && (!RULES[id].needs || this.done(RULES[id].needs)));
+    // (Out there on your first visit, long before you're fit for it, the city's own don't offer you their work: Fennick
+    // says as much. src/folk/first-visit.js.)
+    const visiting = !!this.q.the_door_east && !this.done('fv_home');
+    return Object.keys(RULES).filter((id) => QUESTS[id].giver === who && !this.q[id] && (!RULES[id].needs || this.done(RULES[id].needs)) && !(visiting && PHOBOS_RULES[id]));
   }
 
   begin(id) {
@@ -243,6 +249,8 @@ export class QuestBook {
 
   finish(id) {
     this.q[id] = { stage: 'done' };
+    // (Bram's first errand done: the trail goes to Lisandra next, for her door east, over the round of the town.)
+    if (id === 'bed_and_bell' && RULES.the_door_east && !this.q.the_door_east && this.follow !== 'off') this.follow = 'door';
     this.flags.add(`quest:${id}:done`);
     this.on.toast(`Quest done: ${QUESTS[id].title}`, 'done');
     this.on.done(id);

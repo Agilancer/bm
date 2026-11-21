@@ -16,6 +16,7 @@ import { tileOf } from './sites.js';
 import { dress } from './delve-dress.js';
 import { PROPS_B } from './delve-props-b.js';
 import { PROPS_A } from './delve-props-a.js';
+import { PROPS_RD } from './delve-props-rd.js';
 import { DELVES, DUNGEON_CELL, GRID_UNIT, braziers, caveFloorY, caveRoofY, caveRoom, grid, torches } from './dungeon.js';
 
 const TAU = Math.PI * 2;
@@ -1363,6 +1364,16 @@ export const PROPS = {
   // floor under it (its lamp: src/core/dungeon.js braziers, LIT).
   daylight(K, d, p, x, y, z) {
     const top = caveRoofY(x, z), r = p.r;
+    // (shaft: the sky white through a slot cut in the roof, a frame of dark stone round it, and the light's own column down
+    // through the room's air to the floor, faint, a stack of soft rounds. The Redoubt under the Sill's: src/core/delve-redoubt.js.)
+    if (p.shaft) {
+      K.drum('slate:flame', x, top - 0.12, z, r, 0.1, 16, { collide: false });
+      K.drum('dark:stone', x, top - 2.4, z, r + 0.9, 2.3, 16, { r2: r + 0.9, open: true, collide: false });
+      // (Close and dim, so they run together into one column: spaced wide, each round's bright middle showed, a string of beads.)
+      const n = Math.max(6, Math.ceil((top - y) / (r * 0.5)));
+      for (let k = 0; k < n; k++) { const t = (k + 0.5) / n; K.fires.push({ delve: d.key, hue: 'day:flame', kind: 'glow', x, y: top - 0.8 - (top - y - 1.4) * t, z, w: r * (1.05 + 0.35 * t), h: r * (1.05 + 0.35 * t), ember: 0, seed: 0 }); }
+      return;
+    }
     K.drum('pale:flame', x, top - 0.25, z, r, 0.2, 16, { collide: false });
     K.drum('pale:stone', x, top - 0.45, z, r + 0.5, 0.2, 16, { r2: r, open: true, collide: false });
     // (pool: false, no pale round on the floor under it: its own cold light lights the floor, src/gfx/renderer.js.)
@@ -1901,7 +1912,7 @@ export const PROPS = {
   },
 };
 // (And the later castle dungeons' own: src/core/delve-props-b.js.)
-Object.assign(PROPS, PROPS_B, PROPS_A);
+Object.assign(PROPS, PROPS_B, PROPS_A, PROPS_RD);
 export const PROP_KINDS = Object.keys(PROPS);
 
 // ---- all of it -----------------------------------------------------------------------------------------------------------------

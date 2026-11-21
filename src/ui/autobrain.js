@@ -169,7 +169,7 @@ function fightableAt(kind, lvl, maxHp = 0, slime = false) {
 
 // The quests, in the order it takes them on, and the level it wants for each.
 const PLAN = [
-  ['lisandra_work', 1], ['bed_and_bell', 1], ['letter', 1], ['pines', 1], ['iron_from_dead', 2], ['dead_cant_wait', 3], ['shroud_and_thread', 3], ['bones_for_carver', 3],
+  ['lisandra_work', 1], ['bed_and_bell', 1], FIRST_VISIT_LEVELS[0], ['letter', 1], ['pines', 1], ['iron_from_dead', 2], ['dead_cant_wait', 3], ['shroud_and_thread', 3], ['bones_for_carver', 3],
   ['long_way_round', 4], ['toll_of_bell', 5], ['millhaven_jelly', 5], ['barrow_lights', 8], ['sallowmere', 8], ['four_watches', 9],
   ['crown_of_teeth', 11], ['black_road', 13],
   // The land's (src/folk/land-quests.js): out to the small towns, what besets them, and down the party dungeons.
@@ -186,8 +186,9 @@ const PLAN = [
   ['storm_over_the_horn', 100], ['the_hollow_star', 102],
   // City State Phobos's first (src/folk/phobos-quests.js): you come to it at about twenty.
   ...PHOBOS_LEVELS,
-  // The first visit there, long before (src/folk/first-visit.js): through Lisandra's door at about two, home at five.
-  ...FIRST_VISIT_LEVELS,
+  // The first visit there, long before (src/folk/first-visit.js): through Lisandra's door (above, straight after Bram's
+  // errand), home at five or six.
+  ...FIRST_VISIT_LEVELS.slice(1),
 ];
 // (Taken on in the order of the levels they want.)
 PLAN.sort((a, b) => a[1] - b[1]);
@@ -814,7 +815,7 @@ export class Brain {
       const kind = snap[o + C.KIND] | 0, x = snap[o + C.X], y = snap[o + C.Y], z = snap[o + C.Z];
       const d = dist(m.x, m.z, x, z);
       if (d > 70 || Math.abs(y - m.y) > 8) continue;
-      out.push({ id: i, kind, x, y, z, d, hp: snap[o + C.HP], maxHp: snap[o + C.MAX_HP], hostile: snap[o + C.HOSTILE] > 0.5, h: kind >= TRIPO_KIND ? 1.1 : i < 2 ? 1.3 : 0.95, glint: snap[o + C.GLINT], after: snap[o + C.AFTER] });
+      out.push({ id: i, kind, x, y, z, d, hp: snap[o + C.HP], maxHp: snap[o + C.MAX_HP], hostile: snap[o + C.HOSTILE] > 0.5, model: snap[o + C.MODEL] | 0, h: kind >= TRIPO_KIND ? 1.1 : i < 2 ? 1.3 : 0.95, glint: snap[o + C.GLINT], after: snap[o + C.AFTER] });
     }
     for (let i = 0; i < MAX_SLIMES; i++) {
       const o = SLIMES_START + i * SLIME_FLOATS;
@@ -1827,7 +1828,16 @@ export class Brain {
   foeName(f) {
     if (f.slime) return 'a jelly';
     if (f.kind === 5) return f.maxHp > 150 ? 'a champion of the dead' : 'one of the risen';
-    if (f.kind >= TRIPO_KIND) return `a ${GROUPS[GROUP_KEYS[f.kind - TRIPO_KIND]]?.name.toLowerCase() || 'monster'}`;
+    if (f.kind >= TRIPO_KIND) {
+      // (By its own name if it has one, a boss's; else by what the delve or the lair it's in calls its kind: the Redoubt's
+      // toll-clerks, the Sill's hanged debtors. src/core/delve-redoubt.js names, src/core/tripo-monsters.js LAIRS.)
+      const T = this.o.renderer?.tripo, wild = f.model && T?.wildName?.(f.model), own = f.model && T?.ownName?.(f.model);
+      if (wild) return `a ${wild.toLowerCase()}`;
+      if (own) return own.toLowerCase().replace(/(^|[\s-])\w/g, (c) => c.toUpperCase());
+      const key = GROUP_KEYS[f.kind - TRIPO_KIND], lair = LAIRS.find((l) => l.names && dist(f.x, f.z, l.x, l.z) < l.r + 30);
+      const called = delveOf(f.x, f.z)?.names?.[key] || lair?.names[key];
+      return `a ${(called || GROUPS[key]?.name || 'monster').toLowerCase()}`;
+    }
     return ['a knight of Velscour', 'a knight', 'a great crab', 'the Gravehart', 'the Bone Hydra', 'one of the risen', 'an ogre', '', '', 'the werewolf', 'the Abyssal Mouth'][f.kind] || 'something';
   }
 
@@ -2315,7 +2325,9 @@ export class Brain {
       if (m.lvl + 3 < lvl) continue;
       const w = townUI.whereOf(giver) || this.crowdSpot(giver);
       if (!w) continue;
-      const d = dist(m.x, m.z, w.x, w.z);
+      // (Lisandra's door east, once Bram's errand's done: first, before anyone nearer, as the trail leads a player there.
+      // src/folk/first-visit.js: the first visit's to be in the game's first quarter of an hour.)
+      const d = id === FIRST_VISIT[0] ? 0 : dist(m.x, m.z, w.x, w.z);
       // (Someone out past the town, like the Bellwright: only on the way.)
       // (Or once it's of a level for their work: then it goes out to them, however far.)
       if (giver >= PEOPLE.length && d > 300 && m.lvl < lvl) continue;

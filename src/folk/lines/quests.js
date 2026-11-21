@@ -38,7 +38,7 @@ export const QUESTS = {
     done: [
       "Silas sent word you'd been. Said you didn't laugh and didn't run. That's two things the other twelve couldn't manage between them.",
       "He sent this up with the word. A skull, for your left hand. Plain work, he says; if you want better, you'll bring him bone. I didn't ask whose it was.",
-      "Your stroke's still up there with nothing owing by it and no hill. Keep it that way.",
+      "Your stroke's still up there with nothing owing by it and no hill. Keep it that way. And Lisandra was in, asking after you. Wants you at the end of the Long Road come morning. Says she's a door to show you.",
     ],
     after: [
       "Thirteen strokes, and one of them still comes down for breakfast. I keep looking at it.",

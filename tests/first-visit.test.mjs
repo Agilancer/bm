@@ -95,7 +95,8 @@ test('each first-visit quest can be taken, walked through as the game reports it
   const inside = (k) => { const p = spotIn(k); return [p.x, 30, p.z]; };
   for (const id of IDS) {
     const Q = book(), R = FIRST_VISIT_RULES[id], q = QUESTS[id];
-    for (let need = R.needs; need; need = RULES[need].needs) Q.q[need] = { stage: 'done' };
+    const owe = (need) => { for (const n of [need].flat()) if (n && !Q.q[n]) { Q.q[n] = { stage: 'done' }; owe(RULES[n].needs); } };
+    owe(R.needs);
     assert.ok(Q.offers(q.giver).includes(id), `${id} isn't offered`);
     Q.begin(id);
     for (let k = 0; k < R.steps.length; k++) {

@@ -81,6 +81,8 @@ export class QuestTrail {
     };
     // (Before any work: Lisandra, waiting where the road comes into town, if she's there; else Bram at the inn.)
     if (id === 'start') return (T.lisI !== undefined && T.whereOf(T.lisI) && person('lisandra')) || person('bram');
+    // (Bram's errand done: Lisandra, for her door east. src/folk/quests.js followed.)
+    if (id === 'door') return person('lisandra');
     const s = Q.state(id), q = QUESTS[id];
     if (!s || s.stage === 'done') return null;
     if (s.stage === 'making') return person(q.giver);

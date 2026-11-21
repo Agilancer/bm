@@ -10,7 +10,7 @@ import { LAIRS } from '../src/core/tripo-monsters.js';
 import { routeDist } from '../src/core/lands.js';
 import { DELVES, delveOf } from '../src/core/dungeon.js';
 
-const KINDS = ['camp', 'webs', 'plot', 'ring', 'bed', 'roost', 'den', 'picket', 'gibbets'];
+const KINDS = ['camp', 'webs', 'plot', 'ring', 'bed', 'roost', 'den', 'picket', 'gibbets', 'gate'];
 const manifest = JSON.parse(fs.readFileSync(new URL('../assets/game/tex/manifest.json', import.meta.url)));
 // (The flat materials and the tints: FLAT and TINTS in src/gfx/renderer.js.)
 const FLAT = new Set(['iron', 'flame', 'water', 'fruit', 'fruit2', 'white', 'tile', 'glow', 'lake', 'falls', 'ice', 'seal', 'obsidian', 'gold', 'voidglass', 'magma', 'rune', 'storm']);

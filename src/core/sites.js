@@ -12,6 +12,7 @@
 import { groundBase, portalFloor, terrainHeight } from './terrain.js';
 import { BARROWS, CLIFF, MOUNT, POOL, PORTAL_BANKS, SITES, WATERS, routeDist, waterLevel } from './lands.js';
 import { hash2, vnoise } from './terrain-noise.js';
+import { SILL_DOOR } from '../folk/first-visit.js';
 import { offWay } from './rocks.js';
 import { DELVES, PORTAL_PAD, caveFloorY } from './dungeon.js';
 import { buildDelves } from './delve-build.js';
@@ -818,6 +819,32 @@ function redoubtGate(K, d) {
     K.banner(px, pz, 6.2, yaw + (sd > 0 ? 0 : Math.PI), 'cloth_red', { pole: 'dark:wood', len: 3.6, collide: false });
     const [qx, qz] = P(sd * (U + 1.3), W + 3.0);
     K.brazier(qx, qz, 1.3);
+  }
+  // Set into the cliff: rough cheeks of the rock it was cut out of either side of it, going back into the slope, and a brow
+  // of it over its head.
+  for (const sd of [-1, 1]) {
+    const [cx, cz] = P(sd * (U + 2.7), -W - 3.5), y0 = terrainHeight(cx, cz) - 1.5;
+    K.box('dark:rubble', cx, y0, cz, 2.4, head + 2.8 - y0, 6, yaw);
+    const [kx, kz] = P(sd * (U + 5.6), -W - 6), k0 = terrainHeight(kx, kz) - 1.5;
+    K.box('dark:rubble', kx, k0, kz, 2.2, head + 0.6 - k0, 5, yaw + sd * 0.25);
+  }
+  const [rx, rz] = P(0, -W - 5.2);
+  K.box('dark:rubble', rx, head + 0.9, rz, U + 5.2, 2.6, 5.4, yaw, { collide: false });
+}
+
+// Wenna Coyle's corner of the Sill (src/folk/first-visit.js, docs/FIRST-VISIT.md): the lean-to she keeps her oil and wicks
+// in, south of the road, its front to her; casks of lamp-oil by it; her own lantern on its post beside her; and where
+// Lisandra's door sets you down, its candles, a ring of them burnt down to stubs in the grass, still alight.
+function sillCorner(K) {
+  K.leanTo(8949.5, 15.8, Math.PI, 1.7, 1.2, 2.3, 'roof_3', 'wood');
+  for (const [x, z] of [[8952.4, 13.6], [8953.2, 14.6], [8952.6, 15.8], [8946.6, 16.9]]) K.barrel(x, z, 0.34, 0.85);
+  K.crate(8947.6, 14.2, 0.32, 0.4);
+  K.lantern(8944.6, 5.4, 2.7, -1.75);
+  const { x, z } = SILL_DOOR, n = 11;
+  for (let i = 0; i < n; i++) {
+    const a = i / n * TAU + 0.3, r = 1.7 + (hash2(i, 77) - 0.5) * 0.25, cx = x + Math.cos(a) * r, cz = z + Math.sin(a) * r, y = terrainHeight(cx, cz), h = 0.07 + hash2(i, 91) * 0.12;
+    K.drum('pale:stone', cx, y - 0.02, cz, 0.045, h, 6, { collide: false });
+    K.cone('flame', cx, y + h - 0.01, cz, 0.022, 0.07, 4);
   }
 }
 
@@ -1659,6 +1686,7 @@ export function buildSites(geometry = false, lean = false) {
   downs(K); fen(K); rustwood(K); ashen(K); barrow(K); rimeholt(K); gallows(K); deepwood(K); sorrowhorn(K);
   thornwick(K); cinderford(K); lesser(K);   // (the small towns and the lesser places: src/core/places.js)
   marches(K);   // (the east's keeps and towers, and the way to Phobos: src/core/marches.js)
+  sillCorner(K);   // (Wenna Coyle's corner of the Sill, and where Lisandra's door sets you down: src/folk/first-visit.js)
   phobos(K);    // (City State Phobos, Castle Velscour and the Keep, blocked out: src/core/phobos-build.js)
   warrensMouth(K);
   smithYard(K);   // (what's built in the smith's yard in Bellmourn: src/core/smithyard.js)

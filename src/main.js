@@ -1,6 +1,6 @@
 // Boot: the permission gate, threads, GPU, assets, and the render thread's loop.
 import { setOpeningTerrain } from './core/terrain.js';
-import { GROUPS, GROUP_KEYS, TRIPO_KIND, landLevel } from './core/tripo-monsters.js';
+import { GROUPS, GROUP_KEYS, LAIRS, TRIPO_KIND, landLevel } from './core/tripo-monsters.js';
 import { BOSSES as DELVE_BOSSES, DELVE as DELVE_CODE, LATCHES as DELVE_LATCHES, delveOf, inDungeon as inDelve } from './core/dungeon.js';
 import { KEYS as CASTLE_KEYS, latchWord } from './core/castle-keys.js';
 import { castleVistas, vistaAt } from './core/castle-finds.js';
@@ -74,6 +74,7 @@ import { CritterWords } from './ui/critterwords.js';
 import { beginRun, deathWords, noteEvent, noteRun, trailSentence } from './core/lastrun.js';
 import { HUB_SMOKE } from './core/phobos-hubs.js';
 import { Beacon, HOME as BEACON_HOME } from './ui/beacon.js';
+import { afterHush, hushed } from './ui/hush.js';
 
 const BASE = new URL('..', import.meta.url).href;
 const $ = (id) => document.getElementById(id);
@@ -98,6 +99,7 @@ window.bmTitle = title;
 // (From 11 on, the Tripo monsters' groups: src/core/tripo-monsters.js.)
 // How far off a death still pays you its experience: your spells, your party and your dead all fight well inside it.
 const KILL_REACH = 90;
+const XP_LAIRS = LAIRS.filter((l) => l.xpScale);
 const FOE_NAMES = ['KNIGHT OF VELSCOUR', 'KNIGHT OF TESSARIEL', 'GREAT CRAB', 'GRAVEHART', 'BONE HYDRA', 'THE RISEN', 'OGRE', '', '', 'WEREWOLF', 'ABYSSAL MOUTH',
   ...GROUP_KEYS.map((g) => GROUPS[g].name)];
 
@@ -623,8 +625,9 @@ async function boot(plan, poolSize) {
     const g = what - 1 >= TRIPO_KIND ? GROUPS[GROUP_KEYS[what - 1 - TRIPO_KIND]] : null;
     // (Down a delve made for a new player, a kill's worth is that delve's share of it, xpScale: the Redoubt under the Sill's
     // knights are the castle's, worth a castle knight's, and it's met at five. src/core/delve-redoubt.js.)
-    const d = s && delveOf(s[H.PX], s[H.PZ]);
-    game.addXp(Math.max(1, Math.round(Math.max(XP_OF[kind | 0] ?? 10, g ? Math.round(g.hp * 0.35) : 0) * (d?.xpScale ?? 1))));
+    // (The same of a lair made low for a new player: the Sill's, src/core/tripo-monsters.js LAIRS.)
+    const d = s && delveOf(s[H.PX], s[H.PZ]), l = x !== null && XP_LAIRS.find((q) => Math.hypot(x - q.x, z - q.z) < q.r + 40);
+    game.addXp(Math.max(1, Math.round(Math.max(XP_OF[kind | 0] ?? 10, g ? Math.round(g.hp * 0.35) : 0) * (d?.xpScale ?? (l ? l.xpScale : 1)))));
   };
   // So much experience, for whatever earned it (a kill above; a tear sealed, an outpost cleared: src/ui/wilds.js).
   game.addXp = (amount) => {
@@ -745,9 +748,12 @@ async function boot(plan, poolSize) {
       map: (p) => { if (!worldMap.open) toggleMap(); worldMap.showPlace(p); },
       // Lisandra's door of candles (src/ui/folk.js lisDoor): you and your party set down at `to` (out of any delve), or, with
       // nowhere given, home by Bellmourn's seal. Through it to the Sill, and the Sill's seal knows you: you can travel back.
-      door: (to) => {
+      door: (to, morning = false) => {
         const at = to || BEACON_HOME;
         lands.o.cmd(28, at.yaw, at.x, at.z);
+        // (morning: the door east, out of the dark or the evening, opens on the next morning: the first sight of his city is a
+        // lit one. As a night's sleep turns the day. src/ui/folk.js lisDoor.)
+        if (morning && (renderer.hour < 6.5 || renderer.hour > 16.5)) { if (renderer.hour > 6.1) { town.day++; town.lastHour = -1; } renderer.setHour(7.5); }
         if (to && Math.hypot(to.x - 8931, to.z - 19) < 40 && !lands.awake.has('sill')) { lands.awake.add('sill'); lands.showPortals(); }
       },
     },
@@ -1432,6 +1438,7 @@ class Hud {
   }
 
   tip(text, secs) {
+    if (hushed()) { afterHush(() => this.tip(text, secs)); return; }
     $('tip').textContent = text;
     $('tip').style.opacity = 1;
     clearTimeout(this.tipTimer);

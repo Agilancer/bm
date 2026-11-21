@@ -305,7 +305,7 @@ test('every hub is led to: a quest from somewhere you already are sends you to e
     for (const id of Object.keys(RULES)) {
       if (open.has(id) || !QUESTS[id]) continue;
       const g = QUESTS[id].giver;
-      if (!(town.has(g) || g === 'lisandra' || met.has(g)) || (RULES[id].needs && !open.has(RULES[id].needs))) continue;
+      if (!(town.has(g) || g === 'lisandra' || met.has(g)) || ![RULES[id].needs].flat().every((n) => !n || open.has(n))) continue;
       open.add(id);
       for (const st of RULES[id].steps) if (st.talk) met.add(st.talk);
     }

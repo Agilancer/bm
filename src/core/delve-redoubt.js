@@ -28,7 +28,7 @@ const PI = Math.PI;
 const rooms = [
   R('rd_gate', 'the Cliff Gate', 0, -10, 5, 18, 0, 9, { rock: 'p2_curtain_granite', foot: 'dark:block', ground: 'p2_bone_joint_flags', fires: 9 }),
   R('rd_toll', 'the Toll Hall', 0, -52, 20, 20, 0, 13, { rock: 'p2_curtain_granite', foot: 'dark:course', ground: 'p2_ward_paving', banners: 14, cloth: 'p2_banner_skull', fires: 12 }),
-  R('rd_pens', "the Debtors' Pens", -52, -46, 16, 14, 0, 8, { rock: 'p2_waterline_wall', foot: 'mire:block', ground: 'p2_bones_ground', banners: 0, fires: 11 }),
+  R('rd_pens', "the Debtors' Pens", -52, -46, 16, 14, 0, 12, { rock: 'p2_waterline_wall', foot: 'mire:block', ground: 'p2_bones_ground', banners: 0, fires: 11 }),
   R('rd_harness', 'the Hall of Harness', 54, -60, 16, 16, 0, 12, { rock: 'slate:ashlar', foot: 'dark:block', ground: 'p2_walk_paving', banners: 12, cloth: 'p2_banner_skull', fires: 12 }),
   R('rd_court', 'the Cut Court', 0, -110, 22, 20, 0, 34, { rock: 'p2_curtain_granite', foot: 'dark:block', ground: 'p2_ward_paving', banners: 0, fires: 16 }),
   R('rd_forge', 'the Red Forge', -54, -104, 14, 14, 0, 11, { rock: 'p2_fireback', foot: 'soot:block', ground: 'p2_ash_street', banners: 0, fires: 14 }),
@@ -51,8 +51,9 @@ const tunnels = [
   { pts: [[-6, -161.5], [-6, -180.5]], w: 4.4, h: 5.5 },
 ];
 
-// Where the Pen-Warden's debtors are let out from (src/sim/redoubt-fights.js), the cages down the pens' north wall.
-export const PEN_DOORS = [[-62, -36], [-52, -36], [-42, -36]];
+// Where the Pen-Warden's debtors are let out from (src/sim/redoubt-fights.js): the doors of the cells down the pens' north wall.
+export const PEN_CELLS = [-62, -52, -42];
+export const PEN_DOORS = PEN_CELLS.map((x) => [x, -36.4]);
 // The harness stood up in the Hall of Harness, two rows down its length: what Sir Oswin wakes.
 export const HARNESS_ROWS = [[44, -50], [44, -60], [44, -70], [64, -50], [64, -60], [64, -70]];
 // The Commander's banner, set in its socket before his seat (redoubt-fights.js rothgar).
@@ -64,7 +65,7 @@ const props = [];
   // ---- the Cliff Gate: the teeth up in their slot at the way in, his plate on stands each side, his mark over the inner arch.
   add('portcullis', 0, 1.0, { w: 4.6, h: 6, raised: true });
   for (const z of [-8, -18]) { add('stand', -3.4, z, { yaw: PI / 2 }); add('stand', 3.4, z - 4, { yaw: -PI / 2 }); }
-  add('mark', 0, -27.6, { up: 5.4, r: 1.2, back: -1 });
+  add('skullmark', 0, -27.6, { up: 5.4, r: 1.2, back: -1 });
   add('brazier', -3, -24); add('brazier', 3, -24);
   // ---- the Toll Hall: the bar across it, the clerks' counter behind, his coin in heaps on the tables, the ledgers on their
   // shelves, columns down both sides; the weighing-place in the middle, a ring in the floor.
@@ -75,11 +76,11 @@ const props = [];
   for (const z of [-40, -64]) { add('bookcase', -19.4, z, { hx: 0.4, hz: 3, h: 3.6, one: 1 }); add('bookcase', 19.4, z + 4, { hx: 0.4, hz: 3, h: 3.6, one: -1 }); }
   for (const [x, z] of [[-13, -48], [13, -48], [-13, -60], [13, -60]]) add('column', x, z, { r: 1.2, solid: true });
   add('circle', 0, -55, { r: 2.6 });
-  add('mark', 0, -71.6, { up: 7, r: 1.6, back: -1 });
+  add('skullmark', 0, -71.6, { up: 7, r: 1.6, back: -1 });
   add('decal', -6, -52, { layer: 'p2_cracks', w: 3, flat: true });
-  // ---- the Debtors' Pens: cages down both long walls, chains from the beams, a trough of black water, bones, straw.
-  for (const [x, z] of PEN_DOORS) add('cage', x, z, { up: 0 });
-  for (const x of [-62, -52, -42]) { add('cage', x, -56, { up: 0 }); add('chain', x, -46, { up: 5 }); }
+  // ---- the Debtors' Pens: cells of iron down both long walls, as tall as a man and more, their doors open; in some of them
+  // whoever couldn't pay, sat down against the bars and not got up. Chains from the roof, a pit of black water, bones, straw.
+  PEN_CELLS.forEach((x, k) => { add('cell', x, -34, { yaw: PI, held: k === 1 ? 0 : k + 1 }); add('cell', x, -58, { yaw: 0, held: k + 4 }); add('chain', x, -46, { up: 7 }); });
   add('pit', -60, -46, { r: 1.6 });
   add('bones', -46, -50, { r: 1.2 }); add('bones', -56, -40, { r: 0.9 }); add('heap', -64, -52, { r: 1.1, layer: 'p2_straw_ground' });
   add('decal', -50, -46, { layer: 'p2_blood_splashes', w: 2.4, flat: true });
@@ -91,14 +92,20 @@ const props = [];
   add('seat', 54, -74.4, { hx: 1.1, hz: 0.8, stone: 'dark:ashlar', cloth: 'cloth_red' });
   for (const z of [-50, -66]) { add('rack', 39.4, z, { yaw: PI / 2, h: 2.4, n: 6 }); add('rack', 68.6, z + 4, { yaw: -PI / 2, h: 2.4, n: 6 }); }
   add('shields', 48, -75.4, { yaw: PI }); add('shields', 60, -75.4, { yaw: PI });
-  add('mark', 54, -75.6, { up: 6, r: 1.3, back: -1 });
+  add('skullmark', 54, -75.6, { up: 6, r: 1.3, back: -1 });
   // ---- the Cut Court: open to the sky through its shafts, the light down on the flags; a dead tree in the middle, the lancers'
   // posts in two lines, sand round them; his banner hung on the cliff.
-  for (const [x, z, r] of [[-11, -102, 4.5], [11, -118, 4.5], [0, -110, 3.4], [-12, -122, 3]]) add('daylight', x, z, { r });
+  for (const [x, z, r] of [[-11, -102, 4.5], [11, -118, 4.5], [0, -110, 3.4], [-12, -122, 3]]) add('daylight', x, z, { r, shaft: true });
+  // (A wall-walk round its two long sides, high up, fire baskets along it; racks of the lancers' arms at its feet, their
+  // barrels and crates by the ways in.)
+  add('walk', -21, -110, { hx: 1, hz: 17, up: 9, side: 1 }); add('walk', 21, -110, { hx: 1, hz: 17, up: 9, side: -1 });
+  for (const z of [-96, -110, -124]) { add('basket', -21.3, z, { up: 9 }); add('basket', 21.3, z, { up: 9 }); }
+  add('rack', -21.2, -116, { yaw: PI / 2, h: 2.4, n: 6 }); add('rack', 21.2, -100, { yaw: -PI / 2, h: 2.4, n: 6 });
+  add('barrels', 15, -94); add('crates', -15, -127); add('barrels', 17, -127);
   add('deadtree', 0, -110, { h: 7, r: 1.8 });
   for (const z of [-98, -122]) for (const x of [-15, 15]) add('stand', x, z);
   add('pool', -12, -110, { r: 4.5, layer: 'rubble', up: 0.02 }); add('pool', 12, -110, { r: 4.5, layer: 'rubble', up: 0.02 });
-  add('mark', 0, -129.6, { up: 10, r: 2, back: -1 });
+  add('skullmark', 0, -129.6, { up: 10, r: 2, back: -1 });
   add('decal', 6, -96, { layer: 'p2_cracks', w: 3.4, flat: true });
   // ---- the Red Forge: the casting pit, molten; anvils, tools, quenching barrels, crates of his blanks.
   add('castpit', -54, -106, { r: 2.4 });
@@ -107,11 +114,14 @@ const props = [];
   for (const [x, z] of [[-44, -114], [-48, -116]]) add('barrels', x, z);
   for (const [x, z] of [[-64, -114], [-60, -116]]) add('crates', x, z);
   add('decal', -54, -96, { layer: 'p2_scorch_mark', w: 3, flat: true });
+  // (The quench, and his plate hung up half made along the north wall, not yet blacked.)
+  add('trough', -54, -97, { hx: 1.8, hz: 0.5 });
+  add('platerack', -50, -91, { yaw: PI, n: 4 }); add('platerack', -61, -91, { yaw: PI, n: 3 });
   // ---- the Red Chapel: his altar at the far end under his great mark, pews either side of a red carpet, candles, a ring of
   // his priests' drawn in the floor before the altar.
   add('altar', 54, -128.6, { hx: 2.2, hz: 0.9 });
   add('candles', 52.4, -128.6, { up: 1.1 }); add('candles', 55.6, -128.6, { up: 1.1 });
-  add('mark', 54, -131.6, { up: 4.4, r: 1.8, back: -1 });
+  add('skullmark', 54, -131.6, { up: 4.4, r: 1.8, back: -1 });
   add('carpet', 54, -116, { hx: 1.6, hz: 11, layer: 'cloth_red' });
   for (const z of [-106, -111, -116]) { add('pew', 48, z, { hx: 3.2, hz: 0.5 }); add('pew', 60, z, { hx: 3.2, hz: 0.5 }); }
   add('circle', 54, -123, { r: 2 });
@@ -120,12 +130,12 @@ const props = [];
   add('brazier', -9, -138); add('brazier', -3, -162);
   // ---- the Commander's Hall: his war table with Castle Velscour carved on it, his seat on its dais, his banners on the
   // columns, the cliff cut through high in the south wall (the light down from it), chandeliers.
-  add('maptable', 0, -190, { hx: 4.4, hz: 2.4 });
+  add('maptable', -11, -191, { hx: 4.2, hz: 2.2 });
   add('stonethrone', 0, -211, { yaw: 0, cloth: 'cloth_red' });
   for (const z of [-184, -198]) { add('column', -14, z, { r: 1.4, solid: true }); add('column', 14, z, { r: 1.4, solid: true }); }
-  add('daylight', 0, -204, { r: 3.6 });
+  add('daylight', 0, -203, { r: 3.2, shaft: true });
   add('chandelier', -8, -192, { up: 11 }); add('chandelier', 8, -192, { up: 11 });
-  add('mark', 0, -213.6, { up: 8, r: 2.4, back: -1 });
+  add('skullmark', 0, -213.6, { up: 8, r: 2.4, back: -1 });
   add('shields', -21.4, -196, { yaw: PI / 2 }); add('shields', 21.4, -196, { yaw: -PI / 2 });
   add('decal', 0, -182, { layer: 'p2_blood_splashes', w: 2, flat: true });
 }
@@ -143,9 +153,13 @@ const packs = [
   { key: 'rd_tollmen', room: 'rd_toll', pick: KNIGHTS, n: 2, pal: ['Oxblood'], at: [-6, 10], r: 3 },
   { key: 'rd_clerks', room: 'rd_toll', pick: CLERKS, n: 2, elite: ['necromancer_lord'], pal: ['Oxblood', 'Sable'], ai: 'caster', at: [6, -12], r: 3 },
   { key: 'rd_lancers', room: 'rd_court', pick: LANCERS.concat(KNIGHTS), n: 3, elite: ['velscour_lancer_3'], pal: ['Oxblood'], at: [-6, -10], r: 6 },
-  { key: 'rd_bellows', room: 'rd_forge', pick: BELLOWS, n: 4, pal: ['Emberhide'], at: [0, 0], r: 4 },
+  // (The bellows-imps' overseers come out of the back of the forge to them.)
+  { key: 'rd_bellows', room: 'rd_forge', pick: BELLOWS, n: 4, pal: ['Emberhide'], at: [0, 0], r: 4, more: { n: 2, pick: KNIGHTS, from: [-64, -114], when: 0.6 } },
   { key: 'rd_priests', room: 'rd_chapel', pick: PRIESTS, n: 3, pal: ['Oxblood', 'Sable'], ai: 'caster', at: [0, -2], r: 3 },
-  { key: 'rd_stairguard', room: 'rd_stair', pick: KNIGHTS, n: 2, pal: ['Sable'], at: [0, 4], r: 1.5 },
+  // (The pair on the Commander's door, at the stair's head, come down to them when they're hard pressed.)
+  { key: 'rd_stairguard', room: 'rd_stair', pick: KNIGHTS, n: 2, pal: ['Sable'], at: [0, 4], r: 1.5, more: { n: 2, pick: KNIGHTS, from: [-6, -163], when: 0.6 } },
+  // (His gaolers, by the pens' way in.)
+  { key: 'rd_gaolers', room: 'rd_pens', pick: KNIGHTS, n: 2, pal: ['Oxblood'], at: [9, 4], r: 1.5 },
   // (And a pair walking the way from the Toll Hall down to the court and back.)
   { key: 'rd_round', room: 'rd_court', pick: KNIGHTS, n: 2, pal: ['Oxblood'], at: [8, 12], r: 1, walk: [[8, -76], [8, -88], [8, -96]] },
 ];
@@ -170,13 +184,13 @@ const warnings = {
   car_turn: 'Sir Oswin turns on you! Keep out of his reach.',
   car_enrage: 'Sir Oswin is enraged!',
   rot_shut: "The Commander's Hall is shut. Its doors open only to the deaths of his two: the Pen-Warden and Sir Oswin Carrow.",
-  rot_open: 'Knight-Commander Rothgar, the Red Hand. He calls his guard to him; at the turn of the fight he sets up his banner before his seat, and while it stands his men fight on. Cut the banner down.',
+  rot_open: 'Knight-Commander Rothgar, the Red Hand. He calls his guard to him; at the turn of the fight an empty harness plants his banner before his seat, and while it stands, he mends. Cut it down.',
   rot_cleave: 'The Red Hand sweeps his blade! Out of the arc.',
   rot_charge: 'He charges! Out of the line.',
   rot_quake: 'He drives his blade into the floor! Jump the ring.',
   rot_brand: 'He brands the floor with his fire! Out of the circles.',
   rot_guard: 'His guard comes to him!',
-  rot_banner: 'HIS BANNER IS SET UP! While it stands he mends: cut it down!',
+  rot_banner: 'HIS BANNER IS PLANTED! While its bearer stands, he mends: cut it down!',
   rot_fallen: 'His banner falls! He mends no more.',
   rot_turn: 'The Red Hand turns on you! Keep moving.',
   rot_enrage: 'Knight-Commander Rothgar is enraged!',
@@ -185,15 +199,17 @@ const warnings = {
 export const REDOUBT = {
   key: 'redoubt', tag: 'rd', name: 'The Redoubt under the Sill', short: 'the Redoubt', x: 8700, z: -5700, y: -60, level: 5, style: 'castle',
   party: false, castle: true, dungeon: true,
+  // (Its portal out on the Sill burns his red, not the cold blue of the rest: src/gfx/renderer.js EMBER.)
+  portalHue: 'ember',
   rooms, tunnels, daises, props, packs, bosses, warnings,
   turnWarn: { penwarden: 'pen_turn', carrow: 'car_turn', rothgar: 'rot_turn' },
-  entry: { x: 0, z: 2.5, yaw: PI }, exitIn: { x: 0, z: 5.4 }, exitOut: { x: 0, z: -212.4 },
+  entry: { x: 0, z: 2.5, yaw: PI }, exitIn: { x: 0, z: 5.4 }, exitOut: { x: 16, z: -206 },
   // At the foot of the Sill's north cliff, its back to the rock, facing east across the plain to the city's wall.
   portal: { x: 9038, z: 262, yaw: PI / 2, r: 2.2 },
   links: [],
-  last: 'rothgar', tough: { hp: 0.9, damage: 0.45 }, pay: { xp: 150, gold: 180 },
-  // (A kill down here worth a sixth or so of its kind's: they're the castle's knights, and this is met at five. src/main.js gainXp.)
-  xpScale: 0.15,
+  last: 'rothgar', tough: { hp: 0.9, damage: 0.45 }, pay: { xp: 100, gold: 180 },
+  // (A kill down here worth a tenth of its kind's: they're the castle's knights, and this is met at five. src/main.js gainXp.)
+  xpScale: 0.1,
   names: { "Velscour's Knights": 'REDOUBT KNIGHT', Necromancers: 'TOLL-CLERK', Kobolds: 'BELLOWS-IMP', 'Haunted Mannequins': 'EMPTY HARNESS', 'The Possessed': 'DEBTOR' },
   look: { wall: 'ashlar', foot: 'dark:block', floor: 'flags', banner: 'p2_banner_skull', roof: 'dark:stone', flame: 'dark:flame', light: [1, 0.42, 0.18], fire: [1, 0.46, 0.2], every: 8, high: 3, glow: 2.5, lit: true, beam: 'dark:stone', bays: 'chains' },
   words: { enter: "The Redoubt under the Sill. Velscour's knights keep the only way down to his city here, and take its toll.", clear: 'Knight-Commander Rothgar is dead! The Redoubt is broken.', wipe: 'You fall... and wake inside the Cliff Gate.' },

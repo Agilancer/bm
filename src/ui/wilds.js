@@ -16,6 +16,8 @@ const level = (x, z) => Math.max(4, Math.min(22, Math.round(3 + Math.hypot(x, z)
 const BOARDS = RAID_TOWNS.map((k) => ({ name: SITES[k].name, x: SITES[k].x, z: SITES[k].z, r: SITES[k].r })).concat([{ name: 'Bellmourn', x: 15, z: 0, r: 75 }]);
 const WAYS = ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west'];
 // (+x is east, +z is south: src/core/lands.js.)
+// (A bounty's line in the tracker is shown within this far of its outpost: they're given out 250 m to 2.2 km off.)
+const BOUNTY_SHOWN = 2500;
 const wayTo = (dx, dz) => WAYS[Math.round(Math.atan2(dx, -dz) / (Math.PI / 4) + 8) % 8];
 // What the people posted in a town say over their heads when it's raided (POSTED in src/folk/people.js, by id): as it
 // begins, at the second band, and when it's held. They keep their posts through it; these are all they do. Nobody's
@@ -110,6 +112,9 @@ export class WildsUI {
     const O = OUTPOSTS.find((o) => o.key === this.bounty.key);
     if (!O) { this.bounty = null; return null; }
     const d = Math.hypot(O.x - p[0], O.z - p[1]);
+    // (Kept in hand, but not shown from a country away: a line of "9600 m to the west" over everything else on the Sill, under
+    // a new quest's toast, read as where that quest was. The critics, docs/FIRST-VISIT.md.)
+    if (d > BOUNTY_SHOWN) return null;
     return { title: `BOUNTY · ${O.name.replace(/^(an?|the) /, '').toUpperCase()}`, sub: d < O.r + 40 ? 'Here. Kill its chief and all its own' : `${Math.round(d / 10) * 10} m to the ${wayTo(O.x - p[0], O.z - p[1])}` };
   }
 
