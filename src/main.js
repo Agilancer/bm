@@ -71,7 +71,7 @@ import { CritterLook } from './gfx/critters.js';
 import { CritterWords } from './ui/critterwords.js';
 import { beginRun, deathWords, noteEvent, noteRun, trailSentence } from './core/lastrun.js';
 import { HUB_SMOKE } from './core/phobos-hubs.js';
-import { Beacon } from './ui/beacon.js';
+import { Beacon, HOME as BEACON_HOME } from './ui/beacon.js';
 
 const BASE = new URL('..', import.meta.url).href;
 const $ = (id) => document.getElementById(id);
@@ -94,6 +94,8 @@ window.bmTitle = title;
 // ---- job pool ----------------------------------------------------------------------------------------------
 
 // (From 11 on, the Tripo monsters' groups: src/core/tripo-monsters.js.)
+// How far off a death still pays you its experience: your spells, your party and your dead all fight well inside it.
+const KILL_REACH = 90;
 const FOE_NAMES = ['KNIGHT OF VELSCOUR', 'KNIGHT OF TESSARIEL', 'GREAT CRAB', 'GRAVEHART', 'BONE HYDRA', 'THE RISEN', 'OGRE', '', '', 'WEREWOLF', 'ABYSSAL MOUTH',
   ...GROUP_KEYS.map((g) => GROUPS[g].name)];
 
@@ -606,10 +608,17 @@ async function boot(plan, poolSize) {
   // A kill's worth of experience, and whatever that buys. The sim only says something died.
   // (kind: what it leaves, drops.js; what: 1 + what it was. A Tripo monster's worth goes by its life too, so the tough ones
   // out in the countries pay for the time they take: src/core/tripo-monsters.js GROUPS.)
-  game.gainXp = (kind, what = 0) => {
+  // (x, z: where it died. Only a death near you is yours: the sim says when anything dies anywhere, and a knight of his
+  // put down by Bellmourn's guard while you were in Phobos, nine kilometres off, paid you six hundred.)
+  game.gainXp = (kind, what = 0, x = null, z = null) => {
+    const s = game.currentSnap();
+    if (s && x !== null && Math.hypot(x - s[H.PX], z - s[H.PZ]) > KILL_REACH) return;
     renderer.skullEyes?.feel('glee', 3);
     const g = what - 1 >= TRIPO_KIND ? GROUPS[GROUP_KEYS[what - 1 - TRIPO_KIND]] : null;
-    game.addXp(Math.max(XP_OF[kind | 0] ?? 10, g ? Math.round(g.hp * 0.35) : 0));
+    // (Down a delve made for a new player, a kill's worth is that delve's share of it, xpScale: the Redoubt under the Sill's
+    // knights are the castle's, worth a castle knight's, and it's met at five. src/core/delve-redoubt.js.)
+    const d = s && delveOf(s[H.PX], s[H.PZ]);
+    game.addXp(Math.max(1, Math.round(Math.max(XP_OF[kind | 0] ?? 10, g ? Math.round(g.hp * 0.35) : 0) * (d?.xpScale ?? 1))));
   };
   // So much experience, for whatever earned it (a kill above; a tear sealed, an outpost cleared: src/ui/wilds.js).
   game.addXp = (amount) => {
@@ -728,6 +737,13 @@ async function boot(plan, poolSize) {
       // The quest log: what auto-play is working on (src/ui/autoplay.js), and the big map framed on where a quest is.
       auto: () => game.autoplay?.current(),
       map: (p) => { if (!worldMap.open) toggleMap(); worldMap.showPlace(p); },
+      // Lisandra's door of candles (src/ui/folk.js lisDoor): you and your party set down at `to` (out of any delve), or, with
+      // nowhere given, home by Bellmourn's seal. Through it to the Sill, and the Sill's seal knows you: you can travel back.
+      door: (to) => {
+        const at = to || BEACON_HOME;
+        lands.o.cmd(28, at.yaw, at.x, at.z);
+        if (to && Math.hypot(to.x - 8931, to.z - 19) < 40 && !lands.awake.has('sill')) { lands.awake.add('sill'); lands.showPortals(); }
+      },
     },
   });
   game.townUI = townUI;
@@ -826,6 +842,8 @@ async function boot(plan, poolSize) {
   window.bm = game.api(shared, simWorker, buffer, pool);
   // (For tests: bm.critters is the field, its list each of them; bm.pickCritter(x, y) clicks the screen there.)
   window.bm.critters = game.critters;
+  // (The talk panel and its quest book, and the seals: for playing a quest line through from the console.)
+  window.bm.townUI = townUI; window.bm.lands = lands;
   window.bm.pickCritter = (x, y, how = 'cursor') => game.pickCritter(x, y, how);
   // How long the start took, part by part (tools/load_time.mjs).
   window.bm.loadLaps = [['the simulation ready', Math.round(simMs)], ...renderer.loadLaps];
@@ -1176,6 +1194,8 @@ async function boot(plan, poolSize) {
     base: BASE, opening: OPENING_ENABLED, game, shared, input, hud, audio, pack, inventory, townUI, lands, renderer, town,
     spellbar: () => game.spellbar, paused: () => state.paused, pause: (on) => input.onPauseChange(on), foeNames: FOE_NAMES, settings,
   });
+  // (For tests: bm.autoplay.begin('quests') starts it, as its menu does: tools/firstvisit/play.mjs.)
+  if (window.bm) window.bm.autoplay = game.autoplay;
   // First sight of Phobos, from the Sill: auto-play stops and the camera goes to look (src/ui/firstsight.js).
   game.firstSight = new FirstSight({ game, input, settings, renderer, tip: (t, s) => hud.tip(t, s), autoOn: () => !!game.autoplay?.on, paused: () => state.paused });
   if (window.bm) window.bm.firstSight = (t = 0) => { const s = game.currentSnap(); if (s) { game.firstSight.begin(s); game.firstSight.t = t; } };   // (from t seconds in)
@@ -2403,7 +2423,7 @@ class GameView {
         // A stag's roar, far too big: a groan under a rasp, carrying a long way.
         au.gore(a, b, c, 1.6 * d, 1.7, 130); au.gore(a, b, c, 1.2 * d, 1.4, 240); au.gore(a, b, c, 0.5 * d, 1.1, 620);
         break;
-      case EV.LOOT: this.loot(a, b, c, d); this.gainXp?.(d, e); this.heroTalk?.onPlayerKill(e ? e - 1 : d); this.townUI?.kill(a, b, c, d | 0, e > TRIPO_KIND ? GROUP_KEYS[e - 1 - TRIPO_KIND] || null : null); this.autoplay?.kill(e ? FOE_NAMES[e - 1] || 'FOE' : d === 9 ? 'JELLY OR SMALL TUMBLER' : d === 6 ? 'BIG TUMBLER' : d === 8 ? 'CHAMPION' : d >= 20 ? 'HOARD' : 'FOE'); break;
+      case EV.LOOT: this.loot(a, b, c, d); this.gainXp?.(d, e, a, c); this.heroTalk?.onPlayerKill(e ? e - 1 : d); this.townUI?.kill(a, b, c, d | 0, e > TRIPO_KIND ? GROUP_KEYS[e - 1 - TRIPO_KIND] || null : null); this.autoplay?.kill(e ? FOE_NAMES[e - 1] || 'FOE' : d === 9 ? 'JELLY OR SMALL TUMBLER' : d === 6 ? 'BIG TUMBLER' : d === 8 ? 'CHAMPION' : d >= 20 ? 'HOARD' : 'FOE'); break;
       case EV.CHAMPION: this.renderer.emit(2, 4, a, b, c, 0, 1, 0, 1.6, 0.25, 0.6, 0.01, 0.03, 0.25, 0.5); break;
       case EV.EMPTY_HANDS: this.hud.tip(`Nothing in your hands. ${this.input.touch ? 'Open your pack' : 'Press I'} to take up a staff.`, 3); break;
       case EV.GROAN:

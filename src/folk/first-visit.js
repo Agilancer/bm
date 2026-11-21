@@ -1,0 +1,34 @@
+// Your first visit to City State Phobos, in the first quarter of an hour (docs/FIRST-VISIT.md): their workings, as
+// src/folk/quests.js RULES (spread into it); every word of them is in src/folk/lines/first-visit.js.
+//
+// Once Bram's first errand has put a skull in your hand, Lisandra offers to show you what you're up against. She opens a
+// door of candles (`door`: src/ui/folk.js lisDoor) and sets you down on the Sill, in sight of his city, beside Wenna Coyle, who
+// keeps the lamps on the way down to it and was her apprentice once. Wenna has four things for you there, all at about level
+// three to five: walk down through the Drawbridge Gate and see the city for yourself, as far as the Chainmarket and Fennick
+// Lowe of the Pennyless; put down his hanged debtors on the Gibbet Field and the carrion birds under the Sill; and go into the
+// Redoubt his knights cut into the Sill's north cliff, and kill the Red Hand who holds it. Then she opens Lisandra's door back
+// (`door: 'home'`), and you tell Lisandra what you saw.
+//
+// Places: 'ph:<district>' (inside the wall, src/core/phobos-data.js), 'lair:sill_gibbets' and 'lair:sill_carrion' (the plain
+// under the Sill, src/core/tripo-monsters.js), and the Redoubt ('redoubt', src/core/delve-redoubt.js).
+export const FIRST_VISIT_RULES = {
+  // Lisandra's: through her door, to Wenna on the Sill. Paid there.
+  the_door_east: { needs: 'bed_and_bell', door: 'sill', steps: [{ talk: 'fv_wenna', say: 'Lisandra sent me. Through a door of candles.', end: true }], gold: 30, xp: 100 },
+  // Wenna's four.
+  fv_the_way_down: { needs: 'the_door_east', steps: [{ visit: ['ph:barbican', 'ph:market'] }, { talk: 'ph_penny', say: 'Wenna Coyle of the Sill says her lamps are lit.', end: true }], gold: 40, xp: 150 },
+  fv_gibbet_field: { needs: 'the_door_east', steps: [{ kill: 'lair:sill_gibbets', n: 5 }, { back: true, say: 'The hanged are down again. All of them.' }], gold: 45, xp: 180 },
+  fv_carrion: { needs: 'the_door_east', steps: [{ kill: 'lair:sill_carrion', n: 3 }, { back: true, say: 'The birds under the Sill are dead.' }], gold: 45, xp: 150 },
+  fv_the_redoubt: { needs: 'fv_gibbet_field', steps: [{ enter: 'redoubt' }, { boss: 'rothgar' }, { back: true, say: 'The Red Hand is dead. His Redoubt is broken.' }], gold: 120, xp: 300, item: 'staff', named: "Wenna's Lamp-Iron", seed: 0xf1a5e },
+  // And home: Wenna opens Lisandra's door back, and you tell Lisandra.
+  fv_home: { needs: 'fv_the_redoubt', door: 'home', steps: [{ talk: 'lisandra', say: "I've seen his city. And his knights.", end: true }], gold: 60, xp: 120, item: 'scroll' },
+};
+// The level each wants (src/ui/autobrain.js PLAN; the quest log suggests the same): the first visit is at three to five.
+export const FIRST_VISIT_LEVELS = [
+  ['the_door_east', 2], ['fv_the_way_down', 3], ['fv_gibbet_field', 3], ['fv_carrion', 3], ['fv_the_redoubt', 4], ['fv_home', 4],
+];
+// Wenna's, in the order she gives them (auto-play keeps to them while it's out there: src/ui/autobrain.js).
+export const FIRST_VISIT = FIRST_VISIT_LEVELS.map(([id]) => id);
+// Where Lisandra's door sets you down on the Sill: a few steps short of Wenna, by the seal, facing east to the city.
+export const SILL_DOOR = { x: 8939.5, z: 9.5, yaw: Math.PI / 2 };
+// What you say to go through it (src/ui/folk.js; auto-play says it too, src/ui/autobrain.js).
+export const DOOR_STEP = 'Step through.';

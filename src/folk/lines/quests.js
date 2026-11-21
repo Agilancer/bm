@@ -12,6 +12,7 @@ import { QUESTS as BEYOND_QUESTS } from './beyond.js';
 import { QUESTS as LISANDRA_QUESTS } from './lisandra.js';
 import { QUESTS as LAND_QUESTS } from './land.js';
 import { QUESTS as PHOBOS_QUESTS } from './phobos-hubs.js';
+import { QUESTS as FIRST_VISIT_QUESTS } from './first-visit.js';
 
 export const QUESTS = {
   bed_and_bell: {
@@ -320,6 +321,8 @@ Object.assign(QUESTS, LISANDRA_QUESTS);
 Object.assign(QUESTS, LAND_QUESTS);
 // And City State Phobos's: its three hubs (src/folk/lines/phobos-hubs.js).
 Object.assign(QUESTS, PHOBOS_QUESTS);
+// And your first visit to Phobos's country, through Lisandra's door (src/folk/lines/first-visit.js).
+Object.assign(QUESTS, FIRST_VISIT_QUESTS);
 // (A quest that doesn't say what it's about is told by its steps, one after another: the land's are written so each step's
 // line stands alone.)
 for (const q of Object.values(QUESTS)) if (!q.about) q.about = q.journal.join(' ');

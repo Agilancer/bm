@@ -65,7 +65,9 @@ if (GEAR) inp[INPUT.ARMOR] = 33;   // (ward: a third more than a hundred is a qu
 const tick = () => { sim.step(DT); if (sim.reported) throw new Error('a tick threw'); };
 const breathe = () => new Promise((r) => setImmediate(r));
 for (let i = 0; i < 10; i++) tick();
-for (const cls of ['lancer', 'paladin', 'archer', 'rogue']) {
+// (Gone into alone, as a delve with party: false is, or SOLO=1: nobody hired, the player on their own.)
+const SOLO = delve.party === false || !!process.env.SOLO;
+if (!SOLO) for (const cls of ['lancer', 'paladin', 'archer', 'rogue']) {
   const h = sim.heroes.find((x) => x.person.cls === cls && !x.hired && !x.broker);
   if (!h || !sim.heroWorld.hire(h.slot, { level: LEVEL })) throw new Error(`nobody to hire as ${cls}`);
 }
@@ -236,7 +238,7 @@ async function fight(key) {
   return end;
 }
 
-console.log(`${delve.name}, at level ${LEVEL}: ${sim.knights.length} bodies, a party of ${party.map((h) => h.person.cls).join(', ')}; the player ${still ? 'stands still' : react > 0.3 ? 'keeps out of what it can, half a second late' : 'keeps out of what it can'}`);
+console.log(`${delve.name}, at level ${LEVEL}: ${sim.knights.length} bodies, ${party.length ? `a party of ${party.map((h) => h.person.cls).join(', ')}` : 'alone'}; the player ${still ? 'stands still' : react > 0.3 ? 'keeps out of what it can, half a second late' : 'keeps out of what it can'}`);
 const list = which === delve.key ? [...PACKS.map((q) => q.key), ...MINE.map((b) => b.key)] : [which === 'pack' ? PACKS[0].key : which];
 let lost = 0;
 for (let n = 0; n < times; n++) for (const k of list) if ((await fight(k)) !== 'won') lost++;

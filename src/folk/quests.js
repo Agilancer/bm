@@ -17,6 +17,8 @@
 // monsters' groups that count (GROUPS' keys); at a lair only its own sort of monster counts.
 // bring takes at: where what's wanted is found, for the trail (a place as above).
 // wait: what's handed over is made overnight, and collected the next day.
+// door: taken on, the giver opens Lisandra's door of candles and you're through it ('sill': to the Sill, 'home': back to her;
+// src/ui/folk.js lisDoor).
 // item: a skull, staff or robe it pays, rare (src/ui/folk.js reward); rarity: exactly how fine, for a skull. named: the
 // item is one thing, the same for everyone (made from seed) and called this.
 import { churchAt, inChurch } from '../core/church.js';
@@ -29,6 +31,7 @@ import * as DELVE from '../core/dungeon.js';
 import { LAIRS } from '../core/tripo-monsters.js';
 import { LAND_RULES } from './land-quests.js';
 import { PHOBOS_RULES } from './phobos-quests.js';
+import { FIRST_VISIT_RULES } from './first-visit.js';
 import { CITY, cityIn } from '../core/east.js';
 import { PHOBOS } from '../core/phobos-data.js';
 
@@ -56,6 +59,9 @@ export const RULES = {
   ...LAND_RULES,
   // City State Phobos's (src/folk/phobos-quests.js; words in src/folk/lines/phobos-hubs.js).
   ...PHOBOS_RULES,
+  // Your first visit there, through Lisandra's door, at about level three (src/folk/first-visit.js; words in
+  // src/folk/lines/first-visit.js).
+  ...FIRST_VISIT_RULES,
 };
 
 // The Bell Crypt: the octagon where the stair down lets out (tools/interior/build_interior.py, Stage I), in the world.

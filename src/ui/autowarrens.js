@@ -49,6 +49,9 @@ export const WAYS = {
     'cl_erange', 'cl_mstair', 'cl_mgate', 'cl_mstair', 'cl_erange', 'cl_yard'],
   // The Iron Barracks (src/core/delve-barracks.js): down the Muster Stair, the Kennels and the Practice Yard off the Muster
   // Hall, the War Room, the Cells and the Stores off it, and the Iron Marshal in his hall last.
+  // The Redoubt under the Sill (src/core/delve-redoubt.js): the Toll Hall, the Pens and the Harness off it, the court, its
+  // Forge and Chapel, and up the Watch Stair to the Red Hand last.
+  redoubt: ['rd_gate', 'rd_toll', 'rd_pens', 'rd_toll', 'rd_harness', 'rd_toll', 'rd_court', 'rd_forge', 'rd_court', 'rd_chapel', 'rd_court', 'rd_stair', 'rd_hall'],
   ironbarracks: ['ib_stair', 'ib_muster', 'ib_kennels', 'ib_muster', 'ib_yard', 'ib_muster', 'ib_war', 'ib_cells', 'ib_war', 'ib_stores', 'ib_war', 'ib_iron'],
 };
 export const WAY = WAYS.warrens;
@@ -85,6 +88,9 @@ export const KNOWN = new Set([
   // (The Iron Barracks: plain packs; the Kennelmaster's scent is an order (to the trough), the Quartermaster's runners and
   // the Marshal's standard are orders (to them), the rest marks, rings and adds, as any.)
   'ib_stairguard', 'ib_rank_w', 'ib_rank_e', 'ib_drill', 'ib_officers', 'ib_defaulters', 'kennelmaster', 'quartermaster', 'ironmarshal',
+  // (The Redoubt under the Sill: plain packs; the Pen-Warden's debtors and Carrow's harness are adds, Rothgar's banner an
+  // order (to it), the rest marks, rings and lines, as any.)
+  'rd_gateguard', 'rd_tollmen', 'rd_clerks', 'rd_lancers', 'rd_bellows', 'rd_priests', 'rd_stairguard', 'rd_round', 'penwarden', 'carrow', 'rothgar',
 ]);
 export function warrensCoverage() {
   const out = [];
@@ -202,12 +208,14 @@ export function warrensJob(b, m, want = null, owed = null) {
   const other = here && want?.length && !want.includes(here.key) ? want.map(delveByKey).find((q) => q && WAYS[q.key] && m.lvl >= q.level && delveWay(here, q, b.gateOpen)) : null;
   if (other) return { kind: 'warrens', why: whyOf(other.key), delve: other.key, say: `On to ${other.name}.` };
   if (here) return { kind: 'warrens', why: whyOf(here.key), delve: here.key, say: `Down ${here.name}.` };
-  if (!P.fit()) return null;
-  const fit = (d) => WAYS[d.key] && m.lvl >= d.level + (b.bump[whyOf(d.key)] || 0) && !b.skipping(whyOf(d.key));
+  // (A party fit to go: a tank and a healer among them. Not for one gone into alone or not, party: false, like the Redoubt under the
+  // Sill on the first visit: it used to go home to Bellmourn to hire one first, and they wait at the door.)
+  const ready = P.fit();
+  const fit = (d) => (ready || d.party === false) && WAYS[d.key] && m.lvl >= d.level + (b.bump[whyOf(d.key)] || 0) && !b.skipping(whyOf(d.key));
   const byLevel = DELVES.filter(fit).sort((a, c) => a.level - c.level);
   // (owed: the ones a quest not yet done has work down. Those wait for their quest: src/ui/autobrain.js delveOwed.)
   const d = byLevel.find((q) => want?.includes(q.key)) || (want?.length ? null : byLevel.find((q) => !owed?.has(q.key)));
-  return d ? { kind: 'warrens', why: whyOf(d.key), delve: d.key, say: `To ${d.name}, with the party.` } : null;
+  return d ? { kind: 'warrens', why: whyOf(d.key), delve: d.key, say: !ready ? `To ${d.name}, alone.` : `To ${d.name}, with the party.` } : null;
 }
 
 // Room by room: the next one along the way it hasn't been through, waiting for the party before a boss's door, and out by the

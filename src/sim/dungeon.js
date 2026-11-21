@@ -533,6 +533,8 @@ export class Warrens {
     const d = this.delve, room = roomOf(f.boss.room), [rx, , rz] = roomSpot(room.id);
     let from = [];
     if (a.from === 'doors') from = d.tunnels.filter((t) => t.dead && (!t.door || t.door === room.id) && Math.hypot(t.pts[0][0] - room.x, t.pts[0][1] - room.z) < room.r * 1.5 + 12).map((t) => toWorld(t.pts[t.pts.length - 1][0], t.pts[t.pts.length - 1][1], d));
+    // (Or spots of the fight's own, kept on it by its step: the Redoubt's cages and harness stands, src/sim/redoubt-fights.js.)
+    if (typeof a.from === 'string' && Array.isArray(f[a.from])) from = f[a.from];
     if (a.from === 'edge' || !from.length) for (let i = 0; i < (a.places || 3); i++) { const ang = Math.random() * 6.28; from.push([rx + Math.sin(ang) * room.r * 0.7, rz + Math.cos(ang) * room.r * 0.7]); }
     if (a.from === 'boss') from = [[m.x, m.z]];
     if (a.warn) this.warn(WARN[a.warn]);

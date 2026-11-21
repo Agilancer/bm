@@ -60,6 +60,7 @@ import { LET_OUT, ONE_MORE, PACK_MAKER } from './folk.js';
 import { MAX_EXTRA, slotPrice } from '../items/pack.js';
 import { CHANNEL } from '../items/beacon.js';
 import { PHOBOS_LEVELS } from '../folk/phobos-quests.js';
+import { DOOR_STEP, FIRST_VISIT, FIRST_VISIT_LEVELS, SILL_DOOR } from '../folk/first-visit.js';
 
 // The beacon stone (src/ui/beacon.js): used when the work's in Bellmourn and further off than BEACON_FAR, with nothing
 // within BEACON_CLEAR to break it off; while it's at work, it stands still for it unless something's within BEACON_HOLD.
@@ -68,6 +69,8 @@ const BEACON_FAR = 300, BEACON_CLEAR = 20, BEACON_HOLD = 14;
 const TAU = Math.PI * 2;
 const wrap = (a) => { a %= TAU; return a > Math.PI ? a - TAU : a < -Math.PI ? a + TAU : a; };
 const dist = (ax, az, bx, bz) => Math.hypot(bx - ax, bz - az);
+// A quest place's name, to say where it's off to: a site's, or a district of Phobos's ('ph:<district>'), or its key.
+const placeName = (k) => SITES[k]?.name || (k?.startsWith?.('ph:') && PHOBOS.districts.find((d) => d.key === k.slice(3))?.name) || k;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 // The point `far` metres on along a path from (x, z): where a walker's eyes are while their feet are on the next step.
 function ahead(x, z, pts, far) {
@@ -183,6 +186,8 @@ const PLAN = [
   ['storm_over_the_horn', 100], ['the_hollow_star', 102],
   // City State Phobos's first (src/folk/phobos-quests.js): you come to it at about twenty.
   ...PHOBOS_LEVELS,
+  // The first visit there, long before (src/folk/first-visit.js): through Lisandra's door at about two, home at five.
+  ...FIRST_VISIT_LEVELS,
 ];
 // (Taken on in the order of the levels they want.)
 PLAN.sort((a, b) => a[1] - b[1]);
@@ -2005,11 +2010,25 @@ export class Brain {
     // (But a word with someone who stands down a delve, the sewer-keepers, the princess, the Librarian's household, first:
     // delveTalk. And a quest that wants a ward gone into from this one goes on through its gate: warrensJob, delveWay.)
     if (inDungeon(m.x, m.z)) return this.mode === 'dungeons' ? this.dungeonJob(m) || warrensJob(this, m) : (questing && this.delveTalk(m)) || warrensJob(this, m, this.delveWants(m));
-    const hire = hireJob(this, m);
+    // (Not out on the first visit to Phobos: the only one hiring is in Bellmourn, and the Redoubt's gone into alone.)
+    const hire = this.firstVisit(m) ? null : hireJob(this, m);
     if (hire) return hire;
     // (With a quest still to do, only the dungeon a quest in hand wants: delveOwed. Round them for their own sake after.)
     const delve = questing && warrensJob(this, m, this.delveWants(m), this.delveOwed());
     if (delve && !wantsTown) return delve;
+    // Out at Phobos on the first visit (src/folk/first-visit.js): Wenna's work, all of it, before anything a country away,
+    // and her offers taken as they come (she's there on the Sill, by the door home). And back home through the door, the
+    // word with Lisandra before the town's own errands and offers.
+    if (this.firstVisit(m)) {
+      for (const id of FIRST_VISIT) {
+        const s = Q.state(id);
+        if (!s || s.stage === 'done' || this.skipping(`q:${id}`)) continue;
+        const job = this.questJob(id, m, LEVEL_OF[id]);
+        if (job) return job;
+      }
+      const offer = this.offerJob(m, FIRST_VISIT);
+      if (offer) return offer;
+    }
     // In the town, its errands: the quest talk first (only when it's on the quests), then the shops.
     const errand = this.errand(m, m.town || wantsTown || townDist(m.x, m.z) < 60, questing);
     if (errand) return errand;
@@ -2227,14 +2246,14 @@ export class Brain {
       if (st.night && !isNight(m.hour) && !(m.hour >= 19.5)) return null;
       const a = area(st.enter);
       if (!a) return null;
-      return { kind: 'go', why: `q:${id}`, x: a.x, z: a.z, r: a.r, below: a.below, say: `${title}: to ${st.enter === 'catacombs' ? 'the catacombs' : st.enter === 'bellcrypt' ? 'the Bell Crypt' : SITES[st.enter]?.name || st.enter}${st.night ? ', by night' : ''}.` };
+      return { kind: 'go', why: `q:${id}`, x: a.x, z: a.z, r: a.r, below: a.below, say: `${title}: to ${st.enter === 'catacombs' ? 'the catacombs' : st.enter === 'bellcrypt' ? 'the Bell Crypt' : placeName(st.enter)}${st.night ? ', by night' : ''}.` };
     }
     if (st.visit) {
       const seen = s.seen || [];
       const left = st.visit.filter((v) => !seen.includes(v)).map((v) => ({ v, a: area(v) })).filter((q) => q.a).sort((a, b) => dist(m.x, m.z, a.a.x, a.a.z) - dist(m.x, m.z, b.a.x, b.a.z));
       if (!left.length) return null;
       const { v, a } = left[0];
-      return { kind: 'go', why: `q:${id}`, x: a.x, z: a.z, r: Math.min(a.r, 25), say: `${title}: to ${SITES[v].name} (${seen.length} of ${st.visit.length}).` };
+      return { kind: 'go', why: `q:${id}`, x: a.x, z: a.z, r: Math.min(a.r, 25), say: `${title}: to ${placeName(v)} (${seen.length} of ${st.visit.length}).` };
     }
     if (st.kill) {
       if (st.kill === 'catacombs') return this.grindJob(m, 'catacombs', `q:${id}`, `${title}: the dead below (${s.n} of ${st.n}).`);
@@ -2277,11 +2296,18 @@ export class Brain {
     return !(w.busy === 12 || w.busy === 13) && (w.level | 0) <= 0 && w.y < 2.2;
   }
 
-  offerJob(m) {
+  // Out on the first visit to Phobos (src/folk/first-visit.js): Lisandra's door taken and the way home not yet, and either
+  // within a mile and a half of the Sill or back through the door with the word for her still to say.
+  firstVisit(m) {
+    const Q = this.o.townUI.quests, last = FIRST_VISIT[FIRST_VISIT.length - 1];
+    return Q.done(FIRST_VISIT[0]) && !Q.done(last) && (dist(m.x, m.z, SILL_DOOR.x, SILL_DOOR.z) < 1500 || Q.state(last)?.stage === 'active');
+  }
+
+  offerJob(m, only = null) {
     const { townUI } = this.o, Q = townUI.quests;
     let best = null, bd = Infinity;
     for (const [id, lvl] of PLAN_ALL) {
-      if (Q.state(id) || (RULES[id].needs && !Q.done(RULES[id].needs))) continue;
+      if ((only && !only.includes(id)) || Q.state(id) || (RULES[id].needs && !Q.done(RULES[id].needs))) continue;
       const giver = this.personIndex(QUESTS[id].giver);
       if (giver < 0 || this.skipping(`p:${giver}`) || (!this.reachable(giver) && !this.crowdSpot(giver))) continue;
       // (Far-off work can wait till it's nearly ready for it.)
@@ -2702,7 +2728,8 @@ export class Brain {
     const at = (f) => opts.findIndex((o) => o.cls !== 'dim' && f(o));
     const id = townUI.people[T.who]?.id;
     // On through what's being said.
-    let k = at((o) => ['Go on.', '...', 'To bed.'].includes(label(o)));
+    // (And through Lisandra's door, once a quest's opened it: src/ui/folk.js lisDoor.)
+    let k = at((o) => ['Go on.', '...', 'To bed.', DOOR_STEP].includes(label(o)));
     // Yes to an offer.
     if (k < 0) k = at((o) => Object.values(QUESTS).some((q) => q.accept === label(o)));
     // The quest talk it came for, or anything else this person has for it.

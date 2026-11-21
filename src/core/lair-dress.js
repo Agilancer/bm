@@ -137,6 +137,35 @@ export function dressLairs(K, seals = []) {
       { const [x, z] = at(h(1) + 0.12, R + 1.2); mound(x, z, 20, 'dark:rubble', 1.2, 0.3); }
       for (let i = 0; i < 6; i++) bones(...at(h(30 + i), R * (0.5 + h(36 + i) * 1.2)), 40 + i * 12);
       for (let i = 0; i < 3; i++) stone(...at(h(120 + i), R + 2 + h(123 + i) * 2), 126 + i * 3, 'rubble', 0.4, 0.35);
+    } else if (kind === 'gibbets') {
+      // Gibbets: tall posts with an arm out from the top, an iron cage on a chain from each (some fallen), stakes, bones
+      // under them. (An upright and an arm out from its top: no crossbar, nothing of hers.)
+      // (A cage of bars, not a drum: six uprights between an iron hoop at the foot and one at the shoulder, drawn in to a ring at
+      // the top where the chain takes it; lying on its side, `fallen`, in the grass.)
+      const cage = (cx, cy, cz, r, ch, fallen, seed) => {
+        const p = (k, t, rr) => { const a = k / 6 * TAU + seed, u = Math.cos(a) * rr, v = Math.sin(a) * rr; return fallen ? [cx + t, cy + r + v, cz + u] : [cx + u, cy + t, cz + v]; };
+        const foot = [], shoulder = [], top = [];
+        for (let k = 0; k < 6; k++) { foot.push(p(k, 0, r)); shoulder.push(p(k, ch * 0.8, r)); top.push(p(k, ch, r * 0.35)); }
+        for (let k = 0; k < 6; k++) {
+          const n = (k + 1) % 6;
+          K.beam('iron', foot[k], foot[n], 0.03); K.beam('iron', shoulder[k], shoulder[n], 0.03);
+          K.beam('iron', foot[k], shoulder[k], 0.022); K.beam('iron', shoulder[k], top[k], 0.022); K.beam('iron', top[k], top[n], 0.025);
+        }
+      };
+      for (let i = 0; i < 5; i++) {
+        const [x, z] = at(i / 5 + h(1) * 0.08, R + 1.6 + h(i + 2) * 1.2);
+        if (!free(x, z, 0.4)) continue;
+        const y = Y(x, z), hh = 3.8 + h(i + 6) * 0.7, a = h(i + 10) * TAU, ax = x + Math.cos(a) * 1.25, az = z + Math.sin(a) * 1.25;
+        K.spike('dark:wood', x, y - 0.4, z, 0.13, hh + 0.4, 5, i);
+        K.beam('dark:wood', [x, y + hh - 0.15, z], [ax, y + hh - 0.05, az], 0.08);
+        if (h(i + 14) > 0.3) {
+          K.beam('iron', [ax, y + hh - 0.1, az], [ax, y + hh - 0.85, az], 0.02);
+          cage(ax, y + hh - 2.0, az, 0.38, 1.15, false, i);
+        } else cage(ax + 0.4 - 0.55, y, az + 0.3, 0.38, 1.1, true, i);
+        bones(ax + 0.3, az - 0.2, 200 + i * 7);
+      }
+      for (let i = 0; i < 4; i++) stake(...at(h(80 + i), R + 3.4), 90 + i * 3, 1.4, 'dark:wood');
+      for (let i = 0; i < 3; i++) bones(...at(h(70 + i), R * (0.4 + h(74 + i) * 0.6)), 110 + i * 12);
     } else {
       // A picket: stakes of iron-shod timber round the rim, a cold fire, dark stones to sit on, the dead they've left.
       const nS = 10 + Math.round(R);
