@@ -1389,10 +1389,13 @@ async function boot(plan, poolSize) {
     toggleMap();
   });
   // Tab: the mouse let go, to click what's on the screen (the corner map, the skull, Auto, the spell bar and the rest), the
-  // keys still walking you and the game going on. Tab again and the mouse looks about again. A browser's Tab walks its focus
-  // off the page, which takes the pointer lock with it, and that was the pause: now only Esc pauses (input.loose).
-  const freeTip = 'The mouse is free: click the map, the skull, Auto or a spell. Tab again to look about.';
-  const mouseFree = (on) => {
+  // keys still walking you and the game going on. Tab again, a click on the world itself (not on a button, the map or a
+  // critter), or Esc, and the mouse looks about again; Esc once looking is the pause. A browser's Tab walks its focus off the
+  // page, which takes the pointer lock with it, and that was the pause: now only Esc pauses (input.loose).
+  const freeTip = 'The mouse is free: click the map, the skull, Auto or a spell. Click the world, Tab or Esc to look about.';
+  const lookTip = 'Click to look about again. Esc for the menu.';
+  // viaEsc: a browser won't lock the pointer off the Esc key, so a refusal there leaves the mouse looking, waiting on a click.
+  const mouseFree = (on, viaEsc = false) => {
     if (input.touch || AUTO || on === input.cursor) return;
     input.cursor = on;
     if (on) {
@@ -1403,10 +1406,12 @@ async function boot(plan, poolSize) {
     else {
       if ($('tip').textContent === freeTip) hud.tip(freeTip, 0);     // (its word goes with it, not anyone else's)
       // (A browser that won't take the mouse back this once: it stays free, and Tab tries again.)
-      input.lock(() => { input.cursor = true; hud.tip('The browser kept the mouse free that time. Tab again to look about.', 3.5); });
+      input.lock(viaEsc ? () => hud.tip(lookTip, 3)
+        : () => { input.cursor = true; hud.tip('The browser kept the mouse free that time. Tab again to look about.', 3.5); });
     }
   };
-  input.onLooseClick = () => { if (!input.menu && !state.paused) hud.tip(freeTip, 3); };
+  // A click on the world itself with Tab's free mouse (src/input.js): the mouse looks about again, and the click is that alone.
+  input.onLooseClick = () => { if (!input.menu && !state.paused) mouseFree(false); };
   // (For tests: bm.mouseFree() says whether Tab's free mouse is on; bm.mouseFree(true or false) sets it as Tab would.)
   if (window.bm) window.bm.mouseFree = (on) => { if (on !== undefined) mouseFree(!!on); return input.cursor; };
   // A panel or a window that Esc shuts is up (its own keys see to it), or a name's being written.
@@ -1421,10 +1426,11 @@ async function boot(plan, poolSize) {
     if (e.code === 'Tab' && !state.paused) {
       e.preventDefault();
       if (!panelUp()) mouseFree(!input.cursor);
-    } else if (e.code === 'Escape' && input.cursor && !input.free && !panelUp()) {
-      // With the mouse free there's no lock for the browser to let go of: Esc is the pause, and Esc again is back.
-      e.preventDefault();
-      input.onPauseChange(!state.paused);
+    } else if (e.code === 'Escape' && !input.free && !state.paused && !panelUp()) {
+      // With Tab's mouse free, Esc gives it back to the looking (no pause). Back looking but with no lock to let go of (the
+      // browser wouldn't take it off Esc): Esc is the pause. (Held by the game, the browser's own Esc lets go, and that pauses.)
+      if (input.cursor) { e.preventDefault(); mouseFree(false, true); }
+      else if (document.pointerLockElement !== input.canvas) { e.preventDefault(); input.onPauseChange(true); }
     }
   }, true);
   window.addEventListener('keydown', (e) => {
@@ -1459,7 +1465,7 @@ async function boot(plan, poolSize) {
   game.run();
   $('controls').innerHTML = input.touch
     ? 'Left thumb moves. Right thumb looks, on or off the buttons. The big button fires your <b>staff</b>; round it are <b>dodge</b>, <b>jump</b> and, with a shield on and no skull, <b>guard</b>. The six <b>spells</b> stand in a ring round those: tap one to cast it, hold to keep casting. Along the top: the <b>menu</b>, your <b>pack</b>, your <b>spellbook</b> and your <b>quest log</b>; tap the map in the corner to open the big one. <b>Auto</b>, beside the map, lets the game play itself.'
-    : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump, hold it to ride your shield &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>1</kbd>-<kbd>6</kbd> cast, hold to keep casting &nbsp; <kbd>F</kbd> cast the last again &nbsp; <kbd>Wheel</kbd> choose &nbsp; <kbd>B</kbd> spellbook: learn spells and set your bar &nbsp; <kbd>Alt</kbd> cursor, to click a spell &nbsp; <kbd>Tab</kbd> free the mouse to click the map, the skull or Auto, Tab again to look &nbsp; <kbd>Left click</kbd> fire your staff &nbsp; <kbd>Right click</kbd> shield up with a shove, hold to keep it up (not with a skull in hand) &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>M</kbd> map &nbsp; <kbd>E</kbd> take, open, shut or talk &nbsp; <kbd>J</kbd> quest log: what each quest is, where on the map, what auto-play is on &nbsp; <kbd>P</kbd> auto-play: the game plays itself';
+    : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump, hold it to ride your shield &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>1</kbd>-<kbd>6</kbd> cast, hold to keep casting &nbsp; <kbd>F</kbd> cast the last again &nbsp; <kbd>Wheel</kbd> choose &nbsp; <kbd>B</kbd> spellbook: learn spells and set your bar &nbsp; <kbd>Alt</kbd> cursor, to click a spell &nbsp; <kbd>Tab</kbd> free the mouse to click the map, the skull or Auto; click the world, Tab or Esc to look again &nbsp; <kbd>Left click</kbd> fire your staff &nbsp; <kbd>Right click</kbd> shield up with a shove, hold to keep it up (not with a skull in hand) &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>M</kbd> map &nbsp; <kbd>E</kbd> take, open, shut or talk &nbsp; <kbd>J</kbd> quest log: what each quest is, where on the map, what auto-play is on &nbsp; <kbd>P</kbd> auto-play: the game plays itself';
   // Loaded: the title's menu comes up (once Bellmourn's logo is in).
   game.idle = !AUTO;
   watchFiles(null);
