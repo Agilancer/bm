@@ -6,7 +6,7 @@
 //   PORT=<8481>  WAIT=<ms after each move, 7000>
 // Needs the server (python tools/serve.py 8481 --no-open) and Playwright's Chromium. Saves tools/build/shots/<name>.png.
 import { createRequire } from 'node:module';
-import { delveByKey } from '../../src/core/dungeon.js';
+import { DELVES, delveByKey } from '../../src/core/dungeon.js';
 
 const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
@@ -29,6 +29,9 @@ const SHOTS = [
   ['mw_rooms', 'middleward', 'cm_rooms', [36.4, 2.3, -155.5], [47, 0.9, -165]],
 ];
 
+// (And each later delve's own, written with it: shots: [[name, room, eye, at]]. src/core/delve-castle-a.js and the rest.)
+for (const d of DELVES) for (const [name, room, eye, at] of d.shots || []) SHOTS.push([name, d.key, room, eye, at]);
+
 function cam(ex, ey, ez, tx, ty, tz) {
   let fx = tx - ex, fy = ty - ey, fz = tz - ez; const l = Math.hypot(fx, fy, fz); fx /= l; fy /= l; fz /= l;
   let rx = -fz, rz = fx; const rl = Math.hypot(rx, rz) || 1; rx /= rl; rz /= rl;
@@ -37,12 +40,17 @@ function cam(ex, ey, ez, tx, ty, tz) {
 }
 
 const asked = process.argv.slice(2), which = asked.length ? SHOTS.filter((s) => asked.includes(s[0])) : SHOTS;
-const b = await chromium.launch({ args: ['--enable-unsafe-webgpu', '--ignore-gpu-blocklist', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--use-angle=swiftshader', '--no-sandbox'] });
+// (On Windows the machine's own GPU by D3D11, and the older shader compiler: the software Vulkan the Linux container wants
+// gives no adapter there, and Playwright's own Chromium has no dxcompiler.dll. CHROME_ARGS and CHROME_CHANNEL: other flags,
+// or another browser, if a machine wants them.)
+const WIN = ['--enable-unsafe-webgpu', '--ignore-gpu-blocklist', '--use-angle=d3d11', '--enable-features=Vulkan,WebGPU', '--disable-dawn-features=use_dxc'];
+const SOFT = ['--enable-unsafe-webgpu', '--ignore-gpu-blocklist', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--use-angle=swiftshader', '--no-sandbox'];
+const b = await chromium.launch({ channel: process.env.CHROME_CHANNEL || undefined, args: process.env.CHROME_ARGS ? process.env.CHROME_ARGS.split(' ') : process.platform === 'win32' ? WIN : SOFT });
 const page = await b.newPage({ viewport: { width: 1280, height: 720 } });
 page.on('pageerror', (e) => console.log('PAGE ERROR', String(e).slice(0, 600)));
 await page.goto(`http://localhost:${process.env.PORT || 8481}/?auto&noopening&timer`, { waitUntil: 'load' });
 await page.waitForFunction(() => window.bm && bm.snap && bm.snap(), null, { timeout: 900000, polling: 1000 });
-await page.evaluate('bm.fixScale(1); bm.renderer.hideVM = true; bm.view.lands.cheats.noDamage = true; bm.skills("level", 80); if (bm.view.questTrail) bm.view.questTrail.off = true;');
+await page.evaluate('bm.fixScale(1); bm.renderer.hideVM = true; bm.view.lands.cheats.noDamage = true; bm.skills("level", 120); if (bm.view.questTrail) bm.view.questTrail.off = true;');
 for (const [name, ward, room, eye, at] of which) {
   const d = delveByKey(ward), Y = d.y;
   const c = cam(d.x + eye[0], Y + eye[1], d.z + eye[2], d.x + at[0], Y + at[1], d.z + at[2]);

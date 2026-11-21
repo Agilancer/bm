@@ -1,25 +1,28 @@
 // Opens check.html (or any page that sets window.__result) in plain Chrome, waits for the result, and saves it with the
 // sheets it drew as PNGs (tools/astc/README.md):
 //   FLAGS="--enable-unsafe-swiftshader" node tools/astc/check.mjs "http://localhost:8861/tools/astc/check.html?soft=1" out
-// Env: FLAGS (more of Chrome's flags), CHROME (its path), TIMEOUT (s, 600).
+// Env: FLAGS (more of Chrome's flags), CHROME (its path), TIMEOUT (s, 600), DEBUG_PORT (unset: one of its own,
+// tools/chrome-port.mjs).
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { portFlag, chromeSocket, openSocket } from '../chrome-port.mjs';
 
 const url = process.argv[2], outDir = process.argv[3] || 'astc-check';
 fs.mkdirSync(outDir, { recursive: true });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const PORT = 9371;
 const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'bm-astc-'));
 const chromePath = process.env.CHROME || ['C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe'].find((p) => fs.existsSync(p));
-const chrome = spawn(chromePath, [`--user-data-dir=${profile}`, `--remote-debugging-port=${PORT}`,
+const debugFlag = await portFlag().catch((e) => { console.log(e.message); process.exit(1); });
+const chrome = spawn(chromePath, [`--user-data-dir=${profile}`, debugFlag,
   '--enable-unsafe-webgpu', '--no-first-run', '--no-default-browser-check', '--window-position=-3000,0', '--window-size=900,700',
   ...(process.env.FLAGS ? process.env.FLAGS.split(' ') : []), 'about:blank'], { stdio: 'ignore' });
-let ver = null;
-for (let i = 0; i < 60 && !ver; i++) { await sleep(250); ver = await fetch(`http://127.0.0.1:${PORT}/json/version`).then((r) => r.json()).catch(() => null); }
-const ws = new WebSocket(ver.webSocketDebuggerUrl);
-await new Promise((r) => { ws.onopen = r; });
+let chromeGone = false;
+chrome.on('exit', () => { chromeGone = true; });
+const dbg = await chromeSocket(profile, { seconds: 15, alive: () => !chromeGone });
+if (!dbg) { console.log('chrome did not start'); try { chrome.kill(); } catch { /* */ } process.exit(1); }
+const ws = await openSocket(dbg.url).catch((e) => { console.log(e.message); try { chrome.kill(); } catch { /* */ } process.exit(1); });
 let id = 0; const waits = new Map();
 const send = (method, params = {}, sessionId) => new Promise((res, rej) => { const i = ++id; waits.set(i, (m) => (m.error ? rej(new Error(m.error.message)) : res(m.result))); ws.send(JSON.stringify({ id: i, method, params, sessionId })); });
 ws.onmessage = (e) => {

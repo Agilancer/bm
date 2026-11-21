@@ -2483,6 +2483,50 @@ Measured on the one machine in the table below, at 1024x768: the forest adds abo
 
 A day is 24 minutes (`src/gfx/daylight.js`: an hour is `SECONDS_PER_HOUR`, the colours are the keys at the top). It starts at 15:00, runs only while the world does, and is kept in a save. The sun gets as far as 6 degrees above the horizon and no lower, so shadows stay within the maps; between sun and moon, the light swaps while there's none of it to see. The sky is painted again every 10 s of play (30 s on a phone). The clock in the corner is `src/clock.js`. In the console: `bm.setTime(21)`.
 
+### Gilded critters
+
+VELSCOUR's clickable critters, in 3D: twenty of them crawl, walk and drift about you on open ground wherever you are, never in a town, on a seal or portal dais, in water or on ground steeper than about 40 degrees. There are four kinds:
+
+- **The Gilded Wisp** (45 in a hundred). A faceted crystal shell round a gold heart, with gold rings and beads, and a tail of nine flame beads. The shell is drawn as light (`src/gfx/critterglass.js`): lit at its rim, along its edges and by the sun.
+- **The Starmoth** (25). Indigo-to-silver wings with gold eye spots. It crawls with them spread, and flutters up and off a few metres every few seconds.
+- **The Golden Scarab** (22). Bronze-to-gold wing cases with gold flecks and a turquoise seam and inlay, on six legs in a tripod gait. It pays gold.
+- **The Prismatic Wisp.** A tall rainbow crystal round a pink heart: the rare one. It isn't one of the odds but comes on its own clock: the first 2 to 3⅓ minutes after you're out among them, then 3 to 5 minutes after the last has gone. It turns up ripe, 14 to 24 m ahead of you, with a chord.
+
+All twenty glow, and the ones not ripe wink with the sun every few seconds, so they show across a hillside. Only up to three at a time are **ripe**, as VELSCOUR's few were. A ripe one has a red arrow over it (gold for a Prismatic Wisp), a beacon ring on the ground, rising glitter and its own two lights. Where a pine's boughs or the brow of a hill is in front of the arrow, a ghost of it shows through, so a ripe one can always be found. A new one ripens every 7 to 13 s, 9 to 30 m off, and stays ripe for 14 to 20 s (a Prismatic Wisp for 12 to 15 s). In its last 5 s its ring beats fast and it flashes, and then it gets away: a wisp rises, a moth flies off, a scarab digs in. One that comes in where you can see it comes no nearer than 15 m, and comes down out of the sky or up out of the ground; one left 52 m behind fades.
+
+**Catching one.** Click it, or tap it on a phone, within 16 m of you: in reach, its arrow turns gold-white and beats. That works with the cursor while auto-play plays (or once Tab frees the mouse), and with the crosshair. With the crosshair it must be on the body itself (or within 10 pixels), in plain sight of your eye (ground, trunks and rocks are in the way), and with no foe within 25 m of you or near the crosshair. Otherwise the click is a shot. The crosshair turns to a gold plus when a click would catch, and the free cursor shows a hand. On a phone only a tap catches (the thumb up again inside 300 ms, having moved less than 12 pixels), never a drag to look about or move. A caught one flashes and bursts, its motes fly to the level medal (or the pack, for gold), its worth rises in words, and a bell rings that goes up a step for each ripe catch within 4 s of the last.
+
+**What one is worth** comes from the land it was caught on (`landLevel`), not from you. A kill-scale of 18 + 3 for each land level past the first:
+
+| Kind | Ripe | Land 1 |
+|---|---|---|
+| Wisp | 0.8 of the scale | about 14 XP |
+| Moth | the scale | about 18 XP |
+| Prismatic Wisp | 4 times the scale | about 72 XP |
+| Scarab | 11 + 1 gold per land level | — |
+
+One not ripe pays 15% of that. After 8 ripe catches in two minutes, they pay half; after 8 not ripe in a minute, those pay nothing.
+
+Auto-play leaves them alone.
+
+The rules and numbers are in `src/core/critters.js` (on the render thread), and the bodies are in `src/core/critter-models.js`. The look is in `src/gfx/critters.js`, the words, motes and grab mark in `src/ui/critterwords.js`, and the bells in `audio.chime`. In the console:
+- `bm.critters`: the field.
+- `bm.pickCritter(x, y)`: click a point on the screen.
+
+`node --test tests/critters.test.mjs` checks:
+- the twenty, their shares and where they may be;
+- how near one turns up;
+- the ripe three, and the Prismatic Wisp's clock;
+- turning, heights and shyness;
+- picking and line of sight;
+- what each is worth, and the caps;
+- the bodies.
+
+Not tested:
+- a real phone (only Chrome emulating one, where a tap catches on both halves of the screen and one too far off gives a word);
+- the sound, by ear;
+- the phone graphics tier.
+
 ### The world build-out: what has and hasn't been seen
 
 Blackvigil Keep, the Howling Deeps, the Warrens' dressing, the rebuilt places and the two small towns, the villagers
@@ -3000,6 +3044,142 @@ again was made again; no GPU errors came of any of it. A staff let go and then e
 pack pauses it, was made again and ready within 3 seconds while the old one was still in the hand, and was in the hand
 0.6 seconds after the game went on. On a phone the pictures are packed (`src/gfx/astc.js`), so loot
 costs less there in textures and the same in buffers. **Not run on an iPhone.**
+
+#### Files kept in the page
+
+Two kinds of model file were kept whole in the page's own memory (which an iPhone counts with the GPU's) after their
+mesh and pictures had gone to the GPU:
+- **The monsters' files** (`src/gfx/tripo-slots.js`, `model`): a model is kept for the next monster of its kind (at most
+  10 in all, more only while more are in use, the longest unused let go first), and it kept its whole file with it, 2.9
+  MB on average and up to 8.4. All a model needs of it later is its colour picture, for a skin in a new palette. Now
+  that picture, copied out, is all that's kept: 0.46 MB on average.
+- **The party's body files** (`src/gfx/herolook.js`, `body`): a party hero's look in gear cut from other bodies is made
+  from those bodies' files, and each file was kept for good once used: 2 MB apiece, 44 bodies in all. A file is needed
+  only while a look is made from it (its mesh and pictures are copied into the look's own). Now at most 6 are kept in
+  all (more only while more are in use at once, as when the whole party is dressed together), the longest unused let go
+  first. One let go is fetched again when a look needs it, from the browser's copy (`force-cache`), or from the game's
+  own store when it's kept on the device.
+
+And a monster model or skin that failed to load is no longer kept as failed. It was, and every later monster of that
+kind (or that kind and palette) stayed invisible until it aged out. The one whose load failed is still unseen until its
+place goes to another monster, but the next of its kind loads afresh. A model that fails gives back what it had made.
+And every model's shared mesh came with three pose buffers of its own that are never drawn from (each monster gets its
+own copies), which nothing let go of, a model let go or failed included: 0.3 MB of the GPU's a model on average, up to
+1.8. They're given back as soon as the mesh is made.
+
+How much this saves depends on how long you play and how much changes. In 12 minutes of ordinary auto-play on `main`,
+these held 1 monster model (2.7 MB) and no body files at all. They fill as you meet more kinds of monster (new lands,
+delves) and as the party changes gear: up to about 114 MB on `main`. So this caps a slow pile-up in long sessions. It
+doesn't lower what a short session holds, and nothing here shows it was behind the 21-minute crash.
+
+The worst case, by script, on both, on an emulated iPhone: 12 kinds of monster loaded, then 14 looks made that between
+them use all 44 bodies.
+
+| | `main` | This branch |
+| --- | --- | --- |
+| Hero body files kept | 44, 86.0 MB | 6, 11.9 MB |
+| Monster files kept (10 models) | 28.3 MB whole | 3.4 MB of colour pictures |
+| Page heap's growth | +112 MB | +15 MB, and −1 MB in a second run |
+| Page process, before and after (MB; it wanders by up to 125 MB, above) | 992, 1057 | 999, 926; again 1011, 974 |
+
+Made a second time, all 14 looks came out with the same vertex and index counts (their pictures weren't compared). All
+44 bodies were fetched again for it: 6 kept can't hold a run through 44, so each was let go before its turn came round.
+Every one came from the browser's copy, none over the network. Three looks made at once, sharing bodies, left nothing
+marked in use and 6 kept. Plain and dyed skins of four monsters were made from the kept picture alone, at the same sizes
+as on `main`. **Not run on an iPhone.**
+
+What a player may notice: when a party hero's new gear needs a body that was let go, its file is read again, which
+takes a little longer than having it in memory. The hero keeps their old look until the new one is ready, as before, so
+it's their armour that lands a moment later, never a hero half made. If the phone has thrown that copy away and is
+offline, the look can't be made, and the hero stays as they were until they're next dressed, by new gear or a level
+(keeping the game on the device, the first start's question, avoids that). Monsters look as before.
+
+Left for later, as it changes what you see: a monster's skin in a palette other than its own (a dyed one) is baked in a
+worker (`src/gfx/bake.worker.js`) that doesn't hold it to the phone's cap of 256 across, as the plain skin is held. The
+necromancers, the possessed knights and the Velscour knights and lancers, whose pictures are 4096, come out 1024 across
+on a phone when dyed, and the dragons (2048) 512. Almost every named delve boss is one of these in a dye of its own (the
+Castellan of Blackvigil, the Iron Marshal, Magister Sorvane, Ossivar and others). Capping them at 256 would save roughly
+10 to 16 MB on an iPhone, but make the bosses visibly softer: it wants a change of its own, judged by eye on a phone,
+perhaps with 512 for every big monster, plain and dyed alike.
+
+#### The big pictures, decoded small
+
+What this changes is how much picture work a phone does, and how its models' pictures look; not how much memory the page
+holds at its height, which came out the same, and it is not shown to help the iPhone's crashes. A model's pictures come
+inside its file at 2048 or 4096 a side, and a phone shows none of them over 1024: a quarter of the picture, and no more
+than 256 or 512 across after that (the phone tier's `texScale`, `texCap` and `texCapNear`, `src/gfx/gpu.js`). To shrink
+a picture the game first decoded it whole, 64 MB for a 4096 picture and 16 MB for a 2048, and a load decoded 94 of them.
+
+Now a phone (and any tier that shrinks its pictures, as a laptop's Medium) decodes a copy made at 1024 instead
+(`tools/lean_pictures/make.py` writes them to `assets/lean/`: 158 pictures, 37 MB), and shrinks it the rest of the way
+in halves, which Chrome filters (a shrink of more than a half in one go it doesn't). What it makes is sized from the
+original's sides, not the copy's, so every texture comes out exactly the size it was (`src/gfx/renderer.js`
+`decodePicture`, `src/gfx/gpu.js` `decodeScaledBitmap`). A dyed skin's bake worker is handed the copy and the scale that
+makes it that size, where one scale on both sides can (`src/gfx/lean-pictures.js` `forScale`). A copy is used only where
+what's to be made is no bigger than it: the Medium tier's 2048 from a 4096 picture still comes from the original, and
+Ultra and High never look. The copies are found by the original's own bytes (`pictureKey`), not by file name, so a
+picture shared by two models has one copy, and a copy whose original has since changed is never used over the new
+picture. If a copy can't be fetched or decoded, or decodes smaller than its list says, the original is decoded as
+before. A model's copies start coming down as its file is asked for (`src/core/files.js` `fetchAhead`, and the monsters'
+own fetch in `src/gfx/tripo-slots.js`), so on a slow line they aren't waited for one model at a time as the models are
+built. `?lean=0` turns them off, to set the two side by side (in Safari: the home-screen app can't be given it).
+
+Not Lisandra's (`assets/game/lisandra/`): she is shown as the owner made her, file for file, and no copy is made of any
+picture that is also hers. So her four 4096 pictures and two 2048 are still decoded whole in every load, and in a new
+game's opening so are her spellbook's three 4096 pictures.
+
+The tool leaves alone, and the game decodes as before, any picture a copy would change: one turned by its EXIF, one with
+a see-through pixel or a colour keyed see-through (a resize mixes colour by its alpha, and some maps keep data there), a
+CMYK JPEG, a 16-bit PNG or a lossless WebP (none of the game's is, today). Run `python tools/lean_pictures/make.py`
+again whenever a model's pictures change. `node --test tests/lean-pictures.test.mjs` fails if a big picture has no copy
+and isn't left for a reason, if a copy has no picture, or if any picture of Lisandra's would be found a copy.
+
+On an emulated iPhone (desktop Chrome, this build, `?lean=0` against the copies, three loads each, taken in turn):
+
+| | Before | Now |
+| --- | --- | --- |
+| Pictures of 2048 or more decoded whole in a load | 94 | 6 (Lisandra's) |
+| Pixels decoded in a load | 580 million (2.3 GB) | 234 million (0.9 GB) |
+| The browser's time decoding pictures in a load | 6.6 and 9.1 s | 4.4 and 5.0 s |
+| Start to playable | 16.4 and 16.9 s (53.8 with the PC busy) | 16.4 to 24.4 s |
+| Page process at its height in a load | 1317 to 1521 MB | 1402 to 1484 MB |
+| Downloaded in a load | 323 to 326 MB | 344 to 345 MB (91 copies, 20.1 MB; 2 fetched ahead and not used) |
+| Decoded pictures alive at once as a new big monster is made (necromancer lord, possessed knight, Velscour knight; each counted as width × height × 4) | 64.3 MB | 4.3 MB |
+| One 4096 colour picture made the phone's 256, or 1024 | 188 or 227 ms | 50 or 110 ms (and 3 to 5 for the halves) |
+| Building the models, waiting on copies, with 150 ms added to every fetch (summed over the load) | | 16 to 22 s fetched as wanted; 1.4 to 8.3 s fetched ahead (72 of 89 ahead: the first-person arms', the portals', the doors' and one zombie's are fetched another way) |
+| Every texture's size | | the same: 8 models' pictures at 3 or 4 phone sizes, and the dyed skins |
+
+(Two of the six loads were caught before they'd finished, so their decode times are left out. The PC wasn't steady
+through these; on the first build, before the halves and fetching ahead, three loads each with it idle took 7.2 to 7.7 s
+decoding against 3.3 to 3.5, 14.0 to 17.5 s to playable against 13.4 to 16.3, and 1236 to 1258 MB at the height against
+1246 to 1299.)
+
+The load comes no sooner: the decoding it saves ran beside other work, and the network was this PC. The page's height in
+a load is the same within the runs' spread. In runs on a busy PC with the first build it was some 140 MB higher with the
+copies until the page was collected; with a collection forced every second, the same either way (1229 and 1135 MB
+against 1157 and 1278), and so 30 s after the load (661 and 604 MB against 644 and 641). That doesn't make it safe on an
+iPhone: what's not yet collected still counts against what the phone allows a page, and Safari collects on its own time.
+
+The pictures look better. Chrome's own shrink of a picture by more than a half drops pixels unfiltered, which shows as
+grain, as speckle in a normal map's lighting, and as a checkered shimmer on fine patterns such as the silver knight's
+mail. From the copy, shrunk properly once (Lanczos) and then in halves, they come out near a proper shrink of the
+original (PSNR against a Lanczos made straight from the original, as a phone makes each):
+
+| | Before | Now |
+| --- | --- | --- |
+| Necromancer lord's colour, 256 | 30.9 dB | 38.8 dB |
+| Silver knight's colour, 256 / 1024 (a dyed skin) | 30.3 / 37.7 dB | 38.2 / 46.5 dB |
+| A zombie's colour, 256, and its normal map, 128 | 32.9, 33.6 dB | 39.2, 42.4 dB |
+| A paladin's metal and roughness, 128 (its copy the weakest of all) | 25.4 dB | 32.0 dB |
+| Your wizard's colour, 512 | 30.9 dB | 34.5 dB |
+
+Safari may shrink with a filter of its own, so on an iPhone the old pictures may not have been as grainy, and there the
+change would be smaller.
+
+What a player may notice: close up, the models' pictures cleaner (in play, at a phone's size, the two are hard to tell
+apart), less work for the phone through a load and as each big monster first turns up, and 20 MB more to download, kept
+on the device if the game is (Settings, "Keep Bellmourn on this device"), otherwise fetched again once the browser lets
+them go. **Not run on an iPhone**: on one, Safari decodes the pictures, not Chrome.
 
 ### What has and hasn't been tested
 

@@ -15,6 +15,7 @@ import { PORTAL_MODELS, buildSites, buildSitesApart, buildUnder, dropSiteGeometr
 import { PhobosNear } from './phobos-near.js';
 import { adoptCityDoors } from '../core/phobos-towers.js';
 import { StairsNear } from './stairs-near.js';
+import { CliffSkin } from './cliffs.js';
 import { DELVES, PORTAL_SPOTS, braziers, caveFloorY, caveRoofY, delveAt, inDungeon, torches } from '../core/dungeon.js';
 import { DOOR, HALL, hallLights, inHall } from '../core/testhall.js';
 import { SlimeBodies } from './slimes.js';
@@ -25,26 +26,29 @@ import { loadOpeningStage } from './opening.js';
 import { DAWN_HOUR, DUSK_HOUR, secondsPerHour, daylight } from './daylight.js';
 import { Pines } from './pines.js';
 import { Rocks } from './rocks.js';
-import { accessor, imageBytes, parseGLB } from '../core/glb.js';
-import { dropFile, getFile, lanes, watched } from '../core/files.js';
+import { accessor, parseGLB } from '../core/glb.js';
+import { dropFile, fetchAhead, getFile, lanes, watched } from '../core/files.js';
 import { C, C_BLEEDS, C_MASKS, C_GASH, C_PALETTE, C_PROPS, C_SIZE, CHARS_START, H, MAX_CHARS, SLIMES_START, SPELL_PALETTE, VM_PALETTE, WEAPONS } from '../core/layout.js';
 import { addStumps } from './stumps.js';
 import { GEAR, ROBES, SKULLS } from '../items/items.js';
 import { SkullEyes } from './skulleyes.js';
 import { BoardMarks } from './boardmarks.js';
+import { CritterGlass } from './critterglass.js';
 import { ShadowCache } from './shadowcache.js';
 import { GEM_CUTS, SKULL_ANCHORS } from './skullgemdata.js';
 import { PATTERNS, SKINS } from '../items/skins.js';
 import { BODIES } from '../sim/undead.js';
 import { lerp, mat4Invert, mat4LookTo, mat4Mul, mat4Ortho, mat4Perspective, smoothstep } from '../core/math.js';
 import { shieldPose } from '../core/shield-pose.js';
-import { MipGen, makeBuffer, mipCountFor, loadTextureArray, decodeScaledBitmap } from './gpu.js';
+import { MipGen, makeBuffer, mipCountFor, loadTextureArray, decodeScaledBitmap, scaledSize } from './gpu.js';
+import { LeanPictures, pictureOf } from './lean-pictures.js';
 import { AstcPacker } from './astc.js';
 import { noteEvent } from '../core/lastrun.js';
-import { ARMOR, ARMOR_KIT, ARMOR_TRUE, GRASS, GRASS_CULL, ITEM, PROP, SHADOW, SKY, SKY_BAKE, STATIC, STATIC_SLOTS, TERRAIN, VIEWMODEL, VIEWMODEL_SKULL, staticSoftCut } from './materials.js';
+import { ARMOR, ARMOR_KIT, ARMOR_TRUE, GRASS, GRASS_CULL, ITEM, PROP, SHADOW, SKY, SKY_BAKE, STATIC, STATIC_SLOTS, TERRAIN, TERRAIN_CLIFF, VIEWMODEL, VIEWMODEL_SKULL, staticSoftCut } from './materials.js';
 import { AO, BLOOM, COMPOSITE, PARTICLE_DRAW, PARTICLE_SIM, SHAFTS, STAIN, TRAIL } from './post.js';
 import { SpellFX } from './spellfx.js';
 import { bodyRadius, inCascade } from './shadowcull.js';
+import { bucketLand, drawLandInCascade, drawLandInView } from './landcells.js';
 import { buildDelveFires, buildGlowPipeline, drawDelveFires, drawGlow, drawOpaque, loadInterior, visibility } from './interior.js';
 import { TrailFX } from './trail.js';
 import { HomeLights } from './homelights.js';
@@ -116,7 +120,8 @@ export const SKIN_PARAMS = 48;
 const FLAT = { iron: 100, flame: 101, water: 102, fruit: 103, fruit2: 104, white: 106, tile: 107, glow: 108, lake: 110, falls: 111, ice: 112, seal: 113, obsidian: 114, gold: 115, voidglass: 116, magma: 117, rune: 118, storm: 119 };
 // A painting in another light (src/core/sites.js): its layer plus a thousand times which (materials.js STATIC).
 const TINTS = { dark: 1, pale: 2, frost: 3, mire: 4, spore: 5, void: 6, slate: 7, blood: 8, moss: 9, umber: 10, soot: 11, eve: 12, char: 13, royal: 14, forest: 15 };
-const MAX_GROUND = 160;
+// (Room for the gilded critters' parts too, src/gfx/critters.js: each kind's part one batch, its instances side by side.)
+const MAX_GROUND = 512;
 // A weapon, shield, staff or piece of gear is loaded the first time it's seen (sword), on the ground or in a hand, and was
 // kept for good: every new drop of a long quest added its pictures and models, about 80 MB over 25 minutes. Now one
 // that's gone unseen this long is let go (trimSwords), but for the most recently seen few of those, kept for a quick swap
@@ -223,6 +228,8 @@ export class Renderer {
     // this GPU doesn't read its packing back right.
     const astc = new URLSearchParams(location.search).get('astc');
     this.astc = new AstcPacker(this.device, astc === '1' || (astc !== '0' && !!gpu.tier.lean));
+    // (The phone's copies of the big pictures: none until load says where the game's files are.)
+    this.leanPics = new LeanPictures('', false, getFile);
     this.gashVersions = new Int32Array(MAX_CHARS).fill(-1);
     this.tmpV = new Float32Array(16); this.tmpP = new Float32Array(16); this.tmpVP = new Float32Array(16); this.tmpI = new Float32Array(16);
     this.emitted = [];
@@ -265,6 +272,10 @@ export class Renderer {
   async load(base, progress) {
     const { device, tier, pool } = this;
     this.base = base;
+    // (Off, ?lean=0, to set them side by side.)
+    const fits = (e) => { const [w, h] = scaledSize(e.size[0], e.size[1], tier.texScale); return w <= e.copy[0] && h <= e.copy[1]; };
+    this.leanPics = new LeanPictures(base, tier.texScale < 1 && new URLSearchParams(location.search).get('lean') !== '0', getFile, fits);
+    fetchAhead((url) => this.leanPics.ahead(url));
     const lean = !!tier.lean;
     const pictures = lanes(lean ? 2 : 6);     // pictures decoding or going up to the GPU at once, over all the arrays
     const ahead = lanes(lean ? 2 : 6);        // models fetched, waiting to be built or being built
@@ -437,7 +448,7 @@ export class Renderer {
     const self = model('assets/game/player/wizard.glb', async (glb) => {
       const [body] = await this.buildCrabs(glb, 1, 1, null, 0, true);
       const mat = glb.json.materials[glb.json.meshes[0].primitives[0].material];
-      return { body, colour: imageBytes(glb, glb.json.textures[mat.pbrMetallicRoughness.baseColorTexture.index].source) };
+      return { body, colour: pictureOf(glb, glb.json.textures[mat.pbrMetallicRoughness.baseColorTexture.index].source) };
     });
     const viewModel = (i) => model(models[i], (glb) => this.buildViewModel(glb));
     const vms = [viewModel(9), viewModel(3), viewModel(14)], spellVMs = [viewModel(12), viewModel(13)];
@@ -708,6 +719,8 @@ export class Renderer {
       { binding: 4, visibility: VF, texture: { sampleType: 'float' } },
       { binding: 5, visibility: VF, buffer: { type: 'read-only-storage' } },
       { binding: 6, visibility: VF, buffer: { type: 'read-only-storage' } },
+      { binding: 7, visibility: VF, texture: { sampleType: 'float', viewDimension: '2d-array' } },
+      { binding: 8, visibility: VF, texture: { sampleType: 'float', viewDimension: '2d-array' } },
     ] });
     this.bglStatic = device.createBindGroupLayout({ entries: [
       { binding: 0, visibility: VF, texture: { sampleType: 'float', viewDimension: '2d-array' } },
@@ -748,6 +761,9 @@ export class Renderer {
       { binding: 4, resource: this.farKind.createView() },
       { binding: 5, resource: { buffer: this.roadIdx } },
       { binding: 6, resource: { buffer: this.roadSeg } },
+      // (The PH2 pack: the stone the cliffs round Phobos are painted in, materials.js TERRAIN.)
+      { binding: 7, resource: this.p2Color.createView({ dimension: '2d-array' }) },
+      { binding: 8, resource: this.p2Detail.createView({ dimension: '2d-array' }) },
     ] });
   }
 
@@ -1009,6 +1025,8 @@ export class Renderer {
       });
       this.landScenery.set(k, { gone: false, runs: made });
     }
+    // (Its triangles in order of the ground they stand on, so a pass draws only the squares it sees: src/gfx/landcells.js.)
+    this.landCells = { land: bucketLand(f, indices, 0, runs[0]), landCut: bucketLand(f, indices, runs[0], runs[0] + runs[1]) };
     this.staticVB = makeBuffer(device, new Float32Array(verts), GPUBufferUsage.VERTEX);
     this.staticIB = makeBuffer(device, indices, GPUBufferUsage.INDEX);
     // (The countries' corners are on the GPU now: the lists they were built in are let go.)
@@ -1050,7 +1068,18 @@ export class Renderer {
   }
 
   async imageTexture(glb, imageIndex, format, scale = 1, full = false, near = false, pack = true) {
-    return this.bitmapTexture(imageBytes(glb, imageIndex), format, scale, full, near, pack);
+    return this.bitmapTexture(pictureOf(glb, imageIndex), format, scale, full, near, pack);
+  }
+
+  // A picture decoded and shrunk (src/gfx/gpu.js decodeScaledBitmap): from its phone copy where there's one at least as big
+  // as what's to be made of it (src/gfx/lean-pictures.js), sized as from the original; from the picture itself otherwise,
+  // or if the copy can't be had.
+  async decodePicture(blob, scale, cap, step) {
+    const src = await this.leanPics.source(blob, ([w, h]) => scaledSize(w, h, scale, cap, step));
+    if (src.size) {
+      try { return await decodeScaledBitmap(src.blob, scale, cap, step, src.size); } catch (err) { console.warn('phone picture', src.file, err); }
+    }
+    return decodeScaledBitmap(blob, scale, cap, step);
   }
 
   // A picture as a texture, shrunk by scale. On a phone, of a model's pictures (those given a scale under 1): none is over
@@ -1065,7 +1094,7 @@ export class Renderer {
     const cap = near ? this.tier.texCapNear || this.tier.texCap : this.tier.texCap;
     const lean = this.tier.lean && scale < 1 && !full && cap;
     const k = lean && format === 'rgba8unorm' ? this.tier.mapScale : 1;
-    const bmp = await decodeScaledBitmap(blob, scale * k, lean ? cap * k : 0, pack && this.astc.on ? 4 : 1);
+    const bmp = await this.decodePicture(blob, scale * k, lean ? cap * k : 0, pack && this.astc.on ? 4 : 1);
     const mips = mipCountFor(bmp.width, bmp.height);
     const tex = this.device.createTexture({ size: [bmp.width, bmp.height], format, mipLevelCount: mips, usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT });
     try {
@@ -1956,7 +1985,7 @@ export class Renderer {
   portalOpen(d) { const W = this.delveState; return !!W && W.delve === d.key && !!W.down?.includes(d.last); }
   // A gate between delves shut till a boss has died: open once it has, now (the sim's word) or ever (the quests': bossFlags,
   // from src/main.js). As src/sim/dungeon.js open.
-  gateOpen(key) { return !!this.bossFlags?.has(`boss:${key}`) || !!this.delveState?.down?.includes(key); }
+  gateOpen(key) { return !!this.bossFlags?.has(key.includes(':') ? key : `boss:${key}`) || !!this.delveState?.down?.includes(key); }
 
   makePortals() {
     const { spots } = buildSites(), out = [];
@@ -2115,11 +2144,25 @@ export class Renderer {
     const layout = (...g) => device.createPipelineLayout({ bindGroupLayouts: g });
     const module = (code) => this.shader(code);
 
-    const terrainMod = module(TERRAIN.replaceAll('FAR_SPAN', FAR_SPAN_WGSL).replaceAll('FAR_ORG', FAR_ORG_WGSL));
+    // (The cliffs' stone by its layer in the PH2 pack: src/gfx/materials.js TERRAIN.)
+    const p2L = (name) => String(Math.max(0, this.p2.names.indexOf(name)));
+    const landCode = (code) => code.replaceAll('FAR_SPAN', FAR_SPAN_WGSL).replaceAll('FAR_ORG', FAR_ORG_WGSL)
+      .replaceAll('P2_CLIFF_L', p2L('p2_granite_cliff')).replaceAll('P2_COLS_L', p2L('p2_basalt_columns'))
+      .replaceAll('P2_SCREE_L', p2L('p2_scree')).replaceAll('P2_GRASS_L', p2L('p2_dead_grass'));
+    const terrainMod = module(landCode(TERRAIN));
     this.pTerrain = device.createRenderPipeline({
       layout: layout(this.bgl0, this.bglArr2),
       vertex: { module: terrainMod, entryPoint: 'vs', buffers: [{ arrayStride: 24, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }, { shaderLocation: 1, offset: 12, format: 'float32x3' }] }] },
       fragment: { module: terrainMod, entryPoint: 'fs', targets },
+      primitive: { topology: 'triangle-list', cullMode: 'back' },
+      depthStencil: depth(), multisample: ms,
+    });
+    // The cliffs' skin round Phobos (src/gfx/cliffs.js): the land's own shader, its vertices a little toward the eye.
+    const cliffMod = module(landCode(TERRAIN_CLIFF));
+    this.pTerrainCliff = device.createRenderPipeline({
+      layout: layout(this.bgl0, this.bglArr2),
+      vertex: { module: cliffMod, entryPoint: 'vs', buffers: [{ arrayStride: 36, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }, { shaderLocation: 1, offset: 12, format: 'float32x3' }, { shaderLocation: 2, offset: 24, format: 'float32x3' }] }] },
+      fragment: { module: cliffMod, entryPoint: 'fs', targets },
       primitive: { topology: 'triangle-list', cullMode: 'back' },
       depthStencil: depth(), multisample: ms,
     });
@@ -2194,6 +2237,8 @@ export class Renderer {
     this.skullEyes = new SkullEyes(device, this.bgl0, targets, DEPTH, this.msaa, module);
     // The shield's track on the ground, where it's ridden (src/gfx/boardmarks.js): what's been laid is kept through a rebuild.
     (this.boardMarks ||= new BoardMarks(device)).build(this.bgl0, targets, DEPTH, this.msaa, module);
+    // A gilded wisp's crystal (src/gfx/critterglass.js): light over the world, after it.
+    (this.critterGlass ||= new CritterGlass(device)).build(this.bgl0, targets, DEPTH, this.msaa, module);
     const vmSkullMod = module(VIEWMODEL_SKULL);
     this.pVMSkull = device.createRenderPipeline({
       layout: layout(this.bgl0, this.bglArmor),
@@ -2243,6 +2288,7 @@ export class Renderer {
     const shLayout = layout(this.bglShadow);
     const posVB = (stride) => [{ arrayStride: stride, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }] }];
     this.pShTerrain = device.createRenderPipeline({ layout: shLayout, vertex: { module: shMod, entryPoint: 'vsPos', buffers: posVB(24) }, primitive: { cullMode: 'none' }, depthStencil: shDepth });
+    this.pShCliff = device.createRenderPipeline({ layout: shLayout, vertex: { module: shMod, entryPoint: 'vsPos', buffers: posVB(36) }, primitive: { cullMode: 'none' }, depthStencil: shDepth });
     this.pShStatic = device.createRenderPipeline({ layout: shLayout, vertex: { module: shMod, entryPoint: 'vsPos', buffers: posVB(36) }, primitive: { cullMode: 'none' }, depthStencil: shDepth });
     this.pShSkin = device.createRenderPipeline({ layout: shLayout, vertex: { module: shMod, entryPoint: 'vsSkin', buffers: [{ arrayStride: 16, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x4' }] }] }, primitive: { cullMode: 'none' }, depthStencil: shDepth });
     this.pShProp = device.createRenderPipeline({
@@ -2609,8 +2655,9 @@ export class Renderer {
 
   // ---- particles from the CPU -------------------------------------------------------------------------
 
-  // Emit a burst. kind: 0 droplet, 1 mist, 2 spark, 3 dust, 4 smoke, 5 mote, 6 ember, 7 flame.
-  emit(kind, count, x, y, z, dx, dy, dz, spread, sp0, sp1, sz0, sz1, life0, life1) {
+  // Emit a burst. kind: 0 droplet, 1 mist, 2 spark, 3 dust, 4 smoke, 5 mote, 6 ember, 7 flame, 14 a critter's glitter (pad:
+  // its colour, r + g * 256 + b * 65536, src/gfx/critters.js).
+  emit(kind, count, x, y, z, dx, dy, dz, spread, sp0, sp1, sz0, sz1, life0, life1, pad = 0) {
     const f = this.emitF, u = this.emitU, cap = this.emitF.length / 12;
     // (Blood is what this game is about, so it's the last thing to go thin.)
     if (this.tier.emit !== 1) count = Math.floor(count * (kind < 2 ? 0.8 : this.tier.emit) + Math.random());
@@ -2631,7 +2678,7 @@ export class Renderer {
       // Mostly small with a few large: the way any spray of liquid breaks up.
       f[o + 8] = sz0 + (sz1 - sz0) * Math.random() ** 3;
       u[o + 9] = kind;
-      f[o + 10] = Math.random(); f[o + 11] = 0;
+      f[o + 10] = Math.random(); f[o + 11] = pad;
       this.emitN++;
     }
   }
@@ -2698,6 +2745,8 @@ export class Renderer {
     this.phobosNear.smoke(this.frameDt || 1 / 60, cam);
     // (The ways' flights of steps near the eye: src/gfx/stairs-near.js.)
     (this.stairsNear ||= new StairsNear(this)).update(cam);
+    // (The cliffs' skin round Phobos: src/gfx/cliffs.js.)
+    (this.cliffSkin ||= new CliffSkin(this)).update(cam);
     this.crows(cam);
     this.ash(cam);
     this.slimeBodies?.update(snap, snap[H.TIME], cam);
@@ -2781,7 +2830,11 @@ export class Renderer {
     // (And a fire or a candle indoors, src/core/phobos-build.js houseNear's, counts as further off again from out in the
     // street, where its light is all on the inside of a wall: the street's lanterns are kept before it.)
     for (const e of lit) { const dd = Math.hypot(e.L.p[0] - cam.x, e.L.p[2] - cam.z); e.d = dd - e.L.r * 0.5 + ((e.L.p[0] - cam.x) * cam.fx + (e.L.p[2] - cam.z) * cam.fz < 0 ? 12 : 0) + (e.L.indoor && dd > 9 ? 24 : 0) - (e.L.prio || 0); }
-    if (take < lit.length) lit.sort((a, b) => a.d - b.d);
+    // (A few wanted of thousands, as on a phone in Phobos, two of five thousand: the nearest picked out to the front, not
+    // the lot put in order every frame. The performance critic, 2026-11-20.)
+    if (take < lit.length && take <= 6) {
+      for (let i = 0; i <= take; i++) { let m = i; for (let j = i + 1; j < lit.length; j++) if (lit[j].d < lit[m].d) m = j; if (m !== i) { const t = lit[i]; lit[i] = lit[m]; lit[m] = t; } }
+    } else if (take < lit.length) lit.sort((a, b) => a.d - b.d);
     const nextD = take < lit.length ? lit[take].d : 1e9;
     for (let i = 0; i < take; i++) {
       const L = lit[i].L;
@@ -2792,6 +2845,11 @@ export class Renderer {
     let spellLights = this.spellfx.frame(snap, d, O.LIGHTS, take);
     // The light off the gems you carry. src/gfx/gemfx.js.
     for (const L of this.gemLights || []) {
+      if (take + spellLights >= MAX_LIT) break;
+      putLight(d, O.LIGHTS + (take + spellLights++) * 8, L, L.i);
+    }
+    // The gilded critters' (src/gfx/critters.js), the nearest few.
+    for (const L of this.critterLights || []) {
       if (take + spellLights >= MAX_LIT) break;
       putLight(d, O.LIGHTS + (take + spellLights++) * 8, L, L.i);
     }
@@ -2958,6 +3016,7 @@ export class Renderer {
       sp.setVertexBuffer(0, this.terrainVB);
       sp.setIndexBuffer(this.terrainIB, 'uint32');
       sp.drawIndexed(this.terrainCount);
+      if (this.cliffSkin?.count) { sp.setPipeline(this.pShCliff); this.cliffSkin.draw(sp); }
     }
     sp.setPipeline(this.pShStatic);
     this.drawUnderShadow(sp);
@@ -2965,10 +3024,13 @@ export class Renderer {
     this.stairsNear?.draw(sp);
     sp.setVertexBuffer(0, this.staticVB);
     sp.setIndexBuffer(this.staticIB, 'uint32');
-    sp.drawIndexed(this.staticRuns.land[1]);
+    // (Only the land's squares that reach this cascade's square: src/gfx/landcells.js.)
+    const cm = this.frameData, co = O.CASC + c * 16, LC = this.landCells;
+    let drawn = LC ? drawLandInCascade(sp, LC.land, cm, co) : (sp.drawIndexed(this.staticRuns.land[1]), this.staticRuns.land[1]);
     sp.setPipeline(this.pShCut);
     sp.setBindGroup(1, this.shCutBG);
-    sp.drawIndexed(this.staticRuns.landCut[1], 1, this.staticRuns.landCut[0]);
+    drawn += LC ? drawLandInCascade(sp, LC.landCut, cm, co) : (sp.drawIndexed(this.staticRuns.landCut[1], 1, this.staticRuns.landCut[0]), this.staticRuns.landCut[1]);
+    this.stats['landShadow' + c] = drawn;
     if (this.camNow.y > -6) this.pines.drawShadow(sp, c, last, this.shCutBG);
     if (this.camNow.y > -6 && this.rocksOn !== false) this.rocks.drawShadow(sp, last);
     sp.setPipeline(this.pShStatic);
@@ -2987,6 +3049,7 @@ export class Renderer {
         sp.setVertexBuffer(0, this.terrainVB);
         sp.setIndexBuffer(this.terrainIB, 'uint32');
         sp.drawIndexed(this.terrainCount);
+        if (this.cliffSkin?.count) { sp.setPipeline(this.pShCliff); this.cliffSkin.draw(sp); }
       }
       sp.setPipeline(this.pShStatic);
       this.drawUnderShadow(sp);
@@ -3318,6 +3381,8 @@ export class Renderer {
     this.stallItems ||= this.makeStalls();
     for (const g of this.stallItems) if (this.stallsOpen.has(g.id) === g.open) drawn.push(g);
     if (this.dishes) for (const g of this.dishes.values()) drawn.push(g);
+    // The gilded critters (src/gfx/critters.js): a batch each part, g.n of them, their matrices g.mats and a ball round all.
+    for (const g of this.critterItems || []) if (g.n) drawn.push(g);
     if (snap[H.SURF] > 1.5 && this.board.sword && !this.third) drawn.push(this.board);
     // In third person, what your body holds: the staff, the left hand's (the skull, or the shield on the arm), and the
     // shield on the back or under the feet. The sim says where (a matrix each, none if there's nothing: PlayerBody.hold).
@@ -3337,8 +3402,14 @@ export class Renderer {
       let model = g.openingModel ?? g.mesh ?? (g.portal ? this.portalModels?.[g.off ? `${g.portal}_off` : g.portal] : g.door ? this.doorModels?.[g.piece] : g.bell ? this.bellModels?.[g.piece] : g.ware ? this.ware(g.ware) : g.piece ? this.chestModels?.[g.piece] : g.coins ? this.coins() : g.stuff ? this.stuff(g.stuff) : g.gem ? this.gem(g.gem) : this.sword(g.sword).lying);
       if (model && g.glow) model = this.tinted(model, g.glow, g.glowK ?? 1);
       g.model = model;
-      if (!model || nGround >= MAX_GROUND) { g.slot = -1; continue; }
+      const k = g.batch ? g.n : 1;
+      if (!model || !k || nGround + k > MAX_GROUND) { g.slot = -1; continue; }
       g.slot = nGround;
+      if (g.batch) {
+        this.itemData.set(g.mats.subarray(0, k * 16), nGround * 16); nGround += k;
+        g.sx = g.ball[0]; g.sy = g.ball[1]; g.sz = g.ball[2]; g.sr = g.ball[3]; g.inView = inView(this.planes, g.sx, g.sy, g.sz, g.sr);
+        continue;
+      }
       this.itemData.set(g.mat, nGround++ * 16);
       // (Where it lies, for the same: out of view it isn't drawn, and it's in no cascade its shadow can't reach.)
       if (model.radius !== undefined) { placeSphere(g, g.mat, 0, model.radius); g.inView = inView(this.planes, g.sx, g.sy, g.sz, g.sr); } else { g.sr = -1; g.inView = true; }
@@ -3477,7 +3548,7 @@ export class Renderer {
           if (g.sr >= 0 && !inCascade(cm, co, g.sx, g.sy, g.sz, g.sr)) continue;
           sp.setVertexBuffer(0, g.model.VB);
           sp.setIndexBuffer(g.model.IB, 'uint32');
-          sp.drawIndexed(g.model.count, 1, 0, 0, g.slot);
+          sp.drawIndexed(g.model.count, g.batch ? g.n : 1, 0, 0, g.slot);
         }
       }
       sp.end();
@@ -3626,7 +3697,7 @@ export class Renderer {
         mp.setBindGroup(1, g.model.bg);
         mp.setVertexBuffer(0, g.model.VB);
         mp.setIndexBuffer(g.model.IB, 'uint32');
-        mp.drawIndexed(g.model.count, 1, 0, 0, g.slot);
+        mp.drawIndexed(g.model.count, g.batch ? g.n : 1, 0, 0, g.slot);
       }
     }
     const vis = visibility(this.interior.data.f0, this.camNow);
@@ -3640,12 +3711,14 @@ export class Renderer {
     mp.setVertexBuffer(0, U ? U.VB : this.staticVB);
     mp.setIndexBuffer(U ? U.IB : this.staticIB, 'uint32');
     const [so, sc] = U ? [[0, U.opaque], [U.opaque, U.cut]] : [this.staticRuns.land, this.staticRuns.landCut];
-    mp.drawIndexed(so[1], 1, so[0]);
+    // (On the land, only its squares in view: src/gfx/landcells.js.)
+    const LC = !U && this.landCells;
+    if (LC) this.stats.landDrawn = drawLandInView(mp, LC.land, this.planes); else mp.drawIndexed(so[1], 1, so[0]);
     if (sc[1]) {
       mp.setPipeline(this.pStaticCut);
-      mp.drawIndexed(sc[1], 1, sc[0]);
+      if (LC) this.stats.landDrawn += drawLandInView(mp, LC.landCut, this.planes); else mp.drawIndexed(sc[1], 1, sc[0]);
     }
-    if (!U && this.phobosNear?.count) { mp.setPipeline(this.pStatic); this.phobosNear.draw(mp); }
+    if (!U && this.phobosNear?.count) { mp.setPipeline(this.pStatic); this.phobosNear.draw(mp, true); }
     if (!U && this.stairsNear?.count) { mp.setPipeline(this.pStatic); this.stairsNear.draw(mp); }
     if (this.slimeBodies?.count) { mp.setPipeline(this.pStatic); this.slimeBodies.draw(mp); }
     // (Down the Warrens nothing of the land above can be seen: its rock is all there is.)
@@ -3662,8 +3735,10 @@ export class Renderer {
       mp.setVertexBuffer(0, this.grassFar);
       mp.drawIndirect(this.grassFarArgs, 0);
     }
-    mp.setPipeline(this.pTerrain);
     mp.setBindGroup(1, this.terrainBG);
+    // (The cliffs' skin first: the land's own face behind it is then never shaded.)
+    if (this.cliffSkin?.count) { mp.setPipeline(this.pTerrainCliff); this.cliffSkin.draw(mp); }
+    mp.setPipeline(this.pTerrain);
     mp.setVertexBuffer(0, this.terrainVB);
     mp.setIndexBuffer(this.terrainIB, 'uint32');
     mp.drawIndexed(this.terrainCount);
@@ -3677,6 +3752,7 @@ export class Renderer {
     // (And Phobos's, out in the open: the Approach's braziers and the fire bowls on its towers. src/core/phobos-build.js fire().)
     else if (!vis.warrens && cam.x > 8700 && cam.x < 11700 && Math.abs(cam.z) < 1400) drawDelveFires(this, mp, this.interior, this.delveFires ||= buildDelveFires(this, buildSites().fires), 'phobos');
     this.openingStage?.drawGlow(mp);
+    this.critterGlass?.draw(mp);
     this.trail?.draw(mp);
     if (tier.lean) {
       mp.setPipeline(this.pDraw);

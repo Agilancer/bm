@@ -59,7 +59,7 @@ test('every Phobos quest names someone, somewhere and something that is there, a
       for (const k of [st.enter, st.kill, ...(st.visit || [])].filter(Boolean)) {
         assert.ok(hasArea(k), `${id}: no such place ${k}`);
         const at = spotIn(k);
-        assert.ok(at && areaAt(k, at.x, 30, at.z), `${id}: ${k} can't be stood in`);
+        assert.ok(at && areaAt(k, at.x, at.y ?? 30, at.z), `${id}: ${k} can't be stood in`);   // (a lookout has a height of its own)
       }
       if (st.kill?.startsWith('lair:')) {
         const l = LAIRS.find((q2) => q2.key === st.kill.slice(5));
@@ -103,7 +103,7 @@ test('the two letters keep apart: nothing of the other side in the city, and the
 });
 
 test('each Phobos quest can be taken, walked through as the game reports it, and handed in', () => {
-  const inside = (k) => { const p = spotIn(k); return [p.x, 30, p.z]; };
+  const inside = (k) => { const p = spotIn(k); return [p.x, p.y ?? 30, p.z]; };
   for (const id of IDS) {
     const Q = book(), R = PHOBOS_RULES[id], q = QUESTS[id];
     for (let need = R.needs; need; need = RULES[need].needs) Q.q[need] = { stage: 'done' };

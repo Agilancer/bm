@@ -129,6 +129,10 @@ const westWarnings = {
 export const WEST_DRAINS = {
   key: 'westdrains', tag: 'pw', name: 'The West Drains', short: 'the West Drains', x: 9260, z: -5700, y: -70, level: 30, style: 'castle',
   party: false, sewer: true,
+  // (Off the beaten way, src/core/castle-finds.js: a chest at the end of a spur too small to be anybody's road, and the sector's
+  // great room named for whoever stands in it.)
+  chests: [{ id: 'cinder_spur', room: 'pw_cinder', x: -66, z: -193.5, yaw: 0, loot: 1 }, { id: 'rook_spur', room: 'pw_rook', x: -167.5, z: -222, yaw: PI / 2, loot: 2 }],
+  vistas: [{ id: 'great_grate', name: 'Under the Great Grate', room: 'pw_grate', x: 0, z: -150, r: 6 }],
   rooms: westRooms, tunnels: westTunnels, props: westProps, packs: westPacks, bosses: westBosses, warnings: westWarnings,
   turnWarn: { spiderqueen: 'spq_turn' },
   entry: { x: 0, z: 2.5, yaw: PI }, exitIn: { x: 0, z: 5.4 }, exitOut: { x: -62, z: -313.4 },
@@ -227,6 +231,8 @@ const sloughWarnings = {
 export const SLOUGH_MAINS = {
   key: 'sloughmains', tag: 'ps', name: 'The Slough Mains', short: 'the Slough Mains', x: 9560, z: -5700, y: -74, level: 38, style: 'castle',
   party: false, sewer: true,
+  chests: [{ id: 'wharf_spur', room: 'ps_main', x: 37.5, z: -60, yaw: -PI / 2, loot: 1, up: 0.18 }, { id: 'silt_spur', room: 'ps_silt', x: 72.5, z: -190, yaw: PI / 2, loot: 2, up: 0.37 }],
+  vistas: [{ id: 'weir_step', name: "the Weir Hall's Step", room: 'ps_weir', x: 0, z: -140, r: 6 }],
   rooms: sloughRooms, tunnels: sloughTunnels, props: sloughProps, packs: sloughPacks, bosses: sloughBosses, warnings: sloughWarnings,
   turnWarn: { greatworm: 'gwm_turn' },
   entry: { x: 0, z: 2.5, yaw: PI }, exitIn: { x: 0, z: 5.4 }, exitOut: { x: 112, z: -309.4 },
@@ -319,6 +325,8 @@ const charnelWarnings = {
 export const CHARNEL_RUNS = {
   key: 'charnelruns', tag: 'pc', name: 'The Charnel Runs', short: 'the Charnel Runs', x: 9900, z: -5700, y: -80, level: 45, style: 'castle',
   party: false, sewer: true,
+  chests: [{ id: 'catacomb_spur', room: 'pc_cata', x: -37.5, z: -218, yaw: PI / 2, loot: 2 }, { id: 'ossuary_spur', room: 'pc_main', x: 33.5, z: -80, yaw: -PI / 2, loot: 2, up: -0.39 }],
+  vistas: [{ id: 'charnel_brink', name: "the Charnel Cistern's Brink", room: 'pc_cistern', x: 0, z: -124, r: 6 }],
   rooms: charnelRooms, tunnels: charnelTunnels, props: charnelProps, packs: charnelPacks, bosses: charnelBosses, warnings: charnelWarnings,
   turnWarn: { drownedabbot: 'dab_turn' },
   entry: { x: 0, z: 2.5, yaw: PI }, exitIn: { x: 0, z: 5.4 }, exitOut: { x: 147.4, z: -206, yaw: -PI / 2 },
@@ -418,6 +426,8 @@ const highWarnings = {
 export const HIGH_CONDUITS = {
   key: 'highconduits', tag: 'pa', name: 'The High Conduits', short: 'the High Conduits', x: 10260, z: -5700, y: -66, level: 53, style: 'castle',
   party: false, sewer: true,
+  chests: [{ id: 'dukes_spur', room: 'pa_dukes', x: 37.5, z: -170, yaw: -PI / 2, loot: 2 }, { id: 'long_spur', room: 'pa_long', x: 70, z: -267.5, yaw: 0, loot: 3 }],
+  vistas: [{ id: 'aqueduct_fall', name: 'the Foot of the Aqueduct Fall', room: 'pa_fall', x: 0, z: -120, r: 6 }],
   rooms: highRooms, tunnels: highTunnels, props: highProps, packs: highPacks, bosses: highBosses, warnings: highWarnings,
   turnWarn: { lamplighter: 'lmp_turn' },
   entry: { x: 0, z: 2.5, yaw: PI }, exitIn: { x: 0, z: 5.4 }, exitOut: { x: 146, z: -220.6, yaw: PI },

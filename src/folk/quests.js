@@ -31,6 +31,7 @@ import { LAND_RULES } from './land-quests.js';
 import { PHOBOS_RULES } from './phobos-quests.js';
 import { CITY, cityIn } from '../core/east.js';
 import { PHOBOS } from '../core/phobos-data.js';
+import { castleVistas } from '../core/castle-finds.js';
 
 export const RULES = {
   // Lisandra's, at the edge of town once she's walked you down: go round everyone with work and start each of their quests.
@@ -85,6 +86,8 @@ for (const l of LAIRS) AREAS[`lair:${l.key}`] = (x, y, z) => Math.hypot(x - l.x,
 // City State Phobos: anywhere inside its wall ('phobos'), and each of its districts ('ph:<key>', src/core/phobos-data.js).
 AREAS.phobos = (x, y, z) => y > -30 && cityIn(x, z) < 1;
 for (const d of PHOBOS.districts) AREAS[`ph:${d.key}`] = (x, y, z) => y > -30 && Math.hypot(x - d.x, z - d.z) < d.r * 0.8;
+// A lookout of the castle's or the city's ('vista:<id>', src/core/castle-finds.js): stood on it.
+for (const v of castleVistas()) AREAS[`vista:${v.id}`] = (x, y, z) => Math.abs(y - v.y) < 4 && Math.hypot(x - v.x, z - v.z) < v.r;
 export const areaAt = (k, x, y, z) => !!AREAS[k]?.(x, y, z);
 export const hasArea = (k) => !!AREAS[k];
 
@@ -102,6 +105,8 @@ export function placeSpot(k) {
   if (k.startsWith('lair:')) { const l = LAIRS.find((q) => q.key === k.slice(5)); return l ? { x: l.x, z: l.z, near: l.r + 12 } : null; }
   if (k === 'phobos') return { x: CITY.x - CITY.a + 40, z: 0, near: 30 };
   if (k.startsWith('ph:')) { const d = PHOBOS.districts.find((q) => q.key === k.slice(3)); return d ? { x: d.x, z: d.z, near: d.r * 0.5 } : null; }
+  // (A lookout, 'vista:<id>', src/core/castle-finds.js: where it is, how near counts, and how high it stands.)
+  if (k.startsWith('vista:')) { const v = castleVistas().find((q) => q.id === k.slice(6)); return v ? { x: v.x, z: v.z, near: v.r, y: v.y } : null; }
   const p = delvePortal(k);
   if (p) return { x: p.x, z: p.z, near: 3, delve: k };
   // A room down one ('room:<id>'): that delve's portal.
@@ -129,6 +134,9 @@ export function sayable(list, flags, met = null) {
   return out;
 }
 
+// How many quests the tracker under the map shows at once.
+export const WATCH_MAX = 5;
+
 export class QuestBook {
   // on: { change(), toast(text, kind), done(id) }
   constructor(on) {
@@ -137,6 +145,8 @@ export class QuestBook {
     this.told = {};         // quest -> person -> how many of their lines on it they've said
     this.flags = new Set(); // what the town knows (src/folk/talk.js): 'arrived', 'quest:<id>', 'quest:<id>:done'
     this.follow = null;     // the quest the trail leads you to (src/ui/trail.js): an id, 'off', or null for the newest
+    this.dropped = {};      // quest -> when it was last dropped from the quest log (drop)
+    this.watch = [];        // the quests the tracker under the map shows (src/ui/tracker.js), in the order they were tracked
   }
 
   state(id) { return this.q[id] || null; }
@@ -158,6 +168,17 @@ export class QuestBook {
   // Whether you've taken up your first work in town: Bram's bed, or Lisandra's round of the town.
   started() { return !!(this.q.bed_and_bell || this.q.lisandra_work); }
 
+  // Whether a quest is shown in the tracker under the map; and tracking one, or not (from the quest log). A quest taken is
+  // tracked while there's room (WATCH_MAX); nothing is ever untracked but by you, or by its being done or dropped.
+  watching(id) { return this.watch.includes(id); }
+  track(id, on = !this.watching(id)) {
+    const s = this.q[id];
+    if (on && (!s || s.stage === 'done' || this.watching(id) || this.watch.length >= WATCH_MAX)) return false;
+    if (on) this.watch.push(id); else this.watch = this.watch.filter((k) => k !== id);
+    this.on.change();
+    return true;
+  }
+
   // Picked in the quest log: follow it, or (picked again) put the trail away.
   pick(id) {
     this.follow = this.followed() === id ? 'off' : id;
@@ -174,6 +195,7 @@ export class QuestBook {
     const was = this.followed();
     this.q[id] = { stage: 'active', step: 0, n: 0 };
     if (!(was && this.step(was)?.start)) this.follow = id;
+    if (!this.watching(id) && this.watch.length < WATCH_MAX) this.watch.push(id);
     this.flags.add(`quest:${id}`);
     this.on.toast(`New quest: ${QUESTS[id].title}`, 'quest');
     this.on.begun?.(id);
@@ -232,11 +254,45 @@ export class QuestBook {
 
   finish(id) {
     this.q[id] = { stage: 'done' };
+    this.watch = this.watch.filter((k) => k !== id);
     this.flags.add(`quest:${id}:done`);
     this.on.toast(`Quest done: ${QUESTS[id].title}`, 'done');
     this.on.done(id);
     this.on.change();
   }
+
+  // Whether a quest under way can be dropped from the quest log: any that's taken and not yet done.
+  canDrop(id) { const s = this.q[id]; return !!s && s.stage !== 'done'; }
+
+  // Dropped from the quest log: as if it had never been taken. Its giver has it to give again (offers, and the yellow ! over
+  // their head), what the town says of it being taken goes back to before (the 'quest:<id>' flag), and its count starts
+  // over. A list of people to take work from (Lisandra's round of the town) loses its tick for the giver, unless they've
+  // other work of theirs in hand. `dropped` keeps when it was dropped (auto-play leaves it a while: src/ui/autobrain.js).
+  // Returns what was handed over for it and is to be given back ({ mat, n }: made overnight and not yet collected), or
+  // null; false if there was nothing to drop.
+  drop(id, at = Date.now()) {
+    if (!this.canDrop(id)) return false;
+    const s = this.q[id], st = RULES[id].steps[s.step], giver = QUESTS[id].giver;
+    const back = s.stage === 'making' && st?.bring ? { mat: st.bring, n: st.n || 1 } : null;
+    delete this.q[id];
+    delete this.told[id];
+    this.flags.delete(`quest:${id}`);
+    if (this.follow === id) this.follow = null;
+    this.watch = this.watch.filter((k) => k !== id);
+    this.dropped[id] = at;
+    for (const k of this.active()) {
+      const ks = this.q[k], kst = this.step(k);
+      if (!kst?.start || !ks.seen?.includes(giver)) continue;
+      if (!Object.keys(RULES).some((q) => q !== k && QUESTS[q].giver === giver && this.q[q])) ks.seen = ks.seen.filter((p) => p !== giver);
+    }
+    this.on.toast(`Quest abandoned: ${QUESTS[id].title}`, 'drop');
+    this.on.dropped?.(id, back);
+    this.on.change();
+    return back;
+  }
+
+  // Dropped lately (within `ms` of `now`): auto-play leaves such a quest be for a while.
+  droppedLately(id, ms, now = Date.now()) { const t = this.dropped[id]; return t != null && now - t < ms; }
 
   // What the quest log says to do now.
   journalLine(id) {
@@ -278,9 +334,15 @@ export class QuestBook {
   boss(key) {
     if (!key) return;
     this.flags.add(`boss:${key}`);
+    // (And the key it kept, if it kept one: src/core/castle-keys.js.)
+    const gives = DELVE.BOSSES?.find((b) => b.key === key)?.gives;
+    if (gives) this.flags.add(gives);
     for (const id of this.active()) if (this.step(id)?.boss === key) this.advance(id);
     this.on.change();
   }
+
+  // Something the castle remembers of you: a way unbarred ('latch:<id>'), a lookout found ('vista:<id>').
+  flag(k) { if (!k || this.flags.has(k)) return false; this.flags.add(k); this.on.change(); return true; }
 
   // Where the player is, every so often.
   where(x, y, z, hour) {
@@ -323,12 +385,16 @@ export class QuestBook {
 
   // ---- saving ----
 
-  save() { return { q: structuredClone(this.q), told: structuredClone(this.told), flags: [...this.flags], follow: this.follow }; }
+  save() { return { q: structuredClone(this.q), told: structuredClone(this.told), flags: [...this.flags], follow: this.follow, dropped: { ...this.dropped }, watch: [...this.watch] }; }
   load(d) {
     this.q = structuredClone(d?.q || {});
     this.told = structuredClone(d?.told || {});
     this.flags = new Set(d?.flags || []);
     this.follow = d?.follow ?? null;
+    this.dropped = { ...(d?.dropped || {}) };
+    // (A save from before the tracker: the quest followed and the newest under way, as far as there's room.)
+    const live = this.active();
+    this.watch = Array.isArray(d?.watch) ? d.watch.filter((k) => live.includes(k)) : [...new Set([this.followed(), ...live.slice().reverse()])].filter((k) => live.includes(k)).slice(0, 3);
     this.on.change();
   }
 }

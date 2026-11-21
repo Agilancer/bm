@@ -29,6 +29,7 @@ import { P2_TILE } from './phobos-p2.js';
 import { buildHouse, buildTower } from './belltower.js';
 
 const TAU = Math.PI * 2;
+const EAST_FROM = 8900; // (City State Phobos and Castle Velscour lie east of here: see Kit.collide.)
 // World metres to one repeat of each kind of painting, across and up.
 // (The four from the catacombs, tools/village/more_stone.py, hold three of their painting across and two up: a third number is
 // how far one repeat goes on a floor's other way, where a floor would otherwise stretch it.)
@@ -97,10 +98,13 @@ export class Kit {
     const p = this.part(layer), base = p.pos.length / 3;
     const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = d[0] - a[0], vy = d[1] - a[1], vz = d[2] - a[2];
     const g = [uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx];
+    let flip = false;
     if (!nrm) { const l = Math.hypot(...g) || 1; nrm = g.map((v) => v / l); }
     // (A face given its normal is wound to agree with it: the shader turns a face's normal round when its back is seen,
     // so one wound the other way, a mirrored house's ceiling say, is lit from the side it isn't seen from.)
-    else if (g[0] * nrm[0] + g[1] * nrm[1] + g[2] * nrm[2] < 0) { [b, d] = [d, b]; if (uvs) uvs = [uvs[0], uvs[3], uvs[2], uvs[1]]; }
+    // (Its texture laid first, by the corners as given: laid after the swap, a wall's ran up it slantwise, the houses pass,
+    // 2026-11-20.)
+    else flip = g[0] * nrm[0] + g[1] * nrm[1] + g[2] * nrm[2] < 0;
     if (!uvs) {
       const [tw, th] = tileOf(layer);
       const w = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]), h = Math.hypot(d[0] - a[0], d[1] - a[1], d[2] - a[2]);
@@ -118,6 +122,7 @@ export class Kit {
         uvs = [[u0, a[1] / -th], [u0 + w / tw, b[1] / -th], [u0 + w / tw, (b[1] + h) / -th], [u0, (a[1] + h) / -th]];
       }
     }
+    if (flip) { [b, d] = [d, b]; uvs = [uvs[0], uvs[3], uvs[2], uvs[1]]; }
     for (const q of [a, b, c, d]) p.pos.push(q[0], q[1], q[2]);
     for (let k = 0; k < 4; k++) p.nrm.push(nrm[0], nrm[1], nrm[2]);
     for (const t of uvs) p.uv.push(t[0], t[1]);
@@ -168,13 +173,19 @@ export class Kit {
       this.quad(sideL, P(ax, 0, az), P(bx, 0, bz), P(bx, h, bz), P(ax, h, az));
     }
     if (topL) this.quad(topL, P(-hx, h, -hz), P(-hx, h, hz), P(hx, h, hz), P(hx, h, -hz), [0, 1, 0]);
-    if (o.collide !== false) this.collide(x, z, hx, hz, yaw, y + h, o.under);
+    if (o.collide !== false) this.collide(x, z, hx, hz, yaw, y + h, o.under, y);
   }
 
   // A collider: a box on the ground to height top (world y). (World.resolve takes h over the land at its middle.)
-  collide(x, z, hx, hz, yaw, top, under = 0) {
-    const h = top - terrainHeight(x, z) + under;
-    if (h > 0.05) this.colliders.push({ x, z, hx, hz, yaw, h });
+  // base: where the thing itself starts. In City State Phobos and Castle Velscour, one that starts high over the land (a
+  // turret's drum on a deck, a corbel under a gallery, a block on a tower's crown) stops a body only from there up, as a
+  // bridge's parapet does: from the ground it stood as a pillar no one could see through whatever was under it, a stair's
+  // head landing, a street (tools/paths/map.mjs found them). Elsewhere, as it always was.
+  collide(x, z, hx, hz, yaw, top, under = 0, base = null) {
+    const g = terrainHeight(x, z), h = top - g + under;
+    if (h <= 0.05) return;
+    if (base !== null && x > EAST_FROM && base - g > 2.5) this.colliders.push({ x, z, hx, hz, yaw, h, b: base - 0.3, t: top });
+    else this.colliders.push({ x, z, hx, hz, yaw, h });
   }
 
   // A pitched roof over a w by d plan, ridge along its length (x before the turn), eaves at y, rising rise; gable ends in wall.
@@ -202,14 +213,19 @@ export class Kit {
     this.quad(o.door || 'door_1', [d[0] - 0.8 * c, y + 0.3, d[1] + 0.8 * s], [d[0] + 0.8 * c, y + 0.3, d[1] - 0.8 * s], [d[0] + 0.8 * c, y + 2.6, d[1] - 0.8 * s], [d[0] - 0.8 * c, y + 2.6, d[1] + 0.8 * s], [s, 0, c], [[0, 1], [1, 1], [1, 0], [0, 0]]);
     const gd = terrainHeight(d[0] + 0.6 * s, d[1] + 0.6 * c);
     if (o.foot !== false && gd < y) this.box('stone', d[0] + 0.5 * s, gd - 0.4, d[1] + 0.5 * c, 1.0, y + 0.3 - gd + 0.4 - 0.12, 0.5, yaw, { collide: false });
-    if (o.chimney) this.box('stone', x + o.chimney * c, y + h, z - o.chimney * s, 0.6, Math.min(hx, hz) + 1.4, 0.6, yaw, { collide: false });
+    if (o.chimney) {
+      this.box('stone', x + o.chimney * c, y + h, z - o.chimney * s, 0.6, Math.min(hx, hz) + 1.4, 0.6, yaw, { collide: false });
+      // (Its smoke, out on the land: a lived-in town says so from a kilometre off. main.js emitAmbient. The world once-over.)
+      if (!this.deep) (this.smokes ||= []).push([x + o.chimney * c, y + h + Math.min(hx, hz) + 1.6, z - o.chimney * s]);
+    }
     if (o.lamp) this.wallLamp(d[0] + (o.lamp * 1.25) * c, y + 2.6, d[1] - (o.lamp * 1.25) * s, [s, c]);
   }
 
   // A round thing of sides faces: a drum from y to y + h, radius r (r2 at its top), with a lid unless open.
   drum(layer, x, y, z, r, h, sides = 12, o = {}) {
     const r2 = o.r2 ?? r, a0 = o.turn || 0;
-    const [tw, th] = tileOf(layer);
+    // (o.tile: its stone so many times its own size, for a shaft so tall its courses would be a moire from afar.)
+    const [tw, th] = tileOf(layer).map((v) => v * (o.tile || 1));
     const p = this.part(layer);
     for (let i = 0; i < sides; i++) {
       // (skip: a side left out, where a doorway goes through it.)
@@ -235,7 +251,7 @@ export class Kit {
         this.tri(lid, [x, y + h, z], [x + Math.cos(b) * r2, y + h, z + Math.sin(b) * r2], [x + Math.cos(a) * r2, y + h, z + Math.sin(a) * r2]);
       }
     }
-    if (o.collide !== false) this.collide(x, z, r * 0.8, r * 0.8, 0, y + h);
+    if (o.collide !== false) this.collide(x, z, r * 0.8, r * 0.8, 0, y + h, 0, y);
   }
 
   cone(layer, x, y, z, r, h, sides = 12, turn = 0) { this.drum(layer, x, y, z, r, h, sides, { r2: 0.001, open: true, collide: false, turn }); }
@@ -336,7 +352,9 @@ export class Kit {
       const A = [x + Math.cos(a) * r, y, z + Math.sin(a) * r], B = [x + Math.cos(b) * r, y, z + Math.sin(b) * r], T = [x + lean[0] * h, y + h, z + lean[1] * h];
       this.tri(layer, A, T, B);
     }
-    if (r > 0.6) this.collide(x, z, r * 0.7, r * 0.7, 0, y + h * 0.6);
+    // (soft: while it's set, a spike stops nothing: a corbel under a bridge, a pinnacle on a crown, which would else stand
+    // as a pillar from the ground to itself. src/core/phobos-build.js.)
+    if (r > 0.6 && !this.soft) this.collide(x, z, r * 0.7, r * 0.7, 0, Math.max(y, y + h * 0.6), 0, Math.min(y, y + h));
     return p;
   }
 
@@ -1344,7 +1362,18 @@ function barrow(K) {
   for (let i = 0; i < 22; i++) {
     const a = i / 22 * TAU, x = b.x + Math.cos(a) * 28.5, z = b.z + Math.sin(a) * 28.5;
     if (Math.abs(((a - 0.4 + Math.PI) % TAU) - Math.PI) < 0.22) continue;
-    K.menhir('rubble', x, z, 0.5 + hash2(i, 3) * 0.25, 1.1 + hash2(i, 5) * 0.9, -a, (hash2(i, 7) - 0.5) * 0.2);
+    // (Taller, and leaning more: at a man's height they were lost in the grass from the track. The world once-over.)
+    K.menhir('rubble', x, z, 0.55 + hash2(i, 3) * 0.3, 1.9 + hash2(i, 5) * 1.6, -a, (hash2(i, 7) - 0.5) * 0.34);
+  }
+  // Two dead trees on the great mound's shoulders, bare against the sky: the mounds read as something from the road.
+  for (const [dx, dz, h] of [[-21, -14, 9], [17, 19, 7.5]]) {
+    const x = b.x + dx, z = b.z + dz, y = Y(x, z), turn = dx * 0.7;
+    K.drum('dark:wood', x, y - 0.4, z, 0.38, h * 0.62, 7, { r2: 0.2, collide: false, turn });
+    for (let k = 0; k < 4; k++) {
+      const a = turn + k * 1.61, up = h * (0.38 + 0.11 * k), o = h * (0.2 + 0.05 * (k % 2));
+      K.beam('dark:wood', [x + Math.cos(a) * 0.15, y + up, z + Math.sin(a) * 0.15], [x + Math.cos(a) * o, y + up + h * 0.3, z + Math.sin(a) * o], 0.09);
+    }
+    K.collide(x, z, 0.45, 0.45, 0, y + 3);
   }
   for (let i = 0; i < 5; i++) for (const side of [-1, 1]) {
     const d = 33 + i * 6.5, x = b.x + Math.cos(0.4) * d - Math.sin(0.4) * side * 3.6, z = b.z + Math.sin(0.4) * d + Math.cos(0.4) * side * 3.6;
@@ -1632,7 +1661,7 @@ export function buildSites(geometry = false, lean = false) {
   dressRoads(K);
   K.finish();
   // (fires: the flames and glows the renderer draws facing you, down the delves: src/core/delve-build.js fire().)
-  built = { geometry, lean, parts: K.parts, colliders: K.colliders, spots: K.spots, floors: K.floors, fires: K.fires, groups: K.groups, lamps: K.lamps || [], doors: K.doors || [] };
+  built = { geometry, lean, parts: K.parts, colliders: K.colliders, spots: K.spots, floors: K.floors, fires: K.fires, groups: K.groups, lamps: K.lamps || [], doors: K.doors || [], smokes: K.smokes || [] };
   return built;
 }
 
@@ -1648,13 +1677,13 @@ export function packSites(b) {
   const parts = [...b.parts].map(([name, p]) => [name, p.pos, p.nrm, p.uv, p.idx]);
   const transfer = [];
   for (const p of parts) for (let i = 1; i < 5; i++) if (p[i].byteLength) transfer.push(p[i].buffer);
-  return [{ lean: b.lean, parts, spots: b.spots, fires: b.fires, lamps: b.lamps, doors: b.doors, groups: [...b.groups] }, transfer];
+  return [{ lean: b.lean, parts, spots: b.spots, fires: b.fires, lamps: b.lamps, doors: b.doors, smokes: b.smokes, groups: [...b.groups] }, transfer];
 }
 
 /** A land built elsewhere (packSites), taken as this thread's own: buildSites() gives it from here on. Nothing in it stops a body. */
 export function adoptSites(d) {
   built = { geometry: true, lean: d.lean, apart: true, parts: new Map(d.parts.map(([name, pos, nrm, uv, idx]) => [name, { pos, nrm, uv, idx }])),
-    colliders: [], floors: [], spots: d.spots, fires: d.fires, groups: new Map(d.groups), lamps: d.lamps, doors: d.doors,
+    colliders: [], floors: [], spots: d.spots, fires: d.fires, groups: new Map(d.groups), lamps: d.lamps, doors: d.doors, smokes: d.smokes || [],
     // (And of Phobos, what the page would else work out for itself as the game began, a second and a half of it on a PC:
     // which cells have something to build from near, src/gfx/phobos-near.js. Its doors: src/core/phobos-towers.js adoptCityDoors.)
     phCells: d.phCells || null };
@@ -1699,10 +1728,14 @@ export function buildUnder(key) {
 
 /** One 100 m cell of Phobos's houses as they are from near (src/core/phobos-build.js phobosCell, src/gfx/phobos-near.js):
  * { parts: Map(layer -> {pos, nrm, uv, idx}), lamps: its lights, as the land's are }. Built afresh each time it's asked for. */
-export function buildPhobosCell(cell) {
+// lean: a phone's (src/gfx/phobos-near.js): no furniture, joists or railing posts in its houses, and none of the lamps
+// that only light their insides (the phone lights two lamps in all, and they were mostly these).
+export function buildPhobosCell(cell, lean = false) {
   const K = new Kit(true);
+  K.leanNear = lean;
   phobosCell(K, cell);
   K.finish();
+  if (lean && K.lamps) K.lamps = K.lamps.filter((l) => !l.indoor);
   // (groups: its doors' leaves, each its own, which the renderer folds away while one's open: src/gfx/phobos-near.js.)
   // (smokes: its chimneys that have a fire under them, [x, y, z]: smoke drawn up out of them, src/gfx/phobos-near.js.)
   return { parts: K.parts, lamps: K.lamps || [], groups: K.groups, smokes: K.smokes || [] };

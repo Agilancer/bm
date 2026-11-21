@@ -2647,6 +2647,9 @@ class Home:
                 x, z = ax + (bx_ - ax) * t + inx, az + (bz_ - az) * t + inz
                 if ok(x, z):
                     self.box('beam', x, (y0 + top) / 2, z, 0.075, (top - y0) / 2, 0.075, 1.8)
+                    if not hasattr(self, 'posts'):
+                        self.posts = []
+                    self.posts.append((x, z))
             self.box('beam', (ax + bx_) / 2 + inx, top - 0.09, (az + bz_) / 2 + inz, abs(bx_ - ax) / 2 + 0.07, 0.09, abs(bz_ - az) / 2 + 0.07, 1.8)
 
     # ---- the rest of what's in them ----
@@ -2815,17 +2818,253 @@ class Home:
         self.solid(lx - a, lz - b, lx + a, lz + b, y, 1.2)
 
     def hide(self, lx, lz, y, along_x=True, w=0.75, h=0.95, mat='hide'):
-        """Pegged out flat against a wall."""
-        if along_x:
-            self.box(mat, lx, y + h, lz, w, h * 0.7, 0.008)
-            self.box(mat, lx, y + h * 0.2, lz, w * 0.45, h * 0.3, 0.008)
-        else:
-            self.box(mat, lx, y + h, lz, 0.008, h * 0.7, w)
-            self.box(mat, lx, y + h * 0.2, lz, 0.008, h * 0.3, w * 0.45)
+        """Pegged out flat against a wall, between the frame's posts: the skin, its four legs stretched out to the pegs at its
+        corners, a peg in each. (It had been a broad sheet over a narrower one, a T, and lay across the posts: the critics.)"""
+        w = min(w, 0.55)
+        # (Slid along the wall off any post of the frame it would lie over.)
+        posts = [p_ for p_ in getattr(self, 'posts', []) if (abs(p_[1] - lz) < 0.2 if along_x else abs(p_[0] - lx) < 0.2)]
+        for _ in range(8):
+            hit = [p_ for p_ in posts if abs((p_[0] - lx) if along_x else (p_[1] - lz)) < w + 0.16]
+            if not hit:
+                break
+            c_ = (hit[0][0] - lx) if along_x else (hit[0][1] - lz)
+            step = (abs(c_) - (w + 0.18)) * (1 if c_ > 0 else -1)
+            if along_x:
+                lx += step
+            else:
+                lz += step
+        # (Above the planking, clear of the rail along its top (the floor + 0.97): it had hung down across the rail, a bar
+        # across it. The critics, round 2.)
+        hh = h * 0.5
+        yc = max(y + h * 0.75, (y - 0.3) + 1.08 + hh * 1.02)
+        def flat(u, v, a, b):
+            if along_x:
+                self.box(mat, lx + u, v, lz, a, b, 0.008)
+            else:
+                self.box(mat, lx, v, lz + u, 0.008, b, a)
+        flat(0.0, yc, w * 0.82, hh)
+        flat(0.0, yc, w, hh * 0.72)
+        for su in (-1, 1):
+            for sv in (-1, 1):
+                flat(su * (w * 0.9), yc + sv * hh * 0.95, 0.07, 0.06)
+                if along_x:
+                    self.box('wood_c0', lx + su * (w * 0.98), yc + sv * hh * 1.02, lz, 0.018, 0.018, 0.03)
+                else:
+                    self.box('wood_c0', lx, yc + sv * hh * 1.02, lz + su * (w * 0.98), 0.03, 0.018, 0.018)
 
     def post(self, lx, lz, y, top, r=0.14):
         self.box('wood_c0', lx, (y + top) / 2, lz, r, (top - y) / 2, r)
         self.collide(lx - r, lz - r, lx + r, lz + r, 40.0)
+
+    # ---- the small things: what's left out on a table or stood by a wall, the life of the house. Nothing of them stops a
+    # body (small enough to walk past, or up on a table already solid). The V/T rule: no hammer, no scales, no pick or fork,
+    # no tally struck through, nothing of a cross or a T in any of them. ----
+    def tankard(self, lx, lz, y, mat='wood_c1'):
+        x, z = self.p(lx, lz)
+        lathe(mat, x, z, [(0.045, y), (0.05, y + 0.06), (0.046, y + 0.13), (0.0, y + 0.13)], 8, 0.6)
+        lathe('iron', x, z, [(0.051, y + 0.02), (0.051, y + 0.035)], 8)
+        lathe('iron', x, z, [(0.049, y + 0.1), (0.049, y + 0.115)], 8)
+        # (Its handle: a loop out from its side, round, joined top and bottom.)
+        h = self.p(lx + 0.07, lz)
+        tube(mat, [(x + (h[0] - x) * 0.7, y + 0.03, z + (h[1] - z) * 0.7), (h[0], y + 0.045, h[1]), (h[0], y + 0.095, h[1]), (x + (h[0] - x) * 0.7, y + 0.11, z + (h[1] - z) * 0.7)], 0.008, sides=4)
+
+    def jug(self, lx, lz, y, r=0.08, h=0.24, mat='wood_c1'):
+        x, z = self.p(lx, lz)
+        lathe(mat, x, z, [(r * 0.7, y), (r, y + h * 0.35), (r * 0.9, y + h * 0.65), (r * 0.5, y + h * 0.85), (r * 0.6, y + h), (0.0, y + h)], 10, 0.7)
+
+    def bowl(self, lx, lz, y, r=0.11, mat='wood_c1', fill=None):
+        x, z = self.p(lx, lz)
+        lathe(mat, x, z, [(r * 0.5, y), (r * 0.85, y + 0.03), (r, y + 0.06), (r * 0.9, y + 0.065)], 10, 0.6)
+        lathe(fill or mat, x, z, [(r * 0.9, y + 0.05), (0.0, y + 0.05)], 10, 0.6)
+
+    def plates(self, lx, lz, y, n=4, r=0.11, mat='bone'):   # (glazed pale; 'iron' had read black)
+        x, z = self.p(lx, lz)
+        for k in range(n):
+            yy = y + k * 0.014
+            lathe(mat, x, z, [(r * 0.6, yy), (r, yy + 0.012), (0.0, yy + 0.012)], 12, 0.6)
+
+    def book(self, lx, lz, y, along_x=True, mat='cloth_red', w=0.11, d=0.15, t=0.035):
+        hx, hz = (d, w) if along_x else (w, d)
+        self.box(mat, lx, y + t / 2, lz, hx, t / 2, hz)
+        self.box('linen', lx + (0.01 if along_x else 0.0), y + t / 2, lz + (0.0 if along_x else 0.01), hx - 0.008, t / 2 - 0.004, hz - 0.008)
+
+    def ledger(self, lx, lz, y, along_x=True):
+        """Lying open: two leaves of it, written on, in its boards."""
+        hx, hz = (0.2, 0.15) if along_x else (0.15, 0.2)
+        self.box('wood_c0', lx, y + 0.006, lz, hx + 0.01, 0.006, hz + 0.01)
+        for s_ in (-1, 1):
+            ox, oz = (s_ * hx / 2, 0.0) if along_x else (0.0, s_ * hz / 2)
+            self.box('linen', lx + ox, y + 0.016, lz + oz, hx / 2 - 0.008, 0.006, hz - 0.01)
+            for k in range(5):
+                lx_, lz_ = (lx + ox, lz - hz + 0.05 + k * 0.05) if along_x else (lx - hx + 0.05 + k * 0.05, lz + oz)
+                self.box('wood_c0', lx_, y + 0.023, lz_, (hx / 2 - 0.03) if along_x else 0.003, 0.001, 0.003 if along_x else (hz / 2 - 0.03))
+
+    def inkpot(self, lx, lz, y):
+        x, z = self.p(lx, lz)
+        lathe('wood_c0', x, z, [(0.03, y), (0.034, y + 0.03), (0.016, y + 0.05), (0.0, y + 0.05)], 8, 0.4)
+        # (A quill stood in it, leaning: one line, nothing across it.)
+        tube('linen', [(x, y + 0.04, z), (x + 0.04, y + 0.22, z + 0.02)], 0.005, sides=4)
+
+    def coins(self, lx, lz, y, n=5):
+        x, z = self.p(lx, lz)
+        for k in range(n):
+            lathe('iron', x + (k % 2) * 0.003, z, [(0.018, y + k * 0.004), (0.018, y + (k + 1) * 0.004), (0.0, y + (k + 1) * 0.004)], 8, 0.3)
+
+    def bucket(self, lx, lz, y, r=0.15, h=0.28, fill='soot'):
+        x, z = self.p(lx, lz)
+        lathe('wood_c1', x, z, [(r * 0.85, y), (r, y + h), (0.0, y + h)], 10, 0.8)
+        lathe(fill, x, z, [(r * 0.96, y + h + 0.002), (0.0, y + h + 0.002)], 10, 0.8)
+        for t in (0.25, 0.8):
+            lathe('iron', x, z, [(r * (0.85 + 0.15 * t) + 0.006, y + h * t - 0.012), (r * (0.85 + 0.15 * t) + 0.006, y + h * t + 0.012)], 10)
+
+    def basket(self, lx, lz, y, r=0.18, h=0.2, fill=None, n=0, seed=0):
+        """Wicker, round; what's in it heaped up over the rim (fill, n of them)."""
+        x, z = self.p(lx, lz)
+        lathe('wood_a1', x, z, [(r * 0.75, y), (r, y + h), (0.0, y + h * 0.75)], 9, 0.5)
+        if fill:
+            rng = random.Random(seed)
+            for k in range(n):
+                a, d = rng.uniform(0, math.tau), rng.uniform(0, r * 0.6)
+                q = 0.035 + rng.uniform(0, 0.015)
+                lathe(fill, x + math.cos(a) * d, z + math.sin(a) * d, [(q * 0.6, y + h * 0.75), (q, y + h * 0.75 + q), (0.0, y + h * 0.75 + q * 1.8)], 6, 0.4)
+
+    def broom(self, lx, lz, y, lean=(0.0, 0.0)):
+        """Stood in a corner, leant against the wall: a straight shaft and its bundle of twigs."""
+        x, z = self.p(lx, lz)
+        tx, tz = self.p(lx + lean[0], lz + lean[1])
+        tube('wood_c0', [(x, y + 0.3, z), (tx, y + 1.45, tz)], 0.016, sides=5)
+        lathe('wood_a1', x, z, [(0.1, y), (0.07, y + 0.18), (0.03, y + 0.34), (0.0, y + 0.36)], 7, 0.5)
+
+    def cloak(self, lx, lz, y, along_x, mat='cloth_red', side=1.0, w=0.24, h=0.9):
+        """Hung from a peg in the wall: the peg out of the wall, the cloth falling from it against the wall (side: which way out
+        of it the room is). A peg and what's hung on it: no bar across."""
+        if along_x:
+            self.box('wood_c0', lx, y, lz + side * 0.06, 0.018, 0.018, 0.06)
+            self.box(mat, lx, y - h / 2 + 0.03, lz + side * 0.04, w, h / 2, 0.02)
+        else:
+            self.box('wood_c0', lx + side * 0.06, y, lz, 0.06, 0.018, 0.018)
+            self.box(mat, lx + side * 0.04, y - h / 2 + 0.03, lz, 0.02, h / 2, w)
+
+    def boots(self, lx, lz, y, along_x=True):
+        for s_ in (-1, 1):
+            ox, oz = (s_ * 0.07, 0.0) if along_x else (0.0, s_ * 0.07)
+            fx, fz = (0.0, 0.06) if along_x else (0.06, 0.0)
+            self.box('hide', lx + ox, y + 0.15, lz + oz, 0.045, 0.15, 0.05)
+            self.box('hide', lx + ox + fx, y + 0.04, lz + oz + fz, 0.045, 0.04, 0.06 if along_x else 0.045)
+
+    def horseshoes(self, lx, lz, y, n=3):
+        """Laid flat: each a U of iron, open end out."""
+        for k in range(n):
+            cx, cz = lx + (k - (n - 1) / 2) * 0.16, lz
+            self.box('iron', cx - 0.05, y + 0.006, cz, 0.012, 0.006, 0.06)
+            self.box('iron', cx + 0.05, y + 0.006, cz, 0.012, 0.006, 0.06)
+            self.box('iron', cx, y + 0.006, cz - 0.06, 0.062, 0.006, 0.012)
+
+    def tongs(self, lx, lz, y):
+        """Two long jaws, a V: their joint at one end, open at the other."""
+        a, b, c = self.p(lx - 0.25, lz), self.p(lx + 0.25, lz - 0.04), self.p(lx + 0.25, lz + 0.04)
+        tube('iron', [(a[0], y + 0.01, a[1]), (b[0], y + 0.01, b[1])], 0.008, sides=4)
+        tube('iron', [(a[0], y + 0.012, a[1]), (c[0], y + 0.012, c[1])], 0.008, sides=4)
+
+    def skeins(self, lx, lz, y, mats, along_x=True):
+        """Hanks of spun wool laid in a row, one of each dye."""
+        for k, m in enumerate(mats):
+            t = (k - (len(mats) - 1) / 2) * 0.13
+            x, z = self.p(lx + t if along_x else lx, lz if along_x else lz + t)
+            lathe(m, x, z, [(0.05, y), (0.06, y + 0.03), (0.05, y + 0.06), (0.0, y + 0.06)], 8, 0.3)
+
+    def mortar(self, lx, lz, y):
+        x, z = self.p(lx, lz)
+        lathe('wall_rough', x, z, [(0.06, y), (0.075, y + 0.08), (0.065, y + 0.1), (0.0, y + 0.07)], 10, 0.4)
+        tube('wood_c0', [(x, y + 0.07, z), (x + 0.05, y + 0.2, z + 0.03)], 0.012, sides=5)
+
+    def jars(self, lx, lz, y, n=5, along_x=True, seed=0):
+        rng = random.Random(seed)
+        for k in range(n):
+            t = (k - (n - 1) / 2) * 0.1
+            x, z = self.p(lx + t if along_x else lx, lz if along_x else lz + t)
+            h = rng.uniform(0.09, 0.15)
+            lathe(rng.choice(['wood_c1', 'wall_rough', 'wood_b2']), x, z, [(0.035, y), (0.04, y + h * 0.8), (0.025, y + h), (0.0, y + h)], 7, 0.3)
+
+    def bow(self, lx, lz, y, along_x=True):
+        """Laid on a table, strung: its stave a curve, the string straight between its tips. (A D, nothing across.)"""
+        pts = []
+        for k in range(9):
+            t = k / 8 * 2 - 1
+            u, v = t * 0.6, (1 - t * t) * 0.12
+            pts.append(self.p(lx + u, lz + v) if along_x else self.p(lx + v, lz + u))
+        tube('wood_b0', [(q[0], y + 0.015, q[1]) for q in pts], 0.012, sides=5)
+        tube('linen', [(pts[0][0], y + 0.015, pts[0][1]), (pts[-1][0], y + 0.015, pts[-1][1])], 0.003, sides=3)
+
+    def arrows(self, lx, lz, y, n=5, along_x=True):
+        for k in range(n):
+            o = (k - (n - 1) / 2) * 0.025
+            a, b = (self.p(lx - 0.36, lz + o), self.p(lx + 0.36, lz + o)) if along_x else (self.p(lx + o, lz - 0.36), self.p(lx + o, lz + 0.36))
+            tube('wood_c0', [(a[0], y + 0.008, a[1]), (b[0], y + 0.008, b[1])], 0.005, sides=4)
+
+    def helm(self, lx, lz, y):
+        x, z = self.p(lx, lz)
+        lathe('iron', x, z, [(0.12, y), (0.125, y + 0.08), (0.1, y + 0.16), (0.05, y + 0.21), (0.0, y + 0.22)], 12, 0.6)
+
+    def dice(self, lx, lz, y):
+        for k, (dx, dz) in enumerate(((0.0, 0.0), (0.05, 0.03), (-0.03, 0.05))):
+            self.box('bone', lx + dx, y + 0.012, lz + dz, 0.012, 0.012, 0.012)
+
+    def churn(self, lx, lz, y):
+        """A tall staved churn, its lid, the dasher's handle up out of the lid: one straight line."""
+        x, z = self.p(lx, lz)
+        lathe('wood_c1', x, z, [(0.19, y), (0.15, y + 0.75), (0.0, y + 0.75)], 10, 0.8)
+        for t in (0.15, 0.6):
+            lathe('iron', x, z, [(0.19 - 0.04 * t + 0.006, y + 0.75 * t - 0.012), (0.19 - 0.04 * t + 0.006, y + 0.75 * t + 0.012)], 10)
+        tube('wood_c0', [(x, y + 0.75, z), (x, y + 1.25, z)], 0.017, sides=5)
+
+    def cradle(self, lx, lz, y, along_x=True):
+        """Boxed, on its two rockers: the rockers run along it, under its sides (no rail across)."""
+        hx, hz = (0.5, 0.29) if along_x else (0.29, 0.5)
+        self.box('wood_c1', lx, y + 0.3, lz, hx, 0.18, hz)
+        self.box('wool_brown', lx + (0.08 if along_x else 0.0), y + 0.49, lz + (0.0 if along_x else 0.08), hx - 0.12 if along_x else hx - 0.03, 0.03, hz - 0.03 if along_x else hz - 0.12)
+        self.box('linen', lx - (hx - 0.14 if along_x else 0.0), y + 0.49, lz - (0.0 if along_x else hz - 0.14), 0.09 if along_x else hx - 0.06, 0.04, hz - 0.06 if along_x else 0.09)
+        # (Its hood over the head end, boarded: what tells a cradle from a box at a glance.)
+        if along_x:
+            self.box('wood_c1', lx - hx + 0.04, y + 0.48, lz, 0.04, 0.2, hz)
+            self.box('wood_c1', lx - hx + 0.16, y + 0.66, lz, 0.16, 0.025, hz)
+        else:
+            self.box('wood_c1', lx, y + 0.48, lz - hz + 0.04, hx, 0.2, 0.04)
+            self.box('wood_c1', lx, y + 0.66, lz - hz + 0.16, hx, 0.025, 0.16)
+        # (Its rockers bowed, low in the middle and turned up at the ends: a box on two planks had read as a box.)
+        for s_ in (-1, 1):
+            pts = []
+            for k in range(9):
+                u = -1.0 + k / 4.0
+                a_ = u * (hx + 0.08 if along_x else hz + 0.08)
+                lx_, lz_ = (lx + a_, lz + s_ * (hz - 0.04)) if along_x else (lx + s_ * (hx - 0.04), lz + a_)
+                x_, z_ = self.p(lx_, lz_)
+                pts.append((x_, y + 0.03 + 0.1 * u * u, z_))
+            tube('wood_c0', pts, 0.022, ry=0.035, sides=6)
+            for u in (-0.55, 0.55):
+                a_ = u * (hx if along_x else hz)
+                if along_x:
+                    self.box('wood_c0', lx + a_, y + 0.09, lz + s_ * (hz - 0.04), 0.03, 0.06, 0.018)
+                else:
+                    self.box('wood_c0', lx + s_ * (hx - 0.04), y + 0.09, lz + a_, 0.018, 0.06, 0.03)
+
+    def shavings(self, lx, lz, y, n=14, seed=0):
+        rng = random.Random(seed)
+        for k in range(n):
+            a, d = rng.uniform(0, math.tau), rng.uniform(0, 0.35)
+            x, z = self.p(lx + math.cos(a) * d, lz + math.sin(a) * d)
+            lathe('wood_b2', x, z, [(0.035, y), (0.03, y + 0.02), (0.0, y + 0.025)], 5, 0.3, phase=a)
+
+    def flowers(self, lx, lz, y, seed=0):
+        """A jug of them off the hedges: stalks up out of it, the heads on them."""
+        self.jug(lx, lz, y, 0.06, 0.18, 'wall_rough')
+        x, z = self.p(lx, lz)
+        rng = random.Random(seed)
+        for k in range(6):
+            a = k / 6 * math.tau + rng.uniform(-0.3, 0.3)
+            tx, tz, ty = x + math.cos(a) * 0.07, z + math.sin(a) * 0.07, y + 0.3 + rng.uniform(0, 0.08)
+            tube('wood_a1', [(x, y + 0.16, z), (tx, ty, tz)], 0.004, sides=3)
+            lathe(rng.choice(['cloth_red', 'linen', 'wool_green']), tx, tz, [(0.0, ty - 0.02), (0.025, ty), (0.0, ty + 0.02)], 6, 0.3)
 
     def partition(self, a, b, upstairs=False, gap=None, mat=None):
         """A plank wall from a to b, floor to ceiling, and through it a doorway: gap is (where along it, how wide)."""
@@ -3398,6 +3637,128 @@ def homes():
     h.bed(2.3, -1.7, U, -1, 0)
     h.shelf(-0.6, iz - 0.28, U, 0.9, 0.26)
     h.rug(0.6, 0.4, U, 0.8, 1.0)
+
+    trimmings(inn, chandler, reeve, cottage, smith, alewife, barn, tannery, weaver, hunter, coffins, tower, manor, bakery, herbalist)
+
+
+def trimmings(inn, chandler, reeve, cottage, smith, alewife, barn, tannery, weaver, hunter, coffins, tower, manor, bakery, herbalist):
+    """The houses pass (docs/HOMES.md; the owner, 2026-11-20: "add some small details here and there that make it stand out and
+    make each house a little different"): what each household's left out, on its tables and by its walls. Table tops are 0.775 up
+    from the floor they stand on; the candle in the middle of a lit table is kept clear."""
+    F = HOME_FLOOR
+    T = F + 0.775
+    # The inn: tankards along the bar and on the tables, a stack of pewter plates at the end of the bar, dice left on the
+    # table by the fire; upstairs a ewer and basin on the landing table.
+    h = inn
+    for x in (-0.6, 0.1, 0.9, 1.9, 2.8):
+        h.tankard(x, -1.75, F + 1.02)
+    h.plates(3.3, -1.7, F + 1.02, 6)
+    for (x, z) in ((-5.2, 1.1), (-4.0, 1.5), (-3.9, 1.0), (1.2, 1.9), (2.4, 1.5)):
+        h.tankard(x, z, T)
+    h.dice(1.6, 1.4, T)
+    h.jug(5.1, 2.3, T)
+    h.tankard(4.6, 1.9, T)
+    h.jug(2.7, -3.35, h.y1 + 0.775, 0.1, 0.28)
+    h.bowl(3.6, -3.2, h.y1 + 0.775, 0.16)
+    h.cloak(-6.0, 3.68, F + 1.8, True, side=-1.0)
+    # The chandler's: the wicks cut ready on the back table and a bowl of tallow; a bucket of it by the vats; spare candles in a
+    # basket by the door.
+    h = chandler
+    h.bowl(0.4, -2.6, T, 0.14, 'wood_c1', 'linen')
+    h.jars(1.6, -2.8, T, 4, seed=3)
+    h.bucket(-3.15, -1.5, F, 0.16, 0.3, 'linen')
+    h.basket(2.3, 1.5, T - 0.775, 0.17, 0.18, 'bone', 7, seed=4)
+    h.ledger(1.0, 3.3, h.y1 + 0.775)
+    # The reeve's (the Halloways'): the counting room's table with the open ledger, the ink and the takings counted out in
+    # piles; a jug and cups on the dining table; boots by the door.
+    h = reeve
+    h.ledger(4.3, 0.95, T, along_x=False)
+    h.inkpot(4.55, 1.3, T)
+    for k, (dx, dz) in enumerate(((-0.2, -0.3), (-0.1, -0.45), (0.12, -0.4), (0.2, -0.2))):
+        h.coins(4.3 + dx, 0.6 + dz, T, 3 + k)
+    h.jug(-3.5, 2.2, T)
+    for x in (-3.9, -2.3):
+        h.tankard(x, 1.8, T, 'iron')
+    h.boots(1.3, 3.1, F)
+    # The cottage: the churn by the table, bowls set out for supper, the baby's cradle by the box bed.
+    h = cottage
+    h.churn(2.6, -1.4, F)
+    for x in (0.55, 1.45):
+        h.bowl(x, -1.1, T, 0.09)
+    h.jug(1.0, -0.6, T)
+    h.cradle(-1.2, -2.6, F, along_x=True)
+    h.broom(2.85, 2.0, F, (0.12, 0.0))
+    # The smith's: shoes made and waiting, the tongs, a quench bucket by the anvil; his boots by the bed upstairs.
+    h = smith
+    h.horseshoes(2.6, 1.3, T, 4)
+    h.tongs(3.2, 1.75, T)
+    h.bucket(ANVIL[0] + 0.7, ANVIL[1] + 0.55, F, 0.18, 0.34, 'soot')
+    h.boots(-2.3, 3.05, h.y1, along_x=True)
+    h.jug(-1.6, -2.7, h.y1 + 0.775)
+    # The alewife's: jugs and tankards on her counter, the drip bowl under the tap end, a basket of bread for the drinkers.
+    h = alewife
+    for x in (-0.3, 0.4, 1.1):
+        h.tankard(x, -1.05, F + 1.02)
+    h.jug(2.0, -1.05, F + 1.02, 0.09, 0.26)
+    h.jug(2.6, -1.05, F + 1.02, 0.09, 0.26)
+    h.bowl(3.3, -1.05, F + 1.02, 0.12)
+    h.basket(-2.2, 1.6, T, 0.16, 0.12, 'boards', 4, seed=5)
+    h.tankard(-1.3, 1.9, T)
+    # The tithe barn: the reckoning open on the table, what's been paid in turnips in a basket by it.
+    h = barn
+    h.ledger(-3.5, -2.6, T)
+    h.inkpot(-2.9, -2.4, T)
+    h.basket(-2.2, -2.3, F, 0.24, 0.3, 'wool_brown', 9, seed=6)
+    h.basket(-2.0, -1.7, F, 0.2, 0.26, 'wood_c1', 7, seed=7)
+    # The tannery: the scraping knives laid out, a bucket of lime by the vats, his boots stiff from the pits.
+    h = tannery
+    for k in range(3):
+        h.box('iron', -3.2 + k * 0.22, T + 0.004, 2.25, 0.08, 0.004, 0.02)
+    h.bucket(-2.3, -1.2, F, 0.17, 0.32, 'limewash')
+    h.boots(2.5, 2.9, F, along_x=True)
+    h.jug(2.1, -2.7, h.y1 + 0.775)
+    # The weaver's: hanks of every dye she has on the kitchen table, a basket of carded wool by the loom.
+    h = weaver
+    h.skeins(3.3, -2.2, T, ['wool_red', 'wool_green', 'wool_brown', 'wool_blue', 'linen'])
+    h.basket(-4.5, 1.0, F, 0.24, 0.24, 'linen', 8, seed=8)
+    # The hunter's: his bow on the table, strung, the arrows by it; a brace of snares in a basket.
+    h = hunter
+    h.bow(1.0, -2.05, T)
+    h.arrows(1.0, -1.65, T, 5)
+    h.basket(-2.9, -2.8, F, 0.18, 0.16)
+    h.boots(-1.5, 2.9, F, along_x=True)
+    # The coffin maker's: the shavings under the trestle, a crock of nails on the stacked coffins.
+    h = coffins
+    h.shavings(1.0, 1.4, F, 18, seed=9)
+    h.jug(-1.0, -2.5, F + 0.74, 0.06, 0.12, 'wood_c0')
+    h.book(-1.4, 3.3, h.y1 + 0.775, mat='wool_brown')
+    # The tower house: a helm off on the guard table, dice and the tankards; the watch's cloaks on their pegs.
+    h = tower
+    h.helm(-2.3, 1.2, T)
+    h.dice(-1.2, 0.8, T)
+    for x in (-1.9, -0.9):
+        h.tankard(x, 1.3, T, 'iron')
+    h.cloak(-1.0, h.iz, F + 1.8, True, mat='wool_brown', side=-1.0)
+    # The manor (the Ashbys'): plate and a jug of flowers on the long table, books by the reeve's chair, his desk upstairs with
+    # the ledger.
+    h = manor
+    h.flowers(3.2, 0.6, T, seed=10)
+    h.plates(1.5, 0.4, T, 4, 0.12)
+    h.plates(3.6, 0.8, T, 4, 0.12)
+    for k in range(3):
+        h.book(-3.4, -0.2 + k * 0.0, F + 0.02 + k * 0.04, mat=('cloth_red', 'wool_brown', 'cloth_red')[k], w=0.12, d=0.17, t=0.038)
+    h.ledger(0.0, 3.05, h.y1 + 0.775)
+    h.inkpot(0.4, 2.8, h.y1 + 0.775)
+    # The bakehouse: eggs in a basket and the dough in its bowl on the table, the peel's twin, a broom for the flour.
+    h = bakery
+    h.basket(1.8, 1.9, T, 0.13, 0.1, 'linen', 6, seed=11)
+    h.bowl(2.7, 1.35, T, 0.16, 'wood_c1', 'linen')
+    h.broom(-4.3, -0.2, F, (-0.12, 0.0))
+    # The herbalist's: her mortar and pestle, a row of jars of what she's made up, a bunch drying on the table.
+    h = herbalist
+    h.mortar(-0.7, -1.5, T)
+    h.jars(0.3, -1.6, T, 5, seed=12)
+    h.bowl(0.4, -1.2, T, 0.1, 'wood_c1', 'wool_green')
 
 
 def stair_cover():

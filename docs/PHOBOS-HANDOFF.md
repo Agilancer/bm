@@ -253,3 +253,5 @@ Nobody has played any of Phobos by hand:
 
 The phone has never been run on a real phone, and the street braziers have not been seen at night. The full list is under
 "Untested" in PHOBOS-TODO.md.
+
+- **Castle Velscour, grown (2026-11-20)**: towers, bridges, keys, nine new delves, the Holdout, 98 quests, the town, the world once-over: see [PHOBOS-GRAND.md](PHOBOS-GRAND.md) for what was built, the critics, what is left and what nobody has tried.
