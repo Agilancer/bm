@@ -2481,8 +2481,8 @@ export class Renderer {
       let keep = false;
       if (gpu.mobile && this.activeKey) {
         // A phone turning goes through a run of sizes, and each would be every target thrown away and made again. Upright
-        // it keeps the sideways picture it has (nothing's drawn then: src/main.js turned); any other size is taken once
-        // it's held for a moment.
+        // nothing's drawn, and what it's drawn into is let go (src/main.js turned, rest below), so no upright size is ever
+        // taken here; any other size is taken once it's held for a moment.
         if (ch > cw) return;
         // Nor for the browser's own bar, shown and put away: the same width, a little less height or more. (An iPhone held
         // sideways shows it for a tap near the screen's edge: a touch was every target made again.) Nor while a word's
@@ -2539,6 +2539,16 @@ export class Renderer {
     if (this.targetSets) for (const set of this.targetSets.values()) for (const t of set.textures) t.destroy();
     this.targetSets = new Map();
     this.activeKey = null;
+  }
+
+  // A phone stood upright draws nothing till it's turned back (src/main.js turned), so for the while it lets go of what it
+  // draws into: the screen's targets, and the canvas's own pictures, the canvas made a pixel. An iPhone turning makes every
+  // piece of the page again at the new size while it still holds the old, and a game near its memory's end can go then.
+  // Turned back, the next frame's resize makes them as at the start.
+  rest() {
+    if (!this.gpu.mobile) return;
+    this.dropTargetSets();
+    this.canvas.width = 1; this.canvas.height = 1;
   }
 
   buildTargetSet(W, H_) {

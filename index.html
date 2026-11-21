@@ -102,7 +102,7 @@
   @media (orientation: portrait) { body.touch.playing #rotate { display: flex; } }
   /* Upright, what's over the world is put away as well as covered (src/main.js turned): a phone keeps a picture of every piece
      drawn over the world, and of each again at its new size as it turns, covered or not. */
-  body.upright :is(#hud, #touch, #opening, #opening-name-panel, #ticker, #folkSay, #folkMarks, #folkNotes, #heroLayer, #heroChat, #partyFrames, #bossFrame, #raidWarn, #hallStatus, #autoBtn, #autoStatus, #vskull, #vskullTag, #mapMini, #mapRing, #bMap, #softCursor) { visibility: hidden !important; }
+  body.upright :is(#hud, #touch, #opening, #opening-name-panel, #ticker, #folkSay, #folkMarks, #folkNotes, #heroLayer, #heroChat, #partyFrames, #bossFrame, #raidWarn, #hallStatus, #autoBtn, #autoStatus, #vskull, #vskullTag, #mapMini, #mapRing, #bMap, #softCursor, #dmgNums, #foeBars) { visibility: hidden !important; }
 
   /* The pack */
   #inv { --cell: min(calc((100vh - 96px) / var(--rows, 8)), calc((100vw - 300px) / 12), 52px); position: fixed; inset: 0; z-index: 12; display: none; flex-direction: column; align-items: center; justify-content: flex-start; gap: 8px; background: rgba(6,5,3,.5); padding: 6px; touch-action: none; }

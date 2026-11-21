@@ -1300,7 +1300,8 @@ async function boot(plan, poolSize) {
   });
   // A phone stood upright. The manifest asks for landscape and the lock's asked for too (above, and src/title.js), but an
   // iPhone grants a page neither, so it can still be turned. Upright, the world holds still and nothing's drawn (index.html
-  // #rotate covers it); the picture keeps its sideways shape (Renderer.resize), so turning it back makes nothing again.
+  // #rotate covers it), and what it's drawn into is let go for the while (Renderer.rest): turned back, the next frame makes
+  // it again at the screen's size. So is auto-play's walking thread on a phone, made again turned back if auto-play's on.
   const turned = () => {
     const up = input.touch && window.innerHeight > window.innerWidth;
     if (up === !!game.upright) return;
@@ -1308,6 +1309,8 @@ async function boot(plan, poolSize) {
     // (And what's over the world goes too, not only covered: a phone keeps a picture of each piece, at the old size and the
     // new as it turns, under the cover as much as over the world. index.html body.upright.)
     document.body.classList.toggle('upright', up);
+    if (up) renderer.rest();
+    game.autoplay?.brain?.nav.upright(up);   // (auto-play's walking thread, on a phone: src/ui/autobrain.js Nav)
     noteEvent(up ? 'turned upright' : 'turned back sideways');
     if (!input.enabled) return;     // (under the title, the world's held still already)
     if (up) input.releaseControls();
