@@ -5,6 +5,7 @@
 import fs from 'node:fs';
 import { parentPort, workerData } from 'node:worker_threads';
 import { World } from '../../src/sim/world.js';
+import { FLOOR_RECT } from '../../src/core/sites.js';
 import { BODY, CELL, DROP, LAYERS, RISE, X0, Z0, W } from './grid.mjs';
 import { dropOf, headroom } from '../../src/sim/east-nav.js';
 import { FLOOR_RISE } from '../../src/sim/east-nav.js';
@@ -27,9 +28,11 @@ function candidates(x, z) {
   const list = world.platGrid.get((Math.floor(x / 64) + 4096) * 8192 + Math.floor(z / 64) + 4096);
   if (list) for (const p of list) {
     if (Math.abs(x - p.x) > p.r || Math.abs(z - p.z) > p.r) continue;
-    for (const f of p.rects) {
-      const dx = x - f.x, dz = z - f.z;
-      if (Math.abs(dx * f.c - dz * f.s) <= f.hu && Math.abs(dx * f.s + dz * f.c) <= f.hw) c.push(f.y);
+    // (Seven numbers a rect: x, z, cos, sin, half across, half through, height. src/core/sites.js packFloors.)
+    const R = p.rect;
+    for (let k = 0; k < R.length; k += FLOOR_RECT) {
+      const dx = x - R[k], dz = z - R[k + 1];
+      if (Math.abs(dx * R[k + 2] - dz * R[k + 3]) <= R[k + 4] && Math.abs(dx * R[k + 3] + dz * R[k + 2]) <= R[k + 5]) c.push(R[k + 6]);
     }
   }
   const near = world.sitesNear(x, z);

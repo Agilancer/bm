@@ -1300,7 +1300,8 @@ async function boot(plan, poolSize) {
   });
   // A phone stood upright. The manifest asks for landscape and the lock's asked for too (above, and src/title.js), but an
   // iPhone grants a page neither, so it can still be turned. Upright, the world holds still and nothing's drawn (index.html
-  // #rotate covers it); the picture keeps its sideways shape (Renderer.resize), so turning it back makes nothing again.
+  // #rotate covers it), and what it's drawn into is let go for the while (Renderer.rest): turned back, the next frame makes
+  // it again at the screen's size.
   const turned = () => {
     const up = input.touch && window.innerHeight > window.innerWidth;
     if (up === !!game.upright) return;
@@ -1308,6 +1309,9 @@ async function boot(plan, poolSize) {
     // (And what's over the world goes too, not only covered: a phone keeps a picture of each piece, at the old size and the
     // new as it turns, under the cover as much as over the world. index.html body.upright.)
     document.body.classList.toggle('upright', up);
+    if (up) renderer.rest();
+    // (Under the title only a few frames are drawn, and then none: turned back, a few again, or the village behind it is gone.)
+    else game.idleFrames = 0;
     noteEvent(up ? 'turned upright' : 'turned back sideways');
     if (!input.enabled) return;     // (under the title, the world's held still already)
     if (up) input.releaseControls();
@@ -1593,7 +1597,8 @@ class GameView {
     this.busySum = 0; this.busyN = 0; this.timed = []; this.benched = false;
     renderer.onBusy = (ms) => {
       this.busySum += ms; this.busyN++;
-      if (this.idle && !this.benched) this.timeFrame(ms);
+      // (Not a frame that finishes after the phone's stood upright: what it's drawn into is let go then, Renderer.rest.)
+      if (this.idle && !this.benched && !this.upright) this.timeFrame(ms);
     };
   }
 

@@ -5,7 +5,8 @@
 // Env: PORT (8861)  PHONE=pixel|iphone|small|tablet|'' (desk)  Q='&light=1'  NOAUTO=1  TIMEOUT (s, 600)  W,H
 //      ATTACH=1 (watch worker threads' heaps; a little memory of its own)  CHROME (path)  FLAGS  OUT
 //      DEBUG_PORT (unset: a free one of Chrome's choosing, said at the start; set: refused if taken; tools/chrome-port.mjs)
-// steps: [{eval}|{wait}|{shot}|{log}|{mem}|{regions}|{dump}|{threads}|{gc}|{top}|{x}|{touch:[type,x,y,id]}|{tap:[x,y]}|{key}]
+// steps: [{eval}|{wait}|{shot}|{log}|{mem}|{peak}|{regions}|{dump}|{threads}|{gc}|{top}|{x}|{touch:[type,x,y,id]}|{tap:[x,y]}|{key}
+//         |{sample}|{snap}]  ({peak} and {sample}: what a thread makes, and the process's height uncollected; see below)
 import { spawn, execSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -172,6 +173,8 @@ for (const s of steps) {
     if (s.shot) { const r = await send('Page.captureScreenshot', { format: 'png' }, S); fs.writeFileSync(path.join(out, `${s.shot}.png`), Buffer.from(r.data, 'base64')); console.log('shot', s.shot); }
     if (s.gc) { for (const sid of threads.keys()) await send('HeapProfiler.collectGarbage', {}, sid, 15000).catch(() => {}); await sleep(2500); }
     if (s.mem) await mem(s.mem);
+    // {"peak": "label"}: the page's and the GPU process's biggest since the last "peak" (or the start), and begin again.
+    if (s.peak) { console.log(`== ${s.peak}: page process peak ${peak} MB, GPU process peak ${peakGpu} MB`); peak = 0; peakGpu = 0; }
     if (s.threads) await threadMem(s.threads);
     if (s.regions) console.log(`== ${s.regions}: ${ps('regions.ps1').replace(/\r/g, '')}`);
     if (s.dump) await dump(s.dump);
@@ -215,6 +218,28 @@ for (const s of steps) {
       for (const [b, l] of rows.slice(0, 12)) named.push(`${MB(b)} MB ${Math.round(l.width)}x${Math.round(l.height)} ${await nodeName(l)}${await why(l)}`);
       console.log(`== ${s.layers}: ${L.length} painted layers of ${(lastLayers || []).length}, ${MB(total)} MB at x${dpr}: ${named.join(' | ')}`);
       await send('LayerTree.disable', {}, S).catch(() => {});
+    }
+    // {"sample": "sim.worker", "ms": 15000, "most": 25}: what the thread whose script's name has that in it ('page' for the page)
+    // makes over that long, collected since or not, by the function that made it: the garbage a frame makes, and where.
+    if (s.sample) {
+      const sid = s.sample === 'page' ? S : [...threads].find(([, t]) => t.name.includes(s.sample))?.[0];
+      if (!sid) console.log('no thread', s.sample);
+      else {
+        await send('HeapProfiler.enable', {}, sid);
+        await send('HeapProfiler.startSampling', { samplingInterval: 16384, includeObjectsCollectedByMajorGC: true, includeObjectsCollectedByMinorGC: true }, sid);
+        await sleep(s.ms || 15000);
+        const { profile } = await send('HeapProfiler.stopSampling', {}, sid, 60000);
+        const by = new Map(); let all = 0;
+        const walk = (n, up) => {
+          const f = n.callFrame, at = `${f.functionName || '(anon)'} ${(f.url || '').replace(/^.*\/(src|tools)\//, '$1/')}:${f.lineNumber + 1}`;
+          if (n.selfSize) { all += n.selfSize; const r = by.get(at) || { b: 0, up }; r.b += n.selfSize; by.set(at, r); }
+          for (const c of n.children || []) walk(c, at);
+        };
+        walk(profile.head, '');
+        const secs = (s.ms || 15000) / 1000, M2 = (x) => (x / 1048576).toFixed(2);
+        console.log(`== made by ${s.sample} over ${secs} s: ${M2(all)} MB (${M2(all / secs)} MB a second)\n` + [...by].sort((a, b) => b[1].b - a[1].b).slice(0, s.most || 25)
+          .map(([k, r]) => `${M2(r.b / secs).padStart(6)} MB/s  ${k}   <- ${r.up}`).join('\n'));
+      }
     }
     // {"snap": "sim"}: a heap snapshot of the thread whose script's name has that in it ('page' for the page), to OUT/<name>.heapsnapshot.
     if (s.snap) {

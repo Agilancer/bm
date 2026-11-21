@@ -9,7 +9,7 @@
 import fs from 'node:fs';
 import { against } from './baseline.mjs';
 import { CELL, W, H, X0, Z0 } from './grid.mjs';
-import { buildSites } from '../../src/core/sites.js';
+import { buildSites, floorRects } from '../../src/core/sites.js';
 import { DELVES } from '../../src/core/dungeon.js';
 import { PHOBOS } from '../../src/core/phobos-data.js';
 import { targets } from './targets.mjs';
@@ -117,7 +117,7 @@ if (import.meta.url === `file:///${process.argv[1].replace(/\\/g, '/')}` || proc
   let decks = 0, decksMissed = 0;
   for (const p of S.floors) {
     if (p.x < X0 || p.x > X0 + W * CELL || p.z < Z0 || p.z > Z0 + H * CELL) continue;
-    for (const f of p.rects) {
+    for (const f of floorRects(p)) {
       if (f.hu < 0.6 || f.hw < 0.6) continue;
       decks++;
       // (Its cells: a few across it, at its own height.)

@@ -36,7 +36,8 @@ let world = null, east = null, eastAsk = null, base = '';
 // (And let go of again three minutes after the last ask: some fifty megabytes a phone shouldn't carry about Bellmourn.)
 let eastLast = 0;
 const eastNav = () => { eastLast = Date.now(); return (eastAsk ??= fetch(`${base}assets/game/nav/east.bin`).then((r) => (r.ok ? r.arrayBuffer() : null)).then((b) => (east = b ? new EastNav(b, world) : null)).catch(() => null)); };
-setInterval(() => { if (east && Date.now() - eastLast > 180000) { east = null; eastAsk = null; } }, 30000);
+// (unref: under Node, where the tests import this file for navFor, a timer kept on would keep the test from ever ending.)
+setInterval(() => { if (east && Date.now() - eastLast > 180000) { east = null; eastAsk = null; } }, 30000).unref?.();
 const CELL = 0.5, BODY = 0.42, EDGE = 250;
 const X0 = NAV_X0, Z0 = NAV_Z0, W = Math.round(NAV_W * NAV_CELL / CELL), H = Math.round(NAV_H * NAV_CELL / CELL), N = W * H;
 // Each cell's ground, worked out the first time a search reaches it: 0 not yet, 1 free, 2 solid.

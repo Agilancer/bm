@@ -1627,6 +1627,34 @@ function flattest(x0, z0) {
 }
 
 let built = null;
+
+// A floor's rects (Kit.deck and the rest build them as { x, z, c, s, hu, hw, y }), packed once the land's built: seven
+// numbers a rect in that order, in one Float64Array for every floor, each floor's `rect` the view of its own (src/sim/world.js
+// platformAt reads them). Phobos's houses and towers have some two hundred and seventy thousand of them. As objects, with
+// the land's boxes copied beside them (World's constructor), the simulation's heap was 44 MB bigger, and auto-play's own
+// thread's 12; packed, they're 15 MB, the same numbers.
+export const FLOOR_RECT = 7;
+function packFloors(floors) {
+  let n = 0;
+  for (const p of floors) n += p.rects.length;
+  const all = new Float64Array(n * FLOOR_RECT);
+  let o = 0;
+  for (const p of floors) {
+    const from = o;
+    for (const f of p.rects) { all[o++] = f.x; all[o++] = f.z; all[o++] = f.c; all[o++] = f.s; all[o++] = f.hu; all[o++] = f.hw; all[o++] = f.y; }
+    p.rect = all.subarray(from, o);
+    // (Gone, so whatever still reads them as objects stops at once, rather than finding no floor anywhere.)
+    p.rects = null;
+  }
+}
+
+/** A floor's rects as objects again, { x, z, c, s, hu, hw, y }, for the tools and the tests (the game reads `rect`). */
+export function floorRects(p) {
+  const R = p.rect, out = [];
+  for (let k = 0; k < R.length; k += FLOOR_RECT) out.push({ x: R[k], z: R[k + 1], c: R[k + 2], s: R[k + 3], hu: R[k + 4], hw: R[k + 5], y: R[k + 6] });
+  return out;
+}
+
 // Everything, once: { parts: Map(layer -> {pos, nrm, uv, idx}), colliders, spots, floors, fires, groups (Kit.group), lamps,
 // doors (the land's that open, as the town's are: src/items/doors.js) }.
 // geometry: the land's parts to draw as well (typed arrays), which only the renderer wants, and only until they're on the
@@ -1660,6 +1688,7 @@ export function buildSites(geometry = false, lean = false) {
   // (And what lines the roads out in the land, last of all, clear of everything: src/core/roadside.js.)
   dressRoads(K);
   K.finish();
+  packFloors(K.floors);
   // (fires: the flames and glows the renderer draws facing you, down the delves: src/core/delve-build.js fire().)
   built = { geometry, lean, parts: K.parts, colliders: K.colliders, spots: K.spots, floors: K.floors, fires: K.fires, groups: K.groups, lamps: K.lamps || [], doors: K.doors || [], smokes: K.smokes || [] };
   return built;

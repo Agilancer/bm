@@ -6,7 +6,7 @@ import { BOULDER_CELL, ROCK_FLOATS, rockRadius, rocksInCells } from '../core/roc
 import { LAND_EDGE, openingTerrain, terrainHeight } from '../core/terrain.js';
 import { caveFloor, caveKeep } from '../core/opening.js';
 import { CHURCH_BOUNDS, churchSite } from '../core/church.js';
-import { buildSites } from '../core/sites.js';
+import { FLOOR_RECT, buildSites } from '../core/sites.js';
 import { CaveNav, caveFloorY, caveKeep as warrenKeep, caveRay, caveRoom, delveOf, inDungeon, isVoid, voidGround } from '../core/dungeon.js';
 import { HallNav, hallFloorY, hallKeep, hallRay, hallRoom, inHall } from '../core/testhall.js';
 
@@ -71,7 +71,18 @@ export class World {
     this.siteBoxes = new Map();
     // (Phobos's doors among them, each by its number: setPhobosDoor.)
     this.phDoors = new Map();
-    for (const c0 of buildSites().colliders) { const o = { ...c0, s: Math.sin(c0.yaw), co: Math.cos(c0.yaw) }; this.addSiteBox(o); if (o.phDoor !== undefined) this.phDoors.set(o.phDoor, o); }
+    // (The first World made in a thread takes the land's boxes themselves, its turn added to each: there are ninety-seven
+    // thousand, and a copy of each beside what buildSites keeps was 18 MB more. One made after it (the tools, the tests)
+    // has copies, its Phobos doors as they were built, shut, since its doors open apart from the first's.)
+    const sites = buildSites(), mine = !sites.taken;
+    sites.taken = true;
+    for (const c0 of sites.colliders) {
+      let o = c0;
+      if (!mine) { const { b, ...rest } = c0; o = c0.phDoor !== undefined ? rest : { ...c0 }; }
+      o.s = Math.sin(c0.yaw); o.co = Math.cos(c0.yaw);
+      this.addSiteBox(o);
+      if (o.phDoor !== undefined) this.phDoors.set(o.phDoor, o);
+    }
     this.lightsData = data.lights;
     this.grid = new Uint8Array(NAV_W * NAV_H);
     this.slots = new Map();
@@ -275,12 +286,14 @@ export class World {
       const p = list[i];
       if (Math.abs(x - p.x) > p.r || Math.abs(z - p.z) > p.r) continue;
       let best = null, low = null;
-      for (const f of p.rects) {
-        const dx = x - f.x, dz = z - f.z;
-        if (Math.abs(dx * f.c - dz * f.s) > f.hu || Math.abs(dx * f.s + dz * f.c) > f.hw) continue;
-        if (!p.stack) { if (best === null || f.y > best) best = f.y; continue; }
-        if (low === null || f.y < low) low = f.y;
-        if (y !== undefined && f.y <= y + 0.7 && (best === null || f.y > best)) best = f.y;
+      // (Its rects, seven numbers each: x, z, cos, sin, half across, half through, height. src/core/sites.js packFloors.)
+      const R = p.rect;
+      for (let k = 0; k < R.length; k += FLOOR_RECT) {
+        const dx = x - R[k], dz = z - R[k + 1], c = R[k + 2], s = R[k + 3], fy = R[k + 6];
+        if (Math.abs(dx * c - dz * s) > R[k + 4] || Math.abs(dx * s + dz * c) > R[k + 5]) continue;
+        if (!p.stack) { if (best === null || fy > best) best = fy; continue; }
+        if (low === null || fy < low) low = fy;
+        if (y !== undefined && fy <= y + 0.7 && (best === null || fy > best)) best = fy;
       }
       // (over: a deck high over ground that's walked on too, Phobos's patio, stairs and steps, src/core/phobos-build.js. It's
       // stood on only by feet that are up at it: under it, and for everyone but the player, the ground's the ground.)
@@ -301,8 +314,8 @@ export class World {
     if (!list) return false;
     for (const p of list) {
       if (!p.stack || p.over || Math.abs(x - p.x) > p.r || Math.abs(z - p.z) > p.r) continue;
-      const f = p.rects[0], dx = x - f.x, dz = z - f.z;
-      if (Math.abs(dx * f.c - dz * f.s) <= f.hu && Math.abs(dx * f.s + dz * f.c) <= f.hw) return true;
+      const R = p.rect, dx = x - R[0], dz = z - R[1];
+      if (Math.abs(dx * R[2] - dz * R[3]) <= R[4] && Math.abs(dx * R[3] + dz * R[2]) <= R[5]) return true;
     }
     return false;
   }
