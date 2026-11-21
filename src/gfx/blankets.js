@@ -13,6 +13,7 @@ const HOUSE_WOOL = { halloway: ['#36435a', '#bdbcb6'], reeve: ['#6e2a20'] };
 // Two to a bed lie this far either side of its middle (lieDown in src/folk/brain.js).
 const LAT = 0.25;
 const S = 512;
+const KEEP = 40;
 
 const smoothstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
@@ -24,6 +25,7 @@ export class Blankets {
     this.wools = [];
     this.drawn = [];
     this.masks = new Map();
+    this.frame = 0;
     this.info = new Float32Array([0, 1, 0, 1]);
   }
 
@@ -46,7 +48,7 @@ export class Blankets {
     g.fillStyle = own[0] || WOOLS[k % WOOLS.length]; g.fillRect(0, 0, S, S);
     for (let i = 0; i < 260; i++) {
       const y = rnd() * S, h = 2 + rnd() * 10;
-      g.fillStyle = `rgba(${rnd() < 0.5 ? '255,240,220' : '20,10,5'},${0.025 + rnd() * 0.04})`;
+      g.fillStyle = `rgba(${rnd() < 0.5 ? '255,240,220' : '20,10,5'},${0.008 + rnd() * 0.015})`;
       g.fillRect(0, y, S, h);
     }
     const pale = own[1] || '#cbbf9f';
@@ -100,16 +102,21 @@ export class Blankets {
     // (Measured off the bodies as they lie, the get_up clip's first frame sunk 0.1 into the mattress (lieDown in brain.js): an
     // adult's head about 0.8 up the bed from its middle, shoulders 0.62, feet 0.9 down; at most 0.3 high, a gown 0.37 over the
     // knees, and 0.37 out either side over the arms. A child's about two thirds of that.)
-    const top = floor ? bed.y + 0.1 : bed.y, half = floor ? 0.42 : Math.min(0.6, (bed.width || 1.25) / 2 - 0.02);
+    // (A bed of Phobos (src/core/phobos-rooms.js bed) is its own length, len either side of its middle: 2 m, a pallet 1.9; the
+    // blanket's to its frame, inside the footboard (it went 0.37 m past it into the air, the critics), its sides hung just over
+    // the frame's; a pallet's laid on the floor, over the tick and down to the boards.)
+    const len = bed.len || 0, pal = !!bed.pallet;
+    const top = floor ? bed.y + 0.1 : bed.y, half = floor ? 0.42 : len ? Math.min(0.6, (bed.width || 1.25) / 2 - (pal ? -0.01 : 0.06)) : Math.min(0.6, (bed.width || 1.25) / 2 - 0.02);
     // (The mattress runs to 1.225 down the bed from its middle and the frame to 1.25: the blanket goes over the end of both.)
-    const end = floor ? 1.02 : small ? 1.0 : 1.24, drop = floor ? 0.095 : 0.24;
-    const u0 = floor ? -0.47 : small ? -0.42 : -0.6, u1 = end + 0.13, v0 = -half - 0.13, v1 = half + 0.13, NU = 40, NV = 28;
+    // (A pallet's over its end and down to the boards at its sides and foot: the sleeper's feet had come up through it.)
+    const end = len ? (pal ? len + 0.06 : len - 0.07) : floor ? 1.02 : small ? 1.0 : 1.24, drop = pal ? 0.17 : floor ? 0.095 : 0.24;
+    const u0 = floor ? -0.47 : small ? -0.42 : len && !pal ? -(len - 0.31) : -0.6, u1 = len && !pal ? end : end + (pal ? 0.1 : 0.13), v0 = -half - (pal ? 0.1 : 0.13), v1 = half + (pal ? 0.1 : 0.13), NU = 40, NV = 28;
     const who = [-1, 0, 1].filter((s, k) => mask & (1 << k)).map((s) => s * LAT);
     // Everything of them but the head is sunk into the mattress (TUCK in src/folk/rig.js), so the blanket only has to look like
     // it's over somebody: a soft rise, highest over the chest, lower over the legs, a little lift where the toes are; round
     // across, as wool lies over a body, not flat-topped.
     const H = floor ? 0.16 : small ? 0.12 : 0.17, sig = (who.length > 1 ? 0.2 : 0.23) * (small ? 0.75 : 1), sc = small ? 0.68 : 1;
-    const ALONG = [[-0.62, 0.45], [-0.45, 0.85], [-0.25, 1.0], [0.05, 0.86], [0.4, 0.66], [0.72, 0.56], [0.88, 0.72], [0.98, 0.6], [1.1, 0.0]];
+    const ALONG = [[-0.62, 0.45], [-0.45, 0.85], [-0.25, 1.0], [0.05, 0.86], [0.4, 0.66], [0.72, 0.56], [0.88, 0.82], [0.97, 0.86], [1.05, 0.5], [1.14, 0.0]];   // (the toes tented higher: an innkeeper's came up through his pallet's, round 3)
     const along = (u) => {
       const t = u / sc;
       if (t <= ALONG[0][0]) return ALONG[0][1];
@@ -185,7 +192,18 @@ export class Blankets {
       const bed = this.beds[b];
       if (!bed || Math.hypot(bed.x - cam.x, bed.z - cam.z) > 60) continue;
       const m = this.mesh(b, mask);
+      m.used = this.frame;
       if (m.wool.ready) out.push(m);
+    }
+    this.frame++;
+    // (Phobos has hundreds of beds the crowd sleep in (src/folk/phobos-homes.js), and a blanket's shape is kept once made: the
+    // longest unseen let go past KEEP of them, so walking the city doesn't keep a blanket for every bed in it.)
+    if (this.meshes.size > KEEP) {
+      const old = [...this.meshes].filter(([, m]) => m.used < this.frame - 1).sort((a, b) => a[1].used - b[1].used);
+      for (const [k, m] of old.slice(0, this.meshes.size - KEEP)) {
+        for (const buf of [m.srcBuf, m.sideVB, m.IB, m.outBuf, m.palette, m.params]) buf?.destroy?.();
+        this.meshes.delete(k);
+      }
     }
   }
 

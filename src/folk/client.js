@@ -34,6 +34,8 @@ export class TownClient {
       return;
     }
     if (m.type === 'error') { console.error('town:', m.message); return; }
+    // (A bed in Phobos someone's lain down in: onto the list the blankets have, src/gfx/blankets.js.)
+    if (m.type === 'bed') { if (this.beds) this.beds[m.i] = m.bed; return; }
     if (m.type === 'route') { this.routes.get(m.id)?.(m.pts); this.routes.delete(m.id); return; }
     if (m.type === 'events') { for (const e of m.list) for (const fn of this.listeners) fn(e); return; }
     if (m.type === 'slot') {

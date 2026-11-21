@@ -35,6 +35,9 @@ import { ELDER } from './delve-elder.js';
 import { SEWERS } from './delve-sewers.js';
 import { CASTLE } from './delve-castle.js';
 import { IRON_BARRACKS } from './delve-barracks.js';
+import { CASTLE_HIGH } from './delve-highward.js';
+import { CASTLE_DUNGEONS_A } from './delve-castle-a.js';
+import { CASTLE_DUNGEONS_B } from './delve-castle-b.js';
 import { REDOUBT } from './delve-redoubt.js';
 import { WARRENS_PROPS, WARRENS_NICHES } from './delve-warrens.js';
 
@@ -181,7 +184,7 @@ export const PERCH = { x: 0, z: -348, up: 3 };
 export const PARTY = { size: 4, tanks: ['lancer'], healers: ['paladin'] };
 export const roleOf = (cls) => (PARTY.tanks.includes(cls) ? 'tank' : PARTY.healers.includes(cls) ? 'heal' : 'dps');
 // The Delve's codes, sent from the sim as EV.DELVE (code, a, b, c).
-export const DELVE = { NEED: 0, ENTER: 1, LEAVE: 2, WARN: 3, BOSS: 4, BOSS_DOWN: 5, WIPE: 6, CLEAR: 7, RESET: 8 };
+export const DELVE = { NEED: 0, ENTER: 1, LEAVE: 2, WARN: 3, BOSS: 4, BOSS_DOWN: 5, WIPE: 6, CLEAR: 7, RESET: 8, LATCH: 9 };
 
 // Where you come in, and where the portals inside stand (local).
 export const ENTRY = { x: 0, z: 3, yaw: Math.PI };
@@ -210,7 +213,11 @@ const WARRENS = {
 // (And the four sectors of Phobos's sewers, src/core/delve-sewers.js: no party needed, a second way down into each, a gate
 // at each end into the next.)
 // (And the castle's eight dungeons after its wards, as they're made: the Iron Barracks first. src/core/delve-barracks.js.)
-export const DELVES = [WARRENS, BLACKVIGIL, DEEPS, VAULTS, SPOREHOLD, PLAYHOUSE, KINGSBARROW, ELDER, ...SEWERS, ...CASTLE, IRON_BARRACKS, REDOUBT];
+export const DELVES = [WARRENS, BLACKVIGIL, DEEPS, VAULTS, SPOREHOLD, PLAYHOUSE, KINGSBARROW, ELDER, ...SEWERS, ...CASTLE, IRON_BARRACKS,
+  // (The High Ward and the Deep Stacks, src/core/delve-highward.js; then the rest of the castle's dungeons, in two sets.)
+  ...CASTLE_HIGH, ...CASTLE_DUNGEONS_A, ...CASTLE_DUNGEONS_B,
+  // (And the Redoubt under the Sill, met on the first visit to Phobos: src/core/delve-redoubt.js.)
+  REDOUBT];
 // The Free Company's posts at the later delves' portals: a quartermaster of its own on each terrace that has one (a delve's
 // post: who, and what they say of the place), to hire a party from where it's wanted. (src/core/heroes.js BROKERS has them
 // after the town's and the Warrens'; their posts go by the delve's key.)
@@ -236,6 +243,10 @@ for (const d of DELVES.slice(1)) {
 }
 BOSS_KEYS.push(...BOSSES.slice(BOSS_KEYS.length).map((b) => b.key));
 export const ALL_PACKS = DELVES.flatMap((d) => d.packs);
+// The ways between delves that are barred from one side till you've come through from the other (a link's opens: 'latch:<id>';
+// its far side's shut is the same). Sent by its place in this list with DELVE.LATCH (src/sim/dungeon.js portals), kept as a
+// flag by the render thread's quests (src/main.js), and told back with the bosses that have ever died (bossesDown).
+export const LATCHES = [...new Set(DELVES.flatMap((d) => (d.links || []).map((l) => l.opens).filter(Boolean)))];
 export const delveByKey = (key) => DELVES.find((d) => d.key === key) || null;
 // Every portal's spot (src/core/sites.js portalWall names them; src/gfx/renderer.js stands the models on them).
 // (A sewer's second mouths: out on the land, _w<n>, and their ladder-heads inside, _u<n>; its gates into the next, _l<n>.)

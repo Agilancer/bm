@@ -24,7 +24,10 @@ const DUNGEONS = ['ironbarracks', 'redoubt'];
 const json = (p) => JSON.parse(readFileSync(new URL(p, import.meta.url), 'utf8'));
 
 test('there are eight delves, the first three where they were, the later four each with three bosses, and the Elder Gods with four', () => {
-  assert.deepEqual(DELVES.map((d) => d.key), ['warrens', 'blackvigil', 'deeps', ...LATER, ...SEWERS, ...CASTLE, ...DUNGEONS]);
+  // (And the castle's later delves after these, each set with a test of its own: tests/castle-a.test.mjs and the rest.)
+  assert.deepEqual(DELVES.map((d) => d.key).slice(0, 15), ['warrens', 'blackvigil', 'deeps', ...LATER, ...SEWERS, ...CASTLE, 'ironbarracks']);
+  // (The Redoubt under the Sill, the first visit's, came after the castle's: last, so no boss before it changes its number.)
+  assert.equal(DELVES[DELVES.length - 1].key, 'redoubt');
   for (const k of [...SEWERS, ...CASTLE]) {
     const d = delveByKey(k), mine = BOSSES.filter((b) => b.delve === k);
     assert.ok((d.sewer || d.castle) && d.party === false && mine.length === 1 && mine[0].key === d.last, k);
@@ -53,7 +56,7 @@ test('a boss that waits waits on bosses of its own delve that come before it, an
     assert.ok(b.shut && WARN[b.shut] !== undefined, `${b.key}: nothing said in its empty room`);
   }
   // (The Vaults has none: its three are met in the order they lie.)
-  assert.deepEqual(BOSSES.filter((b) => b.needs).map((b) => b.key), ['heart', 'leadingman', 'dollmaker', 'wyrm', 'kaldurra', 'morvekh', 'nihvaroth', 'ironmarshal', 'rothgar']);
+  assert.deepEqual(BOSSES.filter((b) => b.needs && [...LATER, ...DUNGEONS].includes(b.delve)).map((b) => b.key), ['heart', 'leadingman', 'dollmaker', 'wyrm', 'kaldurra', 'morvekh', 'nihvaroth', 'ironmarshal', 'rothgar']);
 });
 
 test('every later boss has a body, a fight, calls that exist, and one thing of its own to do about', () => {

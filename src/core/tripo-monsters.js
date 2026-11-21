@@ -9,6 +9,9 @@
 import { WILD_VARIANTS, battleLairs, outpostLair } from './wilds.js';
 import { BATTLES, OUTPOSTS } from './wilds-data.js';
 import { HAUNTS } from './east.js';
+import { VARIANTS_H } from './delve-highward.js';
+import { VARIANTS_A } from './delve-castle-a.js';
+import { VARIANTS_B } from './delve-castle-b.js';
 
 export const TRIPO_BASE = 'assets/monsters/tripo/';
 export const TRIPO_SLOTS = 12;
@@ -150,6 +153,8 @@ export const VARIANTS = {
 };
 // And the land's new kinds (src/core/wilds.js): a palette, a size, a name and tricks of their own on the old bodies.
 Object.assign(VARIANTS, WILD_VARIANTS);
+// And Castle Velscour's later delves' (src/core/delve-highward.js, delve-castle-a.js, delve-castle-b.js).
+Object.assign(VARIANTS, VARIANTS_H, VARIANTS_A, VARIANTS_B);
 export function withVariants(roster) {
   for (const [id, v] of Object.entries(VARIANTS)) {
     const src = roster[v.src] ? v.src : v.alt;
@@ -249,6 +254,15 @@ export const LAIRS = [
   { ...HAUNT('phobos_approach'), lvl: 28, boss: VLORDS, pick: VKNIGHTS.concat(VLANCERS), n: 6, pal: ['Bloodsoaked'] },
   { ...HAUNT('phobos_wharf'), lvl: 25, boss: ['worm_2'], pick: SPIDERS, n: 3, pal: ['Blighted', 'Abyssal'] },
   { ...HAUNT('phobos_mages'), lvl: 27, boss: ['necromancer_lord_2'], pick: NECROS, n: 3, pal: ['Abyssal', 'Bloodsoaked'] },
+  // Castle Velscour's own ground (docs/PHOBOS-CASTLE.md): what's out in its wards and on its back road, not only down its
+  // delves. The scullions' yard north of the Kitchens, the garrison at drill between the Barracks hall and the Armoury, the
+  // pale harpies that roost in the piers under the Crown Court, his lancers on the Sally road and what watches the Ash
+  // Terrace at the world's edge. His own in blood red.
+  { key: 'castle_kitchens', lvl: 60, x: 10832, z: -188, r: 8, pick: POSSESSED, n: 4, pal: ['Ashen'] },
+  { key: 'castle_drill', lvl: 62, x: 10836, z: 186, r: 9, boss: VLANCERS, pick: VKNIGHTS, n: 5, pal: ['Bloodred'] },
+  { key: 'castle_undercourt', lvl: 78, x: 10986, z: 34, r: 10, boss: ['harpy_queen'], pick: ['harpy_undead_1', 'harpy_undead_2'], n: 4, pal: ['Skullwhite', 'Bone-white'] },
+  { key: 'castle_sally', lvl: 92, x: 11486, z: 38, r: 10, boss: VLORDS, pick: VLANCERS.concat(VKNIGHTS), n: 5, pal: ['Bloodred'] },
+  { key: 'castle_terrace', lvl: 100, x: 11586, z: 24, r: 9, boss: ['night_demon_red'], pick: ['night_demon_red', 'night_demon_black'], n: 3, pal: ['Bloodred', 'Sable'] },
   // ---- The land filled in: something living at or near every place that isn't a safe town, and beside every road every
   // few hundred metres to a kilometre, off to one side where a traveller sees it (never on the road). Each country has its
   // own; they're fewer and weaker near Bellmourn, more and worse far out, and the far ones have their kinds' tricks.

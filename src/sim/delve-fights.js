@@ -28,6 +28,9 @@ import { ELEM, FX } from './spells.js';
 import { ELDER_FIGHTS } from './elder-fights.js';
 import { SEWER_FIGHTS } from './sewer-fights.js';
 import { CASTLE_FIGHTS } from './castle-fights.js';
+import { FIGHTS_H } from './castle-fights-h.js';
+import { FIGHTS_A } from './castle-fights-a.js';
+import { FIGHTS_B } from './castle-fights-b.js';
 import { REDOUBT_FIGHTS } from './redoubt-fights.js';
 
 const { FIRE, FROST, ARCANE, STORM, DRAIN, BONE, VOID, POISON, SPIRIT, STONE, LIGHT } = ELEM;
@@ -1292,5 +1295,5 @@ export const FIGHTS = {
   },
 };
 // (The Elder Dragon Gods' four, in a file of their own.)
-Object.assign(FIGHTS, ELDER_FIGHTS, SEWER_FIGHTS, CASTLE_FIGHTS, REDOUBT_FIGHTS);
+Object.assign(FIGHTS, ELDER_FIGHTS, SEWER_FIGHTS, CASTLE_FIGHTS, FIGHTS_H, FIGHTS_A, FIGHTS_B, REDOUBT_FIGHTS);
 void rnd; void gap; void POISON; void DEMONS; void STORM;
