@@ -40,7 +40,7 @@ const MOODS = {
 const KEYS = ['open', 'size', 'tilt', 'glow', 'hue', 'shake', 'rate', 'droop'];
 const MAX = 170, SPECKS = 22, STRIDE = 12, AURA = 64;
 const CENTRE = [-0.483, -0.159, -0.783];     // the skull's middle: SKULL_AT
-const GEM_LIGHT = { ruby: [1, 0.15, 0.12], topaz: [1, 0.62, 0.15], emerald: [0.15, 1, 0.45], sapphire: [0.2, 0.45, 1], amethyst: [0.75, 0.3, 1], diamond: [0.9, 0.97, 1] };
+const GEM_LIGHT = { ruby: [1, 0.15, 0.12], topaz: [1, 0.62, 0.15], emerald: [0.15, 1, 0.45], sapphire: [0.2, 0.45, 1], amethyst: [0.75, 0.3, 1], diamond: [0.9, 0.97, 1], aquamarine: [0.2, 0.9, 0.82] };
 const between = (a, b) => a + (b - a) * Math.random();
 
 export class SkullEyes {

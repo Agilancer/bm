@@ -51,7 +51,9 @@ export const INPUT = { MOVE_X: 0, MOVE_Z: 1, YAW: 2, PITCH: 3, SPRINT: 4, ATTACK
   // by GameView in src/main.js): the sim poses those often and the rest seldom (Sim.poseGap in src/sim/sim.worker.js).
   SEEN: 47,
   // Your level (src/main.js arm): a delve's gods weigh it against their own (src/sim/elder-fights.js underHundred).
-  LEVEL: 47 + MAX_CHARS, SIZE: 48 + MAX_CHARS };
+  LEVEL: 47 + MAX_CHARS,
+  // How much further everything you cast reaches, from gear and gems (src/items/items.js writeWeapon): 1 is REACH as it is.
+  FAR: 48 + MAX_CHARS, SIZE: 49 + MAX_CHARS };
 
 // Snapshot header (float offsets)
 export const H = {

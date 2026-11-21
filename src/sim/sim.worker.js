@@ -337,6 +337,7 @@ class Sim {
     this.gameT += dt;
     this.level = input[INPUT.LEVEL] || 0;
     this.casting.power = input[INPUT.POWER] || 1; this.casting.maxMana = MAX_MANA + input[INPUT.MANA_MAX]; this.casting.regen = input[INPUT.REGEN] || 1; this.casting.thrift = input[INPUT.THRIFT];
+    this.casting.setFar(input[INPUT.FAR] || 1);
     if (input[INPUT.HEAL] !== this.healSeen) { const g = input[INPUT.HEAL] - this.healSeen; this.healSeen = input[INPUT.HEAL]; if (g > 0 && !player.dead) player.hp = Math.min(player.maxHp, player.hp + g); }
     if (input[INPUT.MANA_UP] !== this.manaSeen) { const g = input[INPUT.MANA_UP] - this.manaSeen; this.manaSeen = input[INPUT.MANA_UP]; if (g > 0) this.casting.mana = Math.min(this.casting.maxMana, this.casting.mana + g); }
     // (Playing as one of your party, your hands are theirs and you go where they go: src/sim/heroplay.js.)

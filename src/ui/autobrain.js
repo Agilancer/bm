@@ -267,7 +267,7 @@ const lower = (s) => s[0].toLowerCase() + s.slice(1);
 
 const SLOT_OF = (it) => (it.type === 'weapon' ? 'main' : it.type === 'shield' ? 'off' : it.type === 'skull' ? 'skull' : it.type === 'robe' ? ROBES[it.base]?.slot : null);
 // What a set of gear is worth to a wizard: spell power first.
-const WORTH = { power: 260, thrift: 180, regen: 45, mana: 0.7, life: 0.9, armor: 1.2, leech: 5 };
+const WORTH = { power: 260, thrift: 180, reach: 120, regen: 45, mana: 0.7, life: 0.9, armor: 1.2, leech: 5 };
 function gearScore(slots) {
   const t = gearTotals(slots);
   let s = 0;
