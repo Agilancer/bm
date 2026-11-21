@@ -114,9 +114,11 @@ export class Kit {
         // (Across a wall, u runs on by the metre along its line, so the boxes a long wall is built of meet with no seam in
         // the stone: each started its own way, and a curtain read as panels with a light line between every eight metres.
         // Wrapped every 512 repeats, which is kilometres, to keep the number small enough to be exact on the GPU.)
+        // (Never a house's painted front, a door or a roof: those start where they always did, as painted. The owner.)
         const hl = Math.hypot(b[0] - a[0], b[2] - a[2]), span = tw * 512;
-        const along = hl > 1e-3 ? (a[0] * (b[0] - a[0]) + a[2] * (b[2] - a[2])) / hl : (a[0] + a[2]) * 0.37;
-        const u0 = (((along % span) + span) % span) / tw;
+        const painted = /^((dark|pale|frost|mire|spore|void|slate|blood|moss|umber|soot|eve|char|royal|forest):)?(wall|door|roof)/.test(layer);
+        const along = hl > 1e-3 && !painted ? (a[0] * (b[0] - a[0]) + a[2] * (b[2] - a[2])) / hl : (a[0] + a[2]) * 0.37;
+        const u0 = painted ? along / tw : (((along % span) + span) % span) / tw;
         uvs = [[u0, a[1] / -th], [u0 + w / tw, b[1] / -th], [u0 + w / tw, (b[1] + h) / -th], [u0, (a[1] + h) / -th]];
       }
     }

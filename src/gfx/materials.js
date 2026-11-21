@@ -843,7 +843,10 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
   // built alike aren't stone for stone the same; slid along only, so a course stays level. Never a painting with windows in
   // it (params.z), a door, a banner or anything laid once (params.w is nothing on those). (The owner: the same texture over
   // and over on the houses and the castles.)
-  let wide = !LEAN && !phob && !flat_ && params.w < 0.0 && params.z == 0.0;
+  // (Never a house: not a painted front or its timber (params.z), not a roof's painting (-2.25 in w: renderer.js), nor anything
+  // standing in the town. The owner: the houses as they were painted, with none of this on them.)
+  let house = params.z > 0.0 || (params.w < -2.1 && params.w > -2.4) || (length(p.xz - vec2f(20.0, 0.0)) < 115.0 && p.y > -20.0);
+  let wide = !LEAN && !phob && !flat_ && !house && params.w < 0.0 && params.z == 0.0;
   if (wide && dist < 260.0) {
     let l = textureSampleLevel(noiseTex, repeatSmp, vec2f(p.x + p.y * 0.71, p.z - p.y * 0.63) * 0.043 + vec2f(0.19, 0.83), 0.0).b * 8.0;
     let ia = floor(l);
@@ -1046,23 +1049,19 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
         albedo = mix(albedo, moss * 0.7, smoothstep(0.58, 0.82, mid.b) * smoothstep(0.1, 0.5, 1.0 - det.a) * 0.6);
       }
     }
-    // Out in the weather everywhere else (above the delves, which lie fifty metres and more under the land): the town's
-    // houses, the castles and the places, in the world's own space so it runs on over every tile and joint, and placed
-    // where weather puts it rather than in clouds (the critics: clouds of grime with no cause read as camouflage):
-    // - every surface: a slow drift of tone, a few in a hundred, so no two houses or stretches of curtain are one stone;
-    // - masonry, roofs and boards: each stone, shingle or board its own tone, on its face (by the painting's height) so
-    //   the joints stay dark between them; the same stone in the same place, tile after tile, was the repeat that read;
+    // Out in the weather everywhere else (above the delves, which lie fifty metres and more under the land): the castles and
+    // the places out in the land (never a house: see house, above), in the world's own space so it runs on over every tile
+    // and joint, and placed where weather puts it rather than in clouds (clouds of grime with no cause read as camouflage):
+    // - a slow drift of tone, a few in a hundred, so no two stretches of curtain are the one stone;
+    // - masonry and boards: each stone or board its own tone, on its face (by the painting's height) so the joints stay dark
+    //   between them; the same stone in the same place, tile after tile, was the repeat that read;
     // - a wall's foot, where the ground under it is known (groundUnder): rising damp and splashed dirt, a ragged band to
     //   about a metre, greener and darker on what faces north;
-    // - masonry: thin rain streaks down its face, a crack now and then, lichen on its tops;
-    // - a roof: its streaks down the fall line, moss on the slope that faces north, in the shingles' hollows;
-    // - a painted front (params.z): never its timber or its glass. Only its plaster and infill: each bay a little its own
-    //   tone, a line of dirt where the plaster meets the timber, and the damp at the foot. (The owner: the fronts with their
-    //   cross beams must look right.)
+    // - masonry: thin rain streaks down its face here and there, a crack now and then, lichen on its tops.
     // The church's masonry (-3, src/gfx/interior.js) takes the tone and the stone by stone, none of the weather: the same
-    // stone lines its inside. On a phone, the drift of tone only. (The PH2 pack's decals, soot and cracks, are white on black made cut-outs: what
-    // they mark is in their alpha, their colour near black.)
-    if (!phob && params.w < 0.0 && params.x == 0.0 && p.y > -20.0) {
+    // stone lines its inside. On a phone, the drift of tone only. (The PH2 pack's decals, soot and cracks, are white on black
+    // made cut-outs: what they mark is in their alpha, their colour near black.)
+    if (!phob && !house && params.w < 0.0 && params.x == 0.0 && p.y > -20.0) {
       let big = textureSampleLevel(noiseTex, repeatSmp, vec2f(p.x + p.y * 0.5, p.z - p.y * 0.5) * 0.0093 + vec2f(0.61, 0.27), 0.0);
       albedo *= 0.92 + 0.17 * big.r;
       albedo = mix(albedo, albedo * vec3f(1.04, 1.0, 0.94), smoothstep(0.4, 0.75, big.g));
@@ -1070,7 +1069,6 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
       if (!LEAN) {
         let top = n0.y > 0.9;
         let vert = abs(n0.y) < 0.45;
-        let slope = !top && !vert && n0.y > 0.0;
         let hx = n0.x * n0.x * n0.x * n0.x; let hz = n0.z * n0.z * n0.z * n0.z;
         let fx = hx / max(hx + hz, 1e-6);
         let qa = vec2f(p.z, p.y); let qb = vec2f(p.x, p.y);
@@ -1088,25 +1086,6 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
           albedo *= mix(1.0, select(0.8 + 0.4 * sv.r, 0.85 + 0.3 * sv.r, boards), face);
           albedo = mix(albedo, albedo * vec3f(1.06, 1.0, 0.93), smoothstep(0.55, 0.8, sv.g) * face);
           albedo = mix(albedo, vec3f(dot(albedo, vec3f(0.3, 0.55, 0.15))) * vec3f(0.97, 0.99, 1.03), smoothstep(0.58, 0.85, sv.b) * face * 0.5);
-        }
-        if (params.z > 0.0) {
-          let glass = 1.0 - smoothstep(0.1, 0.26, det.b);
-          let sg = sqrt(max(tex.rgb, vec3f(0.0)));
-          let wood = clamp((0.4 - dot(sg, vec3f(0.2126, 0.7152, 0.0722))) * 7.0, 0.0, 1.0) * clamp((sg.r - sg.b) * 7.0, 0.0, 1.0);
-          let infill = (1.0 - smoothstep(0.15, 0.5, wood)) * (1.0 - glass);
-          // (Each bay: a noise about a bay's width, read across the front.)
-          let bay = nz2(qa, qb, fx, 0.33, vec2f(0.33, 0.77), 1.0);
-          albedo *= mix(1.0, 0.93 + 0.13 * bay.r, infill);
-          albedo = mix(albedo, albedo * vec3f(1.04, 0.99, 0.9), smoothstep(0.5, 0.8, bay.g) * infill);
-          // (The stains, drips and old patches painted into the plaster, the same in every bay: lifted toward the plaster
-          // round them in some bays and left in others, by the bay's own noise, so each bay keeps a different few.)
-          let wide = textureSampleLevel(colorArr, repeatSmp, uv, layerI, 6.0).rgb;
-          let lifted = max(albedo, albedo * clamp(dot(wide, vec3f(0.3, 0.55, 0.15)) / max(dot(tex.rgb, vec3f(0.3, 0.55, 0.15)), 1e-3), 1.0, 1.7));
-          albedo = mix(albedo, lifted, smoothstep(0.42, 0.62, bay.a) * infill * 0.85);
-          // (Where the plaster meets the timber: the painting itself, blurred, is darker there.)
-          let soft = sqrt(max(textureSampleLevel(colorArr, repeatSmp, uv, layerI, 4.0).rgb, vec3f(0.0)));
-          let nearWood = clamp((0.62 - dot(soft, vec3f(0.2126, 0.7152, 0.0722))) * 4.0, 0.0, 1.0);
-          albedo *= 1.0 - 0.14 * nearWood * infill * (0.5 + bay.b);
         }
         if (weather && vert && hg > -1.0 && hg < 2.5) {
           // The foot of a wall: damp risen into it and the dirt splashed up, to about a metre with a ragged top.
@@ -1132,23 +1111,6 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
           let li = p2W(p.xz / 1.5, 286, 1.5, dist).rgb;
           let m = textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.21 + vec2f(0.4, 0.2), 0.0);
           albedo = mix(albedo, li * 0.85, smoothstep(0.5, 0.75, m.b) * 0.45);
-        }
-        if (boards && slope) {
-          // A roof: streaks down the fall line from the ridge, and moss on the slope that faces north, in its hollows.
-          // (Each roof its own: a noise about a house apart sets one redder or browner, one greyer and older.)
-          let own = textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.031 + vec2f(0.83, 0.37), 0.0);
-          albedo *= 0.86 + 0.28 * own.r;
-          albedo = mix(albedo, albedo * vec3f(1.1, 0.96, 0.86), smoothstep(0.45, 0.75, own.g) * 0.8);
-          // (Older and greyer is a warm grey, weathered wood's: a cool one beside red shingles read lilac.)
-          albedo = mix(albedo, vec3f(dot(albedo, vec3f(0.3, 0.55, 0.15))) * vec3f(1.04, 0.98, 0.9), smoothstep(0.5, 0.8, own.b) * 0.45);
-          let st = p2W2(qa, qb, fx, 280, 3.1, 5.0, vec2f(0.37, 0.0), dist).a;
-          let m = nz2(qa, qb, fx, 0.27, vec2f(0.05, 0.71), 0.0);
-          albedo *= 1.0 - 0.22 * st * smoothstep(0.35, 0.6, m.r);
-          let north = smoothstep(-0.1, 0.5, -n0.z);
-          let moss = p2W(p.xz / 2.0, 282, 2.0, dist).rgb;
-          // (Moss in the shingles' hollows and down the slope in runs, never in clouds.)
-          let mrun = nz2(qa * vec2f(1.0, 0.25), qb * vec2f(1.0, 0.25), fx, 0.9, vec2f(0.5, 0.1), 1.0);
-          albedo = mix(albedo, moss * 0.8, smoothstep(0.55, 0.78, mrun.b) * north * smoothstep(0.2, 0.6, 1.0 - det.a) * 0.4);
         }
       }
     }
