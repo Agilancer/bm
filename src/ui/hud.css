@@ -26,11 +26,13 @@
 #levelNum { font: 700 calc(var(--medal) * .42)/1 Cinzel, BmNum, Georgia, serif; }
 #levelNum em { display: none; }
 #levelNum.three { font-size: calc(var(--medal) * .31); letter-spacing: -.02em; }
-#xpBar { display: none; }
 #vitals { position: absolute; left: calc(20px + var(--sl) + var(--medal) + 8px); bottom: calc(24px + var(--sb)); width: var(--bars); display: grid; gap: 3px; }
-.meter, #mana, #stam { position: relative; background: rgba(6, 5, 4, .72); overflow: hidden; border-radius: 2px; box-shadow: 0 0 0 1px rgba(0, 0, 0, .8), 0 0 0 2px var(--rim-dim); border: 0; margin: 0; }
+.meter, #mana, #stam, #xpBar { position: relative; background: rgba(6, 5, 4, .72); overflow: hidden; border-radius: 2px; box-shadow: 0 0 0 1px rgba(0, 0, 0, .8), 0 0 0 2px var(--rim-dim); border: 0; margin: 0; }
 #hp { height: 15px; box-shadow: 0 0 0 1px rgba(0, 0, 0, .8), 0 0 0 2px var(--rim); }
 #mana { height: 9px; } #stam { height: 5px; }
+/* (experience: a thin bar under breath, in the ring's violet, filled by width from src/main.js showLevel) */
+#xpBar { height: 4px; }
+#xpBar > i { display: block; height: 100%; width: 0; background: linear-gradient(180deg, #d2b8ff, var(--xp) 50%, #5a35a8); box-shadow: 0 0 4px rgba(167, 123, 242, .55); transition: width .3s; }
 #mana.low { animation: manaLow 1.1s ease-in-out infinite; }
 #mana.dry { animation: manaDry .45s ease-out; }
 @keyframes manaLow { 50% { box-shadow: 0 0 0 1px rgba(0, 0, 0, .8), 0 0 0 2px #7fb6ff, 0 0 9px 2px rgba(90, 150, 255, .75); } }
@@ -140,7 +142,7 @@ body.cinematic #touch #spells { visibility: hidden; }
 /* Along the top: your frame on the left; on the right the corner map, and beside it the row of small buttons. */
 body.touch #levelBox { left: calc(var(--hl) + var(--t-side, 5) * var(--u)); top: calc(var(--st) + var(--t-pad, 8) * var(--u)); bottom: auto; }
 body.touch #vitals { left: calc(var(--hl) + (var(--t-side, 5) + var(--t-medal, 44) + 7) * var(--u)); top: calc(var(--st) + (var(--t-pad, 8) + 5) * var(--u)); bottom: auto; width: var(--bars); gap: calc(3 * var(--u)); }
-body.touch #hp { height: calc(13 * var(--u)); } body.touch #mana { height: calc(8 * var(--u)); } body.touch #stam { height: calc(4.500 * var(--u)); }
+body.touch #hp { height: calc(13 * var(--u)); } body.touch #mana { height: calc(8 * var(--u)); } body.touch #stam { height: calc(4.500 * var(--u)); } body.touch #xpBar { height: calc(3.5 * var(--u)); }
 body.touch #hpNum { font-size: calc(9.5 * var(--u)); }
 body.touch #mapMini, body.touch #mapRing, #bMap { right: calc(var(--hr) + var(--t-side, 5) * var(--u)); top: calc(var(--st) + var(--t-pad, 8) * var(--u)); width: calc(var(--t-mini, 92) * var(--u)); height: calc(var(--t-mini, 92) * var(--u)); }
 #bMap { background: none; box-shadow: none; border-radius: 6px; }
@@ -333,7 +335,7 @@ html.art-stick_base #stick, html.art-stick_base #stickHome { background: var(--a
 html.art-stick_nub #nub { background: var(--art-stick_nub) center / 100% 100% no-repeat; box-shadow: none; }
 html.art-bar_frame #vitals { isolation: isolate; }
 html.art-bar_frame #vitals::before { content: ''; position: absolute; inset: -9px -17px; z-index: -1; border-style: solid; border-width: 0 24px; border-image: var(--art-bar_frame) 0 56 fill / 0 24px stretch; }
-html.art-bar_frame #vitals .meter, html.art-bar_frame #vitals #mana, html.art-bar_frame #vitals #stam { box-shadow: none; background: rgba(0, 0, 0, .55); }
+html.art-bar_frame #vitals .meter, html.art-bar_frame #vitals #mana, html.art-bar_frame #vitals #stam, html.art-bar_frame #vitals #xpBar { box-shadow: none; background: rgba(0, 0, 0, .55); }
 html.art-bar_life #hp > i { background: var(--art-bar_life) 0 50% / auto 100% repeat-x; }
 html.art-bar_mana #mana > i { background: var(--art-bar_mana) 0 50% / auto 100% repeat-x; }
 html.art-bar_stamina #stam > i { background: var(--art-bar_stamina) 0 50% / auto 100% repeat-x; }
