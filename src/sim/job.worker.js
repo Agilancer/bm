@@ -407,6 +407,17 @@ self.addEventListener('message', async (e) => {
         result = mapRows(args);
         transfer = result.wood ? [result.h.buffer, result.wood.buffer, result.tint.buffer] : [result.h.buffer];
         break;
+      case 'phobosCell': {
+        // One 100 m cell of Phobos as it is from near (src/gfx/phobos-near.js asks, as you come to it): built here, off the
+        // thread that draws, which it stopped for a tenth of a second a cell (three or four on a phone). The scenery's
+        // builder is brought in the first time it's asked for, and only on this thread (Pool.run's pin).
+        const { buildPhobosCell } = await import('../core/sites.js');
+        const b = buildPhobosCell(args.cell);
+        const parts = [...b.parts].map(([layer, q]) => [layer, { pos: q.pos, nrm: q.nrm, uv: q.uv, idx: q.idx }]);
+        result = { cell: args.cell, parts, groups: [...b.groups], lamps: b.lamps, smokes: b.smokes };
+        transfer = [...new Set(parts.flatMap(([, q]) => [q.pos.buffer, q.nrm.buffer, q.uv.buffer, q.idx.buffer]))];
+        break;
+      }
       case 'rocks':
         result = rocksAround(args.cx, args.cz, args.sreach, args.breach);
         transfer = [result.stones.buffer, result.boulders.buffer];

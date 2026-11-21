@@ -430,6 +430,8 @@ export function treeCode(x, z) {
   if (Math.hypot(x, z) < 1300) return 0;
   const md = Math.hypot(x - MOUNT.x, z - MOUNT.z);
   if (md < MOUNT.R * 0.75) return 2;
+  // (Every tree on Blackvigil's hill is dead: his keep had the greenest pine in the country on top of it. The once-over.)
+  if (Math.hypot(x + 5000, z - 200) < 330) return 3;
   const k = countryAt(x, z);
   const c = COUNTRIES[k].code;
   // (Dead wood only in stands; most of a dead country's trees are still green, just grim.)

@@ -51,8 +51,13 @@ export class BodySkin {
     if (this.pixels) return;
     const alb = this.body.maps[0], w = alb.width, h = alb.height;
     const canvas = new OffscreenCanvas(w, h), ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const lean = this.r.leanPics;
+    await lean.ready;
     const draw = async (blob, smooth) => {
-      const bmp = await createImageBitmap(blob, { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+      // (Your own colours from the phone's copy where it's as big as the map: src/gfx/lean-pictures.js.)
+      const e = lean.find(blob);
+      const src = (e && e.copy[0] >= w && e.copy[1] >= h && await lean.copy(e)) || blob;
+      const bmp = await createImageBitmap(src, { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
       ctx.imageSmoothingEnabled = smooth; ctx.imageSmoothingQuality = 'high';
       ctx.clearRect(0, 0, w, h); ctx.drawImage(bmp, 0, 0, w, h); bmp.close();
       return ctx.getImageData(0, 0, w, h).data;

@@ -1,7 +1,9 @@
 // Boot: the permission gate, threads, GPU, assets, and the render thread's loop.
 import { setOpeningTerrain } from './core/terrain.js';
 import { GROUPS, GROUP_KEYS, TRIPO_KIND, landLevel } from './core/tripo-monsters.js';
-import { BOSSES as DELVE_BOSSES, DELVE as DELVE_CODE, delveOf, inDungeon as inDelve } from './core/dungeon.js';
+import { BOSSES as DELVE_BOSSES, DELVE as DELVE_CODE, LATCHES as DELVE_LATCHES, delveOf, inDungeon as inDelve } from './core/dungeon.js';
+import { KEYS as CASTLE_KEYS, latchWord } from './core/castle-keys.js';
+import { castleVistas, vistaAt } from './core/castle-finds.js';
 import { OPENING, OPENING_REVISION } from './core/opening.js';
 import { OpeningHUD } from './ui/opening.js';
 import { ChatLog } from './ui/chatlog.js';
@@ -26,7 +28,7 @@ import { MAX_LEVEL, levelPerks, stepXp, xpFor, XP_OF } from './items/levels.js';
 import { OUTSIDE, readyQuests, summon } from './ui/phobos-ready.js';
 import { GemFx } from './gfx/gemfx.js';
 import { Pack } from './items/pack.js';
-import { addPart, capture, restore, saves } from './saves.js';
+import { addPart, capture, restore, saves, setCard } from './saves.js';
 import { Chests } from './items/chests.js';
 import { Doors } from './items/doors.js';
 import { PhobosDoors } from './items/phobos-doors.js';
@@ -56,6 +58,8 @@ import { fits, partyDrops, useKit } from './items/partygear.js';
 import { TownClient } from './folk/client.js';
 import { FolkBodies } from './gfx/folk.js';
 import { TownUI } from './ui/folk.js';
+import { followedFor, pauseCard, whereWords } from './ui/pausecard.js';
+import { Tracker } from './ui/tracker.js';
 import { BOSS_CHEST, LAST_CHEST, hands, matName, RARITIES } from './items/items.js';
 import { Lands } from './ui/lands.js';
 import { AutoPlay } from './ui/autoplay.js';
@@ -145,10 +149,12 @@ class Pool {
     if (this.leaving[i] && !this.working[i] && !this.decoding[i]) { this.workers[i].terminate(); this.leaving[i] = false; }
   }
 
-  run(type, args, transfer) {
+  // (pin: the one thread this work always goes to, waiting for it if it's busy: a kind of work that needs a great deal
+  // loaded to do it, Phobos's near cells, is then loaded on one thread and not on each in turn.)
+  run(type, args, transfer, pin) {
     const id = this.next++;
     return new Promise((resolve, reject) => {
-      const job = { id, type, args, transfer, resolve, reject, light: type === 'decode' };
+      const job = { id, type, args, transfer, resolve, reject, light: type === 'decode', pin };
       if (job.light) {
         let to = 0;
         for (let i = 1; i < this.size; i++) if (this.decoding[i] < this.decoding[to]) to = i;
@@ -162,8 +168,10 @@ class Pool {
   hand() {
     for (let i = 0; i < this.size && this.line.length; i++) {
       if (this.working[i]) continue;
+      const k = this.line.findIndex((j) => j.pin === undefined || j.pin % this.size === i);
+      if (k < 0) continue;
       this.working[i] = true;
-      this.send(i, this.line.shift());
+      this.send(i, this.line.splice(k, 1)[0]);
     }
   }
 
@@ -556,7 +564,8 @@ async function boot(plan, poolSize) {
   game.critters = new CritterField({ ground: (x, z) => meshHeight(x, z, renderer.terrainCell || 2) });
   game.critterLook = new CritterLook(renderer);
   game.critterWords = new CritterWords({ renderer });
-  input.onPick = (sx, sy, how) => game.pickCritter(sx, sy, how);
+  // (A tap on the quest tracker first: on a phone the stick's layer lies over it, so its taps come this way. src/ui/tracker.js)
+  input.onPick = (sx, sy, how) => game.tracker?.tapAt(sx, sy) || game.pickCritter(sx, sy, how);
   input.onHover = (sx, sy) => game.hoverCritter(sx, sy);
   const GEM_COLOR = (g) => ({ ruby: '#d8362c', topaz: '#e2a63a', emerald: '#3fb56a', sapphire: '#3f7fe0', amethyst: '#a45ad6', diamond: '#cfe6ee' }[g.kind]);
   // (bm.wear('crimson_regalia') dresses the whole body in one set, to look at it; bm.wear() goes back to what's worn.)
@@ -728,9 +737,16 @@ async function boot(plan, poolSize) {
       // The quest log: what auto-play is working on (src/ui/autoplay.js), and the big map framed on where a quest is.
       auto: () => game.autoplay?.current(),
       map: (p) => { if (!worldMap.open) toggleMap(); worldMap.showPlace(p); },
+      // (Abandoning a quest: asked first, in the title's "are you sure" box.)
+      confirm: (o) => title.confirm(o),
     },
   });
   game.townUI = townUI;
+  // The quests you track, under the map (src/ui/tracker.js): one clicked opens the quest log on it.
+  const tracker = new Tracker({ el: $('qTrack'), quests: townUI.quests, pack, day: () => town.day,
+    open: (id) => { if (townUI.book || !townUI.act.canMenu()) return false; townUI.openBook('active', id); return true; } });
+  tracker.setOn(settings.tracker !== 'off');
+  game.tracker = tracker;
   game.music = music;
   // The gold trail on the ground to the quest you follow (or, in the opening, down the road after Lisandra).
   game.questTrail = new QuestTrail({ renderer, townUI, town });
@@ -914,6 +930,30 @@ async function boot(plan, poolSize) {
   // The game keeps itself as it's played: that's Continue.
   const autosave = async () => { const data = await snapshot(); if (data) saves.writeAuto(data); };
   keepForReset = autosave;
+  // A save's card in the Save and Load windows (src/saves.js setCard): who, their level, where, the quest followed, the time played,
+  // and a small picture of the game as it was. The picture is taken as the game is paused, and every minute and a half of play.
+  let thumb = null, thumbT = 0;
+  const grabThumb = () => new Promise((res) => {
+    if (!input.enabled || title.up) { res(null); return; }
+    const prev = game.onFrame, to = setTimeout(() => res(null), 1500);
+    game.onFrame = () => {
+      game.onFrame = prev;
+      prev?.();
+      clearTimeout(to);
+      try {
+        const src = renderer.canvas, w = 192, h = 108, c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        const k = Math.max(w / src.width, h / src.height), cw = w / k, ch = h / k;
+        c.getContext('2d').drawImage(src, (src.width - cw) / 2, (src.height - ch) / 2, cw, ch, 0, 0, w, h);
+        thumb = c.toDataURL('image/jpeg', 0.62);
+      } catch (e) { console.warn('save picture', e); }
+      res(thumb);
+    };
+  });
+  setCard(() => {
+    const s = game.currentSnap();
+    return { name: townUI.name || '', level: pack.level || 1, where: s ? whereWords(s[H.PX], s[H.PY], s[H.PZ]) : '', quest: followedFor(townUI.quests)?.title || '', played: Math.round(played), thumb };
+  });
   game.onTaken = autosave;
   if (openingHUD) game.drawOpening = (snap, cam) => openingHUD.feel(snap, cam);
   game.onTick = (dt) => {
@@ -944,8 +984,10 @@ async function boot(plan, poolSize) {
       const night = town.day * 2 + (renderer.hour < 12 ? 0 : 1);
       if (townUI.quests.wantsWarden(renderer.hour) && townUI.wardenAsked !== night) { townUI.wardenAsked = night; simWorker.postMessage({ type: 'warden' }); }
     }
+    tracker.update(dt);
     if (!input.enabled || state.paused) return;
     played += dt; playT += dt; runT += dt; noteT += dt;
+    if ((thumbT += dt) > 90) { thumbT = 0; grabThumb(); }
     if (playT > AUTOSAVE_EVERY) { playT = 0; autosave(); }
     // The run's note (src/core/lastrun.js): how long it's been played and where you stand, for the start after a death.
     if (noteT > 8) {
@@ -997,7 +1039,7 @@ async function boot(plan, poolSize) {
       if (d) startFrom(d);
     }
   };
-  const slotOptions = () => ({ canSave: canSave(), snapshot, restore: (d) => (input.enabled ? loadInGame(d) : startFrom(d)) });
+  const slotOptions = () => ({ canSave: canSave(), inGame: input.enabled, snapshot, restore: (d) => (input.enabled ? loadInGame(d) : startFrom(d)) });
   const loadInGame = async (d) => { if (await loadInto(d)) resume(); };
   // (With the mouse free, Tab's or auto-play's, there's no lock to take again: straight back.)
   const resume = () => { if (input.touch || AUTO || input.loose) input.onPauseChange(false); else input.lock(); };
@@ -1090,6 +1132,19 @@ async function boot(plan, poolSize) {
       else if (a === 'menu') toTitle();
     };
   }
+  // The card beside the pause menu (src/ui/pausecard.js): who you are, where, and the quest you follow, with the way to the log.
+  const pauseCardEl = $('pause').querySelector('.pz-card');
+  const drawPauseCard = () => {
+    const s = game.currentSnap();
+    pauseCardEl.innerHTML = pauseCard({ name: townUI.name, level: pack.level, xp: pack.xp, where: s ? whereWords(s[H.PX], s[H.PY], s[H.PZ]) : '', played, gold: pack.gold, copper: pack.copper,
+      day: town.day, hour: renderer.hour, quest: followedFor(townUI.quests), Q: townUI.quests, mats: pack.mats, today: town.day });
+  };
+  pauseCardEl.addEventListener('click', (e) => {
+    if (!e.target.closest('[data-p="quests"]')) return;
+    title.chime();
+    input.onPauseChange(false);
+    if (townUI.act.canMenu()) townUI.openBook('active');
+  });
   const applySetting = (k, v) => {
     if (k === 'look') input.sens = v;
     else if (k === 'ambience' && input.enabled) audio.setAmbience(v);
@@ -1104,12 +1159,14 @@ async function boot(plan, poolSize) {
       awayChanged();
     } else if (k === 'keep') {
       useStore(v === 'yes');
-    } else if (k === 'gfx') {
-      title.confirm({ title: 'Restart?', text: 'The graphics setting takes hold when the game restarts. Where you are is kept for Continue.', yes: 'Restart Now', no: 'Later' })
-        .then(async (yes) => { if (yes) { await autosave(); title.reload(); } });
+    } else if (k === 'tracker') {
+      tracker.setOn(v !== 'off');
     }
+    // (Graphics and Other Tessariels wait on a restart: the settings window says so, with Restart now, title.onRestart.)
   };
   title.onSetting = applySetting;
+  // Restarting for a setting: where you are is kept for Continue first.
+  title.onRestart = async () => { await autosave(); title.reload(); };
   applySetting('look', settings.look);
   applySetting('res', settings.res);
   applySetting('ticker', settings.ticker);
@@ -1120,6 +1177,8 @@ async function boot(plan, poolSize) {
     state.paused = paused;
     document.body.classList.toggle('paused', paused);
     $('pause').style.display = paused ? 'flex' : 'none';
+    // (The save made as it paused has the picture from before: given this one, once it's taken.)
+    if (paused) { drawPauseCard(); grabThumb().then((t) => { const a = t && saves.auto(); if (a?.card && a.card.thumb !== t && state.paused) { a.card.thumb = t; saves.writeAuto(a); } }); }
     // (Back in play, no button keeps the focus that Tab walked it to on the pause screen: Enter would press it.)
     if (!paused && document.activeElement?.closest?.('button, #pause')) document.activeElement.blur();
     shared.input[INPUT.PAUSE] = paused ? 1 : 0;
@@ -1796,7 +1855,20 @@ class GameView {
     // (Which bosses have ever died, told to the sim when it changes: Castle Velscour's gates that a death opens. src/sim/dungeon.js open.)
     const fl = this.townUI?.quests.flags;
     this.renderer.bossFlags = fl;
-    if (fl && (fl !== this.flagsSent || fl.size !== this.flagsN)) { this.flagsSent = fl; this.flagsN = fl.size; this.sim?.postMessage({ type: 'bossesDown', keys: [...fl].filter((f) => f.startsWith('boss:')).map((f) => f.slice(5)) }); }
+    if (fl && (fl !== this.flagsSent || fl.size !== this.flagsN)) { this.flagsSent = fl; this.flagsN = fl.size; this.sim?.postMessage({ type: 'bossesDown', keys: [...fl].flatMap((f) => (f.startsWith('boss:') ? [f.slice(5)] : /^(key|latch):/.test(f) ? [f] : [])) }); }
+    // (A lookout of the castle's or the city's, stood on for the first time: its name, and what the sight's worth.
+    // src/core/castle-finds.js.)
+    if (fl && (this.vistaT = (this.vistaT || 0) - dt) <= 0) {
+      this.vistaT = 0.5;
+      const v = vistaAt(snap[H.PX], snap[H.PY], snap[H.PZ]);
+      if (v && this.townUI.quests.flag(`vista:${v.id}`)) {
+        const n = castleVistas().filter((q) => fl.has(`vista:${q.id}`)).length;
+        // (Down a delve it's a place found, not a view.)
+        const what = v.delve ? 'Found' : 'Lookout found';
+        this.hud.tip(`${what}: ${v.name}. (${n} of ${castleVistas().length})`, 7); this.chatLog?.system(`${what}: ${v.name}.`);
+        this.addXp?.(v.xp); this.music?.stinger?.('triumph');
+      }
+    }
     const rope = this.bells.update(dt, snap[H.PX], snap[H.PY], snap[H.PZ], this.input.yaw);
     // Someone to talk to, if there's nothing to take or open first.
     const free = this.input.enabled && !this.input.menu && !d && !this.nearChest;
@@ -2119,6 +2191,15 @@ class GameView {
     if (this.smokeT > 0.09) {
       this.smokeT = 0;
       for (const s of r.village.smoke) r.emit(4, 1, s.p[0], s.p[1], s.p[2], 0.1, 1, 0.08, 0.22, 0.45, 0.8, 0.09, 0.17, 7, 12);
+      // (And every other town's and farm's chimneys out on the land, within a kilometre: a few of them a tick, in turn, in
+      // fuller wisps than Bellmourn's, to be seen from the road. src/core/sites.js Kit.house. The world once-over.)
+      const ls = this.landSmokes || (this.landSmokes = buildSites().smokes || []), c0 = this.cam;
+      if (c0 && ls.length) for (let k = 0, n = 0; k < 6 && n < ls.length; n++) {
+        const s = ls[(this.smokeAt = ((this.smokeAt || 0) + 1) % ls.length)];
+        const dx = s[0] - c0.x, dz = s[2] - c0.z;
+        if (dx * dx + dz * dz > 1e6 || (Math.abs(s[0]) < 140 && Math.abs(s[2]) < 140)) continue;
+        r.emit(4, 1, s[0], s[1], s[2], 0.12, 1, 0.08, 0.25, 0.5, 0.9, 0.22, 0.5, 9, 14); k++;
+      }
       // (City State Phobos's hub yards: the Ashwardens' pyre, the Pennyless' cookfire, steam off the dye works' madder vat;
       // only near enough to see: src/core/phobos-hubs.js HUB_SMOKE.)
       const cm = this.cam;
@@ -2190,6 +2271,13 @@ class GameView {
   }
 
   // What one of the other Tessariels' moves does that only this thread can (HFX in src/sim/heroskills.js): at (x, y, z).
+  // A boss's key, the first time it's had (src/core/castle-keys.js; the quests keep it: src/folk/quests.js boss).
+  castleKey(k) {
+    const q = this.townUI?.quests;
+    if (!k || !q || q.flags.has(k) || !CASTLE_KEYS[k]) return;
+    this.hud.tip(CASTLE_KEYS[k].got, 9); this.chatLog?.system(CASTLE_KEYS[k].got);
+  }
+
   heroFx(code, x, y, z, a, b, c) {
     const r = this.renderer, au = this.audio;
     switch (code) {
@@ -2224,7 +2312,10 @@ class GameView {
       case EV.WILD: this.wilds?.on(a, b, c, d, e, f, g); break;
       case EV.DELVE:
         if ((a | 0) === DELVE_CODE.ENTER) this.wantEntry = true;
-        this.party?.onDelve(a, b, c, d); if ((a | 0) === DELVE_CODE.BOSS_DOWN) { this.townUI?.quests.boss(DELVE_BOSSES[b | 0]?.key); this.music?.stinger('triumph'); } break;
+        this.party?.onDelve(a, b, c, d); if ((a | 0) === DELVE_CODE.BOSS_DOWN) { this.castleKey(DELVE_BOSSES[b | 0]?.gives); this.townUI?.quests.boss(DELVE_BOSSES[b | 0]?.key); this.music?.stinger('triumph'); }
+        // (A way unbarred from its far side, for good: src/core/castle-keys.js.)
+        if ((a | 0) === DELVE_CODE.LATCH && DELVE_LATCHES[b | 0]) { this.townUI?.quests.flag(DELVE_LATCHES[b | 0]); this.hud.tip(latchWord(DELVE_LATCHES[b | 0].slice(6)), 6); this.chatLog?.system(latchWord(DELVE_LATCHES[b | 0].slice(6))); }
+        break;
       case EV.HERO_LEVEL: case EV.HERO_DUEL: break;
       case EV.SPELL_CAST:
         this.heroTalk?.onSpell(b);

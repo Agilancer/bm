@@ -79,10 +79,10 @@ test('the stick shows nothing until a thumb is on it', () => {
 });
 
 test('auto-play can put the interface away, keeping the map and the chat if asked', () => {
-  const title = read('../src/title.js');
+  const title = read('../src/title.js'), spec = read('../src/ui/settings-spec.js');
   for (const k of ['autohide', 'autohideMap', 'autohideChat']) {
     assert.ok(new RegExp(`${k}: '`).test(title), `${k} has no default`);
-    assert.ok(title.includes(`data-k="${k}"`), `${k} isn't in Settings`);
+    assert.ok(spec.includes(`k: '${k}'`), `${k} isn't in Settings`);
   }
   assert.match(css, /body\.ui-bare :is\([^)]*#hud[^)]*#touch[^)]*\) \{ visibility: hidden !important; \}/);
   assert.match(css, /body\.ui-bare\.bare-map :is\(#mapMini, #mapRing, #bMap\) \{ visibility: visible !important; \}/);
