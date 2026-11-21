@@ -72,8 +72,10 @@ test('nothing of it moves a door or adds to what stops a body, and the corners a
   assert.ok(pc[0] <= CITY_PC + MORE, `a PC's city: ${pc[0]} corners, ${pc[0] - CITY_PC} more than it was (at most ${MORE})`);
   assert.ok(phone[0] <= CITY_PHONE, `a phone's city: ${phone[0]} corners, ${phone[0] - CITY_PHONE} more than it was (none)`);
   assert.deepEqual(pc.slice(1), phone.slice(1), 'a phone is stopped and held by what a PC is');
-  // (61,773 and 10,423 of the city's own, and the castle's sixteen wall towers' 212 and 60: their walls, doors, floors, stairs.)
-  assert.equal(pc[1], 61773 + 212, 'the city stops a body where it did'); assert.equal(pc[2], 10423 + 60, 'and holds one where it did');
+  // (61,773 and 10,423 of the city's own, and the castle's sixteen wall towers' 212 and 60: their walls, doors, floors, stairs.
+  // And 28,224 more inside the houses: their cross walls, the one upstairs and the two halves of the one down either side of
+  // its doorway (src/core/phobos-rooms.js partition, docs/HOMES.md). Nothing else moved.)
+  assert.equal(pc[1], 61773 + 212 + 28224, 'the city stops a body where it did'); assert.equal(pc[2], 10423 + 60, 'and holds one where it did');
   // (A near cell with a landmark and a street in it builds.)
   const cell = landmarks()[3].h.cell, built = buildPhobosCell(cell);
   let v = 0; for (const p of built.parts.values()) v += p.pos.length / 3;

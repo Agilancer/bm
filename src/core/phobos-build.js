@@ -15,6 +15,7 @@ import { PHOBOS } from './phobos-data.js';
 import { HUBS, hubHouses, hubFar, hubNear, inHub } from './phobos-hubs.js';
 import { MOUTH_SQUARE, PHOBOS_SEALS, SEAL_SQUARE, SEWER_MOUTHS, inSealSquare } from './phobos-seals.js';
 import { cityTowers, towerFar, towerInner, towerNear, towerYards, wallTops, wallTowerAt } from './phobos-towers.js';
+import { furnish, partition, roomPlan } from './phobos-rooms.js';
 import { bridgeHouse, dressHouse, eavesOf, houseFarMore, jutOf, roofTop, roofs, streetLife, styleHouses } from './phobos-houses.js';
 
 const TAU = Math.PI * 2;
@@ -51,6 +52,9 @@ export function footing(h) {
   const c = Math.cos(h.yaw), s = Math.sin(h.yaw);
   let lo = Infinity, hi = -Infinity;
   for (const [lx, lz] of [[-h.hx, -h.hz], [h.hx, -h.hz], [h.hx, h.hz], [-h.hx, h.hz]]) { const y = Y(h.x + lx * c + lz * s, h.z - lx * s + lz * c); lo = Math.min(lo, y); hi = Math.max(hi, y); }
+  // (And the ground inside: on a hump between the corners, a hand of hill came up through the boards of 133 houses, the
+  // houses pass, 2026-11-20. The floor's over the highest of it.)
+  for (const u of [-0.5, 0, 0.5]) for (const v of [-0.5, 0, 0.5]) { const lx = u * h.hx, lz = v * h.hz; hi = Math.max(hi, Y(h.x + lx * c + lz * s, h.z - lx * s + lz * c) - 0.04); }
   return { lo, hi, c, s };
 }
 export const DOOR = 0.8, WALL = 0.45;   // half a doorway's width; a house wall's thickness
@@ -64,13 +68,18 @@ export const doorOf = (h) => (/dressed|rich_brick|basalt|granite|block|course/.t
 // (Room to walk up it, the owner, 2026-11-17: the stair a good stride wide, a landing of a metre and more at its head
 // before the back wall, and its treads as deep as the house's depth lets them be, up to a comfortable 0.36. A house too
 // shallow for that has no upstairs.)
-const RISE = 0.3, SW = 1.25, STOREY = 3.3, LANDING = 1.1;
-const treadOf = (iz) => Math.min(0.36, (2 * iz - 0.45 - LANDING) / Math.round(STOREY / RISE));
+// (The houses pass, 2026-11-20: seventeen risers of 0.194 to the storey on treads of up to 0.27, two rises and a going of
+// 0.66, inside the 0.55 to 0.70 a stair's comfortable at, as a building rule has it. Eleven of 0.3 on 0.36 had been 0.96:
+// a ladder's stride, every riser a block a third of a metre high. Every house that had an upstairs still has room for it.)
+// (Its foot a pace and more in from the front wall, STEP_IN: 0.45 had left no floor to step on to it from, the wall before it
+// and its newel and rail beside it. "HOW IS SOMEONE SUPPOSED TO GO UP THOSE STAIRS?!", the owner, 2026-11-20.)
+const RISE = 3.3 / 17, SW = 1.25, STOREY = 3.3, LANDING = 1.1, STEP_IN = 1.05;
+const treadOf = (iz) => Math.min(0.27, (2 * iz - STEP_IN - LANDING) / Math.round(STOREY / RISE));
 export function upstairs(h, F) {
   const ix = h.hx - WALL, iz = h.hz - WALL, TREAD = treadOf(iz);
   if (!h.roof || h.h < 6 || ix < 2.4 || TREAD < 0.24) return null;
   const { hi, c, s } = F, f = h.front, fy = hi + 0.1, uy = fy + STOREY, uc = Math.min(hi + h.h - 0.3, uy + 2.9), n = Math.round(STOREY / RISE);
-  const W = (lx, lz) => [h.x + lx * c + lz * s, h.z - lx * s + lz * c], yaw = h.yaw, sx = -ix + SW / 2, z0 = iz - 0.45, z1 = z0 - n * TREAD;
+  const W = (lx, lz) => [h.x + lx * c + lz * s, h.z - lx * s + lz * c], yaw = h.yaw, sx = -ix + SW / 2, z0 = iz - STEP_IN, z1 = z0 - n * TREAD;
   const steps = [], rects = [];
   for (let k = 1; k <= n; k++) {
     const lz = f * (z0 - (k - 0.5) * TREAD), y = fy + k * RISE;
@@ -82,7 +91,7 @@ export function upstairs(h, F) {
   rects.push([...W(sx, f * (z1 - iz) / 2), SW / 2, (z1 + iz) / 2, yaw, uy]);
   rects.push([...W(sx, f * (z0 + iz) / 2), SW / 2, (iz - z0) / 2, yaw, uy]);
   // (The rects' half-sizes are along the house's local x and z, the way world.js reads a rect turned by yaw.)
-  return { ix, iz, fy, uy, uc, steps, hole: [z1, z0], rects, tread: TREAD };
+  return { ix, iz, fy, uy, uc, steps, hole: [z1, z0], rects, tread: TREAD, rise: RISE };
 }
 // Every house's door opens and shuts (the owner, 2026-11-16: "make sure all the doors on all the houses open and close"):
 // shut till you open it, E (src/items/phobos-doors.js). A door as the city's doors take it: { id, x, z, yaw (the house's,
@@ -132,6 +141,11 @@ function houseWalls(K, h, F) {
   const up = upstairs(h, F);
   if (up) rects.push(...up.rects);
   K.deck(rects); K.floors.at(-1).stack = true;
+  // (Upstairs, the boards between its two chambers, src/core/phobos-rooms.js: they stop only feet up there.)
+  // (And downstairs the cross wall either side of its doorway; they stop only feet down there.)
+  const pt = partition(h, F, up), seg = (x0, x1, w, y0, y1) => { if (x1 - x0 < 0.05) return; const [px, pz] = W((x0 + x1) / 2, h.front * w); K.colliders.push({ x: px, z: pz, hx: (x1 - x0) / 2, hz: 0.05, yaw: h.yaw, h: y1 - lo, t: y1, b: y0 - 0.4 }); };
+  if (pt.up) seg(pt.up.x0, pt.up.x1, pt.up.w, up.uy, up.uc);
+  if (pt.down) { seg(pt.down.x0, pt.down.g0, pt.down.w, fy, fy + 2.6); seg(pt.down.g1, pt.down.x1, pt.down.w, fy, fy + 2.6); }
 }
 // A house from far off: a box on the ground (its foot sunk to the lowest of its corners) with a ridged roof, or none if
 // it's a ruin.
@@ -246,7 +260,7 @@ function houseNear(K, h) {
     const wx = sd * Math.min(h.hx - (big ? 1.05 : 1.1), DOOR + 1.6), wy = fy + (big ? 0.9 : 1.2) + st * 3.3;
     if (wy + (big ? 1.6 : 1) > top || h.hx < 2.4) continue;
     if (side < 0 && hash2(id + st, 77) > 0.3) continue;
-    const lit = !ruin && r(9) < 0.8 && hash2(id + st * 3 + sd, side + 9) < (st === 0 ? 0.42 : 0.3);
+    const lit = !ruin && h.mark?.kind !== 'shell' && r(9) < 0.8 && hash2(id + st * 3 + sd, side + 9) < (st === 0 ? 0.42 : 0.3);
     const ww = big && side > 0 ? 0.4 + 0.06 * r(14) : 0.26 + 0.08 * r(14), wh = big && side > 0 ? 1.15 + 0.25 * r(15) : 0.6 + 0.2 * r(15);
     const open = !ruin && st <= (up ? 1 : 0) && wy + wh < roofY - 0.15 && Math.abs(wx) + ww < ix - 0.1;
     wins.push({ st, side, sd, q: side * f, wx, wy, ww, wh, lit, open });
@@ -276,9 +290,18 @@ function houseNear(K, h) {
   const out = (ax, az, bx, bz, y0, y1) => K.quad(h.wall, P(ax, y0, az), P(bx, y0, bz), P(bx, y1, bz), P(ax, y1, az));
   out(h.hx, -h.hz, h.hx, h.hz, lo - 0.5, top); out(-h.hx, h.hz, -h.hx, -h.hz, lo - 0.5, top);
   // Inside: the same four the other way round, a hand's breadth in; the doorway's cheeks and head; floor and ceiling.
-  const IN = /poor|daub|soot|burnt|char/.test(h.wall) ? 'p2_sooty_plaster' : 'pale:ph_grey_plaster', inn = (ax, az, bx, bz, y0, y1) => K.quad(IN, P(ax, y0, az), P(bx, y0, bz), P(bx, y1, bz), P(ax, y1, az));
+  // (A house burnt out inside (its mark a shell, phobos-houses.js): its plaster, its boards and its ceiling charred, no fire, no light in its windows.)
+  const burnt = h.mark?.kind === 'shell';
+  const IN = burnt ? 'char:p2_sooty_plaster' : /poor|daub|soot|burnt|char/.test(h.wall) ? 'p2_sooty_plaster' : 'pale:ph_grey_plaster', inn = (ax, az, bx, bz, y0, y1) => K.quad(IN, P(ax, y0, az), P(bx, y0, bz), P(bx, y1, bz), P(ax, y1, az));
   wallZ(IN, iz, -1, fy, roofY, holes(1, true)); wallZ(IN, -iz, -1, fy, roofY, holes(-1, true));
   inn(ix, iz, ix, -iz, fy, roofY); inn(-ix, -iz, -ix, iz, fy, roofY);
+  // (Downstairs: the lime's lower part dirtied by feet, brooms and the damp, and a dark skirting board along its foot; the
+  // pale plaster had read flat, a texture missing, the critics.)
+  if (!ruin && !K.leanNear) {
+    const band = (layer, d, y1) => { for (const sg of [1, -1]) wallZ(layer, sg * (iz - d), -1, fy, y1, holes(sg, true)); K.quad(layer, P(ix - d, fy, iz), P(ix - d, fy, -iz), P(ix - d, y1, -iz), P(ix - d, y1, iz)); K.quad(layer, P(-ix + d, fy, -iz), P(-ix + d, fy, iz), P(-ix + d, y1, iz), P(-ix + d, y1, -iz)); };
+    if (!burnt) band(IN === 'pale:ph_grey_plaster' ? 'umber:ph_grey_plaster' : 'soot:p2_sooty_plaster', 0.008, fy + 0.85);
+    band('dark:wood', 0.018, fy + 0.13);
+  }
   // The open windows' reveals, through the wall's thickness: their cheeks and head in the wall's stone, a stone sill.
   for (const w of wins) if (w.open) {
     const zo = w.q * h.hz, zi = w.q * iz, X = [c, 0, -s];
@@ -288,11 +311,20 @@ function houseNear(K, h) {
   }
   for (const sd of [-1, 1]) K.quad('wood', P(sd * DOOR, fy - 0.2, fz), P(sd * DOOR, fy - 0.2, gz), P(sd * DOOR, dh, gz), P(sd * DOOR, dh, fz));
   K.quad('wood', P(-DOOR, dh, fz), P(DOOR, dh, fz), P(DOOR, dh, gz), P(-DOOR, dh, gz), [0, -1, 0]);
-  K.quad('p2_worn_floorboards', P(-ix, fy, -iz), P(-ix, fy, iz), P(ix, fy, iz), P(ix, fy, -iz), [0, 1, 0]);
+  K.quad(burnt ? 'char:p2_worn_floorboards' : 'p2_worn_floorboards', P(-ix, fy, -iz), P(-ix, fy, iz), P(ix, fy, iz), P(ix, fy, -iz), [0, 1, 0]);
   // (A step at the door where the street's lower than the floor.)
   K.quad('stone', P(-DOOR - 0.3, fy, fz), P(-DOOR - 0.3, fy, fz + f * 0.9), P(DOOR + 0.3, fy, fz + f * 0.9), P(DOOR + 0.3, fy, fz), [0, 1, 0]);
-  if (!ruin && !up) K.quad('wood', P(-ix, ceil, -iz), P(ix, ceil, -iz), P(ix, ceil, iz), P(-ix, ceil, iz), [0, -1, 0]);
+  if (!ruin && !up && !burnt) K.quad('wood', P(-ix, ceil, -iz), P(ix, ceil, -iz), P(ix, ceil, iz), P(-ix, ceil, iz), [0, -1, 0]);
+  else if (!ruin && !up) {
+    // (Burnt: the ceiling charred and come through over the rubble (phobos-rooms.js), the hole ragged with its joists' stubs.)
+    const hx0 = -0.45, hx1 = Math.min(1.05, ix - 0.3), hw0 = -0.25, hw1 = Math.min(1.15, iz - 0.3), cq = (x0, x1, w0, w1) => { if (x1 - x0 > 0.01 && w1 - w0 > 0.01) { const z0 = Math.min(f * w0, f * w1), z1 = Math.max(f * w0, f * w1); K.quad('char:wood', P(x0, ceil, z0), P(x1, ceil, z0), P(x1, ceil, z1), P(x0, ceil, z1), [0, -1, 0]); } };
+    cq(-ix, ix, -iz, hw0); cq(-ix, ix, hw1, iz); cq(-ix, hx0, hw0, hw1); cq(hx1, ix, hw0, hw1);
+    // (The day, or the moon, down through it: cold and dim, the only light in the place.)
+    (K.lamps ||= []).push({ p: P((hx0 + hx1) / 2, ceil - 0.4, f * (hw0 + hw1) / 2), c: [0.6, 0.66, 0.8], r: Math.max(9, ix + iz), i: 7, flicker: 0, indoor: true });
+    for (let k = 0; k < 3; k++) { const x = hx0 + (hx1 - hx0) * (k + 0.5) / 3, [ax, , az] = P(x, ceil, f * (hw0 - 0.3)), [bx2, , bz2] = P(x + 0.1, ceil - 0.25 - k * 0.12, f * (hw0 + 0.35 + k * 0.15)); K.beam('char:wood', [ax, ceil - 0.08, az], [bx2, ceil - 0.25 - k * 0.12, bz2], 0.14, 0.18); }
+  }
   if (up) upstairsNear(K, h, up, P, r);
+  { const pd = !ruin && partition(h, F, up).down; if (pd) crossWall(K, h, P, pd.w, pd.x0, pd.x1, [pd.g0, pd.g1], fy, up ? up.uy - 0.2 : ceil); }
   // The door, shut (opened, it's swung as a thing of its own: src/items/phobos-doors.js).
   if (h.door !== undefined) doorLeaf(K, houseDoor(h));
   // The roof: ridged, a chimney on most, a dormer on some of the bigger.
@@ -355,7 +387,7 @@ function houseNear(K, h) {
   }
   // A lean-to against the back of one house in five off the named streets: a woodstore, a pen, somewhere out of the rain.
   if (!h.spine && !ruin && h.hx > 2.6 && r(34) < 0.2) { const [lx, , lz] = P((r(35) - 0.5) * (h.hx - 1.2), 0, -f * (h.hz + 0.65)); K.leanTo(lx, lz, h.yaw + (f > 0 ? Math.PI : 0), 0.9 + 0.4 * r(36), 0.65, 2.3, h.roof || 'roof_4', 'dark:wood'); }
-  if (r(8) < (h.shop ? 0.9 : 0.5)) { const q = P(DOOR + 0.5, fy + 2.5, fz); K.wallLamp(...q, [f * s, f * c]); if (r(8) < 0.3) (K.lamps ||= []).push({ p: [q[0] + f * s * 0.5, q[1] - 0.4, q[2] + f * c * 0.5], c: [1, 0.62, 0.3], r: 18, i: 11, flicker: 0.4 }); }
+  if (h.mark?.kind !== 'shell' && r(8) < (h.shop ? 0.9 : 0.5)) { const q = P(DOOR + 0.5, fy + 2.5, fz); K.wallLamp(...q, [f * s, f * c]); if (r(8) < 0.3) (K.lamps ||= []).push({ p: [q[0] + f * s * 0.5, q[1] - 0.4, q[2] + f * c * 0.5], c: [1, 0.62, 0.3], r: 18, i: 11, flicker: 0.4 }); }
   // A shop's front, on the named streets: an awning over the door, a board hung out on an iron bracket, goods by the step.
   if (h.shop && !ruin) {
     // (The red, or oat sooted to hessian: the plain oat cloth was butter yellow down the streets, the critics.)
@@ -383,42 +415,72 @@ function houseNear(K, h) {
   // same flue. (The owner, 2026-11-19: put the fireplaces where they'd be in a house that's lived in. The stack had stood
   // anywhere on the roof, the hearth in the middle of the back wall.)
   const zH = -f * iz * 0.28;
-  if (!ruin && ix > 1.4) {
-    const X = [-c, 0, s], H = (lx, y, lz) => P(lx, y, lz);
-    const [qx, , qz] = H(ix - 0.3, 0, zH), fb = ix - 0.62;
-    K.box('stone', qx, fy, qz, 0.3, roofY - fy, 1.05, h.yaw, { collide: false });
-    const hearthAt = (y, lit) => {
-      K.quad('dark:stone', H(fb, y + 0.05, zH + 0.65), H(fb, y + 0.05, zH - 0.65), H(fb, y + 1.1, zH - 0.65), H(fb, y + 1.1, zH + 0.65), X);
-      const [mx, , mz] = H(fb - 0.08, 0, zH); K.box('wood', mx, y + 1.22, mz, 0.12, 0.12, 1.2, h.yaw, { collide: false });
-      K.quad('stone', H(fb, y + 0.02, zH - 0.75), H(fb, y + 0.02, zH + 0.75), H(fb - 0.6, y + 0.02, zH + 0.75), H(fb - 0.6, y + 0.02, zH - 0.75), [0, 1, 0]);
-      for (const [u, v] of [[-0.3, 0.05], [0.3, -0.05]]) K.beam('bark', H(fb - 0.22 + v, y + 0.12, zH + u - 0.35), H(fb - 0.22 - v, y + 0.2, zH + u + 0.35), 0.09);
-      if (!lit) return;
-      const [gx, , gz] = H(fb - 0.22, 0, zH);
-      K.cone('flame', gx, y + 0.15, gz, 0.32, 0.9, 6); K.cone('flame', gx + s * 0.22, y + 0.15, gz + c * 0.22, 0.2, 0.6, 5); K.cone('flame', gx - s * 0.2, y + 0.15, gz - c * 0.2, 0.17, 0.5, 5);
-      (K.lamps ||= []).push({ p: H(fb - 0.8, y + 1.0, zH), c: [1, 0.6, 0.3], r: Math.max(11, h.hx + h.hz + 4), i: 16, flicker: 0.6, indoor: true });
-    };
-    hearthAt(fy, r(9) < 0.8);
-    if (up) hearthAt(up.uy, r(9) < 0.8 && r(10) < 0.4);
-  }
-  // A little of somebody's life: a table and a bench, a barrel or two, a heap of goods, a rack. (Nothing here stops you.)
-  // (Not on a phone: src/core/sites.js buildPhobosCell lean.)
-  if (!ruin && ix > 1.6 && iz > 1.6 && !K.leanNear) {
-    const at = (u, v) => { const q = P(u * ix * 0.7, 0, v * iz * 0.7); return [q[0], q[2]]; };
-    const n0 = K.colliders.length;
-    // (Each piece lifted from the ground under it to the floor: by the house's middle, on a slope, the downhill end of the
-    // room sank through the boards and the uphill end floated.)
-    const set = (u, v, fn) => { const [px, pz] = at(u, v); onFloor(K, px, pz, fy, () => fn(px, pz)); };
-    {
-    set(-0.45, f * 0.15, (px, pz) => { K.table(px, pz, h.yaw, 1.2); if (r(9) < 0.8) { const ty = Y(px, pz) + 0.78; K.drum('pale:stone', px, ty, pz, 0.035, 0.16, 5, { collide: false }); K.cone('flame', px, ty + 0.16, pz, 0.03, 0.09, 4); (K.lamps ||= []).push({ p: [px, fy + 1.25, pz], c: [1, 0.78, 0.5], r: Math.max(8, h.hx + h.hz), i: 7, flicker: 0.25, indoor: true }); } }); set(-0.45, f * 0.45, (px, pz) => K.bench(px, pz, h.yaw, 1.0)); set(-0.45, -f * 0.15, (px, pz) => K.bench(px, pz, h.yaw, 1.0));
-    // (The barrels in the front corner and at the back, clear of the hearth on the right-hand wall.)
-    if (r(11) < 0.75) set(0.9, f * 0.95, (px, pz) => K.barrel(px, pz));
-    if (r(11) < 0.4) set(-0.1, -f * 1.0, (px, pz) => K.barrel(px, pz));
-    if (r(12) < 0.6) set(0.7, f * 0.5, (px, pz) => K.goods(px, pz, 5, 0.8));
-    if (r(13) < 0.45) set(-0.85, -f * 0.6, (px, pz) => K.rack(px, pz, h.yaw + Math.PI / 2, 1.2));
-    if (r(25) < 0.5) set(0.35, -f * 0.95, (px, pz) => K.woodpile(px, pz, h.yaw, 0.7, 0.6, 0.25));   // (by the hearth)
+  if (!ruin && ix > 1.4) hearths(K, h, P, fy, up, roofY, zH, r);
+  // What's in it, room by room, and where its people sleep (src/core/phobos-rooms.js): kept off the stair, out of the way in
+  // and the floor before the fire. (Nothing in it stops you. On a phone, only the beds, the tables and the counters.)
+  if (!ruin) {
+    // (Its strongest lights kept, not its first ones: a rich hall's table had lost its light to a candle by the door. The
+    // biggest houses keep a fourth, round 3: their halls fell off into black.)
+    const want = [], cap = h.hx * h.hz > 45 ? 4 : h.hx * h.hz > 30 ? 3 : 2;
+    const lamp = (p, rr, i) => want.push({ p, c: [1, 0.78, 0.5], r: Math.max(rr, Math.min(10, h.hx + h.hz)), i, flicker: 0.25, indoor: true });
+    furnish(K, h, roomPlan(h, F, up), P, !!K.leanNear, lamp);
+    // (And one of them upstairs where there's a light up there, so the chambers aren't black round their sleepers, round 3.)
+    if (want.length) {
+      const order = want.map((l, k) => [l, k]).sort((a, b) => b[0].i - a[0].i || a[1] - b[1]).map((q) => q[0]), keep = order.slice(0, cap);
+      const upper = (l) => up && l.p[1] > up.uy - 0.3, best = order.find(upper);
+      if (best && !keep.some(upper) && keep.length === cap) keep[cap - 1] = best;
+      (K.lamps ||= []).push(...keep);
     }
-    K.colliders.length = n0;
   }
+}
+// A house's fireplaces: a chimney breast out of the side wall across from the stair, up through every floor to the stack,
+// and in it on each floor a fireplace you can see into: its two stone cheeks, a dark lintel over the opening, the iron
+// fireback at its back, sooted inside; a hearthstone out before it; firedogs with the logs across them; a mantel shelf
+// with a household's odds and ends on it; and the fire, if anyone's in. (The critics, 2026-11-20: the fire had been a
+// glowing cone against a flat dark board on the face of the stone.)
+function hearths(K, h, P, fy, up, roofY, zH, r) {
+  const c = Math.cos(h.yaw), s = Math.sin(h.yaw), ix = h.hx - WALL, X = [-c, 0, s];
+  const bx = (layer, lx, y, lz, ax, hh, az) => { const [qx, , qz] = P(lx, 0, lz); K.box(layer, qx, y, qz, ax, hh, az, h.yaw, { collide: false }); };
+  const D = 0.6, HW = 1.05, fb = ix - D, ST = h.mark?.kind === 'shell' ? 'char:stone' : 'stone';   // (a burnt house's sooted black)
+  const one = (y, yTop, lit, small) => {
+    const OW = small ? 0.45 : 0.62, OH = small ? 0.85 : 1.05, back = ix - 0.16;
+    // (The cheeks either side of the opening, the breast over it to the floor above.)
+    for (const e of [-1, 1]) bx(ST, ix - D / 2, y, zH + e * (OW + HW) / 2, D / 2, OH, (HW - OW) / 2);
+    bx(ST, ix - D / 2, y + OH, zH, D / 2, yTop - y - OH, HW);
+    bx('dark:stone', ix - D / 2 - 0.03, y + OH, zH, D / 2 + 0.03, 0.2, OW + 0.12);
+    // (Inside it: the fireback, the sooted cheeks and the black of its throat.)
+    K.quad('p2_fireback', P(back, y, zH + OW), P(back, y, zH - OW), P(back, y + OH, zH - OW), P(back, y + OH, zH + OW), X);
+    const lean = !!K.leanNear;
+    if (!lean) for (const e of [-1, 1]) K.quad('char:stone', P(fb, y, zH + e * OW), P(back, y, zH + e * OW), P(back, y + OH, zH + e * OW), P(fb, y + OH, zH + e * OW), [-e * s, 0, -e * c]);
+    K.quad('char:stone', P(fb, y + OH - 0.01, zH - OW), P(back, y + OH - 0.01, zH - OW), P(back, y + OH - 0.01, zH + OW), P(fb, y + OH - 0.01, zH + OW), [0, -1, 0]);
+    K.quad('char:stone', P(fb, y + 0.025, zH - OW), P(fb, y + 0.025, zH + OW), P(back, y + 0.025, zH + OW), P(back, y + 0.025, zH - OW), [0, 1, 0]);
+    // (The hearthstone, a step proud of the boards; the mantel shelf on the breast.)
+    bx(ST, fb - 0.3, y, zH, 0.3, 0.045, OW + 0.32);
+    bx('dark:wood', fb - 0.09, y + OH + 0.2, zH, 0.11, 0.07, HW + 0.08);
+    // (Firedogs, the logs on them, ash under.)
+    const lx = (fb + back) / 2;
+    if (!lean) for (const e of [-0.6, 0.6]) { bx('iron', lx, y, zH + e * OW, 0.12, 0.05, 0.025); bx('iron', fb + 0.06, y, zH + e * OW, 0.025, 0.28, 0.025); }
+    for (const [u, v] of [[-0.12, 0.04], [0.1, -0.03]]) K.beam('bark', P(lx + v, y + 0.13, zH + u - OW * 0.75), P(lx - v, y + 0.16, zH + u + OW * 0.75), 0.11);
+    if (lit) {
+      const [gx, , gz] = P(lx, 0, zH);
+      K.cone('flame', gx, y + 0.16, gz, OW * 0.45, OH * 0.62, 6); K.cone('flame', gx + s * OW * 0.35, y + 0.14, gz + c * OW * 0.35, OW * 0.28, OH * 0.4, 5); K.cone('flame', gx - s * OW * 0.32, y + 0.14, gz - c * OW * 0.32, OW * 0.25, OH * 0.34, 5);
+      K.quad('eve:flame', P(fb, y + 0.03, zH - OW * 0.8), P(fb, y + 0.03, zH + OW * 0.8), P(back, y + 0.03, zH + OW * 0.8), P(back, y + 0.03, zH - OW * 0.8), [0, 1, 0]);
+      (K.lamps ||= []).push({ p: P(fb - 0.8, y + 0.9, zH), c: [1, 0.6, 0.3], r: Math.max(11, h.hx + h.hz + 4), i: small ? 11 : 16, flicker: 0.6, indoor: true });
+    }
+    // (On the mantel: a candlestick, a jug, a dish or a little box, a different few in every house.)
+    const my = y + OH + 0.27, mx = fb - 0.09;
+    for (let k = 0; k < (lean ? 0 : 3); k++) {
+      const v = r(70 + k + (small ? 9 : 0)); if (v < 0.25) continue;
+      const [qx, , qz] = P(mx, 0, zH + (k - 1) * HW * 0.6 + (v - 0.5) * 0.2);
+      if (v < 0.45) { K.drum('iron', qx, my, qz, 0.03, 0.2, 4, { collide: false, open: true }); K.drum('pale:stone', qx, my + 0.2, qz, 0.02, 0.1, 4, { collide: false }); }
+      else if (v < 0.65) K.drum('umber:rubble', qx, my, qz, 0.06, 0.16, 5, { collide: false, r2: 0.045 });
+      else if (v < 0.85) K.box('pale:stone', qx, my, qz, 0.03, 0.18, 0.11, h.yaw, { collide: false });
+      else K.box('dark:wood', qx, my, qz, 0.06, 0.08, 0.09, h.yaw + v, { collide: false });
+    }
+  };
+  const lit = r(9) < 0.8 && h.mark?.kind !== 'shell';
+  one(fy, up ? up.uy : roofY, lit, false);
+  if (up) one(up.uy, roofY, lit && r(10) < 0.5, true);
 }
 // A house's upstairs from near (upstairs, above): the ground floor's ceiling on its joists and the floor over it, both cut
 // round the stair; the stair, boarded in under (a cupboard door in it), its treads proud of dark risers, a handrail on
@@ -453,11 +515,17 @@ function upstairsNear(K, h, up, P, r) {
     bx('wood', lx, y - 0.045, lz - f * 0.02, SW / 2 + 0.02, 0.045, TREAD / 2 + 0.03);
   }
   const so = xs + 0.012, NX = [Math.cos(h.yaw), 0, -Math.sin(h.yaw)], nose = (z) => fy + RISE + (z0 - z) / TREAD * RISE;
-  K.quad('wood', P(so, fy, f * z0), P(so, fy, f * z1), P(so, nose(z1) - 0.3, f * z1), P(so, Math.max(fy + 0.02, nose(z0) - 0.3), f * z0), NX);
-  K.quad('dark:wood', P(so + 0.01, nose(z0) - 0.32, f * z0), P(so + 0.01, nose(z1) - 0.32, f * z1), P(so + 0.01, nose(z1) + 0.02, f * z1), P(so + 0.01, nose(z0) + 0.02, f * z0), NX);
+  K.quad('dark:wood', P(so, fy, f * z0), P(so, fy, f * z1), P(so, nose(z1) - 0.3, f * z1), P(so, Math.max(fy + 0.02, nose(z0) - 0.3), f * z0), NX);
+  K.quad('soot:wood', P(so + 0.01, nose(z0) - 0.32, f * z0), P(so + 0.01, nose(z1) - 0.32, f * z1), P(so + 0.01, nose(z1) + 0.02, f * z1), P(so + 0.01, nose(z0) + 0.02, f * z0), NX);
   { const zc = z1 + 0.75, dw = 0.32, dh = Math.min(1.5, nose(zc + dw) - 0.45 - fy);
-    if (dh > 0.9) { K.quad('dark:wood', P(so + 0.015, fy + 0.04, f * (zc + dw)), P(so + 0.015, fy + 0.04, f * (zc - dw)), P(so + 0.015, fy + dh, f * (zc - dw)), P(so + 0.015, fy + dh, f * (zc + dw)), NX);
+    if (dh > 0.9) { K.quad('soot:wood', P(so + 0.015, fy + 0.04, f * (zc + dw)), P(so + 0.015, fy + 0.04, f * (zc - dw)), P(so + 0.015, fy + dh, f * (zc - dw)), P(so + 0.015, fy + dh, f * (zc + dw)), NX);
       bx('iron', so + 0.03, fy + dh * 0.55, f * (zc + dw - 0.08), 0.02, 0.1, 0.02); } }
+  // (Under the landing at its head, boarded in to the floor over it: a closet, its door. It had stood open, a black hole.)
+  if (z1 + iz > 0.3) {
+    K.quad('dark:wood', P(so, fy, f * z1), P(so, fy, -f * iz), P(so, uy - 0.2, -f * iz), P(so, uy - 0.2, f * z1), NX);
+    const zc = (z1 - iz) / 2, dw = Math.min(0.32, (z1 + iz) / 2 - 0.12);
+    if (dw > 0.2) { K.quad('soot:wood', P(so + 0.015, fy + 0.04, f * (zc + dw)), P(so + 0.015, fy + 0.04, f * (zc - dw)), P(so + 0.015, fy + 1.85, f * (zc - dw)), P(so + 0.015, fy + 1.85, f * (zc + dw)), NX); bx('iron', so + 0.03, fy + 1.0, f * (zc + dw - 0.08), 0.02, 0.1, 0.02); }
+  }
   // (A handrail up it on two newels; the foot one by the bottom step, the head one at the hole.)
   const hr = xs + 0.06, ha = P(hr, nose(z0) + 0.85, f * (z0 + 0.05)), hb = P(hr, nose(z1) + 0.85, f * (z1 - 0.05));
   K.beam('wood', ha, hb, 0.035);
@@ -474,32 +542,28 @@ function upstairsNear(K, h, up, P, r) {
   const c = Math.cos(h.yaw), s = Math.sin(h.yaw), d = 0.012;
   sk(ix - d, -iz, ix - d, iz, [-c, 0, s]); sk(-ix + d, -iz, -ix + d, iz, [c, 0, -s]); sk(-ix, iz - d, ix, iz - d, [-s, 0, -c]); sk(-ix, -iz + d, ix, -iz + d, [s, 0, c]);
   for (const [u, v] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) bx('dark:wood', u * (ix - 0.08), uy, v * (iz - 0.08), 0.08, uc - uy, 0.08);
-  // The bed: against the right wall, its head to the back, a headboard, a blanket and a pillow; the chest at its foot, an
-  // iron band round it, a candle on it in most; a stool by the bed's head; a rug beside it.
-  const bxx = ix - 0.6, bz = -f * (iz - 1.1), blanket = r(27) < 0.5 ? 'cloth_red' : 'cloth_oat';
-  bx('wood', bxx, uy, bz, 0.5, 0.42, 1.0);
-  bx('dark:wood', bxx, uy, -f * (iz - 0.06), 0.52, 1.0, 0.05);
-  bx(blanket, bxx, uy + 0.42, bz + f * 0.15, 0.48, 0.09, 0.85);
-  bx(blanket === 'cloth_red' ? 'cloth_oat' : 'pale:stone', bxx, uy + 0.42, bz - f * 0.8, 0.34, 0.13, 0.15);
-  const cz = bz + f * 1.45;
-  if (iz > 2.3) {
-    bx('wood', bxx, uy, cz, 0.45, 0.45, 0.28);
-    for (const u of [-0.3, 0.3]) bx('iron', bxx + u, uy, cz, 0.035, 0.47, 0.295);
-    if (r(28) < 0.7) {
-      const [lx, lz] = at(bxx + 0.2, cz);
-      K.drum('pale:stone', lx, uy + 0.45, lz, 0.035, 0.14, 5, { collide: false }); K.cone('flame', lx, uy + 0.59, lz, 0.03, 0.09, 4);
-      (K.lamps ||= []).push({ p: [lx, uy + 1.0, lz], c: [1, 0.78, 0.5], r: Math.max(7, ix + iz + 2), i: 6, flicker: 0.25, indoor: true });
-    }
+  // (The chambers' beds and the rest are the house's plan's: src/core/phobos-rooms.js, furnish. A bed of its own had stood
+  // here as well, in the back corner, and lay through whatever the plan put there: two beds in one, the critics.)
+  // The boards between the two chambers, where the house is deep enough for two (src/core/phobos-rooms.js partition): from
+  // the floor to the ceiling, both faces, a sill and a dark post at the way through by the stairwell's rail.
+  const pt = partition(h, { hi: fy - 0.1, c, s }, up).up;
+  if (pt) crossWall(K, h, P, pt.w, pt.x0, pt.x1, null, uy, uc);
+}
+// A cross wall inside a house (src/core/phobos-rooms.js partition): plastered both faces as the house's walls are, on a dark sill, floor to ceiling, a
+// post at each side of its doorway (gap: [g0, g1], or none) or at its open end. (No head over the doorway: a post with a
+// beam across its top, end on, is a T.)
+function crossWall(K, h, P, w, x0, x1, gap, y0, y1) {
+  const IN = /poor|daub|soot|burnt|char/.test(h.wall) ? 'p2_sooty_plaster' : 'pale:ph_grey_plaster';
+  const f = h.front, c = Math.cos(h.yaw), s = Math.sin(h.yaw), N = [f * s, 0, f * c];
+  const bx = (layer, lx, yb, lw, hx, hh, hw) => { const [qx, , qz] = P(lx, 0, f * lw); K.box(layer, qx, yb, qz, hx, hh, hw, h.yaw, { collide: false }); };
+  const runs = gap ? [[x0, gap[0]], [gap[1], x1]] : [[x0, x1]];
+  for (const [a, b] of runs) {
+    if (b - a < 0.05) continue;
+    for (const e of [1, -1]) K.quad(IN, P(a, y0, f * (w + e * 0.05)), P(b, y0, f * (w + e * 0.05)), P(b, y1, f * (w + e * 0.05)), P(a, y1, f * (w + e * 0.05)), N.map((q) => q * e));
+    bx('dark:wood', (a + b) / 2, y0, w, (b - a) / 2, 0.12, 0.08);
   }
-  bx('wood', xs + 0.9, uy, f * (z1 - 1.2), 0.18, 0.45, 0.18);
-  // (By the stair head, against the rail: a stack of crates, and a peg-rail of coats on the wall over them.)
-  bx('wood', xs + 0.45, uy, f * (z1 - 0.45), 0.3, 0.55, 0.3, h.yaw + 0.2); bx('dark:wood', xs + 0.45, uy + 0.55, f * (z1 - 0.45), 0.24, 0.42, 0.24, h.yaw - 0.15);
-  { const rx = bxx - 1.15, rz = bz + f * 0.2, rw = 0.55, rl = 0.9; K.quad(r(29) < 0.5 ? 'cloth_red' : 'cloth_oat', P(rx - rw, uy + 0.012, rz - rl), P(rx + rw, uy + 0.012, rz - rl), P(rx + rw, uy + 0.012, rz + rl), P(rx - rw, uy + 0.012, rz + rl), [0, 1, 0]); }
-  // (A straw pallet on the floor along the front, by the right wall, where there's room for one: a second sleeper.)
-  if (ix > 2.8 && iz > 3.2) {
-    bx('dark:cloth_oat', ix - 0.5, uy, f * 0.3, 0.4, 0.14, 0.85); bx(blanket, ix - 0.5, uy + 0.14, f * (0.3 - 0.6), 0.38, 0.1, 0.12);
-    bx('dark:wood', ix - 0.4, uy, f * 1.6, 0.3, 0.75, 0.2);
-  }
+  const posts = gap ? [gap[0] - 0.05, gap[1] + 0.05] : [x0 + 0.05];
+  for (const x of posts) bx('dark:wood', x, y0, w, 0.06, y1 - y0, 0.08);
 }
 // A curtain wall with relief: a heavy course along its foot, a pilaster every eighteen metres a step lighter than the
 // wall, and an arrow slit both faces between each pair. (Forty metres of blank wall read as a cliff, not a wall built.)
