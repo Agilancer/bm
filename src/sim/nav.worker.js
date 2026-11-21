@@ -15,6 +15,8 @@
 //   probe  out past the grid, where only the pines and the places' walls stand in the way: which way to step, nearest the way
 //          wanted, that's clear for a few metres.
 //   escape out of a snug corner or a pocket, on a finer grid, to ground the rest of the walking grid is joined to.
+//   east   in City State Phobos and Castle Velscour, over streets, stairs, decks and bridges one over another: by the east's
+//          own walking map (src/sim/east-nav.js, assets/game/nav/east.bin, fetched the first time it's asked).
 //   sight  from its eye to each of a list of marks: is there a clean line for a shot, clear of walls, corners, pines and the
 //          rise of the ground by a hand's width either side; and if not, which way to step (and how far) to open one
 //          (src/sim/sight.js).
@@ -27,8 +29,14 @@ import { setHallDoor } from '../core/testhall.js';
 import { lineClear, sight } from './sight.js';
 import { allWays } from '../core/roads.js';
 import { TOWN } from '../core/town.js';
+import { EastNav } from './east-nav.js';
 
-let world = null;
+let world = null, east = null, eastAsk = null, base = '';
+// (The east's map, fetched once, the first time anyone's way is there.)
+// (And let go of again three minutes after the last ask: some fifty megabytes a phone shouldn't carry about Bellmourn.)
+let eastLast = 0;
+const eastNav = () => { eastLast = Date.now(); return (eastAsk ??= fetch(`${base}assets/game/nav/east.bin`).then((r) => (r.ok ? r.arrayBuffer() : null)).then((b) => (east = b ? new EastNav(b, world) : null)).catch(() => null)); };
+setInterval(() => { if (east && Date.now() - eastLast > 180000) { east = null; eastAsk = null; } }, 30000);
 const CELL = 0.5, BODY = 0.42, EDGE = 250;
 const X0 = NAV_X0, Z0 = NAV_Z0, W = Math.round(NAV_W * NAV_CELL / CELL), H = Math.round(NAV_H * NAV_CELL / CELL), N = W * H;
 // Each cell's ground, worked out the first time a search reaches it: 0 not yet, 1 free, 2 solid.
@@ -632,6 +640,9 @@ if (typeof self !== 'undefined') self.onmessage = async (e) => {
       setOpeningTerrain(m.opening);
       const [village, interior] = await Promise.all(['village.json', 'interior/interior.json'].map((f) => fetch(`${m.base}assets/game/${f}`).then((r) => r.json())));
       world = new World(village, interior);
+      base = m.base;
+      // (Phobos's doors all open to it: it opens one on its way, src/ui/autobrain.js phDoor.)
+      world.setPhobosDoors(new Set(world.phDoors.keys()));
       setDoorways(interior.things);
       self.postMessage({ type: 'ready', spawns: world.spawns.map((s) => [s.x, s.z]), bounds: [X0, Z0, X0 + W * CELL, Z0 + H * CELL] });
     } else if (!world) {
@@ -645,6 +656,9 @@ if (typeof self !== 'undefined') self.onmessage = async (e) => {
       self.postMessage({ type: 'escape', id: m.id, result: escape(m.x, m.z) });
     } else if (m.type === 'local') {
       self.postMessage({ type: 'local', id: m.id, result: local(m.from, m.to) });
+    } else if (m.type === 'east') {
+      const E = await eastNav();
+      self.postMessage({ type: 'east', id: m.id, result: E ? E.route(m.from, m.to, m.r ?? 1) : null, none: !E });
     } else if (m.type === 'probe') {
       self.postMessage({ type: 'probe', id: m.id, result: probe(m.x, m.z, m.y ?? 0, m.hx, m.hz, m.look || 5) });
     } else if (m.type === 'sight') {

@@ -1,0 +1,22 @@
+// node tools/paths/_route.mjs "target name" [from "name"] : why EastNav.route does or doesn't find a way
+import fs from 'node:fs';
+import { World } from '../../src/sim/world.js';
+import { EAST_DOOR, EastNav } from '../../src/sim/east-nav.js';
+import { targets } from './targets.mjs';
+const read = (p) => JSON.parse(fs.readFileSync(new URL(`../../${p}`, import.meta.url)));
+const world = new World(read('assets/game/village.json'), read('assets/game/interior/interior.json'));
+world.setPhobosDoors(new Set(world.phDoors.keys()));
+const nav = new EastNav(fs.readFileSync(new URL('../../assets/game/nav/east.bin', import.meta.url)), world);
+const T = targets(), to = T.find((t) => t.name === process.argv[2]), fr = process.argv[3] ? T.find((t) => t.name === process.argv[3]) : { x: EAST_DOOR[0], z: EAST_DOOR[1], y: null };
+let fy = nav.ground(fr.x, fr.z, fr.y ?? -100);
+console.log('from', fr.x, fr.z, fy, 'to', to);
+const near = nav.nodesNear(fr.x, fr.z, fy, 7, 4);
+console.log('start nodes', near.length, near.slice(0, 3).map((n) => [nav.x[n], nav.y[n], nav.z[n]].map((v) => v.toFixed(1)).join(',')));
+const ends = nav.nodesNear(to.x, to.z, to.y, Math.max(4, Math.min(to.r + 2, 30)), to.y === null ? 1e9 : 3);
+console.log('end nodes', ends.length, ends.slice(0, 3).map((n) => [nav.x[n], nav.y[n], nav.z[n]].map((v) => v.toFixed(1)).join(',')));
+let t0 = performance.now();
+const path = nav.coarse([[near[0], 0]], new Set(ends.slice(0, 64)), to.x, to.z);
+console.log('coarse', path ? path.length + ' nodes' : 'NONE', (performance.now() - t0).toFixed(0), 'ms');
+t0 = performance.now();
+const r = nav.route([fr.x, fy, fr.z], [to.x, to.z, to.y], Math.max(0.5, to.r - 0.3));
+console.log('route', r ? r.length + ' pts, walked out ' + r.filter((p) => p[2] !== 2).length : 'NONE', (performance.now() - t0).toFixed(0), 'ms');
