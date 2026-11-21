@@ -17,7 +17,7 @@ import { dress } from './delve-dress.js';
 import { PROPS_B } from './delve-props-b.js';
 import { PROPS_A } from './delve-props-a.js';
 import { stamp } from './delve-stamps.js';
-import { DELVES, DUNGEON_CELL, GRID_UNIT, braziers, caveFloorY, caveRoofY, caveRoom, grid, torches } from './dungeon.js';
+import { DELVES, DUNGEON_CELL, GRID_UNIT, bannerSpots, braziers, caveFloorY, caveRoofY, caveRoom, grid, torches } from './dungeon.js';
 
 const TAU = Math.PI * 2;
 const NO = { collide: false };
@@ -330,15 +330,7 @@ function castleShell(K, d) {
     if (j + 1 < rows) { const o = roof[(j + 1) * cols + i]; if (!Number.isNaN(o) && Math.abs(o - y) > 0.05) { const lo = Math.min(o, y), hi = Math.max(o, y), s = o < y ? 1 : -1; K.quad(nearRoom(d, x0 + 1, z0 + 1)?.rock || L.wall, [s > 0 ? x1 : x0, lo, z1], [s > 0 ? x0 : x1, lo, z1], [s > 0 ? x0 : x1, hi, z1], [s > 0 ? x1 : x0, hi, z1], [0, 0, s]); } }
   }
   // His red, hung down the long walls of the high rooms: a banner every so far, clear of the doors.
-  for (const r of d.rooms) {
-    if (r.roof < 9 || r.banners === 0 || L.banner === false) continue;
-    const along = r.hz >= r.hx, len = along ? r.hz : r.hx, off = along ? r.hx : r.hz, n = Math.max(1, Math.round(len * 2 / (r.banners || 9)));
-    for (let i = 0; i < n; i++) for (const side of [-1, 1]) {
-      const t = ((i + 0.5) / n * 2 - 1) * (len - 2.5);
-      const lx = r.x + (along ? side * off : t), lz = r.z + (along ? t : side * off);
-      banner(K, d, lx, lz, along ? -side : 0, along ? 0 : -side, 0.9, r.roof - 1.2, Math.max(3.2, r.roof * 0.42), r, r.cloth || L.banner || 'cloth_red');
-    }
-  }
+  for (const [lx, lz, nx, nz, r] of bannerSpots(d)) banner(K, d, lx, lz, nx, nz, 0.9, r.roof - 1.2, Math.max(3.2, r.roof * 0.42), r, r.cloth || L.banner || 'cloth_red');
   // The stairs: steps laid on the slope, a metre deep.
   for (const r of d.rooms) {
     if (!r.tz) continue;
@@ -442,7 +434,7 @@ function fires(K, d) {
     if (L.lamp === 'lantern') {
       // A keeper's lantern on a wrought bracket (tools/dungeon/stamps.py lantern_wall): the plate on the wall, the lantern
       // hung off the arm's end half a metre out. One gone out has dark glass and no flame.
-      const sp = stamp(K, d, 'lantern_wall', x - nx * back, y, z - nz * back, Math.atan2(nx, nz), { flame: lit ? 'umber:flame' : 'slate:iron' });
+      const sp = stamp(K, d, 'lantern_wall', x - nx * back, y, z - nz * back, Math.atan2(nx, nz), lit ? { flame: 'umber:flame' } : { flame: 'slate:iron', horn: 'slate:iron' });
       if (lit) fire(K, d, sp.flame[0], sp.flame[1] - 0.05, sp.flame[2], 0.045, 0.13, { glow: 0.55 });
       continue;
     }
@@ -577,24 +569,27 @@ function fires(K, d) {
         }
       } else if (L.lamp === 'cap') {
         // Caps grown down from the roof in a cluster, gills out.
-        for (let k = 0; k < 4; k++) { const a = k * 1.7 + x, o = k ? 0.7 : 0, px = x + Math.cos(a) * o, pz = z + Math.sin(a) * o, len = top - h - (k ? 0.8 : 0); K.drum('spore:rubble', px, top - len, pz, 0.09, len, 5, NO); K.cone('fruit', px, top - len - 0.3, pz, k ? 0.5 : 0.8, -0.35, 8); K.drum(L.flame, px, top - len - 0.36, pz, k ? 0.44 : 0.72, 0.06, 8, NO); }
+        // (Not two over one at the same spacing: from across a cave that was a face, two eyes and a mouth. The critics.)
+        for (let k = 0; k < 4; k++) { const a = k * 2.09 + x, o = k ? 1.25 + 0.3 * k : 0, px = x + Math.cos(a) * o, pz = z + Math.sin(a) * o, len = top - h - [0, 1.3, 0.4, 2.1][k]; K.drum('spore:rubble', px, top - len, pz, 0.09, len, 5, NO); K.cone('fruit', px, top - len - 0.3, pz, k ? 0.5 : 0.8, -0.35, 8); K.drum(L.flame, px, top - len - 0.36, pz, k ? 0.44 : 0.72, 0.03, 8, NO); }
         glow(K, d, x, h - 0.2, z, 2.2);
       } else if (L.lamp === 'wisp') {
         for (let k = 0; k < 3; k++) { const a = k * 2.1 + z; fire(K, d, x + Math.cos(a) * 0.8, h - 0.5 + k * 0.4, z + Math.sin(a) * 0.8, 0.3, 0.9, { kind: 'wisp', glow: k ? 0 : 2.2 }); }
       } else if (L.cold) {
         // Icicles in a cluster, the cold light in the long one at the middle.
-        K.spike(L.flame, x, top, z, 0.1, h - top - 0.5, 4, z);
+        // (The long one ice too, its tip lit: in L.flame the whole length of it was a blue tube light.)
+        K.spike('ice', x, top, z, 0.1, h - top - 0.5, 4, z);
         crystal(K, 'ice', x, top, z, 0.3, h - top - 0.2, [0, 0], x);
-        for (let k = 0; k < 5; k++) { const a = k * 1.26 + x; K.spike(k === 2 ? L.flame : 'ice', x + Math.cos(a) * 0.5, top, z + Math.sin(a) * 0.5, k === 2 ? 0.06 : 0.16, (h - top) * (0.4 + 0.1 * k), 4, a); }
+        K.spike(L.flame, x, h + 0.75, z, 0.06, -0.5, 4, z);
+        for (let k = 0; k < 5; k++) { const a = k * 1.26 + x; K.spike('ice', x + Math.cos(a) * 0.5, top, z + Math.sin(a) * 0.5, k === 2 ? 0.06 : 0.16, (h - top) * (0.4 + 0.1 * k), 4, a); }
         glow(K, d, x, h + 0.9, z, 2.6);
       } else if (L.lamp === 'candle') {
         PROPS.chandelier(K, d, { up: lift - 0.4 }, x, y, z);
       } else if (L.lamp === 'bowl') {
-        // A grave-lamp hung on three chains: a wide bowl of stone, the pale flame standing in it.
-        for (let k = 0; k < 3; k++) { const a = k * TAU / 3 + x; rod(K, 'iron', x + Math.cos(a) * 0.1, top, z + Math.sin(a) * 0.1, x + Math.cos(a) * 0.55, h - 0.2, z + Math.sin(a) * 0.55, 0.02); }
-        K.drum('pale:stone', x, h - 0.5, z, 0.25, 0.32, 9, { r2: 0.62, collide: false, lid: L.flame });
-        K.drum('rubble', x, h - 0.62, z, 0.12, 0.12, 6, { r2: 0.25, collide: false, open: true });
-        blaze(K, d, x, h - 0.16, z, 0.42, 1.0, { glow: 2 });
+        // A grave-lamp on a chain (tools/dungeon/stamps.py gravelamp): a wide dished bowl of iron, tallow in it, a crowd of
+        // wicks round its rim. (It was a bowl of pale stone with a sheet of flame for a lid: a crystal hung in the dark.)
+        rod(K, 'iron', x, top, z, x, h + 0.55, z, 0.022);
+        const sp = stamp(K, d, 'gravelamp', x, h + 0.55, z, x, { s: 1.25 });
+        for (const [k, [fx, fy, fz]] of Object.entries(sp)) fire(K, d, fx, fy, fz, 0.06, 0.2, { hue: 'tallow', glow: k === 'w0' ? 1.8 : 0 });
       } else {
         // A basket of iron bars on a chain, three more chains from its rim, coals in it.
         rod(K, 'iron', x, top, z, x, h + 0.9, z, 0.025);
@@ -1270,9 +1265,9 @@ export const PROPS = {
   // The wrapped dead, hung up.
   cocoon(K, d, p, x, y, z) {
     const top = caveRoofY(x, z), h = Math.min(top - 1.6, y + 2.4 + hash2(x | 0, z | 0) * 1.5);
-    rod(K, 'white', x, top + 0.2, z, x, h + 1.5, z, 0.02);
-    K.drum('white', x, h + 0.7, z, 0.34, 0.8, 6, { r2: 0.12, open: true, collide: false });
-    K.cone('white', x, h + 0.7, z, 0.34, -0.7, 6);
+    // (A body wound in silk, lumpy, banded: it was a six-sided point of white, a crystal.)
+    rod(K, 'white', x, top + 0.2, z, x, h + 1.7, z, 0.02);
+    stamp(K, d, 'cocoon', x, h + 1.72, z, hash2(x, z) * TAU, { s: 1.05 });
   },
   // A river caught as it fell: a curtain of ice down the wall, facing yaw.
   falls(K, d, p, x, y, z) {
@@ -1433,8 +1428,10 @@ export const PROPS = {
   streetgrate(K, d, p, x, y, z) {
     const top = caveRoofY(x, z);
     stamp(K, d, 'streetgrate', x, top, z, p.yaw || 0);
-    K.fires.push({ delve: d.key, hue: 'day', kind: 'shaft', x, y: top - 0.1, z, w: 1.1, h: top - y + 0.2, lean: p.lean || [0.1, 0.06], i: 0.32, ember: 0, seed: hash2(x, z) });
-    K.drum('lake', x + 0.2, y + 0.012, z + 0.1, 1.25, 0.01, 12, { collide: false });
+    K.fires.push({ delve: d.key, hue: 'day', kind: 'shaft', x, y: top - 0.4, z, w: 1.0, h: top - y + 0.2, lean: p.lean || [0.1, 0.06], i: 0.26, ember: 0, seed: hash2(x, z) });
+    // (Where the rain comes down through it the floor's wet and washed pale: it was a disc of 'lake', which takes the dark
+    // of the vault over it and read as a hole.)
+    K.drum('pale:flags', x + 0.2, y + 0.012, z + 0.1, 1.35, 0.01, 12, { collide: false });
     K.drum('moss:rubble', x - 0.9, y - 0.02, z + 0.6, 0.45, 0.04, 7, { r2: 0.3, collide: false, turn: x });
   },
   // A pipe's mouth in a wall, a little water out of it over its lip and down into a puddle (tools/dungeon/stamps.py outfall).
@@ -1448,18 +1445,28 @@ export const PROPS = {
     for (let k = 0; k < 40 && caveRoom(wx, wz) > 0.02; k++) { wx -= nx * 0.1; wz -= nz * 0.1; }
     const fy = caveFloorY(x, z), up = p.up ?? 1.1;
     const sp = stamp(K, d, 'outfall', wx, fy + up, wz, p.yaw || 0);
-    const [lx, ly, lz] = sp.lip, tx = -nz * 0.12, tz = nx * 0.12;
+    const [lx, ly, lz] = sp.lip, tx = -nz * 0.045, tz = nx * 0.045;
+    // (Its foot stained, wet or not: the green-brown of years of it on the floor and up the wall's foot.)
+    K.drum('moss:flags', lx + nx * 0.45, fy + 0.012, lz + nz * 0.45, 0.8, 0.01, 10, { collide: false });
     if (p.dry) return;
-    K.quad('falls', [lx - tx, ly, lz - tz], [lx + tx, ly, lz + tz], [lx + tx + nx * 0.18, fy + 0.02, lz + tz + nz * 0.18], [lx - tx + nx * 0.18, fy + 0.02, lz - tz + nz * 0.18]);
-    K.drum('lake', lx + nx * 0.5, fy + 0.012, lz + nz * 0.5, 0.75, 0.01, 10, { collide: false });
+    // (A trickle, a hand wide, two ways so it's a thread of water from any side: a quarter-metre-wide white card was a blade.)
+    for (const [ax, az] of [[tx, tz], [nx * 0.045, nz * 0.045]]) K.quad('falls', [lx - ax, ly, lz - az], [lx + ax, ly, lz + az], [lx + ax + nx * 0.16, fy + 0.02, lz + az + nz * 0.16], [lx - ax + nx * 0.16, fy + 0.02, lz - az + nz * 0.16]);
+    K.drum('dark:lake', lx + nx * 0.3, fy + 0.016, lz + nz * 0.3, 0.32, 0.01, 8, { collide: false });
   },
   daylight(K, d, p, x, y, z) {
     const top = caveRoofY(x, z), r = p.r;
-    // (Its shaft: the day coming down, dust turning in it.)
-    if (p.shaft !== false) K.fires.push({ delve: d.key, hue: 'day', kind: 'shaft', x, y: top - 0.3, z, w: r * 1.1, h: top - y, lean: p.lean || [0.08, 0.04], i: 0.3, ember: 0, seed: hash2(x, z) });
-    // (The sky up the shaft white, 'glow': it was 'pale:flame', the barrow-lamps' green, a green moon in the roof.)
-    K.drum('glow', x, top - 0.25, z, r, 0.2, 16, { collide: false });
-    K.drum('pale:stone', x, top - 0.45, z, r + 0.5, 0.2, 16, { r2: r, open: true, collide: false });
+    if (r >= 6) {
+      // (A court open to the sky over its middle: the day itself up there, grey-blue, not a lamp; no beam, the whole court
+      // is in it. At 'glow' it was a strip light in the vault, white.)
+      K.drum('slate:glow', x, top - 0.25, z, r, 0.2, 24, { collide: false });
+      K.drum('pale:stone', x, top - 0.45, z, r + 0.5, 0.2, 24, { r2: r, open: true, collide: false });
+    } else {
+      // A light well's mouth in the vault, made (tools/dungeon/stamps.py oculus): its moulding, its throat, a grille across
+      // it, the day beyond. A beam down from it only where it's a well worth the name (a hand-wide hole in a dome lets in
+      // a spot, not a shaft), and dim: dust in the day, not a searchlight.
+      stamp(K, d, 'oculus', x, top, z, hash2(x, z) * TAU, { s: r });
+      if (p.shaft !== false && r >= 1.4) K.fires.push({ delve: d.key, hue: 'day', kind: 'shaft', x, y: top - 0.5 * r, z, w: r * 0.9, h: top - y, lean: p.lean || [0.08, 0.04], i: 0.22, ember: 0, seed: hash2(x, z) });
+    }
     // (pool: false, no pale round on the floor under it: its own cold light lights the floor, src/gfx/renderer.js. The round
     // that's there is worn stone, bleached, not a light of its own.)
     if (p.pool !== false) K.drum('pale:flags', x, y + 0.01, z, r * 1.15, 0.02, 16, { collide: false });
@@ -1487,12 +1494,13 @@ export const PROPS = {
   // A cap the height of a house: a stem a body can hide behind, gills that give light (the room's own: braziers()).
   greatcap(K, d, p, x, y, z) {
     const h = p.h, r = p.r, top = Math.min(y + h, caveRoofY(x, z) - 0.6), R = r * 3.4;
-    K.drum('cloth_oat', x, y - 0.3, z, r * 1.25, top - y + 0.3, 9, { r2: r * 0.7, open: true, collide: false, turn: x });
+    // (Its stem fibrous, grained: in flat 'cloth_oat' it was a tan cylinder, untextured.)
+    K.drum('pale:wood', x, y - 0.3, z, r * 1.25, top - y + 0.3, 9, { r2: r * 0.7, open: true, collide: false, turn: x });
     // (Its gills alight: a rim of it under the cap's edge and a collar round the stem, not the whole underside, which
     // seen from below was a white ceiling.)
     // (A sewer's aren't alight: the Sunk Garden's grow in the day from the grates, src/core/delve-sewers.js.)
     const gill = d.sewer ? 'pale:cloth_oat' : d.look.flame;
-    K.drum(gill, x, top - 0.32, z, R * 0.93, 0.16, 12, { open: true, collide: false });
+    K.drum(gill, x, top - 0.26, z, R * 0.93, 0.06, 12, { open: true, collide: false });
     K.drum(gill, x, top - 0.3, z, r * 1.5, 0.1, 9, { collide: false });
     K.drum('cloth_oat', x, top - 0.18, z, R * 0.92, 0.04, 12, { collide: false });
     K.drum('fruit', x, top - 0.15, z, R, 0.5, 12, { r2: R * 0.8, collide: false });

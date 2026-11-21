@@ -41,8 +41,8 @@ function eyes(d, r) {
   // (The way in, where the portal stands at one end: from its middle, so the eye isn't inside the portal's stone.)
   if (r === d.rooms[0] && r.hx !== undefined) { ex = X; ez = Z; tx = X; tz = Z - Math.max(r.hz, 6); }
   else if (r.hx === undefined) { ex = X + r.r * 0.55; ez = Z + r.r * 0.55; tx = X - r.r * 0.3; tz = Z - r.r * 0.3; }
-  else if (r.hz >= r.hx) { ex = X + r.hx * 0.35; ez = Z + r.hz - Math.min(2.5, r.hz * 0.3); tx = X - r.hx * 0.1; tz = Z - r.hz * 0.6; }
-  else { ex = X + r.hx - Math.min(2.5, r.hx * 0.3); ez = Z + r.hz * 0.35; tx = X - r.hx * 0.6; tz = Z - r.hz * 0.1; }
+  else if (r.hz >= r.hx) { ex = X + r.hx * 0.35; ez = Z + r.hz - Math.min(4, r.hz * 0.3); tx = X - r.hx * 0.1; tz = Z - r.hz * 0.6; }
+  else { ex = X + r.hx - Math.min(4, r.hx * 0.3); ez = Z + r.hz * 0.35; tx = X - r.hx * 0.6; tz = Z - r.hz * 0.1; }
   const ey = caveFloorY(ex, ez) + 1.9, ty = caveFloorY(tx, tz) + 1.4;
   const shots = [['', cam(ex, Math.min(ey, caveRoofY(ex, ez) - 0.4), ez, tx, ty, tz)]];
   if (process.env.HIGH) {
@@ -50,6 +50,24 @@ function eyes(d, r) {
     shots.push(['_hi', cam(ex, hy, ez, X, caveFloorY(X, Z) + 0.5, Z)]);
   }
   return shots;
+}
+
+// (And close looks at what the once-over made, by the props themselves: [delve, name, prop kind, n-th of it, from, height].)
+const CLOSE = [['kingsbarrow', 'seal_candles', 'candles', 0, [4, 2.4], 1.7], ['kingsbarrow', 'queens_candles', 'candles', 6, [-2, 3], 1.6],
+  ['vaults', 'boards', 'boards', 0, [3, 4], 1.8], ['westdrains', 'grate', 'streetgrate', 1, [4, 3], 1.7], ['westdrains', 'outfall', 'outfall', 0, [1.5, 3.5], 1.6],
+  ['undercroft', 'jar', 'glassjar', 0, [3, 4], 1.8], ['westdrains', 'cocoon', 'cocoon', 0, [4, 3], 2.2], ['mirrors', 'mirror', 'bigmirror', 0, [0, 5], 1.8],
+  ['highward', 'oculus', 'daylight', 0, [5, 4], 1.7]];
+function closeUps(d) {
+  const out = [];
+  for (const [key, name, kind, n, [ox, oz], up] of CLOSE) {
+    if (key !== d.key) continue;
+    const p = d.props.filter((q) => q.kind === kind)[n]; if (!p) continue;
+    // (Offsets are in the prop's own frame where it faces a way (yaw): oz out the way it faces.)
+    const yw = p.yaw || 0, X = d.x + p.x, Z = d.z + p.z, ex = X + ox * Math.cos(yw) + oz * Math.sin(yw), ez = Z - ox * Math.sin(yw) + oz * Math.cos(yw), fy = caveFloorY(X, Z);
+    const ty = kind === 'daylight' || kind === 'streetgrate' ? Math.min(caveRoofY(X, Z) - 1, fy + 6) : kind === 'cocoon' ? fy + 3 : kind === 'outfall' ? fy + 1 : kind === 'bigmirror' ? fy + 2.5 : kind === 'glassjar' ? fy + 1.6 : fy + 0.6;
+    out.push([name, cam(ex, caveFloorY(ex, ez) + up, ez, X, ty, Z), d.rooms[0].id]);
+  }
+  return out;
 }
 
 const asked = process.argv.slice(2), which = asked.length ? DELVES.filter((d) => asked.includes(d.key)) : DELVES;
@@ -60,7 +78,7 @@ const page = await b.newPage({ viewport: { width: 1280, height: 720 } });
 page.on('pageerror', (e) => console.log('PAGE ERROR', String(e).slice(0, 600)));
 await page.goto(`http://localhost:${process.env.PORT || 8611}/?auto&noopening&timer`, { waitUntil: 'load' });
 await page.waitForFunction(() => window.bm && bm.snap && bm.snap(), null, { timeout: 900000, polling: 1000 });
-await page.evaluate('window.__reviewShots = true; bm.fixScale(1); bm.renderer.hideVM = true; bm.view.lands.cheats.noDamage = true; bm.skills("level", 120); if (bm.view.questTrail) bm.view.questTrail.off = true;');
+await page.evaluate('window.__reviewShots = "calm"; bm.fixScale(1); bm.renderer.hideVM = true; bm.view.lands.cheats.noDamage = true; bm.skills("level", 120); if (bm.view.questTrail) bm.view.questTrail.off = true;');
 for (const d of which) {
   for (const r of pick(d)) {
     for (const [tag, c] of eyes(d, r)) {
@@ -72,6 +90,17 @@ for (const d of which) {
         console.log('shot', name, '|', d.name, '|', r.name || r.id);
       } catch (e) { console.log('FAILED', name, String(e).slice(0, 200)); }
     }
+  }
+  for (const [nm, c] of closeUps(d)) {
+    const name = `${OUT}_${d.key}_zz_${nm}`;
+    // (To the prop's own spot: the nearest room's middle first, so the place round it is streamed in.)
+    const room = d.rooms.reduce((a, r) => (Math.hypot(d.x + r.x - c.x, d.z + r.z - c.z) < Math.hypot(d.x + a.x - c.x, d.z + a.z - c.z) ? r : a), d.rooms[0]);
+    await page.evaluate(`bm.warrens('room', { room: ${JSON.stringify(room.id)} }); bm.setTime(12); bm.setCam(${JSON.stringify(c)});`);
+    await page.waitForTimeout(WAIT);
+    try {
+      await Promise.race([page.evaluate(`(bm.setCam(${JSON.stringify(c)}), bm.shot(${JSON.stringify(name)}))`), new Promise((_, rj) => setTimeout(() => rj(new Error('timed out')), 120000))]);
+      console.log('shot', name, '|', d.name, '| close look:', nm);
+    } catch (e) { console.log('FAILED', name, String(e).slice(0, 200)); }
   }
 }
 await b.close();

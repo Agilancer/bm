@@ -153,8 +153,15 @@ def lantern(M, top, w=0.13, h=0.3, glass='$flame'):
     for sx in (-1, 1):
         for sy in (-1, 1):
             M.box('iron', (x + sx * w * 0.82, y + sy * w * 0.82, (zt + zb) / 2), (0.018, 0.018, zt - zb))
-    # The panes, inset, and a band of iron round their middle.
-    M.box(glass, (x, y, (zt + zb) / 2), (w * 1.5, w * 1.5, zt - zb - 0.02))
+    # The panes, inset, and a band of iron round their middle. The horn smoked and dull ('soot:flame'), and on each face,
+    # low and in the middle, the bright of the flame behind it ($flame): a lantern with a flame in it, not a lit box.
+    # (A dead one's glass is all one, dark: o.flame 'slate:iron' takes both.)
+    M.box('soot:flame' if glass == '$flame' else glass, (x, y, (zt + zb) / 2), (w * 1.5, w * 1.5, zt - zb - 0.02))
+    hh = zt - zb
+    for ax, sx in ((0, 1), (0, -1), (1, 1), (1, -1)):
+        c = [x, y, zb + hh * 0.36]
+        c[ax] += sx * (w * 0.75 + 0.002)
+        M.box(glass, tuple(c), (0.004, w * 0.7, hh * 0.42) if ax == 0 else (w * 0.7, 0.004, hh * 0.42))
     M.box('iron', (x, y, zb + (zt - zb) * 0.55), (w * 1.58, w * 1.58, 0.014))
     M.spot('flame', (x, y, zb + (zt - zb) * 0.4))
 
@@ -188,7 +195,7 @@ def streetgrate():
     on the roof's face, the middle of the grate, and everything is below z = 0. The sky behind the bars is 'glow'."""
     M = Mesh('streetgrate')
     W, D = 0.75, 0.42
-    M.box('glow', (0, 0, -0.015), (2 * W, 2 * W, 0.02))
+    M.box('slate:glow', (0, 0, -0.015), (2 * W, 2 * W, 0.02))
     for sx in (-1, 1):   # the throat: four deep sides of stone, and a frame round its mouth a step wider
         M.box('$foot', (sx * (W + 0.12), 0, -D / 2), (0.24, 2 * W + 0.48, D))
         M.box('$foot', (0, sx * (W + 0.12), -D / 2), (2 * W + 0.48, 0.24, D))
@@ -234,12 +241,14 @@ def candles():
     different heights, wax run down them and pooled. Spots f0.. at each wick (src/core/delve-build.js lights the tallest)."""
     M = Mesh('candles')
     M.box('dark:rubble', (0, 0, 0.05), (0.62, 0.44, 0.1), (0, 0, 0.1))
-    M.cyl('white', (0.02, 0.0, 0.1), (0.02, 0.0, 0.115), 0.26, 9, 0.22, cap='top')   # (the wax all run together)
+    M.cyl('umber:white', (0.02, 0.0, 0.1), (0.02, 0.0, 0.115), 0.26, 9, 0.22, cap='top')   # (the wax all run together, yellowed)
     cs = [(-0.16, -0.08, 0.34), (0.0, 0.06, 0.26), (0.15, -0.05, 0.2), (-0.05, -0.12, 0.14), (0.2, 0.1, 0.11), (-0.2, 0.1, 0.22), (0.08, -0.15, 0.08)]
     for i, (x, y, h) in enumerate(cs):
         r = 0.028 + 0.006 * (i % 3)
-        M.cyl('white', (x, y, 0.11), (x, y, 0.11 + h), r, 6, r * 0.92, cap='top')
-        M.cyl('white', (x + 0.01, y, 0.11), (x + 0.012, y, 0.11 + h * 0.55), r * 1.2, 4, r * 1.02, cap='top')   # (a run of wax down it)
+        tallow = ('white', 'umber:white', 'pale:cloth_oat')[i % 3]   # (new tallow white, old yellowed, older still)
+        M.cyl(tallow, (x, y, 0.11), (x, y, 0.11 + h), r, 6, r * 0.92, cap='top')
+        M.cyl('umber:white', (x + 0.01, y, 0.11), (x + 0.012, y, 0.11 + h * 0.55), r * 1.2, 4, r * 1.02, cap='top')   # (a run of wax down it)
+        M.cyl(tallow, (x, y, 0.11 + h - 0.012), (x + 0.004, y, 0.11 + h + 0.004), r * 1.08, 6, r * 0.7, cap='top')   # (its lip, melted in round the wick)
         M.cyl('dark:iron', (x, y, 0.11 + h), (x, y, 0.11 + h + 0.018), 0.004, 3, cap=False)
         M.spot('f%d' % i, (x, y, 0.11 + h + 0.012))
     return M.done()
@@ -263,6 +272,90 @@ def boards():
 
 
 BUILDERS += [candles, boards]
+
+
+def oculus():
+    """A light well's mouth seen from below, in a vault: a ring of dressed stone hung under the roof's face, a throat going up
+    into it, a grille of iron across it and the day ('slate:glow') beyond. Radius 1 at its throat: o.s is the well's radius.
+    Its origin on the roof's face, the middle of the well; all of it below z = 0 (the roof isn't cut)."""
+    M = Mesh('oculus')
+    n = 20
+    M.cyl('slate:glow', (0, 0, -0.01), (0, 0, -0.02), 1.0, n)
+    M.cyl('$foot', (0, 0, -0.02), (0, 0, -0.42), 1.0, n, 1.0, cap=False)         # (the throat)
+    M.cyl('$foot', (0, 0, -0.42), (0, 0, -0.5), 1.0, n, 1.32, cap=False)         # (its mouth's chamfer, out to the moulding)
+    for i in range(n):   # (the moulding round it: a ring of blocks, not a smooth tube)
+        a = (i + 0.5) / n * math.tau
+        M.box('$foot', (math.cos(a) * 1.2, math.sin(a) * 1.2, -0.54), (0.36, 0.42, 0.14), (0, 0, a))
+    for k in range(8):   # (the grille: eight bars from a hub out to the throat, a ring of bar half way)
+        a = k / 8 * math.tau
+        M.cyl('iron', (0, 0, -0.22), (math.cos(a) * 1.0, math.sin(a) * 1.0, -0.22), 0.025, 4, cap=False)
+    M.ring('iron', (0, 0, -0.22), 0.55, 0.022, 'Z', 16, 4)
+    M.cyl('iron', (0, 0, -0.18), (0, 0, -0.27), 0.08, 8)
+    for k in range(7):   # (rain's run down the throat: dark streaks of it)
+        a = k * 0.9 + 0.3
+        M.box('dark:stone', (math.cos(a) * 0.985, math.sin(a) * 0.985, -0.24), (0.04, 0.09, 0.38), (0, 0, a))
+    M.spot('light', (0, 0, -0.3))
+    return M.done()
+
+
+def jar():
+    """One of the Undercroft's great vessels: a jar of green glass a man high, round-shouldered, an iron lid and three iron
+    bands; a stand of stone under it; a lamp set in the stand's hollow (spot 'lamp'): its glow, low behind the dark green
+    glass, is a card the game puts there (src/core/delve-props-a.js glassjar). Unit: 1 m radius at its belly, 2.8 m of glass."""
+    M = Mesh('jar')
+    n = 16
+    prof = [(0.0, 0.62), (0.1, 0.9), (0.35, 1.0), (1.05, 1.0), (1.6, 1.0), (2.2, 0.92), (2.55, 0.66), (2.75, 0.5), (2.8, 0.5)]
+    z0 = 0.5
+    for (h0, r0), (h1, r1) in zip(prof, prof[1:]):
+        M.cyl('forest:obsidian', (0, 0, z0 + h0), (0, 0, z0 + h1), r0, n, r1, cap=False)
+    M.cyl('iron', (0, 0, z0 + 2.8), (0, 0, z0 + 2.96), 0.56, n, 0.3)
+    M.cyl('iron', (0, 0, z0 + 2.96), (0, 0, z0 + 3.04), 0.12, 8)
+    for h, r in ((0.12, 0.93), (1.3, 1.0), (2.3, 0.88)):
+        M.cyl('iron', (0, 0, z0 + h - 0.05), (0, 0, z0 + h + 0.05), r + 0.025, n, r + 0.025, cap=False)
+    M.cyl('dark:block', (0, 0, 0), (0, 0, z0), 1.15, 8, 1.05)
+    # (What's in it against the light: a body hung curled, a dark shape, seen through the glass: drawn on the glass's face
+    # by src/core/delve-props-a.js, since the glass isn't clear.)
+    M.spot('lamp', (0, 0, 0.3))
+    return M.done()
+
+
+def gravelamp():
+    """The Kingsbarrow's hung grave-lamp: a wide dished bowl of dark iron on three chains from a ring, tallow in it and a
+    crowd of wicks round its rim (spots w0..w5). Origin at the ring, the bowl 0.9 m under it."""
+    M = Mesh('gravelamp')
+    M.ring('iron', (0, 0, 0), 0.09, 0.015, 'Z', 10, 4)
+    for k in range(3):
+        a = k / 3 * math.tau
+        M.path('iron', [(0, 0, -0.02), (math.cos(a) * 0.6, math.sin(a) * 0.6, -0.86)], 0.012, 4)
+    M.cyl('dark:iron', (0, 0, -0.88), (0, 0, -1.08), 0.64, 14, 0.22, cap='top')   # (the bowl's dish, open at the top)
+    M.cyl('dark:iron', (0, 0, -0.9), (0, 0, -0.86), 0.66, 14, 0.66, cap=False)   # (its lip)
+    M.cyl('umber:white', (0, 0, -0.93), (0, 0, -0.92), 0.6, 14)                   # (the tallow in it)
+    M.cyl('dark:iron', (0, 0, -1.08), (0, 0, -1.2), 0.18, 8, 0.05)               # (a drop under it)
+    for k in range(6):
+        a = (k + 0.5) / 6 * math.tau
+        M.cyl('dark:iron', (math.cos(a) * 0.5, math.sin(a) * 0.5, -0.92), (math.cos(a) * 0.5, math.sin(a) * 0.5, -0.9), 0.006, 3, cap=False)
+        M.spot('w%d' % k, (math.cos(a) * 0.5, math.sin(a) * 0.5, -0.89))
+    return M.done()
+
+
+def cocoon():
+    """What the Spider Queen keeps: a body wound in silk and hung by a rope of it, lumpy, the wraps in bands round it.
+    The origin at its top (where the rope meets it), 1.72 m long, hanging down -z."""
+    M = Mesh('cocoon')
+    prof = [(0, 0.06), (0.15, 0.2), (0.4, 0.3), (0.75, 0.34), (1.05, 0.3), (1.35, 0.33), (1.6, 0.2), (1.72, 0.05)]
+    for i, ((h0, r0), (h1, r1)) in enumerate(zip(prof, prof[1:])):
+        M.cyl('white' if i % 2 else 'pale:cloth_oat', (0.02 * (i % 3 - 1), 0, -h0), (0.02 * ((i + 1) % 3 - 1), 0, -h1), r0, 8, r1, cap=False)
+    for h, r in ((0.5, 0.32), (0.9, 0.33), (1.2, 0.32)):   # (the wraps across it)
+        M.cyl('pale:cloth_oat', (0, 0, -h + 0.03), (0, 0, -h - 0.03), r + 0.012, 8, r + 0.012, cap=False)
+    M.cyl('white', (0, 0, -1.72), (0, 0, -1.74), 0.05, 6)
+    for k in range(3):   # (silk strands from its shoulders up to the rope)
+        a = k / 3 * math.tau
+        M.path('white', [(math.cos(a) * 0.18, math.sin(a) * 0.18, -0.16), (0, 0, 0.25)], 0.006, 3)
+    M.spot('top', (0, 0, 0))
+    return M.done()
+
+
+BUILDERS += [oculus, jar, gravelamp, cocoon]
 
 
 def build(only=None):

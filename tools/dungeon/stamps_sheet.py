@@ -44,7 +44,7 @@ for o in props:
     c = (lo + hi) / 2; R = max((hi - lo).length / 2, 0.2)
     # (Wall props stand out toward -y: look at them from -y.)
     # (Three-quarters, then side on, then from above and behind: the orbit the critics ask for.)
-    views = [(0.55, -1, 0.45), (1, -0.05, 0.1), (-0.5, 0.6, 0.9)] if o.name != 'streetgrate' else [(0.4, -0.6, -1), (1, 0, -0.15), (0, 0, -1)]
+    views = [(0.55, -1, 0.45), (1, -0.05, 0.1), (-0.5, 0.6, 0.9)] if o.name not in ('streetgrate', 'oculus') else [(0.4, -0.6, -1), (1, 0, -0.15), (0, 0, -1)]
     for k, v in enumerate(views):
         d = Vector(v).normalized()
         cam.location = c + d * R * 3.2

@@ -6,6 +6,7 @@
 // nothing runs across them; a frame is two posts and a head, the posts stopping at it; a clock's face has marks round it
 // and no numerals; nothing rings (the hours are struck on gongs of iron: the bell is Tessariel's).
 import { caveRoofY } from './dungeon.js';
+import { hash2 } from './terrain-noise.js';
 
 const TAU = Math.PI * 2, NO = { collide: false };
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
@@ -224,14 +225,18 @@ export const PROPS_B = {
     // (Paler toward its head on one side, as a glass is that has a light somewhere before it.)
     if (!p.broken && !p.draped) K.quad('frost:ph_grey_plaster', F(-w * 0.9, up + h * 0.45, 0.045), F(w * 0.1, up + h * 0.97, 0.045), F(-w * 0.9, up + h * 0.97, 0.045), F(-w * 0.9, up + h * 0.97, 0.045), F.n);
     if (!p.broken && !p.draped) { K.quad('white', F(-w * 0.8, up + h * 0.3, 0.05), F(-w * 0.76, up + h * 0.3, 0.05), F(-w * 0.52, up + h * 0.86, 0.05), F(-w * 0.56, up + h * 0.86, 0.05), F.n); K.quad('pale:stone', F(-w * 0.6, up + h * 0.2, 0.05), F(-w * 0.56, up + h * 0.2, 0.05), F(-w * 0.3, up + h * 0.8, 0.05), F(-w * 0.34, up + h * 0.8, 0.05), F.n); }
-    if (p.broken) for (let k = 0; k < 5; k++) { const q = F(-w + (k + 0.5) * w * 0.4, 0, 0.5 + (k % 3) * 0.35); K.spike('ice', q[0], q[1], q[2], 0.14 + (k % 2) * 0.08, 0.3 + (k % 3) * 0.2, 3, k); }
+    if (p.broken) for (let k = 0; k < 5; k++) { const q = F(-w + (k + 0.5) * w * 0.4, 0, 0.5 + (k % 3) * 0.35); K.spike('slate:ph_grey_plaster', q[0], q[1], q[2], 0.14 + (k % 2) * 0.08, 0.3 + (k % 3) * 0.2, 3, k); }
+    if (!p.broken && !p.draped) {
+      K.quad('dark:ph_grey_plaster', F(-w, up + 0.08, 0.042), F(w, up + 0.08, 0.042), F(w, up + h * 0.22, 0.042), F(-w, up + h * 0.22, 0.042), F.n);
+      for (let k = 0; k < 3; k++) { const u = (hash2(x + k, z) * 1.6 - 0.8) * w, v = up + h * (0.42 + 0.12 * k) * (0.9 + 0.2 * hash2(z, k)), q = F(u, v, 0.07); K.fires.push({ delve: d.key, hue: 'tallow', kind: 'glow', x: q[0], y: q[1], z: q[2], w: 0.16 - 0.03 * k, h: 0.16 - 0.03 * k, ember: 0, seed: 0 }); }
+    }
     if (p.draped) { K.quad(p.cloth || 'dark:cloth_oat', F(-w - 0.3, up + h * 0.2, 0.2), F(w + 0.3, up + h * 0.2, 0.2), F(w + 0.2, up + h + w * 0.6, 0.12), F(-w - 0.2, up + h + w * 0.6, 0.12), F.n); }
   },
   // A standing glass on the floor, on a foot: a pane a man and a half high, seen from both sides, a gold post each end
   // (and every two metres of a long run of it).
   pane(K, d, p, x, y, z) {
     const yaw = p.yaw || 0, w = p.w || 0.9, h = p.h || 2.8;
-    for (const s of [0, Math.PI]) { const F = frame(x, y, z, yaw + s); K.quad('slate:ph_grey_plaster', F(-w, 0.3, 0.03), F(w, 0.3, 0.03), F(w, 0.3 + h, 0.03), F(-w, 0.3 + h, 0.03), F.n); for (let u = -w + 0.5; u < w - 0.4; u += 2.2) K.quad('pale:flame', F(u, 0.3 + h * 0.4, 0.04), F(u + 0.04, 0.3 + h * 0.4, 0.04), F(u + 0.24, 0.1 + h, 0.04), F(u + 0.2, 0.1 + h, 0.04), F.n); }
+    for (const s of [0, Math.PI]) { const F = frame(x, y, z, yaw + s); K.quad('slate:ph_grey_plaster', F(-w, 0.3, 0.03), F(w, 0.3, 0.03), F(w, 0.3 + h, 0.03), F(-w, 0.3 + h, 0.03), F.n); for (let u = -w + 0.5; u < w - 0.4; u += 2.2) K.quad('white', F(u, 0.3 + h * 0.4, 0.04), F(u + 0.04, 0.3 + h * 0.4, 0.04), F(u + 0.24, 0.1 + h, 0.04), F(u + 0.2, 0.1 + h, 0.04), F.n); }
     const F = frame(x, y, z, yaw);
     // (A post at each end and every two metres between: a long run of it is a wall of panes.)
     const n = Math.max(1, Math.round(w / 1.1));
@@ -254,8 +259,9 @@ export const PROPS_B = {
   // Broken glass on the floor: shards standing out of a scatter of it.
   shards(K, d, p, x, y, z) {
     const r = p.r || 1.4;
-    K.disc('ice', x, y + 0.03, z, r * 0.8, 9);
-    for (let k = 0; k < 7; k++) { const a = k * 2.4 + x, o = r * (0.25 + 0.7 * ((k * 5) % 7) / 7); K.spike('ice', x + Math.cos(a) * o, y, z + Math.sin(a) * o, 0.1 + (k % 3) * 0.06, 0.25 + (k % 4) * 0.22, 3, k, [Math.cos(a) * 0.3, Math.sin(a) * 0.3]); }
+    // (Glass, grey and dark, a glint on it: 'ice' stays snow-white whatever's put on it, and read as paper.)
+    K.disc('dark:ph_grey_plaster', x, y + 0.03, z, r * 0.8, 9);
+    for (let k = 0; k < 7; k++) { const a = k * 2.4 + x, o = r * (0.25 + 0.7 * ((k * 5) % 7) / 7); K.spike(k % 3 ? 'slate:ph_grey_plaster' : 'pale:ph_grey_plaster', x + Math.cos(a) * o, y, z + Math.sin(a) * o, 0.1 + (k % 3) * 0.06, 0.25 + (k % 4) * 0.22, 3, k, [Math.cos(a) * 0.3, Math.sin(a) * 0.3]); }
   },
   // ---- the Ossuary Chapel ----
   // A wall of skulls, facing yaw: rows of them set in pale mortar, w half its width, h its height; a shelf of long bones

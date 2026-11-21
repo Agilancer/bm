@@ -1,6 +1,6 @@
 // WGSL shared by the world's pipelines: the frame block, lighting, shadows, fog.
 import { CHURCH_X, CHURCH_Z, SEXTON } from '../core/church.js';
-import { DELVES, delveAir } from '../core/dungeon.js';
+import { DELVES, delveAir, delveFill } from '../core/dungeon.js';
 import { MAW_DIR, VOID_TINTS } from '../core/delve-elder.js';
 import { HALL_BOX } from '../core/testhall.js';
 import { INDOORS as BELL_INDOORS } from '../core/belltower.js';
@@ -186,6 +186,11 @@ fn inHome(p: vec3f, x: f32, z: f32, hx: f32, hz: f32, jx: f32, jz: f32, y1: f32,
   return p.y < top && abs(p.x - x) < hx + select(0.0, jx, up) && abs(p.z - z) < hz + select(0.0, jz, up);
 }
 
+// Each delve's fill: the light everywhere in it, off its own stone, in its own colour (src/core/dungeon.js delveFill).
+fn delveFill(p: vec3f) -> vec3f {
+${DELVES.map((d) => { const a = delveFill(d); return `  if (p.x > ${f32(d.box.x0)} && p.x < ${f32(d.box.x1)} && p.z > ${f32(d.box.z0)} && p.z < ${f32(d.box.z1)}) { return vec3f(${a.map((v) => v.toFixed(4)).join(', ')}); }`; }).join('\n')}
+  return vec3f(0.095, 0.078, 0.064);
+}
 // Each delve's air: its colour, and how thick it is (src/core/dungeon.js DELVE_AIR). The old one for all of them was a near
 // black, 0.003 a metre: the far end of a hall as clear as the near one, nothing in the air at all.
 fn delveAir(p: vec3f) -> vec4f {
@@ -296,7 +301,7 @@ fn shadePBR(p: vec3f, n: vec3f, v: vec3f, albedo: vec3f, rough: f32, metal: f32,
   // (The Test Dungeon is lit white from its ceilings: bright from above, the floor's light thrown back up.)
   if (indoor > 3.5) { ambient = voidAmbient(up) * voidTint(p, 1.0); }
   else if (indoor > 2.5) { ambient = mix(vec3f(0.36, 0.36, 0.38), vec3f(0.82, 0.83, 0.86), up); }
-  else if (indoor > 1.5) { ambient = select(select(vec3f(0.044, 0.044, 0.048), vec3f(0.095, 0.078, 0.064), indoor > 2.1), vec3f(0.15, 0.105, 0.085), indoor > 2.2); } else if (indoor > 0.5) { ambient = mix(vec3f(0.12, 0.095, 0.08), vec3f(0.2, 0.19, 0.22), up); }
+  else if (indoor > 1.5) { ambient = delveFill(p) * mix(0.8, 1.12, up); } else if (indoor > 0.5) { ambient = mix(vec3f(0.12, 0.095, 0.08), vec3f(0.2, 0.19, 0.22), up); }
   // (A house's rooms have only their windows: at night, about a fifth of the day's. F.sunColor.a is the day behind a window.)
   if (indoor > 1.1 && indoor < 1.5) { ambient *= mix(0.25, 1.0, clamp((F.sunColor.a - 0.1) / 0.9, 0.0, 1.0)); }
   ambient = mix(ambient, F.caveAmb.rgb * mix(0.7, 1.15, up), cave);

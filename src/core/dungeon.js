@@ -205,7 +205,7 @@ const WARRENS = {
   key: 'warrens', tag: 'hf', name: DUNGEON.name, short: 'the Warrens', x: DUNGEON.x, z: DUNGEON.z, y: DUNGEON.y, level: 7, style: 'cave',
   rooms: ROOMS, tunnels: TUNNELS, pillars: PILLARS, packs: PACKS, props: WARRENS_PROPS,
   entry: ENTRY, exitIn: EXIT_IN, exitOut: EXIT_OUT, portal: PORTAL, last: 'venomaw', tough: PACK_TOUGH, pay: { xp: 1500, gold: 250 },
-  look: { wall: 'rubble', floor: 'rubble', roof: 'dark:stone', spike: 'dark:rubble', flame: 'flame', light: [1, 0.56, 0.24], fire: [1, 0.6, 0.28], lit: 0.5, span: 'timber', litter: 'bones', out: 0.15, fog: [0.03, 0.02, 0.012, 0.012] },
+  look: { fill: [0.12, 0.09, 0.065], wall: 'rubble', floor: 'rubble', roof: 'dark:stone', spike: 'dark:rubble', flame: 'flame', light: [1, 0.56, 0.24], fire: [1, 0.6, 0.28], lit: 0.5, span: 'timber', litter: 'bones', out: 0.15, fog: [0.03, 0.02, 0.012, 0.012] },
   words: { enter: 'The Hollowfang Warrens. Kobolds dug it; goblins took it; something old sleeps at the bottom.', clear: 'The Hollowfang Warrens are cleared. Venomaw is dead!', wipe: "Your party falls... and wakes at the Warrens' mouth." },
 };
 // (In the order they were made: a delve's place in this list is sent with EV.DELVE and kept, so new ones go on the end.)
@@ -550,14 +550,34 @@ function roomEdge(r, step, inset) {
 // it is: a cave's smoke and dust, a castle's hearth-smoke, the void its own (the shader's). Dark, all of them: it's what
 // the far end of a hall goes into, not a light of its own.
 const AIR = { cave: [0.022, 0.016, 0.011, 0.012], castle: [0.026, 0.017, 0.011, 0.008], void: [0, 0, 0, 0] };
+// A delve's own fill: the light that's everywhere in it, off its stone, in its own colour (look.fill, rgb), so no room of it
+// is a black hole between its lamps. Without one, what look.lit said: none, some, more.
+export function delveFill(d) {
+  if (d.look.fill) return d.look.fill;
+  return d.look.lit === true ? [0.15, 0.105, 0.085] : d.look.lit ? [0.095, 0.078, 0.064] : [0.044, 0.044, 0.048];
+}
 export function delveAir(d) { return d.look.fog || AIR[d.style] || AIR.cave; }
 
 // Torches on the walls: every so far along each room's edge and down each tunnel, a little in from the rock. [x, y, z, nx, nz]
 // (nx, nz: the way out from the wall). The same on every thread, so what's drawn is what's lit. (In the Deeps they're
 // shards of ice with a cold light in them: the delve's look says.)
+// Where a delve's banners hang (src/core/delve-build.js draws them): down the long walls of its high rooms, every so far.
+// [local x, local z, facing x, facing z, room] each. (So a torch isn't put where one hangs: fire on the cloth, the critics.)
+export function bannerSpots(d) {
+  const out = [];
+  for (const r of d.rooms) {
+    if (r.hx === undefined || r.roof < 9 || r.banners === 0 || d.look.banner === false) continue;
+    const along = r.hz >= r.hx, len = along ? r.hz : r.hx, off = along ? r.hx : r.hz, n = Math.max(1, Math.round(len * 2 / (r.banners || 9)));
+    for (let i = 0; i < n; i++) for (const side of [-1, 1]) {
+      const t = ((i + 0.5) / n * 2 - 1) * (len - 2.5);
+      out.push([r.x + (along ? side * off : t), r.z + (along ? t : side * off), along ? -side : 0, along ? 0 : -side, r]);
+    }
+  }
+  return out;
+}
 export function torches(d = WARRENS) {
   if (d.torches) return d.torches;
-  const TORCHES = d.torches = [], every = d.look.every || 7, high = d.look.high || 2.3;
+  const TORCHES = d.torches = [], every = d.look.every || 7, high = d.look.high || 2.3, banners = bannerSpots(d);
   const place = (x, z) => {
     // Find the wall: step out from (x, z) toward the rock along the field's fall.
     for (let k = 0; k < 20; k++) {
@@ -571,6 +591,7 @@ export function torches(d = WARRENS) {
     // (Not on a table or a pew: on the wall.)
     if (solids(d).some((b) => blockOut(b, x - d.x, z - d.z) < 0.9)) return;
     if (TORCHES.some((t) => Math.hypot(t[0] - x, t[2] - z) < every * 0.6)) return;
+    if (banners.some(([bx, bz]) => Math.hypot(d.x + bx - x, d.z + bz - z) < 1.5)) return;
     // (The sixth: whether it burns. A delve whose look says out: so many of its torches gone out, the same ones on every
     // thread (src/core/delve-build.js builds them cold, src/gfx/renderer.js gives them no light). Rows of lights all alike,
     // every one burning, read as a corridor of street lamps: the critics.)
@@ -621,7 +642,9 @@ export function braziers(d = WARRENS) {
       }
       for (const [lx, lz] of roomEdge(r, r.fires || 10, 2.2)) {
         const x = d.x + lx, z = d.z + lz, ox = Math.abs(lx - r.x) > r.hx - 2.3 ? Math.sign(lx - r.x) : 0, oz = ox ? 0 : Math.sign(lz - r.z);
-        if (caveRoom(x + ox * 5, z + oz * 5) > -0.5 || caveRoom(x, z) < 1.6) continue;
+        // (None before a door, nor beside one: a fire in the way in is walked through, the floor's furniture being no
+        // wall. The critics, round 1 of the dungeon once-over.)
+        if ([-3, -1.5, 0, 1.5, 3].some((u) => caveRoom(x + ox * 5 + oz * u, z + oz * 5 + ox * u) > -0.5) || caveRoom(x, z) < 1.6) continue;
         if (keep.some(([kx, kz]) => Math.hypot(kx - x, kz - z) < 6) || BRAZIERS.some((b) => Math.hypot(b[0] - x, b[2] - z) < 5)) continue;
         BRAZIERS.push([x, caveFloorY(x, z), z]);
       }
@@ -652,7 +675,9 @@ export function braziers(d = WARRENS) {
         if (caveRoom(x, z) < 2.5 || solids(d).some((b) => blockOut(b, x - d.x, z - d.z) < 0.5)) continue;
         const y = caveFloorY(x, z), lift = Math.min(5.2, caveRoofY(x, z) - y - 2.5);
         if (lift < 4.2) continue;
-        BRAZIERS.push([x, y, z, lift, 'hang']);
+        // (Where no one would hang a lamp from the living rock, the Drowned Vaults' mudlarks: a pole lantern stood there
+        // instead, a mooring post in the wet. look.stand.)
+        BRAZIERS.push(d.look.stand ? [x, y, z] : [x, y, z, lift, 'hang']);
       }
     }
   }

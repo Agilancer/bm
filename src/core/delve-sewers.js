@@ -459,12 +459,14 @@ function lightSewer(d, o = {}) {
     if (r.hx === undefined) continue;
     const along = r.hz >= r.hx, len = along ? r.hz : r.hx, half = along ? r.hx : r.hz;
     if (half <= 4.5 && len > 20) {
-      // A main or a run: grates down its middle every so far, a pipe out of a wall between them, side to side; and no
-      // standing lanterns in its walk, only the ones on its walls.
+      // A main or a run: a street's grate over it, one (two, if it's a long one), off to a side of the walk and not where
+      // its middle is, so the day falls somewhere of its own; a pipe out of a wall between, side to side; and no standing
+      // lanterns in its walk, only the ones on its walls. (A grate every 24 m down the middle made every run one picture.)
       r.fires = 0;
-      const n = Math.max(1, Math.round((len * 2 - 16) / (o.grateEvery || 24)));
+      const n = len * 2 > (o.grateEvery || 70) ? 2 : 1, seed = Math.abs(Math.round(r.x * 7 + r.z * 3)) % 7;
       for (let i = 0; i < n; i++) {
-        const t = ((i + 0.5) / n * 2 - 1) * (len - 8), x = r.x + (along ? 0 : t), z = r.z + (along ? t : 0);
+        const t = (n === 1 ? (seed / 7 - 0.5) * 0.9 : i ? 0.55 : -0.4) * (len - 8), sd = (seed + i) % 2 ? 1 : -1;
+        const x = r.x + (along ? sd * half * 0.35 : t), z = r.z + (along ? t : sd * half * 0.35);
         if (!near(x, z, 3)) add('streetgrate', x, z, { yaw: along ? 0 : Math.PI / 2 });
       }
       const m = Math.max(1, Math.round((len * 2 - 10) / 17));
@@ -472,7 +474,12 @@ function lightSewer(d, o = {}) {
         const t = ((i + 0.5) / m * 2 - 1) * (len - 5) + 5, side = i % 2 ? 1 : -1;
         if (Math.abs(t) > len - 3) continue;
         const x = r.x + (along ? side * (half - 0.4) : t), z = r.z + (along ? t : side * (half - 0.4));
-        if (!near(x, z, 2.5)) add('outfall', x, z, { yaw: along ? (side > 0 ? -Math.PI / 2 : Math.PI / 2) : (side > 0 ? Math.PI : 0), up: 0.9 + 0.4 * ((i * 7) % 3) / 2, dry: i % 3 === 2 });
+        if (!near(x, z, 2.5)) add('outfall', x, z, { yaw: along ? (side > 0 ? -Math.PI / 2 : Math.PI / 2) : (side > 0 ? Math.PI : 0), up: 0.9 + 0.4 * ((i * 7) % 3) / 2, dry: !o.running && i % 3 === 2 });
+        // (Each sector's own along its runs: the Slough's silt banked up the walls; the Charnel Runs' bones, washed down
+        // from the charnel and heaped where the water left them.)
+        const bx = r.x + (along ? -side * (half - 1.1) : t + 4), bz = r.z + (along ? t + 4 : -side * (half - 1.1));
+        if (o.silt && i % 2 === 0 && !near(bx, bz, 2.5)) add('heap', bx, bz, { r: 1.1 + 0.3 * (i % 3) });
+        if (o.bones && i % 2 === 1 && !near(bx, bz, 2.5)) add('bones', bx, bz, { r: 1.2 });
       }
     } else if (Math.min(r.hx, r.hz) >= 7) {
       // A hall: its fires along the walls fewer (pole-lanterns, a long way apart), and a grate or two over it.
@@ -486,9 +493,11 @@ function lightSewer(d, o = {}) {
     }
   }
 }
-lightSewer(WEST_DRAINS, { look: { light: [1, 0.6, 0.3], fog: [0.026, 0.03, 0.018, 0.022] } });
-lightSewer(SLOUGH_MAINS, { look: { light: [1, 0.62, 0.32], out: 0.35, fog: [0.02, 0.022, 0.026, 0.02] } });
-lightSewer(CHARNEL_RUNS, { look: { flame: 'flame', light: [1, 0.58, 0.3], out: 0.4, fog: [0.03, 0.026, 0.024, 0.016] }, grateEvery: 30 });
-lightSewer(HIGH_CONDUITS, { look: { out: 0.2, fog: [0.03, 0.022, 0.014, 0.012] } });
+// (Each its own: the West Drains fen-green and murky; the Slough brown-black and silted, its lamps the fewest; the Charnel
+// Runs bone-pale and dry; the High Conduits clean and loud with water, every pipe running. fill: the light off its stone.)
+lightSewer(WEST_DRAINS, { look: { light: [1, 0.6, 0.3], fog: [0.026, 0.03, 0.018, 0.022], fill: [0.07, 0.075, 0.058] } });
+lightSewer(SLOUGH_MAINS, { look: { light: [1, 0.62, 0.32], out: 0.25, fog: [0.032, 0.028, 0.02, 0.018], fill: [0.13, 0.11, 0.085] }, silt: true });
+lightSewer(CHARNEL_RUNS, { look: { flame: 'flame', light: [1, 0.58, 0.3], out: 0.4, fog: [0.03, 0.026, 0.024, 0.016], fill: [0.085, 0.078, 0.07] }, grateEvery: 90, bones: true });
+lightSewer(HIGH_CONDUITS, { look: { out: 0.2, fog: [0.03, 0.022, 0.014, 0.012], fill: [0.09, 0.08, 0.066] }, running: true });
 // (Where the street fell in, the Great Grate: the day comes down the hole it left, wide.)
 WEST_DRAINS.props.push({ kind: 'daylight', x: 2, z: -152, r: 4.2, pool: false, lean: [0.14, 0.05] });

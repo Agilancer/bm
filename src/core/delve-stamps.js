@@ -3,7 +3,7 @@
 // a lantern costs its triangles and nothing else. '$flame', '$wall', '$foot' are the delve's own (its look).
 //
 // stamp(K, d, name, x, y, z, yaw, o): the prop's origin at x, y, z; turned by yaw, so its own +z (out from a wall) goes
-// toward (sin yaw, cos yaw); o.s scales it. Returns its spots (where its flame burns...) in the world.
+// toward (sin yaw, cos yaw); o.s scales it; o.flame, o.foot, o.horn stand in for '$flame', '$foot', 'soot:flame'. Returns its spots (where its flame burns...) in the world.
 
 import { STAMPS } from './delve-stamps-data.js';
 import { tileOf } from './sites.js';
@@ -20,7 +20,7 @@ export function stamp(K, d, name, x, y, z, yaw = 0, o = {}) {
   const s = o.s || 1, c = Math.cos(yaw), sn = Math.sin(yaw), L = d.look;
   if (K.geometry) {
     for (const [layer0, a] of Object.entries(st.parts)) {
-      const layer = layer0 === '$flame' ? (o.flame || L.flame || 'flame') : layer0 === '$wall' ? (L.wall || 'stone') : layer0 === '$foot' ? (o.foot || L.foot || L.wall || 'stone') : layer0;
+      const layer = layer0 === 'soot:flame' && o.horn ? o.horn : layer0 === '$flame' ? (o.flame || L.flame || 'flame') : layer0 === '$wall' ? (L.wall || 'stone') : layer0 === '$foot' ? (o.foot || L.foot || L.wall || 'stone') : layer0;
       const p = K.part(layer), [tw, th] = tileOf(layer), td = tileOf(layer)[2] || tw;
       let base = p.pos.length / 3;
       for (let i = 0; i < a.length; i += 18) {

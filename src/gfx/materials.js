@@ -699,6 +699,9 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
     let dayK = smoothstep(0.3, 0.9, F.sunColor.a);
     if (lay == 100u && tintK == 7u) { albedo = vec3f(0.03, 0.034, 0.042) * (0.6 + 0.8 * paneK) * mix(0.3, 1.0, dayK); metal = 0.04 * dayK; rough = mix(0.88, mix(0.5, 0.72, paneK), dayK); ao = 0.55; }   // (darker and duller: the sky full in them, they were blank paper, the critics)
     if (lay == 108u) { emissive = select(vec3f(6.0, 6.0, 5.6), vec3f(1.6, 1.6, 1.5), F.blood.w < 0.5); albedo = vec3f(0.0); }
+    // (The sky seen up a delve's light well or through a street grate ('slate:glow', src/core/delve-build.js daylight): a
+    // pale grey-blue day, bright but not a lamp: at 6 it was a strip light in the vault.)
+    if (lay == 108u && tintK == 7u) { emissive = select(vec3f(0.42, 0.48, 0.58), vec3f(0.16, 0.18, 0.22), F.blood.w < 0.5); }
     if (lay == 101u) {
       // (Its own light beside it, put out: src/gfx/homelights.js. A light the frame has no room for leaves the flame be.)
       for (var li = 0u; li < u32(F.counts.x); li++) {
@@ -732,6 +735,12 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
       // (A lantern's horn or glass ('umber:flame', src/core/delve-build.js lanterns): the flame seen through it, a dull warm
       // amber, not the white heat of a flame itself: as a flame the panes read as four blown-out yellow boxes.)
       if (tintK == 10u) { emissive = mix(vec3f(0.55, 0.22, 0.05), vec3f(1.7, 0.95, 0.36), heat) * f; }
+      // (The rest of a lantern's horn ('soot:flame'), round the bright of the flame behind it: dull and smoked, the light
+      // only coming through it, so the pane reads as horn with a flame in it and not as a lit box.)
+      if (tintK == 11u) { emissive = mix(vec3f(0.12, 0.045, 0.012), vec3f(0.42, 0.2, 0.06), heat) * f; }
+      // (Green glass with a lamp well behind it ('moss:flame', the Undercroft's jars): the glass's own colour, soft, more
+      // bottle than lamp.)
+      if (tintK == 9u) { emissive = mix(vec3f(0.006, 0.016, 0.007), vec3f(0.045, 0.09, 0.038), heat) * f; }
       albedo = vec3f(0.0);
       if (tintK == 12u) { albedo = vec3f(0.03, 0.034, 0.042) * (0.6 + 0.8 * paneK) * (1.0 - night); metal = 0.04 * (1.0 - night); rough = mix(0.5, 0.72, paneK); ao = mix(0.55, 1.0, night); }
     }
@@ -1552,7 +1561,7 @@ fn shadeTrue(p: vec3f, n: vec3f, v: vec3f, albedo: vec3f, rough: f32, metal: f32
   var ambient = mix(F.groundAmb.rgb, F.skyAmb.rgb, up);
   if (indoor > 3.5) { ambient = voidAmbient(up) * voidTint(p, 1.0); }
   else if (indoor > 2.5) { ambient = mix(vec3f(0.36, 0.36, 0.38), vec3f(0.82, 0.83, 0.86), up); }
-  else if (indoor > 1.5) { ambient = select(select(vec3f(0.044, 0.044, 0.048), vec3f(0.095, 0.078, 0.064), indoor > 2.1), vec3f(0.15, 0.105, 0.085), indoor > 2.2); } else if (indoor > 0.5) { ambient = mix(vec3f(0.12, 0.095, 0.08), vec3f(0.2, 0.19, 0.22), up); }
+  else if (indoor > 1.5) { ambient = delveFill(p) * mix(0.8, 1.12, up); } else if (indoor > 0.5) { ambient = mix(vec3f(0.12, 0.095, 0.08), vec3f(0.2, 0.19, 0.22), up); }
   if (indoor > 1.1 && indoor < 1.5) { ambient *= mix(0.25, 1.0, clamp((F.sunColor.a - 0.1) / 0.9, 0.0, 1.0)); }
   ambient = mix(ambient, F.caveAmb.rgb * mix(0.7, 1.15, up), cave);
   let nv = max(dot(n, v), 1e-3);

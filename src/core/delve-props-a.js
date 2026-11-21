@@ -7,6 +7,7 @@
 // spokes or five). No letters on a label, a spine or a card.
 import { caveFloorY, caveRoofY } from './dungeon.js';
 import { hash2 } from './terrain-noise.js';
+import { stamp } from './delve-stamps.js';
 
 const TAU = Math.PI * 2, NO = { collide: false };
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
@@ -253,24 +254,17 @@ export const PROPS_A = {
   // A great vessel of banded green glass on a stone stand, as tall as p.h: three iron bands, an iron lid; and on the side
   // it faces (yaw), where a lamp of his red's been set behind it, what's in it against the light.
   glassjar(K, d, p, x, y, z) {
-    const r = p.r || 1, h = p.h || 2.8, yaw = p.yaw || 0, N = 14, y0 = y + 0.5;
-    K.box('dark:block', x, y, z, r + 0.15, 0.5, r + 0.15, yaw, NO);
-    K.drum('forest:obsidian', x, y0, z, r, h, N, { collide: false, turn: yaw });
-    for (const f of [0.04, 0.5, 0.96]) K.drum('iron', x, y0 + h * f - 0.06, z, r + 0.03, 0.12, N, { open: true, collide: false, turn: yaw });
-    K.drum('iron', x, y0 + h, z, r + 0.05, 0.16, N, { r2: r * 0.5, collide: false, turn: yaw });
-    // (The lit side: three staves of the glass with the lamp behind them, and the dark of what floats there.)
-    const F = frame(x, y0, z, yaw), o = r * Math.cos(Math.PI / N) + 0.015, hw = r * 0.62;
-    // (The lamp seen through green glass is green: it was 'blood:flame', a red door in the wall with a man in it.)
-    face(K, 'mire:flame', F, -hw, hw, h * 0.1, h * 0.9, o);
-    // (And the glass's shine: a pale stave up each shoulder of it.)
-    for (const sd of [-1, 1]) { const a = yaw + sd * 1.25, sx = x + Math.sin(a) * (r + 0.012), sz = z + Math.cos(a) * (r + 0.012), tx = Math.cos(a) * 0.07, tz = -Math.sin(a) * 0.07; K.quad('pale:lake', [sx - tx, y0 + h * 0.12, sz - tz], [sx + tx, y0 + h * 0.12, sz + tz], [sx + tx, y0 + h * 0.88, sz + tz], [sx - tx, y0 + h * 0.88, sz - tz], [Math.sin(a), 0, Math.cos(a)]); }
-    const P = (u, v) => F(u * r, v * h, o + 0.012), Q = (a, b, c, e) => K.quad('char:stone', P(...a), P(...b), P(...c), P(...e), F.n);
-    const k = (hash2(x * 3, z * 5) - 0.5) * 0.2;
-    // (A body hung in it: a trunk, round at both ends, and a head bowed on it. Nothing thin, nothing crossed, no limb out.)
-    Q([-0.2 + k, 0.24], [0.2 + k, 0.24], [0.32 + k, 0.36], [-0.32 + k, 0.36]);
-    Q([-0.32 + k, 0.36], [0.32 + k, 0.36], [0.3 + k, 0.56], [-0.3 + k, 0.56]);
-    Q([-0.3 + k, 0.56], [0.3 + k, 0.56], [0.14 + k, 0.64], [-0.14 + k, 0.64]);
-    Q([-0.1 + k * 1.6, 0.64], [0.16 + k * 1.6, 0.64], [0.2 + k * 1.6, 0.72], [-0.14 + k * 1.6, 0.72]);
-    Q([-0.14 + k * 1.6, 0.72], [0.2 + k * 1.6, 0.72], [0.12 + k * 1.6, 0.79], [-0.06 + k * 1.6, 0.79]);
+    const r = p.r || 1, h = p.h || 2.8, yaw = p.yaw || 0, y0 = y + 0.5;
+    // (Made in Blender, tools/dungeon/stamps.py jar: round-shouldered, banded, lidded; its lamp in its stand, low, so the
+    // green is soft and low on the glass and its shoulders dark. It was a flat green stave on a drum: an exit sign.)
+    stamp(K, d, 'jar', x, y, z, yaw, { s: r });
+    // (Its lamp, low in it, seen through the glass on the side it faces: a soft green glow, not a lit panel.)
+    { const q = frame(x, y0, z, yaw)(0, h * 0.22, r * 1.02); K.fires.push({ delve: d.key, hue: 'marsh', kind: 'glow', x: q[0], y: q[1], z: q[2], w: r * 0.75, h: r * 0.6, ember: 0, seed: 0 }); }
+    // (What's hung in it, dark against the lit glass on the side it faces: a curled shape, nothing thin, no limb out.)
+    const F = frame(x, y0, z, yaw), o = r * 1.0 + 0.012, k = (hash2(x * 3, z * 5) - 0.5) * 0.16;
+    const P = (u, v) => F(u * r, v * h, o), Q = (a, b, c, e) => K.quad('char:stone', P(...a), P(...b), P(...c), P(...e), F.n);
+    Q([-0.18 + k, 0.16], [0.18 + k, 0.16], [0.28 + k, 0.28], [-0.28 + k, 0.28]);
+    Q([-0.28 + k, 0.28], [0.28 + k, 0.28], [0.24 + k, 0.46], [-0.24 + k, 0.46]);
+    Q([-0.24 + k, 0.46], [0.24 + k, 0.46], [0.1 + k, 0.54], [-0.1 + k, 0.54]);
   },
 };
