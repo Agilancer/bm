@@ -8,6 +8,10 @@
 import { LINES as SEWER_LINES, QUESTS as SEWER_QUESTS } from './phobos-sewers.js';
 import { LINES as CASTLE_LINES, QUESTS as CASTLE_QUESTS } from './phobos-castle.js';
 import { QUESTS as STREET_QUESTS } from './phobos-streets.js';
+import { LINES_A, QUESTS_A } from './phobos-more-a.js';
+import { LINES_B, QUESTS_B } from './phobos-more-b.js';
+import { LINES_CASTLE, QUESTS_CASTLE } from './phobos-more-castle.js';
+import { LINES_TOWN, QUESTS_TOWN } from './phobos-more-town.js';
 
 export const LINES = {
   ph_penny: {
@@ -571,5 +575,5 @@ export const QUESTS = {
   },
 };
 
-Object.assign(LINES, SEWER_LINES, CASTLE_LINES);
-Object.assign(QUESTS, SEWER_QUESTS, CASTLE_QUESTS, STREET_QUESTS);
+Object.assign(LINES, SEWER_LINES, CASTLE_LINES, LINES_TOWN, LINES_CASTLE, LINES_A, LINES_B);
+Object.assign(QUESTS, SEWER_QUESTS, CASTLE_QUESTS, STREET_QUESTS, QUESTS_TOWN, QUESTS_CASTLE, QUESTS_A, QUESTS_B);

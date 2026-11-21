@@ -313,7 +313,14 @@ fn untileC(l: i32, uv: vec2f, dx: vec2f, dy: vec2f, k: f32) -> vec4f {
     let wash = textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.017 + 0.71, 0.0);
     let grassy = 1.0 - dirt;
     albedo *= mix(vec3f(1.0), mix(vec3f(0.9, 0.97, 0.84), vec3f(1.1, 1.04, 0.92), wash.g) * (0.9 + 0.2 * wash.b), grassy);
+    // And broader still, three hundred metres across: dry yellow stretches and dark damp hollows, so open country isn't
+    // one green to the horizon. (The world once-over, 2026-11-20.)
+    let big = textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.0033 + 0.37, 0.0);
+    albedo *= mix(vec3f(1.0), mix(vec3f(0.74, 0.84, 0.7), vec3f(1.22, 1.12, 0.8), smoothstep(0.3, 0.7, big.r)) * (0.92 + 0.16 * big.a), grassy * 0.85);
   }
+  // A road's verge: the grass beside it trodden brown, so a way doesn't end at a line. (No sample: a phone has it too.)
+  { let verge = smoothstep(0.06, 0.34, dirtBase) * (1.0 - dirt);
+    albedo = mix(albedo, albedo * vec3f(0.7, 0.62, 0.48), verge * 0.75); }
   // The fen's reeds and black water; the Ashen Waste's grey cinders.
   if (!LEAN) {
     let fenAmt = smoothstep(0.25, 0.6, ft.a + (macro2.g - 0.5) * 0.3) * (1.0 - dirt * 0.6) * (1.0 - roadIn);

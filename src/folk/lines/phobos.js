@@ -657,11 +657,44 @@ export const CHATTER = [
   ["My cousin went to the Mages' Rise for work.", "And?", "And nothing. That's the thing. Nothing."],
 ];
 
+// Woken in their own bed (src/folk/brain.js phSleep: the crowd sleep at home, src/folk/phobos-homes.js), by a stranger
+// stood over them. By the sort of work that has them up: those who work the night are abed by day.
+const WOKEN_ANY = [
+  "Who let you in? No. Don't tell me. Just go out the way you came.",
+  "If the house is on fire, say so. If it isn't, get out of it.",
+  "I've nothing worth taking. I checked. Twice.",
+  "Is it the Loyal? It isn't. Then it can wait for the light.",
+];
+const WOKEN_NIGHT = [
+  "I work nights. That makes this my night. Get out of my night.",
+  "It's broad day. Broad day is when I sleep. Come back at dark like everyone else.",
+  "Unless you're paying, I'm asleep. Are you paying? Then I'm asleep.",
+];
+const WOKEN_EARLY = [
+  "The ovens want me in three hours. Every minute you stand there is one I'll feel at the trough.",
+  "I'm up before the bells as it is. Let me have what's left of the dark.",
+];
+const WOKEN_POOR = [
+  "It's a bed. It's mine for the night. I paid the penny. Find your own.",
+  "Don't kick it. It's only straw, but it's my straw.",
+];
+const WOKEN_HIGH = [
+  "There is a bell for the servants. You are not a servant, and you did not ring it.",
+  "My man is downstairs. He'll see you out, one way or another.",
+];
+const WOKEN_DEAD = [
+  "I spend all day with the dead. They don't wake me. Have their manners.",
+  "If somebody's died, they'll keep till morning. They always do.",
+];
+const NIGHT_KINDS = ['watchman', 'lamplighter', 'tavern', 'cutpurse', 'drunk', 'fortune', 'ruffian', 'fence', 'dicer'];
+const woken = (kind) => NIGHT_KINDS.includes(kind) ? WOKEN_NIGHT : kind === 'baker' ? WOKEN_EARLY : ['beggar', 'urchin', 'sweep', 'mourner'].includes(kind) ? WOKEN_POOR
+  : ['moneylender', 'merchant'].includes(kind) ? WOKEN_HIGH : ['gravedigger', 'bonecarver', 'plaguedoctor'].includes(kind) ? WOKEN_DEAD : WOKEN_ANY;
+
 // Everyone in the crowd, by id, with their kind's lines.
 // (Each one's own lines laid over their kind's: theirs where they have them, the kind's for anything they haven't. And the
 // castle's eight, posted in its wards, theirs alone.)
 const over = (k = {}, o = {}) => ({ ...k, ...o, greet: { ...k.greet, ...o.greet }, barks: { ...k.barks, ...o.barks } });
 export const LINES = {
-  ...Object.fromEntries(CROWD.map((p) => [p.id, over(KINDS[p.kind], SAYS[p.base || p.id])])),
+  ...Object.fromEntries(CROWD.map((p) => [p.id, over({ ...KINDS[p.kind], barks: { woken: woken(p.kind), ...KINDS[p.kind]?.barks } }, SAYS[p.base || p.id])])),
   ...Object.fromEntries(Object.entries(SAYS).filter(([id]) => id.startsWith('cs_')).map(([id, v]) => [id, over({}, v)])),
 };

@@ -214,6 +214,15 @@ function write(cx, cy, cz) {
     const seen = map.inbox[FIN.SEEN + me.i] > 0.5, sighted = seen && !me.seen;
     me.seen = seen;
     const every = !seen ? gaps.hidden : d < gaps.near ? 0 : d < gaps.mid ? gaps.midGap : gaps.farGap;
+    // (A bed of Phobos's, the first time one of its crowd lies down in it (src/folk/brain.js layAbed): onto the list, and the
+    // main thread told, for its blanket.)
+    if (me.bed?.bed?.crowd && !bedIndex.has(me.bed.bed)) {
+      const b = me.bed.bed;
+      bedIndex.set(b, beds.length);
+      const o = { x: b.x, y: b.y, z: b.z, foot: b.foot, floor: 0, house: b.house, width: b.width, small: 0, len: b.len, pallet: b.pallet };
+      beds.push(o);
+      self.postMessage({ type: 'bed', i: beds.length - 1, bed: o });
+    }
     // (Tucked in once they're down in a bed: the same moment the blanket's drawn over them, below.)
     const tuck = me.posture === 'lie' && me.pose.rest > 0.5 && me.bed?.bed && bedIndex.has(me.bed.bed) ? 1 : 0;
     if (tuck !== me.pose.tuck) { me.pose.tuck = tuck; me.posedAt = -1; }

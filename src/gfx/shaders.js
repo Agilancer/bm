@@ -359,7 +359,11 @@ fn applyFog(c: vec3f, p: vec3f, viewDir: vec3f, dist: f32) -> vec3f {
   let f = 1.0 - exp(-dist * density);
   let s = pow(max(dot(viewDir, F.sunDir.xyz), 0.0), 6.0);
   let col = mix(F.fogColor.rgb, F.sunColor.rgb * 0.34, s * F.fogParams.y);
-  return mix(c, col, clamp(f, 0.0, 1.0));
+  // The air between: what's far loses its colour and goes a little blue before the haze has it, so a far wood isn't
+  // the green of a near one. (The world once-over, 2026-11-20.)
+  let air = smoothstep(90.0, 800.0, dist) * 0.42;
+  let c2 = mix(c, vec3f(dot(c, vec3f(0.3, 0.55, 0.15))) * vec3f(0.93, 0.98, 1.08), air);
+  return mix(c2, col, clamp(f, 0.0, 1.0));
 }
 
 // Mikkelsen's bump from a height field, with no tangents.
