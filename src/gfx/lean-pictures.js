@@ -8,6 +8,8 @@
 // and a copy whose original has changed is never found, so it's never shown over the new one.
 
 const SAMPLE = 4096;
+// A copy fetched ahead and not asked for in this long is let go (asked for after, it's fetched again).
+const AHEAD_MS = 60000;
 const keys = new WeakMap();
 
 /** As tools/lean_pictures/make.py picture_key: the length, and FNV-1a over the first, middle and last 4 KB. */
@@ -31,15 +33,45 @@ export function pictureOf(glb, imageIndex) {
 
 export class LeanPictures {
   // on: this tier shrinks its pictures. get: (url) => a Blob of that file (src/core/files.js getFile, which the loading
-  // screen names).
-  constructor(base, on, get) {
+  // screen names). fits(entry): whether this tier will use that copy, so it's worth fetching ahead.
+  constructor(base, on, get, fits = () => true) {
     this.base = base;
     this.get = get;
+    this.fits = fits;
     this.list = null;
+    this.models = new Map();   // a model's path under assets/ -> its pictures' entries
+    this.early = new Map();    // a copy's file -> its fetch, begun ahead
     this.used = 0;
     this.missed = 0;
+    this.unused = 0;           // (fetched ahead and let go unasked)
     // (Without the list, every picture is decoded from its model, as before.)
-    this.ready = on ? get(`${base}assets/lean/pictures.json`, 'json').then((m) => { this.list = m.pictures; }, (e) => console.warn('phone pictures off:', e)) : Promise.resolve();
+    this.ready = on ? get(`${base}assets/lean/pictures.json`, 'json').then((m) => {
+      this.list = m.pictures;
+      for (const e of Object.values(m.pictures)) for (const at of e.in || []) {
+        const model = at.slice(0, at.lastIndexOf('#'));
+        this.models.set(model, [...(this.models.get(model) || []), e]);
+      }
+    }, (e) => console.warn('phone pictures off:', e)) : Promise.resolve();
+  }
+
+  /**
+   * A model's file is being fetched (src/core/files.js fetchAhead): its copies this tier will use start coming down beside
+   * it, so on a slow line none is waited for in turn as the models are built one by one.
+   */
+  ahead(url) {
+    const path = String(url).split(/[?#]/)[0], at = path.lastIndexOf('assets/');
+    if (at < 0 || !path.endsWith('.glb')) return;
+    const model = decodeURIComponent(path.slice(at + 7));
+    this.ready.then(() => {
+      for (const e of this.models.get(model) || []) {
+        if (this.early.has(e.file) || !this.fits(e)) continue;
+        const p = this.get(`${this.base}assets/lean/${e.file}`, 'blob');
+        p.catch(() => {});
+        this.early.set(e.file, p);
+        const t = setTimeout(() => { if (this.early.get(e.file) === p) { this.early.delete(e.file); this.unused++; } }, AHEAD_MS);
+        t.unref?.();
+      }
+    });
   }
 
   /** The original's [width, height] and its copy, for a picture of a model's (pictureOf), or null where there's none. */
@@ -50,8 +82,10 @@ export class LeanPictures {
 
   /** The copy's Blob (null if it can't be had: the original is decoded instead). */
   async copy(entry) {
+    const early = this.early.get(entry.file);
+    this.early.delete(entry.file);
     try {
-      const b = await this.get(`${this.base}assets/lean/${entry.file}`, 'blob');
+      const b = await (early || this.get(`${this.base}assets/lean/${entry.file}`, 'blob'));
       this.used++;
       return b;
     } catch (e) {

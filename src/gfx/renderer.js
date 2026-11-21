@@ -26,7 +26,7 @@ import { DAWN_HOUR, DUSK_HOUR, secondsPerHour, daylight } from './daylight.js';
 import { Pines } from './pines.js';
 import { Rocks } from './rocks.js';
 import { accessor, parseGLB } from '../core/glb.js';
-import { dropFile, getFile, lanes, watched } from '../core/files.js';
+import { dropFile, fetchAhead, getFile, lanes, watched } from '../core/files.js';
 import { C, C_BLEEDS, C_MASKS, C_GASH, C_PALETTE, C_PROPS, C_SIZE, CHARS_START, H, MAX_CHARS, SLIMES_START, SPELL_PALETTE, VM_PALETTE, WEAPONS } from '../core/layout.js';
 import { addStumps } from './stumps.js';
 import { GEAR, ROBES, SKULLS } from '../items/items.js';
@@ -272,7 +272,9 @@ export class Renderer {
     const { device, tier, pool } = this;
     this.base = base;
     // (Off, ?lean=0, to set them side by side.)
-    this.leanPics = new LeanPictures(base, tier.texScale < 1 && new URLSearchParams(location.search).get('lean') !== '0', getFile);
+    const fits = (e) => { const [w, h] = scaledSize(e.size[0], e.size[1], tier.texScale); return w <= e.copy[0] && h <= e.copy[1]; };
+    this.leanPics = new LeanPictures(base, tier.texScale < 1 && new URLSearchParams(location.search).get('lean') !== '0', getFile, fits);
+    fetchAhead((url) => this.leanPics.ahead(url));
     const lean = !!tier.lean;
     const pictures = lanes(lean ? 2 : 6);     // pictures decoding or going up to the GPU at once, over all the arrays
     const ahead = lanes(lean ? 2 : 6);        // models fetched, waiting to be built or being built

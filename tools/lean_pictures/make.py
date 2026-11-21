@@ -9,7 +9,12 @@ chroma, a PNG as a PNG, a WebP as a WebP), and assets/lean/pictures.json, which 
 what it wants is no bigger than the copy, and sizes what it makes from the original's sides, so every texture comes out
 the size it was (src/gfx/renderer.js bitmapTexture).
 
-Not Lisandra's (assets/game/lisandra/): she is shown as the owner made her, file for file.
+Not Lisandra's (assets/game/lisandra/): she is shown as the owner made her, file for file. The game finds a copy by the
+picture's bytes, not its file, so no copy is made of any picture that is also hers, wherever else it sits.
+
+What a copy would change is left alone, and the picture is decoded from its model as before: one turned by its EXIF, one
+with any see-through pixel (a resize mixes colour by its alpha, and some maps keep data there), a CMYK JPEG, a 16-bit PNG
+and a lossless WebP.
 
 Run it again whenever a model's pictures change: a copy whose original has gone is removed, and one the game can't match
 to a picture is never used (tests/lean-pictures.test.mjs checks they agree).
@@ -68,15 +73,27 @@ def glb_pictures(path):
     return out
 
 
-def models():
+def models(skipped=False):
+    """(path under assets/, file) of every model; skipped: those under SKIP instead."""
     for base, dirs, files in os.walk(ASSETS):
         dirs.sort()
         for f in sorted(files):
             if f.lower().endswith(".glb"):
                 p = os.path.join(base, f)
                 rel = os.path.relpath(p, ASSETS).replace(os.sep, "/")
-                if not rel.startswith(SKIP):
+                if rel.startswith(SKIP) == skipped:
                     yield rel, p
+
+
+def webp_lossless(data):
+    """Whether a WebP's picture is lossless (a VP8L chunk), which a copy at quality 92 wouldn't be."""
+    at = 12
+    while at + 8 <= len(data):
+        tag, n = data[at:at + 4], struct.unpack_from("<I", data, at + 4)[0]
+        if tag in (b"VP8 ", b"VP8L"):
+            return tag == b"VP8L"
+        at += 8 + n + (n & 1)
+    return False
 
 
 def copy_of(data):
@@ -90,12 +107,23 @@ def copy_of(data):
     s = SIDE / max(w, h)
     size = (max(1, round(w * s)), max(1, round(h * s)))
     kind = im.format
+    if kind == "JPEG" and im.mode not in ("RGB", "L"):
+        raise ValueError(f"a {im.mode} JPEG")
+    if kind == "PNG" and data[24] != 8:
+        raise ValueError(f"a {data[24]}-bit PNG")
+    if kind == "WEBP" and webp_lossless(data):
+        raise ValueError("a lossless WebP")
+    sampling = JpegImagePlugin.get_sampling(im) if kind == "JPEG" else None
     if im.mode not in ("RGB", "RGBA", "L"):
         im = im.convert("RGBA" if "A" in im.mode or "transparency" in im.info else "RGB")
+    if im.mode == "RGBA":
+        if im.getchannel("A").getextrema()[0] < 255:
+            raise ValueError("see-through, which a resize would mix by")
+        im = im.convert("RGB")
     small = im.resize(size, Image.LANCZOS)
     buf = io.BytesIO()
     if kind == "JPEG":
-        small.save(buf, "JPEG", quality=92, subsampling=JpegImagePlugin.get_sampling(im), optimize=True)
+        small.save(buf, "JPEG", quality=92, subsampling=sampling, optimize=True)
         ext = "jpg"
     elif kind == "PNG":
         small.save(buf, "PNG", optimize=True)
@@ -110,8 +138,9 @@ def copy_of(data):
 
 def main():
     os.makedirs(OUT, exist_ok=True)
-    pictures, seen = {}, {}
-    made = skipped = 0
+    pictures, seen, left = {}, {}, {}
+    made = 0
+    theirs = {picture_key(data) for _, path in models(skipped=True) for _, data in glb_pictures(path)}
     for rel, path in models():
         for k, data in glb_pictures(path):
             w, h = Image.open(io.BytesIO(data)).size
@@ -119,6 +148,11 @@ def main():
                 continue
             key = picture_key(data)
             full = hashlib.sha1(data).hexdigest()
+            if key in theirs:
+                if key not in seen:
+                    left[key] = f"{rel}#{k}: also Lisandra's"
+                seen[key] = full
+                continue
             if key in seen:
                 if seen[key] != full:
                     sys.exit(f"two different pictures share the key {key} ({rel} #{k}): lengthen the sample")
@@ -129,8 +163,7 @@ def main():
             try:
                 got = copy_of(data)
             except ValueError as e:
-                print(f"left {rel} #{k}: {e}")
-                skipped += 1
+                left[key] = f"{rel}#{k}: {e}"
                 continue
             if not got:
                 continue
@@ -146,12 +179,15 @@ def main():
     gone = [f for f in os.listdir(OUT) if f not in keep]
     for f in gone:
         os.remove(os.path.join(OUT, f))
-    manifest = {"side": SIDE, "pictures": dict(sorted(pictures.items()))}
+    # (left: big pictures with no copy, and why; tests/lean-pictures.test.mjs knows them from one that was missed.)
+    manifest = {"side": SIDE, "pictures": dict(sorted(pictures.items())), "left": dict(sorted(left.items()))}
     with open(os.path.join(OUT, "pictures.json"), "w", newline="\n") as f:
         json.dump(manifest, f, indent=1)
         f.write("\n")
     size = sum(os.path.getsize(os.path.join(OUT, p["file"])) for p in pictures.values())
-    print(f"{len(pictures)} copies ({made} written, {len(gone)} removed, {skipped} left), {size / 1048576:.1f} MB")
+    for why in left.values():
+        print(f"left {why}")
+    print(f"{len(pictures)} copies ({made} written, {len(gone)} removed, {len(left)} left), {size / 1048576:.1f} MB")
 
 
 if __name__ == "__main__":

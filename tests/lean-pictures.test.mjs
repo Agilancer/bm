@@ -44,8 +44,7 @@ function* models(dir, rel = '') {
 }
 
 test("every big picture in a model has its phone copy, found by its own bytes, at 1024; none of Lisandra's; none left over", () => {
-  const found = new Set();
-  let lisandra = 0;
+  const found = new Set(), all = [];
   for (const [rel, p] of models(fileURLToPath(assets))) {
     const b = fs.readFileSync(p);
     if (b.readUInt32LE(0) !== 0x46546c67) continue;
@@ -53,20 +52,26 @@ test("every big picture in a model has its phone copy, found by its own bytes, a
     (json.images || []).forEach((im, k) => {
       if (im.bufferView === undefined) return;
       const bv = json.bufferViews[im.bufferView], bytes = b.subarray(start + (bv.byteOffset || 0), start + (bv.byteOffset || 0) + bv.byteLength);
-      const [w, h] = sides(bytes);
-      if (w * h < 1.5 * 1024 * 1024) return;
-      const key = pictureKey(new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.length)), e = list.pictures[key];
-      if (rel.startsWith('game/lisandra/')) { lisandra++; assert.ok(!e || !e.in.some((s) => s.startsWith('game/lisandra/')), `${rel} #${k} has a copy`); return; }
-      assert.ok(e, `${rel} #${k} (${w}x${h}) has no copy: run python tools/lean_pictures/make.py`);
-      assert.deepEqual(e.size, [w, h]);
-      assert.equal(e.sha1, crypto.createHash('sha1').update(bytes).digest('hex'), `${rel} #${k}: another picture with its key`);
-      const copy = fs.readFileSync(new URL(`lean/${e.file}`, assets));
-      assert.deepEqual(sides(copy), e.copy, e.file);
-      assert.equal(Math.max(...e.copy), 1024);
-      found.add(key);
+      all.push([rel, k, bytes, pictureKey(new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.length))]);
     });
   }
-  assert.ok(lisandra > 0, "(Lisandra's pictures were looked at)");
+  // The game finds a copy by the bytes alone, so none may be found for any picture of Lisandra's, in her files or another's.
+  const hers = new Set(all.filter(([rel]) => rel.startsWith('game/lisandra/')).map(([, , , key]) => key));
+  assert.ok(hers.size > 0, "(Lisandra's pictures were looked at)");
+  for (const [rel, k, bytes, key] of all) {
+    const e = list.pictures[key];
+    if (hers.has(key)) { assert.ok(!e, `${rel} #${k}: a copy of a picture of Lisandra's`); continue; }
+    const [w, h] = sides(bytes);
+    if (w * h < 1.5 * 1024 * 1024) continue;
+    if (!e && list.left[key]) continue;
+    assert.ok(e, `${rel} #${k} (${w}x${h}) has no copy: run python tools/lean_pictures/make.py`);
+    assert.deepEqual(e.size, [w, h]);
+    assert.equal(e.sha1, crypto.createHash('sha1').update(bytes).digest('hex'), `${rel} #${k}: another picture with its key`);
+    const copy = fs.readFileSync(new URL(`lean/${e.file}`, assets));
+    assert.deepEqual(sides(copy), e.copy, e.file);
+    assert.equal(Math.max(...e.copy), 1024);
+    found.add(key);
+  }
   assert.deepEqual(Object.keys(list.pictures).filter((k) => !found.has(k)), [], 'copies no model holds');
   const files = new Set(Object.values(list.pictures).map((e) => e.file));
   assert.deepEqual(fs.readdirSync(new URL('lean/', assets)).filter((f) => f !== 'pictures.json' && !files.has(f)), [], 'files not in the list');
@@ -75,10 +80,10 @@ test("every big picture in a model has its phone copy, found by its own bytes, a
 // A model of one picture, its bytes those given.
 const glbOf = (u8) => ({ json: { images: [{ bufferView: 0, mimeType: 'image/jpeg' }], bufferViews: [{ byteLength: u8.length }] }, buffer: u8.buffer, binStart: 0 });
 
-function rig({ size = [4096, 4096], copy = [1024, 1024], listFails = false, copyFails = false, copyBad = false } = {}) {
+function rig({ size = [4096, 4096], copy = [1024, 1024], listFails = false, copyFails = false, copyBad = false, copyIs = copy } = {}) {
   const bytes = new Uint8Array(30000).map((_, i) => (i * 31) >> 3);
   const key = pictureKey(bytes), small = new Blob(['copy']);
-  const asked = [], decoded = [];
+  const asked = [], decoded = [], resized = [], live = new Set();
   const get = async (url, as) => {
     asked.push(url.split('/').pop());
     if (url.endsWith('pictures.json')) { if (listFails) throw new Error('404'); return { pictures: { [key]: { file: `${key}.jpg`, size, copy } } }; }
@@ -88,13 +93,16 @@ function rig({ size = [4096, 4096], copy = [1024, 1024], listFails = false, copy
   const r = Object.create(Renderer.prototype);
   r.leanPics = new LeanPictures('base/', true, get);
   const blob = pictureOf(glbOf(bytes), 0);
+  const bitmap = (width, height) => { const b = { width, height, close() { live.delete(b); } }; live.add(b); return b; };
   globalThis.createImageBitmap = async (src, opts) => {
-    if (src === blob) { decoded.push('original'); return { width: size[0], height: size[1], close() {} }; }
-    if (src === small) { decoded.push('copy'); if (copyBad) throw new Error('bad copy'); return { width: copy[0], height: copy[1], close() {} }; }
-    return { width: opts.resizeWidth, height: opts.resizeHeight, close() {} };
+    if (src === blob) { decoded.push('original'); return bitmap(size[0], size[1]); }
+    if (src === small) { decoded.push('copy'); if (copyBad) throw new Error('bad copy'); return bitmap(copyIs[0], copyIs[1]); }
+    resized.push(`${opts.resizeWidth}x${opts.resizeHeight}`);
+    return bitmap(opts.resizeWidth, opts.resizeHeight);
   };
-  const make = async (scale, cap = 0, step = 1) => { const b = await r.decodePicture(blob, scale, cap, step); return [b.width, b.height]; };
-  return { r, blob, asked, decoded, make };
+  // (What's made, with every bitmap made on the way closed but it.)
+  const make = async (scale, cap = 0, step = 1) => { const b = await r.decodePicture(blob, scale, cap, step); assert.deepEqual([...live], [b]); b.close(); return [b.width, b.height]; };
+  return { r, blob, asked, decoded, resized, make };
 }
 
 test("a copy is decoded only where what's made is no bigger than it, and comes out the size the original would have made", async () => {
@@ -102,6 +110,8 @@ test("a copy is decoded only where what's made is no bigger than it, and comes o
   let t = rig();
   assert.deepEqual(await t.make(0.25, 256, 4), [256, 256]);
   assert.deepEqual(t.decoded, ['copy']);
+  // (Shrunk from the copy in halves, which Chrome filters, not in one go, which it doesn't.)
+  assert.deepEqual(t.resized, ['512x512', '256x256']);
   // A body's (full: 1024, the copy itself) and its normals at half that.
   assert.deepEqual(await t.make(0.25, 0, 4), [1024, 1024]);
   assert.deepEqual(await t.make(0.125, 0, 4), [512, 512]);
@@ -112,8 +122,15 @@ test("a copy is decoded only where what's made is no bigger than it, and comes o
   // A long picture (the pale gauntlets', 3072 by 1024): as from the original, to the block.
   t = rig({ size: [3072, 1024], copy: [1024, 341] });
   assert.deepEqual(await t.make(0.25, 0, 4), [768, 256]);
+  t.resized.length = 0;
   assert.deepEqual(await t.make(0.25, 256, 4), [256, 84]);
+  assert.deepEqual(t.resized, ['512x171', '256x86', '256x84']);
   assert.deepEqual(t.decoded, ['copy', 'copy']);
+  // (From the original, as before: in one go.)
+  t = rig();
+  t.resized.length = 0;
+  assert.deepEqual(await t.make(0.5), [2048, 2048]);
+  assert.deepEqual(t.resized, ['2048x2048']);
   // (What a picture with no copy, as Lisandra's, makes: from itself.)
   const plain = new Blob(['x']);
   globalThis.createImageBitmap = async (src, opts) => (src === plain ? { width: 4096, height: 4096, close() {} } : { width: opts.resizeWidth, height: opts.resizeHeight, close() {} });
@@ -122,7 +139,8 @@ test("a copy is decoded only where what's made is no bigger than it, and comes o
 });
 
 test("without its copy or the list, a picture is decoded from its model, the same size", async () => {
-  for (const how of [{ copyFails: true }, { copyBad: true }, { listFails: true }]) {
+  // (copyIs: a copy smaller than the list says, as one kept from before might be, isn't blown up to the size.)
+  for (const how of [{ copyFails: true }, { copyBad: true }, { listFails: true }, { copyIs: [128, 128] }]) {
     const t = rig(how);
     const was = console.warn; console.warn = () => {};
     try { assert.deepEqual(await t.make(0.25, 256, 4), [256, 256], JSON.stringify(how)); } finally { console.warn = was; }
@@ -134,6 +152,39 @@ test("without its copy or the list, a picture is decoded from its model, the sam
   await off.ready;
   assert.equal(off.find(new Blob(['x'])), null);
   assert.deepEqual(asked, []);
+});
+
+test("a model's copies start coming down as its file is asked for, only those this tier uses, and are taken from there", async () => {
+  const asked = [];
+  const pictures = {
+    a: { file: 'a.jpg', size: [4096, 4096], copy: [1024, 1024], in: ['game/x.glb#0', 'game/y.glb#1'] },
+    b: { file: 'b.jpg', size: [2048, 2048], copy: [1024, 1024], in: ['game/x.glb#1'] },
+    c: { file: 'c.jpg', size: [4096, 4096], copy: [1024, 1024], in: ['monsters/z.glb#0'] },
+  };
+  const get = async (url) => { asked.push(url.split('/').pop()); return url.endsWith('.json') ? { pictures } : new Blob([url]); };
+  const settle = () => new Promise((r) => setTimeout(r, 5));
+  // As Medium: half a 4096 picture is more than its copy holds, so that one isn't fetched ahead.
+  const L = new LeanPictures('https://h/bm/', true, get, (e) => e.size[0] / 2 <= e.copy[0]);
+  L.ahead('https://h/bm/assets/game/x.glb?v=2'); L.ahead('https://h/bm/assets/game/x.png'); L.ahead('https://h/bm/assets/game/x.glb');
+  await settle();
+  assert.deepEqual(asked, ['pictures.json', 'b.jpg']);
+  // Asked for: one fetched ahead is not fetched again; one that wasn't is fetched now.
+  assert.ok(await L.copy(pictures.b));
+  assert.ok(await L.copy(pictures.a));
+  assert.deepEqual(asked, ['pictures.json', 'b.jpg', 'a.jpg']);
+  assert.equal(L.used, 2);
+  // As a phone: every copy of the model.
+  asked.length = 0;
+  const P = new LeanPictures('', true, get);
+  P.ahead('assets/monsters/z.glb'); P.ahead('assets/game/y.glb');
+  await settle();
+  assert.deepEqual(asked, ['pictures.json', 'c.jpg', 'a.jpg']);
+  // Off: nothing.
+  const off = [];
+  const O = new LeanPictures('', false, async (u) => { off.push(u); return {}; });
+  O.ahead('assets/game/x.glb');
+  await settle();
+  assert.deepEqual(off, []);
 });
 
 test('the key reads the same three samples as the tool, whatever the length', () => {
