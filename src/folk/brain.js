@@ -14,6 +14,8 @@ import { CHATTER, LINES as CROWD_LINES, MEETS } from './lines/phobos.js';
 import { PHOBOS } from '../core/phobos-data.js';
 import { CITY, cityIn } from '../core/east.js';
 import { phobosLanes } from '../core/phobos-build.js';
+// (Baked from the houses' plans, tools/homes/bake-beds.mjs: this thread never lays out the city's houses.)
+import { bakedBed } from './phobos-beds.js';
 
 const TAU = Math.PI * 2;
 export const wrapAngle = (a) => a - TAU * Math.floor((a + Math.PI) / TAU);
@@ -254,7 +256,7 @@ export class Life {
     // (Most of the crowd to set down at once, as when you come into the city or are put down in it: a cut, so anywhere round
     // you will do, in sight or not. One or two at a time, as you walk on: out of sight.)
     let away = 0;
-    for (const me of this.crowd) if (me.parked ? this.inCity && me.crowdK < this.crowdCap && !(me.p.area && farFrom(me.p.area, world.player)) : !me.p.area && Math.hypot(me.x - world.player[0], me.z - world.player[2]) > RECALL) away++;
+    for (const me of this.crowd) if (me.abed) continue; else if (me.parked ? this.inCity && me.crowdK < this.crowdCap && !(me.p.area && farFrom(me.p.area, world.player)) : !me.p.area && Math.hypot(me.x - world.player[0], me.z - world.player[2]) > RECALL) away++;
     this.burst = away >= 6;
     this.clock += dt;
     if (first || this.jumped(world)) this.place();
@@ -267,7 +269,7 @@ export class Life {
       if (me.posted) this.attend(me);
       // (One of Phobos's crowd left far behind (or one who lives in a district, when you've gone far from it: AREA_REACH), or the player gone out of the city: what they were at is dropped, and roam
       // starts again, setting them down near the player or parking them.)
-      if (me.crowd && !me.parked && (!this.inCity || (me.p.area ? farFrom(me.p.area, this.player) : Math.hypot(me.x - this.player[0], me.z - this.player[2]) > RECALL))) { me.task?.return(); me.task = null; me.taskDone = true; }
+      if (me.crowd && !me.parked && !me.abed && (!this.inCity || (me.p.area ? farFrom(me.p.area, this.player) : Math.hypot(me.x - this.player[0], me.z - this.player[2]) > RECALL))) { me.task?.return(); me.task = null; me.taskDone = true; }
       // (A script that won't wind down when its hour's up is stopped.)
       if (!me.task || me.taskKey !== me.key && (me.taskDone || this.clock - me.keyAt > 45)) this.start(me);
       const r = me.task.next();
@@ -986,6 +988,8 @@ const laneHash = () => {
 function* roam(me, key) {
   const life = me.life;
   while (me.alive(key)) {
+    // (Their hours abed: home to it, below.)
+    if (abedNow(me, life.hour)) { yield* phSleep(me, key); if (abedNow(me, life.hour)) yield; continue; }
     const [px, , pz] = life.player, area = me.p.area && DISTRICT[me.p.area];
     if (!life.inCity || me.crowdK >= life.crowdCap || (area && Math.hypot(px - area.x, pz - area.z) > area.r + AREA_REACH)) { me.parked = true; me.moving = 0; me.pairWith = null; yield; continue; }
     if (area ? me.parked : me.parked || Math.hypot(me.x - px, me.z - pz) > RECALL) {
@@ -1000,6 +1004,96 @@ function* roam(me, key) {
     else if (r < still + talky) { if (o0) yield* chatWith(me, o0, key); else yield* loiter(me, key); }
     else yield* amble(me, key);
   }
+}
+
+// The crowd's nights. Each of them has a bed in a house of their own district (src/folk/phobos-homes.js), and sleeps in
+// it: those whose work is by night (the watch, the lamplighters, the alehouse, the cutpurses and their like) from the
+// morning to the middle of the afternoon, the bakers from the evening till before the bells, everyone else from late
+// evening to the morning, each a little earlier or later than the next. Off the street out of sight at their hour (walking
+// on till nobody's looking); abed in their house whenever you come by it, under the blanket (src/gfx/blankets.js); sat up on
+// the bed's edge if you wake them, and back down once you've gone; and in the morning they lie in till you've gone from
+// their room before they're about. (Not those you've a quest with: they keep the hours a quest wants them at.)
+// (The owner, 2026-11-20: "Make sure everyone has beds too in phobos, and places to sleep, which are in beds in their houses".)
+const NIGHT_WORK = new Set(['watchman', 'lamplighter', 'tavern', 'cutpurse', 'drunk', 'fortune', 'ruffian', 'fence', 'dicer']);
+// (Who quests are given by, or taken to: src/quests/phobos-quests.js, phobos-quests-town.js. Up at every hour.)
+const QUEST_AWAKE = new Set(['ph_garrow', 'ph_wren', 'ph_pie', 'ph_barge', 'ph_bolt', 'ph_clerk', 'ph_flop', 'ph_brann', 'ph_tutor', 'ph_ostler', 'ph_cart',
+  'ph_major', 'ph_silk', 'ph_fop', 'ph_dowager', 'ph_eel', 'ph_adze', 'ph_knave', 'ph_rind', 'ph_curry', 'ph_flay']);
+const ABED_SHOW = 30, ABED_HIDE = 40;
+export function abedNow(me, hour) {
+  const p = me.p;
+  if (!p.id || QUEST_AWAKE.has(p.id) || hour === undefined) return false;
+  const [a, b] = NIGHT_WORK.has(p.kind) ? [7.5, 15] : p.kind === 'baker' ? [20.5, 4.5] : [22.5, 6.5];
+  const j = (hash(p.id + ':abed') - 0.5) * 1.6, t = (((hour - a - j) % 24) + 24) % 24;
+  return t < (((b - a) % 24) + 24) % 24;
+}
+function* phSleep(me, key) {
+  const life = me.life, bed = bakedBed(me.p.id);
+  if (!bed) return;
+  const H = { x: bed.hx, z: bed.hz };
+  // Off the street: on along it while anyone could see them go.
+  if (!me.parked) {
+    me.pairWith = null;
+    while (me.alive(key) && abedNow(me, life.hour) && (me.seen || Math.hypot(me.x - life.player[0], me.z - life.player[2]) < 14) && life.inCity) yield* amble(me, key);
+  }
+  me.parked = true; me.moving = 0; me.pairWith = null; me.abed = true;
+  let inBed = false;
+  try {
+    while (me.alive(key)) {
+      const [px, , pz] = life.player, d = Math.hypot(H.x - px, H.z - pz), up = abedNow(me, life.hour);
+      const show = life.inCity && me.crowdK < life.crowdCap && d < (inBed ? ABED_HIDE : ABED_SHOW);
+      if (!up && (!inBed || (!me.seen && d > 6))) break;
+      if (show && !inBed && up) {
+        // (Abed already when you come by: put down in it, as the townsfolk in Bellmourn are when you come into town.)
+        layAbed(me, bed, true);
+        inBed = true;
+      } else if (!show && inBed) { inBed = false; me.parked = true; me.asleep = false; me.posture = 'stand'; me.pose.restTo = me.pose.rest = 0; me.act = ACT.WALK; }
+      if (inBed && me.woken) {
+        // Woken by the stranger: sat up on the edge, until they've gone; then back down.
+        me.edge = bed.edge;
+        yield* rise(me);
+        me.act = ACT.SIT;
+        while (me.woken && me.alive(key)) yield;
+        if (!me.alive(key)) break;
+        yield* wait(me, 2 + me.rng() * 2, key);
+        if (abedNow(me, life.hour)) yield* layAbed(me, bed, false);
+      }
+      yield;
+    }
+  } finally {
+    // (Up and out: not to be seen again till they're set down on the street, out of sight.)
+    me.abed = false; me.asleep = false; me.woken = false; me.parked = true; me.moving = 0;
+    me.posture = 'stand'; me.pose.restTo = me.pose.rest = 0; me.act = ACT.WALK; me.bed = null; me.seat = null;
+    me.play('idle', { fade: 0 });
+  }
+}
+const CROWD_BEDS = new Map();
+// Down into their bed: at once (snap), or from sat on its edge, eased over onto their back. (A generator only when it eases.)
+function layAbed(me, bed, snap) {
+  // (Its place in the worker's list of beds for the blankets: src/folk/folk.worker.js write.)
+  // (One to a bed, shared by the two in a double one; its wool one of eight, by the house.)
+  const bk = `${bed.house}:${bed.cx.toFixed(2)}:${bed.cz.toFixed(2)}`;
+  if (!CROWD_BEDS.has(bk)) CROWD_BEDS.set(bk, { x: bed.cx, y: bed.y + 0.1, z: bed.cz, foot: bed.yaw, width: bed.hu * 2, len: bed.kind === 'pallet' ? 0.95 : 1.0, pallet: bed.kind === 'pallet' ? 1 : 0, floor: 0, crowd: true, house: 100000 + (bed.blanket ?? bed.house % 8) });
+  me.bed = { bed: CROWD_BEDS.get(bk), side: bed.side };
+  if (snap) {
+    me.parked = false; me.posedAt = -1;
+    me.x = bed.x; me.z = bed.z; me.y = bed.y; me.yaw = bed.yaw; me.level = bed.level;
+    me.play('get_up', { fade: 0, t: 0, speed: 0 }); me.posture = 'lie'; me.pose.restTo = me.pose.rest = 1;
+    me.act = ACT.SLEEP; me.asleep = true; me.pose.wantYaw = 0;
+    return null;
+  }
+  return (function* () {
+    const from = { x: me.x, z: me.z, y: me.y, yaw: me.yaw };
+    me.play('get_up', { fade: 1.5, t: 0, speed: 0 });
+    me.posture = 'lie';
+    while (me.pose.w < 1) {
+      const k = smooth(me.pose.w);
+      me.x = lerp(from.x, bed.x, k); me.z = lerp(from.z, bed.z, k); me.y = lerp(from.y, bed.y, k);
+      me.yaw = from.yaw + wrapAngle(bed.yaw - from.yaw) * k;
+      yield;
+    }
+    me.x = bed.x; me.z = bed.z; me.y = bed.y; me.yaw = bed.yaw;
+    me.pose.restTo = 1; me.act = ACT.SLEEP; me.asleep = true;
+  })();
 }
 
 // Set down on a lane round the player: of a few tries at random, the one best placed: in the band; ahead, in the street
@@ -1423,7 +1517,10 @@ function* work(me, key, w, helping = false) {
         let dx = mx - f.x, dz = mz - f.z;
         const dl = Math.hypot(dx, dz) || 1;
         dx /= dl; dz /= dl;
-        const off = (f.r || 0) + (w.off ?? 0.8);
+        // (Clear of its edge the way they come at it, for a long piece: the coffin maker had stood 0.75 from the trestle's middle,
+        // in the coffin on it, the critics.)
+        const edge = f.hx != null && f.hz != null ? Math.min(f.hx / Math.max(1e-3, Math.abs(dx)), f.hz / Math.max(1e-3, Math.abs(dz))) : 0;
+        const off = Math.max((f.r || 0) + (w.off ?? 0.8), edge + 0.35);
         x = f.x + dx * off; z = f.z + dz * off;
         if (w.watch) { const a = (hash(me.id) - 0.5) * 1.6; const c = Math.cos(a), s = Math.sin(a); [dx, dz] = [dx * c - dz * s, dx * s + dz * c]; x = f.x + dx * off; z = f.z + dz * off; }
         yaw = w.faceRoom ? Math.atan2(dx, dz) : Math.atan2(-dx, -dz);

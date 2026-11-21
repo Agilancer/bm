@@ -1776,9 +1776,17 @@ struct V { @builtin(position) pos: vec4f, @location(0) p: vec3f, @location(1) n:
   // Close up its rim is the softer: at the full strength it's had far off, a drop at the feet wore a neon outline.)
   let far = select(0.0, smoothstep(5.0, 22.0, dist), I.glow.a <= 1.0);
   let rim = pow(1.0 - clamp(dot(n0, v), 0.0, 1.0), mix(2.2, 0.9, far));
-  var c = shadePBR(in.p, n, v, albedo, matteRough(mr.g, mr.b), mr.b, 1.0, shadow) + I.glow.rgb * mix(1.0, 0.05 + 0.3 * far + (1.0 + 0.6 * far) * rim * rim, I.glow.a);
+  // (A gilded critter's, a 6, src/gfx/critters.js: what its metal map's red marks glows its own colour, glow.rgb times; and
+  // its metal is polished, not toned down.)
+  let painted = I.glow.a > 5.5;
+  var c: vec3f;
+  if (painted) {
+    c = shadePBR(in.p, n, v, albedo, mr.g, mr.b, 1.0, shadow) + albedo * mr.r * I.glow.rgb;
+  } else {
+    c = shadePBR(in.p, n, v, albedo, matteRough(mr.g, mr.b), mr.b, 1.0, shadow) + I.glow.rgb * mix(1.0, 0.05 + 0.3 * far + (1.0 + 0.6 * far) * rim * rim, I.glow.a);
+  }
   // A portal's stone (src/gfx/renderer.js portalModels): its runes and gems, painted the whirl's blue, glow of themselves.
-  if (I.glow.a > 1.5) {
+  if (I.glow.a > 1.5 && !painted) {
     let lit = smoothstep(0.22, 0.5, albedo.b) * smoothstep(0.08, 0.3, albedo.b - max(albedo.r, albedo.g * 0.85));
     c += albedo * lit * I.glow.a * (0.85 + 0.15 * sin(F.camPos.w * 2.3));
   }

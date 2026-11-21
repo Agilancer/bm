@@ -98,10 +98,13 @@ export class Kit {
     const p = this.part(layer), base = p.pos.length / 3;
     const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = d[0] - a[0], vy = d[1] - a[1], vz = d[2] - a[2];
     const g = [uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx];
+    let flip = false;
     if (!nrm) { const l = Math.hypot(...g) || 1; nrm = g.map((v) => v / l); }
     // (A face given its normal is wound to agree with it: the shader turns a face's normal round when its back is seen,
     // so one wound the other way, a mirrored house's ceiling say, is lit from the side it isn't seen from.)
-    else if (g[0] * nrm[0] + g[1] * nrm[1] + g[2] * nrm[2] < 0) { [b, d] = [d, b]; if (uvs) uvs = [uvs[0], uvs[3], uvs[2], uvs[1]]; }
+    // (Its texture laid first, by the corners as given: laid after the swap, a wall's ran up it slantwise, the houses pass,
+    // 2026-11-20.)
+    else flip = g[0] * nrm[0] + g[1] * nrm[1] + g[2] * nrm[2] < 0;
     if (!uvs) {
       const [tw, th] = tileOf(layer);
       const w = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]), h = Math.hypot(d[0] - a[0], d[1] - a[1], d[2] - a[2]);
@@ -117,6 +120,7 @@ export class Kit {
         uvs = [[u0, a[1] / -th], [u0 + w / tw, b[1] / -th], [u0 + w / tw, (b[1] + h) / -th], [u0, (a[1] + h) / -th]];
       }
     }
+    if (flip) { [b, d] = [d, b]; uvs = [uvs[0], uvs[3], uvs[2], uvs[1]]; }
     for (const q of [a, b, c, d]) p.pos.push(q[0], q[1], q[2]);
     for (let k = 0; k < 4; k++) p.nrm.push(nrm[0], nrm[1], nrm[2]);
     for (const t of uvs) p.uv.push(t[0], t[1]);

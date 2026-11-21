@@ -69,7 +69,7 @@ const FLAME_ROOM = 1.4;   // and a flame's than the flame
       vp = (F.view * vec4f(P + side * q.x * w * room, 1.0)).xyz;
       o.uv = vec2f(q.x * room, s);
     }
-    case 3u, 4u, 9u, 14u: {
+    case 3u, 4u, 9u, 14u, 26u: {
       // Marks on the ground. With the depth to read, they are drawn from a card as wide as they are and laid onto whatever's
       // really there; from inside one, the whole screen is the card. A phone lays them flat.
       if (LEAN) {
@@ -556,7 +556,7 @@ fn mark(uv: vec2f, dir: vec2f, A: f32, B: f32, kindF: f32, fill: f32, size: f32,
   var keep = 1.0;
   var scene = 1e6;
   if (!LEAN) { scene = textureLoad(depthTex, vec2i(in.pos.xy), 0).r; }
-  if (shape == 3u || shape == 4u || shape == 9u || shape == 14u) {
+  if (shape == 3u || shape == 4u || shape == 9u || shape == 14u || shape == 26u) {
     if (!LEAN) {
       // Back from the depth to the point in the world under this pixel.
       if (scene < 0.35) { discard; }
@@ -570,6 +570,8 @@ fn mark(uv: vec2f, dir: vec2f, A: f32, B: f32, kindF: f32, fill: f32, size: f32,
       let tall = clamp(I.p.w * 0.35, 0.6, 1.5);
       keep = 1.0 - smoothstep(tall * 0.45, tall, abs(d.y));
       if (keep <= 0.0) { discard; }
+      // (A critter's ring lies on the ground's own slope under it, x.yz: not on the grass's tips over it.)
+      if (shape == 26u && d.y - dot(I.x.yz, d.xz) > 0.045) { discard; }
     }
   } else if (!LEAN) {
     if (I.x.x < 0.0) {
@@ -598,9 +600,34 @@ fn mark(uv: vec2f, dir: vec2f, A: f32, B: f32, kindF: f32, fill: f32, size: f32,
     case 13u: { c = kite(uv); }
     case 14u: { c = mark(uv, I.a.xz, I.a.y, I.a.w, I.x.w, age, I.p.w, seed, T); }
     case 15u: { c = glyph(uv, u32(I.x.w + 0.5), I.a.w, age, seed, T); }
+    case 25u: { c = halo(uv, I.a.xyz, I.a.w); }
+    case 26u: { c = beacon(uv, I.a.xyz, I.a.w, T, seed); }
     default: { discard; }
   }
   return c * alpha * keep;
+}
+
+// The gilded critters' (src/gfx/critters.js): a soft glow its own colour (a: the colour, linear, and how hot its white heart),
+// and the ring on the ground under one, beating (a: the colour, and how fast it beats: faster near the end of its time).
+fn halo(uv: vec2f, col: vec3f, hot: f32) -> vec4f {
+  let r2 = dot(uv, uv);
+  if (r2 >= 1.0) { return vec4f(0.0); }
+  let r = sqrt(r2);
+  let soft = (1.0 - r) * (1.0 - r) * (1.0 - r);
+  let core = exp(-r2 * 60.0) * hot;
+  return vec4f(col * (soft * 0.85 + exp(-r2 * 9.0) * 0.6) + vec3f(1.0, 0.96, 0.86) * core, 0.0);
+}
+fn beacon(uv: vec2f, col: vec3f, beat: f32, T: f32, seed: f32) -> vec4f {
+  let r = length(uv);
+  if (r >= 1.3) { return vec4f(0.0); }
+  let pulse = 0.55 + 0.45 * sin(T * beat + seed * 7.0);
+  // (A fine line, as VELSCOUR's is, not a band.)
+  let ring = exp(-abs(r - 0.82) * 60.0) * (0.6 + 0.4 * pulse) * 0.45;
+  // (A second ring going out from it as the first beats.)
+  let out = fract(T * beat * 0.16 + seed);
+  let wave = exp(-abs(r - 0.82 - out * 0.4) * 70.0) * (1.0 - out) * 0.3;
+  let fill = smoothstep(0.85, 0.0, r) * 0.05 * pulse;
+  return vec4f(col * (ring + wave + fill), 0.0);
 }
 `;
 
@@ -862,6 +889,9 @@ export function shieldMeshes() {
 }
 
 const GROUND = new Set([FX.RING, FX.DISC, FX.RUNE, FX.MARK]);
+// The glows of the render thread's own past the snapshot's (src/gfx/critters.js), and their shapes.
+export const EXTRA_FX = 256;
+export const HALO = 25, BEACON = 26;
 const MAX_LIGHTS = 4;
 const STRIDE = FX_FLOATS * 4;
 
@@ -870,9 +900,12 @@ export class SpellFX {
     this.r = r;
     const { device } = r;
     const usage = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST;
-    this.glowBuf = device.createBuffer({ size: MAX_FX * STRIDE, usage });
+    // (Room past the snapshot's for glows of the render thread's own: the gilded critters', src/gfx/critters.js, which puts
+    // them in extraGround and extraAir, each { data, n }.)
+    this.glowBuf = device.createBuffer({ size: (MAX_FX + EXTRA_FX) * STRIDE, usage });
     this.solidBuf = device.createBuffer({ size: MAX_FX * STRIDE, usage });
-    this.glowData = new Float32Array(MAX_FX * FX_FLOATS);
+    this.glowData = new Float32Array((MAX_FX + EXTRA_FX) * FX_FLOATS);
+    this.extraGround = null; this.extraAir = null;
     this.solidData = new Float32Array(MAX_FX * FX_FLOATS);
     this.nGlow = 0; this.nSolid = 0; this.nFirst = 0;
     // The shields: their own instances, sorted by which of the four each is, and one mesh that holds all four.
@@ -988,6 +1021,8 @@ export class SpellFX {
         g.set(snap.subarray(o, o + FX_FLOATS), nG * FX_FLOATS);
         nG++;
       }
+      const ex = pass === 0 ? this.extraGround : pass === 1 ? this.extraAir : null;
+      if (ex && ex.n) { const k = Math.min(ex.n, MAX_FX + EXTRA_FX - nG); if (k > 0) { g.set(ex.data.subarray(0, k * FX_FLOATS), nG * FX_FLOATS); nG += k; } }
     }
     this.nGlow = nG; this.nSolid = nS;
     const q = r.device.queue;

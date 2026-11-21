@@ -13,6 +13,9 @@
 import { SLOT_COUNT, saves } from './saves.js';
 import { isMobileDevice } from './gfx/gpu.js';
 import { slim } from './audio.js';
+import { AI_PARTS, KEYS, SPEC, TABS } from './ui/settings-spec.js';
+import { icon } from './ui/icons.js';
+import { CLOSE_X } from './ui/menu-x.js';
 
 const LOGOS = {
   blastorama: 'assets/title/blastorama.webp',
@@ -49,98 +52,131 @@ const store = {
 
 const SETTINGS_KEY = 'velscour.settings';
 // keep: whether the game's files are kept on this device (coi-sw.js), asked once before the title ('ask' until then).
-export const settings = { volume: 0.8, music: 0.7, ambience: 0.8, look: 1, res: 'auto', gfx: 'auto', perf: 'off', tags: 'full', bubbles: 'on', chatlog: 'on', heroes: 'auto', keep: 'ask', autohide: 'off', autohideMap: 'on', autohideChat: 'on', autocam: 'director', autoread: 'on', autotell: 'on', phobosAwe: 'on', ticker: 1, background: 'run', bgSound: 'on' };
-// What auto-play sees to by itself (src/ui/autobrain.js allow()): each 'on' or 'off'. Off, it's left for you to do.
-// [key, what it is, on, off]
-export const AI_PARTS = [
-  ['aiGear', 'Your gear', 'Puts on the best it finds', 'Left to you'],
-  ['aiGems', 'Your gems', 'Set in open sockets', 'Left to you'],
-  ['aiSkills', 'Your skill points', 'Spent by its build', 'Left to you'],
-  ['aiBar', 'Your spell bar', 'Set from what it knows', 'Left as you set it'],
-  ['aiPartyGear', "Your party's gear", 'Puts their best on them', 'Left to you'],
-  ['aiPartySkills', "Your party's skill points", 'Spent for each by their class', 'Left to you and them'],
-  ['aiHire', 'Hiring a party', 'Hires one when it needs one', 'Only the party you hired'],
-  ['aiLoot', 'Gear on the ground', 'Taken up', 'Only coin, orbs and stuff'],
-  ['aiChests', 'Chests', 'Opened as it passes', 'Left shut'],
-  ['aiSell', 'Selling and buying', 'Sells what it won\'t wear, buys mending', 'Left to you'],
-  ['aiSleep', 'Nights at the inn', 'Sleeps when a quest waits on morning', 'Never'],
-  ['aiWild', 'Raids, tears and bounties', 'Answered when it can', 'Left alone'],
-  ['aiSurf', 'Shield riding in a fight', 'Rides away or across them', 'Keeps its feet'],
-  ['aiTeleport', 'Getting to a dungeon', 'By the skull\'s teleport', 'Walks there'],
-  ['aiBeacon', 'Getting home', 'By the beacon stone', 'Walks back'],
-];
+export const settings = { volume: 0.8, music: 0.7, ambience: 0.8, look: 1, res: 'auto', gfx: 'auto', perf: 'off', tags: 'full', bubbles: 'on', chatlog: 'on', heroes: 'auto', keep: 'ask', autohide: 'off', autohideMap: 'on', autohideChat: 'on', autocam: 'director', autoread: 'on', autotell: 'on', phobosAwe: 'on', ticker: 1, background: 'run', bgSound: 'on', tracker: 'on' };
+// What auto-play sees to by itself (src/ui/autobrain.js allow()): each 'on' or 'off'. Off, it's left for you to do. The list,
+// with the words for each, is src/ui/settings-spec.js AI_PARTS.
+export { AI_PARTS };
 for (const [k] of AI_PARTS) settings[k] = 'on';
+// As the game came: what Reset puts back, and what a setting is marked as changed from.
+export const DEFAULTS = Object.freeze({ ...settings });
 try { Object.assign(settings, JSON.parse(store.get(SETTINGS_KEY) || '{}')); } catch { /* defaults */ }
 export const saveSettings = () => store.set(SETTINGS_KEY, JSON.stringify(settings));
 
+// Digits that read as digits (src/ui/menus.css BmNum). Where Georgia has lining figures of its own (Windows' does: the
+// lining-nums asked for all over the game picks them), they're its weight and width, so BmNum's borrowed ones are let go;
+// where it hasn't (its 0 an o), BmNum stays. Told apart by measure: the two sets of figures aren't the same width.
+try {
+  const s = document.createElement('span');
+  s.style.cssText = 'position:absolute;left:-9999px;top:0;visibility:hidden;white-space:nowrap;font:700 40px Georgia';
+  s.textContent = '0123456789';
+  document.body.append(s);
+  s.style.setProperty('font-variant-numeric', 'oldstyle-nums', 'important');
+  const old = s.getBoundingClientRect().width;
+  s.style.setProperty('font-variant-numeric', 'lining-nums', 'important');
+  const lining = s.getBoundingClientRect().width;
+  s.remove();
+  if (Math.abs(old - lining) > 0.5) {
+    for (const sheet of document.styleSheets) {
+      let rules; try { rules = sheet.cssRules; } catch { continue; }
+      for (let i = rules.length - 1; i >= 0; i--) if (rules[i] instanceof CSSFontFaceRule && /BmNum/.test(rules[i].style.getPropertyValue('font-family'))) sheet.deleteRule(i);
+    }
+    document.documentElement.classList.add('own-lining');
+  }
+} catch { /* BmNum stays */ }
+
 const when = (t) => {
   const d = new Date(t);
-  return `${d.toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })} · ${d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`;
+  return `${d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}, ${d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`;
 };
-const describe = (s) => (Array.isArray(s) ? s.join(' · ') : '');
+// How long ago, in words: "just now", "12 min ago", "3 h ago", "yesterday", or the date.
+const ago = (t) => {
+  const s = (Date.now() - t) / 1000;
+  if (s < 60) return 'just now';
+  if (s < 3600) return `${Math.round(s / 60)} min ago`;
+  if (s < 86400) return `${Math.round(s / 3600)} h ago`;
+  if (s < 172800) return 'yesterday';
+  return when(t);
+};
+const playedWords = (sec) => { const m = Math.floor((sec || 0) / 60), h = Math.floor(m / 60); return h ? `${h} h ${String(m % 60).padStart(2, '0')} min` : `${m} min`; };
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const ic = (name, fall = name) => `<span class="m-ic" data-ic="${name}">${icon(fall)}</span>`;
 
-// ---- the windows' contents ---------------------------------------------------------------------------------------
+// ---- the windows' contents (src/ui/menus.css) ---------------------------------------------------------------------
 
-const SETTINGS = `
-  <h2>Settings</h2><div class="t-rule"></div>
-  <div class="t-set">
-    <label><span>Volume</span><input data-k="volume" type="range" min="0" max="1" step="0.05"></label>
-    <label><span>Music</span><input data-k="music" type="range" min="0" max="1" step="0.05"></label>
-    <label><span>Ambience</span><input data-k="ambience" type="range" min="0" max="1" step="0.05"></label>
-    <label><span>Look speed</span><input data-k="look" type="range" min="0.4" max="2.5" step="0.1"></label>
-    <label><span>Emergency bar size</span><input data-k="ticker" type="range" min="1" max="2.5" step="0.1"></label>
-    <label><span>When the game's out of sight</span><select data-k="background"><option value="run">Keeps running</option><option value="auto">Keeps running in auto-play only</option><option value="pause">Pauses</option></select></label>
-    <label><span>Sound while out of sight</span><select data-k="bgSound"><option value="on">Keeps playing</option><option value="off">Muted</option></select></label>
-    <label><span>Resolution</span><select data-k="res"><option value="auto">Auto (holds the frame rate)</option><option value="1">Full</option><option value="0.75">75%</option><option value="0.5">Half</option></select></label>
-    <label><span>Graphics</span><select data-k="gfx"><option value="auto">Auto (from your GPU)</option><option value="ultra">Ultra</option><option value="high">High</option><option value="medium">Medium (laptops)</option><option value="mobile">Low</option></select></label>
-    <label><span>Names over heads</span><select data-k="tags"><option value="full">Names and guilds</option><option value="names">Names only</option><option value="off">Off</option></select></label>
-    <label><span>Speech bubbles</span><select data-k="bubbles"><option value="on">On</option><option value="off">Off</option></select></label>
-    <label><span>Chat log</span><select data-k="chatlog"><option value="on">On</option><option value="off">Off</option></select></label>
-    <label><span>Camera in auto-play</span><select data-k="autocam"><option value="director">Directed: behind him, with shots</option><option value="third">Behind him</option><option value="first">First person: through his eyes</option><option value="off">As you left it</option></select></label>
-    <label><span>Talk in auto-play</span><select data-k="autoread"><option value="on">Left up to be read</option><option value="off">Clicked through</option></select></label>
-    <label><span>Pause auto-play at first sight of Phobos</span><select data-k="phobosAwe"><option value="on">On: he stops and looks, about 5 minutes</option><option value="off">Off: he rides on</option></select></label>
-    <label><span>Banners in auto-play</span><select data-k="autotell"><option value="on">Shown</option><option value="off">Only the feed</option></select></label>
-    <label><span>Interface in auto-play</span><select data-k="autohide"><option value="off">Always shown</option><option value="on">Hidden until you tap</option></select></label>
-    <label><span>Map in auto-play</span><select data-k="autohideMap"><option value="on">Stays on screen</option><option value="off">Hidden with the rest</option></select></label>
-    <label><span>Chat in auto-play</span><select data-k="autohideChat"><option value="on">Stays on screen</option><option value="off">Hidden with the rest</option></select></label>
-    <div class="t-sub">What auto-play sees to by itself</div>
-    ${AI_PARTS.map(([k, name, on, off]) => `<label><span>${name}</span><select data-k="${k}"><option value="on">${on}</option><option value="off">${off}</option></select></label>`).join('')}
-    <div class="t-sub">Everything else</div>
-    <label><span>Other Tessariels</span><select data-k="heroes"><option value="auto">All of them (16)</option><option value="few">A few</option><option value="off">None</option></select></label>
-    <label><span>Frame rate readout</span><select data-k="perf"><option value="off">Off</option><option value="on">On</option></select></label>
-    <label><span>Game files</span><select data-k="keep"><option value="yes">Kept on this device</option><option value="no">Downloaded each time</option><option value="ask" hidden>Not asked yet</option></select></label>
+const SPECK = Object.fromEntries(SPEC.map((s) => [s.k, s]));
+const fmtOf = (s, v) => (s.fmt === 'pct' ? `${Math.round(v * 100)}%` : s.fmt === 'x' ? `×${Number(v).toFixed(1)}` : String(v));
+// A setting's value in words, as its control shows it.
+const wordsOf = (s, v) => (s.kind === 'range' ? fmtOf(s, v) : s.kind === 'toggle' ? (v === 'on' ? s.on : s.off)
+  : s.opts.find(([o]) => String(o) === String(v))?.[1] ?? (v === 'ask' ? 'Not asked yet' : String(v)));
+const changed = (k) => k !== 'keep' && String(settings[k]) !== String(DEFAULTS[k]);
+
+// A key, or keys, as keycaps: "W A S D" four of them, "Shift + wheel" two with a plus between.
+const cap = (t) => `<em class="m-key">${t}</em>`;
+const caps = (k) => (k.includes(' + ') ? k.split(' + ').map(cap).join('<i>+</i>')
+  : k.split(/\s+/).every((t) => t.length <= 2) ? k.split(/\s+/).map((t) => (t === '–' ? '<i>–</i>' : cap(t))).join('') : cap(k));
+
+function control(s) {
+  if (s.kind === 'range') return `<div class="m-slide"><input class="m-range" type="range" data-k="${s.k}" min="${s.min}" max="${s.max}" step="${s.step}" aria-label="${s.label}"><output></output></div>`;
+  if (s.kind === 'seg') return `<div class="m-seg" role="radiogroup" aria-label="${s.label}" data-k="${s.k}">${s.opts.map(([v, w]) => `<button type="button" role="radio" data-v="${v}">${w}</button>`).join('')}</div>`;
+  if (s.kind === 'select') return `<select class="m-sel" data-k="${s.k}" aria-label="${s.label}">${s.opts.map(([v, w]) => `<option value="${v}">${w}</option>`).join('')}</select>`;
+  return `<button type="button" class="m-tog" role="switch" data-k="${s.k}" aria-label="${s.label}"><i></i><span></span></button>`;
+}
+
+// On a phone: the thumbs and the buttons. [icon, heading, words]
+const TOUCH_TIPS = [
+  ['dodge', 'Moving', 'The <b>left thumb</b> moves: push it right out to run, or press <b>run</b> to keep running. The <b>right thumb</b> looks, on or off the buttons.'],
+  ['staff', 'Your staff', 'The big button fires your <b>staff</b>. Round it: <b>dodge</b>, <b>jump</b> (hold it to ride your shield) and <b>guard</b> with your shield.'],
+  ['cast', 'Spells', 'Your spells stand in rings round those: one to six, seven to nine further out, and outermost the three <b>Utility</b> slots. Tap one to cast it; hold it to keep casting.'],
+  ['take', 'Take, talk, open', 'When something is in reach a gold button comes up beside them: <b>take</b>, <b>talk</b> or <b>open</b>.'],
+  ['menu', 'Along the top', 'The <b>menu</b> (save, load, settings), your <b>pack</b>, your <b>spellbook</b>, your <b>quest log</b> and the view. Tap the <b>map</b> in the corner for the big one.'],
+  ['pack', 'The pack', 'Tap to lift and set down, double tap to put on or stow, tap outside to drop. <b>Move Buttons</b> on the menu puts any button where your thumbs want it.'],
+];
+const TIPS = [
+  ['quest', 'Quests', 'A yellow <b>!</b> over someone\'s head means they have work for you: talk to them to take it on. The <b>quest log</b> keeps it all. Follow a quest\'s trail, track it under the map, or abandon it, and whoever gave it offers it again.'],
+  ['cast', 'Staff and spells', 'Your staff fires where you aim. Spells go on the bar: learn more in the <b>spellbook</b> with the points each level brings, and set them where you like.'],
+  ['guard', 'Your shield', 'Guard with your shield to take a blow. Hold jump to <b>ride</b> it: fast over the ground, and away from a fight.'],
+  ['pack', 'Gear', 'What you find goes in the <b>pack</b>. Put on what\'s better, set gems in its sockets, and sell the rest in Bellmourn\'s shops.'],
+  ['home', 'Getting home', 'The <b>beacon stone</b> takes you home to Bellmourn, your party with you. A night at the Tolling Bell mends you, and keeps the game.'],
+  ['save', 'Saving', 'The game keeps itself as you play: <b>Continue</b> picks up where you were. Pause to keep a copy in one of ten save slots.'],
+  ['resume', 'Auto-play', '<b>Auto-play</b> plays for you: quests, fights, levels. Settings, Auto-play says what it sees to by itself and what it leaves to you.'],
+  ['centre', 'Test Dungeon', 'On the title, <b>Test Dungeon</b> is a white hall for trying out the monsters, with any gear and a party for nothing. Nothing of it is kept.'],
+];
+const tip = ([i, h, p]) => `<div class="m-tip"><h4>${ic(i)}${h}</h4><p>${p}</p></div>`;
+
+// A tab's settings, under the headings they're grouped by; the Controls tab ends with the keys (or, on a phone, the thumbs).
+function rows(tab) {
+  let g = null, out = '';
+  for (const s of SPEC.filter((x) => x.tab === tab)) {
+    if (s.group && s.group !== g) { g = s.group; out += `<div class="m-group">${s.group}</div>`; }
+    out += `<div class="m-row" data-row="${s.k}"><div class="m-lab"><span>${s.label}</span>${s.restart ? '<em class="m-tag warn">Restart</em>' : ''}</div>${control(s)}<div class="m-rhelp">${s.help}</div></div>`;
+  }
+  if (tab === 'controls') {
+    out += TOUCH ? `<div class="m-group">On a phone</div><div class="m-tips">${TOUCH_TIPS.map(tip).join('')}</div>`
+      : `<div class="m-group">Keys</div><div class="m-keylist">${KEYS.map(([k, v]) => `<span class="m-caps">${caps(k)}</span><span>${v}</span>`).join('')}</div>`;
+  }
+  return out;
+}
+
+const SETTINGS = `<div class="m-head">${ic('settings')}<h2>Settings</h2><span class="m-sub">Kept as you change them</span><div class="m-end">${CLOSE_X}</div></div>
+  <div class="m-body">
+    <nav class="m-rail m-scroll" role="tablist">${TABS.map(([k, w, d]) => `<button type="button" role="tab" data-tab="${k}">${w}<i class="m-dot" hidden title="Changed from how the game came"></i></button>`).join('')}</nav>
+    <div class="m-pane m-scroll">${TABS.map(([t, w, d]) => `<section data-pane="${t}" hidden><h3>${w}</h3><p class="m-lede">${d}</p>${rows(t)}</section>`).join('')}</div>
+    <aside class="m-help"><h4></h4><p></p><p class="m-now"></p></aside>
   </div>
-  <p class="t-note">With the interface hidden in auto-play, a tap, a click or a key brings it straight back; it goes again when you leave it be. To move the buttons about, Move Buttons on the pause screen. Graphics and Other Tessariels take hold when the game restarts. Kept game files are checked as the game starts, and only what changed is downloaded.</p>
-  <div class="t-dbtns"><button class="t-btn" data-close><span>Done</span></button></div>`;
+  <div class="m-foot"><div class="m-hints"><span>${cap('↑')}${cap('↓')} Move</span><span>${cap('Esc')} Close</span></div>
+    <span class="m-restart" hidden><span></span><button type="button" class="m-btn pri" data-restart>Restart now</button></span>
+    <span class="m-gap"></span><button type="button" class="m-btn" data-reset="tab">Reset tab</button><button type="button" class="m-btn danger" data-reset="all">Reset all</button><button type="button" class="m-btn pri" data-close>Done</button></div>`;
 
-const KEYS = [['W A S D', 'move'], ['Mouse', 'look'], ['Shift', 'run'], ['Space', 'jump'], ['Q', 'dodge'],
-  ['Left click', 'cut: two cuts, then a slam'], ['Right click', 'wide swing'], ['1 to 9', 'cast the spell in that slot'], ['0  −  +', 'cast the Utility spell in that slot'], ['I', 'pack: swords and gems'], ['E', 'take up what\'s on the ground'], ['V', 'first or third person, once you\'re out of the cave'], ['Wheel', 'out of first person and further back, or in again'], ['Shift + wheel', 'turn the spell bar'], ['Tab', 'free the mouse to click the map, the skull or Auto; Tab again to look'], ['Esc', 'pause: save, load, settings'], ['F3', 'frame time and the thinking']];
-const HOWTO = `
-  <h2>How to Play</h2><div class="t-rule"></div>
-  <div class="t-keys">${KEYS.map(([k, v]) => `<b>${k}</b><span>${v}</span>`).join('')}</div>
-  <div class="t-touchkeys">
-    <p><b>Left thumb</b> moves: push it right out to run, or press the <b>run</b> button to keep running. <b>Right thumb</b> looks, on or off the buttons.</p>
-    <p>The big button fires your <b>staff</b>. Round it: <b>dodge</b>, <b>jump</b> (hold it to ride your shield), and <b>guard</b> when a shield is on your arm.</p>
-    <p>Your <b>spells</b> stand in rings round those: one to six, seven to nine further out, and outermost the three <b>Utility</b> slots, 0, − and +. Tap one to cast it; hold it to keep casting.</p>
-    <p>When something is in reach a gold button comes up beside them: <b>take</b>, <b>talk</b> or <b>open</b>.</p>
-    <p>Along the top: the <b>menu</b> (save, load, settings), your <b>pack</b>, your <b>spellbook</b>, your <b>quest log</b>, and the view from behind. Tap the <b>map in the corner</b> for the big one. <b>Move Buttons</b> on the menu puts any button where your thumbs want it.</p>
-    <p>In the pack: tap to lift and set down, double tap to equip or stow, tap outside to drop.</p>
-  </div>
-  <h3>Along the way</h3>
-  <ul class="t-tips">
-    <li>A gem set on a sword goes in an open socket, for good. Only the rarest swords have four.</li>
-    <li>Moving backward while cutting gives a rising backhand, running gives an overhead chop, and cutting in the air gives a slam.</li>
-    <li>A cut opens a gash in the plate. A second blow on that gash goes through, and it bleeds. Your X turns <b>red</b> over a cut you could go through.</li>
-    <li>A blade <b>flashes</b> before it falls: dodge, or swing into it to parry.</li>
-    <li>Slams and chops break a guard faster than cuts. Running, dodging and swinging all spend your breath.</li>
-    <li>Hitting the silver knight makes an enemy of them too.</li>
-    <li>The game keeps itself as you play: <b>Continue</b> picks up where you were. Pause to keep a copy in one of ten save slots.</li>
-    <li><b>Test Dungeon</b> is a white hall for trying out the monsters: any gear and a party for nothing, and whatever you like summoned past its door. Nothing of it is kept.</li>
-  </ul>
-  <div class="t-dbtns"><button class="t-btn" data-close><span>Done</span></button></div>`;
+const HOWTO = `<div class="m-head">${ic('howto')}<h2>How to Play</h2>
+    <div class="m-tabs" role="tablist"><button type="button" role="tab" class="on" data-ht="controls">${TOUCH ? 'Touch' : 'Controls'}</button><button type="button" role="tab" data-ht="tips">Tips</button></div><div class="m-end">${CLOSE_X}</div></div>
+  <div class="m-body"><div class="m-pane m-scroll">
+    <section data-hp="controls">${TOUCH ? `<div class="m-tips">${TOUCH_TIPS.map(tip).join('')}</div>` : `<div class="m-keys">${KEYS.map(([k, v]) => `<div><span>${caps(k)}</span><span>${v}</span></div>`).join('')}</div>`}</section>
+    <section data-hp="tips" hidden><div class="m-tips">${TIPS.map(tip).join('')}</div></section>
+  </div></div>
+  <div class="m-foot"><div class="m-hints"><span>${cap('Esc')} Close</span></div><span class="m-gap"></span><button type="button" class="m-btn pri" data-close>Done</button></div>`;
 
-const DIALOG = `<h2></h2><div class="t-rule"></div><p class="t-msg"></p>
-  <div class="t-dbtns"><button class="t-btn" data-v="yes"><span></span></button><button class="t-btn" data-v="no"><span></span></button></div>`;
+const DIALOG = `<h2></h2><p class="t-name" hidden></p><div class="t-rule"></div><p class="t-msg"></p>
+  <div class="t-dbtns"><button type="button" class="m-btn" data-v="no"><span></span></button><button type="button" class="m-btn pri" data-v="yes"><span></span></button></div>`;
 
 /** A four-pointed star of light, drawn once, for the glints. */
 function starSprite(n = 160) {
@@ -269,36 +305,137 @@ export class Title {
     const motes = this.mainLogo.querySelector('.t-motes');
     for (let i = 0; i < 16; i++) motes.append(this.mote(rnd(0.02, 0.98), rnd(-0.1, 1.15), rnd(0, 7), true));
 
-    // the windows over everything: settings, how to play, the save slots, the confirm box
+    // the windows over everything: settings, how to play, the save slots, the confirm box (src/ui/menus.css)
     this.modal = R.appendChild(el('div', 't-modal'));
     this.scrim = el('div', 't-scrim');
-    this.settings = el('div', 't-frame t-settings', SETTINGS);
-    this.howto = el('div', 't-frame t-howto', HOWTO);
-    this.slotsEl = el('div', 't-frame t-slots');
+    this.settings = el('div', 't-frame m-win m-settings', SETTINGS);
+    this.howto = el('div', 't-frame m-win m-howto', HOWTO);
+    this.slotsEl = el('div', 't-frame m-win m-saves');
     this.dialog = el('div', 't-frame t-dialog', DIALOG);
+    for (const f of [this.settings, this.howto, this.slotsEl, this.dialog]) { f.setAttribute('role', 'dialog'); f.setAttribute('aria-modal', 'true'); }
     this.frames = [this.settings, this.howto, this.slotsEl];
     this.modal.append(this.scrim, ...this.frames, this.dialog);
-    for (const f of [this.settings, this.howto]) f.querySelector('[data-close]').onclick = () => { this.chime(); this.frame(f, false); };
+    for (const f of [this.settings, this.howto]) for (const b of f.querySelectorAll('[data-close], .menu-x')) b.onclick = () => { this.chime(); this.frame(f, false); };
     for (const b of this.dialog.querySelectorAll('[data-v]')) b.onclick = () => { this.chime(); this.answer?.(b.dataset.v === 'yes'); };
+    for (const b of this.howto.querySelectorAll('[data-ht]')) b.onclick = () => {
+      this.tick();
+      for (const o of this.howto.querySelectorAll('[data-ht]')) { o.classList.toggle('on', o === b); o.setAttribute('aria-selected', o === b); }
+      for (const p of this.howto.querySelectorAll('[data-hp]')) p.hidden = p.dataset.hp !== b.dataset.ht;
+      this.howto.querySelector('.m-pane').scrollTop = 0;
+    };
     this.scrim.onclick = () => this.closeTop();
     new MutationObserver(() => this.scrim.classList.toggle('on', !!this.top())).observe(this.modal, { subtree: true, attributes: true, attributeFilter: ['class'] });
-    R.addEventListener('pointerover', (e) => { const b = e.target.closest?.('.t-btn'); if (b && b !== this.hovered && !b.disabled) { this.hovered = b; this.tick(); } });
-    R.addEventListener('pointerout', (e) => { if (this.hovered && e.target.closest?.('.t-btn') === this.hovered && !this.hovered.contains(e.relatedTarget)) this.hovered = null; });
+    const HOVER = '.t-btn, .m-btn, .m-rail button, .m-tabs button';
+    R.addEventListener('pointerover', (e) => { const b = e.target.closest?.(HOVER); if (b && b !== this.hovered && !b.disabled) { this.hovered = b; this.tick(); } });
+    R.addEventListener('pointerout', (e) => { if (this.hovered && e.target.closest?.(HOVER) === this.hovered && !this.hovered.contains(e.relatedTarget)) this.hovered = null; });
     addEventListener('keydown', (e) => this.key(e), true);
-    // the settings: each kept, and handed to whoever applies it (the sound's are applied here)
-    for (const input of this.settings.querySelectorAll('[data-k]')) {
-      const k = input.dataset.k;
-      input.value = String(settings[k]);
-      const apply = () => {
-        settings[k] = input.type === 'range' ? Number(input.value) : input.value;
-        store.set(SETTINGS_KEY, JSON.stringify(settings));
-        if (k === 'volume' && this.out) this.out.gain.setTargetAtTime(settings.volume, this.ctx.currentTime, 0.03);
-        if (k === 'music' && this.musicBus) this.musicBus.gain.setTargetAtTime(settings.music, this.ctx.currentTime, 0.05);
-        this.onSetting?.(k, settings[k]);
-      };
-      input.addEventListener(input.type === 'range' ? 'input' : 'change', apply);
-      if (input.type === 'range') input.addEventListener('change', () => this.tick(1.6));
+    this.buildSettings();
+  }
+
+  // ------------------------------------------------------------------ the settings window
+  // Built from src/ui/settings-spec.js: a tab down the left for each part of the game, its settings on the right (sliders with
+  // what they're at, two or three choices side by side, a list for more, a switch for on and off), and beside them what the one
+  // pointed at does. A setting changed from how the game came is marked, on its row and on its tab. Each is kept as it's changed
+  // and handed to the game (onSetting); the two that wait on a restart say so, with Restart now at the foot.
+  buildSettings() {
+    const S = this.settings;
+    // (What the game started with: the restart settings are only waiting while they differ from it.)
+    this.started = Object.fromEntries(SPEC.filter((s) => s.restart).map((s) => [s.k, settings[s.k]]));
+    for (const s of SPEC) {
+      const c = S.querySelector(`[data-k="${s.k}"]`);
+      if (s.kind === 'range') {
+        c.addEventListener('input', () => this.setVal(s.k, Number(c.value)));
+        c.addEventListener('change', () => this.tick(1.6));
+      } else if (s.kind === 'seg') {
+        for (const b of c.querySelectorAll('button')) b.onclick = () => { this.tick(); this.setVal(s.k, b.dataset.v); };
+      } else if (s.kind === 'select') {
+        c.addEventListener('change', () => { this.tick(); this.setVal(s.k, c.value); });
+      } else {
+        c.onclick = () => { this.tick(); this.setVal(s.k, settings[s.k] === 'on' ? 'off' : 'on'); };
+      }
+      const row = c.closest('.m-row');
+      row.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') this.helpFor(s.k); });
+      row.addEventListener('focusin', () => this.helpFor(s.k));
+      row.addEventListener('pointerdown', () => this.helpFor(s.k), { passive: true });
+      this.syncRow(s.k);
     }
+    for (const b of S.querySelectorAll('[data-tab]')) b.onclick = () => { this.tick(); this.setTab(b.dataset.tab); };
+    S.querySelector('[data-reset=tab]').onclick = async () => {
+      this.chime();
+      const [t, w] = TABS.find(([k]) => k === this.tab), list = SPEC.filter((s) => s.tab === t && changed(s.k));
+      if (!list.length) { this.toast(`${w}: as the game came already`); return; }
+      if (await this.confirm({ title: `Reset ${w}?`, text: `Every ${w} setting goes back to how the game came.`, yes: 'Reset', no: 'Keep them' })) this.resetTo(list);
+    };
+    S.querySelector('[data-reset=all]').onclick = async () => {
+      this.chime();
+      const list = SPEC.filter((s) => changed(s.k));
+      if (!list.length) { this.toast('Every setting is as the game came'); return; }
+      if (await this.confirm({ title: 'Reset all settings?', text: `${list.length === 1 ? 'The one setting you changed goes' : list.length === 2 ? 'Both settings you changed go' : `The ${list.length} settings you changed go`} back to how the game came. Whether the game's files are kept on this device stays as it is.`, yes: 'Reset all', no: 'Keep them', danger: true })) this.resetTo(list);
+    };
+    S.querySelector('[data-restart]').onclick = () => { this.chime(); if (this.onRestart) this.onRestart(); else this.reload(); };
+    this.setTab('audio');
+  }
+
+  /** A setting changed from its window: kept, its control shown as it now is, and handed to the game. */
+  setVal(k, v) {
+    settings[k] = v;
+    saveSettings();
+    if (k === 'volume' && this.out) this.out.gain.setTargetAtTime(settings.volume, this.ctx.currentTime, 0.03);
+    if (k === 'music' && this.musicBus) this.musicBus.gain.setTargetAtTime(settings.music, this.ctx.currentTime, 0.05);
+    this.syncRow(k);
+    this.onSetting?.(k, v);
+  }
+
+  resetTo(list) {
+    for (const s of list) this.setVal(s.k, DEFAULTS[s.k]);
+    this.toast(list.length === 1 ? `${list[0].label}: as the game came` : 'Settings reset');
+  }
+
+  setTab(t) {
+    const S = this.settings;
+    this.tab = t;
+    for (const b of S.querySelectorAll('[data-tab]')) { const on = b.dataset.tab === t; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); }
+    // (The focus goes with the pick, so one tab never looks picked while another is.)
+    if (S.querySelector('.m-rail').contains(document.activeElement)) S.querySelector(`[data-tab="${t}"]`).focus({ preventScroll: true });
+    for (const p of S.querySelectorAll('[data-pane]')) p.hidden = p.dataset.pane !== t;
+    S.querySelector('.m-pane').scrollTop = 0;
+    this.helpFor(SPEC.find((s) => s.tab === t)?.k, true);
+  }
+
+  /** Beside the settings: what the one pointed at (or picked) does, what it's at, and how the game came. quiet: not marked. */
+  helpFor(k, quiet = false) {
+    const S = this.settings, s = SPECK[k];
+    if (!s) return;
+    for (const r of S.querySelectorAll('.m-row.on')) r.classList.remove('on');
+    if (!quiet) S.querySelector(`[data-row="${k}"]`)?.classList.add('on');
+    this.helpK = k;
+    const H = S.querySelector('.m-help'), v = settings[k];
+    H.querySelector('h4').textContent = s.label;
+    H.querySelector('p').textContent = s.help;
+    H.querySelector('.m-now').innerHTML = `Now: <b>${esc(wordsOf(s, v))}</b>${changed(k) ? `<br><i class="m-dot"></i> Changed. As the game came: <b>${esc(wordsOf(s, DEFAULTS[k]))}</b>` : ''}${s.restart ? '<br><em class="m-tag warn">Restart</em> Takes hold when the game starts again.' : ''}`;
+  }
+
+  /** A setting's control as the setting is now, its row and tab marked if it's changed, and the restart word at the foot. */
+  syncRow(k) {
+    const S = this.settings, s = SPECK[k], c = S.querySelector(`[data-k="${k}"]`), v = settings[k];
+    if (!s || !c) return;
+    if (s.kind === 'range') {
+      c.value = String(v);
+      c.style.setProperty('--v', `${(((Number(v) - s.min) / (s.max - s.min)) * 100).toFixed(1)}%`);
+      c.nextElementSibling.textContent = fmtOf(s, Number(v));
+    } else if (s.kind === 'seg') {
+      // (The files' choice is 'ask' till it's been asked, and they aren't kept till then.)
+      const shown = k === 'keep' && v !== 'yes' ? 'no' : String(v);
+      for (const b of c.querySelectorAll('button')) { const on = b.dataset.v === shown; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); }
+    } else if (s.kind === 'select') c.value = String(v);
+    else { const on = v === 'on'; c.classList.toggle('on', on); c.setAttribute('aria-checked', on); c.querySelector('span').textContent = on ? s.on : s.off; }
+    c.closest('.m-row').classList.toggle('changed', changed(k));
+    for (const [t] of TABS) S.querySelector(`[data-tab="${t}"] .m-dot`).hidden = !SPEC.some((x) => x.tab === t && changed(x.k));
+    const wait = SPEC.filter((x) => x.restart && String(settings[x.k]) !== String(this.started?.[x.k] ?? settings[x.k]));
+    const R = S.querySelector('.m-restart');
+    R.hidden = !wait.length;
+    R.querySelector('span').textContent = wait.length ? `${wait.map((x) => x.label).join(' and ')}: on a restart` : '';
+    if (this.helpK === k) this.helpFor(k, !S.querySelector('.m-row.on'));
   }
 
   mote(x, y, delay, loop = false) {
@@ -565,41 +702,55 @@ export class Title {
   panel(which, from = null) {
     const f = which === 'settings' ? this.settings : this.howto;
     for (const o of this.frames) if (o !== f) this.frame(o, false);
+    // (Shown as the settings are now: the game sets one or two itself, Game files the first time it's asked.)
+    if (f === this.settings) for (const s of SPEC) this.syncRow(s.k);
     this.opener = from || document.activeElement;
     this.frame(f, true);
   }
 
   frame(f, on) {
     f.classList.toggle('open', on);
-    if (on) { f.scrollTop = 0; f.querySelector('select, input, .t-btn:not(:disabled)')?.focus({ preventScroll: true }); }
-    else if (this.opener?.isConnected) { this.opener.focus({ preventScroll: true }); this.opener = null; }
+    if (on) {
+      f.scrollTop = 0;
+      f.querySelector('.m-rail button.on, .m-card :is(button, [tabindex]):not(:disabled), .m-tabs button.on, .m-btn.pri:not(:disabled), select, input, .t-btn:not(:disabled)')?.focus({ preventScroll: true });
+    } else if (this.opener?.isConnected) { this.opener.focus({ preventScroll: true }); this.opener = null; }
   }
 
-  /** The "are you sure" box: resolves true (yes) or false. o: {title, text, yes, no} */
+  /**
+   * The "are you sure" box: resolves true (yes) or false. o: {title, name, tone, text, yes, no, danger}: name, what it's about
+   * (a quest, a save), under the question in plain letters, coloured tone; danger, yes is drawn red. The window under it dims.
+   */
   confirm(o) {
     this.answer?.(false);
-    const D = this.dialog;
-    D.querySelector('h2').textContent = o.title;
+    const D = this.dialog, yes = D.querySelector('[data-v=yes]'), no = D.querySelector('[data-v=no]');
+    // (Its digits in plain letters: Cinzel's 1 reads as an I.)
+    D.querySelector('h2').innerHTML = esc(o.title).replace(/\d+/g, '<i class="m-n">$&</i>');
+    const nm = D.querySelector('.t-name');
+    nm.hidden = !o.name; nm.textContent = o.name || ''; nm.style.color = o.tone || '';
     D.querySelector('.t-msg').textContent = o.text;
-    D.querySelector('[data-v=yes] span').textContent = o.yes || 'Yes';
-    D.querySelector('[data-v=no] span').textContent = o.no || 'Go Back';
-    D.querySelector('[data-v=no]').style.display = o.no === false ? 'none' : '';
+    yes.querySelector('span').textContent = o.yes || 'Yes';
+    no.querySelector('span').textContent = o.no || 'Go Back';
+    no.style.display = o.no === false ? 'none' : '';
+    yes.classList.toggle('danger', !!o.danger);
+    yes.classList.toggle('pri', !o.danger);
     const opener = document.activeElement;
     return new Promise((res) => {
       this.answer = (v) => {
         this.answer = null;
         D.classList.remove('open');
+        this.modal.classList.remove('asking');
         if (opener?.isConnected && !v) opener.focus({ preventScroll: true });
         res(v);
       };
+      this.modal.classList.add('asking');
       D.classList.add('open');
-      D.querySelector(o.no === false ? '[data-v=yes]' : '[data-v=no]').focus({ preventScroll: true });
+      (o.no === false ? yes : no).focus({ preventScroll: true });
     });
   }
 
-  /** The save slots. mode: save | load. o: { canSave, snapshot() -> Promise<data|null>, restore(data), onClose() } */
+  /** The save slots. mode: save | load. o: { canSave, inGame, snapshot() -> Promise<data|null>, restore(data), onClose() } */
   slots(mode, o) {
-    this.slotO = o; this.slotMode = mode; this.slotConfirm = null;
+    this.slotO = o; this.slotMode = mode === 'save' && !o.canSave ? 'load' : mode;
     for (const f of this.frames) if (f !== this.slotsEl) this.frame(f, false);
     this.renderSlots();
     this.frame(this.slotsEl, true);
@@ -607,47 +758,89 @@ export class Title {
 
   closeSlots() { this.frame(this.slotsEl, false); this.slotO?.onClose?.(); }
 
+  // A save, in a line: who, their level and where ("Aldric, level 12, in the Rustwood"); an old one, its summary.
+  saveName(d) {
+    const c = d?.card;
+    if (c?.level) return `${c.name || 'Tessariel'}, level ${c.level}${c.where ? `, ${c.where}` : ''}`;
+    return Array.isArray(d?.summary) && d.summary.length ? d.summary.join(', ') : 'A saved game';
+  }
+
+  // Each save as a card: a picture of where it was made, who, their level, where, the quest followed, when and how long played.
+  // Save: a new save first (into the first empty slot), then the saves, the newest first, to overwrite. Load: the game as it was
+  // last played (Autosave: what Continue picks up), big, then the saves, the newest first; a tap anywhere on one loads it.
   renderSlots() {
     const E = this.slotsEl, o = this.slotO, save = this.slotMode === 'save';
-    E.innerHTML = `<h2>${save ? 'Save Game' : 'Load Game'}</h2><div class="t-rule"></div>`;
-    const tabs = el('div', 't-tabs');
-    for (const [m, label] of [['save', 'Save'], ['load', 'Load']]) {
-      const b = el('button', 't-btn' + (m === this.slotMode ? ' sel' : ''), `<span>${label}</span>`);
-      b.disabled = m === 'save' && !o.canSave;
-      b.onclick = () => { this.chime(); this.slotMode = m; this.slotConfirm = null; this.renderSlots(); };
-      tabs.append(b);
+    const slot = []; let used = 0, free = 0;
+    for (let i = 1; i <= SLOT_COUNT; i++) { const d = saves.read(i); slot[i] = d; if (d) used++; else free ||= i; }
+    const auto = save ? null : saves.auto();
+    const list = [...Array(SLOT_COUNT).keys()].map((k) => k + 1).filter((i) => slot[i]).sort((x, y) => slot[y].at - slot[x].at);
+    const card = (key, d) => {
+      const c = d.card || {}, thumb = typeof c.thumb === 'string' && c.thumb.startsWith('data:image/') ? c.thumb : '';
+      const sum = Array.isArray(d.summary) ? d.summary : [], big = key === 'auto';
+      const playedW = c.played != null ? `${playedWords(c.played)} played` : sum.find((t) => /played/.test(t)) || '';
+      const badge = big ? '<span class="m-tag ready m-badge">Autosave</span>' : `<span class="m-tag m-badge">Slot <i class="m-n">${key}</i></span>`;
+      return `<div class="m-card${big ? ' auto' : ''}${save ? '' : ' tap'}" data-slot="${key}">
+        <div class="m-thumb${thumb ? '' : ' none'}"${thumb ? ` style="background-image:url('${thumb}')"` : ''}>${thumb ? '' : ic('save')}${badge}</div>
+        <div class="m-info"><div class="m-who"><span>${esc(c.name || 'Tessariel')}</span>${c.level ? `<em>Level <i class="m-n">${c.level}</i></em>` : ''}</div>
+          <div class="m-where">${esc(c.where || sum[0] || 'Bellmourn')}</div>
+          ${c.quest ? `<div class="m-quest">${esc(c.quest)}</div>` : ''}
+          <div class="m-when" title="${esc(when(d.at))}">${esc(ago(d.at))}${playedW ? ` · ${esc(playedW)}` : ''}</div></div>
+        <div class="m-acts">${save ? '<button type="button" class="m-btn" data-save>Overwrite</button>' : `<button type="button" class="m-btn pri" data-load>${big ? 'Continue' : 'Load'}</button>`}</div>
+        ${big ? '' : `<button type="button" class="m-del" data-del aria-label="Delete slot ${key}">Delete</button>`}</div>`;
+    };
+    let cards = '';
+    if (save) {
+      const left = SLOT_COUNT - used;
+      // (The very first save: the one thing in the window, big and in the middle of it.)
+      cards += free ? `<button type="button" class="m-card empty${list.length ? '' : ' first'}" data-slot="${free}" data-new${o.canSave ? '' : ' disabled'}><span class="m-new"><b>+</b><span>${list.length ? 'New save' : 'Save your game'}<small>${list.length ? `Into slot <i class="m-n">${free}</i>: ${left === 1 ? 'the last one empty' : `${left} of ${SLOT_COUNT} are empty`}` : `Into slot <i class="m-n">1</i> of ${SLOT_COUNT}. Saves are kept on this device.`}</small></span></span></button>`
+        : `<div class="m-card empty full"><span class="m-new"><b>!</b><span>All ${SLOT_COUNT} slots are full<small>Overwrite one, or delete one to make room</small></span></span></div>`;
+      if (list.length) cards += `<div class="m-section">Saved games</div>${list.map((i) => card(i, slot[i])).join('')}`;
+    } else {
+      if (auto) cards += `<div class="m-section">Last played</div>${card('auto', auto)}`;
+      if (list.length) cards += `<div class="m-section">Saved games</div>${list.map((i) => card(i, slot[i])).join('')}`;
+      if (!auto && !list.length) cards = `<div class="m-empty" style="grid-column:1/-1">${ic('load')}<span>No saved games yet. Pause the game and choose Save Game to keep one.</span></div>`;
     }
-    E.append(tabs);
-    const list = el('div', 't-slotlist');
-    for (let i = 1; i <= SLOT_COUNT; i++) {
-      const d = saves.read(i), c = this.slotConfirm;
-      const row = el('div', 't-slot' + (d ? '' : ' empty'));
-      row.innerHTML = d
-        ? `<div class="si"><b>Slot ${i}</b><span class="when">${when(d.at)}</span><span class="who">${describe(d.summary)}</span></div>`
-        : `<div class="si"><b>Slot ${i}</b><span class="when">Empty</span></div>`;
-      const btns = el('div', 'sb');
-      const button = (label, fn, red) => { const b = el('button', 't-btn small' + (red ? ' red' : ''), `<span>${label}</span>`); b.onclick = () => { this.chime(); fn(); }; btns.append(b); };
-      if (save) {
-        button(c === i ? 'Overwrite?' : 'Save here', async () => {
-          if (d && c !== i) { this.slotConfirm = i; this.renderSlots(); return; }
-          const data = await o.snapshot();
-          this.slotConfirm = null;
-          if (!data) this.toast('Nothing to save right now');
-          else this.toast(saves.write(i, data) ? `Saved in slot ${i}` : 'Could not save: the browser refused the space');
-          this.renderSlots();
-        }, c === i);
-      } else if (d) {
-        button('Load', () => { this.frame(this.slotsEl, false); o.restore(d); });
-      }
-      if (d) button(c === -i ? 'Delete?' : '✕', () => { if (c !== -i) { this.slotConfirm = -i; this.renderSlots(); return; } saves.clear(i); this.slotConfirm = null; this.renderSlots(); this.refresh(); }, true);
-      row.append(btns);
-      list.append(row);
-    }
-    E.append(list);
-    E.append(el('p', 't-note', save ? 'Ten slots. Each keeps where you stand and how long you\'ve played.' : 'Loading puts you back where that save was made.'));
-    const done = el('div', 't-dbtns', '<button class="t-btn"><span>Done</span></button>');
-    done.firstChild.onclick = () => { this.chime(); this.closeSlots(); };
-    E.append(done);
+    E.innerHTML = `<div class="m-head">${ic(save ? 'save' : 'load')}<h2>${save ? 'Save Game' : 'Load Game'}</h2>
+        <div class="m-tabs" role="tablist">${[['save', 'Save'], ['load', 'Load']].map(([m, w]) => `<button type="button" role="tab" data-m="${m}" class="${m === this.slotMode ? 'on' : ''}" aria-selected="${m === this.slotMode}"${m === 'save' && !o.canSave ? ' disabled title="Only while you\'re playing, on your feet"' : ''}>${w}</button>`).join('')}</div>
+        <div class="m-end"><span class="m-store">${used} of ${SLOT_COUNT} slots used</span>${CLOSE_X}</div></div>
+      <div class="m-body"><div class="m-cards m-scroll">${cards}</div></div>
+      <div class="m-foot"><span class="m-store">${save ? 'A save keeps where you stand, what you carry, your quests and the time played.' : 'Loading takes you back to where that save was made.'}</span><span class="m-gap"></span><button type="button" class="m-btn pri" data-close>Done</button></div>`;
+    const read = (b) => { const k = b.closest('[data-slot]').dataset.slot; return { k, d: k === 'auto' ? auto : slot[+k] }; };
+    const name = (k) => (k === 'auto' ? 'the autosave' : `slot ${k}`);
+    for (const b of E.querySelectorAll('[data-close], .menu-x')) b.onclick = () => { this.chime(); this.closeSlots(); };
+    for (const b of E.querySelectorAll('[data-m]')) b.onclick = () => { this.tick(); this.slotMode = b.dataset.m; this.renderSlots(); E.querySelector('.m-tabs button.on')?.focus({ preventScroll: true }); };
+    for (const b of E.querySelectorAll('[data-new]')) b.onclick = () => { this.chime(); this.saveTo(+b.dataset.slot); };
+    for (const b of E.querySelectorAll('[data-save]')) b.onclick = async () => {
+      this.chime();
+      const { k, d } = read(b);
+      if (await this.confirm({ title: `Overwrite ${name(k)}?`, name: this.saveName(d), text: `Saved ${ago(d.at)}. It will be replaced by your game as it is now, and that can't be undone.`, yes: 'Overwrite', no: 'Keep it', danger: true })) this.saveTo(+k);
+    };
+    for (const b of E.querySelectorAll('[data-load]')) b.onclick = async () => {
+      this.chime();
+      const { k, d } = read(b);
+      if (o.inGame && !(await this.confirm({ title: `Load ${name(k)}?`, name: this.saveName(d), text: `Saved ${ago(d.at)}. Anything since then that isn't saved in a slot is lost.`, yes: 'Load', no: 'Go Back' }))) return;
+      this.frame(this.slotsEl, false);
+      o.restore(d);
+    };
+    // (Loading: a tap anywhere on a save but its Delete loads it.)
+    for (const c of E.querySelectorAll('.m-card.tap')) c.onclick = (e) => { if (!e.target.closest('button')) c.querySelector('[data-load]')?.click(); };
+    for (const b of E.querySelectorAll('[data-del]')) b.onclick = async () => {
+      this.chime();
+      const { k, d } = read(b);
+      if (!(await this.confirm({ title: `Delete ${name(k)}?`, name: this.saveName(d), text: `Saved ${ago(d.at)}. Once it's deleted, it's gone for good.`, yes: 'Delete', no: 'Keep it', danger: true }))) return;
+      saves.clear(+k);
+      this.toast(`Slot ${k} deleted`);
+      this.renderSlots(); this.refresh();
+      E.querySelector('.m-tabs button.on')?.focus({ preventScroll: true });
+    };
+  }
+
+  async saveTo(i) {
+    const data = await this.slotO.snapshot();
+    if (!data) this.toast('Nothing to save right now');
+    else this.toast(saves.write(i, data) ? `Saved in slot ${i}` : 'Could not save: the browser refused the space');
+    this.renderSlots(); this.refresh();
+    this.slotsEl.querySelector(`[data-slot="${i}"] [data-save], [data-slot="${i}"]`)?.focus({ preventScroll: true });
   }
 
   toast(text) {

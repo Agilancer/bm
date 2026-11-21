@@ -4,20 +4,20 @@
   html, body { cursor: url(../assets/title/cursor.png) 1 1, auto;
     cursor: -webkit-image-set(url(../assets/title/cursor.png) 1x, url(../assets/title/cursor@2x.png) 2x) 1 1, auto;
     cursor: image-set(url(../assets/title/cursor.png) 1x, url(../assets/title/cursor@2x.png) 2x) 1 1, auto; }
-  #pause *, #title * { cursor: inherit; }
+  #pause *, #title *, #folkBook *, #qTrack * { cursor: inherit; }
   #ui :is(button, select, input[type=range], .eslot, .bslot, .q-list .q-row, .q-pick, .q-toggle, .cskip),
-  #title :is(button, select, input[type=range], .t-gate, .t-cards) {
+  #title :is(button, select, input[type=range], .t-gate, .t-cards), #pause button, #folkBook :is(button, .ql-pin), #qTrack .qt-q {
     cursor: url(../assets/title/cursor_hover.png) 1 1, pointer;
     cursor: -webkit-image-set(url(../assets/title/cursor_hover.png) 1x, url(../assets/title/cursor_hover@2x.png) 2x) 1 1, pointer;
     cursor: image-set(url(../assets/title/cursor_hover.png) 1x, url(../assets/title/cursor_hover@2x.png) 2x) 1 1, pointer; }
-  #pause button:disabled, #title button:disabled { cursor: url(../assets/title/cursor.png) 1 1, auto;
+  #pause button:disabled, #title button:disabled, #folkBook button:disabled { cursor: url(../assets/title/cursor.png) 1 1, auto;
     cursor: -webkit-image-set(url(../assets/title/cursor.png) 1x, url(../assets/title/cursor@2x.png) 2x) 1 1, auto;
     cursor: image-set(url(../assets/title/cursor.png) 1x, url(../assets/title/cursor@2x.png) 2x) 1 1, auto; }
   #ui .map-full canvas { cursor: grab; }
 
   /* ---------------- the title screen (title.js): the cards, Bellmourn's logo over the black, the menu */
   body.title-up #hud, body.title-up #touch, body.title-up #pause { visibility: hidden; }
-  #title { position: fixed; inset: 0; z-index: 50; pointer-events: none; font: 14px Cinzel, Georgia, serif; color: #e8dcc0; }
+  #title { position: fixed; inset: 0; z-index: 50; pointer-events: none; font: 14px Cinzel, BmNum, Georgia, serif; color: #e8dcc0; }
   .t-screen { position: absolute; inset: 0; overflow: hidden; pointer-events: auto; transition: opacity .85s ease; }
   .t-screen.out { opacity: 0; pointer-events: none; }
   .t-screen.gone { display: none; }
@@ -71,13 +71,13 @@
   .t-status.has-bar .t-bar { opacity: 1; }
   .t-bar i { display: block; height: 100%; border-radius: 2px; transform: scaleX(0); transform-origin: 0 50%; transition: transform .25s ease-out;
              box-shadow: 0 0 6px rgba(255, 210, 120, .55); background: linear-gradient(90deg, #8c7344, #f2cf82 70%, #fff0c0); }
-  .t-file { min-height: 1.3em; max-width: min(92vw, 640px); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font: italic 600 13px 'Alegreya Sans', Georgia, serif;
+  .t-file { min-height: 1.3em; max-width: min(92vw, 640px); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font: italic 600 13px 'Alegreya Sans', BmNum, Georgia, serif;
             letter-spacing: .04em; color: #8c7a58; text-shadow: 0 1px 4px #000; margin-top: -4px; }
   .t-main.menu-on .t-status > * { opacity: 0; }
   .t-menu { display: flex; flex-direction: column; align-items: center; gap: 2px; pointer-events: none; }
   .t-main.menu-on .t-menu { pointer-events: auto; }
   .t-btn { position: relative; background: none; border: 0; padding: 8px 36px; min-width: 0; outline: none;
-           font: 700 clamp(15px, 1.55vw, 20px) Cinzel, Georgia, serif; letter-spacing: .24em; text-transform: uppercase;
+           font: 700 clamp(15px, 1.55vw, 20px) Cinzel, BmNum, Georgia, serif; letter-spacing: .24em; text-transform: uppercase;
            color: #e2c486; text-shadow: 0 2px 6px #000, 0 0 2px #000; transition: color .2s, text-shadow .2s; }
   .t-btn::before, .t-btn::after { content: ''; position: absolute; top: 50%; width: 7px; height: 7px; margin-top: -4px; opacity: 0; transform: rotate(45deg) scale(0);
            background: linear-gradient(135deg, #fff2c4, #d9a04a 60%, #8a5a1c); border: 1px solid #2a1a06; transition: transform .22s ease, opacity .22s; }
@@ -97,7 +97,7 @@
   .t-skip { position: absolute; right: max(22px, env(safe-area-inset-right)); bottom: 18px; font: 11px Cinzel, serif; letter-spacing: .18em; text-transform: uppercase;
             color: rgba(200, 176, 128, .45); opacity: 0; transition: opacity 1s; pointer-events: none; }
   .t-skip.on { opacity: 1; transition-delay: 1.4s; }
-  .t-last { position: absolute; left: 12px; right: 12px; bottom: 8px; text-align: center; font: 11px Georgia, serif; color: #c0907a; -webkit-user-select: text; user-select: text; }
+  .t-last { position: absolute; left: 12px; right: 12px; bottom: 8px; text-align: center; font: 11px BmNum, Georgia, serif; color: #c0907a; -webkit-user-select: text; user-select: text; }
   .t-last:empty { display: none; }
 
   /* ---------------- the windows over it all: settings, how to play, the confirm box, the save slots */
@@ -123,7 +123,7 @@
   .t-rule { position: relative; height: 1px; width: 72%; margin: 12px auto 18px; background: linear-gradient(90deg, transparent, #b08840 30%, #b08840 70%, transparent); }
   .t-rule::after { content: ''; position: absolute; left: 50%; top: 50%; width: 7px; height: 7px; transform: translate(-50%, -50%) rotate(45deg);
                    background: linear-gradient(135deg, #fff2c4, #d9a04a 60%, #8a5a1c); border: 1px solid #000; }
-  .t-msg { margin: 0 0 6px; text-align: center; font: 17px/1.5 'Alegreya Sans', Georgia, serif; color: #eadcbc; }
+  .t-msg { margin: 0 0 6px; text-align: center; font: 17px/1.5 'Alegreya Sans', BmNum, Georgia, serif; color: #eadcbc; }
   .t-dbtns { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; margin-top: 14px; }
   .t-dbtns .t-btn { font-size: 15px; letter-spacing: .2em; padding: 8px 32px; }
   .t-dialog { width: min(480px, 92vw); }
@@ -141,16 +141,16 @@
   .t-set input[type=range]::-moz-range-thumb { width: 12px; height: 12px; transform: rotate(45deg); border-radius: 0;
     background: radial-gradient(circle at 35% 30%, #fff3c8, #e0a84a 55%, #7a4f17); border: 1px solid #1a1006; }
   .t-set input[type=range]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 2px rgba(255, 210, 120, .6); }
-  .t-note { margin: 12px 0 0; text-align: center; font: italic 600 14px 'Alegreya Sans', Georgia, serif; color: #9a8662; }
+  .t-note { margin: 12px 0 0; text-align: center; font: italic 600 14px 'Alegreya Sans', BmNum, Georgia, serif; color: #9a8662; }
   .t-howto { width: min(680px, 94vw); }
-  .t-keys { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; font: 15px 'Alegreya Sans', Georgia, serif; color: #e2d4b4; }
+  .t-keys { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; font: 15px 'Alegreya Sans', BmNum, Georgia, serif; color: #e2d4b4; }
   .t-keys b { font: 700 12px Cinzel, serif; letter-spacing: .08em; color: #f0cf86; text-align: right; white-space: nowrap; padding-top: 2px; }
   @media (min-width: 640px) { .t-keys { grid-template-columns: auto 1fr auto 1fr; } }
-  .t-touchkeys { display: none; font: 15px/1.5 'Alegreya Sans', Georgia, serif; color: #e2d4b4; text-align: center; }
+  .t-touchkeys { display: none; font: 15px/1.5 'Alegreya Sans', BmNum, Georgia, serif; color: #e2d4b4; text-align: center; }
   .t-touchkeys p { margin: 4px 0; } .t-touchkeys b { color: #f0cf86; }
   #title.is-touch .t-keys { display: none; } #title.is-touch .t-touchkeys { display: block; }
   .t-howto h3 { margin: 20px 0 8px; font: 700 12px Cinzel, serif; letter-spacing: .22em; text-transform: uppercase; color: #c9a86a; text-align: center; }
-  .t-tips { margin: 0; padding-left: 20px; font: 15px/1.45 'Alegreya Sans', Georgia, serif; color: #dccfae; }
+  .t-tips { margin: 0; padding-left: 20px; font: 15px/1.45 'Alegreya Sans', BmNum, Georgia, serif; color: #dccfae; }
   .t-tips li { margin: 5px 0; } .t-tips b { color: #ffd84a; }
   @media (max-height: 480px) {   /* a phone on its side */
     .t-mainlogo { width: clamp(220px, min(70vw, calc((100vh - 200px) * 4.5)), 700px); }
@@ -171,8 +171,8 @@
   .t-slot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 8px; border-bottom: 1px solid rgba(154, 118, 56, .16); }
   .t-slot .si { display: grid; gap: 2px; min-width: 0; }
   .t-slot .si b { font: 700 12px Cinzel, serif; letter-spacing: .14em; color: #f0cf86; }
-  .t-slot .when { font: 13px 'Alegreya Sans', Georgia, serif; color: #cdb386; }
-  .t-slot .who { font: 13px 'Alegreya Sans', Georgia, serif; color: #9a8662; }
+  .t-slot .when { font: 13px 'Alegreya Sans', BmNum, Georgia, serif; color: #cdb386; }
+  .t-slot .who { font: 13px 'Alegreya Sans', BmNum, Georgia, serif; color: #9a8662; }
   .t-slot.empty .when { opacity: .5; }
   .t-slot .sb { display: flex; flex-shrink: 0; }
   .t-toast { position: fixed; left: 50%; top: 14%; transform: translateX(-50%); padding: 8px 18px; font: 600 13px Cinzel, serif; letter-spacing: .18em; color: #f0cf86;

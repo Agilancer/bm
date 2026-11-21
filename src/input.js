@@ -65,6 +65,13 @@ export class Input {
     });
     window.addEventListener('keyup', (e) => { this.keys.delete(e.code); if (e.code === 'AltLeft' || e.code === 'AltRight') { e.preventDefault(); this.softOn(false); } });
     window.addEventListener('blur', () => this.releaseControls());
+    // (With the mouse free, what it's over, fifteen times a second: a gilded critter there lights up, src/main.js hoverCritter.)
+    let hoverAt = 0;
+    this.canvas.addEventListener('mousemove', (e) => {
+      if (!this.enabled || this.menu || !this.loose || e.timeStamp - hoverAt < 66) return;
+      hoverAt = e.timeStamp;
+      this.onHover?.(e.clientX, e.clientY);
+    });
     document.addEventListener('mousemove', (e) => {
       if (!this.enabled || document.pointerLockElement !== this.canvas) return;
       if (this.soft) {
@@ -78,11 +85,14 @@ export class Input {
     });
     this.canvas.addEventListener('mousedown', (e) => {
       if (!this.enabled || this.menu) return;
-      // (A click on the world with the mouse free is nothing: Tab gives the mouse back to the looking. src/main.js says so.)
-      if (this.loose) { if (this.cursor && !this.free && e.button === 0) this.onLooseClick?.(); return; }
+      // A gilded critter under the pointer (src/main.js onPick, src/core/critters.js): caught, and the click is that alone.
+      // With the mouse free (auto-play's, or Tab's) it's where the mouse is; with the soft cursor, there; else the crosshair.
+      // (A click on the world with the mouse free is nothing else: Tab gives the mouse back to the looking. src/main.js says so.)
+      if (this.loose) { if (e.button === 0 && this.onPick?.(e.clientX, e.clientY, 'cursor')) return; if (this.cursor && !this.free && e.button === 0) this.onLooseClick?.(); return; }
       if (document.pointerLockElement !== this.canvas && !this.touch) { this.lock(); return; }
-      if (this.soft) { if (e.button === 0) this.softPress?.(this.softX, this.softY); return; }
+      if (this.soft) { if (e.button === 0 && !this.onPick?.(this.softX, this.softY, 'soft')) this.softPress?.(this.softX, this.softY); return; }
       if (e.button === 0 && this.mapUp) return;      // (the left button moves the big map while it's up)
+      if (e.button === 0 && this.onPick?.(-1, -1, 'aim')) return;
       if (e.button === 0) this.fire(INPUT.ATTACK);
       if (e.button === 2) { this.guardMouse = true; this.s[INPUT.BLOCK] = 1; this.fire(INPUT.WIDE); }     // (held before the press is seen: the shield drops when it isn't)
       if (e.button === 1) { e.preventDefault(); this.castMouse = true; this.fire(INPUT.CAST_N); }
@@ -123,26 +133,34 @@ export class Input {
     const root = document.getElementById('touch');
     const stick = document.getElementById('stick'), nub = document.getElementById('nub');
     const R = 52;
+    // A tap, not a drag: a thumb down and up again inside 300 ms, having moved less than 12 pixels. Only that catches a
+    // gilded critter (src/main.js onPick), as it lifts, so looking about or moving off never does.
+    const taps = new Map();
     const start = (e) => {
       if (!this.enabled || this.menu) return;
       for (const t of e.changedTouches) {
+        taps.set(t.identifier, { x: t.clientX, y: t.clientY, t: performance.now(), moved: 0, how: null });
         // (The stick's side: the left, unless Move Buttons has put it on the right: src/ui/arrange.js stickRight.)
         const stickSide = this.stickRight ? t.clientX > innerWidth * 0.58 : t.clientX < innerWidth * 0.42;
         if (stickSide && this.stickId === null) {
+          taps.get(t.identifier).how = 'stick';
           this.stickId = t.identifier;
           this.ox = t.clientX; this.oy = t.clientY;
           stick.style.display = 'block';
           root.classList.add('sticking');
           stick.style.left = `${t.clientX - 65}px`; stick.style.top = `${t.clientY - 65}px`;
         } else if (this.lookId === null) {
+          taps.get(t.identifier).how = 'tap';
           this.lookId = t.identifier;
           this.lx = t.clientX; this.ly = t.clientY;
-        }
+        } else taps.get(t.identifier).how = 'tap';
       }
       e.preventDefault();
     };
     const move = (e) => {
       for (const t of e.changedTouches) {
+        const tap = taps.get(t.identifier);
+        if (tap) tap.moved = Math.max(tap.moved, Math.hypot(t.clientX - tap.x, t.clientY - tap.y));
         if (t.identifier === this.stickId) {
           let dx = t.clientX - this.ox, dy = t.clientY - this.oy;
           const L = Math.hypot(dx, dy);
@@ -165,6 +183,9 @@ export class Input {
     };
     const end = (e) => {
       for (const t of e.changedTouches) {
+        const tap = taps.get(t.identifier);
+        taps.delete(t.identifier);
+        if (tap && tap.how && e.type === 'touchend' && tap.moved < 12 && performance.now() - tap.t < 300 && this.enabled && !this.menu) this.onPick?.(tap.x, tap.y, tap.how);
         if (t.identifier === this.stickId) {
           this.resetStick();
         } else if (t.identifier === this.lookId) this.lookId = null;

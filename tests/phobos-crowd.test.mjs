@@ -15,7 +15,10 @@ import { Talk } from '../src/folk/talk.js';
 import { CROWD, FOLK, PEOPLE } from '../src/folk/people.js';
 import { LINES } from '../src/folk/lines/phobos.js';
 import { HAUNTS, cityIn } from '../src/core/east.js';
-import { phobosLanes } from '../src/core/phobos-build.js';
+import { phobosHouses, phobosLanes } from '../src/core/phobos-build.js';
+import { bedOf, phobosHomes } from '../src/folk/phobos-homes.js';
+import { abedNow } from '../src/folk/brain.js';
+import { BAKED, bakedText } from '../tools/homes/bake-beds.mjs';
 
 const R = (p) => readFileSync(new URL(`../${p}`, import.meta.url));
 const J = (p) => JSON.parse(R(p));
@@ -78,6 +81,8 @@ test('in the street: parked out of the city, up and about inside it, and along w
     // (Each lives in a district of their own and is about only while you're near it, on its streets: src/folk/brain.js
     // AREA_REACH. Those with none go along with you.)
     for (const me of crowd) {
+      // (A baker abed already, early in the evening: src/folk/brain.js abedNow. Below.)
+      if (me.abed) continue;
       const D = me.p.area && DISTRICTS[me.p.area];
       if (D && Math.hypot(px - D.x, pz - D.z) > D.r + 120) { assert.ok(me.parked, `${me.id} is up away from ${me.p.area}`); continue; }
       assert.ok(!me.parked, `${me.id} isn't up in the city`);
@@ -101,4 +106,61 @@ test('in the street: parked out of the city, up and about inside it, and along w
   // (Bellmourn's people never left Bellmourn.)
   for (const me of life.folk) if (!me.posted && !me.crowd) assert.ok(Math.hypot(me.x, me.z) < 400, `${me.id} is at ${me.x | 0}, ${me.z | 0}`);
   void ACT;
+});
+
+// The crowd's nights (src/folk/phobos-homes.js, brain.js phSleep): everyone a bed in a house of their district, nobody's
+// the same place in it; abed at their hours, in it when you come by, sat up when you wake them and back down after; up in
+// the morning and out on the street. The owner, 2026-11-20: "Make sure everyone has beds too in phobos".
+test('abed at night: a bed each, in it when you come by, woken and back down, up in the morning', () => {
+  // (The beds the townsfolk's thread knows are baked: tools/homes/bake-beds.mjs. Still what the houses' plans say.)
+  assert.equal(readFileSync(BAKED, 'utf8').replace(/\r/g, ''), bakedText(), 'src/folk/phobos-beds.js is stale: run node tools/homes/bake-beds.mjs');
+  const H = phobosHouses(), homes = phobosHomes(), spots = new Set();
+  for (const p of CROWD) {
+    const hm = homes.get(p.id), b = bedOf(p.id);
+    assert.ok(hm && b, `${p.id} has no bed`);
+    const k = `${b.x.toFixed(2)},${b.y.toFixed(2)},${b.z.toFixed(2)}`;
+    assert.ok(!spots.has(k), `${p.id} is in someone else's place`); spots.add(k);
+    const h = H[b.house], c = Math.cos(h.yaw), s = Math.sin(h.yaw), dx = b.x - h.x, dz = b.z - h.z;
+    assert.ok(Math.abs(dx * c - dz * s) < h.hx && Math.abs(dx * s + dz * c) < h.hz, `${p.id}'s bed is out of the house`);
+  }
+  const clips = new FolkClips(J('assets/game/folk/clips.json'), AB('assets/game/folk/clips.bin'));
+  const village = J('assets/game/village.json'), interior = J('assets/game/interior/interior.json'), folk = J('assets/game/folk/folk.json');
+  const town = new Town(village, interior, J('assets/game/folk/spots.json'));
+  const life = new Life({ ground: new Ground(village, interior, [-80, -75, 110, 80]), town, clips, emit: () => {}, people: FOLK });
+  const talk = new Talk(life, { lines: LINES, scenes: [], smalltalk: [] }, () => {});
+  const rigs = new Map();
+  for (const me of life.folk) {
+    let m = me.p.body;
+    if (!folk.models[m]) m = folk.swaps?.[m]?.base || (me.child ? 'boy_1' : 'worker');
+    if (!rigs.has(m)) rigs.set(m, new FolkRig(parseGLB(AB(`assets/game/folk/${folk.models[m].glb}`)), clips, {}));
+    life.setRig(me.i, rigs.get(m));
+  }
+  const dt = 1 / 20, run = (n, hour, player, yaw = 0) => { for (let k = 0; k < n; k++) { life.update(dt, { hour, day: 0, player, dangers: [], yaw }); talk.update(dt, { player, cast: 0 }); } };
+  // Suds, at two in the morning, the player stood in the street by her door.
+  const suds = life.folk.find((me) => me.p.id === 'ph_suds'), b = bedOf('ph_suds'), h = H[b.house];
+  assert.ok(abedNow(suds, 2) && !abedNow(suds, 12), 'Suds keeps day hours');
+  const door = [h.x + h.front * (h.hz + 1.6) * Math.sin(h.yaw), 0, h.z + h.front * (h.hz + 1.6) * Math.cos(h.yaw)];
+  run(200, 2, door);
+  assert.ok(suds.abed && !suds.parked && suds.posture === 'lie' && suds.asleep, `Suds isn't abed (parked ${suds.parked}, ${suds.posture})`);
+  assert.ok(Math.hypot(suds.x - b.x, suds.z - b.z) < 0.01 && Math.abs(suds.y - b.y) < 0.01, 'Suds is not in her own bed');
+  assert.equal(suds.act, ACT.SLEEP);
+  // Woken: sat up on the bed's edge; let be, back down.
+  talk.talkTo(suds.i);
+  run(120, 2, door);
+  assert.equal(suds.posture, 'sit', 'woken, Suds sits up');
+  talk.talkTo(-1);
+  run(200, 2, door);
+  assert.ok(suds.posture === 'lie' && suds.asleep, 'Suds lay down again');
+  // Gone from the house: not drawn there.
+  const away = [h.x + 200, 0, h.z];
+  run(40, 2, away);
+  assert.ok(suds.parked, 'Suds is drawn with nobody by');
+  // Morning, with nobody in her room: up, and about the street again.
+  run(400, 9.5, door);
+  assert.ok(!suds.abed && suds.posture === 'stand', `Suds is still abed in the morning (${suds.posture})`);
+  // A watchman's the other way round: abed by day.
+  const watch = CROWD.find((p) => p.id === 'ph_wake');
+  assert.ok(abedNow({ p: watch }, 11) && !abedNow({ p: watch }, 23), 'the watch sleeps by day');
+  // Those quests want are never abed.
+  assert.ok(!abedNow({ p: { id: 'ph_garrow', kind: 'merchant' } }, 2));
 });

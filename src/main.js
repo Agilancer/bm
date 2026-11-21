@@ -1,6 +1,6 @@
 // Boot: the permission gate, threads, GPU, assets, and the render thread's loop.
 import { setOpeningTerrain } from './core/terrain.js';
-import { GROUPS, GROUP_KEYS, TRIPO_KIND } from './core/tripo-monsters.js';
+import { GROUPS, GROUP_KEYS, TRIPO_KIND, landLevel } from './core/tripo-monsters.js';
 import { BOSSES as DELVE_BOSSES, DELVE as DELVE_CODE, LATCHES as DELVE_LATCHES, delveOf, inDungeon as inDelve } from './core/dungeon.js';
 import { KEYS as CASTLE_KEYS, latchWord } from './core/castle-keys.js';
 import { castleVistas, vistaAt } from './core/castle-finds.js';
@@ -11,7 +11,7 @@ import { QuestTrail } from './ui/trail.js';
 import { Audio } from './audio.js';
 import { Music } from './music.js';
 import { inTown } from './core/town.js';
-import { C, C_BLEEDS, C_SIZE, CHARS_START, CTRL, EV, EV_CAPACITY, EV_FLOATS, H, INPUT, MAX_CHARS, SNAP_FLOATS, STATE_NAMES, TACTICS, TOTAL_BYTES, WEAPONS, mapShared } from './core/layout.js';
+import { C, C_BLEEDS, C_SIZE, CHARS_START, CTRL, EV, EV_CAPACITY, EV_FLOATS, H, INPUT, MAX_CHARS, MAX_SLIMES, SLIME_FLOATS, SLIMES_START, SNAP_FLOATS, STATE_NAMES, TACTICS, TOTAL_BYTES, WEAPONS, mapShared } from './core/layout.js';
 import { clamp, damp, lerp, smoothstep, wrapAngle } from './core/math.js';
 import { FileWatch, getFile, watchFiles } from './core/files.js';
 import { initGPU, isMobileDevice, lighten } from './gfx/gpu.js';
@@ -28,7 +28,7 @@ import { MAX_LEVEL, levelPerks, stepXp, xpFor, XP_OF } from './items/levels.js';
 import { OUTSIDE, readyQuests, summon } from './ui/phobos-ready.js';
 import { GemFx } from './gfx/gemfx.js';
 import { Pack } from './items/pack.js';
-import { addPart, capture, restore, saves } from './saves.js';
+import { addPart, capture, restore, saves, setCard } from './saves.js';
 import { Chests } from './items/chests.js';
 import { Doors } from './items/doors.js';
 import { PhobosDoors } from './items/phobos-doors.js';
@@ -58,6 +58,8 @@ import { fits, partyDrops, useKit } from './items/partygear.js';
 import { TownClient } from './folk/client.js';
 import { FolkBodies } from './gfx/folk.js';
 import { TownUI } from './ui/folk.js';
+import { followedFor, pauseCard, whereWords } from './ui/pausecard.js';
+import { Tracker } from './ui/tracker.js';
 import { BOSS_CHEST, LAST_CHEST, hands, matName, RARITIES } from './items/items.js';
 import { Lands } from './ui/lands.js';
 import { AutoPlay } from './ui/autoplay.js';
@@ -67,7 +69,10 @@ import { DmgNums } from './ui/dmgnums.js';
 import { Arrange } from './ui/arrange.js';
 import { groundAt, setHomes } from './ui/places.js';
 import { HallUI } from './ui/testhall.js';
-import { HALL, SPAWN, hallAt } from './core/testhall.js';
+import { HALL, SPAWN, hallAt, inHall } from './core/testhall.js';
+import { CritterField, lineClear, meshHeight, REACH as CRITTER_REACH } from './core/critters.js';
+import { CritterLook } from './gfx/critters.js';
+import { CritterWords } from './ui/critterwords.js';
 import { beginRun, deathWords, noteEvent, noteRun, trailSentence } from './core/lastrun.js';
 import { HUB_SMOKE } from './core/phobos-hubs.js';
 import { Beacon } from './ui/beacon.js';
@@ -554,6 +559,14 @@ async function boot(plan, poolSize) {
   // What of the land you've seen.
   addPart('map', { save: () => worldMap.save(), load: (d) => worldMap.load(d) });
   game.gemFx = new GemFx(renderer);
+  // The gilded critters crawling about the hillsides (src/core/critters.js; drawn by src/gfx/critters.js). A click on one, or
+  // a tap, catches it for what it's worth: input.onPick, game.pickCritter. (Sat on the ground as it's drawn, its own grid.)
+  game.critters = new CritterField({ ground: (x, z) => meshHeight(x, z, renderer.terrainCell || 2) });
+  game.critterLook = new CritterLook(renderer);
+  game.critterWords = new CritterWords({ renderer });
+  // (A tap on the quest tracker first: on a phone the stick's layer lies over it, so its taps come this way. src/ui/tracker.js)
+  input.onPick = (sx, sy, how) => game.tracker?.tapAt(sx, sy) || game.pickCritter(sx, sy, how);
+  input.onHover = (sx, sy) => game.hoverCritter(sx, sy);
   const GEM_COLOR = (g) => ({ ruby: '#d8362c', topaz: '#e2a63a', emerald: '#3fb56a', sapphire: '#3f7fe0', amethyst: '#a45ad6', diamond: '#cfe6ee' }[g.kind]);
   // (bm.wear('crimson_regalia') dresses the whole body in one set, to look at it; bm.wear() goes back to what's worn.)
   let forcedSkin = null;
@@ -724,9 +737,16 @@ async function boot(plan, poolSize) {
       // The quest log: what auto-play is working on (src/ui/autoplay.js), and the big map framed on where a quest is.
       auto: () => game.autoplay?.current(),
       map: (p) => { if (!worldMap.open) toggleMap(); worldMap.showPlace(p); },
+      // (Abandoning a quest: asked first, in the title's "are you sure" box.)
+      confirm: (o) => title.confirm(o),
     },
   });
   game.townUI = townUI;
+  // The quests you track, under the map (src/ui/tracker.js): one clicked opens the quest log on it.
+  const tracker = new Tracker({ el: $('qTrack'), quests: townUI.quests, pack, day: () => town.day,
+    open: (id) => { if (townUI.book || !townUI.act.canMenu()) return false; townUI.openBook('active', id); return true; } });
+  tracker.setOn(settings.tracker !== 'off');
+  game.tracker = tracker;
   game.music = music;
   // The gold trail on the ground to the quest you follow (or, in the opening, down the road after Lisandra).
   game.questTrail = new QuestTrail({ renderer, townUI, town });
@@ -820,6 +840,9 @@ async function boot(plan, poolSize) {
   game.beacon = new Beacon({ pack, shared, input, hud, renderer, audio, cmd: (...a) => lands.o.cmd(...a), party: () => game.party,
     firstHero: () => renderer.firstHero, gameState: () => game.gameState(), snap: () => game.currentSnap(), testing: () => testMode, saved: () => autosave() });
   window.bm = game.api(shared, simWorker, buffer, pool);
+  // (For tests: bm.critters is the field, its list each of them; bm.pickCritter(x, y) clicks the screen there.)
+  window.bm.critters = game.critters;
+  window.bm.pickCritter = (x, y, how = 'cursor') => game.pickCritter(x, y, how);
   // How long the start took, part by part (tools/load_time.mjs).
   window.bm.loadLaps = [['the simulation ready', Math.round(simMs)], ...renderer.loadLaps];
   gpuNote = () => `Before it went, the GPU took ${Math.round(renderer.stats.busyMs || 0)} ms a frame (${Math.round(renderer.worstMs)} ms at worst), with ${renderer.inFlight} frames waiting; the picture was ${renderer.W}x${renderer.H}.`;
@@ -907,6 +930,30 @@ async function boot(plan, poolSize) {
   // The game keeps itself as it's played: that's Continue.
   const autosave = async () => { const data = await snapshot(); if (data) saves.writeAuto(data); };
   keepForReset = autosave;
+  // A save's card in the Save and Load windows (src/saves.js setCard): who, their level, where, the quest followed, the time played,
+  // and a small picture of the game as it was. The picture is taken as the game is paused, and every minute and a half of play.
+  let thumb = null, thumbT = 0;
+  const grabThumb = () => new Promise((res) => {
+    if (!input.enabled || title.up) { res(null); return; }
+    const prev = game.onFrame, to = setTimeout(() => res(null), 1500);
+    game.onFrame = () => {
+      game.onFrame = prev;
+      prev?.();
+      clearTimeout(to);
+      try {
+        const src = renderer.canvas, w = 192, h = 108, c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        const k = Math.max(w / src.width, h / src.height), cw = w / k, ch = h / k;
+        c.getContext('2d').drawImage(src, (src.width - cw) / 2, (src.height - ch) / 2, cw, ch, 0, 0, w, h);
+        thumb = c.toDataURL('image/jpeg', 0.62);
+      } catch (e) { console.warn('save picture', e); }
+      res(thumb);
+    };
+  });
+  setCard(() => {
+    const s = game.currentSnap();
+    return { name: townUI.name || '', level: pack.level || 1, where: s ? whereWords(s[H.PX], s[H.PY], s[H.PZ]) : '', quest: followedFor(townUI.quests)?.title || '', played: Math.round(played), thumb };
+  });
   game.onTaken = autosave;
   if (openingHUD) game.drawOpening = (snap, cam) => openingHUD.feel(snap, cam);
   game.onTick = (dt) => {
@@ -937,8 +984,10 @@ async function boot(plan, poolSize) {
       const night = town.day * 2 + (renderer.hour < 12 ? 0 : 1);
       if (townUI.quests.wantsWarden(renderer.hour) && townUI.wardenAsked !== night) { townUI.wardenAsked = night; simWorker.postMessage({ type: 'warden' }); }
     }
+    tracker.update(dt);
     if (!input.enabled || state.paused) return;
     played += dt; playT += dt; runT += dt; noteT += dt;
+    if ((thumbT += dt) > 90) { thumbT = 0; grabThumb(); }
     if (playT > AUTOSAVE_EVERY) { playT = 0; autosave(); }
     // The run's note (src/core/lastrun.js): how long it's been played and where you stand, for the start after a death.
     if (noteT > 8) {
@@ -990,7 +1039,7 @@ async function boot(plan, poolSize) {
       if (d) startFrom(d);
     }
   };
-  const slotOptions = () => ({ canSave: canSave(), snapshot, restore: (d) => (input.enabled ? loadInGame(d) : startFrom(d)) });
+  const slotOptions = () => ({ canSave: canSave(), inGame: input.enabled, snapshot, restore: (d) => (input.enabled ? loadInGame(d) : startFrom(d)) });
   const loadInGame = async (d) => { if (await loadInto(d)) resume(); };
   // (With the mouse free, Tab's or auto-play's, there's no lock to take again: straight back.)
   const resume = () => { if (input.touch || AUTO || input.loose) input.onPauseChange(false); else input.lock(); };
@@ -1083,6 +1132,19 @@ async function boot(plan, poolSize) {
       else if (a === 'menu') toTitle();
     };
   }
+  // The card beside the pause menu (src/ui/pausecard.js): who you are, where, and the quest you follow, with the way to the log.
+  const pauseCardEl = $('pause').querySelector('.pz-card');
+  const drawPauseCard = () => {
+    const s = game.currentSnap();
+    pauseCardEl.innerHTML = pauseCard({ name: townUI.name, level: pack.level, xp: pack.xp, where: s ? whereWords(s[H.PX], s[H.PY], s[H.PZ]) : '', played, gold: pack.gold, copper: pack.copper,
+      day: town.day, hour: renderer.hour, quest: followedFor(townUI.quests), Q: townUI.quests, mats: pack.mats, today: town.day });
+  };
+  pauseCardEl.addEventListener('click', (e) => {
+    if (!e.target.closest('[data-p="quests"]')) return;
+    title.chime();
+    input.onPauseChange(false);
+    if (townUI.act.canMenu()) townUI.openBook('active');
+  });
   const applySetting = (k, v) => {
     if (k === 'look') input.sens = v;
     else if (k === 'ambience' && input.enabled) audio.setAmbience(v);
@@ -1097,12 +1159,14 @@ async function boot(plan, poolSize) {
       awayChanged();
     } else if (k === 'keep') {
       useStore(v === 'yes');
-    } else if (k === 'gfx') {
-      title.confirm({ title: 'Restart?', text: 'The graphics setting takes hold when the game restarts. Where you are is kept for Continue.', yes: 'Restart Now', no: 'Later' })
-        .then(async (yes) => { if (yes) { await autosave(); title.reload(); } });
+    } else if (k === 'tracker') {
+      tracker.setOn(v !== 'off');
     }
+    // (Graphics and Other Tessariels wait on a restart: the settings window says so, with Restart now, title.onRestart.)
   };
   title.onSetting = applySetting;
+  // Restarting for a setting: where you are is kept for Continue first.
+  title.onRestart = async () => { await autosave(); title.reload(); };
   applySetting('look', settings.look);
   applySetting('res', settings.res);
   applySetting('ticker', settings.ticker);
@@ -1113,6 +1177,8 @@ async function boot(plan, poolSize) {
     state.paused = paused;
     document.body.classList.toggle('paused', paused);
     $('pause').style.display = paused ? 'flex' : 'none';
+    // (The save made as it paused has the picture from before: given this one, once it's taken.)
+    if (paused) { drawPauseCard(); grabThumb().then((t) => { const a = t && saves.auto(); if (a?.card && a.card.thumb !== t && state.paused) { a.card.thumb = t; saves.writeAuto(a); } }); }
     // (Back in play, no button keeps the focus that Tab walked it to on the pause screen: Enter would press it.)
     if (!paused && document.activeElement?.closest?.('button, #pause')) document.activeElement.blur();
     shared.input[INPUT.PAUSE] = paused ? 1 : 0;
@@ -1382,10 +1448,9 @@ class Hud {
     this.foeHp = $('foeHp').firstElementChild;
     this.foeArm = $('foeArmor').firstElementChild;
     this.stamEl = $('stam').firstElementChild;
-    this.shown = {};
   }
 
-  reset() { this.msgShown = 0; $('msg').style.opacity = 0; $('msg').innerHTML = ''; this.shown = {}; }
+  reset() { this.msgShown = 0; $('msg').style.opacity = 0; $('msg').innerHTML = ''; }
 
   setDebug(on) { this.debug = on; $('debug').style.display = on ? 'block' : 'none'; }
 
@@ -1397,13 +1462,6 @@ class Hud {
     if (Math.abs(v - el.shown) < 0.004) return;
     el.shown = v;
     el.style.transform = `scaleX(${v.toFixed(3)})`;
-  }
-
-  // Each lesson once, at the moment it means something.
-  once(id, text, secs = 4.5) {
-    if (this.shown[id]) return;
-    this.shown[id] = true;
-    this.tip(text, secs);
   }
 
   tip(text, secs) {
@@ -1653,6 +1711,129 @@ class GameView {
     if (this.onTaken) this.onTaken();
   }
 
+  // The gilded critters: about you while you're out on the land (not in the opening, a delve, the Test Dungeon, or under the
+  // ground), still while the game is, and drawn either way.
+  updateCritters(dt, snap) {
+    const f = this.critters, look = this.critterLook;
+    if (!f || !look) return;
+    const px = snap[H.PX], py = snap[H.PY], pz = snap[H.PZ], o = snap[H.OPENING], cell = this.renderer.terrainCell || 2;
+    const out = !(o > 0 && o < OPENING.ESCORT) && !inDelve(px, pz) && !inHall(px, pz) && py > meshHeight(px, pz, cell) - 2.5;
+    const still = !!this.shared.input[INPUT.PAUSE] || !!this.idle;
+    // (A Prismatic Wisp come near you: its own chord, low.)
+    f.onRipe ||= (c) => { const s = this.currentSnap(); if (c.K.one && s && Math.hypot(c.x - s[H.PX], c.z - s[H.PZ]) < 34) this.audio.chime?.('prism', -7, 0.7); };
+    if (!still) f.step(dt, out ? { x: px, z: pz, fx: this.cam.fx, fz: this.cam.fz } : null);
+    // The crosshair over one a click would catch: a gold grab mark, and it lights up. (Fifteen times a second.)
+    if ((this.critterAimT = (this.critterAimT || 0) - dt) <= 0) {
+      this.critterAimT = 1 / 15;
+      const aiming = out && !still && !this.input.loose && !this.input.soft && !this.input.touch && document.pointerLockElement === this.input.canvas;
+      const u = aiming ? this.critterUnder(-1, -1, 'aim') : null, grab = !!(u && u.reach);
+      document.getElementById('cross')?.classList.toggle('grab', grab);
+      if (!this.input.loose) look.hover = grab ? u.c : null;
+    }
+    look.step(still ? 0 : dt, f, this.overrideCam || this.cam, out, cell, px, pz);
+    // The first one near enough to see well: what they are, once.
+    if (out && !still && !this.critterTold && this.input.enabled && !this.input.menu) {
+      const c = f.list.find((q) => q.alive && q.born > 0.9 && Math.hypot(q.x - px, q.z - pz) < 16);
+      if (c) {
+        this.critterTold = true;
+        let told = false;
+        try { told = localStorage.getItem('bm.critterTold') === '1'; localStorage.setItem('bm.critterTold', '1'); } catch { /* no storage */ }
+        if (!told) this.hud.tip(`Gilded critters! A red arrow marks a ripe one: ${this.input.touch ? 'tap' : 'click'} it when its arrow turns gold, before it gets away. Ripe ones pay well; a Golden Scarab pays gold.`, 7);
+      }
+    }
+  }
+
+  // The gilded critter at (sx, sy) on the screen that a click there (how: 'aim', the crosshair; 'cursor', the free mouse;
+  // 'soft', Alt's; 'tap', a thumb looking about; 'stick', a thumb on the stick's side) would be on, if any, as { c, reach }
+  // (reach: near enough you to be caught). Not one you can't see (behind a trunk, a boulder or the brow of the hill), and
+  // with the crosshair never in a fight: a foe within 25 m, or on the screen within 40 pixels of it, and the click's a shot.
+  critterUnder(sx, sy, how) {
+    const f = this.critters, m = this.renderer.frameData, s = this.currentSnap();
+    if (!f || !f.list.length || !m || !s || this.input.menu || this.shared.input[INPUT.PAUSE]) return null;
+    const W = innerWidth, Ht = innerHeight, py = m[37];
+    const screen = (x, y, z) => {
+      const cx = m[0] * x + m[4] * y + m[8] * z + m[12], cy = m[1] * x + m[5] * y + m[9] * z + m[13], cw = m[3] * x + m[7] * y + m[11] * z + m[15];
+      if (cw < 0.1) return null;
+      return [(cx / cw * 0.5 + 0.5) * W, (0.5 - cy / cw * 0.5) * Ht, (py * Ht * 0.5) / cw];
+    };
+    if (how === 'aim') {
+      const r = document.getElementById('cross')?.getBoundingClientRect();
+      sx = r && r.width ? r.left + r.width / 2 : W / 2; sy = r && r.width ? r.top + r.height / 2 : Ht / 2;
+      if (this.foeNear(s, screen, sx, sy)) return null;
+    }
+    const eye = [m[144], m[145], m[146]], cell = this.renderer.terrainCell || 2, ground = (x, z) => meshHeight(x, z, cell);
+    const seen = (c) => { const q = c.middle(); return lineClear(eye[0], eye[1], eye[2], q[0], q[1] + 0.04, q[2], ground); };
+    // (The crosshair: its body, or 10 pixels round it if that's more. A pointer, a little round it; a thumb, more round a ripe
+    // one than one not.)
+    const room = how === 'tap' ? (q) => (q.ripe ? 46 : 24) : how === 'stick' ? (q) => (q.ripe ? 30 : 18) : how === 'aim' ? 10 : 24;
+    const c = f.pick(screen, sx, sy, room, seen, how === 'aim' ? 1 : 1.35);
+    return c ? { c, reach: Math.hypot(c.x - s[H.PX], c.z - s[H.PZ]) <= CRITTER_REACH } : null;
+  }
+
+  // A foe near you (within 25 m), or on the screen near (sx, sy). screen(x, y, z): where a point is on it.
+  foeNear(s, screen, sx, sy) {
+    const px = s[H.PX], pz = s[H.PZ];
+    const near = (x, y, z) => { if (Math.hypot(x - px, z - pz) < 25) return true; const q = screen(x, y, z); return !!q && Math.hypot(q[0] - sx, q[1] - sy) < 40; };
+    for (let i = 0; i < s[H.NCHARS]; i++) {
+      const o = CHARS_START + i * C_SIZE;
+      if (s[o + C.ACTIVE] < 0.5 || s[o + C.STATE] === 10 || !s[o + C.HOSTILE] || !(s[o + C.HP] > 0)) continue;
+      if (near(s[o + C.X], s[o + C.Y] + 1, s[o + C.Z])) return true;
+    }
+    for (let i = 0; i < MAX_SLIMES; i++) {
+      const o = SLIMES_START + i * SLIME_FLOATS;
+      if (s[o] >= 0.5 && near(s[o + 1], s[o + 2] + 0.4, s[o + 3])) return true;
+    }
+    return false;
+  }
+
+  // The free mouse over the screen at (sx, sy): a gilded critter under it in reach lights up and the pointer's a hand; one
+  // out of reach, the pointer says not yet.
+  hoverCritter(sx, sy) {
+    const u = this.input.loose ? this.critterUnder(sx, sy, 'cursor') : null;
+    if (this.critterLook) this.critterLook.hover = u && u.reach ? u.c : null;
+    if (this.input.canvas) this.input.canvas.style.cursor = u ? (u.reach ? 'pointer' : 'not-allowed') : '';
+  }
+
+  // A click or a tap on the screen at (sx, sy), how as critterUnder: if a gilded critter's there, it's caught, and what it was
+  // worth is yours. True if one was (or one too far off was, and there's a word for it).
+  pickCritter(sx, sy, how) {
+    const u = this.critterUnder(sx, sy, how);
+    if (!u) return false;
+    const c = u.c;
+    if (!u.reach) {
+      // (Too far off: the crosshair's click is a shot as ever, and a thumb on the stick's side moves you; the mouse's or a
+      // look-about thumb's, a word.)
+      if (how === 'aim' || how === 'stick') return false;
+      // (Said once in eight seconds at most.)
+      const now = performance.now();
+      if (!(now - (this.critterFarT || -1e9) < 8000)) {
+        this.critterFarT = now;
+        this.hud.tip(c.ripe ? `Too far off to catch. Get nearer: its arrow turns gold when it's in reach.` : `Too far off to catch. Get nearer.`, 2);
+      }
+      return true;
+    }
+    const m = c.middle(), got = this.critters.take(c, landLevel(c.x, c.z));
+    if (!got) return false;
+    this.critterLook.caught(c);
+    if (this.critterLook.hover === c) this.critterLook.hover = null;
+    // A run of ripe catches, each within four seconds of the one before: each one's bell a semitone higher, up to eight. (One
+    // not ripe rings low and soft, and is no part of a run.)
+    const now = performance.now() / 1000, ch = (this.critterChain ||= { n: -1, t: -9 });
+    if (c.ripe) { ch.n = now - ch.t < 4 ? Math.min(8, ch.n + 1) : 0; ch.t = now; }
+    this.audio.chime?.(c.key, c.ripe ? ch.n : 0, c.ripe ? 1 : got.none ? 0.25 : 0.45);
+    // (Not ripe, and caught so many of late it's worth nothing: a word, no more.)
+    if (got.none) { this.critterWords.add(m[0], m[1] + 0.25, m[2], 'tired', '#9a9a9a', 0.6); return true; }
+    const pack = this.pack;
+    if (got.gold) { pack.gold += got.gold; this.audio.play('coin', null, 0, 0, c.ripe ? 0.9 : 0.5, 1, false); }
+    else this.addXp(got.xp);
+    const color = got.gold ? '#ffd040' : c.K.color;
+    this.critterWords.add(m[0], m[1] + 0.25, m[2], `+${got.gold || got.xp} ${got.gold ? 'gold' : 'XP'}`, color, c.ripe ? 1 : 0.7);
+    // Its motes fly to where it went: the level's medal for experience, the pack for gold.
+    this.critterWords.fly(m[0], m[1], m[2], got.gold ? 'bPack' : 'levelBox', color, c.ripe ? 8 : 3);
+    if (c.ripe) this.chatLog?.system(`Caught a ${c.K.name}: ${got.gold || got.xp} ${got.gold ? 'gold' : 'experience'}${got.tired ? ', half: you have caught a great many of late' : ''}.`);
+    return true;
+  }
+
   updateDrops(dt, snap) {
     this.drops.low = snap[H.HP] / (snap[H.MAX_HP] || 1) < 0.35;
     this.drops.dry = snap[H.MANA] / (snap[H.MAX_MANA] || 1) < 0.3;
@@ -1782,6 +1963,7 @@ class GameView {
       this.beacon?.frame(dt, snap);
       this.updateTrail(dt, snap);
       this.updateDrops(dt, snap);
+      this.updateCritters(dt, snap);
       this.autoplay?.frame(dt, snap);
       this.firstSight?.frame(dt, snap);
       const c = this.overrideCam || this.cam;
@@ -1812,6 +1994,7 @@ class GameView {
       this.hud.update(dt, snap, hs);
       this.foeBars?.update(snap, !this.idle && !this.input.menu && this.input.enabled);
       this.dmgNums?.update(dt, !this.idle && !this.input.menu);
+      this.critterWords?.update(dt, !this.idle && !this.input.menu);
       this.clock.set(r.hour);
       // (Down a delve there's no sun to tell the hour by, and nothing of the land's to track: the clock is put away.)
       const deep = inDelve(snap[H.PX], snap[H.PZ]);
@@ -2140,7 +2323,6 @@ class GameView {
         if (!this.spellSound) this.spellSound = new SpellSound(au);
         this.spellSound.gather(a);
         if (this.town) this.town.cast++;   // (The town's never seen real magic: src/folk/talk.js.)
-        this.hud.once('cast', this.input.touch ? 'Tap a spell to cast it, and hold to keep casting. Your spellbook is in the top row.' : '1 to 9 cast what is in each slot, and 0, − and + the Utility spells in the last three: hold to keep casting. B is your spellbook. Alt gives you a cursor to click them with.', 5);
         break;
       case EV.SPELL_LOOSE:
         if (!this.spellSound) this.spellSound = new SpellSound(au);
@@ -2195,7 +2377,6 @@ class GameView {
           au.play('blocked', a, b, c, 0.7, 1.2);
           r.emit(2, 42, a, b, c, d, e, f, 0.9, 1.4, 6.5, 0.0018, 0.005, 0.2, 0.6);
         }
-        this.hud.once('gash', g < 2 ? 'The plate is cut. Strike that same cut again to go through. Your X turns red over it.' : 'A cut. Strike it again to go through.');
         r.emit(6, 8, a, b, c, d, e, f, 0.6, 0.3, 1.1, 0.004, 0.01, 0.5, 1.3);
                 this.hud.crossHit();
         break;
@@ -2208,7 +2389,6 @@ class GameView {
         r.emit(0, 80, a, b, c, d, e, f, 0.1, 5.5, 9, 0.002, 0.01, 1, 2);
         r.emit(1, 22, a, b, c, d, e, f, 0.9, 0.4, 2.5, 0.03, 0.08, 0.4, 0.9);
         if (!r.chars[g]?.flesh) r.emit(2, 30, a, b, c, d, e, f, 1.0, 1, 4.5, 0.002, 0.004, 0.2, 0.5);        this.hud.crossHit();
-        if (g < 2) this.hud.once('puncture', 'Through the wound. Now it bleeds.', 3);
         break;
       }
       case EV.BLOCK:
@@ -2270,11 +2450,10 @@ class GameView {
         break;
       case EV.GLINT:
         r.emit(2, 3, a, b, c, 0, 1, 0, 2, 0.1, 0.5, 0.004, 0.008, 0.1, 0.2);
-        if (!this.deepWas) this.hud.once('glint', this.input.touch ? 'A blade flashes before it falls. Dodge, or swing into it to parry.' : 'A blade flashes before it falls. Q to dodge, or swing into it to parry.');
         break;
       case EV.JUMP: au.play(`jump_${this.underfoot}`, null, 0, 0, 0.32, 1, false); break;
       case EV.DODGE: au.play(`run_${this.underfoot}`, null, 0, 0, 0.5, 1.15, false); break;
-      case EV.HYDRA_NOTICE: this.hud.once('hydra', 'Three heads have turned your way. It has given you one warning.', 5); break;
+      case EV.HYDRA_NOTICE: break;
       case EV.FIRE: {
         // One head's breath, this instant. A hiss under it, not on every puff, and a roar of flame as a gout begins.
         if (performance.now() - (this.breathAt || 0) > 700) au.play('torchStrike', a, b, c, 1.4, 0.65);
@@ -2310,7 +2489,7 @@ class GameView {
         au.play('armorLand', a, b, c, 0.5 + d * 0.9, 0.5);
         r.emit(3, Math.ceil(30 * d), a, b + 0.05, c, 0, 1, 0, 1.3, 0.4, 2.2, 0.08, 0.2, 0.5, 1.2);
         break;
-      case EV.BEAST_NOTICE: if (!this.deepWas) this.hud.once('gravehart', 'Something in the trees has noticed you. Leave its ground and it may let you go.', 5); break;
+      case EV.BEAST_NOTICE: break;
       case EV.ROAR:
         // A stag's roar, far too big: a groan under a rasp, carrying a long way.
         au.gore(a, b, c, 1.6 * d, 1.7, 130); au.gore(a, b, c, 1.2 * d, 1.4, 240); au.gore(a, b, c, 0.5 * d, 1.1, 620);
