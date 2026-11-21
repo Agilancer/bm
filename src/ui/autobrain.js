@@ -2136,7 +2136,7 @@ export class Brain {
     return o && down(o.who) ? o : null;
   }
   // Whether a gate between delves shut till a boss has died is open: it has died, now or ever (src/sim/dungeon.js open).
-  gateOpen = (key) => this.o.townUI.quests.flags.has(`boss:${key}`) || !!this.o.game.party?.warrens?.down?.includes(key);
+  gateOpen = (key) => this.o.townUI.quests.flags.has(key.includes(':') ? key : `boss:${key}`) || !!this.o.game.party?.warrens?.down?.includes(key);
 
   // The party dungeons the quests it has in hand send it down, and is of a level for: to go in, to kill there, or for a boss.
   delveWants(m) {

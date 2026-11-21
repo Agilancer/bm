@@ -8,6 +8,7 @@
 import { groundAt } from '../core/interior.js';
 import { makeRng, rollChest } from './items.js';
 import { towerChests } from '../core/phobos-towers.js';
+import { castleChests } from '../core/castle-finds.js';
 
 // Out in the woods, for finding: further out, better. (After the house and crypt chests, so a save's list still lines up.)
 function woodsChests() {
@@ -36,6 +37,10 @@ export class Chests {
     // (And one at the top of each of Phobos's towers, after the woods', so a save's list still lines up:
     // src/core/phobos-towers.js towerChests.)
     this.list = things.filter((t) => t.type === 'chest').concat(woodsChests(), towerChests()).map((t) => this.make(t));
+    // (How many are kept in a save by their place in the list. After them, the castle's: kept by their ids, so more can
+    // be put anywhere without moving a save's. src/core/castle-finds.js.)
+    this.byPlace = this.list.length;
+    this.list.push(...castleChests().map((t) => this.make(t)));
     this.fixed = this.list.length;
     this.near = [];
     renderer.chests = this.near;
@@ -105,9 +110,10 @@ export class Chests {
 
   // What goes in a save: which are open, by their place in the list; and the bosses' still shut, by where they stand.
   save() {
-    const open = this.list.slice(0, this.fixed).flatMap((ch, i) => (ch.open ? [i] : []));
+    const open = this.list.slice(0, this.byPlace).flatMap((ch, i) => (ch.open ? [i] : []));
+    const ids = this.list.slice(this.byPlace, this.fixed).filter((ch) => ch.open).map((ch) => ch.id);
     const boss = this.list.slice(this.fixed).filter((ch) => !ch.open).map(({ x, y, z, yaw, loot, key }) => ({ x, y, z, yaw, loot, key }));
-    return boss.length ? { open, boss } : open;
+    return boss.length || ids.length ? { open, boss, ids } : open;
   }
 
   // (They come back open, and what was in them has been had. Null: all of them shut, and no boss's.)
@@ -115,8 +121,9 @@ export class Chests {
     const open = new Set(Array.isArray(d) ? d : Array.isArray(d?.open) ? d.open : []);
     this.list.length = this.fixed;
     for (const t of d?.boss || []) if (Number.isFinite(t.x) && Number.isFinite(t.y) && Number.isFinite(t.z)) this.list.push(this.make({ type: 'chest', boss: true, ...t }));
+    const ids = new Set(Array.isArray(d?.ids) ? d.ids : []);
     this.list.slice(0, this.fixed).forEach((ch, i) => {
-      ch.open = ch.spilled = open.has(i);
+      ch.open = ch.spilled = i < this.byPlace ? open.has(i) : ids.has(ch.id);
       ch.k = ch.open ? 1 : 0;
       this.pose(ch);
     });
