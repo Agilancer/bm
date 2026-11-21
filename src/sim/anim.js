@@ -88,9 +88,9 @@ export class Rig {
     this.bank = bank;
     const prim = glb.json.meshes.find((m) => m.primitives[0].attributes.WEIGHTS_0)?.primitives[0];
     if (prim) {
-      // (Copies: a view would keep the whole file in memory, its pictures too, for as long as the rig's about.)
+      // (Copies: a view would keep the whole file in memory, its pictures too, for as long as the rig's about. The plates' hit
+      // trees are built from these: src/sim/knight.js. The normals were kept too, and nothing read them: 6 MB.)
       this.bindPos = accessor(glb, prim.attributes.POSITION).slice();
-      this.bindNormal = accessor(glb, prim.attributes.NORMAL).slice();
       this.tris = accessor(glb, prim.indices).slice();
     }
     for (let i = 0; i < this.count; i++) if (this.parent[i] >= i) throw new Error('joints must be parents first');
@@ -272,10 +272,36 @@ export class ArmsRig {
     this.clips = {};
     const clips = readClips(glb, skel, clipNames);
     for (const [name, c] of Object.entries(clips)) {
-      const n = Math.max(2, Math.round(c.dur * (this.extras.fps || 60)) + 1);
+      // A grid as fine as the clip's own keys, and no finer than 60 a second. The monsters' files are keyed at 24 or 30 a
+      // second: on a 60 Hz grid each was the same curve (a straight line between keys either way) in two and a half times the
+      // memory, which for a world's worth of monsters was 40 MB of a phone's in the simulation's thread alone.
+      // The rate is the closest two keys' (one track's keys can be thinned where nothing moves, so not the most keys'), and
+      // it's kept only if every key falls on its grid: keys begun off the clip's start, or at no steady rate, would fall
+      // between its points and be cut across, so those have the 60 a second grid they always had, which no key is far from.
+      const fps = this.extras.fps || 60, dur = Math.max(c.dur, 1e-3);
+      let gap = Infinity;
+      for (const set of [c.rot, c.trans]) for (const [, tr] of set) for (let k = 1; k < tr.times.length; k++) {
+        const d = tr.times[k] - tr.times[k - 1];
+        if (d > 1e-4 && d < gap) gap = d;
+      }
+      const steps = (rate) => Math.max(1, Math.round(dur * rate));
+      let n = steps(Math.min(fps, 1 / gap)) + 1;
+      if (n - 1 < steps(fps)) {
+        const h = c.dur / (n - 1);
+        const on = (t) => Math.abs(t / h - Math.round(t / h)) < 0.02;
+        let all = true;
+        for (const set of [c.rot, c.trans]) for (const [, tr] of set) if (all && tr.times.length > 1) for (const t of tr.times) if (!on(t)) { all = false; break; }
+        if (!all) n = steps(fps) + 1;
+      }
       const rots = new Array(this.count).fill(null), trs = new Array(this.count).fill(null);
+      // (All of a clip's tracks in one block, each its own view of it: a buffer apiece was forty thousand of them.)
+      let size = 0;
+      for (const [, tr] of c.rot) if (tr.times.length > 1) size += n * 4;
+      for (const [, tr] of c.trans) if (tr.times.length > 1) size += n * 3;
+      const block = new Float32Array(size);
+      let at = 0;
       const resample = (track, size) => {
-        const out = new Float32Array(n * size);
+        const out = block.subarray(at, (at += n * size));
         const { times } = track;
         // q and -q are the same turn, and exporters hand over either. Blended straight across a change of sign they pass through nothing, and for that frame the bone points anywhere: so each key takes the sign nearest the last.
         const values = size === 4 ? sameHemisphere(track.values) : track.values;

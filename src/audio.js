@@ -12,6 +12,21 @@ const KEPT_BYTES = PHONE ? 24e6 : 0;
 // A loop silent this long (seconds) is stopped and let go (Audio.bed, Audio.spot): it comes back the moment it's wanted.
 const QUIET = 10;
 
+/** On a phone, a decoded sound kept as one channel, not two: half the memory. Decoded, the sound a phone held in the cave
+ *  was 75 to 95 MB. (src/title.js uses this for its song too.) The beds lose their width, which a phone's speakers, an inch
+ *  apart, hardly had to give; earbuds hear them in the middle.
+ *  The channels are summed at 1/sqrt(n), not averaged, so a sound keeps its loudness: a wide bed's two sides are mostly
+ *  unlike, and halved they'd lose 3 dB; and a panner (a sound from a place) gives one channel 0.71 of itself each side at
+ *  the middle where it gave two all of theirs, so a sound alike in both would lose 3 dB the other way. Alike in both and not
+ *  through a panner, it's 3 dB up. */
+export function slim(ctx, buf) {
+  if (!PHONE || !buf || buf.numberOfChannels < 2) return buf;
+  const one = ctx.createBuffer(1, buf.length, buf.sampleRate), out = one.getChannelData(0);
+  const n = buf.numberOfChannels, k = 1 / Math.sqrt(n);
+  for (let c = 0; c < n; c++) { const d = buf.getChannelData(c); for (let i = 0; i < d.length; i++) out[i] += d[i] * k; }
+  return one;
+}
+
 const n = (base, k) => Array.from({ length: k }, (_, i) => `${base}_${i + 1}`);
 // Decoded at load, before the game starts: what a fight and a walk on the dirt need the instant they happen.
 const BANKS = {
@@ -115,7 +130,7 @@ export class Audio {
     const nd = this.noise.getChannelData(0);
     for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
     await Promise.all([...CORE].map(async (n) => {
-      this.buffers[n] = await ctx.decodeAudioData(await getFile(`${this.base}assets/game/audio/${n}.mp3`));
+      this.buffers[n] = slim(ctx, await ctx.decodeAudioData(await getFile(`${this.base}assets/game/audio/${n}.mp3`)));
     }));
     this.lastAt = {};
     this.ready = true;
@@ -201,7 +216,7 @@ export class Audio {
   fetchBuffer(name) {
     if (this.buffers[name]) { this.touched(name); return Promise.resolve(this.buffers[name]); }
     this.pending = this.pending || {};
-    return this.pending[name] || (this.pending[name] = fetch(`${this.base}assets/game/audio/${name}.mp3`).then((r) => r.arrayBuffer()).then((a) => this.ctx.decodeAudioData(a))
+    return this.pending[name] || (this.pending[name] = fetch(`${this.base}assets/game/audio/${name}.mp3`).then((r) => r.arrayBuffer()).then((a) => this.ctx.decodeAudioData(a)).then((b) => slim(this.ctx, b))
       .then((buf) => { this.buffers[name] = buf; this.touched(name); this.trim(name); return buf; })
       // (The promise isn't kept once it's answered: it would hold the sound after the sound's been let go.)
       .finally(() => { delete this.pending[name]; }));

@@ -15,7 +15,7 @@ import { C, C_BLEEDS, C_SIZE, CHARS_START, CTRL, EV, EV_CAPACITY, EV_FLOATS, H, 
 import { clamp, damp, lerp, smoothstep, wrapAngle } from './core/math.js';
 import { FileWatch, getFile, watchFiles } from './core/files.js';
 import { initGPU, isMobileDevice, lighten } from './gfx/gpu.js';
-import { Governor } from './gfx/governor.js';
+import { Governor, PHONE_ONLY_STEPS } from './gfx/governor.js';
 import { STEPS as DESK_STEPS, deskStep } from './gfx/deskscale.js';
 import { RenderDiagnostics } from './gfx/render-diagnostics.js';
 import { Clock } from './clock.js';
@@ -68,7 +68,7 @@ import { Arrange } from './ui/arrange.js';
 import { groundAt, setHomes } from './ui/places.js';
 import { HallUI } from './ui/testhall.js';
 import { HALL, SPAWN, hallAt } from './core/testhall.js';
-import { beginRun, deathWords, noteRun } from './core/lastrun.js';
+import { beginRun, deathWords, noteEvent, noteRun, trailSentence } from './core/lastrun.js';
 import { HUB_SMOKE } from './core/phobos-hubs.js';
 import { Beacon } from './ui/beacon.js';
 
@@ -395,6 +395,7 @@ async function boot(plan, poolSize) {
   let gpuErrors = 0, outOfMemory = false;
   gpu.device.addEventListener('uncapturederror', (e) => {
     window.__gpuErrors = ++gpuErrors; renderDiagnostics.fail(e.error, 'GPU validation'); if (gpuErrors < 6) console.error('GPU error:', e.error.message);
+    gpu.fresh?.suspect(e.error);   // (just after views were made fresh: theirs, likely, so that stops: src/gfx/freshviews.js)
     // The GPU saying it has no memory left for something asked of it: what's drawn with that is missing or black from here
     // on, and the next thing may be the device lost. Noted, so the next start loads lighter (src/core/lastrun.js), and the
     // game kept now, while it can be.
@@ -472,11 +473,11 @@ async function boot(plan, poolSize) {
   const pendingEvents = [];
   const hz = gpu.tier.sim;
   // The other Tessariels this session (src/core/heroes.js): who they are is kept, so the same people are about next time.
-  // How many: by the tier, the setting, or ?heroes=N for tests.
+  // How many: HERO_SLOTS, unless the player's own setting says fewer (or ?heroes=N for tests).
   const heroCount = params.has('heroes') ? Number(params.get('heroes')) : settings.heroes === 'off' ? 0
-    // (Never fewer for a browser that closed the game last time, src/core/lastrun.js: the party for the Warrens is hired from
-    // these, four with a tank and a healer, and a cast cut to two or four left none to be had, or no choice of who.)
-    : Math.min(settings.heroes === 'few' ? 8 : 99, HERO_SLOTS[gpu.tier.lean ? 'lean' : 'desktop']);
+    // (The same on every device and tier, and never fewer for a browser that closed the game last time: OWNER RULE, "DO NOT
+    // REDUCE THE NUMBER OF NPC PLAYERS". The party for the Warrens is hired from these, too. tests/crash-party.test.mjs.)
+    : settings.heroes === 'few' ? 8 : HERO_SLOTS;
   let cast = [];
   if (heroCount > 0) {
     try {
@@ -488,7 +489,7 @@ async function boot(plan, poolSize) {
       try { kept = JSON.parse(localStorage.getItem('bm.heroes') || 'null'); } catch { /* none */ }
       const seed = kept?.seed || Math.floor(Math.random() * 2 ** 31);
       try { localStorage.setItem('bm.heroes', JSON.stringify({ ...(kept || {}), seed })); } catch { /* full */ }
-      cast = withBrokers(makeCast(roster, kit, names, Math.min(heroCount, 16), seed, params.get('bodies')?.split(',') || null), roster, kit, !!gpu.tier.lean);
+      cast = withBrokers(makeCast(roster, kit, names, Math.min(heroCount, HERO_SLOTS), seed, params.get('bodies')?.split(',') || null), roster, kit, !!gpu.tier.lean);
     } catch (e) { console.warn('heroes', e); cast = []; }
   }
   renderer.heroCast = cast;
@@ -510,6 +511,10 @@ async function boot(plan, poolSize) {
     return;
   }
   const loadMs = performance.now() - start;
+  if (renderer.astc.on) {
+    const a = renderer.astc.stats;
+    console.info(`graphics: ${a.packed} pictures packed to ASTC on the GPU, ${Math.round(a.plainMB)} MB to ${Math.round(a.packedMB)}; ${a.kept} kept plain, ${a.masks} of them for a mask in their alpha (src/gfx/astc.js)`);
+  }
   pool.takeBack(lent);
   setProgress(0.99, 'Opening the gates...');
   // Tasks for the pool once the load is done: thinking about the fight.
@@ -835,7 +840,7 @@ async function boot(plan, poolSize) {
     input.menu = false;
     simWorker.postMessage({ type: 'openingName' });
     if (!input.touch && !AUTO) input.lock();
-  }, { audio, renderer, log: chatLog, onSkip: () => simWorker.postMessage({ type: 'openingSkip' }) }) : null;
+  }, { audio, renderer, log: chatLog, touch: input.touch, onSkip: () => { noteEvent('held to skip'); simWorker.postMessage({ type: 'openingSkip' }); } }) : null;
   const enter = async (fresh = true) => {
     noteRun({ stage: 'playing' });
     title.hide();
@@ -965,6 +970,7 @@ async function boot(plan, poolSize) {
     await new Promise((r) => setTimeout(r, 700));
     const kept = !!saves.newest();
     const text = `The browser closed the game last time, ${deathWords(RUN.died)}. It does that when a page wants more memory than the device has to give.`
+      + `${RUN.died.trail?.length ? ` ${trailSentence(RUN.died)}` : ''}`
       + `${gpu.mobile && RUN.light ? ' This time the game is using less memory: smaller pictures on the models.' : ''}`
       + `${lighterWords()}`
       + `${kept ? ' Continue picks up from where the game was last kept.' : ''}`;
@@ -1233,6 +1239,10 @@ async function boot(plan, poolSize) {
     const up = input.touch && window.innerHeight > window.innerWidth;
     if (up === !!game.upright) return;
     game.upright = up;
+    // (And what's over the world goes too, not only covered: a phone keeps a picture of each piece, at the old size and the
+    // new as it turns, under the cover as much as over the world. index.html body.upright.)
+    document.body.classList.toggle('upright', up);
+    noteEvent(up ? 'turned upright' : 'turned back sideways');
     if (!input.enabled) return;     // (under the title, the world's held still already)
     if (up) input.releaseControls();
     shared.input[INPUT.PAUSE] = up || awayHeld() || state.paused ? 1 : 0;
@@ -1240,6 +1250,12 @@ async function boot(plan, poolSize) {
   window.addEventListener('resize', turned);
   window.addEventListener('orientationchange', turned);
   turned();
+  // What came just before, if the browser closes the game (src/core/lastrun.js noteEvent): a touch, a size, a field typed in.
+  if (input.touch) {
+    addEventListener('touchstart', () => noteEvent('touched'), { capture: true, passive: true });
+    addEventListener('resize', () => noteEvent(`size ${innerWidth}x${innerHeight}`), { passive: true });
+    addEventListener('focusin', (e) => { if (e.target?.matches?.('input, textarea')) noteEvent('typing'); });
+  }
   // The game's own panels (the talk, the shops, the seals, the skull's menu, the book, the pack): a tick under the pointer and a
   // click as one's pressed (MenuSFX, by Kevin Fowler). The title and the pause menu have their own (src/title.js chime, tick).
   let uiHover = null;
@@ -1411,6 +1427,9 @@ class Hud {
       this.fps = this.frames * 1000 / (now - this.lastFpsT);
       this.frames = 0; this.lastFpsT = now;
       this.worstShown = this.worst; this.worst = 0;
+      // (And the worst of the last 20 s, which would show a stall every so often, as a round of src/gfx/freshviews.js might.)
+      (this.worsts ||= []).push(this.worstShown); if (this.worsts.length > 40) this.worsts.shift();
+      this.worst20 = Math.max(...this.worsts);
     }
     this.worst = Math.max(this.worst, dt * 1000);
     this.t += dt;
@@ -1455,8 +1474,9 @@ class Hud {
     }
     if (this.debug) {
       const k = this.gpu.tier;
-      $('debug').textContent = `${this.fps.toFixed(0)} fps   worst ${this.worstShown.toFixed(0)} ms   gpu busy ${stats.busyMs.toFixed(1)} ms${stats.gpuMs > 0 ? `   timer ${stats.gpuMs.toFixed(1)} ms` : ''}
-${this.gpu.info.vendor || ''} ${this.gpu.info.architecture || ''}  tier ${k.name}
+      const fv = this.gpu.fresh;
+      $('debug').textContent = `${this.fps.toFixed(0)} fps   worst ${this.worstShown.toFixed(0)} ms (${(this.worst20 || 0).toFixed(0)} in 20 s)   gpu busy ${stats.busyMs.toFixed(1)} ms${stats.gpuMs > 0 ? `   timer ${stats.gpuMs.toFixed(1)} ms` : ''}
+${this.gpu.info.vendor || ''} ${this.gpu.info.architecture || ''}  tier ${k.name}${fv ? `  views made fresh: ${fv.on ? `${fv.rounds} rounds` : `off (${fv.why})`}` : ''}
 render ${stats.W}x${stats.H}  scale ${stats.scale.toFixed(2)}  msaa ${stats.msaa}  effects -${stats.demoted}  refresh ${stats.vsync.toFixed(1)} ms
 threads ${this.plan.cores} logical, ${this.poolSize + 2} used, shared ${this.isolated ? 'yes' : 'no'}
 sim ${stats.sim ? `${stats.sim.ms.toFixed(1)} ms a tick, worst ${stats.sim.worst.toFixed(1)}, ${stats.sim.rate.toFixed(0)} a second${stats.sim.paced ? ', by the frames' : ` (own clock, ${k.sim} Hz)`}` : `${k.sim} Hz`}${stats.sim?.town ? `  town ${stats.sim.town.ms.toFixed(1)} ms, ${stats.sim.town.rate.toFixed(0)} a second` : ''}  planner rollouts ${(snap[H.ROLLOUTS] / 1000).toFixed(0)}k
@@ -1511,7 +1531,7 @@ class GameView {
     this.unpaced = gpu.mobile || params.has('unpaced');
     this.paceAt = -1; this.snapSlot = 0; this.snapUs = 0; this.pacedSnap = false;
     this.simT = 0; this.simStats = { ms: 0, worst: 0, rate: 0, paced: false };
-    if (gpu.mobile || gpu.tier.lean) this.governor = new Governor({ apply: (s) => { renderer.scale = s; }, demote: () => renderer.demote() });
+    if (gpu.mobile || gpu.tier.lean) this.governor = new Governor({ apply: (s) => { if (renderer.scale !== s && gpu.mobile) noteEvent(`picture x${s}`); renderer.scale = s; }, demote: () => renderer.demote(), ...(gpu.mobile ? { steps: PHONE_ONLY_STEPS, start: 0 } : {}) });
     this.busySum = 0; this.busyN = 0; this.timed = []; this.benched = false;
     renderer.onBusy = (ms) => {
       this.busySum += ms; this.busyN++;
