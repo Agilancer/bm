@@ -2253,8 +2253,11 @@ function climb(K, t, draw) {
   const y0 = t.from ?? stops.shift(), top = P(t.deck), G = 'dark:p2_bridge_ashlar', seen = K.geometry !== false;
   // (Every flight starts and ends on the side facing the tower: TURN to a turn.)
   const a0 = t.ta + Math.PI, R = RT + HW + 0.4;
-  const gallery = (h, rOut, deck) => {
-    walk(K, ringRects(t.x, t.z, s.re - 0.5, rOut, h, [t.tx, t.tz, RT + HW - 0.25]));
+  // (Floored over the stair's well where no flight comes up through it: the lowest gallery of one reached by its bridges was
+  // cut open there, a 400 m drop at the foot of its stair. tools/paths/trips.mjs.)
+  const gallery = (h, rOut, deck, floored = false) => {
+    walk(K, ringRects(t.x, t.z, s.re - 0.5, rOut, h, [t.tx, t.tz, floored ? 0 : RT + HW - 0.25]));
+    if (floored) walk(K, ringRects(t.tx, t.tz, 0, R, h));
     if (!seen) return;
     // (From far a band; on a phone only the deck's.)
     if (!draw) {
@@ -2279,7 +2282,7 @@ function climb(K, t, draw) {
     let y = y0;
     // (One reached only by its bridges: its stair starts at its lowest gallery, which is laid too, or that bridge ended at
     // nothing: tools/paths/map.mjs.)
-    if (t.from === null) gallery(y0, y0 === top ? s.rd : s.rg, y0 === top);
+    if (t.from === null) gallery(y0, y0 === top ? s.rd : s.rg, y0 === top, true);
     for (const h of stops) {
       if (h <= y + 1) continue;
       const turn = Math.max(1, Math.round((h - y) / TURN)) * TAU;
@@ -2349,7 +2352,8 @@ function ringRects(cx, cz, r0, r1, y, hole = null) {
     for (let i = 0; i < N; i++) {
       const a = (i + 0.5) / N * TAU, px = cx + Math.cos(a) * rm, pz = cz + Math.sin(a) * rm;
       if (Math.hypot(px - hole[0], pz - hole[1]) < hole[2]) continue;
-      out.push([px, pz, (rb - ra) / 2 + 0.08, Math.PI * rb / N + 0.08, -a, y]);
+      // (Overlapped well: turned pieces only just meeting left pinholes a body's point dropped through, 18 m down a tower.)
+      out.push([px, pz, (rb - ra) / 2 + 0.2, Math.PI * rb / N + 0.2, -a, y]);
     }
   }
   return out;

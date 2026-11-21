@@ -62,7 +62,8 @@ if (isMainThread) {
     // (The start: on the ground there, or on the floor at its height.)
     let x = from.x, z = from.z, y = settle(x, z, from.y ?? -100), vy = 0;
     // (A start inside something: the nearest place it fits, as the map has it.)
-    if (!nav.fits(x, z, y)) { const n = nav.nodesNear(x, z, from.y, from.r || 6, 6)[0] ?? nav.nodesNear(x, z, null, 12)[0]; if (n !== undefined) { x = nav.x[n]; z = nav.z[n]; y = settle(x, z, nav.y[n]); } }
+    // (Somewhere a body stands that can be got to from the gate: a place the player can't be isn't a start.)
+    if (!nav.fits(x, z, y)) { const live = (L) => L.filter((n) => nav.live[n]); const n = live(nav.nodesNear(x, z, from.y, from.r || 6, 6))[0] ?? live(nav.nodesNear(x, z, null, 12))[0]; if (n !== undefined) { x = nav.x[n]; z = nav.z[n]; y = settle(x, z, nav.y[n]); } }
     const res = { from: from.name, to: to.name, kind: to.kind, ok: false, why: '', at: [x, y, z], secs: 0, ask: 0, asks: 0 };
     let P = null, askT = -99, t = 0, best = Infinity, bestT = 0, miss = 0, fresh = false;
     const tmp = [0, 0, 0];
@@ -89,7 +90,7 @@ if (isMainThread) {
       let mx = 0, mz = 0, run = false;
       if (P) {
         while (P.length > 1) {
-          const q = P[0], k = Math.hypot(x - q[0], z - q[1]), level = Math.abs((q[4] ?? y) - y) < (k < 0.2 ? 1 : 0.3);   // (as eastWalk)
+          const q = P[0], k = Math.hypot(x - q[0], z - q[1]), level = Math.abs((q[4] ?? y) - y) < (k < 0.2 ? 0.6 : 0.3);   // (as eastWalk)
           const gone = (x - q[0]) * (P[1][0] - q[0]) + (z - q[1]) * (P[1][1] - q[1]) > 0;
           if ((level && (k < 0.5 || (gone && k < 0.8))) || (q[2] === 2 && k < 3)) P.shift(); else break;
         }

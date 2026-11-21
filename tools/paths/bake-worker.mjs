@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import { parentPort, workerData } from 'node:worker_threads';
 import { World } from '../../src/sim/world.js';
 import { BODY, CELL, DROP, LAYERS, RISE, X0, Z0, W } from './grid.mjs';
+import { dropOf, headroom } from '../../src/sim/east-nav.js';
 import { FLOOR_RISE } from '../../src/sim/east-nav.js';
 
 const read = (p) => JSON.parse(fs.readFileSync(new URL(`../../${p}`, import.meta.url)));
@@ -18,7 +19,7 @@ const tmp = [0, 0, 0];
 // (Settled: feet set down on a stair's tread may be lifted onto the deck it runs into the very next tick, as heightFor takes
 // the highest floor within a step of the feet. So again from where they came down, till they stay.)
 const ground = (x, z, y) => { let g = Math.max(world.heightFor(x, z, y), world.topUnder(x, z, y + 0.2)); for (let k = 0; k < 6; k++) { const h = Math.max(world.heightFor(x, z, g), world.topUnder(x, z, g + 0.2)); if (Math.abs(h - g) < 0.005) break; g = h; } return g; };
-const free = (x, z, y) => { tmp[0] = x; tmp[2] = z; world.resolve(tmp, BODY, y + 0.2, true); return Math.abs(tmp[0] - x) + Math.abs(tmp[2] - z) < 0.004; };
+const free = (x, z, y) => { tmp[0] = x; tmp[2] = z; world.resolve(tmp, BODY, y + 0.2, true); return Math.abs(tmp[0] - x) + Math.abs(tmp[2] - z) < 0.004 && headroom(world, x, z, y); };
 
 // Every height a body could be stood at in (x, z): the land, each floor of each platform over it, each box's top.
 function candidates(x, z) {
@@ -85,7 +86,10 @@ for (let j = j0; j <= j1; j++) {
         const there = nrow[ni].ys;
         if (!there.length) return;
         const nx = x + di * CELL, nz = z + dj * CELL, g = ground(nx, nz, y);
-        if (g - y > (g <= world.landAt(nx, nz) + 0.05 ? RISE : FLOOR_RISE) || y - g > DROP) return;   // (src/sim/east-nav.js FLOOR_RISE)
+        // (Up: clear at the height it steps from too, as the sim moves the feet across before it lifts them: a low wall under
+        // the drawbridge stood clear of the bank's higher side and in the way from its lower.)
+        if (g > y + 0.01 && !free(nx, nz, y)) return;
+        if (g - y > (g <= world.landAt(nx, nz) + 0.05 ? RISE : FLOOR_RISE) || y - g > dropOf(y <= world.landAt(x, z) + 0.05, g <= world.landAt(nx, nz) + 0.05)) return;   // (src/sim/east-nav.js FLOOR_RISE, dropOf)
         let best = -1, bd = 0.05;
         there.forEach((ty, k) => { const e = Math.abs(ty - g); if (e < bd) { bd = e; best = k; } });
         if (best >= 0 && nrow[ni].fit[best]) link[q * 4 + d] = best;

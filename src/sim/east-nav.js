@@ -17,8 +17,16 @@ export const CELL = 0.5, X0 = 9000, Z0 = -860, X1 = 11720, Z1 = 860, TILE = 4;
 // (RISE: the land's own slope never stops the sim's feet, steep as it is: only a deck more than a step over them, or a box
 // they'd walk into. So a cell's climb is let up to RISE, dear past STEEP; a drop of more than DROP isn't taken.)
 export const BODY = 0.36, RISE = 3, STEEP = 0.75, DROP = 1.1;
+// (Down the land itself, from land: as far as up it. The sim's feet go down a crag's face as they go up it; held to DROP there,
+// a way along a steep side was one-way across it, and auto-play walked to and fro under the castle's crag for good.)
+// (Room over the head: nothing walked on or stood on from a step over the feet to 1.2 m. Under a drawbridge's edge, a deck a
+// metre up, the way walked on along the bank while the sim's feet were lifted onto the deck at every step. Not higher: a
+// spiral's third tread over its foot is 1.5 m up, and its foot must be stood on.)
+export const headroom = (w, x, z, y) => Math.max(w.heightFor(x, z, y + 0.5), w.topUnder(x, z, y + 1.2)) <= y + 0.75;
+export const dropOf = (fromLand, toLand) => (fromLand && toLand ? RISE : DROP);
 // (Onto a floor, a stair's tread or a deck, from one half-metre cell to the next: no more than this. The sim lifts the feet
 // onto a floor only within 0.7 of them, a tick at a time; on the land there's no such limit, RISE.)
+export const SLOP = 0.3;
 export const FLOOR_RISE = 1.0;
 export const GW = Math.round((X1 - X0) / CELL), GH = Math.round((Z1 - Z0) / CELL);
 // (In it, with room round the edge for a search.)
@@ -88,7 +96,7 @@ export class EastNav {
     for (let k = 0; k < 6; k++) { const h = Math.max(w.heightFor(x, z, g), w.topUnder(x, z, g + 0.2)); if (Math.abs(h - g) < 0.005) break; g = h; }
     return g;
   }
-  fits(x, z, y, r = BODY) { const t = this.tmp; t[0] = x; t[2] = z; this.world.resolve(t, r, y + 0.2, true); return Math.abs(t[0] - x) + Math.abs(t[2] - z) < 0.004; }
+  fits(x, z, y, r = BODY) { const t = this.tmp; t[0] = x; t[2] = z; this.world.resolve(t, r, y + 0.2, true); return Math.abs(t[0] - x) + Math.abs(t[2] - z) < 0.004 && headroom(this.world, x, z, y); }
   // The place a body comes down on stepping into cell (i, j) from height y: [its height, fits, roomy], cached.
   land(i, j, y) {
     const key = (j * GW + i) * 8192 + Math.round(y * 4) + 4096;
@@ -174,7 +182,7 @@ export class EastNav {
       const k = pop();
       if (shut.has(k)) continue;
       shut.add(k);
-      const [i, j] = at(k), y = Y.get(k), x = X0 + (i + 0.5) * CELL, z = Z0 + (j + 0.5) * CELL;
+      const [i, j] = at(k), y = Y.get(k), x = X0 + (i + 0.5) * CELL, z = Z0 + (j + 0.5) * CELL, here = y <= this.world.landAt(x, z) + 0.05;
       for (let q = 0; q < marks.length; q++) {
         const m = marks[q];
         if (Math.hypot(x - m[0], z - m[1]) <= m[3] && (m[2] === null || m[2] === undefined || Math.abs(y - m[2]) < 1.6)) { found = k; mark = q; break; }
@@ -185,13 +193,15 @@ export class EastNav {
         const ni = i + di, nj = j + dj;
         if (ni < i0 || ni > i1 || nj < j0 || nj > j1) { step.push(null); continue; }
         const v = this.land(ni, nj, y);
-        step.push(v[1] && v[0] - y <= (v[3] ? RISE : FLOOR_RISE) && y - v[0] <= DROP ? [ni, nj, v[0], v[2] ? 1 : CLOSE_COST] : null);
+        // (Up: clear at the height it steps from, too, as the sim moves the feet before it lifts them. tools/paths/bake-worker.mjs.)
+        if (v[1] && v[0] > y + 0.01 && !this.fits(X0 + (ni + 0.5) * CELL, Z0 + (nj + 0.5) * CELL, y)) { step.push(null); continue; }
+        step.push(v[1] && v[0] - y <= (v[3] ? RISE : FLOOR_RISE) && y - v[0] <= dropOf(here, v[3]) ? [ni, nj, v[0], v[2] ? 1 : CLOSE_COST] : null);
       }
       // (On the slant only where both ways round the corner are open and come down about level with it.)
       for (const [a, b] of [[0, 2], [0, 3], [1, 2], [1, 3]]) {
         if (!step[a] || !step[b]) continue;
         const ni = step[a][0], nj = step[b][1], v = this.land(ni, nj, y);
-        if (v[1] && v[0] - y <= (v[3] ? RISE : FLOOR_RISE) && y - v[0] <= DROP && Math.abs(v[0] - step[a][2]) < RISE && Math.abs(v[0] - step[b][2]) < RISE) step.push([ni, nj, v[0], (v[2] ? 1 : CLOSE_COST) * Math.SQRT2]);
+        if (v[1] && !(v[0] > y + 0.01 && !this.fits(X0 + (ni + 0.5) * CELL, Z0 + (nj + 0.5) * CELL, y)) && v[0] - y <= (v[3] ? RISE : FLOOR_RISE) && y - v[0] <= dropOf(here, v[3]) && Math.abs(v[0] - step[a][2]) < RISE && Math.abs(v[0] - step[b][2]) < RISE) step.push([ni, nj, v[0], (v[2] ? 1 : CLOSE_COST) * Math.SQRT2]);
       }
       for (const st of step) {
         if (!st) continue;
@@ -217,16 +227,26 @@ export class EastNav {
   // (On a floor, as the sim lifts feet onto one: only within 0.7 of where they are, a tick at a time, a fifth of a metre a
   // tick at a run. Taken as the land is, a line across a spiral stair's inner edge, where the treads crowd in, went up three
   // of them in a stride: the feet stayed under them and it dropped back to the foot. tools/paths/trips.mjs.)
+  // (Over floors, the line a hand to either side too: the feet are never on the line itself, and a spiral's chord walked
+  // half a metre off it went in over the well and down to the foot. tools/paths/trips.mjs.)
   walkable(a, b) {
+    const on = this.line(a, b, 0);
+    if (on !== 1) return on === 0;
+    return this.line(a, b, SLOP) !== false && this.line(a, b, -SLOP) !== false;
+  }
+  // (0: walkable all on land; 1: walkable, over a floor somewhere; false: not. Off: that far to its left.)
+  line(a, b, off) {
     const d = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.max(1, Math.ceil(d / 0.2)), W = this.world;
-    let y = a[2];
+    const ox = d > 0 ? -(b[1] - a[1]) / d * off : 0, oz = d > 0 ? (b[0] - a[0]) / d * off : 0;
+    let y = a[2], floor = 0, was = y <= W.landAt(a[0], a[1]) + 0.05;
     for (let q = 1; q <= n; q++) {
-      const x = a[0] + (b[0] - a[0]) * q / n, z = a[1] + (b[1] - a[1]) * q / n;
+      const x = a[0] + (b[0] - a[0]) * q / n + ox * Math.min(1, q, n - q), z = a[1] + (b[1] - a[1]) * q / n + oz * Math.min(1, q, n - q);
       const g = Math.max(W.heightFor(x, z, y), W.topUnder(x, z, y + 0.2)), land = g <= W.landAt(x, z) + 0.05;
-      if (g - y > (land ? RISE * 0.4 + 0.12 : 0.6) || y - g > DROP * 0.4 + 0.1 || !this.fits(x, z, g, BODY + 0.06)) return false;
-      y = g;
+      if (g - y > (land ? RISE * 0.4 + 0.12 : 0.6) || y - g > dropOf(was, land) * 0.4 + 0.1 || (!off && (!this.fits(x, z, g, BODY + 0.06) || (g > y + 0.01 && !this.fits(x, z, y))))) return false;
+      if (!land) floor = 1;
+      y = g; was = land;
     }
-    return Math.abs(y - b[2]) < 0.6;
+    return Math.abs(y - b[2]) < 0.6 ? floor : false;
   }
   pull(pts) {
     const out = [pts[0]];

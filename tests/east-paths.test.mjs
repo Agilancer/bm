@@ -20,7 +20,8 @@ const from = nav.nodesNear(dx, dz, dy, 7, 4);
 
 // (Every target's nodes, got to over the map's long way from the gate road's.)
 const gets = (t) => {
-  const ends = nav.nodesNear(t.x, t.z, t.y, Math.max(4, Math.min(t.r + 2, 30)), t.y === null ? 1e9 : 3);
+  // (Only places got to from the gate are a way's end, as EastNav.route has it: a spire's crown over its deck isn't.)
+  const ends = nav.nodesNear(t.x, t.z, t.y, Math.max(4, Math.min(t.r + 2, 30)), t.y === null ? 1e9 : 3).filter((n) => nav.live[n]);
   return ends.length > 0 && nav.coarse(from.slice(0, 4).map((n) => [n, 0]), new Set(ends.slice(0, 64)), t.x, t.z) !== null;
 };
 
@@ -40,7 +41,7 @@ for (const kind of ['portal', 'way in', 'gate', 'castle tower deck', 'bridge']) 
 test('a near way is walked out, each step one the body can take', () => {
   // (From the gate road toward the first castle tower deck: the first stretch walked out, the rest by the long way.)
   const t = T.find((q) => q.kind === 'castle tower deck');
-  const P = nav.route([dx, dy, dz], [t.x, t.z, t.y], 1);
+  const P = nav.route([dx, dy, dz], [t.x, t.z, t.y], t.r);
   assert.ok(P?.length > 1, 'no way');
   for (let i = 1; i < P.length; i++) {
     if (P[i][2] === 2 || P[i - 1][2] === 2) continue;

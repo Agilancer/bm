@@ -53,6 +53,17 @@ layered:
 | House stairs were 0.4 m tightropes (tread half-sizes swapped) | full-width treads (`upstairs`) |
 | Bridges had no parapet colliders | a waist-high stop along each side of every walked span |
 | The bake kept only 12 heights per cell: tall stairs lost their bottom turns | 64 |
+| Switchback stairs: a slot between the flights a body fell down | a spine wall between the lanes (`stairs`) |
+| Floors stepped onto 3 m up, as the land's rise is: the map led up walls | on floors a step is at most 1 m (`FLOOR_RISE`) |
+| Routes to pieces that can't be got to from the gate: long asks that came to nothing | only pieces the gate's flood reaches are a way's start or end |
+| Asks up to 35 s on long castle routes | budgets shared out over the ask: the worst ~7 s |
+| A stair's first tread ticked off from the ground under it: turned in under the stair | a point is passed only at its height (within 0.6 m once stood on it) |
+| Straight cuts across a spiral's well: the walker, half a metre off its line, fell to the foot | over floors a line must hold a hand (`SLOP`) to either side too |
+| A bridge-only tower's lowest gallery was cut open over its stair's well: a 400 m drop | the well is floored there (`gallery` floored) |
+| Down steep land held to 1.1 m: ways along the castle's crag were one-way, auto-play walked to and fro | from land onto land a drop is as far as a climb (`dropOf`) |
+| The bank under the drawbridge's edge, a metre under its deck: the sim lifts feet onto the deck | 1.2 m of head room to stand anywhere (`headroom`) |
+| A low wall stepped over from the high side, walked into from the low | a step up must be clear at the height it's stepped from |
+| Gallery pieces only just meeting: pinholes | overlapped by 0.2 m |
 
 ## Running it after a change
 
@@ -69,4 +80,6 @@ through places that aren't there any more. The fine stretches it walks out use t
 into a new wall; it just takes the long way round.
 
 Scratch probes (not part of the run): `probe.mjs x0 z0 x1 z1 step` (places along a line), `_what.mjs x z` (floors
-and boxes at a point), `_layer.mjs`, `_cells.mjs`, `_tower.mjs`, `_walls.mjs`, `_house.mjs`.
+and boxes at a point), `_layer.mjs`, `_cells.mjs`, `_tower.mjs`, `_walls.mjs`, `_house.mjs`, `_at.mjs x y z target` (the route from a spot),
+`_cpath.mjs` (its long way), `_edges.mjs` (east.bin's steps at a spot), `_holes.mjs` (holes in a deck), `_walk.mjs` / `_wk.mjs`
+(the sim's body and `walkable` along a line).

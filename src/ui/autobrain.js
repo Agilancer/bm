@@ -580,10 +580,19 @@ export function planWay(m, end, o = {}) {
   // In City State Phobos and Castle Velscour (src/sim/east-nav.js), or bound there: the east's own map walks it, streets,
   // stairs, bridges and all, from the road before the Drawbridge Gate. (The roads stop at the gate; the delves' terraces
   // and steps are on the map.)
-  const ea = inEast(m.x, m.z) && !below, eb = inEast(end.x, end.z) && !end.below;
-  if (ea && eb) return [{ ...end, east: true }];
-  if (eb) { const door = { x: EAST_DOOR[0], z: EAST_DOOR[1], r: 6 }; return planWay(m, door, o).concat([{ ...end, east: true }]); }
-  if (ea) { const door = { x: EAST_DOOR[0], z: EAST_DOOR[1], r: 6, east: true }; return [door].concat(planWay(door, end, { ...o, below: false })); }
+  // (The road before the gate is in the east's box itself: it's the meeting of the two maps, on neither side of it, or a way to
+  // it went to it by way of it for ever.)
+  const ea = inEast(m.x, m.z) && !below && !m.gate, eb = inEast(end.x, end.z) && !end.below && !end.gate;
+  // (A delve's steps there are still gone up square on and down, as everywhere: east.bin is the way between them.)
+  if (ea || eb) {
+    const A = ea ? stairsOf(m.x, m.z) : null, B = eb ? stairsOf(end.x, end.z) : null;
+    if (A && A === B) return [end];
+    const pre = A ? downStairs(A).filter((q, k, all) => k === all.length - 1 || (q.x - m.x) * A.fx + (q.z - m.z) * A.fz > 0.3) : [], post = B ? upStairs(B) : [];
+    const door = { x: EAST_DOOR[0], z: EAST_DOOR[1], r: 6, gate: true };
+    if (ea && eb) return pre.concat(post, [end]);
+    if (eb) return planWay(m, door, o).concat(post, [end]);
+    return pre.concat([door], planWay(door, end, { ...o, below: false }));
+  }
   // On a delve's terrace or bound for one: by its steps.
   const A = stairsOf(m.x, m.z), B = stairsOf(end.x, end.z);
   if (A && A === B) return [end];
@@ -3021,7 +3030,7 @@ export class Brain {
       // (At its height: within a hand of it, or a metre once it's all but stood on it. Within two metres, as it was, a stair's
       // foot was ticked off from the ground before its first tread, and it turned up the flight from under it: in under the
       // stair, and there for good. tools/paths/trips.mjs.)
-      const q = P[0], k = dist(m.x, m.z, q[0], q[1]), dy = Math.abs((q[4] ?? m.y) - m.y), level = dy < (k < 0.2 ? 1 : 0.3);
+      const q = P[0], k = dist(m.x, m.z, q[0], q[1]), dy = Math.abs((q[4] ?? m.y) - m.y), level = dy < (k < 0.2 ? 0.6 : 0.3);
       const gone = (m.x - q[0]) * (P[1][0] - q[0]) + (m.z - q[1]) * (P[1][1] - q[1]) > 0;
       if ((level && (k < 0.5 || (gone && k < 0.8))) || (q[2] === 2 && k < 3)) P.shift(); else break;
     }
