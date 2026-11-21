@@ -15,6 +15,7 @@ import { RULES } from '../folk/quests.js';
 import { QUESTS } from '../folk/lines/quests.js';
 import { COUNTRIES, countryAt } from '../core/lands.js';
 import { nameOf } from '../items/items.js';
+import { hushed } from './hush.js';
 
 export const AWAY = 180;         // seconds left alone before coming back gets a recap
 export const RECAP_MIN = 60;     // a stretch shorter than this isn't worth a card when it's stopped
@@ -197,7 +198,7 @@ export class AutoShow {
     if (stakes !== this.stakes) { this.stakes = stakes; this.em.textContent = stakes; }
     // The banners, one at a time.
     if (this.bannerT > 0) { this.bannerT -= dt; if (this.bannerT <= 0.5) this.bannerEl.classList.remove('on'); }
-    if (this.bannerT <= 0 && this.queue.length) {
+    if (this.bannerT <= 0 && this.queue.length && !hushed()) {
       const b = this.queue.shift();
       this.bannerEl.className = `on k-${b.kind}`;
       this.bannerEl.querySelector('b').textContent = b.big;

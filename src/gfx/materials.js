@@ -963,6 +963,10 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
       let night = 1.0 - smoothstep(0.3, 0.9, F.sunColor.a);
       if (tintK == 12u) { emissive *= vec3f(0.5, 0.7, 0.95) * night; }
       if (tintK == 8u) { emissive = vec3f(dot(emissive, vec3f(0.3, 0.5, 0.2))) * vec3f(0.95, 0.1, 0.035); }
+      // (The sky seen up a slot cut in a roof ('slate:flame', the Redoubt under the Sill's court and hall): a steady pale
+      // overcast, no flicker and no flame's heat in it. src/core/delve-build.js daylight.)
+      // (a mid grey, not white: at 1.2 it burnt out to a flat blob; at 0.6, down a dark room, still a white tile. The critics.)
+      if (tintK == 7u) { emissive = vec3f(0.3, 0.33, 0.4); }
       albedo = vec3f(0.0);
       if (tintK == 12u) { albedo = vec3f(0.03, 0.034, 0.042) * (0.6 + 0.8 * paneK) * (1.0 - night); metal = 0.04 * (1.0 - night); rough = mix(0.5, 0.72, paneK); ao = mix(0.55, 1.0, night); }
     }
@@ -1881,6 +1885,8 @@ struct V { @builtin(position) pos: vec4f, @location(0) p: vec3f, @location(1) n:
     // (a -4: the Warrens' way out while its last boss lives, gone out: a dark, still well, no blue in it.)
     let dead = I.glow.a < -3.5;
     let lying = I.glow.a < -2.5 && !dead;
+    // (a -2.25: the same whirl in Velscour's red, the Redoubt under the Sill's: its blues turned to embers.)
+    let ember = abs(I.glow.a + 2.25) < 0.1;
     let d = (in.uv - I.glow.xy) / I.glow.z;
     let r = length(d);
     let a = atan2(d.y, d.x);
@@ -1922,6 +1928,7 @@ struct V { @builtin(position) pos: vec4f, @location(0) p: vec3f, @location(1) n:
     c += exp(-abs(edge) * 14.0) * vec3f(0.5, 1.2, 3.0) * flick;
     c += exp(-max(-edge, 0.0) * 4.0) * vec3f(0.06, 0.18, 0.7);
     if (dead) { c = vec3f(0.003, 0.003, 0.004) + vec3f(0.03, 0.031, 0.034) * smoothstep(0.0, 1.3, r); }
+    if (ember) { c = vec3f(c.b, c.g * 0.42 + c.b * 0.07, c.r * 0.45); }
     let toCam = F.camPos.xyz - in.p;
     let dist = length(toCam);
     c = applyFog(c, in.p, -toCam / dist, dist);
@@ -1981,7 +1988,9 @@ struct V { @builtin(position) pos: vec4f, @location(0) p: vec3f, @location(1) n:
   // A portal's stone (src/gfx/renderer.js portalModels): its runes and gems, painted the whirl's blue, glow of themselves.
   if (I.glow.a > 1.5 && !painted) {
     let lit = smoothstep(0.22, 0.5, albedo.b) * smoothstep(0.08, 0.3, albedo.b - max(albedo.r, albedo.g * 0.85));
-    c += albedo * lit * I.glow.a * (0.85 + 0.15 * sin(F.camPos.w * 2.3));
+    // (a 3.25: the Redoubt's, its runes burning his red.)
+    let rune = select(albedo, vec3f(albedo.b, albedo.g * 0.4, albedo.r * 0.4), abs(I.glow.a - 3.25) < 0.1);
+    c += rune * lit * I.glow.a * (0.85 + 0.15 * sin(F.camPos.w * 2.3));
   }
   c = applyFog(c, in.p, -v, dist);
   var o: Out;

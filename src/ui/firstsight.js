@@ -10,7 +10,7 @@
 
 import { H } from '../core/layout.js';
 import { terrainHeight } from '../core/terrain.js';
-import { CITY_WALL, CRAG, PLAIN, SILL, WARDS } from '../core/east.js';
+import { CRAG, PLAIN, SILL, WARDS } from '../core/east.js';
 
 const SEEN_KEY = 'velscour.phobosSeen';
 // The five beats' lengths, seconds: five minutes in all (the owner's length). The first is short: he's seen it, now go.
@@ -53,21 +53,28 @@ function shot(beat, u, e, hx, hy, hz) {
     return { eye: over([hx - 2.6 - e * 9, hy + 0.35 + e * e * 11, hz + 1.3 - e * 1.3], 0.3), at: [lerp(hx + 30, gate[0], e), lerp(hy + 1, gate[1], e), lerp(hz, gate[2], e)], line: u < 0.45 ? 'The Sill' : 'The Drawbridge Gate, raised' };
   }
   if (beat === 1) {
-    // Down off the Sill and along the wall, outside it, one way: from the Barbican south round to the Water Gate.
-    const w = CITY_WALL, path = [[SILL.x + 70, SILL.y + 6, -30], [9285, PLAIN + 24, -60], [9290, PLAIN + 30, 240], [w[4][0] - 80, PLAIN + 36, w[4][1] + 70], [w[3][0] - 20, PLAIN + 44, w[3][1] + 100]];
-    const look = [[9440, PLAIN + 14, -40], [9560, PLAIN + 16, 60], [9640, PLAIN + 16, 300], [9880, PLAIN + 18, 420], [9950, PLAIN + 16, 660]];
-    return { eye: over(along(path, e), 6), at: along(look, e), line: pick(['City State Phobos', 'The Barbican', 'The Rookeries', 'The Drowned Wharf', "The Tanners' Water Gate"], e) };
+    // Down off the Sill and along the wall, outside it, one way: from the Barbican south to the Drowned Wharf.
+    // (Well out from the wall and over its top, looking down into each quarter as it's named: at thirty metres up and sixty
+    // out it was a minute of the wall's own brick, the Rookeries and the Water Gate both. The critics, docs/FIRST-VISIT.md.)
+    // (Not on to the Tanners' Water Gate: past the wall's south-west corner the basin's rim stood in the right of the picture.)
+    const path = [[SILL.x + 70, SILL.y + 10, -30], [9180, PLAIN + 70, -40], [9170, PLAIN + 95, 220], [9230, PLAIN + 120, 400], [9260, PLAIN + 140, 470]];
+    const look = [[9440, PLAIN + 8, 0], [9560, PLAIN + 8, 100], [9640, PLAIN + 10, 300], [9800, PLAIN + 10, 380], [9930, PLAIN + 8, 400]];
+    return { eye: over(along(path, e), 6), at: along(look, e), line: pick(['City State Phobos', 'The Barbican', 'The Rookeries', 'The Drowned Wharf'], e) };
   }
   if (beat === 2) {
-    // Up the Castle Approach and over the three ward walls, each higher.
-    const path = [[10240, PLAIN + 70, 60], [10600, PLAIN + 78, 20], [WARDS[0][0] + 30, PLAIN + WARDS[0][1] + 30, -20], [WARDS[1][0] + 30, PLAIN + WARDS[1][1] + 34, 10], [WARDS[2][0] + 20, PLAIN + WARDS[2][1] + 40, 0]];
-    const look = [[10700, PLAIN + 70, 0], [10850, PLAIN + 80, 0], [11050, PLAIN + 100, 0], [11200, PLAIN + 140, 0], [KEEP.x, PLAIN + 200, 0]];
+    // Up the Castle Approach and over the three ward walls, each higher: alongside them to the south and well up, looking in.
+    // (It flew through the castle at thirty metres over each ward's wall, from before the wards were built up: a minute of
+    // close brick. The critics, docs/FIRST-VISIT.md.)
+    // (Out past the crag's south edge, and climbing over the towers' tops: the castle's grown up and out since, CASTLE grand.)
+    const path = [[10150, PLAIN + 160, 380], [10500, PLAIN + 220, 420], [WARDS[0][0] + 40, PLAIN + 300, 440], [WARDS[1][0] + 50, PLAIN + 380, 420], [WARDS[2][0], PLAIN + 440, 380]];
+    const look = [[10650, PLAIN + 60, 0], [WARDS[0][0], PLAIN + WARDS[0][1], 0], [WARDS[1][0], PLAIN + WARDS[1][1], 0], [WARDS[2][0], PLAIN + WARDS[2][1], 0], [KEEP.x, PLAIN + 280, 0]];
     return { eye: over(along(path, e), 8), at: along(look, e), line: e < 0.2 ? 'Castle Velscour' : e < 0.5 ? 'The Lower Ward' : e < 0.75 ? 'The Middle Ward' : 'The High Ward' };
   }
   if (beat === 3) {
     // Round the Keep, climbing, inside the basin's head: from the west by the north, the east and the south. What it looks at
     // slides from spire to spire as each is passed, and each is named.
-    const a = Math.PI + e * Math.PI * 1.75, r = 215 - e * 35, y = lerp(KEEP.base + 60, KEEP.top - 20, e);
+    // (Out past the spires and over their tops: at 215 m in and under the Keep's top it went through the spires' walls.)
+    const a = Math.PI + e * Math.PI * 1.75, r = 520 - e * 40, y = lerp(KEEP.top + 110, KEEP.top + 90, e);
     const f = e * 4, i = Math.min(3, Math.floor(f)), k = ease(f - i), p = SPIRES[i], q = SPIRES[i + 1];
     const sx = lerp(p[1], q[1], k), sz = lerp(p[2], q[2], k), sy = lerp(p[3], q[3], k);
     return { eye: over([KEEP.x + Math.cos(a) * r, y, KEEP.z + Math.sin(a) * r], 14), at: [lerp(KEEP.x, sx, 0.5), lerp(KEEP.base + 60, PLAIN + sy, 0.5 + 0.3 * e), lerp(KEEP.z, sz, 0.5)], line: SPIRES[Math.min(4, Math.round(f))][0] };
@@ -75,10 +82,10 @@ function shot(beat, u, e, hx, hy, hz) {
   // The Throne Tower's top, close; then all the way back down to him.
   if (u < 0.42) {
     const k = ease(u / 0.42);
-    return { eye: [KEEP.x - 120 + k * 62, KEEP.top + 14 - k * 9, 46 - k * 30], at: [KEEP.x + 5, KEEP.top - 2, 0], line: k > 0.15 ? 'The Throne Tower' : '' };
+    return { eye: [KEEP.x - 520 + k * 120, KEEP.top + 130 - k * 30, 220 - k * 60], at: [KEEP.x, KEEP.top + 20, 0], line: k > 0.15 ? 'The Throne Tower' : '' };
   }
   const k = ease((u - 0.42) / 0.58);
-  const path = [[KEEP.x - 58, KEEP.top + 5, 16], [CRAG.x - 500, PLAIN + 240, 0], [9700, PLAIN + 170, -40], [SILL.x + 220, SILL.y + 60, 10], [hx - 4.4, hy + 1.85, hz + 0.8]];
+  const path = [[KEEP.x - 400, KEEP.top + 100, 160], [CRAG.x - 500, PLAIN + 240, 0], [9700, PLAIN + 170, -40], [SILL.x + 220, SILL.y + 60, 10], [hx - 4.4, hy + 1.85, hz + 0.8]];
   return { eye: over(along(path, k), 1.2), at: [lerp(KEEP.x, hx + 60, k * k), lerp(KEEP.top - 20, hy + 1.2, k), lerp(0, hz, k)], line: '' };
 }
 
@@ -95,7 +102,9 @@ export class FirstSight {
 #firstSight .fs-black{position:absolute;inset:0;background:#000;opacity:0}
 #firstSight .fs-bar{position:absolute;left:0;right:0;height:9vh;background:#000}#firstSight .fs-bar.top{top:0}#firstSight .fs-bar.bottom{bottom:0}
 #firstSight .fs-line{position:absolute;left:0;right:0;bottom:12vh;text-align:center;font-style:italic;font-size:clamp(18px,2.6vw,34px);letter-spacing:.06em;text-shadow:0 2px 8px #000,0 0 2px #000;transition:opacity .9s}
-#firstSight .fs-skip{position:absolute;right:2.2vw;bottom:2.6vh;font-size:13px;opacity:.55}`;
+#firstSight .fs-skip{position:absolute;right:2.2vw;bottom:2.6vh;font-size:13px;opacity:.55;animation:fsSkip 7s ease-in}
+body.firstsight :is(#autoBtn, #autoStatus, #autoLog, #vskull, #vskullTag, #wildTrack, #qTrack, #partyFrames, #folkMarks){visibility:hidden !important}
+@keyframes fsSkip{0%,70%{right:50%;bottom:44vh;transform:translateX(50%);font-size:20px;opacity:1}100%{right:2.2vw;bottom:2.6vh;transform:none;font-size:13px;opacity:.55}}`;
     document.head.appendChild(css); document.body.appendChild(el);
     this.lineEl = el.querySelector('.fs-line'); this.blackEl = el.querySelector('.fs-black');
     const skip = (e) => { if (this.active && this.t > 1.5) { this.end(); e.preventDefault?.(); } };
@@ -110,7 +119,7 @@ export class FirstSight {
   end() {
     if (!this.active) return;
     this.t = -1; this.el.hidden = true;
-    document.body.classList.remove('cinematic');
+    document.body.classList.remove('cinematic', 'firstsight');
     this.o.game.overrideCam = this.o.game.reviewCam || null;
     this.o.renderer.hideVM = false;
   }
@@ -120,7 +129,10 @@ export class FirstSight {
     if (!this.active) {
       if (this.seen) return;
       const x = snap[H.PX], z = snap[H.PZ];
-      if (x < SILL.x - 20 || Math.hypot(x - SILL.x, z - SILL.z) > SILL.r || Math.abs(snap[H.PY] - SILL.y) > 6) return;
+      if (x < SILL.x - 20 || Math.hypot(x - SILL.x, z - SILL.z) > SILL.r || Math.abs(snap[H.PY] - SILL.y) > 6) { this.waitT = 0; return; }
+      // (Not till the land's laid round him: through Lisandra's door it opened on white ground and candles floating on it,
+      // for the first ten seconds. A while at most: on a slow device it goes ahead.)
+      if (this.o.renderer.landReady && !this.o.renderer.landReady(x, z) && (this.waitT = (this.waitT || 0) + dt) < 25) return;
       this.seen = true;
       try { localStorage.setItem(SEEN_KEY, '1'); } catch { /* it plays again next time */ }
       if (this.o.autoOn() && this.o.settings.phobosAwe !== 'off') this.begin(snap);
@@ -139,7 +151,8 @@ export class FirstSight {
     this.o.game.overrideCam = { x: ex, y: ey, z: ez, fx, fy, fz, ux: ux / U, uy: uy / U, uz: uz / U };
     this.o.renderer.hideVM = true;
     this.blackEl.style.opacity = s.dark;
-    document.body.classList.add('cinematic');
+    // (And auto-play's button, its status and the skull's, which body.cinematic leaves up: they stood inside the letterbox.)
+    document.body.classList.add('cinematic', 'firstsight');
     if (s.line !== this.shown) { this.shown = s.line; this.lineEl.style.opacity = s.line ? 1 : 0; if (s.line) this.lineEl.textContent = s.line; }
   }
 }

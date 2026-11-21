@@ -3527,7 +3527,7 @@ export class HeroWorld {
       if (h.hired || h.broker) continue;
       h.baseLevel ??= h.person.level;
       const want = Math.max(h.baseLevel, Math.min(200, level + ((h.slot * 5) % 7) - 3));
-      if (want !== h.person.level) { const up = want > h.person.level; this.setLevel(h, want); if (up && h.active && !h.dead && Math.random() < 0.25) h.say(this.sim, 'level_up'); }
+      if (want !== h.person.level) { const up = want > h.person.level; this.setLevel(h, want); if (up && h.active && !h.dead && Math.random() < 0.25) h.say(this.sim, 'level_up', -1, -1, -1, want); }
     }
   }
 

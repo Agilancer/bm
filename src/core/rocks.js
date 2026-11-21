@@ -14,6 +14,7 @@ import { CLIFF, COUNTRY_KEYS, MOUNT, WATERS, countryWeights, groundCover, routeD
 import { CRAG as CASTLE_CRAG, cityIn } from './east.js';
 import { churchSite } from './church.js';
 import { PORTAL } from './dungeon.js';
+import { REDOUBT } from './delve-redoubt.js';
 import { huntEdge } from './hunts.js';
 
 export const STONE_CELL = 4, BOULDER_CELL = 12;
@@ -193,6 +194,16 @@ function clearOfWays(x, z, size0, variant, qi, qj) {
   return null;
 }
 
+// (The Redoubt under the Sill's gate, cut into the foot of the Sill's cliff: the ground before its steps kept clear. A boulder
+// that lay there is rolled aside, out of the way, as one over a road is; never taken away. src/core/delve-redoubt.js.)
+const GATE_CLEAR = 11;
+function offGate(x, z, size) {
+  const p = REDOUBT.portal, cx = p.x + Math.sin(p.yaw) * 6, cz = p.z + Math.cos(p.yaw) * 6, d = Math.hypot(x - cx, z - cz), need = GATE_CLEAR + size * 0.9;
+  if (d >= need) return null;
+  const nx = d > 0.01 ? (x - cx) / d : Math.cos(p.yaw), nz = d > 0.01 ? (z - cz) / d : -Math.sin(p.yaw);
+  return [cx + nx * need, cz + nz * need];
+}
+
 // Where a round rock of radius r put down at (x, z) by a place (src/core/places.js PIECES.rock) lies, rolled off any way or
 // flight of steps it would lie over, just clear of the edge: [x, z].
 export function offWay(x, z, r) {
@@ -290,6 +301,8 @@ function rockInCell(i, j, big, out) {
     if (q) size = Math.max(0.3, lead * (0.3 + 0.45 * hash2(qi + 61, qj + 67)));
     else lead = size;
     const tall = variant >= CRAG[0] ? (size > 2.9 ? 1.1 + 0.4 * hash2(qi + 3, qj + 77) : 0.8 + 0.45 * hash2(qi + 3, qj + 77)) : variant >= SLAB[0] ? 0.75 + 0.35 * hash2(qi + 3, qj + 77) : 0.75 + 0.3 * hash2(qi + 3, qj + 77);
+    const og = offGate(bx, bz, size);
+    if (og) { [bx, bz] = og; bh = terrainHeight(bx, bz); slope = lie(bx, bz).slope; }
     // Never across a road, a path or a flight of steps: one whose stone would lie over a way is turned to lie along it and
     // rolled off to its side, close by the edge, as if it had been levered out of the way when the road was laid.
     if (rockOverWay(bx, bz, size, variant, Math.cos(a), Math.sin(a), 0)) {

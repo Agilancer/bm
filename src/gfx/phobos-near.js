@@ -90,7 +90,7 @@ export class PhobosNear {
     const r = this.r;
     const NEAR = this.near, FAR = this.far, KEEP = this.keep;
     this.cam = cam;
-    if (!r.landScenery || cam.x < CITY.x - CITY.a - FAR || cam.x > CRAG.x + CRAG.a + FAR || Math.abs(cam.z - CITY.z) > CITY.b + FAR) { if (this.cells.size || this.builder) this.clear(); return; }
+    if (!r.landScenery || cam.x < CITY.x - CITY.a - FAR || cam.x > CRAG.x + CRAG.a + FAR || Math.abs(cam.z - CITY.z) > CITY.b + FAR) { this.waiting = false; if (this.cells.size || this.builder) this.clear(); return; }
     let want = null, best = NEAR;
     for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) {
       const x = cam.x + i * CELL, z = cam.z + j * CELL, key = cellOf(x, z);
@@ -99,6 +99,8 @@ export class PhobosNear {
       const d = Math.max(0, Math.hypot(cx - cam.x, cz - cam.z) - CELL * 0.7);
       if (d < best) { best = d; want = [key, cx, cz]; }
     }
+    // (A cell near still to come: renderer.landReady waits on it.)
+    this.waiting = !!want || !!this.asked;
     let changed = false, built = null;
     if (this.apart) {
       // (What's come back is put up, if it's still wanted: you may have gone on past it. Then the nearest wanting is asked for.)

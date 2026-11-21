@@ -138,6 +138,10 @@ const SWORD_RETRY = 5000, SWORD_RETRY_MAX = 120000;
 // (portalFx), in the same units: the doorway's middle and the funnel's rim (back from the dais's middle), the seal's swirl's
 // face and radius.
 const SWIRL = { dungeon: [0, 0.37, 0.3, -2], ground: [0, 0, 0.267, -3] };
+// A delve whose portal out in the land burns red (portalHue 'ember': the Redoubt under the Sill, his), not the cold blue.
+// (Its ways out inside too, `_in` by the way in and `_out` down in his hall: blue there, after a red one in, read as somebody
+// else's door. The critics.)
+const EMBER = new Set(DELVES.filter((d) => d.portalHue === 'ember').flatMap((d) => [`${d.tag}_portal`, `${d.tag}_in`, `${d.tag}_out`]));
 const MOTES = { dungeon: { mid: 0.37, rim: -0.17, deck: 0.107 }, ground: { face: 0.086, r: 0.267 } };
 // A PC's far bodies (addLod, bodyDetail): the coarse mesh's cell in metres, and how much of a pixel a cell must have shrunk
 // to before that mesh is drawn. At 4.5 cm it keeps 95% or more of a body's outline (a fifth of the triangles); a coarser
@@ -633,7 +637,7 @@ export class Renderer {
     for (const key of PORTAL_SPOTS) {
       if (!portalSpots[key]) continue;
       const [x, y, z, yaw] = portalSpots[key];
-      const L = { p: [x - Math.sin(yaw) * 0.3, y + 2.2, z - Math.cos(yaw) * 0.3], c: gateTint[key] || [0.4, 0.62, 1], r: 14, i: gateTint[key] ? 5 : 4.2, flicker: 0.3 };
+      const L = { p: [x - Math.sin(yaw) * 0.3, y + 2.2, z - Math.cos(yaw) * 0.3], c: gateTint[key] || (EMBER.has(key) ? [1, 0.3, 0.1] : [0.4, 0.62, 1]), r: 14, i: gateTint[key] ? 5 : 4.2, flicker: 0.3 };
       warrens.push(L);
       const out = DELVES.find((d) => key === `${d.tag}_out`);
       if (out) this.portalOutLights.push({ L, d: out });
@@ -765,6 +769,16 @@ export class Renderer {
       { binding: 7, resource: this.p2Color.createView({ dimension: '2d-array' }) },
       { binding: 8, resource: this.p2Detail.createView({ dimension: '2d-array' }) },
     ] });
+  }
+
+  // Whether the land round (x, z) is laid and drawn: its grid, the fine ground and the city's near cells. After a long step
+  // (Lisandra's door, nine kilometres) the old land is drawn round where you were for some seconds, and you stand on white:
+  // her door's fade and the first sight of Phobos wait on this. (src/ui/folk.js lisDoor, src/ui/firstsight.js.)
+  landReady(x, z) {
+    if (this.landBusy) return false;
+    const at = this.landAt, here = this.landHere, near = Math.abs(x) < 700 && Math.abs(z) < 700;
+    const far = near ? at[0] !== 0 || at[1] !== 0 : Math.hypot(x - at[0], z - at[1]) >= FOLLOW_AT;
+    return !far && !!here && Math.max(Math.abs(x - here[0]), Math.abs(z - here[1])) <= HERE_STEP * 1.5 && !this.phobosNear?.waiting;
   }
 
   // Out in the countries the land's grid and the pines are laid again round you, a few hundred metres at a time, in the pool's
@@ -1970,6 +1984,8 @@ export class Renderer {
         ]);
         // (And the Warrens' again, gone out: no glow in its stone, its whirl a dark well. src/gfx/materials.js ITEM.)
         const off = kind === 'dungeon' ? { dungeon_stone_off: this.lyingModel(stone, alb, nrm, mr, [0, 0, 0, 1.25]), dungeon_swirl_off: this.lyingModel(swirl, alb, nrm, mr, [...SWIRL.dungeon.slice(0, 3), -4]) } : {};
+        // (And in his red, the Redoubt under the Sill's: EMBER.)
+        if (kind === 'dungeon') Object.assign(off, { dungeon_stone_ember: this.lyingModel(stone, alb, nrm, mr, [0, 0, 0, 3.25]), dungeon_swirl_ember: this.lyingModel(swirl, alb, nrm, mr, [...SWIRL.dungeon.slice(0, 3), -2.25]) });
         return { [`${kind}_stone`]: this.lyingModel(stone, alb, nrm, mr, [0, 0, 0, 3]), [`${kind}_swirl`]: this.lyingModel(swirl, alb, nrm, mr, SWIRL[kind]), ...off };
       };
       const [g, d] = await Promise.all([load('ground'), load('dungeon')]);
@@ -1992,13 +2008,14 @@ export class Renderer {
     // (shut: the boss whose death opens a gate between delves: dark till then, gateOpen.)
     const shuts = {};
     for (const d of DELVES) (d.links || []).forEach((l, i) => { if (l.shut) shuts[`${d.tag}_l${i}`] = l.shut; });
-    const put = (kind, [x, y, z, yaw], way = null, shut = null) => {
+    const put = (kind, [x, y, z, yaw], way = null, shut = null, key = '') => {
       const { scale: S, sink } = PORTAL_MODELS[kind], c = Math.cos(yaw), s = Math.sin(yaw);
       const mat = new Float32Array([S * c, 0, -S * s, 0, 0, S, 0, 0, S * s, 0, S * c, 0, x, y - sink, z, 1]);
       const at = { kind, x, y: y - sink, z, c, s, S, out: way, shut };   // (out: the delve whose way out this is. Not named `out` here: that's the list.)
-      out.push({ portal: `${kind}_stone`, mat, at }, { portal: `${kind}_swirl`, mat, at });
+      const hue = EMBER.has(key) ? '_ember' : '';
+      out.push({ portal: `${kind}_stone${hue}`, mat, at }, { portal: `${kind}_swirl${hue}`, mat, at });
     };
-    for (const key of PORTAL_SPOTS) if (spots[key]) put('dungeon', spots[key], DELVES.find((d) => key === `${d.tag}_out`), shuts[key]);
+    for (const key of PORTAL_SPOTS) if (spots[key]) put('dungeon', spots[key], DELVES.find((d) => key === `${d.tag}_out`), shuts[key], key);
     for (const key in spots) if (key.startsWith('seal_')) put('ground', spots[key]);
     return out;
   }
@@ -2011,7 +2028,8 @@ export class Renderer {
     const k = Math.min(dt || 0, 0.05) * this.tier.emit;
     for (let i = 0; i < items.length; i += 2) {
       const p = items[i].at, d2 = (p.x - cam.x) ** 2 + (p.z - cam.z) ** 2;
-      if (items[i].off) continue;
+      // (Not round a red one: its motes are the cold blue's. Its gatehouse's fires are its own light. EMBER.)
+      if (items[i].off || items[i].portal.endsWith('_ember')) continue;
       if (p.kind === 'ground') {
         if (d2 > 220 ** 2) continue;
         const { face, r } = MOTES.ground, y = p.y + face * p.S;
@@ -3410,7 +3428,7 @@ export class Renderer {
       }
     }
     for (const g of drawn) {
-      let model = g.openingModel ?? g.mesh ?? (g.portal ? this.portalModels?.[g.off ? `${g.portal}_off` : g.portal] : g.door ? this.doorModels?.[g.piece] : g.bell ? this.bellModels?.[g.piece] : g.ware ? this.ware(g.ware) : g.piece ? this.chestModels?.[g.piece] : g.coins ? this.coins() : g.stuff ? this.stuff(g.stuff) : g.gem ? this.gem(g.gem) : this.sword(g.sword).lying);
+      let model = g.openingModel ?? g.mesh ?? (g.portal ? this.portalModels?.[g.off ? `${g.portal.replace('_ember', '')}_off` : g.portal] : g.door ? this.doorModels?.[g.piece] : g.bell ? this.bellModels?.[g.piece] : g.ware ? this.ware(g.ware) : g.piece ? this.chestModels?.[g.piece] : g.coins ? this.coins() : g.stuff ? this.stuff(g.stuff) : g.gem ? this.gem(g.gem) : this.sword(g.sword).lying);
       if (model && g.glow) model = this.tinted(model, g.glow, g.glowK ?? 1);
       g.model = model;
       const k = g.batch ? g.n : 1;

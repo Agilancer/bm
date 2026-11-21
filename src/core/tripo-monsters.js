@@ -144,6 +144,12 @@ export const VARIANTS = {
   ib_runner: { src: 'kobold_armored_1', alt: 'kobold_1', height: 1.3, name: 'POWDER-RUNNER' },
   ib_marshal: { src: 'velscour_knight_5', alt: 'velscour_knight_1', height: 4.0, name: 'THE IRON MARSHAL' },
   ib_standard: { src: 'mannequin_2', alt: 'mannequin_1', height: 3.0, name: 'THE IRON STANDARD' },
+  // The Redoubt under the Sill's (src/core/delve-redoubt.js): the Pen-Warden in his pens, the Master of Harness, the Red Hand
+  // and his banner. The first you meet in his country, so not so tall as the castle's.
+  rd_penwarden: { src: 'plague_giant_1', alt: 'plague_giant_2', height: 3.2, name: 'THE PEN-WARDEN' },
+  rd_carrow: { src: 'velscour_lancer_3', alt: 'velscour_knight_2', height: 2.7, name: 'SIR OSWIN CARROW' },
+  rd_rothgar: { src: 'possessed_knight_3', alt: 'velscour_knight_4', height: 3.5, name: 'KNIGHT-COMMANDER ROTHGAR' },
+  rd_banner: { src: 'mannequin_3', alt: 'mannequin_1', height: 3.0, name: "THE RED HAND'S BANNER" },
 };
 // And the land's new kinds (src/core/wilds.js): a palette, a size, a name and tricks of their own on the old bodies.
 Object.assign(VARIANTS, WILD_VARIANTS);
@@ -235,7 +241,19 @@ export const LAIRS = [
   { key: 'marshal_host', lvl: 20, x: 6100, z: 2092, r: 12, boss: ['ma_brannoch'], pick: VKNIGHTS.concat(VLANCERS), n: 5, pal: ['Bloodsoaked'], wake: 160 },
   { key: 'notch_giant', lvl: 22, x: 7482, z: 28, r: 6, boss: ['ma_tollgiant'], pick: ['plague_knight_black', 'plague_knight_red'], n: 2, pal: ['Base', 'Blighted'], wake: 160 },
   { key: 'span_ambush', lvl: 22, x: 8404, z: 138, r: 12, pick: VKNIGHTS.concat(NECROS), n: 5, pal: ['Bloodsoaked', 'Ashen'] },
-  { key: 'sill_carrion', lvl: 20, x: 9050, z: -160, r: 9, pick: ['harpy_undead_1', 'harpy_undead_2'], n: 3, pal: ['Base', 'Ashen'] },
+  // (The carrion birds and the gibbets on the plain under the Sill are the first you meet there: Lisandra's door sets you down
+  // on the Sill at about level three, src/folk/first-visit.js. So they're low, whichever way you came.)
+  // (xpScale: a kill's share of what its kind is worth, src/main.js gainXp: the birds and the hanged are the city's own kinds, made
+  // low for a new player, and paid as such.)
+  { key: 'sill_carrion', lvl: 4, x: 9050, z: -160, r: 9, pick: ['harpy_undead_1', 'harpy_undead_2'], n: 5, pal: ['Base', 'Ashen'], xpScale: 0.4, names: { Harpies: 'CARRION BIRD' } },
+  // His gate-wards, posted outside the Redoubt under the Sill (src/core/delve-redoubt.js), at the foot of its steps.
+  // (tough: a step over the delve's own packs, { hp: 0.9, damage: 0.45 }. By the land's level 4 they hit two and a half times
+  // as hard as any knight inside, and took a level-5 player alone down to a sliver of life.)
+  // (Out on the open ground before the gate square, the city behind them: at its foot they drew the fight back into the rock
+  // cheeks, and the camera with it. The critics.)
+  { key: 'redoubt_gate', lvl: 4, x: 9061, z: 262, r: 4, pick: VKNIGHTS, n: 2, pal: ['Oxblood'], dress: 'gate', xpScale: 0.25, tough: { hp: 1, damage: 0.6 }, names: { "Velscour's Knights": 'REDOUBT KNIGHT' } },
+  // His debtors, hanged on the plain in sight of the gate and walking again: gibbets, and what was left in them.
+  { key: 'sill_gibbets', lvl: 3, x: 9160, z: 236, r: 10, pick: POSSESSED, n: 8, pal: ['Ashen', 'Bone-white'], dress: 'gibbets', xpScale: 0.5, names: { 'The Possessed': 'HANGED DEBTOR' } },
   // City State Phobos (src/core/east.js HAUNTS): where the dead, the Loyal and the other horrors keep inside the wall. The
   // street crowd keeps away from these (src/folk/people.js CROWD). His own in blood red, as everywhere in his area.
   { ...HAUNT('phobos_boneyards'), lvl: 24, boss: ['skeleton_knight_giant', 'bone_golem'], pick: CHILDREN.concat(['plague_knight_black']), n: 5, pal: ['Bone-white', 'Ashen'] },

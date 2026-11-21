@@ -193,7 +193,8 @@ test('the people posted in the land: room for them, somewhere sound to stand, an
   assert.equal(new Set(FOLK.map((p) => p.id)).size, FOLK.length);
   assert.ok(DAYS.posted);
   // (Phobos's hub givers stand in their yards, not in the land's places: tests/phobos-quests.test.mjs.)
-  for (const p of POSTED.filter((q) => !q.hub && !q.sewer && !q.delve)) {
+  // (Nor does Wenna on the Sill, the first visit's, by its own lairs: tests/first-visit.test.mjs.)
+  for (const p of POSTED.filter((q) => !q.hub && !q.sewer && !q.delve && !q.firstVisit)) {
     assert.equal(p.job, 'posted', p.id);
     assert.ok(LINES[p.id], `${p.id} has nothing to say`);
     const [x, z] = p.post, near = Object.values(SITES).find((s) => Math.hypot(x - s.x, z - s.z) < s.r);
@@ -205,7 +206,7 @@ test('the people posted in the land: room for them, somewhere sound to stand, an
     for (const l of LAIRS) assert.ok(Math.hypot(l.x - x, l.z - z) > 150, `${p.id} is ${Math.hypot(l.x - x, l.z - z) | 0} m from ${l.key}`);
   }
   // Every one of them gives work.
-  for (const p of [...POSTED.filter((q) => !q.hub && !q.sewer && !q.delve), BEYOND.find((b) => b.id === 'hale')]) assert.ok(IDS.some((id) => QUESTS[id].giver === p.id), `${p.id} gives nothing`);
+  for (const p of [...POSTED.filter((q) => !q.hub && !q.sewer && !q.delve && !q.firstVisit), BEYOND.find((b) => b.id === 'hale')]) assert.ok(IDS.some((id) => QUESTS[id].giver === p.id), `${p.id} gives nothing`);
 });
 
 test('the lairs: none in a place, on a road or in water, and no more near any one than the slots can stand up', () => {
@@ -304,7 +305,7 @@ test('every hub is led to: a quest from somewhere you already are sends you to e
     for (const id of Object.keys(RULES)) {
       if (open.has(id) || !QUESTS[id]) continue;
       const g = QUESTS[id].giver;
-      if (!(town.has(g) || g === 'lisandra' || met.has(g)) || (RULES[id].needs && !open.has(RULES[id].needs))) continue;
+      if (!(town.has(g) || g === 'lisandra' || met.has(g)) || ![RULES[id].needs].flat().every((n) => !n || open.has(n))) continue;
       open.add(id);
       for (const st of RULES[id].steps) if (st.talk) met.add(st.talk);
     }
