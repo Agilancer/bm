@@ -103,6 +103,30 @@ fn crackE(q: vec2f) -> f32 {
   }
   return sqrt(d2) - sqrt(d1);
 }
+// The joints of a hard bed seen on a face (h along it, t up it along the beds, metres; bv the bed's number; w a pixel's
+// width in metres): it's laid in courses a few metres high, each bed's its own, each course split by joints about half its
+// height apart, standing near upright, each a little askew, some missing, offset course to course like a wall's bricks;
+// the partings between the courses fainter. How dark (0 to about a half). (As a net of cells all round, the critics' dried
+// mud and turtle shell, round 3: real joints run up the bed and stop at its partings.)
+fn crackB(h: f32, t: f32, bv: f32, w: f32) -> f32 {
+  let rh = 3.0 + 4.0 * fract(bv * 13.7);
+  let rf = t / rh + fract(bv * 5.3);
+  let row = floor(rf); let fy = rf - row;
+  let rk = crackH(vec2f(row, floor(bv * 997.0)));
+  let cw = rh * (0.4 + 0.35 * rk.x);
+  let hx = h / cw + rk.y * 7.0;
+  let ei = floor(hx + 0.5);
+  let eh = crackH(vec2f(ei, row + 77.0));
+  let off = (fy - 0.5) * (eh.y - 0.5) * 0.5 + sin(t * 1.7 + eh.x * 20.0) * 0.04;
+  let dj = abs(hx - ei - off) * cw;
+  let dp = min(fy, 1.0 - fy) * rh;
+  let ww = max(0.04, w * 1.2);
+  // (A joint missing now and then, and one now and then running only part way up its course.)
+  let reach = select(1.0, 1.0 - smoothstep(eh.x * 0.9 - 0.05, eh.x * 0.9 + 0.05, fy), eh.y > 0.78);
+  let j = (1.0 - smoothstep(ww * 0.3, ww * 1.3, dj)) * step(0.3, eh.x) * reach * (0.55 + 0.45 * eh.y);
+  let pt = 1.0 - smoothstep(ww * 0.3, ww * 1.1, dp);
+  return min(0.5, j * 0.5 + pt * 0.22);
+}
 
 // A ground painting laid without its repeat (on a PC). The land is cut into patches along the contours of a slow noise (k,
 // 0 to 1, read once for here); each patch has its own copy of the painting, slid its own way, and where two patches meet
@@ -386,6 +410,11 @@ fn untileC(l: i32, uv: vec2f, dx: vec2f, dy: vec2f, k: f32) -> vec4f {
   // Which bed: the skin knows (signed: hard beds over nothing); the land's own faces take one by their height.
   var bedV = abs(in.bed); var hardB = in.bed > 0.0;
   if (!skin) { bedV = fract(sin(floor(tB / 23.0) * 12.9898) * 43758.547); hardB = true; }
+  // (High up, on the mountains, no beds' bands at all, nor the runs down from them: across each other they were the critics'
+  // tartan, round 3. The land's own faces only: the skin's are the walls'.)
+  let peakK = select(smoothstep(370.0, 470.0, p.y + (textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.003 + 0.17, 0.0).r - 0.5) * 120.0), 0.0, skin);
+  // (Its painting, too, one bed's all the way up: a band's own offset and now and then the basalt's columns drew the bands.)
+  if (peakK > 0.5) { bedV = 0.43; }
   let bOff = vec2f(fract(bedV * 37.1), fract(bedV * 91.7)) * 4.0;
   let uXa = vec2f(p.z, -p.y) / 14.0 + bOff; let uZa = vec2f(p.x, -p.y) / 14.0 + bOff.yx;
   let uXb = vec2f(p.z, -p.y) / 4.7 + vec2f(0.37, 0.11) + bOff * 2.3; let uZb = vec2f(p.x, -p.y) / 4.7 + vec2f(0.61, 0.29) + bOff.yx * 2.3;
@@ -416,7 +445,15 @@ fn untileC(l: i32, uv: vec2f, dx: vec2f, dy: vec2f, k: f32) -> vec4f {
     // (Its dead grass in patches on the flats only, and close to the scree's own value: in brown blotches over everything it
     // read as camouflage paint.)
     let ground = mix(sc * vec3f(0.7, 0.72, 0.77), gr * vec3f(0.56, 0.55, 0.5), 0.6 * smoothstep(0.45, 0.66, gn.g) * (1.0 - smoothstep(0.04, 0.12, steep)));
-    albedo = mix(albedo, ground * (0.74 + 0.28 * gn.b), max(highK * 0.92, footK * 0.85));
+    // (The high ground near flat: bedrock showing through in pavements, its joints a net across it. Untextured, it read as
+    // grey clay: the critics, round 3.)
+    var pave = 1.0;
+    if (!LEAN && highK > 0.01) {
+      let pw = 0.5 * (abs(dP1.x) + abs(dP2.x) + abs(dP1.z) + abs(dP2.z));
+      let pf = (1.0 - smoothstep(0.15, 0.6, pw)) * smoothstep(0.4, 0.6, gn.r) * (1.0 - smoothstep(0.1, 0.25, steep));
+      if (pf > 0.01) { let e = crackE(p.xz / 3.1 + 0.37); pave = 1.0 - 0.4 * pf * (1.0 - smoothstep(max(0.03, pw / 3.1) * 0.4, max(0.03, pw / 3.1) * 1.6, e)); }
+    }
+    albedo = mix(albedo, ground * (0.74 + 0.28 * gn.b) * pave, max(highK * 0.92, footK * 0.85));
   }
   if (cliffK > 0.002) {
     let lay = select(P2_CLIFF_L, P2_COLS_L, hardB && bedV < 0.2);
@@ -441,8 +478,8 @@ fn untileC(l: i32, uv: vec2f, dx: vec2f, dy: vec2f, k: f32) -> vec4f {
     // The rock's colour: grey going cold, each bed lighter or darker, a few near black; the soft beds a darker brown shale.
     let lum = dot(col, vec3f(0.3, 0.6, 0.1));
     col = mix(col, vec3f(lum), 0.62) * vec3f(0.88, 0.92, 1.0);
-    let shade = 0.66 + 0.44 * fract(bedV * 7.31);
-    col *= shade * select(1.0, 0.58, fract(bedV * 5.17) > 0.82) * mix(vec3f(0.97, 0.99, 1.03), vec3f(1.04, 1.0, 0.95), fract(bedV * 3.7));
+    let shade = mix(0.66 + 0.44 * fract(bedV * 7.31), 0.86, peakK);
+    col *= shade * mix(select(1.0, 0.58, fract(bedV * 5.17) > 0.82), 1.0, peakK) * mix(vec3f(0.97, 0.99, 1.03), vec3f(1.04, 1.0, 0.95), fract(bedV * 3.7));
     if (!hardB) { col = vec3f(dot(col, vec3f(0.3, 0.6, 0.1))) * vec3f(1.04, 0.95, 0.84) * 0.78; }
     // Broad stretches lighter and darker across the walls, lichen and old stains in patches tens of metres across; and the
     // runs down them, long and dark, from the ledges.
@@ -455,7 +492,7 @@ fn untileC(l: i32, uv: vec2f, dx: vec2f, dy: vec2f, k: f32) -> vec4f {
     col = mix(col, col * vec3f(0.92, 1.04, 0.82) * 1.12, smoothstep(0.56, 0.74, lich.g) * 0.55);
     col *= 1.0 - smoothstep(0.6, 0.8, lich.r) * 0.3;
     let run = mix(textureSampleLevel(noiseTex, repeatSmp, vec2f(p.x * 0.04, tB * 0.0042) + 0.57, 1.5), textureSampleLevel(noiseTex, repeatSmp, vec2f(p.z * 0.04, tB * 0.0042) + 0.57, 1.5), cfx);
-    col *= 1.0 - smoothstep(0.52, 0.8, run.r) * 0.62;
+    col *= 1.0 - smoothstep(0.52, 0.8, run.r) * 0.62 * (1.0 - 0.8 * peakK);
     col = mix(col, col * vec3f(1.2, 0.9, 0.7), smoothstep(0.78, 0.94, run.g) * 0.25);
     // Its ledges: scree (and dead grass in patches) on whatever lies back enough to hold it.
     // (Looked down on where it lies near flat; seen from the side, as the face is, where it lies back at a slope: from above
@@ -473,18 +510,15 @@ fn untileC(l: i32, uv: vec2f, dx: vec2f, dy: vec2f, k: f32) -> vec4f {
     // Its cracks: the joints across each bed a few metres apart and the partings along it (cells wider than tall), thin and
     // dark; and a coarser set, the blocks a face breaks into. Faded out where a pixel's as wide as a crack's worth, never on
     // a ledge's scree. (The pixel's width in cells from the derivatives taken above, out here in a branch.)
-    if (!LEAN) {
-      let dy = (abs(dP1.y - 0.03 * dP1.x) + abs(dP2.y - 0.03 * dP2.x)) / 2.3;
-      let fw = mix((abs(dP1.x) + abs(dP2.x)) / 3.4, (abs(dP1.z) + abs(dP2.z)) / 3.4, cfx) + dy;
-      let fade = (1.0 - smoothstep(0.06, 0.24, fw)) * (1.0 - ledge);
+    // (The hard beds' only, crackB: and not everywhere, in patches, half the face or so.)
+    if (!LEAN && hardB) {
+      let fwm = 0.5 * max(mix(abs(dP1.x) + abs(dP2.x), abs(dP1.z) + abs(dP2.z), cfx), 0.6 * (abs(dP1.y - 0.03 * dP1.x) + abs(dP2.y - 0.03 * dP2.x)));
+      let fade = (1.0 - smoothstep(0.12, 0.5, fwm)) * (1.0 - ledge) * (1.0 - peakK) * (0.35 + 0.65 * smoothstep(0.35, 0.6, lich.b));
       if (fade > 0.01) {
-        let qx = vec2f(p.z / 3.4, tB / 2.3) + bOff; let qz = vec2f(p.x / 3.4, tB / 2.3) + bOff.yx;
-        var e = 0.0; var e2 = 0.0;
-        if (cfx > 0.03) { e += crackE(qx) * cfx; e2 += crackE(qx * 0.36 + 7.1) * cfx; }
-        if (cfx < 0.97) { e += crackE(qz) * (1.0 - cfx); e2 += crackE(qz * 0.36 + 7.1) * (1.0 - cfx); }
-        let wd = max(0.05, fw * 1.3);
-        let ck = (1.0 - smoothstep(wd * 0.4, wd * 1.5, e)) * 0.55 + (1.0 - smoothstep(wd * 0.25, wd * 0.9, e2)) * 0.4;
-        col *= 1.0 - min(ck, 0.75) * fade;
+        var ck = 0.0;
+        if (cfx > 0.03) { ck += crackB(p.z + bOff.x * 9.0, tB, bedV, fwm) * cfx; }
+        if (cfx < 0.97) { ck += crackB(p.x + bOff.y * 9.0, tB, bedV, fwm) * (1.0 - cfx); }
+        col *= 1.0 - ck * fade;
       }
     }
     // The skin's own shade: its hollows, the backs of its ledges, the undersides of its lips, deep.
@@ -503,8 +537,13 @@ fn untileC(l: i32, uv: vec2f, dx: vec2f, dy: vec2f, k: f32) -> vec4f {
   // Snow on the mountains' tops, over six hundred metres, where it can lie.
   // (Where it can lie, by a slope taken broadly, the vertex's and the cell's together, and its edge broken: by the cell's
   // alone it lay along every ledge in ribbons.) A cold blue-grey, never paper white.
-  let peakSnow = eastK * smoothstep(560.0, 660.0, p.y + (textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.004 + 0.31, 0.0).r - 0.5) * 150.0)
-    * smoothstep(0.66, 0.86, 0.6 * in.n.y + 0.4 * geoN.y + (textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.023 + 0.6, 0.0).g - 0.5) * 0.2);
+  // (Lower and holding on steeper ground than it did, in couloirs and on ledges, and the brightest thing on the mountains:
+  // a smudge, round 3, the critics.)
+  // (And over the top fifth of the tallest, a cap: all but the sheerest under it.)
+  let snowLine = p.y + (textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.004 + 0.31, 0.0).r - 0.5) * 150.0;
+  let peakSnow = eastK * smoothstep(530.0, 620.0, snowLine)
+    * smoothstep(mix(0.55, 0.3, smoothstep(680.0, 780.0, snowLine)), mix(0.74, 0.5, smoothstep(680.0, 780.0, snowLine)),
+      0.6 * in.n.y + 0.4 * geoN.y + (textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.023 + 0.6, 0.0).g - 0.5) * 0.25);
   // (The castle's crag, src/core/east.js CRAG, inside its curtain and down its banks: rock and gravel near half as dark, a
   // dull brown-black. Pale, its slopes in the yard and the wards were snow against the black walls, the gate lost on them.
   // The critics.) (Its cliffs a little less: they're the castle's rock, its beds wanted to be seen.)
@@ -517,7 +556,7 @@ fn untileC(l: i32, uv: vec2f, dx: vec2f, dy: vec2f, k: f32) -> vec4f {
   var snowCol = vec3f(0.84, 0.87, 0.93) * (0.88 + 0.16 * grassDet.a);
   if (haveSnow) { snowCol = snowTex.rgb * mix(vec3f(1.04, 1.05, 1.08), vec3f(1.0), snowTex.a); }
   albedo = mix(albedo, snowCol, snowAmt);
-  albedo = mix(albedo, snowCol * vec3f(0.8, 0.84, 0.9), peakSnow * (1.0 - snowAmt));
+  albedo = mix(albedo, snowCol * vec3f(0.93, 0.96, 1.0), peakSnow * (1.0 - snowAmt));
   // Under the pines, old needles in the dark (less where the snow's got in).
   // (Where the stand's thick, the whole floor is needles, its edge wandering out into the grass.)
   let floorAmt = select(fm.g, smoothstep(0.12, 0.55, fm.g + (macro2.g - 0.5) * 0.3), haveFloor) * (1.0 - dirt * 0.7) * (1.0 - snowAmt * 0.6) * (1.0 - roadIn);

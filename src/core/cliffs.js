@@ -26,13 +26,17 @@ export const BEDS = [];
   let t = T0;
   while (t < T1) {
     // A hard bed: now and then a massive one, twenty-odd to fifty metres of near sheer cliff, and between them thin ones,
-    // five to fourteen, bunched with their ledges. (All of a middling thickness, a wall's beds stood as a dozen even steps:
-    // the critics' ziggurat.)
-    const th = R() < 0.3 ? 22 + 28 * R() : 5 + 9 * R();
-    BEDS.push([t, t + th, 0.035 + 0.075 * R(), 1, R()]); t += th;
-    // Then a soft one: mostly a ledge (thin, lying far back), now and then a scree slope (thick, at about forty-five degrees).
-    if (R() < 0.22) { const s = 8 + 12 * R(); BEDS.push([t, t + s, 0.78 + 0.32 * R(), 0, R()]); t += s; }
-    else { const s = 1.6 + 5 * R(); BEDS.push([t, t + s, 1.3 + 1.6 * R(), 0, R()]); t += s; }
+    // four to twelve, stacked one on another as one sheer packet. (All of a middling thickness, a wall's beds stood as a
+    // dozen even steps: the critics' ziggurat.)
+    const massive = R() < 0.32, th = massive ? 24 + 30 * R() : 4 + 8 * R();
+    BEDS.push([t, t + th, massive ? 0.03 + 0.05 * R() : 0.05 + 0.08 * R(), 1, R()]); t += th;
+    // Then a soft one. Over a massive bed a ledge (thin, lying far back) or now and then a scree slope (thick, at about
+    // forty-five degrees); over a thin one only a parting, a metre of shale set back a hand's breadth, a line along the face.
+    // (A ledge over every bed, a wall three hundred metres high had nineteen of them, ringing the basin like an open pit's
+    // benches: the critics, round 3. Now five or so.)
+    if (massive && R() < 0.3) { const s = 8 + 14 * R(); BEDS.push([t, t + s, 0.8 + 0.3 * R(), 0, R()]); t += s; }
+    else if (massive) { const s = 2 + 5 * R(); BEDS.push([t, t + s, 1.5 * (1.3 + 1.6 * R()), 0, R()]); t += s; }
+    else { const s = 0.5 + 1.2 * R(); BEDS.push([t, t + s, 0.22 + 0.25 * R(), 0, R()]); t += s; }
   }
 }
 // Per STEP of t from T0: the run, and which bed.
@@ -46,6 +50,8 @@ const RUN = new Float32Array(N), BED_OF = new Uint16Array(N), CUM = new Float64A
     CUM[i + 1] = CUM[i] + RUN[i] * STEP;
   }
 }
+// (The beds' mean run, metres back per metre up, over the walls' heights.)
+const MEAN_RUN = (CUM[Math.round(300 / STEP) - Math.round(T0 / STEP)] - CUM[-Math.round(T0 / STEP)]) / 300;
 const idxOf = (t) => Math.min(N - 1, Math.max(0, Math.floor((t - T0) / STEP)));
 
 export function cumAt(t) {
@@ -71,14 +77,17 @@ export const bedIndexAt = (t) => BED_OF[idxOf(t)];
 // f, the face's fluting, the joints the rock splits along, set back a metre or two in narrow vertical runs; lift, how far
 // the beds are raised (or let down) there, the rock folded in long low waves, so their lines never run ruler straight
 // along a wall but rise and fall over it, some twenty metres in half a kilometre.
-export function wallLie(s, side) {
+// (Its lean sharply different from one stretch to the next: steep spurs standing out between bays laid back, five or six
+// down each side. Near even all round, the ring's benches ran concentric like a quarry's: the critics, round 3. And its
+// beds folded higher, so a band climbs or falls tens of metres across a few hundred.)
+export function wallLie(s, side, chasm = false) {
   const o = side * 31.7;
-  const k = 0.6 + 0.75 * fbm(s * 0.0032 + o, 2.3 + o, 3);
+  const k = chasm ? 0.6 + 0.75 * fbm(s * 0.0032 + o, 2.3 + o, 3) : 0.55 + 1.0 * sstep(0.32, 0.68, fbm(s * 0.0032 + o, 2.3 + o, 3));
   const gully = Math.pow(Math.max(0, 1 - Math.abs(2 * vnoise(s / 150 + o, 1.7) - 1)), 4);
   const spur = Math.pow(Math.max(0, 1 - Math.abs(2 * vnoise(s / 210 + o, 8.3) - 1)), 4);
   const f = 2.2 * Math.pow(Math.abs(2 * fbm(s / 14 + o, 4.4, 2) - 1), 0.6);
   const fault = faultAt(s, o);
-  const lift = 44 * (fbm(s * 0.0019 + o, 6.1 + o, 3) - 0.5) + 9 * (fbm(s * 0.0071 + o, 2.9, 2) - 0.5) + fault;
+  const lift = (chasm ? 44 : 100) * (fbm(s * (chasm ? 0.0019 : 0.0026) + o, 6.1 + o, 3) - 0.5) + (chasm ? 9 : 16) * (fbm(s * 0.0071 + o, 2.9, 2) - 0.5) + fault;
   return { k, g: 62 * gully - 16 * spur, f, gully, lift, fault };
 }
 // Faults: every couple of hundred metres along a wall (never evenly) the whole stack of beds is dropped or raised as a
@@ -93,8 +102,10 @@ function faultAt(s, o) {
 // The Chasm's walls: the same rock cut narrower, so its walls stand steeper (two thirds of the basin's lean) and its gullies
 // shallower. s along the way, side 0 or 1.
 export function chasmLie(s, side) {
-  const L = wallLie(s * 1.6 + 3000, side + 2);
-  L.k *= 0.68; L.g *= 0.45; L.f *= 0.4;
+  const L = wallLie(s * 1.6 + 3000, side + 2, true);
+  // (Its beds' ledges fewer and wider than they were, the Chasm's walls lean as far overall as they did: two thirds of the
+  // basin's old lean, by the beds' mean run then, 0.668, and now.)
+  L.k *= 0.68 * 0.668 / MEAN_RUN; L.g *= 0.45; L.f *= 0.4;
   // (Not faulted: a slot a dozen metres wide, its walls stepped tens of metres at a crack, came out ramps and slabs across
   // the way. The basin's walls are.)
   L.lift -= L.fault; L.fault = 0;
@@ -153,4 +164,5 @@ export function cragFaceY(x, y0, y1, u) {
 }
 
 // Where the talus heaps up under a gully, out over the foot: metres high, m metres out from the foot.
-export const fanOf = (lie, m) => 16 * lie.gully * Math.pow(Math.max(0, 1 - Math.max(0, m) / 48), 1.3);
+// (Steep, at about thirty degrees, a cone under each gully's mouth.)
+export const fanOf = (lie, m) => 24 * lie.gully * Math.pow(Math.max(0, 1 - Math.max(0, m) / 44), 1.3);

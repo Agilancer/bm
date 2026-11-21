@@ -33,27 +33,39 @@ const landChasm = (x, z, nearFloor) => (nearFloor || x < 7700 ? terrainHeight(x,
 export const SKIN_FLOATS = 9;
 
 // Every row up a face, by height along the beds (t), the same for every column: [t, kind]. kind: 0 face, 1 a hard bed's
-// foot (the back of the ledge under it), 2 under a lip, 3 the lip, 4 a ledge's front, 5 soft.
+// foot (the back of the ledge under it), 2 a lip's front, low, 3 the lip, 4 a ledge's front, 5 soft, (6 the cap over the rim),
+// 7 a parting (a thin shale between two hard beds, set back a little), 8 under a lip, at its back.
+// (A lip only over a hard bed with a ledge or a slope on it, cut square: its front sheer, its top flat back to the ledge,
+// its underside flat into the face. Over every bed and rounded, the lips were the critics' pie crust and sausage rolls.)
 function rowList(step, lean) {
   const rows = [];
-  for (const [t0, t1, , hard] of BEDS) {
-    if (t1 < -200 || t0 > 1000) continue;
+  BEDS.forEach(([t0, t1, run, hard], b) => {
+    if (t1 < -200 || t0 > 1000) return;
     const th = t1 - t0;
     if (hard) {
-      const body = Math.max(0.5, th - 2.1), n = Math.max(1, Math.ceil(body / step));
-      for (let i = 0; i < n; i++) rows.push([t0 + body * i / n, i === 0 ? 1 : 0]);
-      if (!lean) rows.push([t1 - 2.1, 2]);
-      rows.push([t1 - 0.6, 3]);
+      const lip = BEDS[b + 1] && BEDS[b + 1][2] > 0.7, afterLedge = b > 0 && BEDS[b - 1][2] > 0.7;
+      const body = lip ? Math.max(0.5, th - 1.7) : th, n = Math.max(1, Math.ceil(body / step));
+      for (let i = 0; i < n; i++) rows.push([t0 + body * i / n, i === 0 && afterLedge ? 1 : 0]);
+      if (lip) {
+        if (!lean) { rows.push([t1 - 1.7, 8]); rows.push([t1 - 1.45, 2]); }
+        rows.push([t1 - 0.12, 3]);
+      }
+    } else if (run < 0.7 && th < 2.5) {
+      rows.push([t0, 7]);
     } else {
-      const n = Math.max(1, Math.ceil(th / step));
+      // (A row every few metres back across a ledge as well as up it: the ledges are few and wide now, and with a row only at
+      // either edge of one, a Chasm column's next row was too far on, and it stopped there, the land's staircase over it.)
+      const n = Math.max(1, Math.ceil(th / step), Math.ceil(th * run * 2 / 8));
       for (let i = 0; i < n; i++) rows.push([t0 + th * i / n, i === 0 ? 4 : 5]);
     }
-  }
+  });
   return rows;
 }
 // How far a row stands out from the land's face (on top of the skin's own inset): a hard bed's top bulges out into a lip that
 // overhangs the ledge under it, and the ledge's front is that lip's top.
-const PROUD = [0, -0.25, 0.9, 2.1, 1.1, 0];
+// (The lip itself just half a metre over the face, its edge square: two metres proud, every ledge's edge drew as a cable laid
+// along it. The ledge's back cut under the bed over it, where the shale's weathered back.)
+const PROUD = [0, -0.5, 0.35, 0.35, 0.3, 0, 0, -0.25, 0];
 
 // Columns: { x, z (the foot), ix, iz (in, level), s (metres along, for its noise), y0 (the foot's height), kind, ... }.
 // The basin's walls stand on the line basinEdges draws, north and south; each column goes in along z (as east.js measures
@@ -171,9 +183,10 @@ function chasmPoints(col, rows, caps, spacing) {
       } else col.cut = true;
       break;
     }
-    // (A hundred and eighty metres back: the walls are two hundred and more high, and stopped at seventy a third of them
-    // left their tops to the land's own cells, which draw a sheer face as a staircase of ribs, saw teeth at the rim.)
-    if (D - col.w > 180 || (prev && D - prevD > 24)) { col.cut = true; if (globalThis.__cutStats) { const k = D - col.w > 180 ? 'far' : 'jump'; globalThis.__cutStats[k] = (globalThis.__cutStats[k] || 0) + 1; } break; }
+    // (Two hundred and sixty metres back: the walls are two hundred and more high, their rims up to two hundred and twenty back,
+    // and stopped short a third of them left their tops to the land's own cells, which draw a sheer face as a staircase of
+    // ribs, saw teeth at the rim.)
+    if (D - col.w > 260 || (prev && D - prevD > 32)) { col.cut = true; break; }
     lastA = alongAt(D); lastAD = D;
     const [x, z] = at(D);
     const pt = { p: [x, y, z], t, kind, key: r, ok: Math.abs(h - y) < 0.7 ? true : h > y ? 'buried' : 'air' };
@@ -335,7 +348,7 @@ export function buildCliffSkin({ lean = false } = {}) {
   const jh = (a, b) => { const v = Math.sin(a * 91.3 + b * 47.7 + 13.1) * 43758.5453; return v - Math.floor(v); };
   const bulge = meta.map((q) => {
     if (q.cap || q.ridge) return 0;
-    const b = bedIndexAt(q.t), hard = BEDS[b][3] && q.kind <= 3;
+    const b = bedIndexAt(q.t), hard = BEDS[b][3] && (q.kind <= 3 || q.kind === 8);
     let out = 1.6 * Math.max(0, fbm(q.col.s / 13 + 3.1, q.p[1] / 9 + 0.7, 3) - 0.28);
     if (hard) {
       const len = 8 + 17 * jh(b, 1), blk = Math.floor((q.col.s + 40 * jh(b, 2)) / len), r = jh(b, blk);
@@ -361,7 +374,7 @@ export function buildCliffSkin({ lean = false } = {}) {
   const verts = new Float32Array(P.length * SKIN_FLOATS);
   P.forEach((p, i) => {
     const q = meta[i], n = N[i];
-    let open = 0.74 + 0.025 * bulge[i] + [0, -0.34, -0.5, 0.08, 0.14, 0.02, 0.05][q.kind] - 0.35 * Math.max(0, -n[1]);
+    let open = 0.74 + 0.025 * bulge[i] + [0, -0.22, -0.1, 0.1, 0.14, 0.02, 0.05, -0.12, -0.45][q.kind] - 0.35 * Math.max(0, -n[1]);
     if (q.ok === 'buried') open -= 0.15;
     const o = i * SKIN_FLOATS;
     verts[o] = p[0]; verts[o + 1] = p[1]; verts[o + 2] = p[2];

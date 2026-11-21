@@ -268,11 +268,14 @@ function peaksAt(x, z) {
     const dx = x - sx, dz = z - sz, d2 = dx * dx + dz * dz;
     if (d2 > R * R * 2) continue;
     const d = Math.sqrt(d2), th = Math.atan2(dz, dx);
-    const Rr = R * (1 + 0.22 * Math.cos(3 * th + ph)) * (0.85 + 0.3 * fbm(x * 0.004 + ph, z * 0.004 - ph, 2));
+    // (Lopsided: one face long and laid back, the one opposite short and steep, so its top stands off its middle; and each
+    // arête notched two or three times on its way down. Even all round, every horn was a pyramid: the critics, round 3.)
+    const Rr = R * (1 + 0.22 * Math.cos(3 * th + ph)) * (1 + 0.32 * Math.cos(th - 1.7 * ph)) * (0.85 + 0.3 * fbm(x * 0.004 + ph, z * 0.004 - ph, 2));
     const u = 1 - d / Rr;
     if (u <= 0) continue;
     const cr = 1 - Math.abs(2 * fbm(x * 0.0065 + ph * 3, z * 0.0065 - ph, 2) - 1);
-    const v = H * Math.pow(u, 1.7) * (1 - 0.22 * (1 - u) * (1 - cr * cr));
+    const ar = Math.pow(Math.max(0, Math.cos(3 * th + ph)), 6), nt = Math.pow(Math.max(0, Math.sin(u * 8.5 + ph * 2.1)), 10);
+    const v = H * Math.pow(u, 1.7) * (1 - 0.26 * (1 - u) * (1 - cr * cr)) * (1 - 0.07 * ar * nt * (1 - u));
     if (v > h) h = v;
   }
   return h;
@@ -294,7 +297,7 @@ export function eastHeight(x, z, h) {
   // their tops, they stood as ziggurats with snow along every step; and hardly at all just back from the Chasm's rims, whose
   // steps, seen from its floor against the sky, were a saw's teeth.)
   const pk = peaksAt(x, z);
-  let tAmt = 0.55 * (1 - 0.8 * sstep(40, 240, pk));
+  let tAmt = 0.45 * (1 - 0.85 * sstep(40, 200, pk));
   if (x > 7100 && x < 9400 && Math.abs(z) < 1000) { const n = chasmNear(x, z); tAmt *= 0.08 + 0.92 * sstep(100, 380, n.d - chasmWidth(n.s)); }
   const high = terraceY(x, z, 190 + 250 * Math.pow(rg, 1.6) + 46 * rg2 * rg2 + pk
     + (70 + 130 * fbm(z * 0.0031 + 2, 7, 3)) * Math.exp(-(((x - 7500 - wob) / 170) ** 2))
