@@ -2563,27 +2563,28 @@ the same stone in the same place up a curtain, the same stain in every bay of a 
   is a face. Over it, the meadows' own lie, some tens of metres a patch: dry stretches gone to straw, lush dark ones, worn
   places where plain grey-brown earth shows, more where the ground tilts. On a phone the one painting each ground reads is
   bent out of line by a slow warp instead (a couple of metres over some tens: no grid, and no more reads of the paintings).
-- **The houses, the castles and the places** (STATIC). Their masonry, roofs and boards read two copies of the tile, slid
-  along their courses by a noise laid in the world's own space, meeting in the mortar (as Phobos's already did; now
-  everywhere, the delves too). Then, outdoors, weather where weather puts it, never in clouds: each stone, shingle or board
-  its own tone on its face, the joints left dark; a slow drift of tone so no two houses or stretches of curtain are one
-  stone; damp risen and dirt splashed up the foot of a wall, a ragged band to about a metre, greener on what faces north
-  (where the ground under it is known: each place's levelled pad and the town, `GROUNDS`; nowhere else); thin rain runs
-  down masonry here and there along it; lichen on wall tops; on roofs, runs down the fall line, moss in the hollows of the
-  north slopes, and each roof a little its own colour. A timbered front's timber and glass are never touched: only its
-  plaster varies, bay by bay, its painted stains kept in some bays and lifted in others, with a line of dirt where it meets
-  the timber. The church's own masonry (`wall_ashlar`, `wall_rough`, `src/gfx/interior.js`) takes the slide and the
-  stone-by-stone tone and no weather, since the same stone lines its inside. On a phone, the drift of tone only.
+- **The castles and the places** (STATIC). Their masonry and boards read two copies of the tile, slid along their courses
+  by a noise laid in the world's own space, meeting in the mortar (as Phobos's already did; now everywhere, the delves
+  too). Then, outdoors, weather where weather puts it, never in clouds: each stone or board its own tone on its face, the
+  joints left dark; a slow drift of tone so no two stretches of curtain are one stone; damp risen and dirt splashed up the
+  foot of a wall, a ragged band to about a metre, greener on what faces north (where the ground under it is known: each
+  place's levelled pad, `GROUNDS`; nowhere else); thin rain runs down masonry here and there along it; lichen on wall tops.
+  The church's own masonry (`wall_ashlar`, `wall_rough`, `src/gfx/interior.js`) takes the slide and the stone-by-stone tone
+  and no weather, since the same stone lines its inside. On a phone, the drift of tone only.
+- **Never the houses.** None of it touches a house: not a painted front or its timber, not any roof's painting (-2.25 in the
+  layer table, `src/gfx/renderer.js`), nor anything standing in the town (`house` in STATIC). The houses' paintings (the
+  fourteen timbered fronts, `door_wall`, and the `stone` and `rubble` of the stone houses) are as they were painted, and the
+  land's houses start their fronts, doors and roofs where they always did (`Kit.quad`). The owner, after seeing the
+  houses with it on them, weathered bay by bay and then their framing laid again at one scale: back to the originals.
 - **The land's walls** (`src/core/sites.js`): a long wall is built of boxes some eight metres long, overlapping. Each began
   its painting its own way, so a curtain read as panels with a seam every eight metres; now u runs on along the wall's
   line by the metre, and round a drum it's a whole number of repeats. The ends between two boxes of one wall aren't built
   (seen edge on, flush with the face, they drew a thin dark line down every join). The coursed stone (`course`) is laid half
   again as big, about 40 cm a course.
 - **The paintings** (`python tools/world/unrepeat_tex.py`, reading each from the commit before, so it can be run again):
-  the grass's pale netting strands toned down and their relief eased; the masonry's broad light and dark half divided out,
-  so no blotch marks the period of the tile; the pale plaster of the fourteen timbered fronts evened, its dark rims and
-  stains lifted (only ever lightened), the dirt splashed at each panel's foot left, the timber, glass and stone infill as
-  painted. Same sizes, so nothing more is held: no memory measured, none added.
+  the grass's pale netting strands toned down and their relief eased; the castles' masonry (`block`, `course`, `ashlar`,
+  `flags`) with its broad light and dark half divided out, so no blotch marks the period of the tile. Same sizes, so
+  nothing more is held: no memory measured, none added.
 
 **Looked at:** `tools/world/repeats.mjs <round>` photographs the same fourteen places every round (the square, a lane, a long
 timbered house near and far, the roofs from above, the meadow by the church, the hill road, the downs, Blackvigil,
@@ -2603,17 +2604,14 @@ at Blackvigil's joins (there in the original: the boxes' ends), an orange stain 
 meadow's dry grass, and the downs still one carpet. Round 3 fixed those. **The level designer approved it; the texture
 critic did not**, though calling it better than the original nearly everywhere and fit to ship. Left, and said by them:
 
-- **The timbered fronts' framing** on some houses is mapped at a different scale from storey to storey (a gable's lower
-  band of braces at half the scale of the storey above) and a few painted studs run down over the stone plinth. It's in
-  the village's own modelled UVs (`tools/village/build_village.py`, in Blender), as it was before, and wants a pass there:
-  the framed faces at one density in metres, rails at the storeys' heights, the framing cut at the sill. Not done here.
 - Greywarden's curtain still lines its joints up in columns at one stone's width (they'd stagger the courses); a faint tan
   ring by the abbey's stairs; a small streak in the corner of the near ground at Khel; the downs' patches could be
-  stronger; the two lower windows of the long house still drip the same stain.
+  stronger. What they said of the houses (each bay of a front painted to the same stain, a front's framing at a different
+  scale from storey to storey, a few painted posts down over stone) is left as painted: the owner wants the houses as they
+  were.
 - Seen only in pictures from a software GPU at 1280 by 720. Not looked at on a real GPU or a phone, and not measured for
   frame time: the ground reads two copies only along its joins, and a wall's weather is a few more reads of the small
-  noise and the PH2 pack's decals. After the last round the older roofs' grey was warmed (a cool one read lilac beside red
-  shingles), seen in two pictures, not by the critics.
+  noise and the PH2 pack's decals.
 
 ### When the GPU is lost
 
