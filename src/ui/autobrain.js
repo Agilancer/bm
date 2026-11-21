@@ -192,6 +192,8 @@ const guessLevel = (id) => Math.max(1, Math.min(20, Math.round((RULES[id].xp || 
 const PLAN_ALL = PLAN.filter(([id]) => RULES[id]).concat(Object.keys(RULES).filter((id) => !(id in LEVEL_OF)).map((id) => [id, guessLevel(id)]));
 // The level it wants for a quest: the quest log (src/ui/questlog.js) suggests the same to a player.
 export const questLevel = (id) => LEVEL_OF[id] ?? guessLevel(id);
+// How long a quest dropped from the quest log is left be before it goes back to its giver for it (ms, by the wall clock).
+export const DROP_REST = 15 * 60 * 1000;
 
 // Where each place in a quest's steps is, for walking to: a point, and how near counts.
 const area = (k) => {
@@ -2282,6 +2284,8 @@ export class Brain {
     let best = null, bd = Infinity;
     for (const [id, lvl] of PLAN_ALL) {
       if (Q.state(id) || (RULES[id].needs && !Q.done(RULES[id].needs))) continue;
+      // (One you've just dropped from the quest log is left be a while: it isn't to be taken straight back up.)
+      if (Q.droppedLately?.(id, DROP_REST)) continue;
       const giver = this.personIndex(QUESTS[id].giver);
       if (giver < 0 || this.skipping(`p:${giver}`) || (!this.reachable(giver) && !this.crowdSpot(giver))) continue;
       // (Far-off work can wait till it's nearly ready for it.)
@@ -2707,8 +2711,10 @@ export class Brain {
     if (k < 0) k = at((o) => Object.values(QUESTS).some((q) => q.accept === label(o)));
     // The quest talk it came for, or anything else this person has for it.
     if (k < 0) {
-      const want = this.wanted(id);
-      k = at((o) => want.has(label(o)) || o.cls === 'offer');
+      const want = this.wanted(id), Q = townUI.quests;
+      // (Not an offer of something you've lately dropped from the quest log: wanted() leaves those out, and so does this.)
+      const rested = new Set(Object.keys(RULES).filter((qid) => Q.droppedLately?.(qid, DROP_REST)).map((qid) => QUESTS[qid].title));
+      k = at((o) => want.has(label(o)) || (o.cls === 'offer' && !rested.has(label(o))));
     }
     if (k >= 0) { townUI.choose(k); return; }
     // Wes Harrow letting the pack out: asked, then a pocket at a time while it's still worth the coin (wantsRoom).
@@ -2771,7 +2777,7 @@ export class Brain {
     const { townUI, pack } = this.o, Q = townUI.quests, out = new Set();
     for (const qid of Object.keys(RULES)) {
       const s = Q.state(qid), st = Q.step(qid), q = QUESTS[qid];
-      if (!s) { if (q.giver === id) out.add(q.title); continue; }
+      if (!s) { if (q.giver === id && !Q.droppedLately?.(qid, DROP_REST)) out.add(q.title); continue; }
       if (s.stage === 'done') continue;
       if (st?.talk === id) out.add(st.say);
       if (q.giver !== id) continue;
