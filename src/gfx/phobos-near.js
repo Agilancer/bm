@@ -10,7 +10,7 @@
 // thing of its own (src/items/phobos-doors.js).
 
 import { buildPhobosCell, buildSites, unpackCell } from '../core/sites.js';
-import { CASTLE_CELLS, CELL, cellOf, phobosHouses, wallCells } from '../core/phobos-build.js';
+import { CASTLE_CELLS, CELL, cellOf, phobosHouses, towerCells, wallCells } from '../core/phobos-build.js';
 import { cityTowers } from '../core/phobos-towers.js';
 import { CITY, CRAG } from '../core/east.js';
 
@@ -21,7 +21,7 @@ const NEAR = 150, FAR = 230, KEEP = 30;   // metres to build a cell at, and to l
 const LEAN = { near: 105, far: 165, keep: 14 };
 
 /** Every cell of the city with something in it to build from near. */
-export function phobosCells() { return [...new Set([...phobosHouses().map((h) => h.cell), ...CASTLE_CELLS, ...wallCells(), ...cityTowers().map((t) => t.cell)])]; }
+export function phobosCells() { return [...new Set([...phobosHouses().map((h) => h.cell), ...CASTLE_CELLS, ...towerCells(), ...wallCells(), ...cityTowers().map((t) => t.cell)])]; }
 
 export class PhobosNear {
   constructor(renderer) {
@@ -51,7 +51,7 @@ export class PhobosNear {
       } catch (err) { this.apart = false; return; }
     }
     this.asked = key; this.askedAt = performance.now();
-    this.builder.postMessage({ cell: key, opening: !!this.r.openingEnabled });
+    this.builder.postMessage({ cell: key, opening: !!this.r.openingEnabled, lean: !!this.r.tier.lean });
   }
 
   // A door's leaf as its house has it, folded away (hide) or put back. (Nothing if its cell isn't up: when it is, it's
@@ -89,6 +89,7 @@ export class PhobosNear {
   update(cam) {
     const r = this.r;
     const NEAR = this.near, FAR = this.far, KEEP = this.keep;
+    this.cam = cam;
     if (!r.landScenery || cam.x < CITY.x - CITY.a - FAR || cam.x > CRAG.x + CRAG.a + FAR || Math.abs(cam.z - CITY.z) > CITY.b + FAR) { if (this.cells.size || this.builder) this.clear(); return; }
     let want = null, best = NEAR;
     for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) {
@@ -117,7 +118,7 @@ export class PhobosNear {
         if (Math.hypot(cx - cam.x, cz - cam.z) - CELL * 0.7 < FAR) { want = [got[0], cx, cz]; built = got[1]; }
       }
     }
-    if (want && this.apart === false) built = buildPhobosCell(want[0]);
+    if (want && this.apart === false) built = buildPhobosCell(want[0], !!r.tier.lean);
     if (want && built) {
       const set = r.packParts(built.parts, built.groups);
       for (const [k, runs] of set.slices) {
@@ -165,9 +166,13 @@ export class PhobosNear {
 
   // Into a pass with the static pipeline (or a shadow's) already set: every cell that's up. cut: the cutout pipeline's
   // turn (nothing of a cell's is a cutout yet).
-  draw(pass) {
+  // view: the eye's own pass, where a cell wholly behind you is left out (by its place on the ground only: a cell's towers
+  // stand hundreds of metres, so nothing's said of its height, and nothing's left out while you look steeply up or down).
+  draw(pass, view) {
+    const cam = view && this.cam, fl = cam ? Math.hypot(cam.fx, cam.fz) : 0, cull = fl > 0.72;
     for (const c of this.cells.values()) {
       if (!c.opaque) continue;
+      if (cull && ((c.x - cam.x) * cam.fx + (c.z - cam.z) * cam.fz) / fl < -CELL * 0.75) continue;
       pass.setVertexBuffer(0, c.VB);
       pass.setIndexBuffer(c.IB, 'uint32');
       pass.drawIndexed(c.opaque);

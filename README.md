@@ -3111,7 +3111,7 @@ Now a monster's pictures go by how tall it stands, one rule for its own colours 
 (`src/gfx/picsize.js`, shared by the worker and the render thread, `tests/picsize.test.mjs`):
 - **As tall as a house (2.5 m or more):** its colours seen close, as Lisandra's and your own body's are: `texCapNear`,
   512 across, whatever size Tripo made the picture (`fill`). That's the named bosses, the dragons, the giants, golems
-  and worms, the night demons and the land's great kinds: 90 of the 237 in the bestiary.
+  and worms, the night demons, the land's great kinds and the castle's bosses: 116 of the 273 in the bestiary.
 - **An outpost's chief, however tall** (`CHIEFS` in `src/core/tripo-monsters.js`: a faction's chief that's never one of
   the many anywhere): the same, 512. The Tomb-Lord (2.45 m) and Magister Sorvane (2.5) are one body, as are the Vigil's
   Magister (2.4) and its Captain (2.5): by height alone one was 512 and the other 256, and the dyed ones had been 1024 on a

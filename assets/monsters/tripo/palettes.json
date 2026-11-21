@@ -29,5 +29,10 @@
  "Ironrust": {"sat": 0.7, "val": 0.8, "tint": [0.7, 0.36, 0.2], "tamt": 0.4},
  "Amethyst": {"hue": 280, "sat": 1.1},
  "Stormhide": {"sat": 0.5, "val": 0.85, "tint": [0.5, 0.56, 0.8], "tamt": 0.45},
- "Gloam": {"sat": 0.35, "val": 0.55}
+ "Gloam": {"sat": 0.35, "val": 0.55},
+ "Royal": {"val": 0.8, "tint": [0.16, 0.26, 0.82], "tamt": 0.56},
+ "Forest": {"sat": 0.9, "val": 0.74, "tint": [0.13, 0.4, 0.17], "tamt": 0.54},
+ "Greygold": {"sat": 0.3, "val": 0.92, "tint": [0.72, 0.66, 0.5], "tamt": 0.34},
+ "Skullwhite": {"sat": 0.08, "val": 1.36, "tint": [1.0, 0.97, 0.9], "tamt": 0.3},
+ "Bloodred": {"val": 0.84, "tint": [0.78, 0.07, 0.06], "tamt": 0.48}
 }
