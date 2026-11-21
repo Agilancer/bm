@@ -2482,8 +2482,9 @@ export class Renderer {
       let keep = false;
       if (gpu.mobile && this.activeKey) {
         // A phone turning goes through a run of sizes, and each would be every target thrown away and made again. Upright
-        // nothing's drawn, and what it's drawn into is let go (src/main.js turned, rest below), so no upright size is ever
-        // taken here; any other size is taken once it's held for a moment.
+        // nothing's drawn (src/main.js turned), so an upright size is never taken while there's a picture. (And a phone stood
+        // upright lets the picture go, rest below: the first frame back makes it at whatever size the screen is then.) Any
+        // other size is taken once it's held for a moment.
         if (ch > cw) return;
         // Nor for the browser's own bar, shown and put away: the same width, a little less height or more. (An iPhone held
         // sideways shows it for a tap near the screen's edge: a touch was every target made again.) Nor while a word's

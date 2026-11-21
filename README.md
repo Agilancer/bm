@@ -3184,18 +3184,19 @@ them go. **Not run on an iPhone**: on one, Safari decodes the pictures, not Chro
 #### Turned upright, five minutes in
 
 The owner's iPhone again (the home-screen app, with the pictures above): closed five minutes into play, in Bellmourn at
-(8, -36), the note's last things a touch, then the phone turned upright. The note is written every eight seconds and
-"Just before" means nothing came after, so it went within some 18 seconds of the turn. In Chrome made an iPhone (956 x 440
-at three pixels to the point, the Mobile tier) a turn costs nothing that can be measured: going upright, the page's
-process falls (1,273 to 824 MB in 13 s) and its layers go from 67 MB to 29. So the turn isn't a leak. It's the moment an
-iPhone holds the page twice, every layer at the old size and the new while it lays the page out again, and a page near
-the end of what it's allowed goes then. An iPhone gives a page about 2 GB whatever the phone has (`ActiveHard 2048 MB`
-in its memory reports; older guidance said 1.5), and counts against it what's asked of the GPU as well as the page's own
-memory: in the town here, the page's process 0.8 GB just collected and up to 1.6 between, and about 560 MB asked of the GPU.
+(8, -36), the note's last things a touch, then the phone turned upright. The turn and the new size are one event, noted
+at once; the note is kept again every 8 s, and "Just before" means it wasn't kept 10 s after, so the page went at the
+turn or within some 16 s of it. In Chrome made an iPhone (956 x 440 at three pixels to the point, the Mobile tier) a turn
+costs nothing that can be measured: nothing the page holds grows. On an iPhone it's the moment the page is held twice,
+every layer at the old size and the new while it's laid out again, and a page near the end of what it's allowed goes
+then. What an iPhone allows a page is reported (Apple's developer forum, from the phones' own reports) as about 2 GB
+whatever the phone has, `ActiveHard 2048 MB` (older guidance said 1.5), counting what's asked of the GPU with the page's
+own memory: in the town here, the page's process 1.0 GB just collected and up to 1.6 between, and some 560 MB asked of
+the GPU.
 
-And the game had grown since the twenty-one minutes above (25377a5d), measured the same way in the town: the page's
-process 120 to 180 MB more, the load's height 156 MB more, what's asked of the GPU the same. Most of it was in the
-simulation's thread, a heap snapshot each side (`snap` in `tools/memory/raw.mjs`) said: Phobos's floors and boxes.
+The game had grown since the twenty-one minutes above (25377a5d), measured the same way in the town: the page's process
+120 to 180 MB more, the load's height 156 MB more, what's asked of the GPU the same. Most of it was in the simulation's
+thread, a heap snapshot each side (`snap` in `tools/memory/raw.mjs`) said: Phobos's floors and boxes.
 
 - **The floors as numbers** (`packFloors`, `src/core/sites.js`). Every floor's rects were objects, 162 thousand then and
   269 thousand now. They're seven numbers each in one Float64Array (15 MB), read in place by `platformAt` and `indoors`
@@ -3204,54 +3205,66 @@ simulation's thread, a heap snapshot each side (`snap` in `tools/memory/raw.mjs`
   by every World with its turn added: 18 MB in a snapshot. The first World in a thread now adds the turn to the boxes
   themselves; one made after it in the same thread (the tools, the tests) copies them, with its Phobos doors shut as
   built, so the two open their doors apart.
-- **Auto-play's walking thread let go** (`Nav` in `src/ui/autobrain.js`). It's a second whole World, made the first time
-  auto-play is on and kept for good after: 130 to 160 MB. On a phone it's let go the moment the phone's stood upright
-  (auto-play can't move then anyway), and with auto-play off once nothing's been asked of it for 90 s. Auto-play on
-  again, or the phone turned back with it on, makes it again as the first time: turned back, not till 6 s after, since
-  turning back is the page laid out again too and a start is the thread at its biggest (some 250 MB till it's collected).
-  Till it's ready, auto-play finds its ways as it does at the start, and walks on.
-- **Nothing to draw into while upright** (`Renderer.rest`, from `turned` in `src/main.js`). Upright nothing's drawn, so
-  the screen's targets are let go and the canvas made a pixel, and the turn has that much less to hold twice. Turned
-  back, the next frame makes them at the screen's size, as at the start.
+- **Nothing to draw into while upright** (`Renderer.rest`, from `turned` in `src/main.js`). Upright nothing's drawn, so on
+  a phone the screen's targets are let go and the canvas is made a pixel. They go once the GPU's done with what it was
+  sent, so not at the very moment of the turn. Turned back, the next frame makes them at the screen's size, as at the
+  start; under the title too, which draws a few frames again so the village is back behind it.
 - **The damage numbers and the foes' life bars put away upright** (`index.html`), with the rest of what's over the
-  world. Upright the frame stops, so whatever numbers were up stood frozen under the cover, each a layer of its own.
+  world. Upright the frame stops, so whatever numbers were up stood frozen under the cover.
 
 (And `src/sim/nav.worker.js` had a timer at its top, the east's map let go after three minutes, which kept every test
 that reads the file alive for ever: five of them hung the whole suite. It no longer holds Node open.)
 
-In Chrome made an iPhone, in the town with auto-play on, the same steps on `main` and on this (`tools/memory/raw.mjs`;
-each thread and the page's process just after a collection):
+In Chrome made an iPhone, in the town with auto-play on, the same steps on `main` and on this (`tools/memory/raw.mjs`).
+Just after a collection:
 
 | | `main` | Now |
 | --- | --- | --- |
 | The simulation's thread | 253 and 254 MB (its heap 113) | 217 to 227 MB (its heap 68 to 70) |
-| Auto-play's walking thread | 142 and 160 MB | 130 MB |
 | The page's process, sideways | 1,059 and 1,073 MB | 962 to 1,004 MB |
-| The page's process 7 s upright, auto-play on | 1,042 MB | 795 and 804 MB |
-| Auto-play's walking thread upright | kept | let go at once; back 6 s after turning back, ready by about 20 s |
-| Two minutes after auto-play's turned off | the thread kept | let go: the page's process 853 and 869 MB |
 | The canvas upright | 1276 x 587, kept | 1 x 1 |
 | Textures asked of the GPU upright | as sideways | 6 or 7 MB less (the screen's targets) |
 | Layers upright, after numbers and bars were up | 40 painted, 44 MB | 7 painted, 42 MB |
-| Turned back sideways | | the picture back at once, no GPU errors; auto-play walked on throughout |
 
-The layers are counted at their size on screen: a canvas made a pixel still shows as the screen's size there, though
-what it holds is a pixel. The damage numbers' and the bars' boxes, the size of the screen, were looked at too: in a fight
-with both up they were no layers of their own, old or new (65 and 66 MB of layers in all), so they're left as they were.
+And with nothing collected by hand, the page's process at its highest (read every 0.7 s), two runs each, a turn upright
+for 10 s and back:
+
+| | `main` | Now |
+| --- | --- | --- |
+| 30 s sideways, before the turn | 1,417 and 1,362 MB | 1,421 and 1,400 MB |
+| The 10 s upright | 1,304 and 1,272 MB | 1,309 and 1,281 MB |
+| The 30 s after turning back | 1,302 and 1,277 MB | 1,309 and 1,318 MB |
+| 30 to 60 s after | 1,412 and 1,315 MB | 1,308 and 1,432 MB |
+| Turned back | | the picture back at once, no GPU errors |
+
+So what this saves is real once collected, and lost in the swing between collections: in Chrome the page makes some 55 MB
+a second of things it throws away, and the simulation's thread some 44 (`sample` in `tools/memory/raw.mjs`), and the
+process rises 130 MB in the 20 s after a collection. Some of that may not be made on an iPhone at all: Chrome keeps many
+a number as a small object of its own, and makes an array of every `Math.hypot`'s arguments, which Safari's engine
+doesn't. How much is made there isn't known. The layers are counted at
+their size on screen: a canvas made a pixel still shows as the screen's size there, though what it holds is a pixel.
 
 The World built both ways was asked the same things at 463,650 points, at the floors' rects and round them and over the
 whole land (`platformAt` with a height and without, `indoors`, `height`, `heightFor`, `topUnder`, `resolve`, and `resolve`
 with every Phobos door open, as auto-play's thread has them): 4,018,300 answers, none different. Two Worlds in one thread
 keep their 9,607 doors apart.
 
-**Not known:** whether this is enough. Stood upright with auto-play on, the page holds some 240 MB less than on `main`;
-sideways, some 60 to 110 MB less. How much more than that an iPhone's turn costs isn't known, and nothing here has run
-on an iPhone. What would say: the phone's own report of the kill, a `JetsamEvent`
-file (Settings, Privacy & Security, Analytics & Improvements, Analytics Data), which names the page's footprint and its
-limit. **Looked at, left:** the undead built at the start (62 MB of the GPU's, every kind, for those that come up from
-the graves); the skinned bodies' corners (48 and 36 bytes a corner where 24 might do); the world map's three canvases
-(21 MB, which the corner map draws from); `#mapRing` a layer the screen's size, and the life number's 650 x 302; and the
-delves' floor and distance grids kept in the page (some 20 MB).
+**Tried and taken back:** letting go of auto-play's walking thread (`Nav` in `src/ui/autobrain.js`) when the phone's
+stood upright, and after 90 s with auto-play off. It's a second whole World, 130 to 160 MB, made the first time auto-play
+is on and kept for good. Let go, auto-play read every "not ready yet" as "no way there" while it was made again, and gave
+up errands for minutes at a time (in Phobos, "No way there from here."), and each start was the thread at some 250 MB
+till it was collected. It's kept, as before. Making it smaller is the land built once and read by both threads, not
+built twice: work of its own. And the damage numbers' and the bars' boxes, the size of the screen, were looked at: in a
+fight with both up they were no layers of their own, old or new, so they're left as they were.
+
+**Not known:** whether any of this is enough, and it's likely not on its own. At the moment of the turn this lets go of
+little, and what it does let go (the screen's targets, the canvas) goes a moment later, when the GPU's done with it.
+Nothing here has run on an iPhone. What would say: the phone's own report of the kill, a `JetsamEvent` file (Settings,
+Privacy & Security, Analytics & Improvements, Analytics Data), which names which part of the browser went, its footprint,
+and its limit. **Looked at, left:** auto-play's walking thread (above); the undead built at the start (62 MB of the GPU's,
+every kind, for those that come up from the graves); the skinned bodies' corners (48 and 36 bytes a corner where 24 might
+do); the world map's three canvases (21 MB, which the corner map draws from); `#mapRing` a layer the screen's size, and
+the life number's 650 x 302; and the delves' floor and distance grids kept in the page (some 20 MB).
 
 ### What has and hasn't been tested
 

@@ -474,69 +474,21 @@ export function coverage(foeNames = null) {
 
 // ---------------------------------------------------------------- the nav thread
 
-// The thread is a whole second World (src/sim/world.js), with the east's walking map when it's been asked the way there: 130
-// MB in Chrome's count, and a phone counts all of it against the page as long as it's there. So on a phone it's let go
-// with auto-play off (wanted() false) and nothing asked of it in NAV_REST, or at once when the phone's stood upright
-// (upright). Auto-play on again, the phone turned back with it on (NAV_BACK after), or the next ask makes it again, as the
-// first time: ready in under 10 s on a PC made a phone, and till then auto-play finds its ways as it does at the start. It
-// holds nothing between asks that it isn't given again (the doors, the hall: each ask brings its own).
-const NAV_REST = 90000, NAV_BACK = 6000;
-
 class Nav {
-  // rests: whether it may be let go (a phone); wanted(): whether auto-play is on.
-  constructor(base, opening, rests = false, wanted = () => true) {
-    this.base = base; this.opening = opening; this.wanted = wanted;
-    this.ready = false; this.calls = new Map(); this.id = 0; this.spawns = []; this.w = null; this.asked = 0;
-    this.started = 0;   // (how many times it's been made: 1 for good on a PC)
-    this.rests = rests; this.held = false; this.backT = 0;   // (held: stood upright, or just turned back: upright)
-    this.start();
-    if (rests) setInterval(() => { if (this.w && !this.wanted() && performance.now() - this.asked > NAV_REST) this.rest(); }, 10000).unref?.();
-  }
-
-  start() {
-    this.asked = performance.now();
-    this.started++;
-    const w = this.w = new Worker(new URL('../sim/nav.worker.js', import.meta.url), { type: 'module' });
-    w.onmessage = (e) => {
-      if (w !== this.w) return;
+  constructor(base, opening) {
+    this.ready = false; this.calls = new Map(); this.id = 0; this.spawns = [];
+    this.w = new Worker(new URL('../sim/nav.worker.js', import.meta.url), { type: 'module' });
+    this.w.onmessage = (e) => {
       const m = e.data;
       if (m.type === 'ready') { this.ready = true; this.spawns = m.spawns; this.bounds = m.bounds; return; }
       const c = this.calls.get(m.id);
       if (c) { this.calls.delete(m.id); c(m.result); }
     };
-    w.onerror = (e) => console.warn('auto-play nav', e.message);
-    w.postMessage({ type: 'boot', base: this.base, opening: this.opening });
-  }
-
-  // Let go: the thread and all it built go with it. What was asked and not yet answered is answered with nothing.
-  rest() {
-    this.w.terminate();
-    this.w = null; this.ready = false;
-    const waiting = [...this.calls.values()];
-    this.calls.clear();
-    for (const c of waiting) c(null);
-  }
-
-  // A phone stood upright (src/main.js turned): the world's held still and auto-play with it, and it's the moment an iPhone
-  // holds the whole page twice, so the thread goes at once, auto-play on or not. Turned back, it's made again if auto-play's on.
-  // Not made again the moment it's turned back, though: that's the page laid out again too, and a start is the thread at
-  // its biggest (some 250 MB in Chrome's count till it's collected, against 130 after). NAV_BACK later; asks till then are
-  // answered with nothing, as before it's ready.
-  upright(up) {
-    if (!this.rests) return;
-    clearTimeout(this.backT);
-    if (up) { this.held = true; if (this.w) this.rest(); return; }
-    this.backT = setTimeout(() => { this.held = false; if (this.wanted()) this.wake(); }, NAV_BACK);
-  }
-
-  // Wanted again (auto-play on: Brain.start). Some asks are put only once it says it's ready, so they'd never wake it.
-  wake() {
-    this.asked = performance.now();
-    if (!this.w && !this.held) this.start();
+    this.w.onerror = (e) => console.warn('auto-play nav', e.message);
+    this.w.postMessage({ type: 'boot', base, opening });
   }
 
   ask(type, o) {
-    this.wake();
     return new Promise((resolve) => {
       if (!this.ready) { resolve(null); return; }
       const id = ++this.id;
@@ -806,8 +758,7 @@ export class Brain {
   // o: { game, shared, input, pack, inventory, townUI, lands, spellbar, renderer, town, heroCount, base, opening, say(text), menu(), done() }
   constructor(o) {
     this.o = o;
-    // (Let go while auto-play's off, on a phone: Nav.)
-    this.nav = new Nav(o.base, o.opening, !!o.renderer?.tier?.lean, () => o.on?.() ?? true);
+    this.nav = new Nav(o.base, o.opening);
     const gaps = coverage(o.foeNames);
     if (gaps.length) console.warn(`auto-play doesn't know all of the game yet (teach it in src/ui/autobrain.js; node tools/autoplay/check.mjs):\n  ${gaps.join('\n  ')}`);
     this.auto = { mx: 0, mz: 0, run: false, jumpHeld: false, cast: false, block: false };
@@ -847,7 +798,7 @@ export class Brain {
     this.fightHere = null; this.seekOn = null;   // Auto Fight: where it was begun, and the one it's going after
   }
 
-  start() { this.nav.wake(); this.reset(); this.o.input.auto = this.auto; }
+  start() { this.reset(); this.o.input.auto = this.auto; }
   stop() {
     this.o.input.auto = null;
     this.letGo();
