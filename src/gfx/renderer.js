@@ -40,6 +40,7 @@ import { BODIES } from '../sim/undead.js';
 import { lerp, mat4Invert, mat4LookTo, mat4Mul, mat4Ortho, mat4Perspective, smoothstep } from '../core/math.js';
 import { shieldPose } from '../core/shield-pose.js';
 import { MipGen, makeBuffer, mipCountFor, loadTextureArray, decodeScaledBitmap } from './gpu.js';
+import { picRule } from './picsize.js';
 import { AstcPacker } from './astc.js';
 import { noteEvent } from '../core/lastrun.js';
 import { ARMOR, ARMOR_KIT, ARMOR_TRUE, GRASS, GRASS_CULL, ITEM, PROP, SHADOW, SKY, SKY_BAKE, STATIC, STATIC_SLOTS, TERRAIN, VIEWMODEL, VIEWMODEL_SKULL, staticSoftCut } from './materials.js';
@@ -1058,15 +1059,19 @@ export class Renderer {
   // tier.texCap a side (some bodies' colours came 4096 across, 1024 after the shrink: 5 MB apiece), and its normals and its
   // metal and roughness, the two that aren't colours, are tier.mapScale of that again: there are two of them to every
   // colour picture, uncompressed, and at a phone's size they were a third of all its textures. full: as scale says.
-  // near: one seen close (Lisandra, your own body), held to tier.texCapNear instead.
+  // near: one seen close (Lisandra, your own body), held to tier.texCapNear instead. (The sizes: src/gfx/picsize.js picRule,
+  // the rule the monsters' skins are made by too, src/gfx/tripo-slots.js.)
   // Packed to ASTC on a phone (src/gfx/astc.js): its sides made whole blocks of 4 as it's shrunk, which the packing needs.
   // pack false: kept plain even there (a detail map whose four channels are each their own; Lisandra, as the owner made her).
   async bitmapTexture(blob, format, scale, full = false, near = false, pack = true) {
     await this.astc.ready;
-    const cap = near ? this.tier.texCapNear || this.tier.texCap : this.tier.texCap;
-    const lean = this.tier.lean && scale < 1 && !full && cap;
-    const k = lean && format === 'rgba8unorm' ? this.tier.mapScale : 1;
-    const bmp = await decodeScaledBitmap(blob, scale * k, lean ? cap * k : 0, pack && this.astc.on ? 4 : 1);
+    const { scale: s, cap, step } = picRule(this.tier, scale, { format, full, near, blocks: pack && this.astc.on });
+    return this.pictureTexture(await decodeScaledBitmap(blob, s, cap, step), format, pack);
+  }
+
+  // A picture already decoded at its size as a texture, with its mips; the bitmap's closed. Packed on a phone unless pack
+  // is false (once astc.ready: bitmapTexture above, or a monster's skin).
+  async pictureTexture(bmp, format, pack = true) {
     const mips = mipCountFor(bmp.width, bmp.height);
     const tex = this.device.createTexture({ size: [bmp.width, bmp.height], format, mipLevelCount: mips, usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT });
     try {

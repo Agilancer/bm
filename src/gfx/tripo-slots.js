@@ -5,7 +5,8 @@
 import { accessor, imageBytes, parseGLB } from '../core/glb.js';
 import { C, C_HERO, C_SIZE, CHARS_START } from '../core/layout.js';
 import { ARMS, TRIPO_BASE, armIds } from '../core/tripo-monsters.js';
-import { makeBuffer, mipCountFor } from './gpu.js';
+import { decodeScaledBitmap, makeBuffer } from './gpu.js';
+import { monsterRule } from './picsize.js';
 
 const KEEP_MODELS = 10;
 const KEEP_SKINS = 12;
@@ -53,15 +54,16 @@ function handFrames(glb) {
   return { Right: frame('Right'), Left: frame('Left') };
 }
 
-// The palette bake runs in a worker of its own: a 4096 map takes most of a second, which would be a hitch here.
+// The palette bake runs in a worker of its own: a 4096 map takes most of a second, which would be a hitch here. rule: how
+// big it comes out (src/gfx/picsize.js), the same as the monster's own colours.
 let baker = null, bakeId = 0;
 const bakes = new Map();
-function bakeOff(blob, scale, pal) {
+function bakeOff(blob, rule, pal) {
   if (!baker) {
     baker = new Worker(new URL('./bake.worker.js', import.meta.url), { type: 'module' });
     baker.onmessage = (e) => { const b = bakes.get(e.data.id); bakes.delete(e.data.id); if (e.data.error) b.no(new Error(e.data.error)); else b.ok(e.data.bmp); };
   }
-  return new Promise((ok, no) => { const id = ++bakeId; bakes.set(id, { ok, no }); baker.postMessage({ id, blob, scale, pal }); });
+  return new Promise((ok, no) => { const id = ++bakeId; bakes.set(id, { ok, no }); baker.postMessage({ id, blob, rule, pal }); });
 }
 
 export class TripoSlots {
@@ -147,8 +149,10 @@ export class TripoSlots {
       // on average, up to 1.8.)
       for (const b of [base.outBuf, base.palette, base.params]) b.destroy();
       r.addLod(base, prim, 0.14);
-      const ts = r.tier.texScale;
-      const got = await Promise.allSettled([r.imageTexture(glb, nrmSrc, 'rgba8unorm', ts), r.imageTexture(glb, mrSrc, 'rgba8unorm', ts)]);
+      // (Its normals and its metal and roughness: texCap's half on a phone, 128, however tall. Each one's bytes are read in
+      // its own promise, so a map that isn't in the file fails it as a map that won't decode does, and what was made is
+      // given back below.)
+      const got = await Promise.allSettled([nrmSrc, mrSrc].map(async (src) => this.picture(id, imageBytes(glb, src), 'rgba8unorm')));
       const bad = got.find((g) => g.status === 'rejected');
       if (bad) {
         // (What was made is given back: a model that failed is asked for again, model() below, and would leave it each time.)
@@ -172,24 +176,26 @@ export class TripoSlots {
     const key = `${id}:${pal}`;
     let s = this.skins.get(key);
     if (s) { this.skins.delete(key); this.skins.set(key, s); return s; }
-    const r = this.r, p = this.palettes[pal] || {};
+    const p = this.palettes[pal] || {};
     const plain = !p.hue && (p.sat ?? 1) === 1 && (p.val ?? 1) === 1 && !p.tamt;
-    s = plain ? r.bitmapTexture(m.alb, 'rgba8unorm-srgb', r.tier.texScale) : (async () => {
-      const cv = await bakeOff(m.alb, r.tier.texScale, p);
-      const fmt = 'rgba8unorm-srgb', mips = mipCountFor(cv.width, cv.height);
-      const tex = r.device.createTexture({ size: [cv.width, cv.height], format: fmt, mipLevelCount: mips, usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT });
-      r.device.queue.copyExternalImageToTexture({ source: cv }, { texture: tex, premultipliedAlpha: false }, [cv.width, cv.height]);
-      cv.close();
-      const enc = r.device.createCommandEncoder();
-      r.mip.generate(tex, fmt, 1, mips, enc);
-      r.device.queue.submit([enc.finish()]);
-      return r.astc.pack(tex);   // (packed on a phone: src/gfx/astc.js)
-    })();
+    // (Its own colours, or dyed in the bake worker: the same size either way.)
+    s = this.picture(id, m.alb, 'rgba8unorm-srgb', plain ? null : p);
     // (Nor a skin that failed: its picture didn't decode, or its bake failed, before any texture was made.)
     s.catch(() => { if (this.skins.get(key) === s) this.skins.delete(key); });
     this.skins.set(key, s);
     this.trim(this.skins, KEEP_SKINS, (k) => this.inUse((wk) => { const [mo, pa] = wk.split(':'); return `${this.ids[mo - 1]}:${pa}` === k; }), (t) => t.destroy());
     return s;
+  }
+
+  // One of a monster's pictures as a texture, sized by how tall it stands (src/gfx/picsize.js monsterRule): on a phone,
+  // one as tall as a house (TALL) is seen close, at texCapNear; the rest at texCap; a picture that isn't a colour at half
+  // that. pal: a palette baked into it on the way, in the bake worker, by the same rule. Packed on a phone (src/gfx/astc.js).
+  async picture(id, blob, format, pal = null) {
+    const r = this.r;
+    await r.astc.ready;
+    const rule = monsterRule(r.tier, this.roster[id] || {}, { format, blocks: r.astc.on });
+    const bmp = pal ? await bakeOff(blob, rule, pal) : await decodeScaledBitmap(blob, rule.scale, rule.cap, rule.step);
+    return r.pictureTexture(bmp, format);
   }
 
   // A body's own buffers (the mesh and maps are shared, and kept).

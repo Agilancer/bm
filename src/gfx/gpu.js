@@ -2,6 +2,8 @@
 // feature it offers, and a quality tier picked from what it is.
 import { lanes } from '../core/files.js';
 import { FreshViews, wantFreshViews } from './freshviews.js';
+// (How big a picture comes out is src/gfx/picsize.js's, shared with the dyed skins' worker: decodeScaledBitmap is there.)
+export { decodeScaledBitmap } from './picsize.js';
 
 const WANTED_FEATURES = [
   'rg11b10ufloat-renderable', 'float32-filterable', 'timestamp-query', 'indirect-first-instance',
@@ -24,8 +26,9 @@ export const TIERS = {
   mobile: { name: 'Mobile', lean: true, scaleMax: 1.0, maxPixels: 750000, shadowSize: 1024, cascades: 2, splits: [20, 80, 80], msaa: 1, grassSpacing: 0.2, grassRadius: 20, grassCap: 16000, particles: 18000, ao: false, shafts: false, pom: 0, texScale: 0.25, mapScale: 0.5, texCap: 256, texCapNear: 512, terrainN: 128, bloom: 3, sim: 90, aniso: 2, lights: 2, bloodSize: 1024, emit: 0.4 },
 };
 
-// (On a phone, a model's picture is at most texCap a side, 256: the crowds, the beasts, the townsfolk, the heroes. Those seen
-// close, Lisandra and your own body, texCapNear: 512. At 512 the lot was 120 MB of an iPhone's memory, which counts the GPU's.)
+// (On a phone, a model's picture is at most texCap a side, 256: the crowds, the beasts, the townsfolk, the heroes, the
+// monsters, dyed or not. Those seen close, Lisandra, your own body and the monsters as tall as a house (src/gfx/picsize.js
+// TALL), texCapNear: 512. At 512 the lot was 120 MB of an iPhone's memory, which counts the GPU's.)
 // A phone's tier made lighter still, for one whose browser has closed the game for want of memory (src/core/lastrun.js):
 // level 1 and up, no model's picture over 192 a side (256 close; their normals half that); level 2, 160 (192 close). (Never
 // sharper close than the level before this pass had them all: 256, then 192.)
@@ -235,22 +238,6 @@ export async function loadTextureArray(device, mipgen, names, decode, format, ru
   const bad = ends.find((e) => e.status === 'rejected');
   if (bad) { tex?.destroy(); throw bad.reason; }
   return tex;
-}
-
-// (cap: no side of what comes back is longer than this, whatever scale says. 0: no cap. step: each side a whole number of
-// these, as ASTC's 4x4 blocks need (src/gfx/astc.js): rounded to the nearest, a picture's UVs don't mind a pixel or two.)
-export async function decodeScaledBitmap(blob, scale, cap = 0, step = 1) {
-  const opts = { premultiplyAlpha: 'none', colorSpaceConversion: 'none' };
-  const bmp = await createImageBitmap(blob, opts);
-  if (cap) scale = Math.min(scale, cap / Math.max(bmp.width, bmp.height));
-  scale = Math.min(scale, 1);
-  const side = (n) => Math.max(step, Math.round(n * scale / step) * step);
-  const w = side(bmp.width), h = side(bmp.height);
-  if (w === bmp.width && h === bmp.height) return bmp;
-  try {
-    // Resize the decoded pixels instead of decoding the compressed source twice.
-    return await createImageBitmap(bmp, { ...opts, resizeWidth: w, resizeHeight: h, resizeQuality: 'high' });
-  } finally { bmp.close(); }
 }
 
 // Build a texture array from decoded bitmaps.
