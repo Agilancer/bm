@@ -101,7 +101,7 @@ export class AutoCam {
     const { game, settings } = this.o, cam = game.cam;
     this.t += dt;
     const brain = ap.brain, on = ap.on && !!brain && (settings?.autocam ?? 'director') === 'director' && snap[H.TP] > 0.5 && !game.overrideCam
-      && !ap.o.input.handsOn && !(ap.yieldT > 0) && !this.o.shared.input[INPUT.PAUSE];
+      && !ap.critter?.on && !ap.o.input.handsOn && !(ap.yieldT > 0) && !this.o.shared.input[INPUT.PAUSE];
     const x = snap[H.PX], y = snap[H.PY], z = snap[H.PZ], yaw = ap.o.input.yaw;
     const sp = Math.hypot(snap[H.VX], snap[H.VZ]);
     // (The way he's going, eased: a shot hung on it doesn't twitch with every step round a pine.)

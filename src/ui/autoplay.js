@@ -18,6 +18,9 @@
 // Settings' Interface in auto-play, Hidden until you tap: while it plays and nobody's touched anything for a few seconds, the
 // interface is put away (body.ui-bare, src/ui/hud.css), all but the map and the chat if those are kept (Map in auto-play, Chat
 // in auto-play: body.bare-map, body.bare-chat). A tap, a click, a key or the mouse moved brings it all back at once.
+//
+// The C beside the button while it plays is the Critter camera (src/ui/crittercam.js): the interface all away but the C, and
+// the view free to drag round him and catch critters with.
 import { H, INPUT } from '../core/layout.js';
 import { delveOf } from '../core/dungeon.js';
 import { RULES } from '../folk/quests.js';
@@ -25,6 +28,7 @@ import { Brain, DUNGEONS, FOCI, GRINDS, MODES, finishedDungeons } from './autobr
 import { AutoLog } from './autolog.js';
 import { AutoShow } from './autoshow.js';
 import { AutoCam } from './autocam.js';
+import { CritterCam } from './crittercam.js';
 
 const BTN = 'assets/ui/btn_auto.webp';
 const MENU_WAIT = 12;   // seconds the menu waits for a choice before it keeps the last one
@@ -130,6 +134,7 @@ export class AutoPlay {
     document.body.append(this.btn, this.statusEl, this.menu, this.logEl);
     this.show = new AutoShow({ statusEl: this.statusEl, pack: o.pack, townUI: o.townUI, settings: o.settings, isOn: () => this.on });
     this.cam = new AutoCam({ game: o.game, shared: o.shared, settings: o.settings, townUI: o.townUI });
+    this.critter = new CritterCam({ game: o.game, input: o.input, isOn: () => this.on, paused: () => this.o.paused() });
     const press = (e) => { e.preventDefault(); e.stopPropagation(); this.btn.blur(); this.press(); };
     this.btn.addEventListener('click', press);
     this.btn.addEventListener('touchend', press, { passive: false });
@@ -170,7 +175,7 @@ export class AutoPlay {
   // Every frame: whether the interface should be put away now. (Only the player's own hands count as being busy with it: a
   // chest or a word it opens itself is up over the bare picture, as it would be over the interface.)
   bareStep() {
-    const want = this.on && this.o.settings?.autohide === 'on' && !this.asking && !this.o.paused()
+    const want = this.on && !this.critter.on && this.o.settings?.autohide === 'on' && !this.asking && !this.o.paused()
       && !this.menu.classList.contains('on') && !this.logEl.classList.contains('on') && !this.show.card.classList.contains('on') && !document.body.classList.contains('arranging');
     if (!want) { this.since = 0; if (this.bare) this.setBare(false); return; }
     const now = performance.now();
@@ -241,6 +246,7 @@ export class AutoPlay {
     const { input, hud } = this.o;
     this.on = v;
     this.btn.classList.toggle('on', v);
+    document.body.classList.toggle('auto-on', v);
     if (v) {
       this.wake();
       // (Its line under the button, from the first time it's on: what it's about, and the log.)
@@ -256,6 +262,7 @@ export class AutoPlay {
       if (this.mode === 'quests' && this.brain.allQuestsDone()) this.askGrind();
     } else {
       this.brain?.stop();
+      this.critter.set(false);
       if (this.o.game.viewSwitch) this.o.game.viewSwitch.auto = null;
       this.since = 0; this.setBare(false);
       this.show.stop();
@@ -293,8 +300,10 @@ export class AutoPlay {
     // The view behind him while it plays, and the director's shots over that (src/ui/autocam.js): eased out when it stops. Or
     // through his eyes (Settings' Camera in auto-play: First person; V or the eye while it plays: src/ui/view.js).
     const vs = this.o.game.viewSwitch;
-    if (vs) vs.auto = this.on ? this.cam.view : null;
+    if (vs) vs.auto = this.on ? (this.critter.on ? 'third' : this.cam.view) : null;
     if (snap) this.cam.frame(dt, snap, this);
+    // (The Critter camera's view, where it was left, over all that.)
+    this.critter.frame(dt, snap);
     if (!this.on || !snap) return;
     if (!input.enabled) { this.toggle(false); return; }
     if (this.o.shared.input[INPUT.PAUSE]) { this.brain.halt(); return; }
