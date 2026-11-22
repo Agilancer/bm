@@ -348,11 +348,9 @@ gift: a bell the size of a thumb; ring it in the air and the air holds you one s
 
 ## Quests beyond the town
 
-9. **The Long Way Round** (Corran). The dead walk wide of a knoll far east. Go to the Bell Tower, ask the Bellwright why, tell
-   Corran. (He says: the bells.)
-10. **Jelly in the Millpond** (Hob). Something in Abel's millpond at Millhaven ate a ewe. Put down 8 jellies round Millhaven. Paid with Abel's money ("He'd rather pay than come").
-11. **The Four Watches** (the Bellwright). Stand in the abbey, the chapel and the shrine, in any order, and see if their seals
-    wake. Reward: the Wingbell (double jump).
+9. to 11. (**The Long Way Round**, **Jelly in the Millpond** and **The Four Watches** were given from Bellmourn and the Bell
+    Tower and sent you kilometres and back. They're the Green Downs' now, below: the millpond is Abel's own to ask about,
+    why the dead walk wide of the knoll is asked on Abel's errand up it, and the Wingbell is paid for **What Answers**.)
 12. **What the Fen Keeps** (Sabine). Clear 10 jellies from the fen so she can reach the bog myrtle for the winter fevers. Paid in coin
     (robes are Tamsin's trade, not hers).
 13. **The Black Road** (Aldric). Go and look at what's at the end of the west road. Only look. (Blackvigil.)
@@ -429,8 +427,8 @@ Out of Bellmourn:
 16. **Word to Thornwick** (Aldric). The yearly letter got no answer. Ask Osric Thorne if the Gallows Road still runs.
 17. **Tracks Going West** (Corran, after the Pines). The dead in the pines came down the Vigil Road. Ask Sergeant Hasket.
 18. **Owed to Frostwatch** (Bram, after the Bed). The one mark on his slate that's the wrong way round: pay Hew Garrick.
-19. **The Millhaven Man** (Hob, after the Millpond). Abel wants to know if Hale Orrowick is coming home for the barley.
-20. **Stones on the Cairnfield** (Silas, after the Dead). Someone is opening the cairns where the Cranes lie.
+19. and 20. (**The Millhaven Man** and **Stones on the Cairnfield** are the Green Downs' now, below: Abel asks after Hale
+    himself, and Cuddy Stone, who keeps the cairns, wants them let alone.)
 21. **The Sunken Mile** (Sabine, after the Fen). Five of the drowned stand on the causeway.
 22. **The Wayhouse on the Moor** (Jory, after the Lights). A lamp in a window that's been shut since he was a lad.
 Also out of Bellmourn: **The Masons' Marks** (Orrin): kobolds tunnelling behind the face of Ossery Quarry, where each of
@@ -517,8 +515,77 @@ built at the camps**: Tobin's mare is in the lean-to and is only heard; Nan's he
   stubborn, means to go back up for six and seven. Gives **The Two Who Stand** (hooded things by the road that turned
   their heads together as she passed, "and kept turning"; there was a third she never saw).
 
-The six their errands are said to (**Cuddy Stone**, **Amos Tye**, **Berin Stoat**, **Dag Colley**, **Fenn Hollis**, **Odo
-Marsh**) stand at their camps as placeholders, with a line each, till their own regions are made.
+The five their errands are said to (**Amos Tye**, **Berin Stoat**, **Dag Colley**, **Fenn Hollis**, **Odo Marsh**) stand
+at their camps as placeholders, with a line each, till their own regions are made. (The sixth, Cuddy Stone, is the Green
+Downs': below.)
+
+## The Green Downs (`src/folk/regions/downs.js`, lines in `src/folk/lines/regions/downs.js`)
+
+East of Bellmourn, levels five to eleven: Cairnwatch, Millhaven, the Bell Tower, Dunmow Fold and, far off the roads,
+Kestrel Hide. The camps and Millhaven are **plain folk's**: none of them names either power; they say "the knoll", "the old
+one in white", "the one in iron". The Bell Tower's two are **Tessariel's** (their own paragraphs are under "Beyond
+Bellmourn" and "The small towns"), and nothing they say in these quests names Velscour, his keep or anything of his.
+**No animals are built at the camps or in Millhaven, and none is said to stand there**: Rafe's fold is empty, Sib's sky is
+empty, Joss's snares are empty, and that is what each of them talks about.
+
+- **Cuddy Stone**, 61, cairn-keeper, at **Cairnwatch** above the Cairnfield (`c_sage_1`). Keeps the two hundred and twelve
+  cairns of Bellmourn's first dead, and the beacon over the bad bend on the hill. Hasn't left the rise in eleven years:
+  he sees everything from the platform and gets to none of it. Counts (cairns, smokes at dusk, scarecrows); gives
+  bearings and paces. "Stand anywhere long enough and it all comes past. Lately it comes past and stops." His line: "I
+  count it anyway, mornings. None. It's the best number I've got." Sent to by Tobin (**A Light for the Bend**). His work:
+  **Three I Can't Account For** (go and stand at the three things he can see and can't explain: the opened cairns, the
+  scarecrows' field, Paupers' Field), **Stones on the Cairnfield** (a robed one and three raised children, opening the
+  cairns and stacking the stones by size: "That's how my father showed me. I don't like having a thing in common with
+  it"), **One More Each Morning** (Strawman's Acre: a scarecrow more each day, all facing the camp, the newest in his
+  other coat; pays the coat, a robe), and on: **Sails at a Slant** (through the goblins on the Abbey Road to Millhaven:
+  a word with Joan, then Abel).
+- **Ede Lowry**, 34, washerwoman, up from Bellmourn (`c_young_2_1`). Her father Ned, a thatcher, died owing and went into
+  Paupers' Field under a board; this year she has the money for a stone (Silas cut it "at the family rate. I'm not
+  family. He said everybody is, in the end"). Plain, restless, not used to sitting. Gives **Name-Boards** (five boards
+  from round the Field: all five say Lowry, four of them new wood: something in there is learning the name).
+- **Abel Fenwick**, 49, farmer, on the green at **Millhaven** (`c_worker_2_2`). Hob's cousin: Hob "got the easy land, and
+  the wife who can cook". Stands by the well with a shilling for any man who'll swing a scythe, and gets no takers.
+  Put upon, exact about what everything has cost him, not asking to be pitied: "I say it so you'll not stand too near."
+  Keeps Hale Orrowick's hearth lit and his barley cut, and burns too green. His work: **Jelly in the Millpond** (what
+  ate the ewe, by the farm: "even what eats my sheep breeds better than they do"), **The Barley Rows** (scarecrows he
+  never made, standing guard over forty ripe acres; his own, with his father's hat and one arm, isn't among them; pays
+  the pole that held up the big one, a staff), and on: **The Millhaven Man** (up the knoll: is Hale coming home for the
+  barley, and why do the dead walk wide of that hill and straight through his field? No; and the tenor bell).
+- **Joan Millward**, 38, the miller's daughter, at her board on the green (`c_wife_jolly_1`; Millhaven's sutler). Old
+  Enoch Millward, 71, is the miller, abed at her aunt's with his chest (the Bellwright's "Millhaven's miller ... He
+  worries"); she lifts the sacks and dresses the stones. Brisk, weighs everything. "A miller takes a sixteenth. It's the
+  only law I ever liked." The sails have stood a month. Her work: **Three Under the Sails** (three who stand in the
+  mill yard like men being measured; the third has a sack held open with an old penny in it: "Then it's paid. Damn it.
+  Now I owe it flour"), **Flour and Water** (Mudwall Stockade emptied, then her sacks from round it: the wall is paste
+  of her fine white, "It's a receipt"), and on: **Bran for Dunmow** (through the goblins who wear her sacking to Rafe).
+- **Ser Anselm Toller**'s work at the tower now: **Four Ropes** (the four bell ropes he took down forty years ago lash
+  Bramble Stockade; the tenor's hangs from a thorn with a kettle on it, and they pulled it: "I have wanted to for
+  forty years, and it took a goblin to do it"), **What Answers** (at nine: by night to the Horned Stones, where the great
+  ram knocks the tall stone once at the third watch, then the ring emptied; pays the Wingbell), and on: **A Block for
+  the Frame** (to Jem Sledge at Stonecarters' Halt). **Ser Hale Orrowick**'s: **A Right Pauldron** (five pieces of
+  harness from the falls' shore, among the crabs: every one a left) and **Two of the Three** (the drake on the
+  cliff-top and its two goblins: any two; it isn't on the hill, so it isn't his to fight). His eight older quests, down
+  the Deeps and Blackvigil, wait for those dungeons' own people; the two that needed The Millhaven Man still do.
+- **Rafe Dunmow**, 68, shepherd, at **Dunmow Fold** under its great cairn (`c_old_man_2`). Three hundred and forty ewes at
+  lambing; one night at shearing the hurdles were down and the fold empty. Slow, counts in the old score ("Yan, tan,
+  tethera"), sleeps by the gate from habit. A stone goes on the cairn for each ewe lost; he hasn't put this year's on.
+  His work: **Plucked** (wool from under the Screaming Crag: two tufts are his, one is Thornwick's, one is hair),
+  **Yan, Tan, Tethera** (Bleatmoot, where a goat man counts the rest in scores, like a shepherd), **The Screaming Crag**
+  (pays the last of last year's clip, a robe: "I was keeping it to be buried in"), and on: **Strays** (past the goat men
+  on the Gallows Road to Osric Thorne: two hundred and six of his ewes are in Thornwick pound).
+- **Madge Wattle**, 52, hurdle-maker, from the hazel coppice Thornwick way (`c_worker_f_2`). Brought forty hurdles up at
+  shearing, and makes two a day still, with nothing to fold. Sees that Rafe eats. Gives **Six-Bar Hurdles** (two goblins
+  who stand her hurdles in a ring and sit in it; they've carved faces on the heads).
+- **Sib Kestrel**, 33, fowler, at **Kestrel Hide** by the ribs (`c_redhead_1`). Net, lime and call. Speaks low, shushes
+  out of habit, looks up: nothing has flown over in nine days. "A call's a lie told to a bird. You have to mean it
+  kindly, even then." Her work: **Borrowed Voices** (her bird-calls from round the Crooked Circle; the fifth isn't hers,
+  has no stop in it, and doesn't burn), **The Crooked Circle**, **The Gnawed Hollow** (the wolfkin gnaw the ribs by
+  night: "They're not feeding. They're sharpening"; pays an old skull Joss dug up as a boy). The end of its road: she's
+  sent to from Thornwick, by an errand the Gallows Road's maker writes.
+- **Joss Kestrel**, 29, her brother, hunts what runs (`c_dude_3`). Says half of what he hears. Gives **Off the Spit** (two
+  wolfkin walked in upright, took the hare off his spit, and looked at him: "It's not hunger, that look. It's more like
+  counting").
+- **Jem Sledge**, 46, stone-carter, at Stonecarters' Halt: a placeholder with a line, till the Rustwood is made.
 
 ## Where people go (for the life sim)
 
