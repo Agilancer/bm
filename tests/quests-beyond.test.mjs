@@ -320,7 +320,8 @@ test('every hub is led to: a quest from somewhere you already are sends you to e
       const g = QUESTS[id].giver;
       if (!(town.has(g) || g === 'lisandra' || met.has(g)) || ![RULES[id].needs].flat().every((n) => !n || open.has(n))) continue;
       open.add(id);
-      for (const st of RULES[id].steps) if (st.talk) met.add(st.talk);
+      // (Sent to someone at a camp, you've met whoever else is posted there: its second, across the fire.)
+      for (const st of RULES[id].steps) if (st.talk) { met.add(st.talk); const c = POSTED.find((q) => q.id === st.talk)?.camp; if (c) for (const q of POSTED) if (q.camp === c) met.add(q.id); }
     }
   }
   for (const id of IDS) assert.ok(open.has(id), `${id} can't be come by from Bellmourn`);

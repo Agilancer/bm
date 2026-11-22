@@ -458,47 +458,64 @@ Ser Hale: 43. **The Howling** and 44. **The Sleeper** (the Deeps); 45. **The Gat
 
 ## The four roads out (`src/folk/regions/bellmourn.js`, lines in `src/folk/lines/regions/bellmourn.js`)
 
-A quarter of an hour out of Bellmourn on each road there's a camp with one person at it, who has its work and keeps its
-board (a sutler: buys anything). They're the first people a player meets out of town, at level three to six. **Plain
-folk's**: none of them names Velscour or Tessariel, the keep, the tower or the sisters. Each is sent to from town by one of
-the eleven Lisandra sends you round to (a word carried, paid at the camp), and each sends you on.
+A quarter of an hour out of Bellmourn on each road there's a camp with two people at it: one who has most of its work and
+keeps its board (a sutler: buys anything), and a second across the fire with one quest of their own. They're the first
+people a player meets out of town, and the ring steps up: Hillfoot at three to five, Withy at four to six, the Forkstone at
+five to seven, Palmers' Rest at six to eight. **Plain folk's**: none of them names either power or anything of theirs. Each
+camp is sent to from town by one of the eleven Lisandra sends you round to (a word carried, paid at the camp; three of the
+four go through what dens beside the road on the way), and each sends you on when its last work is done. **No animals are
+built at the camps**: Tobin's mare is in the lean-to and is only heard; Nan's herd is down in the dip behind the stone.
 
 - **Tobin Wain**, 54, carter, at **Hillfoot Halt** on the Hill Road (`c_worker_2_1`). Thirty years carting barley up the
-  hill to the Downs and flour down. Measured, dry, thinks in loads, wheels and gradients; everything he knows is "take it
-  loaded, at a walk, and don't stop". His mare is Pudding, nineteen, and he trusts her nose over his eyes. Sleeps under the
-  cart ("the one roof I trust. I know what it weighs"). His line: "Everything's a load. It's only a question of how far."
-  Sent to by Hob (**The Carter's Late**: the barley's sacked and he hasn't come). His work: **Linchpins** (kobolds draw the
-  pins from the wheels and nothing else), **A Pole Across the Road** (three goblins who've half understood a toll),
-  **Iron on the Fence** (the tyres off his wheels, hung on Gnawbone Stockade to be beaten with bones; he can't sleep without
-  the ringing after), **Candlewick** (the kobolds' diggings under the road, where the pins went; pays his father's cart
-  shaft, a staff), and on: **A Light for the Bend** (to Cuddy Stone at Cairnwatch, to light the beacon).
+  hill to the Downs and flour down. Measured, dry, thinks in loads, wheels and gradients. His mare is Pudding, nineteen;
+  she kicks the lean-to's boards for strangers and he trusts her nose over his eyes. Sleeps under the cart ("the one roof I
+  trust. I know what it weighs"). His line: "Everything's a load. It's only a question of how far." Sent to by Hob (**The
+  Carter's Late**). His work: **Linchpins** (kobolds draw the pins from the wheels and nothing else; none are found on
+  them), **Iron on the Fence** (the tyres off his wheels, hung on Gnawbone Stockade to be beaten with bones; he can't sleep
+  without the ringing after), **Candlewick** (the kobolds' diggings under the road, where the pins went; pays his father's
+  cart shaft, a staff), and on: **A Light for the Bend** (to Cuddy Stone at Cairnwatch).
+- **Bet Carrow**, 41, carter, stuck at Hillfoot Halt (`c_worker_f_1`). Tiles and lime down from the Downs kilns. Lost a
+  wheel on the bend when the pin came out; her cart's on blocks, twelve days. Short-tempered, swears by the parts of a
+  wheel ("Spokes and felloes"). One of the dead stacked her tiles for her and she doesn't tell Tobin. Gives **A Pole Across
+  the Road** (three goblins who've half understood a toll; she keeps the pole for a shaft).
+- **Maren Rush**, 31, withy-cutter, at **Withy Landing** on the Fen Way (`c_young_3_1`). Cuts and boils willow for
+  Bellmourn's baskets, hurdles and wattle; her hands never stop and she doesn't stop for talk. "Cut it to the ground and it
+  comes back thicker. I've tried that with people. It doesn't take." Sent to by Sabine (**Willow Bark**: through the three
+  goblins who cut her bundles' ties and watch; one claps). Her work: **The Path to the Water** (the web across the path
+  north; Odo's punt-pole is in it: "He never said he'd tried to come"), **Muddle** (after Hats: the whole camp, the one that
+  plaits with it: "I can't keep a camp of thieves for the sake of one that's learning"), **The Silk Dell** (the great one in
+  the middle "sits and ties, all day, like me"; pays the skull that came up on her hook), and on: **Rods for Sedgebank** (to
+  Odo Marsh; say it twice).
+- **Tully Rush**, 24, Maren's cousin (`c_dude_2`). Followed a light into the fen and came back a week on "with one boot
+  and no opinions". Agrees with everything, commits to nothing ("Could be"), stays where he can see it's a fire. Was minding
+  the racks the night the baskets went. Gives **Hats** (Muddle Camp wears Maren's eel baskets; one comes back mended, over
+  and under, in rush).
 - **Nan Dray**, 47, drover, at **the Forkstone** where the Barrow Track leaves the Frost Road (`c_wife_big_1`). Minds
-  other folks' cattle and is paid by the head that comes home. Blunt, unsentimental, reads people by their feet and
-  treats them as she treats beasts ("stand where it doesn't want to be"). Her husband Tam is buried in Lychfield, three
-  years; she kept the name and the dog. Sent to by Jory (**One Fire at the Fork**: he counts the drovers' fires from the
-  south lamp, and they wave to each other after). Her work: **Salt** (kobolds rolled away the salt, and a beast without
-  salt wanders), **Bring Me the Bells** (the strays are hung in the Hanging Larder; she owes each owner a bell and an
-  account; the sixth bell is nobody's, and old), **They Drive Them** (goat men who cut cattle out of the herd as a drover
-  would, and keep them well), **Whistled Up** (Lychfield, where something calls and they get up for it: "he never once
-  came when I called him"; pays Tam's coat, a robe), and on: **Word Down the Track** (to Amos Tye at the Drovers' Stance)
-  and **Ponies for the Winter** (to Berin Stoat at Fellfoot, at level eight).
+  other folks' cattle (thirty-eight head, in the dip) and is paid by the head that comes home. Blunt, reads people by
+  their feet and handles them as she handles beasts. Her husband Tam is in Lychfield, three years; she kept the name and
+  the dog. Sent to by Jory (**One Fire at the Fork**: through the kobolds who rolled off her salt; he counts her fire from
+  the south lamp and they wave to each other after). Her work: **What Walks Round** (three spiders that circle the herd
+  outside the firelight and carry off strays; after it she lets the fire down at midnight), **Bring Me the Bells** (the
+  strays hang in the Hanging Larder; she owes each owner a bell and an account; the sixth bell is nobody's, and old),
+  **Whistled Up** (Lychfield, where something calls and they get up for it: "he never once came when I called him"; pays
+  Tam's coat, a robe), and on: **Word Down the Track** (to Amos Tye) and **Ponies for the Winter** (to Berin Stoat, at eight).
+- **Dickon**, 16, Nan's herd-lad (`c_wes_2`). Keeps the back of the herd; two summers droving; earnest, corrects himself
+  downward ("a look and a stick. Well. Mostly the stick"), calls her the mistress. Gives **They Drive Them** behind her back
+  (goat men who cut cattle out of the herd better than he can, and keep them well). She has known for a month.
 - **Old Perrin Lowe**, 73, palmer, at **Palmers' Rest** where the Pilgrims' Road leaves the Vigil Road (`c_old_man_1`).
   Has walked the seven stations to the foot of the Sorrowhorn forty-one times and never gone up it. Gentle, exact about
-  paces, vague about years, wry about faith without naming any: "Nobody's ever said what 'it' is. That's why it's lasted."
-  Notches a stick for everyone who goes west. Sent to by Aldric (**The Palmer's Tally**: forty-four since spring). His
-  work: **Left Boots** (kobolds take one boot from each sleeper, always the left), **How Far They Got** (the Thornpit's
-  goblins throw the palmers' lead tokens in the thorns; he sends them home so a family knows how far; one is a seven;
-  pays the Stations written out, a scroll), **The Two Who Stand** (two hooded figures by the Pilgrims' Road who waved
-  back wrong), **What Mumblefast Says** (go near enough to hear: they're saying his stations backwards), and on: **Two
-  Tallies** (to Dag Colley at Ashgate Halt) and **The First Station** (to Fenn Hollis at Mossgate Hide, at level eight).
-- **Maren Rush**, 31, withy-cutter, at **Withy Landing** on the Fen Way (`c_young_3_1`). Cuts and boils willow for
-  Bellmourn's baskets, hurdles and wattle; her hands never stop and she doesn't stop for talk. Quick, short, practical;
-  a craftswoman who grudgingly admires good tying wherever she finds it. "Cut it to the ground and it comes back thicker.
-  I've tried that with people. It doesn't take." Sent to by Sabine (**Willow Bark**). Her work: **Cut Loose** (goblins who
-  cut her bundles' ties and watch; one claps), **Hats** (Muddle Camp wears her eel baskets; one comes back mended, over
-  and under), **The Path to the Water** (two spiders' web across the path north; she learns something from it and hates
-  that), **The Silk Dell** (the great one in the middle "sits and ties, all day, like me"; pays the skull that came up on
-  her hook), and on: **Rods for Sedgebank** (to Odo Marsh; say it twice).
+  paces, wry about faith without naming any: "Nobody's ever said what 'it' is. That's why it's lasted." Notches a stick for
+  everyone who goes west. Sent to by Aldric (**The Palmer's Tally**: through the kobolds who take the sleepers' left boots
+  and set them out in a row, toes to the west, a pebble in each: "They think that's how it's done. I'm not sure it
+  isn't"). His work: **How Far They Got** (the Thornpit, then the lead tokens thrown in its thorns; one is a seven), **The
+  Halfway Stone** (goat men at the stone where he and Dag Colley met to compare tallies; Dag's stick is on it, since
+  spring: "I was the one who didn't walk"), **What Mumblefast Says** (near enough to hear: his stations, backwards), **Seven
+  Down** (Mumblefast emptied, at eight; pays the Stations written out, a scroll), and on: **Two Tallies** (to Dag at
+  Ashgate Halt) and **The First Station** (to Fenn Hollis at Mossgate Hide, after Mumblefast).
+- **Hild Ames**, 17, palmer, from Millhaven way (`c_young_5_1`). Five tokens and a very large blister; the only one to
+  come down the Pilgrims' Road in eleven days (the peg at the fifth station was full, so she turned back). Plain-spoken,
+  stubborn, means to go back up for six and seven. Gives **The Two Who Stand** (hooded things by the road that turned
+  their heads together as she passed, "and kept turning"; there was a third she never saw).
 
 The six their errands are said to (**Cuddy Stone**, **Amos Tye**, **Berin Stoat**, **Dag Colley**, **Fenn Hollis**, **Odo
 Marsh**) stand at their camps as placeholders, with a line each, till their own regions are made.
