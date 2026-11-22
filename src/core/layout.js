@@ -51,7 +51,10 @@ export const INPUT = { MOVE_X: 0, MOVE_Z: 1, YAW: 2, PITCH: 3, SPRINT: 4, ATTACK
   // by GameView in src/main.js): the sim poses those often and the rest seldom (Sim.poseGap in src/sim/sim.worker.js).
   SEEN: 47,
   // Your level (src/main.js arm): a delve's gods weigh it against their own (src/sim/elder-fights.js underHundred).
-  LEVEL: 47 + MAX_CHARS, SIZE: 48 + MAX_CHARS };
+  LEVEL: 47 + MAX_CHARS,
+  // The things lying about for a quest's gather step (src/folk/quests.js marks): how many, then x, z for each of up to eight.
+  // The sim only draws a light over each (src/sim/wilds.js draw); picking one up is the quest book's.
+  QMARK_N: 48 + MAX_CHARS, QMARKS: 49 + MAX_CHARS, SIZE: 65 + MAX_CHARS };
 
 // Snapshot header (float offsets)
 export const H = {

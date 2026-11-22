@@ -8,6 +8,8 @@
 // Pay grows with how far it is and how hard: a walk and a word about what a town errand paid; a lair cleared a little more;
 // a dungeon's boss a good deal more, with something rare; a long chain's end a charm (src/ui/lands.js CHARMS).
 // tests/quests-beyond.test.mjs walks every one of them through.
+import { REGION_RULES, REGION_LEVELS } from './regions/index.js';
+
 const KNIGHTS = ["Velscour's Knights"];
 
 export const LAND_RULES = {
@@ -78,3 +80,6 @@ export const LAND_RULES = {
   storm_over_the_horn: { needs: 'the_castellan', steps: [{ enter: 'elder' }, { boss: 'thyrraxis' }, { back: true, say: 'There is a storm god on an island over nothing. It is dead.' }], gold: 2400, xp: 42000, item: 'staff', rarity: 4 },
   the_hollow_star: { needs: 'storm_over_the_horn', steps: [{ boss: 'kaldurra' }, { boss: 'morvekh' }, { boss: 'nihvaroth' }, { back: true, say: 'The Hollow Star went into its own Maw. The lights on the Horn are out.' }], gold: 5200, xp: 96000, item: 'skull', rarity: 4 },
 };
+// And the land's quests made region by region since (src/folk/regions/, docs/QUEST-LOOP.md), and the level each wants.
+Object.assign(LAND_RULES, REGION_RULES);
+export const LAND_LEVELS = REGION_LEVELS;

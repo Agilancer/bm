@@ -43,7 +43,8 @@ import { CAMPS } from '../sim/slimes.js';
 import { REACH, SPELLS } from '../sim/spells.js';
 import { AMBUSH_AT } from '../sim/opening.js';
 import { NODES, UTILITY, blocked, pointsAt, spent, startFree, startRanks } from '../sim/skills.js';
-import { RULES, isNight, placeSpot } from '../folk/quests.js';
+import { RULES, gatherSpots, isNight, outpostOf, placeSpot } from '../folk/quests.js';
+import { LAND_LEVELS } from '../folk/land-quests.js';
 import { QUESTS } from '../folk/lines/quests.js';
 import { CROWD, PEOPLE, POSTED } from '../folk/people.js';
 import { PHOBOS } from '../core/phobos-data.js';
@@ -71,7 +72,7 @@ const TAU = Math.PI * 2;
 const wrap = (a) => { a %= TAU; return a > Math.PI ? a - TAU : a < -Math.PI ? a + TAU : a; };
 const dist = (ax, az, bx, bz) => Math.hypot(bx - ax, bz - az);
 // A quest place's name, to say where it's off to: a site's, or a district of Phobos's ('ph:<district>'), or its key.
-const placeName = (k) => SITES[k]?.name || (k?.startsWith?.('ph:') && PHOBOS.districts.find((d) => d.key === k.slice(3))?.name) || k;
+const placeName = (k) => SITES[k]?.name || (k?.startsWith?.('ph:') && PHOBOS.districts.find((d) => d.key === k.slice(3))?.name) || (k?.startsWith?.('outpost:') && outpostOf(k.slice(8))?.name) || k;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 // The point `far` metres on along a path from (x, z): where a walker's eyes are while their feet are on the next step.
 function ahead(x, z, pts, far) {
@@ -149,6 +150,8 @@ const LAIR_LEVEL = {
   track_possessed: 7, wayhouse_dead: 9, moor_golem: 12, moor_whelps: 13, moor_knight: 14, rime_goats: 10, fells_goats: 11, fells_wolves: 12,
   mouth_demons: 13, tor_roost: 13, tor_demons: 14, toll_ambush: 11, gallows_bat: 10, gallows_demons: 13, gibbet_possessed: 12, gallows_giant: 14,
 };
+// (For the quests' own rules, tools/quests/rules.mjs: the level it wants for a lair, by its key.)
+export const lairLevelOf = (key) => { const l = LAIRS.find((q) => q.key === key); return l ? lairLevel(l) ?? null : null; };
 // What it'll stand and fight, by kind (FOE_NAMES in src/main.js) and its level. A kind added since it was taught (KNOWN_KINDS), it
 // judges by its life against its own level; coverage() below names it, so it can be taught properly.
 const KNOWN_KINDS = new Set([0, 1, 2, 3, 4, 5, 6, 9, 10]);
@@ -188,6 +191,8 @@ const PLAN = [
   16], ['lords_of_the_keep', 17], ['the_castellan', 18],  // The four delves made after those, each at its own level and a little over for its last boss.
   ['under_the_mile', 10], ['what_sank_the_mile', 11], ['the_ring_below', 12], ['what_it_fruits_from', 13], ['the_winter_company', 14], ['last_night_of_the_run', 15],
   ['sung_open', 17], ['king_under_the_moor', 18],
+  // The regions' (src/folk/regions/, docs/QUEST-LOOP.md).
+  ...LAND_LEVELS,
   // The Elder Dragon Gods: a party of the hundredth winter.
   ['storm_over_the_horn', 100], ['the_hollow_star', 102],
   // City State Phobos's first (src/folk/phobos-quests.js): you come to it at about twenty.
@@ -236,7 +241,7 @@ const HUNTS = {
 // Where to hunt for a kill step: its own grounds; a lair's glade; nowhere for a dungeon's (it goes down it instead).
 // (A room down a delve, 'room:<id>', is that delve's: roomDelve.)
 const roomDelve = (k) => (typeof k === 'string' && k.startsWith('room:') ? DELVES.find((d) => d.rooms.some((r) => r.id === k.slice(5)))?.key ?? null : null);
-const huntsFor = (k) => HUNTS[k] || (k.startsWith('lair:') && area(k) ? [[area(k).x, area(k).z]] : DELVE_KEYS.includes(k) || roomDelve(k) ? [] : null);
+const huntsFor = (k) => HUNTS[k] || ((k.startsWith('lair:') || k.startsWith('outpost:')) && area(k) ? [[area(k).x, area(k).z]] : DELVE_KEYS.includes(k) || roomDelve(k) ? [] : null);
 
 // The menu's grinding grounds (src/ui/autoplay.js GRINDS).
 export const GRINDS = {
@@ -530,7 +535,7 @@ export function castWorth(sp, c) {
 // can't do, somewhere it can't find, a foe or a lair it has no measure of, a spell it casts that's gone, a shop it doesn't use.
 // Warned in the console when it starts, and the failing list of tools/autoplay/check.mjs. When something's added to the game,
 // it's taught here (and the check run), so auto-play keeps playing the whole of it. foeNames: FOE_NAMES from src/main.js.
-const STEP_KEYS = new Set(['talk', 'say', 'back', 'bring', 'n', 'enter', 'night', 'visit', 'kill', 'of', 'warden', 'start', 'foe', 'boss', 'end', 'at']);
+const STEP_KEYS = new Set(['talk', 'say', 'back', 'bring', 'n', 'enter', 'night', 'visit', 'kill', 'of', 'warden', 'start', 'foe', 'boss', 'end', 'at', 'clear', 'gather', 'what', 'spots']);
 // The Test Dungeon's counters (src/core/testhall.js STATIONS), and what auto-play does with each: nothing. In there it fights
 // whatever's been summoned, and what that is, what it's wearing and who's with it are for whoever's testing to choose
 // (hallRun below). A new counter is named here, with what it's for, or coverage() says so.
@@ -550,7 +555,8 @@ export function coverage(foeNames = null) {
     if (!QUESTS[id]?.giver || !people.has(QUESTS[id].giver)) out.push(`quest ${id}: its giver isn't anyone it can find`);
     for (const st of R.steps) {
       for (const k of Object.keys(st)) if (!STEP_KEYS.has(k)) out.push(`quest ${id}: a step with "${k}", which it doesn't know how to do`);
-      for (const a of [st.enter, st.kill, ...(st.visit || [])].filter((q) => typeof q === 'string')) if (!area(a)) out.push(`quest ${id}: nowhere to walk to for "${a}" (area())`);
+      for (const a of [st.enter, st.kill, st.gather, st.clear && `outpost:${st.clear}`, ...(st.visit || [])].filter((q) => typeof q === 'string')) if (!area(a)) out.push(`quest ${id}: nowhere to walk to for "${a}" (area())`);
+      if (st.gather && gatherSpots(id, st).length < st.n) out.push(`quest ${id}: ${st.n} to gather at "${st.gather}", and fewer than that lying there (gatherSpots)`);
       if (st.boss && !BOSSES.some((b) => b.key === st.boss)) out.push(`quest ${id}: a boss, "${st.boss}", that no dungeon has`);
       if (st.kill && st.kill !== 'catacombs' && !huntsFor(st.kill)) out.push(`quest ${id}: no hunting grounds for "${st.kill}" (HUNTS): it hunts round its middle`);
       if (st.bring && !FARMS.has(st.bring)) out.push(`quest ${id}: wants ${st.bring}, which it doesn't know where to farm`);
@@ -2267,7 +2273,11 @@ export class Brain {
     // (Out on the first visit to Phobos, home to sell only once the pack's all but full: home's a beacon stone and a seal back
     // away, and a run that went home with the Redoubt in hand stopped to take the square's offers. src/folk/first-visit.js.)
     const visiting = this.firstVisit(m);
-    const wantsTown = ((visiting ? room < 3 : (room < 10 || junk.length >= 6)) && buyer) || (m.hpf < 0.45 && !this.known(SP.mend));
+    // (A camp's sutler nearer than the town, src/folk/shops.js sutler: the pack's emptied there, where the work is.)
+    const wantsSell = junk.length > 0 && (visiting ? room < 3 : (room < 10 || junk.length >= 6));
+    const sutler = junk.length > 0 && !m.town ? this.sutler(m, wantsSell ? Math.max(120, townDist(m.x, m.z) * 0.8) : 70) : -1;
+    if (sutler >= 0 && (wantsSell || junk.length >= 3) && !inDungeon(m.x, m.z)) return { kind: 'talk', why: 'sell', who: sutler, say: `Selling to ${townUI.people[sutler].name}.` };
+    const wantsTown = (wantsSell && buyer) || (m.hpf < 0.45 && !this.known(SP.mend));
     const questing = this.mode === 'quests';
     // Once it's at the black knight, it sees him through (unless he's done it in, and it's falling back to mend).
     if (questing && this.job?.kind === 'boss' && this.blackKnight(this.snap) && m.hpf > 0.4) return this.job;
@@ -2397,6 +2407,19 @@ export class Brain {
       return { kind: 'hunt', why, spots: [[c.x, c.z]], say };
     }
     return null;
+  }
+
+  // The nearest of those out in the land who'll buy what it carries (a camp's sutler), within `within` metres: their
+  // place in the town's list, or -1.
+  sutler(m, within) {
+    const T = this.o.townUI;
+    let best = -1, bd = within;
+    for (let i = PEOPLE.length; i < T.people.length; i++) {
+      if (!TRADES[T.people[i].trade]?.buys || this.skipping(`sell:${i}`) || this.skipping(`p:${i}`)) continue;
+      const w = T.whereOf(i), d = w ? dist(m.x, m.z, w.x, w.z) : Infinity;
+      if (d < bd) { bd = d; best = i; }
+    }
+    return best;
   }
 
   freeCells() {
@@ -2530,6 +2553,18 @@ export class Brain {
       if (!left.length) return null;
       const { v, a } = left[0];
       return { kind: 'go', why: `q:${id}`, x: a.x, z: a.z, r: Math.min(a.r, 25), say: `${title}: to ${placeName(v)} (${seen.length} of ${st.visit.length}).` };
+    }
+    // An outpost to empty: to it, and everything in it put down, its chief with them.
+    if (st.clear) {
+      const a = area(`outpost:${st.clear}`);
+      return a ? { kind: 'hunt', why: `q:${id}`, spots: [[a.x, a.z]], say: `${title}: to empty ${placeName(`outpost:${st.clear}`)}.` } : null;
+    }
+    // Things to gather: to the nearest still lying there (walked up to, it's picked up: src/folk/quests.js where).
+    if (st.gather) {
+      const got = s.got || [], left = gatherSpots(id, st).filter((_, i) => !got.includes(i) && !this.skipping(`g:${id}:${i}`));
+      if (!left.length) return null;
+      left.sort((a, b) => dist(m.x, m.z, a[0], a[1]) - dist(m.x, m.z, b[0], b[1]));
+      return { kind: 'go', why: `q:${id}`, x: left[0][0], z: left[0][1], r: 1.4, say: `${title}: ${st.what || 'what was asked for'}, ${s.n || 0} of ${st.n}.` };
     }
     if (st.kill) {
       if (st.kill === 'catacombs') return this.grindJob(m, 'catacombs', `q:${id}`, `${title}: the dead below (${s.n} of ${st.n}).`);

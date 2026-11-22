@@ -11,11 +11,17 @@
 //   start  take on a quest from each of a list of people, in any order (Lisandra's: src/folk/lines/lisandra.js)
 //   visit  get to every one of a list of places, in any order
 //   boss   put down one of the party dungeons' bosses, by its key (src/core/dungeon.js BOSSES); one already dead counts
+//   clear  empty one of the land's outposts, its chief and every one of its own (an outpost's key in src/core/wilds-data.js
+//          OUTPOSTS; the dens pinned for the camps, src/core/camps-data.js DENS, are the ones to name); one emptied in the
+//          last few minutes counts
+//   gather pick up n things lying about a place (walk up to each: it glints); what: what they are, for the count
 // A place (enter, kill, visit) is an area named below (AREAS), any of the land's places by its key (src/core/lands.js SITES),
 // a party dungeon by its key ('warrens', 'blackvigil', 'deeps': down inside it), or 'lair:<key>', the ground round one of the
 // monsters' lairs (src/core/tripo-monsters.js LAIRS). kill takes of: the one kind that counts (9 a jelly), or foe: the
 // monsters' groups that count (GROUPS' keys); at a lair only its own sort of monster counts.
+// And 'outpost:<key>', the ground round one of the land's outposts (kill, enter, visit, gather).
 // bring takes at: where what's wanted is found, for the trail (a place as above).
+// gather takes spots: [[dx, dz], ...] from the place's middle, where the things lie; else they're laid in a ring round it.
 // wait: what's handed over is made overnight, and collected the next day.
 // door: taken on, the giver opens Lisandra's door of candles and you're through it ('sill': to the Sill, 'home': back to her;
 // src/ui/folk.js lisDoor).
@@ -35,6 +41,8 @@ import { FIRST_VISIT_RULES } from './first-visit.js';
 import { CITY, cityIn } from '../core/east.js';
 import { PHOBOS } from '../core/phobos-data.js';
 import { castleVistas } from '../core/castle-finds.js';
+import { OUTPOSTS } from '../core/wilds-data.js';
+import { hash2 } from '../core/terrain-noise.js';
 
 export const RULES = {
   // Lisandra's, at the edge of town once she's walked you down: go round everyone with work and start each of their quests.
@@ -96,6 +104,10 @@ AREAS.phobos = (x, y, z) => y > -30 && cityIn(x, z) < 1;
 for (const d of PHOBOS.districts) AREAS[`ph:${d.key}`] = (x, y, z) => y > -30 && Math.hypot(x - d.x, z - d.z) < d.r * 0.8;
 // A lookout of the castle's or the city's ('vista:<id>', src/core/castle-finds.js): stood on it.
 for (const v of castleVistas()) AREAS[`vista:${v.id}`] = (x, y, z) => Math.abs(y - v.y) < 4 && Math.hypot(x - v.x, z - v.z) < v.r;
+// The ground round one of the land's outposts ('outpost:<key>', src/core/wilds-data.js): as a lair's.
+const OUTPOST = Object.fromEntries(OUTPOSTS.map((o) => [o.key, o]));
+for (const o of OUTPOSTS) AREAS[`outpost:${o.key}`] = (x, y, z) => Math.hypot(x - o.x, z - o.z) < o.r + LAIR_REACH;
+export const outpostOf = (key) => OUTPOST[key] || null;
 export const areaAt = (k, x, y, z) => !!AREAS[k]?.(x, y, z);
 export const hasArea = (k) => !!AREAS[k];
 
@@ -111,6 +123,7 @@ export function delvePortal(key) {
 // Where a step's place is, to be led to: { x, z, near }, or null (the town's own, which src/ui/trail.js knows its ways to).
 export function placeSpot(k) {
   if (k.startsWith('lair:')) { const l = LAIRS.find((q) => q.key === k.slice(5)); return l ? { x: l.x, z: l.z, near: l.r + 12 } : null; }
+  if (k.startsWith('outpost:')) { const o = OUTPOST[k.slice(8)]; return o ? { x: o.x, z: o.z, near: o.r + 12, r: o.r } : null; }
   if (k === 'phobos') return { x: CITY.x - CITY.a + 40, z: 0, near: 30 };
   if (k.startsWith('ph:')) { const d = PHOBOS.districts.find((q) => q.key === k.slice(3)); return d ? { x: d.x, z: d.z, near: d.r * 0.5 } : null; }
   // (A lookout, 'vista:<id>', src/core/castle-finds.js: where it is, how near counts, and how high it stands.)
@@ -138,6 +151,27 @@ export function sayable(list, flags, met = null) {
     if (l.after && !has(l.after)) continue;
     if (l.met && !met?.has(l.met)) continue;
     out.push(l.say);
+  }
+  return out;
+}
+
+// How long an outpost stays emptied for a `clear` step taken after the fight (ms): about as long as it stays empty.
+export const CLEAR_KEPT = 420000;
+// How near you come to a thing to gather before it's picked up (m), and how many glint at once (src/core/layout.js QMARKS).
+export const GATHER_REACH = 3.2;
+export const GATHER_SHOWN = 8;
+// Where a gather step's things lie: [[x, z], ...], st.n of them. Its own spots (from the place's middle), else a ring
+// round the place just outside what's built there, each at an angle of its own (the same for everyone, from the quest's id).
+export function gatherSpots(id, st) {
+  const at = placeSpot(st.gather);
+  if (!at) return [];
+  if (st.spots) return st.spots.slice(0, st.n).map(([dx, dz]) => [at.x + dx, at.z + dz]);
+  let seed = 0;
+  for (const ch of id) seed = (seed * 31 + ch.charCodeAt(0)) % 9973;
+  const r0 = (at.r ?? Math.min(at.near, 30)) + 9, out = [];
+  for (let i = 0; i < st.n; i++) {
+    const a = (i + hash2(seed + i * 3, seed - i * 7) * 0.7) / st.n * Math.PI * 2, d = r0 + hash2(seed - i, i * 5 + 1) * 12;
+    out.push([Math.round((at.x + Math.sin(a) * d) * 10) / 10, Math.round((at.z + Math.cos(a) * d) * 10) / 10]);
   }
   return out;
 }
@@ -259,7 +293,7 @@ export class QuestBook {
   // On to the next step (or to the end of the last).
   advance(id) {
     const s = this.q[id];
-    s.step++; s.n = 0;
+    s.step++; s.n = 0; delete s.got;
     if (s.step < RULES[id].steps.length) this.on.toast(this.journalLine(id), 'step');
     this.on.change();
   }
@@ -327,7 +361,7 @@ export class QuestBook {
     // (The way in, for work that's down among the dead and given before Silas has handed over his key.)
     const hint = s.step === 0 ? sayable([text.hint], this.flags)[0] : null;
     const list = step.visit || step.start;
-    const count = step.kill ? ` (${s.n} of ${step.n})` : list ? ` (${(s.seen || []).length} of ${list.length})` : '';
+    const count = step.kill || step.gather ? ` (${s.n} of ${step.n})` : list ? ` (${(s.seen || []).length} of ${list.length})` : '';
     // Who's still to give you work, by name.
     const left = step.start ? step.start.filter((p) => !(s.seen || []).includes(p)).map((p) => first(BY_ID[p])) : [];
     return `${line}${count}${hint ? ` ${hint}` : ''}${left.length ? ` Still to see: ${left.join(', ')}.` : ''}`;
@@ -363,6 +397,26 @@ export class QuestBook {
     this.on.change();
   }
 
+  // One of the land's outposts has been emptied (EV.WILD CLEARED, through src/main.js), by its key: told to any quest
+  // waiting on it, and kept a few minutes for one taken just after.
+  cleared(key, at = Date.now()) {
+    if (!key) return;
+    (this.clearedAt ||= {})[key] = at;
+    for (const id of this.active()) if (this.step(id)?.clear === key) this.advance(id);
+  }
+
+  // The things still to pick up for the gather steps under way: [{ id, i, x, z }], the quest followed first.
+  marks() {
+    const out = [], f = this.followed();
+    for (const id of this.active().sort((a, b) => (b === f) - (a === f))) {
+      const st = this.step(id);
+      if (!st?.gather) continue;
+      const got = this.q[id].got || [];
+      gatherSpots(id, st).forEach(([x, z], i) => { if (!got.includes(i)) out.push({ id, i, x, z }); });
+    }
+    return out;
+  }
+
   // Something the castle remembers of you: a way unbarred ('latch:<id>'), a lookout found ('vista:<id>').
   flag(k) { if (!k || this.flags.has(k)) return false; this.flags.add(k); this.on.change(); return true; }
 
@@ -378,6 +432,19 @@ export class QuestBook {
       const st = this.step(id);
       // (A boss that was dead before this was asked.)
       if (st?.boss && this.flags.has(`boss:${st.boss}`)) { this.advance(id); continue; }
+      // (An outpost emptied just before this was asked.)
+      if (st?.clear) { const t = this.clearedAt?.[st.clear]; if (t != null && Date.now() - t < CLEAR_KEPT) this.advance(id); continue; }
+      // gather: walk up to each of the things lying about the place.
+      if (st?.gather) {
+        const s = this.q[id], got = (s.got = s.got || []);
+        const i = gatherSpots(id, st).findIndex(([gx, gz], k) => !got.includes(k) && Math.hypot(gx - x, gz - z) < GATHER_REACH);
+        if (i < 0) continue;
+        got.push(i); s.n = got.length;
+        if (s.n >= st.n) this.advance(id);
+        else { this.on.toast(`${QUESTS[id].title}: ${s.n} of ${st.n}`, 'count'); this.on.change(); }
+        this.on.picked?.(id, i);
+        continue;
+      }
       // visit: every one of a list of places, in any order.
       if (st?.visit) {
         const s = this.q[id], k = st.visit.find((v) => !(s.seen || []).includes(v) && AREAS[v](x, y, z));

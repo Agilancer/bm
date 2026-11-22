@@ -2093,3 +2093,8 @@ export const QUESTS = {
     },
   },
 };
+
+// And the regions' (src/folk/lines/regions/, docs/QUEST-LOOP.md).
+import { REGION_LINES, REGION_QUESTS } from './regions/index.js';
+Object.assign(LINES, REGION_LINES);
+Object.assign(QUESTS, REGION_QUESTS);

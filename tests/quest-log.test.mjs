@@ -37,9 +37,10 @@ test('every step of every quest has a place on the map, and its steps so far', (
       const done = stepsOf(id, Q);
       assert.equal(done.length, k + 1, id);
       assert.deepEqual(done.map((d) => d.done), [...Array(k).fill(true), false], id);
-      // (Something to bring: from the catacombs till the satchel holds it, then to the giver.)
+      // (Something to bring: from the catacombs, or from where the quest says it's found, till the satchel holds it; then
+      // to the giver.)
       if (steps[k].bring) {
-        assert.ok(p.spots[0].below, `${id}: not from below`);
+        if (!steps[k].at) assert.ok(p.spots[0].below, `${id}: not from below`);
         const full = placeOf(id, { Q, person, mats: { [steps[k].bring]: steps[k].n } });
         assert.equal(full.spots[0].who, QUESTS[id].giver, id);
       }

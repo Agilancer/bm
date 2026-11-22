@@ -11,6 +11,7 @@ import { PORTAL } from './dungeon.js';
 import { FIELD_CREATURES } from './field-creatures.js';
 import { LAIRS } from './tripo-monsters.js';
 import { FINDS, TEAR_SPOTS } from './wilds-data.js';
+import { CAMPS } from './camps-data.js';
 
 // How far out a lair counts as one of the town's own woods'.
 const NEAR = 330;
@@ -28,7 +29,9 @@ export const HUNT_GROUNDS = [
 // (An outpost's ground goes out to what's built round it, src/core/wild-dress.js; and each tear spot and each small thing
 // to find has a little clearing of its own, so no boulder or pine stands in it. src/core/wilds-data.js.)
 const FAR_GROUNDS = LAIRS.filter((l) => Math.hypot(l.x, l.z) >= NEAR).map((l) => ({ key: l.key, x: l.x, z: l.z, r: l.r + (l.wild && !l.battle ? 11 : 5) }))
-  .concat(TEAR_SPOTS.map(([x, z], i) => ({ key: `tear_${i}`, x, z, r: 8 })), FINDS.map(([x, z], i) => ({ key: `find_${i}`, x, z, r: 4 })));
+  .concat(TEAR_SPOTS.map(([x, z], i) => ({ key: `tear_${i}`, x, z, r: 8 })), FINDS.map(([x, z], i) => ({ key: `find_${i}`, x, z, r: 4 })),
+    // (And a camp's own ground, src/core/camps-data.js: open to its edge, the nearest of them under the town's own pines.)
+    CAMPS.map((c) => ({ key: `camp_${c.key}`, x: c.x, z: c.z, r: c.r + 2 })));
 
 // Where the path up to the Warrens' portal ends: the foot of the steps down its front (src/core/sites.js portalWall).
 const STEPS_FOOT = [Math.round(PORTAL.x + Math.sin(PORTAL.yaw) * 13), Math.round(PORTAL.z + Math.cos(PORTAL.yaw) * 13)];

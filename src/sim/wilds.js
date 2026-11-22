@@ -14,7 +14,7 @@
 //
 // Everything stood up here is a temp lair of TripoWorld's (src/sim/tripo.js): the twelve slots are all there are, so
 // nothing is rolled while they're busy.
-import { EV } from '../core/layout.js';
+import { EV, INPUT } from '../core/layout.js';
 import { OPENING } from '../core/opening.js';
 import { townDist } from '../core/town.js';
 import { SITES, countryAt, routeDist, siteAt, waterAt } from '../core/lands.js';
@@ -469,6 +469,16 @@ export class Wilds {
     for (const [x, y, z, i] of this.glints) {
       const a = time * 1.6 + i;
       c.fx(FX.FLARE, ELEM.LIGHT, x + Math.cos(a) * 0.25, y + Math.sin(time * 2.3 + i) * 0.18, z + Math.sin(a) * 0.25, 0.09, 0, 1, 0, 0, 0.9, 1.5, 3, 0, i * 0.37);
+    }
+    // What a quest wants gathered (src/folk/quests.js marks, through INPUT.QMARKS): a taller light than a find's, two motes
+    // turning about each other, seen from further off.
+    const inp = sim.input, nq = inp ? Math.min(8, inp[INPUT.QMARK_N] | 0) : 0, pl = sim.player;
+    for (let k = 0; k < nq; k++) {
+      const x = inp[INPUT.QMARKS + k * 2], z = inp[INPUT.QMARKS + k * 2 + 1];
+      if (Math.hypot(x - pl.x, z - pl.z) > 110) continue;
+      const y = sim.world.height(x, z) + 0.9, a = time * 2.1 + k * 1.7;
+      c.fx(FX.FLARE, ELEM.LIGHT, x + Math.cos(a) * 0.3, y + Math.sin(time * 2.6 + k) * 0.2, z + Math.sin(a) * 0.3, 0.15, 0, 1, 0, 0, 0.9, 1.5, 3, 0, k * 0.61);
+      c.fx(FX.FLARE, ELEM.LIGHT, x - Math.cos(a) * 0.3, y + 0.7 + Math.cos(time * 2.2 + k) * 0.2, z - Math.sin(a) * 0.3, 0.11, 0, 1, 0, 0, 0.9, 1.5, 3, 0, k * 0.61 + 0.5);
     }
     // A tear: a wound of light over a ring of signs, a column (its size is its height, its length its width) you can see from a long way off; wilder while it's fought.
     const T = this.tear, i = T ? T.i : this.near;

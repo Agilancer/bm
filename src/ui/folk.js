@@ -749,6 +749,8 @@ export class TownUI {
     const p = this.person(i), w = this.renderer.folk.where(i), t = TRADES[p.trade], h = this.act.hour();
     if (!w || w.sleep || w.busy === ACT.FLEE || w.busy === ACT.HIDE) return false;
     if (t.hours && (h < t.hours[0] || h >= t.hours[1])) return false;
+    // (Someone posted out in the land keeps their board at their post, day and night: a camp's sutler.)
+    if (p.job === 'posted') return true;
     if (w.busy === ACT.WORK || w.busy === ACT.SHOP) return true;
     let now = null;
     for (const [at, what] of DAYS[p.job] || []) if (h >= at) now = what;

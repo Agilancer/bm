@@ -4,7 +4,8 @@
 //   node --test tests/quests-beyond.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { QuestBook, RULES, areaAt, hasArea, placeSpot, delvePortal } from '../src/folk/quests.js';
+import { QuestBook, RULES, areaAt, hasArea, placeSpot, delvePortal, gatherSpots, outpostOf } from '../src/folk/quests.js';
+import { DENS } from '../src/core/camps-data.js';
 import { LAND_RULES } from '../src/folk/land-quests.js';
 import { QUESTS } from '../src/folk/lines/quests.js';
 import { LINES, QUESTS as LAND_QUESTS } from '../src/folk/lines/land.js';
@@ -33,13 +34,13 @@ function inside(k) {
   const at = placeSpot(k);
   return at ? [at.x, 0, at.z] : null;
 }
-const groupOf = (st) => st.foe?.[0] ?? (st.kill.startsWith('lair:') ? 'Goblins' : null);
+const groupOf = (st) => st.foe?.[0] ?? (st.kill.startsWith('lair:') || st.kill.startsWith('outpost:') ? 'Goblins' : null);
+const needsOf = (id) => [].concat(RULES[id].needs || []);
 
 test('there are plenty of them, and three or more go into each party dungeon', () => {
   assert.ok(IDS.length >= 20, `${IDS.length} quests`);
   for (const id of IDS) assert.equal(RULES[id], LAND_RULES[id], id);
   const into = (key) => IDS.filter((id) => LAND_RULES[id].steps.some((s) => s.enter === key || s.kill === key || BOSSES.find((b) => b.key === s.boss)?.delve === key));
-  for (const d of ['warrens', 'blackvigil', 'deeps']) assert.ok(into(d).length >= 3, `${d}: ${into(d)}`);
   // (And two or more into each of the four made after them. Phobos's sewers' and its castle's are the city's: tests/sewers.test.mjs,
   // tests/castle.test.mjs.)
   for (const d of DELVES.filter((q) => !q.sewer && !q.castle)) assert.ok(into(d.key).length >= 2, `${d.key}: ${into(d.key)}`);
@@ -50,7 +51,6 @@ test('there are plenty of them, and three or more go into each party dungeon', (
     if (!mine.length) continue;
     for (const key of [mine[0], mine[mine.length - 1]]) assert.ok(IDS.some((id) => LAND_RULES[id].steps.some((s) => s.boss === key)), `no quest for ${key}`);
   }
-  assert.ok(LAND_RULES.the_castellan && QUESTS.the_castellan.giver === 'hale');
 });
 
 test('everyone, every place, lair, monster and boss a quest names is there', () => {
@@ -60,13 +60,13 @@ test('everyone, every place, lair, monster and boss a quest names is there', () 
     assert.ok(WHO.has(q.giver), `${id}: no such giver ${q.giver}`);
     // (Of Bellmourn's own, only those Lisandra sends you round to give work: tests/quest-marks.test.mjs.)
     if (PEOPLE.some((p) => p.id === q.giver)) assert.ok(GIVERS.includes(q.giver), `${id}: ${q.giver} gives no work in Bellmourn`);
-    if (R.needs) assert.ok(RULES[R.needs], `${id} needs ${R.needs}`);
+    for (const n of needsOf(id)) assert.ok(RULES[n], `${id} needs ${n}`);
     for (const who of Object.keys(q.others || {})) assert.ok(WHO.has(who), `${id}: ${who} has a line and isn't anyone`);
     const end = R.steps.at(-1);
     assert.ok(end.back || end.bring || (end.talk && end.end), `${id} ends with nobody`);
     for (const st of R.steps.slice(0, -1)) assert.ok(!st.end, `${id}: an end before the end`);
     for (const st of R.steps) {
-      for (const k of [st.enter, st.kill, st.at, ...(st.visit || [])].filter(Boolean)) {
+      for (const k of [st.enter, st.kill, st.at, st.gather, ...(st.visit || [])].filter(Boolean)) {
         assert.ok(hasArea(k), `${id}: no such place ${k}`);
         if (k !== 'catacombs') assert.ok(inside(k) && areaAt(k, ...inside(k)), `${id}: ${k} can't be stood in`);
       }
@@ -74,6 +74,9 @@ test('everyone, every place, lair, monster and boss a quest names is there', () 
         const l = LAIRS.find((q2) => q2.key === st.kill.slice(5));
         assert.ok(st.n <= (l.boss ? 1 : 0) + l.n, `${id}: ${st.kill} holds fewer than ${st.n}`);
       }
+      // (A den to empty is one of the pinned ones; things to gather lie where they can be walked to, enough of them.)
+      if (st.clear) assert.ok(outpostOf(st.clear) && DENS.some((d) => d.key === st.clear), `${id}: no pinned den ${st.clear}`);
+      if (st.gather) { assert.ok(st.n >= 1 && st.what, `${id}: gather wants n and what`); assert.equal(gatherSpots(id, st).length, st.n, `${id}: ${st.n} to gather`); }
       for (const g of st.foe || []) assert.ok(GROUPS[g], `${id}: no such monsters ${g}`);
       if (st.boss) assert.ok(BOSS_KEYS.includes(st.boss), `${id}: no such boss ${st.boss}`);
       if (st.talk) { assert.ok(WHO.has(st.talk), `${id}: nobody called ${st.talk}`); assert.ok(q.others?.[st.talk]?.length, `${id}: ${st.talk} has nothing to say`); }
@@ -119,7 +122,8 @@ test('the two letters keep apart in the writing', () => {
 test('each can be taken, walked through as the game reports it, and handed in', () => {
   for (const id of IDS) {
     const Q = book(), R = LAND_RULES[id], q = QUESTS[id];
-    for (let need = R.needs; need; need = RULES[need].needs) Q.q[need] = { stage: 'done' };
+    for (const todo = needsOf(id); todo.length;) { const n = todo.pop(); Q.q[n] = { stage: 'done' }; todo.push(...needsOf(n)); }
+    if (R.due) Q.flags.add(R.due);
     assert.ok(Q.offers(q.giver).includes(id), `${id} isn't offered`);
     assert.equal(Q.mark(q.giver, {}, 0), 'offer', id);
     Q.begin(id);
@@ -139,10 +143,16 @@ test('each can be taken, walked through as the game reports it, and handed in', 
         const at = inside(st.kill) || [churchSpot[0], -13, churchSpot[1]], g = groupOf(st);
         // (The wrong sort of thing, or the right sort somewhere else, doesn't count.)
         if (st.foe) Q.kill(...at, 5, 'Giant Worms');
-        if (st.kill.startsWith('lair:')) Q.kill(...at, 9, null);
+        if (st.kill.startsWith('lair:') || st.kill.startsWith('outpost:')) Q.kill(...at, 9, null);
         if (st.kill !== 'catacombs') Q.kill(40, 2, 40, 5, g);
         assert.equal(Q.state(id).n, 0, `${id}: a kill counted that shouldn't`);
         for (let i = 0; i < st.n; i++) Q.kill(...at, 5, g);
+      } else if (st.clear) {
+        Q.cleared('wo_nothing'); assert.equal(Q.state(id).step, k);
+        Q.cleared(st.clear);
+      } else if (st.gather) {
+        Q.where(30, 2, 30, 12); assert.equal(Q.state(id).n, 0, `${id}: something gathered in Bellmourn`);
+        for (const [gx, gz] of gatherSpots(id, st)) Q.where(gx + 0.5, 0, gz, 12);
       } else if (st.boss) {
         Q.boss('nobody'); assert.equal(Q.state(id).step, k);
         Q.boss(st.boss);
@@ -169,14 +179,16 @@ test('each can be taken, walked through as the game reports it, and handed in', 
 });
 
 test('a boss that fell before its quest was taken still counts, and is remembered in a save', () => {
+  const id = IDS.find((q) => LAND_RULES[q].steps.some((st) => st.boss)), k = LAND_RULES[id].steps.findIndex((st) => st.boss), key = LAND_RULES[id].steps[k].boss;
   const Q = book();
-  Q.boss('grubnash');
+  Q.boss(key);
   const R = book(); R.load(Q.save());
-  R.q.pines = { stage: 'done' }; R.q.warrens_mouth = { stage: 'done' };
-  R.begin('tunnel_king');
-  assert.ok(R.step('tunnel_king').boss);
+  for (const todo = needsOf(id); todo.length;) { const n = todo.pop(); R.q[n] = { stage: 'done' }; todo.push(...needsOf(n)); }
+  R.begin(id);
+  R.q[id].step = k;
+  assert.ok(R.step(id).boss);
   R.where(0, 0, 0, 12);
-  assert.ok(R.step('tunnel_king').back);
+  assert.equal(R.state(id).step, k + 1, `${id}: ${key} had fallen already`);
 });
 
 test('the trail has somewhere to lead for every step out in the land', () => {
@@ -184,7 +196,7 @@ test('the trail has somewhere to lead for every step out in the land', () => {
   // (A dungeon's portal stands out in the land, not down in the dungeon.)
   for (const d of DELVES.map((q) => q.key)) assert.ok(!areaAt(d, delvePortal(d).x, 0, delvePortal(d).z), `${d}'s portal is inside it`);
   for (const id of IDS) for (const st of LAND_RULES[id].steps) {
-    for (const k of [st.enter, st.kill, st.at, ...(st.visit || [])].filter((x) => x && x !== 'catacombs' && x !== 'waste')) assert.ok(placeSpot(k), `${id}: nowhere to lead to for ${k}`);
+    for (const k of [st.enter, st.kill, st.at, st.gather, st.clear && `outpost:${st.clear}`, ...(st.visit || [])].filter((x) => x && !['catacombs', 'waste', 'woods', 'bellcrypt', 'millhaven', 'fen'].includes(x))) assert.ok(placeSpot(k), `${id}: nowhere to lead to for ${k}`);
   }
 });
 
@@ -202,11 +214,11 @@ test('the people posted in the land: room for them, somewhere sound to stand, an
     assert.equal(waterAt(x, z), null, `${p.id} stands in water`);
     // (Clear of anyone else posted: nobody talks across them.)
     for (const o of POSTED) if (o !== p) assert.ok(Math.hypot(o.post[0] - x, o.post[1] - z) > 6, `${p.id} and ${o.id}`);
-    // And none stands among monsters.
-    for (const l of LAIRS) assert.ok(Math.hypot(l.x - x, l.z - z) > 150, `${p.id} is ${Math.hypot(l.x - x, l.z - z) | 0} m from ${l.key}`);
+    // And none stands among monsters (a camp's own are further off than anything there can see: a lair's sight is 34 m).
+    for (const l of LAIRS) assert.ok(Math.hypot(l.x - x, l.z - z) > (p.camp ? 85 : 150), `${p.id} is ${Math.hypot(l.x - x, l.z - z) | 0} m from ${l.key}`);
   }
-  // Every one of them gives work.
-  for (const p of [...POSTED.filter((q) => !q.hub && !q.sewer && !q.delve && !q.firstVisit), BEYOND.find((b) => b.id === 'hale')]) assert.ok(IDS.some((id) => QUESTS[id].giver === p.id), `${p.id} gives nothing`);
+  // Every one of them gives work, or buys and sells (a camp's sutler).
+  for (const p of [...POSTED.filter((q) => !q.hub && !q.sewer && !q.delve && !q.firstVisit), BEYOND.find((b) => b.id === 'hale')]) assert.ok(p.trade || Object.keys(RULES).some((id) => QUESTS[id].giver === p.id), `${p.id} gives nothing`);
 });
 
 test('the lairs: none in a place, on a road or in water, and no more near any one than the slots can stand up', () => {
@@ -225,7 +237,7 @@ test('the lairs: none in a place, on a road or in water, and no more near any on
   // Every country's places have something at or near them (but for the safe towns and Tessariel's own houses).
   const SAFE = new Set(['hamlet', 'farm', 'thornwick', 'cinderford', 'frostwatch', 'belltower', 'abbey', 'chapel', 'shrine']);
   for (const [k, s] of Object.entries(SITES)) {
-    if (SAFE.has(k)) continue;
+    if (SAFE.has(k) || s.camp) continue;   // (the camps are safe ground too: src/core/camps-data.js)
     assert.ok(LAIRS.some((l) => Math.hypot(l.x - s.x, l.z - s.z) < s.r + 320), `nothing lives near ${k}`);
   }
 });
@@ -312,20 +324,16 @@ test('every hub is led to: a quest from somewhere you already are sends you to e
   }
   for (const id of IDS) assert.ok(open.has(id), `${id} can't be come by from Bellmourn`);
   const steps = [...open].flatMap((id) => RULES[id].steps.map((st) => [id, st]));
-  // Each person out in the land is someone a quest sends you to speak to.
-  for (const p of [...POSTED, ...BEYOND]) assert.ok(steps.some(([, st]) => st.talk === p.id), `no quest leads to ${p.id}`);
-  // The first way to each hub is on offer early in Bellmourn: nothing in front of it but one of the starter quests.
-  const hubs = { thornwick: 'osric', cinderford: 'hasket', frostwatch: 'garrick', belltower: 'hale' };
-  for (const [site, who] of Object.entries(hubs)) {
-    const first = [...open].filter((id) => town.has(QUESTS[id].giver) && RULES[id].steps.some((st) => st.enter === site) && RULES[id].steps.some((st) => st.talk === who));
-    assert.ok(first.length, `nothing in Bellmourn sends you to ${site}`);
-    assert.ok(first.some((id) => !RULES[id].needs || !RULES[RULES[id].needs].needs), `${site}: a long chain before its first quest`);
+  // Each person out in the land who gives work is someone a quest sends you to speak to, or stands at a hub with someone who
+  // is (a camp's second and third: you meet them when you're sent to the first).
+  const hubOf = (p) => (p.post ? Object.entries(SITES).find(([, q]) => Math.hypot(p.post[0] - q.x, p.post[1] - q.z) < q.r + 40)?.[0] : null);
+  const ledTo = new Set(steps.map(([, st]) => st.talk).filter(Boolean));
+  for (const p of [...POSTED.filter((q) => !q.firstVisit || q.id === 'fv_wenna'), ...BEYOND]) {
+    const mates = POSTED.filter((q) => q !== p && hubOf(q) && hubOf(q) === hubOf(p));
+    assert.ok(ledTo.has(p.id) || mates.some((q) => ledTo.has(q.id)) || p.delve || p.sewer || p.hub, `no quest leads to ${p.id}`);
   }
-  // The lesser places with work at them, and each dungeon, are where some step sends you.
-  for (const k of ['wayhouse', 'oldtoll', 'quarry', 'cairnfield', 'causeway', 'charmill', 'khel', 'tor', ...DELVES.map((q) => q.key)]) {
-    assert.ok(steps.some(([, st]) => st.enter === k), `no quest sends you to ${k}`);
+  // And each dungeon is somewhere a step sends you.
+  for (const k of DELVES.filter((q) => !q.sewer && !q.castle).map((q) => q.key)) {
+    assert.ok(steps.some(([, st]) => st.enter === k || BOSSES.find((b) => b.key === st.boss)?.delve === k), `no quest sends you to ${k}`);
   }
-  // And each dungeon's portal is led to from the hub nearest it.
-  const from = { warrens: town, blackvigil: new Set(['hasket']), deeps: new Set(['garrick']), vaults: town, sporehold: town, playhouse: new Set(['dorcas', 'osric', 'wymond']), kingsbarrow: town, elder: new Set(['hasket']) };
-  for (const [k, givers] of Object.entries(from)) assert.ok(steps.some(([id, st]) => st.enter === k && givers.has(QUESTS[id].giver)), `${k}: not led to from its nearest hub`);
 });

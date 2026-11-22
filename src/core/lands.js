@@ -14,6 +14,7 @@ import { OUTPOSTS } from './wilds-data.js';
 import { WAYS } from './roads-data.js';
 import { CHASM, EAST_FROM, WORLD_EAST, eastHeight, eastSteep } from './east.js';
 import { PHOBOS } from './phobos-data.js';
+import { CAMPS } from './camps-data.js';
 
 // How far the land goes: this far north, south and west of the well, and WORLD_EAST east of it, where the Marches run out to
 // the City State of Phobos (src/core/east.js). LAND: the same as a box.
@@ -158,7 +159,13 @@ export const SITES = {
   span: { x: 8400, z: 120, r: 50, name: 'The Broken Span' },
   sill: { x: 8950, z: 0, r: 45, name: 'The Sill', portal: true },
 };
+// And the camps (src/core/camps-data.js): each a place like any other, levelled, cleared of trees, named on the map and
+// linked by a way of its own (tools/roads/lay.mjs), with `camp: true`. Plain folk's, all of them.
+for (const c of CAMPS) SITES[c.key] = { x: c.x, z: c.z, r: c.r, name: c.name, pad: c.pad, camp: true };
 export const SITE_KEYS = Object.keys(SITES);
+// (The places whose levelled ground reaches inside the town's own land, the first 1.15 km, where nothing else out here is
+// done to the ground: the nearest camps. landHeight levels them there too.)
+const NEAR_PADS = SITE_KEYS.filter((k) => SITES[k].pad && Math.hypot(SITES[k].x, SITES[k].z) < 1150 + SITES[k].pad + 30);
 // The knolls under the Lantern and the Needle: [x, z, radius, height]. And where no tree stands so a thing can be seen: them,
 // and the toll gate on the Throne Road. [x, z, radius]
 const TOWER_KNOLLS = [[6800, -1000, 110, 20], [7050, 1200, 120, 26]];
@@ -322,7 +329,18 @@ export function mountainHeight(x, z) {
 const PADS = {};
 export function landHeight(x, z, level, raw = false) {
   const r = Math.hypot(x, z);
-  if (r < 1150) return level;
+  if (r < 1150) {
+    // (The town's own land, left as it lies: but for the ground of a camp that stands in it, levelled to its middle.)
+    if (raw || !NEAR_PADS.length) return level;
+    let h = level;
+    for (const k of NEAR_PADS) {
+      const s = SITES[k], d = Math.hypot(x - s.x, z - s.z);
+      if (d > s.pad + 30) continue;
+      const y = PADS[k] ?? (PADS[k] = rawHeight(s.x, s.z));
+      h += (y - h) * (1 - sstep(s.pad, s.pad + 30, d));
+    }
+    return h;
+  }
   const out = sstep(1150, 1700, r);
   const w = countryWeights(x, z);
   let hills = 0, wet = 0, dry = 0;
