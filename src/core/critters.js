@@ -46,6 +46,10 @@ export const LEASH = 52;              // further off than this it fades, and ano
 export const LIFE = [45, 90];         // seconds before it gets away
 export const SHY = 3.6;               // nearer you than this it turns away
 export const REACH = 16;              // nearer than this to you it can be caught (a click further off is a word: get nearer)
+// How far round one a click or a tap still catches it, in pixels of the screen (the owner: far ones are tiny, so be generous).
+// cursor/soft: the free mouse and Alt's; aim: the crosshair; tap/stick: a thumb, [ripe, not]. body: and at least its body this
+// many times over, near ones big on the screen (the crosshair's, aimBody).
+export const PICK_ROOM = { cursor: 64, soft: 64, aim: 34, tap: [104, 72], stick: [64, 44], body: 2.4, aimBody: 1.8 };
 export const LATE = 5;                // a ripe one's last seconds: its ring beats quicker, and it flashes
 export const AWAY = { hover: 1.3, hop: 1.4, dig: 0.9 }; // how long getting away takes
 export const ARRIVE = { hover: 1.7, hop: 1.3, dig: 0.9 }; // and coming: down out of the sky, fluttering in, digging up

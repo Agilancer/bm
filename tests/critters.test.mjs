@@ -3,7 +3,7 @@
 // at a time, caught by a click on them (not through a trunk or a hill), and worth what they're worth.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CRITTERS, CRITTER_COUNT, CritterField, NEAR, LEASH, IN_VIEW, RIPE_MAX, KILL_XP, UNRIPE, TIRED, TIRED_UNRIPE, PRISM_FIRST, openGround, obstaclesAround, meshHeight, lineClear } from '../src/core/critters.js';
+import { CRITTERS, CRITTER_COUNT, CritterField, NEAR, LEASH, IN_VIEW, RIPE_MAX, KILL_XP, UNRIPE, TIRED, TIRED_UNRIPE, PRISM_FIRST, openGround, obstaclesAround, meshHeight, lineClear, PICK_ROOM } from '../src/core/critters.js';
 import * as CM from '../src/core/critter-models.js';
 import { townDist } from '../src/core/town.js';
 import { SEALS } from '../src/core/sites.js';
@@ -147,6 +147,19 @@ test('three are ripe at a time, and a Prismatic Wisp is ripe from its coming, th
   }
   assert.ok(most <= RIPE_MAX, `${most} ripe at once`);
   assert.ok(ripeSeen >= 2, 'they ripen');
+});
+
+test('a far one, tiny on the screen, is still easy to click or tap', () => {
+  const f = new CritterField({ rng: seeded(17) });
+  for (let i = 0; i < 40; i++) f.step(1 / 60, HERE);
+  // (Far off: a metre is 6 pixels, so its body is a pixel or two.)
+  const toScreen = (x, y, z) => [(x - HERE.x) * 6 + 640, (z - HERE.z) * 6 + 360, 6];
+  const c = f.list[3], [sx, sy] = toScreen(c.x, c.y, c.z);
+  const only = (q) => q === c;
+  assert.equal(f.pick(toScreen, sx + 50, sy, PICK_ROOM.cursor, only, PICK_ROOM.body), c, 'a mouse 50 px off');
+  assert.equal(f.pick(toScreen, sx + 60, sy + 30, (q) => (q.ripe ? PICK_ROOM.tap[0] : PICK_ROOM.tap[1]), only, PICK_ROOM.body), c, 'a thumb 67 px off');
+  assert.equal(f.pick(toScreen, sx + 28, sy, PICK_ROOM.aim, only, PICK_ROOM.aimBody), c, 'the crosshair 28 px off');
+  assert.ok(PICK_ROOM.cursor >= 60 && PICK_ROOM.tap[1] >= 70 && PICK_ROOM.tap[0] >= 100);
 });
 
 test('a click picks the one under it; a caught one goes, and another comes for it', () => {
