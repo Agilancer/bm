@@ -1269,7 +1269,7 @@ async function boot(plan, poolSize) {
   // Auto-play, the Auto button under the skull or P: the game plays itself (src/ui/autoplay.js, src/ui/autobrain.js).
   game.autoplay = new AutoPlay({
     base: BASE, opening: OPENING_ENABLED, game, shared, input, hud, audio, pack, inventory, townUI, lands, renderer, town,
-    spellbar: () => game.spellbar, paused: () => state.paused, pause: (on) => input.onPauseChange(on), foeNames: FOE_NAMES, settings,
+    spellbar: () => game.spellbar, paused: () => state.paused, pause: (on) => input.onPauseChange(on), foeNames: FOE_NAMES, settings, saveSettings,
   });
   // (For tests: bm.autoplay.begin('quests') starts it, as its menu does: tools/firstvisit/play.mjs.)
   if (window.bm) window.bm.autoplay = game.autoplay;
