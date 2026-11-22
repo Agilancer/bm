@@ -5,12 +5,17 @@
 // has more bodies within 235 m than the twelve slots can stand up (tests/quests-beyond.test.mjs); Velscour's forts and
 // towers stand only in the Ashen Waste, half a kilometre from any seal and 1.5 km from Tessariel's places.
 import fs from 'node:fs';
-import { terrainHeight } from '../../src/core/terrain.js';
-import { SITES, ROUTES, WATERS, CLIFF, MOUNT, countryAt } from '../../src/core/lands.js';
-import { LAIRS } from '../../src/core/tripo-monsters.js';
-import { TUMBLER_CAMPS } from '../../src/sim/tumblers.js';
-import { CAMPS } from '../../src/sim/slimes.js';
-import { COUNTRY_FACTIONS, COUNTRY_TEARS, FACTIONS, atWar, outpostLair } from '../../src/core/wilds.js';
+
+// (The land's own roads only, not the ways tools/roads/lay.mjs laid last time: those are laid to what's placed here, after.
+// Run with them in, a third of the outposts' spots were "on a road" that was only the footpath to the outpost before.)
+globalThis.__bmNoWays = true;
+const { terrainHeight } = await import('../../src/core/terrain.js');
+const { SITES, ROUTES, WATERS, CLIFF, MOUNT, countryAt } = await import('../../src/core/lands.js');
+const { LAIRS } = await import('../../src/core/tripo-monsters.js');
+const { TUMBLER_CAMPS } = await import('../../src/sim/tumblers.js');
+const { CAMPS } = await import('../../src/sim/slimes.js');
+const { COUNTRY_FACTIONS, COUNTRY_TEARS, FACTIONS, atWar, outpostLair } = await import('../../src/core/wilds.js');
+const { DENS } = await import('../../src/core/camps-data.js');
 
 let seed = 0x5eed1e55;
 const rnd = () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
@@ -111,6 +116,42 @@ for (const r of ROADS) for (let i = 0; i + 1 < r.pts.length; i++) {
   }
 }
 
+// ---- the dens pinned for the camps' quests (src/core/camps-data.js DENS), before the tears, the other outposts and the finds: each on the nearest
+// sound ground to where it's wanted, named as it's given, with a trail from its camp where that's nearer than a road.
+const OUTPOSTS = [], uses = {}, names = {};
+const sizeOf = (f) => (f.kind === 'fort' ? 11 : f.kind === 'graveyard' || f.kind === 'camp' ? 8 : 7);
+const lost = [];
+for (const d of DENS) {
+  const f = FACTIONS[d.faction], r = sizeOf(f), count = outpostLair({ faction: d.faction, key: '', x: 0, z: 0, r }).n + 1;
+  const country = countryAt(d.x, d.z);
+  const o = { off: 46, count, v: f.v, gap: 110, site: 60, steep: country === 'rimeholt' ? 0.42 : 0.32 };
+  let at = null, why = '';
+  for (let q = 0; q <= 240 && !at; q += 6) for (let a = 0; a < (q ? 12 : 1); a++) {
+    const t = a / 12 * 6.2832, x = round(d.x + Math.sin(t) * q), z = round(d.z + Math.cos(t) * q), b = bad(x, z, r + 8, o);
+    if (!b) { at = [x, z]; break; }
+    why ||= b;
+  }
+  if (!at) { lost.push(`${d.key} (${why})`); continue; }
+  const [x, z] = at, camp = SITES[d.camp];
+  // (From its camp's edge, when the camp's nearer than any road.)
+  let trail = null;
+  if (camp && Math.hypot(camp.x - x, camp.z - z) < roadNear(x, z).d * 1.6) {
+    const a = Math.atan2(x - camp.x, z - camp.z), fx = camp.x + Math.sin(a) * (camp.r + 4), fz = camp.z + Math.cos(a) * (camp.r + 4), L = Math.hypot(x - fx, z - fz), ux = (x - fx) / L, uz = (z - fz) / L;
+    const n = Math.max(1, Math.round(L / 110)), pts = [[round(fx), round(fz)]];
+    for (let i = 1; i <= n; i++) { const t = i / (n + 1), w = (rnd() - 0.5) * Math.min(40, L * 0.18); pts.push([round(fx + (x - fx) * t - uz * w), round(fz + (z - fz) * t + ux * w)]); }
+    pts.push([round(x - ux * (r + 13)), round(z - uz * (r + 13))]);
+    const wet = pts.some(([px, pz]) => WATERS.some((wt) => Math.hypot(px - wt.x, pz - wt.z) < wt.r + 10)) || pts.slice(1).some(([px, pz]) => OLD.some((p) => Math.hypot(px - p.x, pz - p.z) < p.r + 12));
+    if (!wet) trail = pts;
+  }
+  trail ||= trailTo(x, z, r, OUTPOSTS);
+  if (trail) trails.push(trail);
+  const to = trail ? trail[trail.length - 2] : [camp?.x ?? 0, camp?.z ?? 0];
+  uses[country + d.faction] = (uses[country + d.faction] || 0) + 1;
+  OUTPOSTS.push({ key: d.key, faction: d.faction, name: d.name, x, z, r, yaw: +Math.atan2(to[0] - x, to[1] - z).toFixed(2), trail, pin: d.camp });
+  placed.push({ x, z, r, count }); taken.push([x, z, r + 8]);
+}
+if (lost.length) { console.error(`No sound ground for ${lost.length} pinned den${lost.length > 1 ? 's' : ''}: ${lost.join(', ')}. Move them in src/core/camps-data.js DENS.`); process.exit(1); }
+
 // ---- where tears can open: all over, a few hundred metres apart, each of one of its country's two kinds.
 const TEAR_SPOTS = [];
 for (let cx = -EDGE; cx <= EDGE; cx += 560) for (let cz = -EDGE; cz <= EDGE; cz += 560) for (let tries = 0; tries < 6; tries++) {
@@ -124,7 +165,6 @@ for (let cx = -EDGE; cx <= EDGE; cx += 560) for (let cz = -EDGE; cz <= EDGE; cz 
 const cells = [];
 for (let x = -EDGE; x <= EDGE; x += 470) for (let z = -EDGE; z <= EDGE; z += 470) cells.push([x, z, rnd()]);
 cells.sort((a, b) => a[2] - b[2]);
-const OUTPOSTS = [], uses = {}, names = {};
 for (const [cx, cz] of cells) {
   for (let tries = 0; tries < 9; tries++) {
     const x = round(cx + (rnd() - 0.5) * 400), z = round(cz + (rnd() - 0.5) * 400);
@@ -132,9 +172,11 @@ for (const [cx, cz] of cells) {
     // (The first of a country's list the most often; each country's least used first, so they all get stood somewhere.)
     const want = (k) => ((uses[country + k] || 0) + 1) * (1 + list.indexOf(k) * 0.22);
     const fk = [...new Set(list)].sort((a, b) => want(a) - want(b))[rnd() < 0.75 ? 0 : 1];
-    const f = FACTIONS[fk], r = f.kind === 'fort' ? 11 : f.kind === 'graveyard' || f.kind === 'camp' ? 8 : 7;
+    const f = FACTIONS[fk], r = sizeOf(f);
     const count = outpostLair({ faction: fk, key: '', x, z, r }).n + 1;
     if (bad(x, z, r + 8, { off: 46, count, v: f.v, gap: 150, site: 140, steep: country === 'rimeholt' ? 0.42 : f.kind === 'roost' || f.kind === 'den' ? 0.3 : 0.22 })) continue;
+    // (Not crowding a den pinned for a camp's quest: that one is what's there.)
+    if (OUTPOSTS.some((o) => o.pin && Math.hypot(o.x - x, o.z - z) < 330)) continue;
     uses[country + fk] = (uses[country + fk] || 0) + 1;
     const k = names[fk] = (names[fk] ?? -1) + 1;
     const trail = trailTo(x, z, r, OUTPOSTS);
@@ -171,7 +213,7 @@ export const FINDS = ${j(FINDS)};
 `;
 fs.writeFileSync(new URL('../../src/core/wilds-data.js', import.meta.url), out);
 const by = {}; for (const o of OUTPOSTS) by[o.faction] = (by[o.faction] || 0) + 1;
-console.log(`${OUTPOSTS.length} outposts (${OUTPOSTS.filter((o) => o.trail).length} with a trail), ${BATTLES.length} battles, ${TEAR_SPOTS.length} tear spots, ${FINDS.length} finds`);
+console.log(`${OUTPOSTS.length} outposts (${OUTPOSTS.filter((o) => o.pin).length} pinned for the camps, ${OUTPOSTS.filter((o) => o.trail).length} with a trail), ${BATTLES.length} battles, ${TEAR_SPOTS.length} tear spots, ${FINDS.length} finds`);
 console.log(Object.entries(by).map(([k, n]) => `${k} ${n}`).join(', '));
 const unused = Object.keys(FACTIONS).filter((k) => !by[k]);
 if (unused.length) console.log('NOT STOOD ANYWHERE:', unused.join(', '));

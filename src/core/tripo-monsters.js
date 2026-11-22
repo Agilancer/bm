@@ -289,9 +289,9 @@ export const LAIRS = [
   { key: 'frost_spiders', x: 38, z: 1109, r: 6, pick: SPIDERS, n: 3, pal: ['Base', 'Bone-white'] },
   { key: 'frost_wolf', x: 301, z: 1860, r: 3, boss: ['werewolf_brown'], n: 0, pal: ['Bone-white'] },
   { key: 'fenway_goblins', x: 70, z: -480, r: 5, pick: GOBLINS, n: 3, pal: ['Base'] },
-  { key: 'fenway_spiders', x: -78, z: -1109, r: 6, pick: SPIDERS, n: 2, pal: ['Blighted'] },
+  { key: 'fenway_spiders', x: -78, z: -1109, r: 6, pick: SPIDERS, n: 3, pal: ['Blighted'] },
   { key: 'vigil_kobolds', x: -550, z: -159, r: 5, pick: KOBOLDS, n: 3, pal: ['Base', 'Infernal'] },
-  { key: 'vigil_goats', x: -1169, z: -5, r: 5, pick: ['goatman_bw', 'goatman_black'], n: 2, pal: ['Base'] },
+  { key: 'vigil_goats', x: -1169, z: -5, r: 5, pick: ['goatman_bw', 'goatman_black'], n: 3, pal: ['Base'] },
   { key: 'vigil_children', x: -1713, z: -174, r: 6, pick: CHILDREN, n: 3, pal: ['Ashen'] },
   { key: 'track_children', x: -448, z: 1355, r: 6, pick: CHILDREN, n: 4, pal: ['Base', 'Ashen'] },
   // The Green Downs: raiders by the roads, the keepers at the Cairnfield, harpies under the cliff; and round Thornwick, goat men
@@ -320,7 +320,7 @@ export const LAIRS = [
   { key: 'rust_kobolds', x: 4064, z: -1179, r: 6, pick: KOBOLDS, n: 4, pal: ['Infernal', 'Abyssal'] },
   { key: 'rust_warband', x: 3302, z: -3516, r: 9, boss: ['goblin_red_armored_2'], pick: RED_GOBLINS, n: 6, pal: ['Base', 'Infernal', 'Bloodsoaked'], tricks: true },
   // The Deepwood and the Sorrowhorn's foot.
-  { key: 'pilgrim_dolls', x: -1083, z: -516, r: 5, pick: MANNEQUINS, n: 2, pal: ['Base'] },
+  { key: 'pilgrim_dolls', x: -1083, z: -516, r: 5, pick: MANNEQUINS, n: 3, pal: ['Base'] },
   { key: 'pilgrim_spiders', x: -1123, z: -856, r: 6, pick: SPIDERS, n: 3, pal: ['Base', 'Corrupted'] },
   { key: 'deep_spiders', x: -1877, z: -1343, r: 7, pick: SPIDERS.concat(POSSESSED), n: 4, pal: ['Base', 'Ashen'] },
   { key: 'deep_worm', x: -1751, z: -913, r: 4, boss: ['worm_1'], n: 0, pal: ['Blighted', 'Corrupted'], wake: 140 },

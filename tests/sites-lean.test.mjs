@@ -28,12 +28,15 @@ test('the land\'s corners are typed arrays of just their length, and can be let 
   // cold fires, src/core/roadside.js; a phone's, below, hasn't.)
   // (A PC's ceiling raised to 1.8 million, 2026-11-19, for the castle the owner asked for ("make this shit look amazing"):
   // its stairs walled, its spires' decks, his V on every battlement. A phone's, below, is where memory bites, and it's not.)
-  assert.ok(verts > 150000 && verts < 1800000,   // (a million and a half with Phobos blocked out: src/core/phobos-build.js. It wants a build of its own, like the delves', before it's detailed.)
+  // (And to 1.9 million, 2026-11-22, for the camps the quests are given at, src/core/camps.js: 85,000 more, tents and all.)
+  assert.ok(verts > 150000 && verts < 1900000,   // (a million and a half with Phobos blocked out: src/core/phobos-build.js. It wants a build of its own, like the delves', before it's detailed.)
     `${verts} corners: the land's, and none of the delves'`);
   const phone = buildSites(true, true);
   let pv = 0;
   for (const p of phone.parts.values()) { assert.ok(typed(p) && whole(p)); pv += p.pos.length / 3; }
-  assert.ok(pv > 150000 && pv < 950000, `${pv} corners on a phone`);   // (as above: Phobos's block-out is 350,000 of them even with flat-lidded houses, and a phone holds them all; and its sewers' eight stairs down)
+  // (975,000 since the camps, 2026-11-22: a phone has each camp's fire, one shelter, its cart and its landmark, 21,000
+  // corners among the twenty-nine of them and the dens pinned by them: about 0.7 MB.)
+  assert.ok(pv > 150000 && pv < 975000, `${pv} corners on a phone`);   // (as above: Phobos's block-out is 350,000 of them even with flat-lidded houses, and a phone holds them all; and its sewers' eight stairs down)
   assert.equal(phone.colliders.length, full.colliders.length, 'a phone is stopped by what a PC is');
   dropSiteGeometry();
   assert.equal(buildSites().parts.size, 0);

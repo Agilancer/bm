@@ -11,7 +11,7 @@ import { COUNTRIES, SITES, countryAt } from '../core/lands.js';
 import { PHOBOS_RULES } from '../folk/phobos-quests.js';
 import { OPENING } from '../core/opening.js';
 import { BOSSES, DELVES, PORTAL } from '../core/dungeon.js';
-import { RULES, placeSpot } from '../folk/quests.js';
+import { RULES, gatherSpots, outpostOf, placeSpot } from '../folk/quests.js';
 import { QUESTS } from '../folk/lines/quests.js';
 import { CROWD, PEOPLE, POSTED } from '../folk/people.js';
 import { BEYOND } from '../folk/lines/beyond.js';
@@ -68,6 +68,8 @@ export function areaSpot(k) {
   const rd = k.startsWith('room:') ? DELVES.find((q) => q.rooms.some((r) => r.id === k.slice(5))) : null;
   if (rd) { const n = rd.rooms.find((r) => r.id === k.slice(5)).name; return { x: rd.portal.x, z: rd.portal.z, name: `${n[0].toUpperCase()}${n.slice(1)}, in ${rd.name}` }; }
   if (k === 'waste') return { x: -4250, z: -200, r: 700, name: 'The Ashen Waste, along the Vigil Road' };
+  // One of the land's outposts ('outpost:<key>', src/core/wilds-data.js): by its own name.
+  if (k.startsWith('outpost:')) { const o = outpostOf(k.slice(8)); return o ? { x: o.x, z: o.z, r: o.r + 12, name: o.name.replace(/^(an?|the) /, (m) => m[0].toUpperCase() + m.slice(1)) } : null; }
   // A lair (src/core/tripo-monsters.js LAIRS): its glade, named by the nearest place.
   const at = placeSpot(k);
   if (!at) return null;
@@ -106,7 +108,13 @@ export function placeOf(id, ctx) {
     return left.length ? { spots: left.map((p) => personSpot(p, person)), where: left.map(nameOf).join(', ') } : null;
   }
   // Something to bring: from the catacombs, then to the giver once you've all of it.
-  if (st.bring) return (mats[st.bring] || 0) >= (st.n || 1) ? giver() : one(areaSpot('catacombs'));
+  if (st.bring) return (mats[st.bring] || 0) >= (st.n || 1) ? giver() : one(areaSpot(st.at || 'catacombs'));
+  if (st.clear) return one(areaSpot(`outpost:${st.clear}`));
+  // Things to gather: each still lying there, under the place's name.
+  if (st.gather) {
+    const got = s.got || [], at = areaSpot(st.gather), left = gatherSpots(id, st).map(([x, z], i) => ({ x, z, name: at?.name || 'Out in the wilds', i })).filter((m) => !got.includes(m.i));
+    return left.length ? { spots: left, where: at?.name || 'Out in the wilds' } : null;
+  }
   if (st.warden) return one(areaSpot('bellcrypt'));
   if (st.boss) return one(bossSpot(st.boss));
   // (The way down to the dead, the first time: the Sexton's Door, which Silas's key opens.)
@@ -186,7 +194,7 @@ export function objectivesOf(id, Q, mats = {}, day = 0) {
   if (s.stage === 'making') { cur.ready = day >= s.ready; return out; }
   const st = RULES[id].steps[s.step];
   if (!st) return out;
-  if (st.kill) { cur.have = s.n || 0; cur.need = st.n; }
+  if (st.kill || st.gather) { cur.have = s.n || 0; cur.need = st.n; }
   else if (st.visit || st.start) { cur.have = (s.seen || []).length; cur.need = (st.visit || st.start).length; }
   else if (st.bring) { cur.need = st.n || 1; cur.have = Math.min(mats[st.bring] || 0, cur.need); cur.ready = cur.have >= cur.need; }
   else if (st.back) cur.ready = true;
@@ -231,6 +239,8 @@ export function tallyOf(id, Q) {
     if (st.kill === 'woods') return 'Dead in the woods';
     return 'Foes slain';
   }
+  if (st?.gather) return st.what ? `${st.what.charAt(0).toUpperCase()}${st.what.slice(1)}` : 'Gathered';
+  if (st?.clear) return 'Cleared';
   if (st?.visit) return 'Places seen';
   if (st?.start) return 'People seen';
   return '';

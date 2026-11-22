@@ -1,6 +1,6 @@
 // The quests of the land beyond Bellmourn: the roads out to the small towns, what besets each of them, and the party
 // dungeons (the Hollowfang Warrens, Blackvigil Keep, the Howling Deeps, and the four made after them: the Drowned Vaults,
-// the Sporehold, the Hollow Playhouse, the Kingsbarrow) and the cathedral's catacombs. Their workings only:
+// the Sporehold, the Hollow Playhouse, the Kingsbarrow). Their workings only:
 // every word of them is in src/folk/lines/land.js, and how a step is finished is src/folk/quests.js (which spreads these
 // into RULES). Givers: Bellmourn's own (the ones Lisandra sends you round), the people posted in the small towns
 // (src/folk/people.js POSTED), and the two at the Bell Tower (src/folk/lines/beyond.js BEYOND).
@@ -8,6 +8,8 @@
 // Pay grows with how far it is and how hard: a walk and a word about what a town errand paid; a lair cleared a little more;
 // a dungeon's boss a good deal more, with something rare; a long chain's end a charm (src/ui/lands.js CHARMS).
 // tests/quests-beyond.test.mjs walks every one of them through.
+import { REGION_RULES, REGION_LEVELS } from './regions/index.js';
+
 const KNIGHTS = ["Velscour's Knights"];
 
 export const LAND_RULES = {
@@ -26,14 +28,6 @@ export const LAND_RULES = {
   sunken_mile: { needs: 'sallowmere', steps: [{ enter: 'causeway' }, { kill: 'lair:mile_drowned', n: 5 }, { back: true, say: 'The Sunken Mile can be walked.' }], gold: 120, xp: 800 },
   moor_wayhouse: { needs: 'barrow_lights', steps: [{ enter: 'wayhouse' }, { kill: 'lair:wayhouse_dead', n: 4 }, { back: true, say: "The wayhouse is empty. It's a better empty." }], gold: 150, xp: 900 },
   ossery_quarry: { steps: [{ enter: 'quarry' }, { kill: 'lair:quarry_kobolds', n: 5, foe: ['Kobolds'] }, { back: true, say: "The quarry's empty. I read the marks." }], gold: 150, xp: 1000 },
-  // ---- the cathedral's catacombs ----
-  deeper_dead: { needs: 'bones_for_carver', steps: [{ kill: 'catacombs', n: 20 }, { back: true, say: 'Twenty more are at rest.' }], gold: 120, xp: 500 },
-  waxed_thread: { needs: 'shroud_and_thread', steps: [{ bring: 'wax', n: 6 }], gold: 100, xp: 300 },
-  // ---- the Hollowfang Warrens ----
-  warrens_mouth: { needs: 'pines', steps: [{ enter: 'warrens' }, { back: true, say: "I've been down the hole on the hill." }], gold: 80, xp: 500 },
-  barley_thieves: { steps: [{ kill: 'warrens', n: 12, foe: ['Goblins', 'Kobolds'] }, { back: true, say: 'Twelve of your thieves are done thieving.' }], gold: 150, xp: 900 },
-  tunnel_king: { needs: 'warrens_mouth', steps: [{ boss: 'grubnash' }, { back: true, say: 'The big kobold is dead.' }], gold: 180, xp: 1200, item: 'staff' },
-  mother_of_the_warren: { needs: 'tunnel_king', steps: [{ boss: 'twins' }, { boss: 'venomaw' }, { back: true, say: 'The thing at the bottom of the Warrens is dead.' }], gold: 400, xp: 2500, item: 'skull' },
   // ---- Thornwick ----
   hedge_breakers: { steps: [{ kill: 'lair:thorn_goats', n: 3, foe: ['Goat Men'] }, { back: true, say: "Three goat men won't be through your hedge again." }], gold: 120, xp: 800 },
   black_ram: { needs: 'hedge_breakers', steps: [{ kill: 'lair:thorn_ram', n: 3, foe: ['Goat Men'] }, { back: true, say: 'The Black Ram is dead, and his two with him.' }], charm: 'goatfoot', charmName: 'the Goatfoot', xp: 1100 },
@@ -78,3 +72,6 @@ export const LAND_RULES = {
   storm_over_the_horn: { needs: 'the_castellan', steps: [{ enter: 'elder' }, { boss: 'thyrraxis' }, { back: true, say: 'There is a storm god on an island over nothing. It is dead.' }], gold: 2400, xp: 42000, item: 'staff', rarity: 4 },
   the_hollow_star: { needs: 'storm_over_the_horn', steps: [{ boss: 'kaldurra' }, { boss: 'morvekh' }, { boss: 'nihvaroth' }, { back: true, say: 'The Hollow Star went into its own Maw. The lights on the Horn are out.' }], gold: 5200, xp: 96000, item: 'skull', rarity: 4 },
 };
+// And the land's quests made region by region since (src/folk/regions/, docs/QUEST-LOOP.md), and the level each wants.
+Object.assign(LAND_RULES, REGION_RULES);
+export const LAND_LEVELS = REGION_LEVELS;
