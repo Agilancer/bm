@@ -2357,7 +2357,7 @@ export class Brain {
     // so the camp's whole round is in hand before it sets out. It used to take only what the one it was sent to had, and
     // came back for the other's when everything else in the land was done.)
     if (questing && !visiting && !m.town) { const by = this.offerJob(m, null, 120); if (by) return by; }
-    let near1 = null, nd1 = Infinity, low1 = null, lowLvl = 0;
+    let near1 = null, nd1 = Infinity, low1 = null, lowLvl = 0, lowD = Infinity;
     for (const [id, lvl] of PLAN_ALL) {
       const s = Q.state(id), st = Q.step(id);
       if (!s || s.stage === 'done' || this.skipping(`q:${id}`)) continue;
@@ -2367,8 +2367,8 @@ export class Brain {
       if (!job) continue;
       const d = this.jobDist(job, m);
       if (d < nd1) { nd1 = d; near1 = job; }
-      // (The first of them in the plan's order, the lowest level's: for when none is near.)
-      if (!low1) { low1 = job; lowLvl = lvl; }
+      // (The first of them in the plan's order, the lowest level's, and the nearest of that level: for when none is near.)
+      if (!low1 || (lvl === lowLvl && d < lowD)) { low1 = job; lowLvl = lvl; lowD = d; }
     }
     // (A hand-in close by waits while another quest's work is as close: a camp's work is done in one round, the lair, the
     // den past it and the things lying round the den, and then all of it told. Each used to be its own walk out and back.)
@@ -2385,8 +2385,9 @@ export class Brain {
         const job = this.questJob(id, m, lvl);
         if (!job || job === near1 || job.quest === near1.quest) continue;
         if (this.jobDist(job, m) < 500) return job;
-        // (And far work of a lower level than the far word: the next camp of the ring before the errand on from this one.)
-        if (!work && lvl < lowLvl && (job.kind === 'hunt' || job.kind === 'go')) work = job;
+        // (And far work it's of a level for, the lowest first, before a far word: the rest of the ring round Bellmourn
+        // before the errand on from any one camp of it. A word that leads on is for when the work in hand is done.)
+        if (!work && (job.kind === 'hunt' || job.kind === 'go')) work = job;
       }
       return work || near1;
     }
