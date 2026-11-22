@@ -21,7 +21,7 @@
 import { H, INPUT } from '../core/layout.js';
 import { delveOf } from '../core/dungeon.js';
 import { RULES } from '../folk/quests.js';
-import { Brain, DUNGEONS, GRINDS, MODES, finishedDungeons } from './autobrain.js';
+import { Brain, DUNGEONS, FOCI, GRINDS, MODES, finishedDungeons } from './autobrain.js';
 import { AutoLog } from './autolog.js';
 import { AutoShow } from './autoshow.js';
 import { AutoCam } from './autocam.js';
@@ -29,6 +29,8 @@ import { AutoCam } from './autocam.js';
 const BTN = 'assets/ui/btn_auto.webp';
 const MENU_WAIT = 12;   // seconds the menu waits for a choice before it keeps the last one
 const BARE_AFTER = 4;   // seconds left be before the interface is put away, with Settings' Interface in auto-play: Hidden until you tap
+// Each school's colour on the menu's Build focus (Best: gold).
+const FOCUS_COLOR = { best: '#ffd27a', fire: '#ff7a3a', ice: '#8fd8ff', earth: '#d6a460', arcane: '#c48bff', lightning: '#a9a4ff' };
 
 const CSS = `
 #autoBtn { position: fixed; top: 268px; right: 22px; width: 52px; height: 56px; z-index: 45; border: 0; background: none; cursor: pointer; padding: 0; display: none; }
@@ -56,25 +58,50 @@ body.playing #autoStatus.shown { display: block; }
 #autoLog .foot button { font: inherit; color: #d8e8ee; background: #142028; border: 1px solid #2a4a5a; padding: 7px 12px; cursor: pointer; }
 #autoLog .foot button:hover { border-color: #8fe0ff; }
 #autoStatus.live { pointer-events: auto; cursor: pointer; }
-#autoMenu { position: fixed; z-index: 47; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(560px, 94vw); max-height: 88vh; overflow: auto; display: none;
-  background: rgba(8, 12, 16, .96); border: 1px solid #2a6a8a; box-shadow: 0 10px 40px #000c, 0 0 18px rgba(42,176,255,.18); color: #e2eef4; font: 14px Georgia, serif; padding: 18px 20px; box-sizing: border-box; }
+#autoMenu { position: fixed; z-index: 47; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(820px, 96vw); max-height: 90vh; overflow: auto; display: none;
+  background: linear-gradient(180deg, rgba(10,18,24,.97), rgba(6,10,14,.97)); border: 1px solid #2a6a8a; box-shadow: 0 10px 40px #000c, 0 0 18px rgba(42,176,255,.18);
+  color: #e2eef4; font: 14px Georgia, serif; padding: 0; box-sizing: border-box; }
 #autoMenu.on { display: block; }
-#autoMenu h2 { margin: 0 0 4px; font: 700 20px Cinzel, Georgia, serif; color: #8fe0ff; letter-spacing: .05em; }
+#autoMenu .top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 14px 20px 10px; border-bottom: 1px solid #1d3a48; }
+#autoMenu h2 { margin: 0; font: 700 21px Cinzel, Georgia, serif; color: #8fe0ff; letter-spacing: .06em; }
+#autoMenu .now { font-size: 12px; color: #93acb8; text-align: right; }
+#autoMenu .now b { color: #8fe0ff; font-weight: 400; }
 #autoMenu p { margin: 0 0 12px; color: #a8c0cc; }
-#autoMenu .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-#autoMenu .card { font: inherit; color: inherit; text-align: left; background: #0e1a22; border: 1px solid #23485a; padding: 10px; cursor: pointer; border-radius: 3px; }
-#autoMenu .card b { display: block; color: #e8f6fc; margin-bottom: 3px; }
-#autoMenu .card span { display: block; font-size: 12px; color: #93acb8; }
+#autoMenu .cols { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); }
+#autoMenu .col { padding: 14px 20px 16px; min-width: 0; }
+#autoMenu .col + .col { border-left: 1px solid #1d3a48; background: rgba(14,28,36,.35); }
+#autoMenu h3 { margin: 0 0 9px; font: 700 11px Cinzel, Georgia, serif; color: #8fb8c8; letter-spacing: .14em; text-transform: uppercase; }
+#autoMenu h3:not(:first-child) { margin-top: 16px; }
+#autoMenu .cards { display: grid; grid-template-columns: 1fr; gap: 7px; }
+#autoMenu .card { position: relative; font: inherit; color: inherit; text-align: left; background: #0e1a22; border: 1px solid #23485a; padding: 9px 12px 9px 34px; cursor: pointer; border-radius: 4px; transition: border-color .12s, background .12s; }
+#autoMenu .card::before { content: ''; position: absolute; left: 12px; top: 13px; width: 10px; height: 10px; border: 1px solid #4a7a8e; border-radius: 50%; box-sizing: border-box; }
+#autoMenu .card.sel::before { background: #8fe0ff; border-color: #8fe0ff; box-shadow: 0 0 6px #4fd0ff; }
+#autoMenu .card b { display: block; color: #e8f6fc; margin-bottom: 2px; }
+#autoMenu .card span { display: block; font-size: 12px; color: #93acb8; line-height: 1.35; }
 #autoMenu .card:hover { border-color: #4fd0ff; background: #12242e; }
-#autoMenu .card.sel { border-color: #8fe0ff; box-shadow: inset 0 0 12px rgba(79,208,255,.25); }
+#autoMenu .card.sel { border-color: #8fe0ff; background: #10232d; box-shadow: inset 0 0 14px rgba(79,208,255,.18); }
 #autoMenu .card:disabled { opacity: .45; cursor: default; border-color: #23485a; background: #0e1a22; }
-#autoMenu p.sub { margin: 12px 0 8px; }
-#autoMenu .cards.two { grid-template-columns: 1fr 1fr; }
-#autoMenu .card i { display: block; margin-top: 5px; font-size: 11px; color: #8fe0ff; font-style: normal; }
-#autoMenu .foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 12px; }
+#autoMenu .card i { display: block; margin-top: 4px; font-size: 11px; color: #8fe0ff; font-style: normal; }
+#autoMenu .seg { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid #23485a; border-radius: 4px; overflow: hidden; }
+#autoMenu .seg button { font: inherit; color: #b8ccd6; background: #0e1a22; border: 0; padding: 8px 6px; cursor: pointer; }
+#autoMenu .seg button + button { border-left: 1px solid #23485a; }
+#autoMenu .seg button:hover { background: #12242e; color: #e8f6fc; }
+#autoMenu .seg button.sel { background: #173444; color: #fff; box-shadow: inset 0 -2px 0 #8fe0ff; }
+#autoMenu .hint { margin: 6px 0 0; font-size: 12px; color: #8ea6b2; line-height: 1.4; min-height: 2.8em; }
+#autoMenu .foci { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+#autoMenu .foci button { --c: #8fe0ff; font: inherit; font-size: 13px; color: #d8e6ec; background: #0e1a22; border: 1px solid #23485a; border-left: 3px solid var(--c); border-radius: 4px; padding: 7px 8px; cursor: pointer; text-align: left; }
+#autoMenu .foci button:hover { background: #12242e; border-color: var(--c); }
+#autoMenu .foci button.sel { background: color-mix(in srgb, var(--c) 18%, #0e1a22); border-color: var(--c); color: #fff; box-shadow: 0 0 8px color-mix(in srgb, var(--c) 35%, transparent); }
+#autoMenu .foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 20px 14px; border-top: 1px solid #1d3a48; }
+#autoMenu .foot > span:last-child { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
 #autoMenu .wait { font-size: 12px; color: #7f9aa6; }
 #autoMenu .foot button { font: inherit; color: #d8e8ee; background: #142028; border: 1px solid #2a4a5a; padding: 7px 12px; cursor: pointer; }
 #autoMenu .foot button:hover { border-color: #8fe0ff; }
+#autoMenu .foot button.go { color: #04131b; background: #8fe0ff; border-color: #8fe0ff; font-weight: 700; padding: 7px 18px; }
+#autoMenu .foot button.go:hover { background: #bff0ff; }
+#autoMenu .solo { padding: 14px 20px 14px; }
+#autoMenu .cards.grind { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 680px) { #autoMenu .cols { grid-template-columns: 1fr; } #autoMenu .col + .col { border-left: 0; border-top: 1px solid #1d3a48; } #autoMenu .foci { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 `;
 
 const lower = (s) => s[0].toLowerCase() + s.slice(1);
@@ -313,31 +340,83 @@ export class AutoPlay {
     if (was && !this.on && !this.o.paused()) this.o.input.lock();
   }
 
+  // The menu: what he does (MODES) on the left, how he fights on the right: his temper, his combat style (Settings' Auto
+  // combat style: Cinematic or Full Auto) and the school he builds in (Settings' Build focus: FOCI). The right-hand choices
+  // take hold at once, and are kept; a mode is picked, then begun with the button (or a double click on it).
   askMode() {
     this.wake();
     this.hold();
     const { townUI, game } = this.o;
+    const st = this.o.settings || {};
     // (Down a dungeon now: that one's run first, from where he is, found portal or not: src/ui/autobrain.js dungeonJob.)
     const snap = game.currentSnap?.(), here = snap ? delveOf(snap[H.PX], snap[H.PZ]) : null;
     const done = finishedDungeons(townUI, game, here?.key);
     const rest = done.filter((d) => d.key !== here?.key);
     const runs = here ? `Through ${lower(here.name)} first, from where he stands${rest.length ? `; then round the rest: ${rest.map((d) => lower(d.name)).join(', ')}` : ''}.`
       : done.length ? `In this order, round and round: ${done.map((d) => lower(d.name)).join(', ')}.` : `No dungeon portal found yet: ${DUNGEONS.length} of them lie out in the land, and each counts once you've come upon its portal.`;
+    this.pick = MODES[this.mode] && !(this.mode === 'dungeons' && !done.length) ? this.mode : 'quests';
     const cards = Object.entries(MODES).map(([k, v]) => {
       const off = k === 'dungeons' && !done.length;
-      return `<button type="button" class="card${k === this.mode ? ' sel' : ''}" data-m="${k}"${off ? ' disabled' : ''}><b>${v.name}</b><span>${v.line}</span>${k === 'dungeons' ? `<i>${runs}</i>` : ''}</button>`;
+      return `<button type="button" class="card${k === this.pick ? ' sel' : ''}" data-m="${k}"${off ? ' disabled' : ''}><b>${v.name}</b><span>${v.line}</span>${k === 'dungeons' ? `<i>${runs}</i>` : ''}</button>`;
     }).join('');
-    const temper = [['', 'Careful', 'Runs from what he can\'t yet beat, falls back when he\'s hurt, and comes back two levels stronger.'], ['1', 'Bold', 'Takes fights two levels early and stays in to finish a kill. More close calls, and more falls.']]
-      .map(([k, name, line]) => `<button type="button" class="card${(k === '1') === this.bold ? ' sel' : ''}" data-t="${k}"><b>${name}</b><span>${line}</span></button>`).join('');
-    this.menu.innerHTML = `<h2>Auto-play</h2><p>What should he do?</p><div class="cards">${cards}</div>
-      <p class="sub">And how?</p><div class="cards two">${temper}</div>
-      <div class="foot"><span class="wait"></span><span>${this.on ? '<button type="button" data-a="recap">Recap</button> <button type="button" data-a="log">Balance log</button> <button type="button" data-a="stop">Stop auto-play</button> <button type="button" data-a="keep">Carry on</button>' : '<button type="button" data-a="cancel">Cancel</button>'}</span></div>`;
-    for (const b of this.menu.querySelectorAll('[data-m]')) b.onclick = () => { if (!b.disabled) this.pickMode(b.dataset.m); };
-    for (const b of this.menu.querySelectorAll('[data-t]')) b.onclick = () => { this.setBold(b.dataset.t === '1'); for (const q of this.menu.querySelectorAll('[data-t]')) q.classList.toggle('sel', q === b); };
+    const seg = (attr, opts, now) => `<div class="seg">${opts.map(([k, name]) => `<button type="button" data-${attr}="${k}"${k === now ? ' class="sel"' : ''}>${name}</button>`).join('')}</div>`;
+    const focus = FOCI.some(([k]) => k === st.autoFocus) ? st.autoFocus : 'best';
+    const foci = FOCI.map(([k, name]) => `<button type="button" data-f="${k}" style="--c:${FOCUS_COLOR[k]}"${k === focus ? ' class="sel"' : ''}>${name}</button>`).join('');
+    const now = this.on ? `<span class="now">Now: <b>${MODES[this.mode]?.name || ''}</b></span>` : '<span class="now">He plays on his own. P turns it on and off.</span>';
+    const foot = this.on
+      ? '<button type="button" data-a="recap">Recap</button><button type="button" data-a="log">Balance log</button><button type="button" data-a="stop">Stop auto-play</button><button type="button" class="go" data-a="go">Carry on</button>'
+      : '<button type="button" data-a="cancel">Cancel</button><button type="button" class="go" data-a="go">Begin</button>';
+    this.menu.innerHTML = `<div class="top"><h2>Auto-play</h2>${now}</div>
+      <div class="cols">
+        <div class="col"><h3>What he does</h3><div class="cards">${cards}</div></div>
+        <div class="col">
+          <h3>Temper</h3>${seg('t', [['careful', 'Careful'], ['bold', 'Bold']], this.bold ? 'bold' : 'careful')}<p class="hint" data-h="t"></p>
+          <h3>Combat style</h3>${seg('s', [['cinematic', 'Cinematic'], ['full', 'Full Auto']], st.autoStyle === 'full' ? 'full' : 'cinematic')}<p class="hint" data-h="s"></p>
+          <h3>Build focus</h3><div class="foci">${foci}</div><p class="hint" data-h="f"></p>
+        </div>
+      </div>
+      <div class="foot"><span class="wait"></span><span>${foot}</span></div>`;
+    const M = this.menu, all = (q) => M.querySelectorAll(q);
+    const goLabel = () => { const g = M.querySelector('[data-a="go"]'); if (g && this.on) g.textContent = this.pick === this.mode ? 'Carry on' : `Switch to ${MODES[this.pick].name}`; };
+    for (const b of all('[data-m]')) {
+      b.onclick = () => { if (b.disabled) return; this.pick = b.dataset.m; for (const q of all('[data-m]')) q.classList.toggle('sel', q === b); goLabel(); };
+      b.ondblclick = () => { if (!b.disabled) this.pickMode(b.dataset.m); };
+    }
+    for (const b of all('[data-t]')) b.onclick = () => { this.setBold(b.dataset.t === 'bold'); this.menuHints(); };
+    for (const b of all('[data-s]')) b.onclick = () => this.setSetting('autoStyle', b.dataset.s);
+    for (const b of all('[data-f]')) b.onclick = () => this.setSetting('autoFocus', b.dataset.f);
     this.wire();
-    this.menu.classList.add('on');
+    M.querySelector('[data-a="go"]').onclick = () => (this.on && this.pick === this.mode ? this.closeMenu() : this.pickMode(this.pick));
+    goLabel();
+    this.menuHints();
+    M.classList.add('on');
     this.menuT = 0;
     this.o.audio.play?.('uiOpen', null, 0, 0, 0.4, 1, false);
+  }
+
+  // A choice of how he fights, taken now and kept with the rest of Settings.
+  setSetting(k, v) {
+    const st = this.o.settings;
+    if (!st || st[k] === v) return;
+    st[k] = v;
+    this.o.saveSettings?.();
+    this.menuHints();
+  }
+
+  // The right-hand column's marks and the line under each: what the choice means, and what a change of build will cost.
+  menuHints() {
+    const M = this.menu, st = this.o.settings || {};
+    const style = st.autoStyle === 'full' ? 'full' : 'cinematic', focus = FOCI.some(([k]) => k === st.autoFocus) ? st.autoFocus : 'best';
+    for (const b of M.querySelectorAll('[data-t]')) b.classList.toggle('sel', (b.dataset.t === 'bold') === this.bold);
+    for (const b of M.querySelectorAll('[data-s]')) b.classList.toggle('sel', b.dataset.s === style);
+    for (const b of M.querySelectorAll('[data-f]')) b.classList.toggle('sel', b.dataset.f === focus);
+    const say = (k, t) => { const e = M.querySelector(`[data-h="${k}"]`); if (e) e.textContent = t; };
+    say('t', this.bold ? 'Takes fights two levels early and stays in to finish a kill. More close calls, and more falls.' : 'Runs from what he can\'t yet beat, falls back when he\'s hurt, and comes back two levels stronger.');
+    say('s', style === 'full' ? 'Fights to win: only the spells that pay on his bar, his cooldowns as they come ready, fillers and the staff between.' : 'Fights to be watched: every spell he knows takes its turn, the big ones kept for the moment worth seeing.');
+    const S = this.o.spellbar?.()?.skills;
+    const fee = S && S.spent > 0 ? ` If his points are already spent elsewhere, he unlearns them once, for ${S.respecCost} gold.` : '';
+    const words = FOCI.find(([k]) => k === focus)[2];
+    say('f', focus === 'best' && style === 'cinematic' ? 'A little of every school, so every spell gets its turn.' : `${words}${focus === 'best' && !fee ? '' : fee}`);
   }
 
   // His temperament, kept for next time.
@@ -369,10 +448,10 @@ export class AutoPlay {
     this.wake();
     if (chosen) this.hold();
     const g = this.brain.grind;
-    const head = chosen ? `<h2>${MODES.grind.name}</h2><p>Where should he grind?</p>` : `<h2>Every quest is done</h2><p>Nothing's asked of him now but to get stronger. Where should he grind?</p>`;
+    const head = chosen ? `<div class="top"><h2>${MODES.grind.name}</h2></div><div class="solo"><p>Where should he grind?</p>` : `<div class="top"><h2>Every quest is done</h2></div><div class="solo"><p>Nothing's asked of him now but to get stronger. Where should he grind?</p>`;
     const foot = chosen ? `<button type="button" data-a="back">Back</button>${this.asking ? ' <button type="button" data-a="cancel">Cancel</button>' : ''}` : '<button type="button" data-a="log">Balance log</button> <button type="button" data-a="stop">Stop auto-play</button> <button type="button" data-a="keep">Keep grinding</button>';
     this.menu.innerHTML = `${head}
-      <div class="cards">${Object.entries(GRINDS).map(([k, v]) => `<button type="button" class="card${k === g ? ' sel' : ''}" data-g="${k}"><b>${v.name}</b><span>${v.line}</span></button>`).join('')}</div>
+      <div class="cards grind">${Object.entries(GRINDS).map(([k, v]) => `<button type="button" class="card${k === g ? ' sel' : ''}" data-g="${k}"><b>${v.name}</b><span>${v.line}</span></button>`).join('')}</div></div>
       <div class="foot"><span class="wait"></span><span>${foot}</span></div>`;
     for (const b of this.menu.querySelectorAll('[data-g]')) b.onclick = () => this.pickGrind(b.dataset.g, chosen);
     this.wire();

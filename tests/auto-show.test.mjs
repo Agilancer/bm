@@ -168,7 +168,7 @@ test('the view is only lent to auto-play: your own is as it was after, and V cho
 
 test('bold is a choice in the menu, kept, and makes the head dare more', () => {
   const auto = read('../src/ui/autoplay.js'), brain = read('../src/ui/autobrain.js');
-  assert.ok(auto.includes("localStorage.setItem('bm-auto-bold'") && auto.includes('data-t='));
+  assert.ok(auto.includes("localStorage.setItem('bm-auto-bold'") && auto.includes("seg('t', [['careful', 'Careful'], ['bold', 'Bold']]"));
   assert.ok(brain.includes('lvl: p.level + (this.bold ? BOLD_LEVELS : 0), own: p.level'));
   // (His own level, not the dared one, is what the log keeps and what the black knight is gone at by.)
   assert.ok(brain.includes('m.own >= BOSS_LEVEL') && brain.includes('this.o.log?.fell(m, m.own'));

@@ -52,7 +52,7 @@ const store = {
 
 const SETTINGS_KEY = 'velscour.settings';
 // keep: whether the game's files are kept on this device (coi-sw.js), asked once before the title ('ask' until then).
-export const settings = { volume: 0.8, music: 0.7, ambience: 0.8, look: 1, res: 'auto', gfx: 'auto', perf: 'off', tags: 'full', bubbles: 'on', chatlog: 'on', heroes: 'auto', keep: 'ask', autohide: 'off', autohideMap: 'on', autohideChat: 'on', autocam: 'director', autoread: 'on', autotell: 'on', phobosAwe: 'on', ticker: 1, background: 'run', bgSound: 'on', tracker: 'on' };
+export const settings = { volume: 0.8, music: 0.7, ambience: 0.8, look: 1, res: 'auto', gfx: 'auto', perf: 'off', tags: 'full', bubbles: 'on', chatlog: 'on', heroes: 'auto', keep: 'ask', autohide: 'off', autohideMap: 'on', autohideChat: 'on', autocam: 'director', autoStyle: 'cinematic', autoFocus: 'best', autoread: 'on', autotell: 'on', phobosAwe: 'on', ticker: 1, background: 'run', bgSound: 'on', tracker: 'on' };
 // What auto-play sees to by itself (src/ui/autobrain.js allow()): each 'on' or 'off'. Off, it's left for you to do. The list,
 // with the words for each, is src/ui/settings-spec.js AI_PARTS.
 export { AI_PARTS };

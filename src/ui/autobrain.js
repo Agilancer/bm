@@ -404,16 +404,113 @@ const BUILD = [
 ];
 // Whether the build can be bought as written: it's played through from level 1 to 50, and what's still unbought at the end
 // (a spell that's gone, a branch whose other was taken, a tier it never has the points for) is named.
-function buildGaps() {
+export function buildGaps(build = BUILD, name = 'its build') {
   const out = [], ranks = startRanks(), free = startFree();
-  for (const id of BUILD) if (!NODES[id]) out.push(`its build wants "${id}", which isn't a node in the six trees`);
-  const want = BUILD.filter((id) => NODES[id]);
+  for (const id of build) if (!NODES[id]) out.push(`${name} wants "${id}", which isn't a node in the six trees`);
+  const want = build.filter((id) => NODES[id]);
   let at = 0;
   for (let lvl = 1; lvl <= 50; lvl++) {
     while (at < want.length && pointsAt(lvl) - spent(ranks, free) > 0 && !blocked(ranks, free, lvl, want[at])) { ranks[want[at]] = (ranks[want[at]] || 0) + 1; at++; }
   }
-  if (at < want.length) out.push(`its build stops at "${want[at]}" (${blocked(ranks, free, 50, want[at]) || 'out of points'}), with ${want.length - at} left unbought`);
+  if (at < want.length) out.push(`${name} stops at "${want[at]}" (${blocked(ranks, free, 50, want[at]) || 'out of points'}), with ${want.length - at} left unbought`);
   return out;
+}
+
+// ---------------------------------------------------------------- Full Auto
+
+// Settings, Auto combat style (src/ui/settings-spec.js autoStyle). Cinematic is all of the above: a build that gives it a
+// little of everything, a bar that turns every spell it knows through its hands, and its biggest kept for the moment worth
+// watching. Full Auto fights to win: the build below, the bar of what pays (FULL_PICK), and the rotation of fullShoot().
+//
+// The build: Fire for its burst (Firebolt to rank 5 and Searing Core, so a full gather is quick; Cinder Brand, leaping;
+// Meteor with its shower), Mend to stay standing, and Lightning as far as a Thunderclap for when they're on it and a
+// Thunderbolt by level 11, out of the sky, for the black knight's raised shield (BOSS_LEVEL), then the masteries.
+// Fire's damage per mana is the best of the six (a gathered Firebolt is 95 for 10), and its cooldowns fall in a ladder
+// (Brand 4 s, Thunderbolt 5, Ring 10, Meteor 10) that has something ready nearly every second cast.
+export const FULL_BUILD = [
+  'firebolt', 'mend', 'comet', 'fork', 'spark', 'spark', 'thunderclap', 'spark', 'spark', 'firebolt', 'firebolt:searing', 'thunder',
+  'firenova', 'firebolt', 'firebolt', 'firebolt:searing', 'firebolt:searing', 'bomb', 'bomb', 'bomb:wildbrand', 'bomb', 'bomb:wildbrand',
+  'meteor', 'meteor', 'meteor:shower', 'meteor', 'meteor:shower', 'meteor', 'thunder', 'thunder:twice', 'thunder', 'thunder', '@fire',
+  '@fire', '@fire', '@fire', '@fire', 'bomb', 'comet', 'comet', 'comet:heavycore', 'firenova', 'firenova', 'firenova:kindled',
+  '@lightning', '@lightning', '@lightning', '@lightning', '@lightning', 'thunderclap', 'thunderclap', 'mend', 'mend', 'renew', 'fork', 'fork',
+];
+// Build focus (the auto-play menu, and Settings: autoFocus): a school of the player's choosing, each a build for that
+// school's hardest blows, with Mend first to stay standing. Best: Full Auto's FULL_BUILD, Cinematic's BUILD. Each keeps
+// something by level 11 that comes from above or out of the ground, as a raised shield can't turn (the black knight,
+// BOSS_LEVEL): Ice a Blizzard, Arcane a Rune, Lightning its Thunderbolt, Fire a Wall of Fire; Earth borrows Lightning's.
+export const FOCUS = {
+  fire: [
+    'firebolt', 'mend', 'comet', 'firebolt', 'firebolt:searing', 'firebeam', 'firenova', 'firebolt', 'wallfire', 'firebolt:searing',
+    'firebolt:searing', 'bomb', 'firebolt', 'bomb', 'bomb:wildbrand', 'bomb', 'bomb:wildbrand', 'wyrm', 'meteor', 'meteor', 'meteor:shower',
+    'meteor', 'meteor:shower', 'meteor', 'phoenix', '@fire', '@fire', '@fire', '@fire', '@fire', 'bomb', 'comet', 'comet', 'comet:heavycore',
+    'firenova', 'firenova', 'firenova:kindled', 'inferno', 'inferno', 'phoenix', 'phoenix', 'phoenix:rebirth', 'wallfire', 'wallfire',
+    'firenova', 'firenova', 'comet', 'comet', 'wyrm', 'wyrm', 'wyrm:twin', 'inferno', 'inferno', 'mend', 'mend', 'renew', 'inferno:conflagration', 'phoenix',
+  ],
+  ice: [
+    'frost', 'mend', 'coldcone', 'frost', 'rime', 'frost:piercing', 'nova', 'frost', 'prism', 'nova', 'nova:brittle', 'blizzard', 'shatter',
+    'orb', 'shatter', 'shatter', 'orb', 'orb', 'zero', 'zero', 'shatter', 'shatter:chainshatter', 'zero', 'orb', 'orb:wintersheart', 'zero',
+    'zero', 'zero:killingfrost', '@ice', '@ice', '@ice', '@ice', '@ice', 'blizzard', 'blizzard', 'blizzard:hail', 'prism', 'prism',
+    'prism:refraction', 'prism:refraction', 'nova', 'nova', 'blizzard', 'blizzard', 'frost', 'rime', 'rime', 'rime:splintering', 'rime:splintering',
+    'coldcone', 'coldcone', 'coldcone:flash', 'mend', 'mend', 'renew', 'nova', 'prism', 'rime', 'coldcone',
+  ],
+  earth: [
+    'stone', 'mend', 'lance', 'fork', 'spark', 'spark', 'thunderclap', 'spark', 'spark', 'thunder', 'stone', 'stone:heavyhand', 'boulder',
+    'spikes', 'boulder', 'boulder', 'vine', 'stone', 'stone:heavyhand', 'stoneskin', 'monolith', 'monolith', 'monolith:toppling', 'monolith',
+    'monolith', 'quake', 'quake', 'quake', '@earth', '@earth', '@earth', '@earth', '@earth', 'boulder', 'boulder:momentum', 'boulder:momentum',
+    'spikes', 'spikes', 'spikes:aftershock', 'spikes', 'quake', 'quake:chasm', 'stone', 'stone:heavyhand', 'lance', 'lance', 'lance:impale',
+    'lance:impale', 'vine', 'vine', 'thunder', 'thunder:twice', 'mend', 'mend', 'renew', 'lance', 'vine',
+  ],
+  arcane: [
+    'arcaneblast', 'mend', 'arcaneblast', 'blink', 'arcaneblast:focused', 'rune', 'crescent', 'arcaneblast', 'rune', 'crescent', 'rune:binding',
+    'stasis', 'well', 'stasis', 'crescent', 'crescent:orbit', 'stasis', 'well', 'starfall', 'starfall', 'starfall:greatstar', 'starfall',
+    'starfall', 'stasis', 'stasis:echo', '@arcane', '@arcane', '@arcane', '@arcane', '@arcane', 'well', 'well', 'well:crush', 'well:crush',
+    'rune', 'rune', 'arcaneblast', 'crescent', 'crescent:orbit', 'blades', 'blades', 'blades:fling', 'blades', 'blades', 'mend', 'mend',
+    'renew', 'blink', 'blink:quickstep', 'missiles', 'missiles', 'missiles:arcing', 'disintegrate', 'rune', 'well', 'missiles',
+  ],
+  lightning: [
+    'spark', 'mend', 'fork', 'spark', 'spark:heavy', 'spark', 'thunderclap', 'fork', 'fork:branching', 'spark', 'spark:heavy', 'thunder',
+    'thunder', 'thunder:twice', 'thunderclap', 'thunder', 'staticfield', 'thunder', 'tempest', 'tempest', 'tempest:eye', 'tempest', 'tempest',
+    '@lightning', '@lightning', '@lightning', '@lightning', '@lightning', 'spark:heavy', 'fork', 'fork', 'thunderclap', 'thunderclap',
+    'thunderclap:shockwave', 'staticfield', 'staticfield', 'staticfield:rod', 'staticfield:rod', 'chain', 'lightning', 'lightning', 'lightning',
+    'lightning:thunderhead', 'lightning:thunderhead', 'seed', 'seed', 'seed:livewire', 'mend', 'mend', 'renew', 'staticfield', 'lightning', 'seed', 'seed',
+  ],
+};
+// The menu's words for each focus.
+export const FOCI = [
+  ['best', 'Best', 'Whatever hits hardest: Fire\'s burst, with Lightning\'s Thunderbolt.'],
+  ['fire', 'Fire', 'Firebolt, Cinder Brand and Meteor: burst, and the ground left burning.'],
+  ['ice', 'Ice', 'Frost Nova, Frozen Orb and Deadwinter: stop them, then break them.'],
+  ['earth', 'Earth', 'Boulder, Monolith and Earthquake: the heaviest single blows.'],
+  ['arcane', 'Arcane', 'Runes, Stasis and Starfall: hold them still, then rain on them.'],
+  ['lightning', 'Lightning', 'Thunderbolt, Static Field and Thunderstorm: strikes that leap.'],
+];
+// What goes on its bar, in this order, of what it knows: the nine of 1 to 9 hold only what's worth a cast (so a short bar
+// early on, not one padded out), and 0, - and + its Mend and whatever of the Utility school keeps it in the fight.
+const FULL_PICK = ['firebolt', 'meteor', 'thunder', 'bomb', 'firenova', 'comet', 'thunderclap', 'monolith', 'starfall', 'tempest', 'orb', 'phoenix', 'wyrm',
+  'lightning', 'boulder', 'spikes', 'rime', 'lance', 'nova', 'spark', 'stone', 'frost'];
+const FULL_UTIL = ['mend', 'renew', 'aegis', 'empower', 'turn'];
+// How long a cast holds its hands, start to finish (tools/fp_spells/hands.py: the attack clip runs 0.95 s, the raise 1 s),
+// and a gather on top: the only thing between one spell and the next. There's no global cooldown.
+const HANDS = { attack: 0.95, raise: 1 };
+const BITE_TICK = 0.18;   // a held spell's bite (src/sim/casting.js TICK)
+// Mana it wins back a second in a fight, about: the fight's regeneration and the staff's hits (src/sim/spells.js).
+const EARN = 6;
+// What a cast should do, all told, on the fight as it stands: its blow, times what it'll catch, a frozen mark taking half again.
+export function castWorth(sp, c) {
+  const key = sp.key;
+  let hit = (sp.dmg || 0) + (sp.ringDmg || 0) + (sp.dps || 0) * Math.min(sp.duration || sp.moat || 3, 4);
+  if (sp.shards) hit *= sp.shards;
+  if (sp.count) hit *= sp.count * 0.35;
+  if (sp.shower) hit *= 1 + 0.45 * sp.shower;
+  if (sp.twice) hit *= 1 + sp.twice;
+  if (sp.beamDmg) hit += sp.beamDmg * Math.min(sp.beams || 0, Math.max(0, (c.inLine || 1) - 1) + 1);
+  if (sp.channel) hit = (sp.dmg || 0) / BITE_TICK;   // (a second of it)
+  const area = sp.radius || sp.ring || sp.zoneR || 0;
+  const many = SELF.has(key) ? c.close : sp.jumps ? Math.min(1 + sp.jumps, c.n) : sp.pierce || sp.beams ? Math.max(1, c.inLine) : area >= 2.5 ? Math.max(1, c.around) : 1;
+  if (!many) return 0;
+  // (Past what the mark has left, a blow on it alone is wasted.)
+  const first = Math.min(hit, Math.max(c.left, 1) * 1.15);
+  return (first + (many - 1) * hit * 0.8) * (c.frozen ? 1.5 : 1);
 }
 
 // ---------------------------------------------------------------- what it knows, against what the game has
@@ -458,6 +555,9 @@ export function coverage(foeNames = null) {
   for (const k of Object.keys(USE)) if (!(k in SP)) out.push(`spell ${k}: a use for it in USE, and it's gone from SPELLS`);
   for (const sp of SPELLS) if (!NODES[sp.key]) out.push(`spell ${sp.key}: in no tree, so it can never be learned`);
   out.push(...buildGaps());
+  out.push(...buildGaps(FULL_BUILD, 'its Full Auto build'));
+  for (const [k, b] of Object.entries(FOCUS)) out.push(...buildGaps(b, `its ${k} build`));
+  for (const k of [...FULL_PICK, ...FULL_UTIL]) if (!(k in SP)) out.push(`spell ${k}: on Full Auto's bar list, and gone from SPELLS`);
   for (const sp of SPELLS) if (!CORE_ALL.includes(sp.key) && !SLOT_A.includes(sp.key) && !SLOT_B.includes(sp.key) && !UTIL_TURN.includes(sp.key) && !OFF_BAR.has(sp.key)) out.push(`spell ${sp.key}: in none of its bar's turning lists (SLOT_A for a crowd, SLOT_B for one mark, UTIL_TURN for 0, - and +), so it's only ever a stopgap on its bar`);
   for (const k of [...CORE_ALL, ...SLOT_A, ...SLOT_B, ...UTIL_TURN]) if (!(k in SP)) out.push(`spell ${k}: on its bar's lists, and gone from SPELLS`);
   // (0, - and + take the Utility school's alone: UTIL_TURN is that school's, and SLOT_A and SLOT_B, for 1 to 9, have none of it.)
@@ -1005,7 +1105,7 @@ export class Brain {
     if ((this.gearT -= dt) <= 0 && !this.fighting) {
       this.gearT = 4;
       this.dress();
-      if (this.allow('aiSkills')) this.learn();
+      if (this.allow('aiSkills')) { if (!this.unspecT || this.t - this.unspecT > 60) this.restyle(); this.learn(); }
       if (this.allow('aiBar')) this.bar();
       this.o.party?.(this);
     }
@@ -1093,6 +1193,12 @@ export class Brain {
 
   // Whether Settings leave this to it (src/title.js AI_PARTS: aiGear, aiGems, aiSkills, ...). Anything not set is allowed.
   allow(k) { return this.o.settings?.[k] !== 'off'; }
+  // Settings, Auto combat style: Full Auto fights to win, Cinematic (as it came) to be watched.
+  get full() { return this.o.settings?.autoStyle === 'full'; }
+  // Settings (and the auto-play menu), Build focus: a school, or 'best'.
+  get focus() { const f = this.o.settings?.autoFocus; return FOCUS[f] ? f : 'best'; }
+  // The build it spends its points on: the focus's, or the style's own best.
+  buildList() { return FOCUS[this.focus] || (this.full ? FULL_BUILD : BUILD); }
 
   // ---- spells and the staff
 
@@ -1102,7 +1208,7 @@ export class Brain {
     if (!S || S.points <= 0) return;
     const seen = {};
     let id = null, saving = false;
-    for (const q of BUILD) {
+    for (const q of this.buildList()) {
       if (!NODES[q]) continue;
       seen[q] = (seen[q] || 0) + 1;
       if (S.rank(q) >= seen[q] + (S.free.has(q) ? 1 : 0)) continue;     // (bought already)
@@ -1116,6 +1222,55 @@ export class Brain {
     if (S.spend(id)) { this.o.log?.learned?.(id, S.rank(id), this.o.pack.level); this.say(first ? `Learning ${SPELLS[NODES[id].spell].name}.` : 'A point spent in the book.'); if (first) this.o.event?.('spell', { name: SPELLS[NODES[id].spell].name }); }
   }
 
+  // Full Auto or a focus, chosen with points already spent on something else (by hand, or another build): it unlearns the
+  // lot, paying the book's fee as a player would, and spends them again on the build it's been given. Once a choosing;
+  // never without the gold (it asks again in a minute); never for a point or two astray. (Cinematic on Best keeps what's
+  // there and builds on it, as it always has.)
+  restyle() {
+    const style = `${this.full ? 'full' : 'cinematic'}:${this.focus}`;
+    if (this.specFor === style) return;
+    this.specFor = style;
+    const S = this.o.spellbar.skills;
+    if ((!this.full && this.focus === 'best') || !S) return;
+    const want = {};
+    for (const q of this.buildList()) if (NODES[q]) want[q] = (want[q] || 0) + 1;
+    let astray = 0;
+    for (const id of Object.keys(S.ranks || {})) astray += Math.max(0, S.rank(id) - (S.free.has(id) ? 1 : 0) - (want[id] || 0));
+    if (astray < 3) return;
+    const fee = S.respecCost;
+    if (!this.o.pack.pay(fee * 10)) { this.specFor = null; this.unspecT = this.t; this.o.note?.(`Auto-play: not the ${fee} gold to unlearn its points for the new build yet. It builds on what it has meanwhile.`); return; }
+    S.unlearn();
+    const name = FOCI.find(([k]) => k === this.focus)?.[1];
+    this.say(this.focus === 'best' ? 'Unlearning it all, for a build that hits harder.' : `Unlearning it all, to begin again in ${name}.`);
+    this.o.note?.(`Auto-play: every point unlearned (${fee} gold), to spend them on its ${this.focus === 'best' ? 'own' : name} build.`);
+  }
+
+  // What its bar is filled from, in order, for Full Auto: Best's own list (FULL_PICK); a focus, its school's spells from its
+  // build, the highest tier first (what it's built for), then the rest of FULL_PICK for whatever else it knows.
+  pickList() {
+    const b = FOCUS[this.focus];
+    if (!b) return FULL_PICK;
+    const mine = [...new Set(b.filter((q) => NODES[q]?.kind === 'spell'))].filter((k) => SP[k] !== undefined && !UTILITY.has(SP[k]) && !SPELLS[SP[k]].channel && !OFF_BAR.has(k) && k !== 'blink')
+      .sort((x, y) => NODES[y].tier - NODES[x].tier);
+    return [...mine, ...FULL_PICK.filter((k) => !mine.includes(k))];
+  }
+
+  // Full Auto's bar: what pays, in its pick list's order, and nothing it won't cast. What's left of the nine stays empty.
+  fullBar() {
+    const sb = this.o.spellbar, ALL = sb.loadout.length, MAIN = Math.min(ALL, sb.main ?? ALL), ROOM = ALL - MAIN;
+    const party = this.snap ? this.party(this.snap).filter((h) => !h.dead) : [];
+    const healer = party.some((h) => h.role === 'heal');
+    const ok = (k) => SP[k] !== undefined && sb.known.has(SP[k]) && !SPELLS[SP[k]].noBar;
+    const util = FULL_UTIL.filter((k) => ok(k) && !(k === 'mend' && healer)).map((k) => SP[k]);
+    const nine = this.pickList().filter(ok).map((k) => SP[k]).filter((i) => !(ROOM > 0 && UTILITY.has(i))).slice(0, MAIN);
+    // (No Utility slots, as an older bar: Mend goes in the nine.)
+    if (ROOM === 0 && util.length && nine.length < MAIN) nine.push(util[0]);
+    const three = ROOM > 0 ? util.slice(0, ROOM) : [];
+    for (let k = 0; k < MAIN; k++) { const i = nine[k] ?? -1; if (sb.loadout[k] !== i) sb.assign(k, i); }
+    for (let k = 0; k < ROOM; k++) { const i = three[k] ?? -1; if (sb.loadout[MAIN + k] !== i) sb.assign(MAIN + k, i); }
+    this.stormOnBar = STORM.some((k) => sb.loadout.includes(SP[k]));
+  }
+
   // Its bar, set in the book as a player sets theirs from what it's learned: the nine of 1 to 9 between them cover a fight,
   // and the three of 0, - and + (the Utility school's alone: src/ui/spellbar.js) keep it standing. The nine: what it leans on
   // (Firebolt to open and from range; the first it knows of a Frost Nova or a Thunderclap, for when they're on it; the first
@@ -1125,6 +1280,7 @@ export class Brain {
   // every four minutes among what it knows, so that in time every spell has been in its hands (and in the log). With a
   // healer at its back, Mend's place goes to another, and with a tank holding them still, the nine lean to the crowd.
   bar() {
+    if (this.full) { this.fullBar(); return; }
     const sb = this.o.spellbar, known = [...sb.known].sort((a, b) => a - b);
     const party = this.snap ? this.party(this.snap).filter((h) => !h.dead) : [];
     const healer = party.some((h) => h.role === 'heal'), tank = party.some((h) => h.role === 'tank');
@@ -1209,6 +1365,7 @@ export class Brain {
   // spell's cooling. c: the fight as it stands (USE). Nothing leaves its hands without a clean line to its mark (c.aimed).
   shoot(snap, m, c) {
     if (this.auto.cast || this.slotHeld || snap[H.CAST_HELD] > 0.5 || snap[H.SWINGING] > 0.5) return;
+    if (this.full) { this.fullShoot(snap, m, c); return; }
     const mana = this.purse(m.mana), bar = this.o.spellbar.loadout;
     const has = (k) => SP[k] !== undefined && bar.includes(SP[k]);
     // What's kept back for trouble: a Mend when it's been hurt, a Nova when it's alone among several.
@@ -1274,6 +1431,75 @@ export class Brain {
       if (key === 'well') this.pulledT = this.t;
       if ((HEAVY.has(key) || SKY.includes(key)) && (c.opener || c.finisher)) this.o.event?.(c.finisher ? 'finisher' : 'opener', { spell: best.name, who: this.foeName(c.T) });
       // (A flask is lobbed: its eyes go up by the arc it needs, and stay up till it's left the hand. motor().)
+      if (key === 'plague') { this.lift = 0.5 * Math.asin(Math.min(1, 12 * c.d / (17 * 17))); this.liftT = this.t + 0.7; this.pitch += this.lift; }
+    }
+  }
+
+  // Full Auto's rotation: the most damage for the time its hands are busy, from a mana pool that has to last. Each moment it
+  // looks over what's ready on its bar and what each would do to the fight as it stands (castWorth), over the time it
+  // holds the hands (HANDS, and a gather), and casts the best of it at once: no waiting for the moment's show.
+  //   - Trouble first, as Cinematic: a Mend when it's low, a Nova or a Thunderclap when they're on it (USE scores 7.5+).
+  //   - A spell with a cooldown is worth a fifth more while it's ready: held back, its clock isn't turning.
+  //   - What has no cooldown (a Firebolt) fills between, and only from mana that isn't owed to a cooldown about to come
+  //     ready: it never spends the mana the next Meteor needs.
+  //   - A Firebolt is always gathered full: same mana, its whole bite (a short gather throws a fifth of it).
+  //   - A channel pours at most a second: they're dear now.
+  //   - Short of all that, the staff, which fights for nothing and wins back mana with every hit.
+  fullShoot(snap, m, c) {
+    const mana = this.purse(m.mana), sb = this.o.spellbar, bar = sb.loadout;
+    const has = (k) => SP[k] !== undefined && bar.includes(SP[k]);
+    const staff = () => {
+      if (!c.aimed || this.staffCool > 0 || c.d > IN) return;
+      if (m.hpf < 0.45 && has('mend') && mana < 31 && mana >= 24) return;
+      if (this.t - this.tapAt < 0.4 && snap[H.SPELL_RIG] < 0.5) return;
+      this.o.shared.input[INPUT.ATTACK] += 1;
+      this.staffCool = 0.55 + Math.random() * 0.2;
+      this.staffAt = this.t;
+      this.o.log?.cast('staff');
+    };
+    if (this.castCool > 0) { staff(); return; }
+    // (Owed: a Mend's worth when it's hurt, and the mana of a cooldown spell coming ready in the next two seconds and a half.)
+    const owed = has('mend') && m.hpf < 0.6 ? 25 : 0, mf = mana / m.maxMana;
+    let soon = 0;
+    const defs = bar.map((i) => (i >= 0 ? sb.def?.(i) || SPELLS[i] : null));
+    bar.forEach((i, k) => { const sp = defs[k]; if (sp?.cd && !UTILITY.has(i) && snap[H.COOL + i] > 0 && snap[H.COOL + i] < 2.5) soon = Math.max(soon, sp.mana); });
+    let best = null, bs = 0, urgent = false;
+    bar.forEach((i, k) => {
+      const sp = defs[k], U = sp && USE[sp.key];
+      if (!U || snap[H.COOL + i] > 0) return;
+      const hold = sp.channel ? 1 : 0;
+      const cost = sp.mana + (sp.channel ? (sp.drain || 10) * hold : 0);
+      if (mana < cost) return;
+      if (!SELF.has(sp.key) && !c.aimed) return;
+      const use = U(c, this) || 0;
+      if (!use) return;
+      // (Trouble: it goes now, whatever it's worth in damage.)
+      if (use >= 7.5) { if (!urgent || use > bs) { best = sp; bs = use; urgent = true; } return; }
+      if (urgent) return;
+      const worth = castWorth(sp, c);
+      if (!worth) return;
+      if (c.shield && BOLTS.has(sp.key)) return;
+      // (What it can spend: a cooldown spell, all but the Mend's; a filler, only what no cooldown's about to want.)
+      if (mana - cost < owed + (sp.cd ? 0 : soon)) return;
+      // (Its time: the hands, and the time it takes to win its mana back, which is nothing with the pool full and more as
+      // it empties: so a full pool spends for speed, Comet over a long-gathered Firebolt, and a low one for what each mana
+      // buys, the Firebolt.)
+      const time = HANDS[sp.rig] + (sp.gather || 0) + hold + cost / (EARN / Math.max(0.12, 1 - mf));
+      let s = worth / time * (sp.cd ? 1.2 : 1);
+      // (Dry is slow: a filler wants a fifth of the pool kept, and the staff earns it back.)
+      if (!sp.cd && mana - cost < m.maxMana * 0.2) s *= 0.3;
+      if (s > bs) { bs = s; best = sp; }
+    });
+    // (Not worth its hands: a shot of the staff does about this much a second, and brings mana back besides.)
+    if (!best || (!urgent && bs < 15)) { staff(); return; }
+    const key = best.key;
+    if (GROUND.has(key)) this.pitch = Math.atan2(c.T.y - (m.y + 1.62), Math.max(1, c.d));
+    const hold = best.gather ? best.gather + 0.3 : best.channel ? Math.max(0.45, Math.min(1, (mana - best.mana - owed) / (best.drain || 10) - 0.1)) : 0.16;
+    if (this.cast(SP[key], hold)) {
+      this.castCool = 0.15;
+      if (key === 'blades') this.bladesT = this.t;
+      if (key === 'nova' || key === 'zero') this.frozenT = this.t;
+      if (key === 'well') this.pulledT = this.t;
       if (key === 'plague') { this.lift = 0.5 * Math.asin(Math.min(1, 12 * c.d / (17 * 17))); this.liftT = this.t + 0.7; this.pitch += this.lift; }
     }
   }
