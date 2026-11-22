@@ -2353,7 +2353,11 @@ export class Brain {
     // What's ready to hand in, or a word that moves a quest on: before more work.
     // (The nearest of them first: out in a small town, the word with the innkeeper across the green before the long way
     // home to hand something in.)
-    let near1 = null, nd1 = Infinity, low1 = null;
+    // (Work to be had from anyone a few strides off, out of the town: taken as it comes to a camp, from everyone there,
+    // so the camp's whole round is in hand before it sets out. It used to take only what the one it was sent to had, and
+    // came back for the other's when everything else in the land was done.)
+    if (questing && !visiting && !m.town) { const by = this.offerJob(m, null, 120); if (by) return by; }
+    let near1 = null, nd1 = Infinity, low1 = null, lowLvl = 0;
     for (const [id, lvl] of PLAN_ALL) {
       const s = Q.state(id), st = Q.step(id);
       if (!s || s.stage === 'done' || this.skipping(`q:${id}`)) continue;
@@ -2364,7 +2368,7 @@ export class Brain {
       const d = this.jobDist(job, m);
       if (d < nd1) { nd1 = d; near1 = job; }
       // (The first of them in the plan's order, the lowest level's: for when none is near.)
-      low1 ||= job;
+      if (!low1) { low1 = job; lowLvl = lvl; }
     }
     // (A hand-in close by waits while another quest's work is as close: a camp's work is done in one round, the lair, the
     // den past it and the things lying round the den, and then all of it told. Each used to be its own walk out and back.)
@@ -2374,13 +2378,17 @@ export class Brain {
     if (near1 && low1) near1 = low1;
     // (A hand-in a country away waits while there's a quest's work close by: the hunt over the hedge before the road home.)
     if (near1) {
+      let work = null;
       for (const [id, lvl] of PLAN_ALL) {
         const s = Q.state(id);
         if (!s || s.stage === 'done' || this.skipping(`q:${id}`)) continue;
         const job = this.questJob(id, m, lvl);
-        if (job && job !== near1 && job.quest !== near1.quest && this.jobDist(job, m) < 500) return job;
+        if (!job || job === near1 || job.quest === near1.quest) continue;
+        if (this.jobDist(job, m) < 500) return job;
+        // (And far work of a lower level than the far word: the next camp of the ring before the errand on from this one.)
+        if (!work && lvl < lowLvl && (job.kind === 'hunt' || job.kind === 'go')) work = job;
       }
-      return near1;
+      return work || near1;
     }
     // The black knight on the cathedral's steps, once it's strong enough for him.
     if (this.blackKnight(this.snap) && m.own >= BOSS_LEVEL + (this.bump['boss:black'] || 0) && !this.skipping('boss:black') && !(isNight(m.hour) && m.own < BOSS_LEVEL + 4)) {
@@ -2604,10 +2612,10 @@ export class Brain {
     }
     // Things to gather: to the nearest still lying there (walked up to, it's picked up: src/folk/quests.js where).
     if (st.gather) {
-      const got = s.got || [], left = gatherSpots(id, st).filter((_, i) => !got.includes(i) && !this.skipping(`g:${id}:${i}`));
+      const got = s.got || [], left = gatherSpots(id, st).map((p, i) => ({ p, i })).filter(({ i }) => !got.includes(i) && !this.skipping(`g:${id}:${i}`));
       if (!left.length) return null;
-      left.sort((a, b) => dist(m.x, m.z, a[0], a[1]) - dist(m.x, m.z, b[0], b[1]));
-      return { kind: 'go', why: `q:${id}`, x: left[0][0], z: left[0][1], r: 1.4, mark: `g:${id}:${gatherSpots(id, st).indexOf(left[0])}`, say: `${title}: ${st.what || 'what was asked for'}, ${s.n || 0} of ${st.n}.` };
+      left.sort((a, b) => dist(m.x, m.z, a.p[0], a.p[1]) - dist(m.x, m.z, b.p[0], b.p[1]));
+      return { kind: 'go', why: `q:${id}`, x: left[0].p[0], z: left[0].p[1], r: 1.4, mark: `g:${id}:${left[0].i}`, say: `${title}: ${st.what || 'what was asked for'}, ${s.n || 0} of ${st.n}.` };
     }
     if (st.kill) {
       if (st.kill === 'catacombs') return this.grindJob(m, 'catacombs', `q:${id}`, `${title}: the dead below (${s.n} of ${st.n}).`);
@@ -2659,7 +2667,7 @@ export class Brain {
     return !!Q.state(FIRST_VISIT[0]) && !Q.done(last) && (dist(m.x, m.z, SILL_DOOR.x, SILL_DOOR.z) < 1500 || FIRST_VISIT.some((id) => Q.state(id)?.stage === 'active'));
   }
 
-  offerJob(m, only = null) {
+  offerJob(m, only = null, reach = Infinity) {
     const { townUI } = this.o, Q = townUI.quests;
     let best = null, bd = Infinity;
     for (const [id, lvl] of PLAN_ALL) {
@@ -2671,7 +2679,7 @@ export class Brain {
       // (Far-off work can wait till it's nearly ready for it.)
       if (m.lvl + 3 < lvl) continue;
       const w = townUI.whereOf(giver) || this.crowdSpot(giver);
-      if (!w) continue;
+      if (!w || dist(m.x, m.z, w.x, w.z) > reach) continue;
       // (Lisandra's door east, once Bram's errand's done: first, before anyone nearer, as the trail leads a player there.
       // src/folk/first-visit.js: the first visit's to be in the game's first quarter of an hour. And so, before the rest of
       // the town's offers, her own work and then Bram's errand, which is what opens the door: a run took every other offer
