@@ -71,6 +71,8 @@ export class TripoSlots {
     this.ids = Object.keys(roster);
     // (What one of the land's new kinds is called, by C.MODEL: src/core/wilds.js. The life bar's name.)
     this.wildName = (model) => { const m = model > 0 ? roster[this.ids[model - 1]] : null; return m?.wild ? m.name : ''; };
+    // (And one with a name of its own, a boss or a kind made on an old body: src/core/tripo-monsters.js VARIANTS. Auto-play's.)
+    this.ownName = (model) => { const m = model > 0 ? roster[this.ids[model - 1]] : null; return m?.src ? m.name : ''; };
     this.palettes = Object.values(palettes);
     this.first = first; this.count = count;
     this.models = new Map();   // id -> Promise of { base, nrm, mr, alb, hands }, newest last

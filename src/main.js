@@ -1,6 +1,6 @@
 // Boot: the permission gate, threads, GPU, assets, and the render thread's loop.
 import { setOpeningTerrain } from './core/terrain.js';
-import { GROUPS, GROUP_KEYS, TRIPO_KIND, landLevel } from './core/tripo-monsters.js';
+import { GROUPS, GROUP_KEYS, LAIRS, TRIPO_KIND, landLevel } from './core/tripo-monsters.js';
 import { BOSSES as DELVE_BOSSES, DELVE as DELVE_CODE, LATCHES as DELVE_LATCHES, delveOf, inDungeon as inDelve } from './core/dungeon.js';
 import { KEYS as CASTLE_KEYS, latchWord } from './core/castle-keys.js';
 import { castleVistas, vistaAt } from './core/castle-finds.js';
@@ -56,6 +56,7 @@ import { HeroPlayUI } from './ui/heroplay.js';
 import { PartyBook } from './ui/partybook.js';
 import { fits, partyDrops, useKit } from './items/partygear.js';
 import { TownClient } from './folk/client.js';
+import { DOOR_DUE } from './folk/first-visit.js';
 import { FolkBodies } from './gfx/folk.js';
 import { TownUI } from './ui/folk.js';
 import { followedFor, pauseCard, whereWords } from './ui/pausecard.js';
@@ -75,7 +76,8 @@ import { CritterLook } from './gfx/critters.js';
 import { CritterWords } from './ui/critterwords.js';
 import { beginRun, deathWords, noteEvent, noteRun, trailSentence } from './core/lastrun.js';
 import { HUB_SMOKE } from './core/phobos-hubs.js';
-import { Beacon } from './ui/beacon.js';
+import { Beacon, HOME as BEACON_HOME } from './ui/beacon.js';
+import { afterHush, hushed } from './ui/hush.js';
 
 const BASE = new URL('..', import.meta.url).href;
 const $ = (id) => document.getElementById(id);
@@ -98,6 +100,9 @@ window.bmTitle = title;
 // ---- job pool ----------------------------------------------------------------------------------------------
 
 // (From 11 on, the Tripo monsters' groups: src/core/tripo-monsters.js.)
+// How far off a death still pays you its experience: your spells, your party and your dead all fight well inside it.
+const KILL_REACH = 90;
+const XP_LAIRS = LAIRS.filter((l) => l.xpScale);
 const FOE_NAMES = ['KNIGHT OF VELSCOUR', 'KNIGHT OF TESSARIEL', 'GREAT CRAB', 'GRAVEHART', 'BONE HYDRA', 'THE RISEN', 'OGRE', '', '', 'WEREWOLF', 'ABYSSAL MOUTH',
   ...GROUP_KEYS.map((g) => GROUPS[g].name)];
 
@@ -615,10 +620,18 @@ async function boot(plan, poolSize) {
   // A kill's worth of experience, and whatever that buys. The sim only says something died.
   // (kind: what it leaves, drops.js; what: 1 + what it was. A Tripo monster's worth goes by its life too, so the tough ones
   // out in the countries pay for the time they take: src/core/tripo-monsters.js GROUPS.)
-  game.gainXp = (kind, what = 0) => {
+  // (x, z: where it died. Only a death near you is yours: the sim says when anything dies anywhere, and a knight of his
+  // put down by Bellmourn's guard while you were in Phobos, nine kilometres off, paid you six hundred.)
+  game.gainXp = (kind, what = 0, x = null, z = null) => {
+    const s = game.currentSnap();
+    if (s && x !== null && Math.hypot(x - s[H.PX], z - s[H.PZ]) > KILL_REACH) return;
     renderer.skullEyes?.feel('glee', 3);
     const g = what - 1 >= TRIPO_KIND ? GROUPS[GROUP_KEYS[what - 1 - TRIPO_KIND]] : null;
-    game.addXp(Math.max(XP_OF[kind | 0] ?? 10, g ? Math.round(g.hp * 0.35) : 0));
+    // (Down a delve made for a new player, a kill's worth is that delve's share of it, xpScale: the Redoubt under the Sill's
+    // knights are the castle's, worth a castle knight's, and it's met at five. src/core/delve-redoubt.js.)
+    // (The same of a lair made low for a new player: the Sill's, src/core/tripo-monsters.js LAIRS.)
+    const d = s && delveOf(s[H.PX], s[H.PZ]), l = x !== null && XP_LAIRS.find((q) => Math.hypot(x - q.x, z - q.z) < q.r + 40);
+    game.addXp(Math.max(1, Math.round(Math.max(XP_OF[kind | 0] ?? 10, g ? Math.round(g.hp * 0.35) : 0) * (d?.xpScale ?? (l ? l.xpScale : 1)))));
   };
   // So much experience, for whatever earned it (a kill above; a tear sealed, an outpost cleared: src/ui/wilds.js).
   game.addXp = (amount) => {
@@ -737,6 +750,18 @@ async function boot(plan, poolSize) {
       // The quest log: what auto-play is working on (src/ui/autoplay.js), and the big map framed on where a quest is.
       auto: () => game.autoplay?.current(),
       map: (p) => { if (!worldMap.open) toggleMap(); worldMap.showPlace(p); },
+      // (Whether the land's laid round you: Lisandra's door holds its fade till it is. renderer.landReady)
+      landReady: () => { const s = game.currentSnap(); return !s || renderer.landReady(s[H.PX], s[H.PZ]); },
+      // Lisandra's door of candles (src/ui/folk.js lisDoor): you and your party set down at `to` (out of any delve), or, with
+      // nowhere given, home by Bellmourn's seal. Through it to the Sill, and the Sill's seal knows you: you can travel back.
+      door: (to, morning = false) => {
+        const at = to || BEACON_HOME;
+        lands.o.cmd(28, at.yaw, at.x, at.z);
+        // (morning: the door east, out of the dark or the evening, opens on the next morning: the first sight of his city is a
+        // lit one. As a night's sleep turns the day. src/ui/folk.js lisDoor.)
+        if (morning && (renderer.hour < 6.5 || renderer.hour > 16.5)) { if (renderer.hour > 6.1) { town.day++; town.lastHour = -1; } renderer.setHour(7.5); }
+        if (to && Math.hypot(to.x - 8931, to.z - 19) < 40 && !lands.awake.has('sill')) { lands.awake.add('sill'); lands.showPortals(); }
+      },
       // (Abandoning a quest: asked first, in the title's "are you sure" box.)
       confirm: (o) => title.confirm(o),
     },
@@ -842,6 +867,8 @@ async function boot(plan, poolSize) {
   window.bm = game.api(shared, simWorker, buffer, pool);
   // (For tests: bm.critters is the field, its list each of them; bm.pickCritter(x, y) clicks the screen there.)
   window.bm.critters = game.critters;
+  // (The talk panel and its quest book, and the seals: for playing a quest line through from the console.)
+  window.bm.townUI = townUI; window.bm.lands = lands;
   window.bm.pickCritter = (x, y, how = 'cursor') => game.pickCritter(x, y, how);
   // How long the start took, part by part (tools/load_time.mjs).
   window.bm.loadLaps = [['the simulation ready', Math.round(simMs)], ...renderer.loadLaps];
@@ -987,6 +1014,15 @@ async function boot(plan, poolSize) {
     tracker.update(dt);
     if (!input.enabled || state.paused) return;
     played += dt; playT += dt; runT += dt; noteT += dt;
+    // Lisandra's door east, due at twelve minutes played whatever Bram's errand has come to: the first visit to Phobos is to
+    // come in the game's first quarter hour (src/folk/first-visit.js DOOR_DUE). Once her own work's taken, so she's met.
+    const Q = townUI.quests;
+    if (played > DOOR_DUE && Q.q.lisandra_work && !Q.q.the_door_east && !Q.done('bed_and_bell') && !Q.flags.has('door_due')) {
+      Q.flags.add('door_due');
+      if (Q.follow !== 'off') Q.follow = 'door';
+      townUI.note('Lisandra has a door to show you. She waits where the Long Road comes into town.', 'quest');
+      Q.on.change();
+    }
     if ((thumbT += dt) > 90) { thumbT = 0; grabThumb(); }
     if (playT > AUTOSAVE_EVERY) { playT = 0; autosave(); }
     // The run's note (src/core/lastrun.js): how long it's been played and where you stand, for the start after a death.
@@ -1235,6 +1271,8 @@ async function boot(plan, poolSize) {
     base: BASE, opening: OPENING_ENABLED, game, shared, input, hud, audio, pack, inventory, townUI, lands, renderer, town,
     spellbar: () => game.spellbar, paused: () => state.paused, pause: (on) => input.onPauseChange(on), foeNames: FOE_NAMES, settings, saveSettings,
   });
+  // (For tests: bm.autoplay.begin('quests') starts it, as its menu does: tools/firstvisit/play.mjs.)
+  if (window.bm) window.bm.autoplay = game.autoplay;
   // First sight of Phobos, from the Sill: auto-play stops and the camera goes to look (src/ui/firstsight.js).
   game.firstSight = new FirstSight({ game, input, settings, renderer, tip: (t, s) => hud.tip(t, s), autoOn: () => !!game.autoplay?.on, paused: () => state.paused });
   if (window.bm) window.bm.firstSight = (t = 0) => { const s = game.currentSnap(); if (s) { game.firstSight.begin(s); game.firstSight.t = t; } };   // (from t seconds in)
@@ -1351,10 +1389,13 @@ async function boot(plan, poolSize) {
     toggleMap();
   });
   // Tab: the mouse let go, to click what's on the screen (the corner map, the skull, Auto, the spell bar and the rest), the
-  // keys still walking you and the game going on. Tab again and the mouse looks about again. A browser's Tab walks its focus
-  // off the page, which takes the pointer lock with it, and that was the pause: now only Esc pauses (input.loose).
-  const freeTip = 'The mouse is free: click the map, the skull, Auto or a spell. Tab again to look about.';
-  const mouseFree = (on) => {
+  // keys still walking you and the game going on. Tab again, a click on the world itself (not on a button, the map or a
+  // critter), or Esc, and the mouse looks about again; Esc once looking is the pause. A browser's Tab walks its focus off the
+  // page, which takes the pointer lock with it, and that was the pause: now only Esc pauses (input.loose).
+  const freeTip = 'The mouse is free: click the map, the skull, Auto or a spell. Click the world, Tab or Esc to look about.';
+  const lookTip = 'Click to look about again. Esc for the menu.';
+  // viaEsc: a browser won't lock the pointer off the Esc key, so a refusal there leaves the mouse looking, waiting on a click.
+  const mouseFree = (on, viaEsc = false) => {
     if (input.touch || AUTO || on === input.cursor) return;
     input.cursor = on;
     if (on) {
@@ -1365,10 +1406,12 @@ async function boot(plan, poolSize) {
     else {
       if ($('tip').textContent === freeTip) hud.tip(freeTip, 0);     // (its word goes with it, not anyone else's)
       // (A browser that won't take the mouse back this once: it stays free, and Tab tries again.)
-      input.lock(() => { input.cursor = true; hud.tip('The browser kept the mouse free that time. Tab again to look about.', 3.5); });
+      input.lock(viaEsc ? () => hud.tip(lookTip, 3)
+        : () => { input.cursor = true; hud.tip('The browser kept the mouse free that time. Tab again to look about.', 3.5); });
     }
   };
-  input.onLooseClick = () => { if (!input.menu && !state.paused) hud.tip(freeTip, 3); };
+  // A click on the world itself with Tab's free mouse (src/input.js): the mouse looks about again, and the click is that alone.
+  input.onLooseClick = () => { if (!input.menu && !state.paused) mouseFree(false); };
   // (For tests: bm.mouseFree() says whether Tab's free mouse is on; bm.mouseFree(true or false) sets it as Tab would.)
   if (window.bm) window.bm.mouseFree = (on) => { if (on !== undefined) mouseFree(!!on); return input.cursor; };
   // A panel or a window that Esc shuts is up (its own keys see to it), or a name's being written.
@@ -1383,10 +1426,11 @@ async function boot(plan, poolSize) {
     if (e.code === 'Tab' && !state.paused) {
       e.preventDefault();
       if (!panelUp()) mouseFree(!input.cursor);
-    } else if (e.code === 'Escape' && input.cursor && !input.free && !panelUp()) {
-      // With the mouse free there's no lock for the browser to let go of: Esc is the pause, and Esc again is back.
-      e.preventDefault();
-      input.onPauseChange(!state.paused);
+    } else if (e.code === 'Escape' && !input.free && !state.paused && !panelUp()) {
+      // With Tab's mouse free, Esc gives it back to the looking (no pause). Back looking but with no lock to let go of (the
+      // browser wouldn't take it off Esc): Esc is the pause. (Held by the game, the browser's own Esc lets go, and that pauses.)
+      if (input.cursor) { e.preventDefault(); mouseFree(false, true); }
+      else if (document.pointerLockElement !== input.canvas) { e.preventDefault(); input.onPauseChange(true); }
     }
   }, true);
   window.addEventListener('keydown', (e) => {
@@ -1421,7 +1465,7 @@ async function boot(plan, poolSize) {
   game.run();
   $('controls').innerHTML = input.touch
     ? 'Left thumb moves. Right thumb looks, on or off the buttons. The big button fires your <b>staff</b>; round it are <b>dodge</b>, <b>jump</b> and, with a shield on and no skull, <b>guard</b>. The six <b>spells</b> stand in a ring round those: tap one to cast it, hold to keep casting. Along the top: the <b>menu</b>, your <b>pack</b>, your <b>spellbook</b> and your <b>quest log</b>; tap the map in the corner to open the big one. <b>Auto</b>, beside the map, lets the game play itself.'
-    : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump, hold it to ride your shield &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>1</kbd>-<kbd>6</kbd> cast, hold to keep casting &nbsp; <kbd>F</kbd> cast the last again &nbsp; <kbd>Wheel</kbd> choose &nbsp; <kbd>B</kbd> spellbook: learn spells and set your bar &nbsp; <kbd>Alt</kbd> cursor, to click a spell &nbsp; <kbd>Tab</kbd> free the mouse to click the map, the skull or Auto, Tab again to look &nbsp; <kbd>Left click</kbd> fire your staff &nbsp; <kbd>Right click</kbd> shield up with a shove, hold to keep it up (not with a skull in hand) &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>M</kbd> map &nbsp; <kbd>E</kbd> take, open, shut or talk &nbsp; <kbd>J</kbd> quest log: what each quest is, where on the map, what auto-play is on &nbsp; <kbd>P</kbd> auto-play: the game plays itself';
+    : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump, hold it to ride your shield &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>1</kbd>-<kbd>6</kbd> cast, hold to keep casting &nbsp; <kbd>F</kbd> cast the last again &nbsp; <kbd>Wheel</kbd> choose &nbsp; <kbd>B</kbd> spellbook: learn spells and set your bar &nbsp; <kbd>Alt</kbd> cursor, to click a spell &nbsp; <kbd>Tab</kbd> free the mouse to click the map, the skull or Auto; click the world, Tab or Esc to look again &nbsp; <kbd>Left click</kbd> fire your staff &nbsp; <kbd>Right click</kbd> shield up with a shove, hold to keep it up (not with a skull in hand) &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>M</kbd> map &nbsp; <kbd>E</kbd> take, open, shut or talk &nbsp; <kbd>J</kbd> quest log: what each quest is, where on the map, what auto-play is on &nbsp; <kbd>P</kbd> auto-play: the game plays itself';
   // Loaded: the title's menu comes up (once Bellmourn's logo is in).
   game.idle = !AUTO;
   watchFiles(null);
@@ -1469,6 +1513,7 @@ class Hud {
   }
 
   tip(text, secs) {
+    if (hushed()) { afterHush(() => this.tip(text, secs)); return; }
     $('tip').textContent = text;
     $('tip').style.opacity = 1;
     clearTimeout(this.tipTimer);
@@ -2499,7 +2544,7 @@ class GameView {
         // A stag's roar, far too big: a groan under a rasp, carrying a long way.
         au.gore(a, b, c, 1.6 * d, 1.7, 130); au.gore(a, b, c, 1.2 * d, 1.4, 240); au.gore(a, b, c, 0.5 * d, 1.1, 620);
         break;
-      case EV.LOOT: this.loot(a, b, c, d); this.gainXp?.(d, e); this.heroTalk?.onPlayerKill(e ? e - 1 : d); this.townUI?.kill(a, b, c, d | 0, e > TRIPO_KIND ? GROUP_KEYS[e - 1 - TRIPO_KIND] || null : null); this.autoplay?.kill(e ? FOE_NAMES[e - 1] || 'FOE' : d === 9 ? 'JELLY OR SMALL TUMBLER' : d === 6 ? 'BIG TUMBLER' : d === 8 ? 'CHAMPION' : d >= 20 ? 'HOARD' : 'FOE'); break;
+      case EV.LOOT: this.loot(a, b, c, d); this.gainXp?.(d, e, a, c); this.heroTalk?.onPlayerKill(e ? e - 1 : d); this.townUI?.kill(a, b, c, d | 0, e > TRIPO_KIND ? GROUP_KEYS[e - 1 - TRIPO_KIND] || null : null); this.autoplay?.kill(e ? FOE_NAMES[e - 1] || 'FOE' : d === 9 ? 'JELLY OR SMALL TUMBLER' : d === 6 ? 'BIG TUMBLER' : d === 8 ? 'CHAMPION' : d >= 20 ? 'HOARD' : 'FOE'); break;
       case EV.CHAMPION: this.renderer.emit(2, 4, a, b, c, 0, 1, 0, 1.6, 0.25, 0.6, 0.01, 0.03, 0.25, 0.5); break;
       case EV.EMPTY_HANDS: this.hud.tip(`Nothing in your hands. ${this.input.touch ? 'Open your pack' : 'Press I'} to take up a staff.`, 3); break;
       case EV.GROAN:

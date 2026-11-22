@@ -17,6 +17,8 @@
 // monsters' groups that count (GROUPS' keys); at a lair only its own sort of monster counts.
 // bring takes at: where what's wanted is found, for the trail (a place as above).
 // wait: what's handed over is made overnight, and collected the next day.
+// door: taken on, the giver opens Lisandra's door of candles and you're through it ('sill': to the Sill, 'home': back to her;
+// src/ui/folk.js lisDoor).
 // item: a skull, staff or robe it pays, rare (src/ui/folk.js reward); rarity: exactly how fine, for a skull. named: the
 // item is one thing, the same for everyone (made from seed) and called this.
 import { churchAt, inChurch } from '../core/church.js';
@@ -29,6 +31,7 @@ import * as DELVE from '../core/dungeon.js';
 import { LAIRS } from '../core/tripo-monsters.js';
 import { LAND_RULES } from './land-quests.js';
 import { PHOBOS_RULES } from './phobos-quests.js';
+import { FIRST_VISIT_RULES } from './first-visit.js';
 import { CITY, cityIn } from '../core/east.js';
 import { PHOBOS } from '../core/phobos-data.js';
 import { castleVistas } from '../core/castle-finds.js';
@@ -57,6 +60,9 @@ export const RULES = {
   ...LAND_RULES,
   // City State Phobos's (src/folk/phobos-quests.js; words in src/folk/lines/phobos-hubs.js).
   ...PHOBOS_RULES,
+  // Your first visit there, through Lisandra's door, at about level three (src/folk/first-visit.js; words in
+  // src/folk/lines/first-visit.js).
+  ...FIRST_VISIT_RULES,
 };
 
 // The Bell Crypt: the octagon where the stair down lets out (tools/interior/build_interior.py, Stage I), in the world.
@@ -66,7 +72,9 @@ export const isNight = (h) => h >= 21 || h < 4.5;
 
 const AREAS = {
   catacombs: (x, y, z) => y < -6 && inChurch(x, y + 1, z),
-  woods: (x, y, z) => y > -3 && !inTown(x, z, 10) && !inChurch(x, y + 1, z),
+  // (Bellmourn's own country, the Darkwood: not anywhere out of town. A run's kills on the Sill above Phobos, nine kilometres
+  // east, put down Corran's twelve in the pines for him.)
+  woods: (x, y, z) => y > -3 && !inTown(x, z, 10) && !inChurch(x, y + 1, z) && countryAt(x, z) === 'darkwood',
   bellcrypt: inCrypt,
 };
 // Out past the town: within reach of a named place (src/core/lands.js SITES), its radius stretched by s.
@@ -152,13 +160,16 @@ export class QuestBook {
   state(id) { return this.q[id] || null; }
   step(id) { const s = this.q[id]; return s && s.stage === 'active' ? RULES[id].steps[s.step] : null; }
   active() { return Object.keys(this.q).filter((id) => this.q[id].stage !== 'done'); }
-  done(id) { return this.q[id]?.stage === 'done'; }
+  // (id: or a list of them, all done: a rule's needs may be two. src/folk/first-visit.js fv_the_redoubt.)
+  done(id) { return Array.isArray(id) ? id.every((k) => this.done(k)) : this.q[id]?.stage === 'done'; }
 
   // The quest you're following: the one picked in the quest log while it's under way, else the newest under way; before
   // anything's asked of you, 'start' (go and see Bram Kettle). Null when you've put the trail away.
   followed() {
     if (this.follow === 'off') return null;
     if (this.follow === 'start' && !this.started()) return 'start';
+    // (Bram's errand done: Lisandra, with her door east, till it's taken. src/folk/first-visit.js.)
+    if (this.follow === 'door' && this.needsMet('the_door_east') && !this.q.the_door_east && RULES.the_door_east) return 'door';
     const live = this.active();
     if (live.includes(this.follow)) return this.follow;
     if (live.length) return live[live.length - 1];
@@ -187,7 +198,16 @@ export class QuestBook {
 
   // The quests this person has to give, now.
   offers(who) {
-    return Object.keys(RULES).filter((id) => QUESTS[id].giver === who && !this.q[id] && (!RULES[id].needs || this.done(RULES[id].needs)));
+    // (Out there on your first visit, long before you're fit for it, the city's own don't offer you their work: Fennick
+    // says as much. src/folk/first-visit.js.)
+    const visiting = !!this.q.the_door_east && !this.done('fv_home');
+    return Object.keys(RULES).filter((id) => QUESTS[id].giver === who && !this.q[id] && this.needsMet(id) && !(visiting && PHOBOS_RULES[id]));
+  }
+
+  // Whether what a quest needs first is done: or, for one with a `due` flag, that flag's set (src/folk/first-visit.js).
+  needsMet(id) {
+    const r = RULES[id];
+    return !r?.needs || this.done(r.needs) || (!!r.due && this.flags.has(r.due));
   }
 
   begin(id) {
@@ -254,6 +274,8 @@ export class QuestBook {
 
   finish(id) {
     this.q[id] = { stage: 'done' };
+    // (Bram's first errand done: the trail goes to Lisandra next, for her door east, over the round of the town.)
+    if (id === 'bed_and_bell' && RULES.the_door_east && !this.q.the_door_east && this.follow !== 'off') this.follow = 'door';
     this.watch = this.watch.filter((k) => k !== id);
     this.flags.add(`quest:${id}:done`);
     this.on.toast(`Quest done: ${QUESTS[id].title}`, 'done');

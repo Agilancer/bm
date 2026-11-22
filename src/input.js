@@ -87,8 +87,8 @@ export class Input {
       if (!this.enabled || this.menu) return;
       // A gilded critter under the pointer (src/main.js onPick, src/core/critters.js): caught, and the click is that alone.
       // With the mouse free (auto-play's, or Tab's) it's where the mouse is; with the soft cursor, there; else the crosshair.
-      // (A click on the world with the mouse free is nothing else: Tab gives the mouse back to the looking. src/main.js says so.)
-      if (this.loose) { if (e.button === 0 && this.onPick?.(e.clientX, e.clientY, 'cursor')) return; if (this.cursor && !this.free && e.button === 0) this.onLooseClick?.(); return; }
+      // (Any other click on the world with Tab's mouse free gives the mouse back to the looking, and is nothing else: src/main.js.)
+      if (this.loose) { if (e.button === 0 && this.onPick?.(e.clientX, e.clientY, 'cursor')) return; if (this.cursor && !this.free) this.onLooseClick?.(); return; }
       if (document.pointerLockElement !== this.canvas && !this.touch) { this.lock(); return; }
       if (this.soft) { if (e.button === 0 && !this.onPick?.(this.softX, this.softY, 'soft')) this.softPress?.(this.softX, this.softY); return; }
       if (e.button === 0 && this.mapUp) return;      // (the left button moves the big map while it's up)

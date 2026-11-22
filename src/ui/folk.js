@@ -4,6 +4,7 @@
 // stands where the Long Road comes in and is talked to here too (src/folk/lines/lisandra.js). What's said is src/folk/lines/;
 // quests' workings src/folk/quests.js; trade src/folk/shops.js.
 import { CROWD, FOLK, PEOPLE, POSTED, first as firstName } from '../folk/people.js';
+import { afterHush, hushed } from './hush.js';
 import { LINES as LA } from '../folk/lines/town_a.js';
 import { LINES as LB } from '../folk/lines/town_b.js';
 import { LINES as LC } from '../folk/lines/town_c.js';
@@ -12,10 +13,13 @@ import { BEYOND, LINES as LBEY } from '../folk/lines/beyond.js';
 import { LINES as LLAND } from '../folk/lines/land.js';
 import { LINES as LPHOBOS } from '../folk/lines/phobos.js';
 import { LINES as LHUBS } from '../folk/lines/phobos-hubs.js';
+import { LINES as LFV } from '../folk/lines/first-visit.js';
+import { DOOR_STEP, SILL_DOOR } from '../folk/first-visit.js';
 import { LISANDRA, LINES as LLIS } from '../folk/lines/lisandra.js';
 import { C, CHARS_START, C_PROPS, C_SIZE, H } from '../core/layout.js';
 import { LISANDRA_FORMS } from '../core/lisandra.js';
 import { OPENING } from '../core/opening.js';
+import { ESCORT_LEN, routeAt } from '../core/escort.js';
 import { TOWN_KNIGHTS } from '../core/knights.js';
 import { QuestBook, RULES, WATCH_MAX, sayable } from '../folk/quests.js';
 import { CRAFTS, GOODS, MAX_EMBERS, TRADES, matsText, offerFor, priceText, rollStock, worth } from '../folk/shops.js';
@@ -28,7 +32,7 @@ import { art } from './skin.js';
 import { giverOf, hintOf, levelTone, nameOf as whoName, objectivesOf, placeOf, questLevel, rewardsOf, shortOf, standOf, zoneOf, zoneRank } from './questlog.js';
 import { icon, paintIcons } from './icons.js';
 
-const LINES = { ...LA, ...LB, ...LC, ...LBEY, ...LLAND, ...LLIS, ...LPHOBOS, ...LHUBS };
+const LINES = { ...LA, ...LB, ...LC, ...LBEY, ...LLAND, ...LLIS, ...LPHOBOS, ...LHUBS, ...LFV };
 // Where the people out past the town keep (src/folk/lines/beyond.js): the middle of the beat they walk (core/knights.js).
 // (Or, with no knight flagged as theirs, where their entry says they stand: `at`.)
 const BEYOND_AT = Object.fromEntries(BEYOND.map((b) => {
@@ -107,6 +111,7 @@ body.folk-talking #cross, body.folk-talking #take { visibility: hidden; }
 .tk-ember button { width: 24px; height: 22px; font: 14px BmNum, Georgia; color: var(--bone); background: rgba(255,255,255,.06); border: 1px solid rgba(140,115,68,.5); cursor: pointer; }
 .tk-satchel { font-size: 12.5px; opacity: .8; margin-top: 6px; }
 /* (The quest log, #folkBook: src/ui/menus.css, with the other menus.) */
+body.noted #wildTrack.on { opacity: 0; }
 #folkNotes { position: fixed; left: 50%; top: 13vh; transform: translateX(-50%); z-index: 7; display: flex; flex-direction: column; align-items: center; gap: 5px; pointer-events: none; }
 .fn { padding: 5px 14px; background: rgba(8,6,4,.72); border: 1px solid rgba(140,115,68,.45); font: 15px BmNum, Georgia, serif; letter-spacing: .02em; color: var(--bone); transition: opacity .6s, transform .6s; }
 .fn.quest, .fn.done { color: #f1d78f; border-color: rgba(232,193,90,.7); font-size: 16px; }
@@ -499,7 +504,8 @@ export class TownUI {
         out.push(have >= st.n ? { label: `Here: ${st.n} ${matName(st.bring, st.n)}.`, cls: 'q', run: () => this.handIn(qid) }
           : { label: `${text.title} (${Math.min(have, st.n)} of ${st.n} ${matName(st.bring, st.n)})`, cls: 'q', run: () => this.progress(qid) });
       } else if (st?.back) out.push({ label: st.say || `${text.title}: it's done.`, cls: 'q', run: () => this.handIn(qid) });
-      else out.push({ label: text.title, cls: 'q', run: () => this.progress(qid) });
+      // (A door's quest under way, its door offered again below: that one line, not its title as well. The critics.)
+      else if (!RULES[qid].door) out.push({ label: text.title, cls: 'q', run: () => this.progress(qid) });
     }
     for (const qid of Q.offers(id)) out.push({ label: QUESTS[qid].title, cls: 'offer', run: () => this.offer(qid, 0) });
     // What they've to say about someone else's quest under way.
@@ -513,6 +519,12 @@ export class TownUI {
     if (about.length) out.push({ label: 'Who are you?', run: () => this.show(pick(about, this.count(id, 'about')), id, this.root()) });
     if (p.trade && TRADES[p.trade]) out.push({ label: TRADES[p.trade].label, run: () => this.shop() });
     if (id === PACK_MAKER && this.pack.extra < MAX_EXTRA) out.push({ label: LET_OUT, run: () => this.letOut() });
+    // (Lisandra's door again, should you find yourself the wrong side of it: hers to the Sill while her errand's under way,
+    // Wenna's home while hers is.)
+    for (const qid of Object.keys(RULES)) {
+      const R = RULES[qid], st = Q.step(qid);
+      if (R.door && st && QUESTS[qid].giver === id) out.push({ label: `${QUESTS[qid].title}: ${DOOR_STEP}`, cls: 'q', run: () => this.lisDoor(R.door) });
+    }
     if (id === LISANDRA.id && this.act.spentPoints?.() > 0) out.push({ label: `${UNBIND} (${unbindFee(this.pack.level)} gold)`, run: () => this.unbind() });
     out.push({ label: 'Farewell.', run: () => this.close(true) });
     return out;
@@ -610,7 +622,46 @@ export class TownUI {
     const q = QUESTS[qid];
     this.quests.begin(qid);
     if (qid === 'bed_and_bell') this.freeBed = true;
+    // (Lisandra's door of candles: through it, once the giver's said their piece. src/folk/first-visit.js.)
+    if (RULES[qid].door) { this.show(q.acceptLine, q.giver, [{ label: DOOR_STEP, cls: 'q', run: () => this.lisDoor(RULES[qid].door) }]); return; }
     this.show(q.acceptLine, q.giver, this.root());
+  }
+
+  // Lisandra's door of candles (src/folk/first-visit.js): the violet comes up, the candles gutter all at once, and you're
+  // stood somewhere else: on the Sill above Phobos ('sill'), or ('home') on her doorstep where the Long Road comes into
+  // Bellmourn, facing her. Your party comes with you (the sim's home(): src/sim/dungeon.js).
+  lisDoor(kind) {
+    this.close(false);
+    let to = SILL_DOOR;
+    if (kind === 'home') {
+      // (A couple of strides off her toward the town's middle, facing her. From the Sill she isn't in the snapshot, nine
+      // kilometres off: then where she waits, the Long Road's end (src/sim/opening.js keeps her there once she's arrived).)
+      const L = this.lisandra(), [ex, ez] = routeAt(ESCORT_LEN), lx = L ? L.x : ex, lz = L ? L.z : ez, d = Math.hypot(lx, lz) || 1;
+      to = { x: lx - lx / d * 2.2, z: lz - lz / d * 2.2, yaw: Math.atan2(lx, lz) };
+    }
+    const f = this.fade, h = this.act.hour?.() ?? 12, night = kind !== 'home' && (h < 6.5 || h > 16.5);
+    f.textContent = '';
+    f.style.background = 'radial-gradient(circle, #5a2e86 0%, #24103c 55%, #07030c 100%)';
+    f.style.visibility = 'visible';
+    f.style.opacity = 1;
+    this.act.sound?.('unlock');
+    setTimeout(() => {
+      f.textContent = kind === 'home' ? 'The candles gutter, all at once. Burnt hair, and Bellmourn.'
+        : night ? 'The candles burn down all night long, and gutter all at once. Burnt hair, and a cold dawn wind off a long drop.'
+          : 'The candles gutter, all at once. Burnt hair, and a cold wind off a long drop.';
+      // (And shut whatever was opened in the fade: auto-play, still at her elbow for that second, spoke to her again, and her
+      // menu rode through the door and stood over all five minutes of Phobos's first sight. The critics.)
+      this.close(false);
+      this.act.door?.(to, kind !== 'home');
+    }, 1200);
+    // (Up again once the land's laid where you've come to: nine kilometres off, it's seconds coming, and the fade lifted on
+    // white ground with the candles floating on it. Twelve seconds more at most.)
+    const lift = (tries = 0) => {
+      if (tries < 60 && this.act.landReady && !this.act.landReady()) { setTimeout(() => lift(tries + 1), 200); return; }
+      f.textContent = ''; f.style.opacity = 0; this.note(kind === 'home' ? "Bellmourn. Lisandra's waiting." : 'The Sill, above City State Phobos.', 'hint');
+      setTimeout(() => { if (f.style.opacity === '0') { f.style.visibility = ''; f.style.background = ''; } }, 1250);
+    };
+    setTimeout(lift, 3400);
   }
 
   // A line or a run of them about a step that's someone else's to hear (Silas for Bram; Elowen for Cedric).
@@ -893,7 +944,11 @@ export class TownUI {
       this.fade.textContent = this.quests.done('toll_of_bell') ? 'Midnight comes. The bell keeps its peace.' : 'Out along the east road, the bell goes three.';
       this.act.sleep();
     }, 1200);
-    setTimeout(() => { this.fade.textContent = ''; this.fade.style.opacity = 0; this.note('You wake at dawn, mended.', 'hint'); }, 3600);
+    setTimeout(() => {
+      this.fade.textContent = ''; this.fade.style.opacity = 0; this.note('You wake at dawn, mended.', 'hint');
+      // (Bram's errand just done: Lisandra's door east is next. src/folk/first-visit.js.)
+      if (this.quests.followed() === 'door') this.note('Lisandra has a door to show you. She waits where the Long Road comes into town.', 'quest');
+    }, 3600);
     setTimeout(() => { if (this.fade.style.opacity === '0') this.fade.style.visibility = ''; }, 3600 + 1250);
   }
 
@@ -1214,13 +1269,17 @@ export class TownUI {
   // ---- notes as things happen ----
 
   note(text, kind = '') {
+    if (hushed()) { afterHush(() => this.note(text, kind)); return; }
     const d = document.createElement('div');
     d.className = `fn ${kind}`;
     d.textContent = text;
     this.notes.appendChild(d);
     while (this.notes.children.length > 4) this.notes.firstChild.remove();
+    // (The land's bounty line stands in the same place, top and centre, src/ui/wilds.js: it steps aside while a note's up.
+    // "Lisandra has a door to show you" came up under "BOUNTY · SILK DELL" and neither could be read.)
+    document.body.classList.add('noted');
     setTimeout(() => d.classList.add('gone'), kind === 'quest' || kind === 'done' ? 4800 : 3200);
-    setTimeout(() => d.remove(), kind === 'quest' || kind === 'done' ? 5500 : 3900);
+    setTimeout(() => { d.remove(); if (!this.notes.children.length) document.body.classList.remove('noted'); }, kind === 'quest' || kind === 'done' ? 5500 : 3900);
   }
 
   // Something put down, somewhere: for the quests' counts.

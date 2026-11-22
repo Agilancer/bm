@@ -38,6 +38,7 @@ import { IRON_BARRACKS } from './delve-barracks.js';
 import { CASTLE_HIGH } from './delve-highward.js';
 import { CASTLE_DUNGEONS_A } from './delve-castle-a.js';
 import { CASTLE_DUNGEONS_B } from './delve-castle-b.js';
+import { REDOUBT } from './delve-redoubt.js';
 import { WARRENS_PROPS, WARRENS_NICHES } from './delve-warrens.js';
 
 // Where it lies: its entrance, in the world, and the height its rooms are measured from.
@@ -183,7 +184,7 @@ export const PERCH = { x: 0, z: -348, up: 3 };
 export const PARTY = { size: 4, tanks: ['lancer'], healers: ['paladin'] };
 export const roleOf = (cls) => (PARTY.tanks.includes(cls) ? 'tank' : PARTY.healers.includes(cls) ? 'heal' : 'dps');
 // The Delve's codes, sent from the sim as EV.DELVE (code, a, b, c).
-export const DELVE = { NEED: 0, ENTER: 1, LEAVE: 2, WARN: 3, BOSS: 4, BOSS_DOWN: 5, WIPE: 6, CLEAR: 7, RESET: 8, LATCH: 9 };
+export const DELVE = { NEED: 0, ENTER: 1, LEAVE: 2, WARN: 3, BOSS: 4, BOSS_DOWN: 5, WIPE: 6, CLEAR: 7, RESET: 8, LATCH: 9, BARS: 10 };
 
 // Where you come in, and where the portals inside stand (local).
 export const ENTRY = { x: 0, z: 3, yaw: Math.PI };
@@ -214,7 +215,9 @@ const WARRENS = {
 // (And the castle's eight dungeons after its wards, as they're made: the Iron Barracks first. src/core/delve-barracks.js.)
 export const DELVES = [WARRENS, BLACKVIGIL, DEEPS, VAULTS, SPOREHOLD, PLAYHOUSE, KINGSBARROW, ELDER, ...SEWERS, ...CASTLE, IRON_BARRACKS,
   // (The High Ward and the Deep Stacks, src/core/delve-highward.js; then the rest of the castle's dungeons, in two sets.)
-  ...CASTLE_HIGH, ...CASTLE_DUNGEONS_A, ...CASTLE_DUNGEONS_B];
+  ...CASTLE_HIGH, ...CASTLE_DUNGEONS_A, ...CASTLE_DUNGEONS_B,
+  // (And the Redoubt under the Sill, met on the first visit to Phobos: src/core/delve-redoubt.js.)
+  REDOUBT];
 // The Free Company's posts at the later delves' portals: a quartermaster of its own on each terrace that has one (a delve's
 // post: who, and what they say of the place), to hire a party from where it's wanted. (src/core/heroes.js BROKERS has them
 // after the town's and the Warrens'; their posts go by the delve's key.)
@@ -610,6 +613,8 @@ export function braziers(d = WARRENS) {
         }
       }
       for (const [lx, lz] of roomEdge(r, r.fires || 10, 2.2)) {
+        // (noFire: [[x, z, r]], ground a room keeps clear of standing fires: before a throne, down a stair's tread.)
+        if (r.noFire?.some(([fx, fz, fr]) => Math.hypot(lx - fx, lz - fz) < fr)) continue;
         const x = d.x + lx, z = d.z + lz, ox = Math.abs(lx - r.x) > r.hx - 2.3 ? Math.sign(lx - r.x) : 0, oz = ox ? 0 : Math.sign(lz - r.z);
         if (caveRoom(x + ox * 5, z + oz * 5) > -0.5 || caveRoom(x, z) < 1.6) continue;
         if (keep.some(([kx, kz]) => Math.hypot(kx - x, kz - z) < 6) || BRAZIERS.some((b) => Math.hypot(b[0] - x, b[2] - z) < 5)) continue;

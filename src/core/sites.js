@@ -12,6 +12,7 @@
 import { groundBase, portalFloor, terrainHeight } from './terrain.js';
 import { BARROWS, CLIFF, MOUNT, POOL, PORTAL_BANKS, SITES, WATERS, routeDist, waterLevel } from './lands.js';
 import { hash2, vnoise } from './terrain-noise.js';
+import { SILL_DOOR } from '../folk/first-visit.js';
 import { offWay } from './rocks.js';
 import { DELVES, PORTAL_PAD, caveFloorY } from './dungeon.js';
 import { buildDelves } from './delve-build.js';
@@ -677,8 +678,10 @@ function warrensMouth(K) {
   // (And in Phobos and its castle, each the door of a building of its own: cityPortalDress.)
   for (const d of DELVES) {
     if (d.within) continue;
-    const castle = d.key === 'lowerward' || d.key === 'ironbarracks';
-    if (castle || DELVES_SEWER.has(d.key)) cityPortalDress(K, d.portal.x, d.portal.z, d.portal.yaw, castle);
+    // (The Redoubt under the Sill's too, taller, and dressed as his gate: redoubtGate.)
+    const castle = d.key === 'lowerward' || d.key === 'ironbarracks' || d.key === 'redoubt';
+    if (castle || DELVES_SEWER.has(d.key)) cityPortalDress(K, d.portal.x, d.portal.z, d.portal.yaw, castle, d.key === 'redoubt' ? REDOUBT_TALL : 0);
+    if (d.key === 'redoubt') redoubtGate(K, d);
     (d.ways || []).forEach((w) => cityPortalDress(K, w.x, w.z, w.yaw, false));
   }
   // (A sewer's second mouth in the streets of Phobos: src/core/delve-sewers.js ways.)
@@ -781,11 +784,11 @@ function portalDress(K, [bx, bz, yaw, H, kind]) {
 // either side (the castle's: His, by the V and T rule). Nothing on the terrace or its steps. (The owner, 2026-11-20: "Build
 // them into areas of the map they are in".)
 const DELVES_SEWER = new Set(['westdrains', 'sloughmains', 'charnelruns', 'highconduits']);
-function cityPortalDress(K, x, z, yaw, castle) {
+function cityPortalDress(K, x, z, yaw, castle, tall = 0) {
   const F = terraceFrame(x, z, yaw), { P, G } = F, U = PORTAL_PAD.hu + PLAT.edge, W = PORTAL_PAD.hw + PLAT.edge;
   const { top } = terraceTop(G, 'city', true);
   const at = (u, w) => { const [px, pz] = P(u, w); return [px, terrainHeight(px, pz), pz]; };
-  const D = 4.6, wc = -W - D - 0.05, head = top + (castle ? 9.4 : 8.0);
+  const D = 4.6, wc = -W - D - 0.05, head = top + (castle ? 9.4 : 8.0) + tall;
   const [cx, , cz] = at(0, wc), lo = Math.min(...[[-U, -W], [U, -W], [-U, wc * 2 + W], [U, wc * 2 + W]].map(([u, w]) => at(u, w)[1])) - 0.6;
   // The hall behind the wall: as wide as the terrace, as high as the wall and a little more.
   K.box(castle ? 'dark:block' : 'dark:ashlar', cx, lo, cz, U + 0.3, head - lo, D, yaw);
@@ -802,6 +805,55 @@ function cityPortalDress(K, x, z, yaw, castle) {
     for (const sd of [-1, 1]) { const [lx, , lz] = at(sd * (U + 1.4), W + 0.6); K.lantern(lx, lz, 2.8, yaw); }
     { const [dx, , dz] = at(U + 2.2, (W + 6) / 2 - W / 2); K.paving('water', dx, dz, 0.45, W + 4, yaw, 0.03); }
     for (const [u, w] of [[-U - 1.6, -W + 1.2], [-U - 2.5, -W + 2.2], [U + 1.6, -W + 2.6]]) { const [bx, , bz] = at(u, w); K.barrel(bx, bz); }
+  }
+}
+
+// The Redoubt under the Sill's gate (src/core/delve-redoubt.js), cut into the foot of the Sill's cliff: its gatehouse a
+// storey taller than his doors in the city (cityPortalDress, REDOUBT_TALL), his mark hung over the arch on its face (the
+// painted banner the Redoubt has inside), his red on poles either side of the steps, and a fire each side, so it's seen
+// from the Sill and the path. Nothing of hers, and no letters.
+const REDOUBT_TALL = 4;
+function redoubtGate(K, d) {
+  const { x, z, yaw } = d.portal, { P, G } = terraceFrame(x, z, yaw), U = PORTAL_PAD.hu + PLAT.edge, W = PORTAL_PAD.hw + PLAT.edge;
+  const { top } = terraceTop(G, 'city', true), head = top + 9.4 + REDOUBT_TALL;
+  const [ax, az] = P(0, 0), [bx, bz] = P(0, 1), l = Math.hypot(bx - ax, bz - az) || 1, nx = (bx - ax) / l, nz = (bz - az) / l, tx = -nz, tz = nx;
+  // (His mark: two wide to three long, on the gatehouse's face, its foot clear of the portal's wall in front of it.)
+  const hh = Math.min(5.4, head - 0.6 - (top + ARCH.high) - 0.3), hw = hh / 3, [fx, fz] = P(0, -W + 0.03);
+  const Q = (u, v) => [fx + tx * u, head - 0.6 + v, fz + tz * u];
+  K.quad('p2_banner_skull', Q(-hw, 0), Q(hw, 0), Q(hw, -hh), Q(-hw, -hh), [nx, 0, nz], [[0, 0], [1, 0], [1, 1], [0, 1]]);
+  K.box('iron', fx + nx * 0.05, head - 0.6, fz + nz * 0.05, hw + 0.2, 0.08, 0.05, yaw, { collide: false });
+  // His red either side of the steps, and a fire by each.
+  for (const sd of [-1, 1]) {
+    const [px, pz] = P(sd * (U + 1.1), W + 0.9);
+    K.banner(px, pz, 6.2, yaw + (sd > 0 ? 0 : Math.PI), 'cloth_red', { pole: 'dark:wood', len: 3.6, collide: false });
+    const [qx, qz] = P(sd * (U + 1.3), W + 3.0);
+    K.brazier(qx, qz, 1.3);
+  }
+  // Set into the cliff: rough cheeks of the rock it was cut out of either side of it, going back into the slope, and a brow
+  // of it over its head.
+  for (const sd of [-1, 1]) {
+    const [cx, cz] = P(sd * (U + 2.7), -W - 3.5), y0 = terrainHeight(cx, cz) - 1.5;
+    K.box('dark:rubble', cx, y0, cz, 2.4, head + 2.8 - y0, 6, yaw);
+    const [kx, kz] = P(sd * (U + 5.6), -W - 6), k0 = terrainHeight(kx, kz) - 1.5;
+    K.box('dark:rubble', kx, k0, kz, 2.2, head + 0.6 - k0, 5, yaw + sd * 0.25);
+  }
+  const [rx, rz] = P(0, -W - 5.2);
+  K.box('dark:rubble', rx, head + 0.9, rz, U + 5.2, 2.6, 5.4, yaw, { collide: false });
+}
+
+// Wenna Coyle's corner of the Sill (src/folk/first-visit.js, docs/FIRST-VISIT.md): the lean-to she keeps her oil and wicks
+// in, south of the road, its front to her; casks of lamp-oil by it; her own lantern on its post beside her; and where
+// Lisandra's door sets you down, its candles, a ring of them burnt down to stubs in the grass, still alight.
+function sillCorner(K) {
+  K.leanTo(8949.5, 15.8, Math.PI, 1.7, 1.2, 2.3, 'roof_3', 'wood');
+  for (const [x, z] of [[8952.4, 13.6], [8953.2, 14.6], [8952.6, 15.8], [8946.6, 16.9]]) K.barrel(x, z, 0.34, 0.85);
+  K.crate(8947.6, 14.2, 0.32, 0.4);
+  K.lantern(8944.6, 5.4, 2.7, -1.75);
+  const { x, z } = SILL_DOOR, n = 11;
+  for (let i = 0; i < n; i++) {
+    const a = i / n * TAU + 0.3, r = 1.7 + (hash2(i, 77) - 0.5) * 0.25, cx = x + Math.cos(a) * r, cz = z + Math.sin(a) * r, y = terrainHeight(cx, cz), h = 0.07 + hash2(i, 91) * 0.12;
+    K.drum('pale:stone', cx, y - 0.02, cz, 0.045, h, 6, { collide: false });
+    K.cone('flame', cx, y + h - 0.01, cz, 0.022, 0.07, 4);
   }
 }
 
@@ -1671,6 +1723,7 @@ export function buildSites(geometry = false, lean = false) {
   downs(K); fen(K); rustwood(K); ashen(K); barrow(K); rimeholt(K); gallows(K); deepwood(K); sorrowhorn(K);
   thornwick(K); cinderford(K); lesser(K);   // (the small towns and the lesser places: src/core/places.js)
   marches(K);   // (the east's keeps and towers, and the way to Phobos: src/core/marches.js)
+  sillCorner(K);   // (Wenna Coyle's corner of the Sill, and where Lisandra's door sets you down: src/folk/first-visit.js)
   phobos(K);    // (City State Phobos, Castle Velscour and the Keep, blocked out: src/core/phobos-build.js)
   warrensMouth(K);
   smithYard(K);   // (what's built in the smith's yard in Bellmourn: src/core/smithyard.js)

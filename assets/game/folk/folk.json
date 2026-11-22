@@ -163,6 +163,7 @@
     "magda": {"base": "crone", "c": "magda_c.webp", "note": "Elspeth's twin sister: same face and hair, a wine skirt over a plum-black underskirt, a near-black leather bodice", "skirt": {"center": [0.027, -0.005], "legRadii": [0.092, 0.066, 0.056]}},
     "bram": {"base": "elder", "c": "bram_c.webp", "note": "the innkeeper at fifty: the same clothes, his dark hair and beard gone salt-and-pepper"},
     "silas": {"base": "old_man", "c": "silas_c.webp", "note": "the undertaker at sixty-eight: the same blacks, his hair and beard gone grey-white"},
+    "fv_wenna": {"base": "chandler", "c": "fv_wenna_c.webp", "note": "Wenna Coyle, who keeps the Sill's lamps: the candle-maker's body in lamp-soot grey-green, her hair gone grey (tools/firstvisit/wenna_swap.py)"},
     "dorcas": {"base": "wife_jolly", "c": "dorcas_c.webp", "note": "Thornwick's innkeeper: the cook's body in slate blue, her hair gone grey (tools/folk/posted_swaps.py)", "skirt": {"center": [0.0, -0.006], "legRadii": [0.095, 0.068, 0.058]}},
     "osric": {"base": "worker", "c": "osric_c.webp", "note": "Thornwick's hedge-reeve: the hunter's body in hedge green (tools/folk/posted_swaps.py)"},
     "wymond": {"base": "old_man", "c": "wymond_c.webp", "note": "the hedge-priest: the undertaker's body, his blacks washed out to undyed wool (tools/folk/posted_swaps.py)"},

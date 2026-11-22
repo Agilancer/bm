@@ -130,6 +130,10 @@ export const POSTED = [
   posted({ id: 'cs_hellguard', delve: 'middleward', late: true, name: 'Vargoth', title: 'a hellguard of the Keep', body: 'hellguard', sex: 'm', age: 500, post: [11162, -5736, -60], face: 1.57, walk: 'walk_proud', idles: ['fold_arms', 'idle', 'look_around'] }),
   posted({ id: 'cs_priestess', delve: 'middleward', late: true, name: 'Mother Severine', title: 'a priestess of the Keep', body: 'keeppriestess', sex: 'f', age: 41, post: [11198, -5766, -60], face: -1.57, walk: 'walk_proud', idles: ['idle_ual', 'fold_arms_ual', 'look_around'] }),
   posted({ id: 'ph_ash', hub: 'ash', name: 'Edda Grail', title: 'Warden of the Ashwardens', body: 'ph_ash', sex: 'f', age: 52, post: [10059.7, -551.4], face: -3.11, idles: ['fold_arms_ual', 'idle_ual', 'look_around'] }),
+  // On the Sill, by its seal, where Lisandra's door sets you down on your first visit to Phobos's country (src/folk/first-visit.js):
+  // Wenna Coyle, who keeps the lamps on the way down to the city, and was Lisandra's apprentice once. Late, as the castle's
+  // people are: her body's loaded once you're on your way there. Her words: src/folk/lines/first-visit.js.
+  posted({ id: 'fv_wenna', firstVisit: true, late: true, name: 'Wenna Coyle', title: "keeper of the Sill's lamps", body: 'fv_wenna', sex: 'f', age: 61, post: [8946.5, 7.5], face: -1.75, speed: 0.8, idles: ['fold_arms_ual', 'idle_ual', 'look_around'] }),
 ];
 // City State Phobos's street crowd: ruffians, riff-raff and adventurer folk, on the town's own thread with no house, bed or
 // day (job 'roam': src/folk/brain.js). They're only up while you're inside the city's wall, and then they're about the
