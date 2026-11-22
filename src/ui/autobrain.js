@@ -182,9 +182,9 @@ const PLAN = [
   ['long_way_round', 4], ['toll_of_bell', 5], ['millhaven_jelly', 5], ['barrow_lights', 8], ['sallowmere', 8], ['four_watches', 9],
   ['crown_of_teeth', 11], ['black_road', 13],
   // The land's (src/folk/land-quests.js): out to the small towns, what besets them, and down the party dungeons.
-  ['deeper_dead', 4], ['waxed_thread', 4], ['word_to_thornwick', 6], ['millhaven_man', 6], ['hare_and_harrow', 6], ['man_at_the_cross', 6],
-  ['cairnfield', 6], ['tracks_west', 7], ['ask_the_burner', 7], ['girl_from_khel', 7], ['warrens_mouth', 7], ['barley_thieves', 7], ['tunnel_king', 8],
-  ['hedge_breakers', 8], ['owed_to_frostwatch', 9], ['sunken_mile', 9], ['moor_wayhouse', 9], ['ossery_quarry', 9], ['mother_of_the_warren', 9],
+  ['word_to_thornwick', 6], ['millhaven_man', 6], ['hare_and_harrow', 6], ['man_at_the_cross', 6],
+  ['cairnfield', 6], ['tracks_west', 7], ['ask_the_burner', 7], ['girl_from_khel', 7],
+  ['hedge_breakers', 8], ['owed_to_frostwatch', 9], ['sunken_mile', 9], ['moor_wayhouse', 9], ['ossery_quarry', 9],
   ['up_from_the_gallowswood', 9], ['ash_on_the_wind', 9], ['black_ram', 10], ['old_toll', 11], ['red_scouts', 11], ['salt_for_the_hanged', 12],
   ['charcoal_for_khel', 12], ['charred_mill', 12], ['mouth_guard', 13], ['ravens_tor', 13], ['vigil_patrols', 14], ['arch_before_the_gate', 14],
   ['into_the_deeps', 14], ['the_howling', 14], ['gate_of_blackvigil', 14], ['broodmother', 15], ['red_cloth', 15], ['first_lord', 15], ['the_sleeper',

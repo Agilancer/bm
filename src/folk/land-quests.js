@@ -28,14 +28,6 @@ export const LAND_RULES = {
   sunken_mile: { needs: 'sallowmere', steps: [{ enter: 'causeway' }, { kill: 'lair:mile_drowned', n: 5 }, { back: true, say: 'The Sunken Mile can be walked.' }], gold: 120, xp: 800 },
   moor_wayhouse: { needs: 'barrow_lights', steps: [{ enter: 'wayhouse' }, { kill: 'lair:wayhouse_dead', n: 4 }, { back: true, say: "The wayhouse is empty. It's a better empty." }], gold: 150, xp: 900 },
   ossery_quarry: { steps: [{ enter: 'quarry' }, { kill: 'lair:quarry_kobolds', n: 5, foe: ['Kobolds'] }, { back: true, say: "The quarry's empty. I read the marks." }], gold: 150, xp: 1000 },
-  // ---- the cathedral's catacombs ----
-  deeper_dead: { needs: 'bones_for_carver', steps: [{ kill: 'catacombs', n: 20 }, { back: true, say: 'Twenty more are at rest.' }], gold: 120, xp: 500 },
-  waxed_thread: { needs: 'shroud_and_thread', steps: [{ bring: 'wax', n: 6 }], gold: 100, xp: 300 },
-  // ---- the Hollowfang Warrens ----
-  warrens_mouth: { needs: 'pines', steps: [{ enter: 'warrens' }, { back: true, say: "I've been down the hole on the hill." }], gold: 80, xp: 500 },
-  barley_thieves: { steps: [{ kill: 'warrens', n: 12, foe: ['Goblins', 'Kobolds'] }, { back: true, say: 'Twelve of your thieves are done thieving.' }], gold: 150, xp: 900 },
-  tunnel_king: { needs: 'warrens_mouth', steps: [{ boss: 'grubnash' }, { back: true, say: 'The big kobold is dead.' }], gold: 180, xp: 1200, item: 'staff' },
-  mother_of_the_warren: { needs: 'tunnel_king', steps: [{ boss: 'twins' }, { boss: 'venomaw' }, { back: true, say: 'The thing at the bottom of the Warrens is dead.' }], gold: 400, xp: 2500, item: 'skull' },
   // ---- Thornwick ----
   hedge_breakers: { steps: [{ kill: 'lair:thorn_goats', n: 3, foe: ['Goat Men'] }, { back: true, say: "Three goat men won't be through your hedge again." }], gold: 120, xp: 800 },
   black_ram: { needs: 'hedge_breakers', steps: [{ kill: 'lair:thorn_ram', n: 3, foe: ['Goat Men'] }, { back: true, say: 'The Black Ram is dead, and his two with him.' }], charm: 'goatfoot', charmName: 'the Goatfoot', xp: 1100 },
