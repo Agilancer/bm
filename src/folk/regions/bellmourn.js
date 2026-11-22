@@ -40,7 +40,7 @@ export const RULES = {
   // ---- Bellmourn: a word down each of the four roads, to the camp a quarter of an hour out, paid there. None needs
   // anything first: each is one of the eleven Lisandra sends you round to (src/folk/lines/lisandra.js GIVERS), taken on her
   // round and walked when you're of a level for the camp. Three have a fight in the walk: what dens beside the road in ----
-  carter_is_late: { steps: [{ talk: 'tobin', say: "Hob Fenwick's barley is sacked and waiting on your cart.", end: true }], gold: 3, xp: 30 },
+  carter_is_late: { steps: [{ enter: 'hillfoot' }, { talk: 'tobin', say: "Hob Fenwick's barley is sacked and waiting on your cart.", end: true }], gold: 3, xp: 30 },
   willow_bark: { steps: [{ kill: 'lair:fenway_goblins', n: 2 }, { talk: 'maren', say: "Sabine Moss sends coin for bark. Your road's clear.", end: true }], gold: 4, xp: 35 },
   one_fire_at_the_fork: { steps: [{ kill: 'lair:frost_kobolds', n: 2 }, { talk: 'nan', say: 'Jory Pell counts one fire here where there were three.', end: true }], gold: 4, xp: 35 },
   palmers_tally: { steps: [{ kill: 'lair:vigil_kobolds', n: 2 }, { talk: 'perrin', say: "Ser Aldric Halloway asks for this month's tally.", end: true }], gold: 4, xp: 35 },

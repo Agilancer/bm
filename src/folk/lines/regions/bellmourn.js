@@ -595,7 +595,8 @@ export const QUESTS = {
     decline: 'Not now, Hob.',
     declineLine: "No hurry. Well. Some hurry. Mice.",
     journal: [
-      "Hob Fenwick's barley is waiting on Tobin Wain's cart. Find Tobin at Hillfoot Halt, ten minutes east of Bellmourn along the Hill Road.",
+      "Hob Fenwick's barley is waiting on Tobin Wain's cart. Go out to Hillfoot Halt, ten minutes east of Bellmourn along the Hill Road: a tall squared waystone stands behind it.",
+      "Hillfoot Halt. Find Tobin Wain, the carter, by the fire.",
     ],
     progress: [
       "Hillfoot Halt. East, along the Hill Road. Tobin Wain. Barley's still sacked. I looked.",
