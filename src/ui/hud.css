@@ -198,6 +198,10 @@ body.touch #vskull { top: calc(var(--st) + (var(--t-pad, 8) + var(--t-mini, 92) 
 body.touch #vskullTag { top: calc(var(--st) + (var(--t-pad, 8) + var(--t-mini, 92) + 20) * var(--u)); right: calc(var(--hr) - 2 * var(--u)); width: calc(44 * var(--u)); font-size: calc(7.5 * var(--u)); }
 body.touch #autoBtn { top: calc(var(--st) + (var(--t-pad, 8) + var(--t-mini, 92) - 12) * var(--u)); right: calc(var(--hr) + var(--t-auto-r, 40) * var(--u)); width: calc(var(--t-auto, 32) * var(--u)); height: calc(var(--t-auto, 32) * var(--u)); }
 body.touch #autoBtn img { object-fit: contain; }
+/* Critter camera's C (src/ui/crittercam.js), beside Auto under the map while auto-play plays; in its own mode it's in the top
+   left corner, and the only thing on the screen. */
+body.touch #critCam { top: calc(var(--st) + (var(--t-pad, 8) + var(--t-mini, 92) - 12 + var(--t-crit-t, 4)) * var(--u)); right: calc(var(--hr) + var(--t-crit-r, 78) * var(--u));
+  width: calc(var(--t-crit, 26) * var(--u)); height: calc(var(--t-crit, 26) * var(--u)); font-size: calc(14 * var(--u)); line-height: calc(var(--t-crit, 26) * var(--u) - 2px); }
 body.touch #autoStatus { top: calc(var(--st) + 121 * var(--u)); right: calc(var(--hr) + 73 * var(--u)); left: auto; bottom: auto; text-align: right; max-width: 34vw; }
 body.touch #autoStatus b { font-size: calc(10.5 * var(--u)); }
 body.touch #autoStatus small { font-size: calc(10 * var(--u)); }
