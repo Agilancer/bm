@@ -116,8 +116,28 @@ A quest's words: `title`, `giver`, `about`, `offer` (2+), `accept`, `acceptLine`
 step names (what they say when you bring the word). Lines are 280 letters at most (a journal line 320; `accept`,
 `decline` and a step's `say` 70). `tests/quests-beyond.test.mjs` walks every one through.
 
-Pay (as a guide): xp about 90 a level for a small one, 130 for a den, 250 and an item for a dungeon's boss; gold about
-a tenth of the xp; an errand about half a kill quest's.
+Pay (as a guide; the first pass paid twice this and the ring round Bellmourn came to ten levels): a small kill or
+gather quest about 45 xp a level; a den about 90 a level and something to keep; an errand 60 to 100; a dungeon's boss
+250 a level and an item; gold about a tenth of the xp. A level is `90 * (level - 1) ^ 1.75` xp in all
+(`src/items/levels.js`): a hub should be worth a level or two with its kills, not five.
+
+What the critics of the first region found, which holds for every region:
+
+- **Ask for one fewer than a lair holds** (`kill n` under its boss and n together): a missed count leaves auto-play
+  hunting an empty lair for ten minutes.
+- **A hub's levels step up, and neighbouring hubs don't share a band.** Errands on are a level or two above the hub's
+  own work, so auto-play finishes the hub before it follows one.
+- **Two people at a camp** where there's the work for it: one gives most of it and keeps the board, the other has a
+  quest of their own. The same face for six quests is dull to play and to watch.
+- **No two hubs open the same way**, and no twist is used twice in a region.
+- **Don't send anyone back up the road they came in by.** What stands beside the road in belongs on the errand in
+  (a `kill` step before its `talk`), so the walk has a fight in it; the hub's own work lies beyond it.
+- **Things to gather lie outside a den's sight** (38 to 53 m from its middle), so "round the outside" is true; give a
+  step its own `spots` to put one or two close in.
+- **Say only what the game shows.** No animals stand at the camps; a walk to somewhere must have something seen or
+  done at the end of it. Distances in paces under 500 m, and about a quarter-hour for 850 m above that.
+- **`needs` only where the words need it** (and on the errand on, which needs the hub's last quest). Auto-play holds
+  its hand-ins while other work is within 450 m, so a hub's quests are done in one round.
 
 ### Things to fight and find
 

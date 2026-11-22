@@ -36,7 +36,9 @@ pinned, the new steps (`clear`, `gather`) work, auto-play knows them, and the ru
   Tessariel.
 - Levels inside the region's band, rising through a hub; pay by the guide in docs/QUEST-LOOP.md; each hub's best quest
   pays an item or a charm (`item: 'staff' | 'robe' | 'skull' | 'scroll'`).
-- A sutler at every camp (`trade: 'sutler'`), with `shop` lines.
+- A sutler at every camp (`trade: 'sutler'`), with `shop` lines; and a second person at a camp with four quests or
+  more, on `campPost(<camp>, 2)`, with a quest of their own.
+- Everything under "What the critics of the first region found" in docs/QUEST-LOOP.md.
 
 ## How to check (all of these, before you report)
 

@@ -168,9 +168,12 @@ export function gatherSpots(id, st) {
   if (st.spots) return st.spots.slice(0, st.n).map(([dx, dz]) => [at.x + dx, at.z + dz]);
   let seed = 0;
   for (const ch of id) seed = (seed * 31 + ch.charCodeAt(0)) % 9973;
-  const r0 = (at.r ?? Math.min(at.near, 30)) + 9, out = [];
+  // (Round a den or a lair, out past what its monsters see from their middle, 24 m and their wander: gathering is going
+  // round the outside, and a fight only if you go nearer or they come out. At a place, a little way in from its edge.)
+  const wild = st.gather.startsWith('outpost:') || st.gather.startsWith('lair:');
+  const r0 = wild ? (at.r ?? 8) + 30 : (at.r ?? Math.min(at.near, 30)) + 9, out = [];
   for (let i = 0; i < st.n; i++) {
-    const a = (i + hash2(seed + i * 3, seed - i * 7) * 0.7) / st.n * Math.PI * 2, d = r0 + hash2(seed - i, i * 5 + 1) * 12;
+    const a = (i + hash2(seed + i * 3, seed - i * 7) * 0.7) / st.n * Math.PI * 2, d = r0 + hash2(seed - i, i * 5 + 1) * (wild ? 15 : 12);
     out.push([Math.round((at.x + Math.sin(a) * d) * 10) / 10, Math.round((at.z + Math.cos(a) * d) * 10) / 10]);
   }
   return out;
