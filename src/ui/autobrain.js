@@ -179,11 +179,11 @@ function fightableAt(kind, lvl, maxHp = 0, slime = false) {
 // The quests, in the order it takes them on, and the level it wants for each.
 const PLAN = [
   ['lisandra_work', 1], ['bed_and_bell', 1], FIRST_VISIT_LEVELS[0], ['letter', 1], ['pines', 1], ['iron_from_dead', 2], ['dead_cant_wait', 3], ['shroud_and_thread', 3], ['bones_for_carver', 3],
-  ['long_way_round', 4], ['toll_of_bell', 5], ['millhaven_jelly', 5], ['barrow_lights', 8], ['sallowmere', 8], ['four_watches', 9],
+  ['toll_of_bell', 5], ['barrow_lights', 8], ['sallowmere', 8],
   ['crown_of_teeth', 11], ['black_road', 13],
   // The land's (src/folk/land-quests.js): out to the small towns, what besets them, and down the party dungeons.
-  ['word_to_thornwick', 6], ['millhaven_man', 6], ['hare_and_harrow', 6], ['man_at_the_cross', 6],
-  ['cairnfield', 6], ['tracks_west', 7], ['ask_the_burner', 7], ['girl_from_khel', 7],
+  ['word_to_thornwick', 6], ['hare_and_harrow', 6], ['man_at_the_cross', 6],
+  ['tracks_west', 7], ['ask_the_burner', 7], ['girl_from_khel', 7],
   ['hedge_breakers', 8], ['owed_to_frostwatch', 9], ['sunken_mile', 9], ['moor_wayhouse', 9], ['ossery_quarry', 9],
   ['up_from_the_gallowswood', 9], ['ash_on_the_wind', 9], ['black_ram', 10], ['old_toll', 11], ['red_scouts', 11], ['salt_for_the_hanged', 12],
   ['charcoal_for_khel', 12], ['charred_mill', 12], ['mouth_guard', 13], ['ravens_tor', 13], ['vigil_patrols', 14], ['arch_before_the_gate', 14],

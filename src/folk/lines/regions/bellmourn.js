@@ -399,19 +399,7 @@ export const LINES = {
   },
 
   // ---------------------------------------------------------------- placeholders: moved to their own region's file when
-  // it's made (the six the ring's errands on are said to; what each says to the errand is in its quest's `others`).
-  cuddy: {
-    first: ["Up through the cairns on your own feet. Well. Cuddy Stone. I keep the beacon, when there's anyone to keep it for."],
-    greet: {
-      morning: ["Morning. The cairns are all where I left them. I look."],
-      day: ["You can see four roads from here. Nothing on any of them."],
-      evening: ["Light's going. That's when a beacon earns its oil."],
-      night: ["Keep by the fire. The cairns aren't for walking among after dark."],
-    },
-    about: ["Cuddy Stone. Cairn-keeper at Cairnwatch, as my father was. I mind the stones and the light."],
-    bye: ["Mind the path going down."],
-    shop: { open: ["I've a little to sell and I'll buy what you've carried up."], closed: ["Not now."] },
-  },
+  // it's made (the five the ring's errands on are said to; what each says to the errand is in its quest's `others`).
   amos: {
     first: ["You're no drover. You walk like you're going somewhere. Amos Tye. This is the Stance."],
     greet: {
