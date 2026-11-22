@@ -509,8 +509,8 @@ built at the camps**: Tobin's mare is in the lean-to and is only heard; Nan's he
   and set them out in a row, toes to the west, a pebble in each: "They think that's how it's done. I'm not sure it
   isn't"). His work: **How Far They Got** (the Thornpit, then the lead tokens thrown in its thorns; one is a seven), **The
   Halfway Stone** (goat men at the stone where he and Dag Colley met to compare tallies; Dag's stick is on it, since
-  spring: "I was the one who didn't walk"), **What Mumblefast Says** (near enough to hear: his stations, backwards), **Seven
-  Down** (Mumblefast emptied, at eight; pays the Stations written out, a scroll), and on: **Two Tallies** (to Dag at
+  spring: "I was the one who didn't walk"), **Seven Down** (at eight: up the path to Mumblefast near enough to hear what
+  it says, his stations backwards, and then the ring emptied; pays the Stations written out, a scroll), and on: **Two Tallies** (to Dag at
   Ashgate Halt) and **The First Station** (to Fenn Hollis at Mossgate Hide, after Mumblefast).
 - **Hild Ames**, 17, palmer, from Millhaven way (`c_young_5_1`). Five tokens and a very large blister; the only one to
   come down the Pilgrims' Road in eleven days (the peg at the fifth station was full, so she turned back). Plain-spoken,

@@ -40,55 +40,54 @@ export const RULES = {
   // ---- Bellmourn: a word down each of the four roads, to the camp a quarter of an hour out, paid there. None needs
   // anything first: each is one of the eleven Lisandra sends you round to (src/folk/lines/lisandra.js GIVERS), taken on her
   // round and walked when you're of a level for the camp. Three have a fight in the walk: what dens beside the road in ----
-  carter_is_late: { steps: [{ talk: 'tobin', say: "Hob Fenwick's barley is sacked and waiting on your cart.", end: true }], gold: 6, xp: 60 },
-  willow_bark: { steps: [{ kill: 'lair:fenway_goblins', n: 2 }, { talk: 'maren', say: "Sabine Moss sends coin for bark. Your road's clear.", end: true }], gold: 10, xp: 100 },
-  one_fire_at_the_fork: { steps: [{ kill: 'lair:frost_kobolds', n: 2 }, { talk: 'nan', say: 'Jory Pell counts one fire here where there were three.', end: true }], gold: 10, xp: 100 },
-  palmers_tally: { steps: [{ kill: 'lair:vigil_kobolds', n: 2 }, { talk: 'perrin', say: "Ser Aldric Halloway asks for this month's tally.", end: true }], gold: 10, xp: 100 },
+  carter_is_late: { steps: [{ talk: 'tobin', say: "Hob Fenwick's barley is sacked and waiting on your cart.", end: true }], gold: 3, xp: 30 },
+  willow_bark: { steps: [{ kill: 'lair:fenway_goblins', n: 2 }, { talk: 'maren', say: "Sabine Moss sends coin for bark. Your road's clear.", end: true }], gold: 4, xp: 35 },
+  one_fire_at_the_fork: { steps: [{ kill: 'lair:frost_kobolds', n: 2 }, { talk: 'nan', say: 'Jory Pell counts one fire here where there were three.', end: true }], gold: 4, xp: 35 },
+  palmers_tally: { steps: [{ kill: 'lair:vigil_kobolds', n: 2 }, { talk: 'perrin', say: "Ser Aldric Halloway asks for this month's tally.", end: true }], gold: 4, xp: 35 },
 
   // ---- Hillfoot Halt, east on the Hill Road, levels 3 to 5 (Tobin Wain; Bet Carrow): kobolds in the rocks by the halt,
   // goblins up the road and in Gnawbone Stockade, and the kobolds' diggings under the road, with their foreman, last ----
-  linchpins: { steps: [{ kill: 'lair:hill_kobolds', n: 2 }, { back: true, say: "Two kobolds won't draw another pin." }], gold: 14, xp: 135 },
-  pole_across_the_road: { steps: [{ kill: 'lair:hill_goblins', n: 2 }, { back: true, say: 'The toll on the hill is lifted.' }], gold: 18, xp: 180 },
-  iron_on_the_fence: { needs: 'linchpins', steps: [{ gather: 'outpost:den_gnawbone', n: 5, what: 'tyre irons' }, { back: true, say: 'Five tyres, from round their fence.' }], gold: 18, xp: 180 },
-  candlewick: { steps: [{ clear: 'den_candlewick' }, { back: true, say: 'The diggings are empty. The foreman too.' }], gold: 45, xp: 450, item: 'staff' },
-  beacon_for_the_bend: { needs: 'candlewick', steps: [{ talk: 'cuddy', say: 'Tobin Wain is bringing a cart up. He asks for the beacon.', end: true }], gold: 8, xp: 80 },
+  linchpins: { steps: [{ kill: 'lair:hill_kobolds', n: 2 }, { back: true, say: "Two kobolds won't draw another pin." }], gold: 6, xp: 65 },
+  pole_across_the_road: { steps: [{ kill: 'lair:hill_goblins', n: 2 }, { back: true, say: 'The toll on the hill is lifted.' }], gold: 9, xp: 90 },
+  iron_on_the_fence: { needs: 'linchpins', steps: [{ gather: 'outpost:den_gnawbone', n: 5, what: 'tyre irons', spots: [[40, -14], [-12, 43], [-38, -22], [13, 9], [-8, -13]] }, { back: true, say: 'Five tyres, from round their fence.' }], gold: 9, xp: 90 },
+  candlewick: { needs: 'linchpins', steps: [{ clear: 'den_candlewick' }, { back: true, say: 'The diggings are empty. The foreman too.' }], gold: 20, xp: 200, item: 'staff' },
+  beacon_for_the_bend: { needs: 'candlewick', steps: [{ talk: 'cuddy', say: 'Tobin Wain is bringing a cart up. He asks for the beacon.', end: true }], gold: 3, xp: 30 },
 
   // ---- Withy Landing, north on the Fen Way, levels 4 to 6 (Maren Rush; her cousin Tully): the baskets in Muddle Camp and
   // then the camp, the web over the path north, and the Silk Dell last ----
-  hats: { steps: [{ gather: 'outpost:den_muddle', n: 6, what: 'eel baskets' }, { back: true, say: 'Six baskets. Some of them had been worn.' }], gold: 18, xp: 180 },
-  path_to_the_water: { steps: [{ kill: 'lair:fenway_spiders', n: 2 }, { back: true, say: 'Two spiders. The web is down.' }], gold: 22, xp: 225 },
-  muddle: { needs: 'hats', steps: [{ clear: 'den_muddle' }, { back: true, say: 'Muddle Camp is empty.' }], gold: 45, xp: 450 },
-  silk_dell: { steps: [{ clear: 'den_silkdell' }, { back: true, say: 'The Silk Dell is empty. The big one is dead.' }], gold: 54, xp: 540, item: 'skull' },
-  rods_for_sedgebank: { needs: ['silk_dell', 'path_to_the_water'], steps: [{ talk: 'odo', say: 'Maren Rush has your rods cut. The path is open.', end: true }], gold: 8, xp: 80 },
+  hats: { steps: [{ gather: 'outpost:den_muddle', n: 6, what: 'eel baskets' }, { back: true, say: 'Six baskets. Some of them had been worn.' }], gold: 9, xp: 90 },
+  path_to_the_water: { steps: [{ kill: 'lair:fenway_spiders', n: 2 }, { back: true, say: 'Two spiders. The web is down.' }], gold: 11, xp: 110 },
+  muddle: { needs: 'hats', steps: [{ clear: 'den_muddle' }, { back: true, say: 'Muddle Camp is empty.' }], gold: 20, xp: 200 },
+  silk_dell: { steps: [{ clear: 'den_silkdell' }, { back: true, say: 'The Silk Dell is empty. The big one is dead.' }], gold: 24, xp: 240, item: 'skull' },
+  rods_for_sedgebank: { needs: ['silk_dell', 'path_to_the_water'], steps: [{ talk: 'odo', say: 'Maren Rush has your rods cut. The path is open.', end: true }], gold: 3, xp: 30 },
 
   // ---- the Forkstone, south where the Barrow Track leaves the Frost Road, levels 5 to 7 (Nan Dray; Dickon, her lad): what
   // walks round the herd, the bells under the spiders' larder (three lying out, two close in), the goat men on the way
   // to Lychfield, and Lychfield last ----
-  what_walks_round: { steps: [{ kill: 'lair:frost_spiders', n: 2 }, { back: true, say: 'Two of what walked round you are dead.' }], gold: 22, xp: 225 },
-  bring_me_the_bells: { steps: [{ gather: 'outpost:den_hanginglarder', n: 5, what: 'herd bells', spots: [[-41, 12], [9, -44], [37, 26], [-13, 11], [12, -9]] }, { back: true, say: 'Five bells. And one more.' }], gold: 22, xp: 225 },
-  they_drive_them: { steps: [{ kill: 'lair:dark_goats_e', n: 2 }, { back: true, say: 'Two of your drovers on two legs are dead.' }], gold: 27, xp: 270 },
-  whistled_up: { steps: [{ clear: 'den_lychfield' }, { back: true, say: "Lychfield is quiet. All of it's lying down." }], gold: 63, xp: 630, item: 'robe' },
-  down_the_track: { needs: 'whistled_up', steps: [{ talk: 'amos', say: 'Nan Dray has six of your blacks, safe, on her grass.', end: true }], gold: 9, xp: 90 },
-  ponies_for_the_winter: { needs: 'whistled_up', steps: [{ talk: 'berin', say: "Nan Dray will winter your ponies. The road's fit as far as her.", end: true }], gold: 10, xp: 100 },
+  what_walks_round: { steps: [{ kill: 'lair:frost_spiders', n: 2 }, { back: true, say: 'Two of what walked round you are dead.' }], gold: 11, xp: 110 },
+  bring_me_the_bells: { steps: [{ gather: 'outpost:den_hanginglarder', n: 5, what: 'herd bells', spots: [[-41, 12], [9, -44], [37, 26], [-13, 11], [12, -9]] }, { back: true, say: 'Five bells. And one more.' }], gold: 11, xp: 110 },
+  they_drive_them: { steps: [{ kill: 'lair:dark_goats_e', n: 2 }, { back: true, say: 'Two of your drovers on two legs are dead.' }], gold: 13, xp: 130 },
+  whistled_up: { steps: [{ clear: 'den_lychfield' }, { back: true, say: "Lychfield is quiet. All of it's lying down." }], gold: 28, xp: 280, item: 'robe' },
+  down_the_track: { needs: 'whistled_up', steps: [{ talk: 'amos', say: 'Nan Dray has six of your blacks, safe, on her grass.', end: true }], gold: 3, xp: 30 },
+  ponies_for_the_winter: { needs: 'whistled_up', steps: [{ talk: 'berin', say: "Nan Dray will winter your ponies. The road's fit as far as her.", end: true }], gold: 4, xp: 35 },
 
   // ---- Palmers' Rest, west where the Pilgrims' Road leaves the Vigil Road, levels 6 to 8 (Old Perrin Lowe; Hild Ames):
-  // the goblins' pit north, what stands by the Pilgrims' Road, the goat men at the halfway stone, a listen at Mumblefast
-  // (past that stone), and Mumblefast last ----
-  how_far_they_got: { steps: [{ clear: 'den_thornpit' }, { gather: 'outpost:den_thornpit', n: 6, what: "palmers' tokens" }, { back: true, say: 'The pit is empty. Six tokens.' }], gold: 60, xp: 600 },
-  two_who_stand: { steps: [{ kill: 'lair:pilgrim_dolls', n: 2 }, { back: true, say: "They weren't palmers. They're down." }], gold: 27, xp: 270 },
-  halfway_stone: { steps: [{ kill: 'lair:vigil_goats', n: 2 }, { back: true, say: 'Two goat men down. This was on the stone.' }], gold: 27, xp: 270 },
-  what_mumblefast_says: { steps: [{ enter: 'outpost:den_mumblefast' }, { back: true, say: "I listened. It's your stations they're saying." }], gold: 20, xp: 200 },
-  seven_down: { needs: 'what_mumblefast_says', steps: [{ clear: 'den_mumblefast' }, { back: true, say: 'Mumblefast is empty. Nobody is counting.' }], gold: 72, xp: 720, item: 'scroll' },
-  two_tallies: { needs: ['halfway_stone', 'how_far_they_got'], steps: [{ talk: 'dag', say: 'Old Perrin Lowe sends his tally. He found yours on the stone.', end: true }], gold: 8, xp: 80 },
-  first_station: { needs: 'seven_down', steps: [{ talk: 'fenn', say: "Perrin Lowe says they're coming back down the Pilgrims' Road.", end: true }], gold: 10, xp: 100 },
+  // the goblins' pit north, what stands by the Pilgrims' Road, the goat men at the halfway stone, and Mumblefast last (past that stone:
+  // near enough to hear what it says, then emptied) ----
+  how_far_they_got: { steps: [{ clear: 'den_thornpit' }, { gather: 'outpost:den_thornpit', n: 6, what: "palmers' tokens" }, { back: true, say: 'The pit is empty. Six tokens.' }], gold: 27, xp: 270 },
+  two_who_stand: { steps: [{ kill: 'lair:pilgrim_dolls', n: 2 }, { back: true, say: "They weren't palmers. They're down." }], gold: 13, xp: 130 },
+  halfway_stone: { steps: [{ kill: 'lair:vigil_goats', n: 2 }, { back: true, say: 'Two goat men down. This was on the stone.' }], gold: 13, xp: 130 },
+  seven_down: { steps: [{ enter: 'outpost:den_mumblefast' }, { clear: 'den_mumblefast' }, { back: true, say: 'They said your stations backwards. They have stopped.' }], gold: 34, xp: 340, item: 'scroll' },
+  two_tallies: { needs: ['halfway_stone', 'how_far_they_got'], steps: [{ talk: 'dag', say: 'Old Perrin Lowe sends his tally. He found yours on the stone.', end: true }], gold: 3, xp: 30 },
+  first_station: { needs: 'seven_down', steps: [{ talk: 'fenn', say: "Perrin Lowe says they're coming back down the Pilgrims' Road.", end: true }], gold: 4, xp: 35 },
 };
 // The level each wants (src/ui/autobrain.js PLAN; the quest log suggests the same). The ring steps up: Hillfoot 3 to 5,
-// Withy 4 to 6, the Forkstone 5 to 7, Palmers' Rest 6 to 8; the errands on out of it at 7 and 8, after the ring's own work.
+// Withy 4 to 6, the Forkstone 5 to 7, Palmers' Rest 6 to 8; each errand on at the first level of where it leads.
 export const LEVELS = [
   ['carter_is_late', 3], ['willow_bark', 4], ['one_fire_at_the_fork', 5], ['palmers_tally', 6],
   ['warrens_mouth', 7], ['tunnel_king', 8], ['mother_of_the_warren', 9],
-  ['linchpins', 3], ['pole_across_the_road', 4], ['iron_on_the_fence', 4], ['candlewick', 5], ['beacon_for_the_bend', 7],
-  ['hats', 4], ['path_to_the_water', 5], ['muddle', 5], ['silk_dell', 6], ['rods_for_sedgebank', 7],
-  ['what_walks_round', 5], ['bring_me_the_bells', 5], ['they_drive_them', 6], ['whistled_up', 7], ['down_the_track', 7], ['ponies_for_the_winter', 8],
-  ['how_far_they_got', 6], ['two_who_stand', 6], ['halfway_stone', 6], ['what_mumblefast_says', 7], ['two_tallies', 7], ['seven_down', 8], ['first_station', 8],
+  ['linchpins', 3], ['pole_across_the_road', 4], ['iron_on_the_fence', 4], ['candlewick', 5], ['beacon_for_the_bend', 5],
+  ['hats', 4], ['path_to_the_water', 5], ['muddle', 5], ['silk_dell', 6], ['rods_for_sedgebank', 6],
+  ['what_walks_round', 5], ['bring_me_the_bells', 5], ['they_drive_them', 6], ['whistled_up', 7], ['down_the_track', 6], ['ponies_for_the_winter', 8],
+  ['how_far_they_got', 6], ['two_who_stand', 6], ['halfway_stone', 6], ['two_tallies', 6], ['seven_down', 8], ['first_station', 8],
 ];

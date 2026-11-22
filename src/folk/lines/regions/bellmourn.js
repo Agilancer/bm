@@ -729,7 +729,7 @@ export const QUESTS = {
     about: "Kobolds come down to Hillfoot Halt at night and draw the linchpins out of the cart wheels: nothing else. Bet Carrow's cart lost a wheel on the hill for it. Tobin Wain wants two of the three put down at their lair in the rocks, south-east of the Halt across the Hill Road.",
     offer: [
       "See that wheel? Nothing wrong with it. That's the trouble. It'll go round fifty times and come off on the fifty-first, because some little snouted thing had the pin out of it in the night.",
-      "They don't take the load. They don't take the oats. Pins. Three of them, denned in the rocks south-east, a hundred and fifty paces off. Bet Carrow lost a wheel on the bend for it, and near enough lost Bet. Put down two. The third won't come alone.",
+      "They don't take the load. They don't take the oats. Pins. Three of them, denned in the rocks south-east, a hundred and fifty paces off. Bet Carrow lost a wheel on the bend for it, and near enough lost Bet. Put them down.",
     ],
     accept: "I'll see to them.",
     acceptLine: "South-east, over the road, where the ground breaks up. Little spears, quick feet. They go for your ankles, same as they go for my wheels.",
@@ -757,7 +757,7 @@ export const QUESTS = {
     about: "Three goblins have laid a pole across the Hill Road east of Hillfoot Halt and take a toll of whatever comes by. No horse will step over it. Bet Carrow, twelve days late with a load of tiles, wants the toll lifted: two of them down will do it. Up the road, where it starts to climb.",
     offer: [
       "Four hundred paces up the road there's a pole across it, on two forked sticks, and three goblins sat by it. They've seen a toll somewhere, and understood about half.",
-      "They took a cheese off a tinker and let him by. Then they took his kettle and let the cheese by. I'd laugh, on somebody else's road. No horse will step over a pole with goblins on it, and I'm twelve days late with tiles. Lift it. Two gone, and the third will find other work.",
+      "They took a cheese off a tinker and let him by. Then they took his kettle and let the cheese by. I'd laugh, on somebody else's road. No horse will step over a pole with goblins on it, and I'm twelve days late with tiles. Lift it.",
     ],
     accept: "I'll lift it.",
     acceptLine: "East up the road till it starts to climb. They're just off it, on the north side. Don't offer them anything. Tobin tried a turnip. Now they want a turnip a day.",
@@ -768,7 +768,7 @@ export const QUESTS = {
       "Go back to Bet Carrow at Hillfoot Halt.",
     ],
     progress: [
-      "East, where the road tilts. A pole and three goblins. Two, and it's lifted.",
+      "East, where the road tilts. A pole, and three goblins sat by it.",
     ],
     done: [
       "Lifted? Good. I'll have that pole. Ash, twelve foot, straight as a die. I need a new shaft, and they'd an eye for timber. I'll give them that and nothing else.",
@@ -786,21 +786,21 @@ export const QUESTS = {
     title: 'Iron on the Fence',
     giver: 'tobin',
     needs: 'linchpins',
-    about: "The goblins of Gnawbone Stockade, south-west of Hillfoot Halt, have had the iron tyre off every cart wheel left on the hill, and hang them on their fence to beat with bones. Tobin Wain can't shoe a wheel without them. Bring back five: they lie well out from the stockade, where they've been rolled and left. Keep wide and you needn't be seen.",
+    about: "The goblins of Gnawbone Stockade, south-west of Hillfoot Halt, have had the iron tyre off every cart wheel left on the hill, and hang them on their fence to beat with bones. Tobin Wain can't shoe a wheel without them. Bring back five: three lie well out from the stockade, where they've been rolled and left; two are hard by the fence, in the goblins' sight.",
     offer: [
       "Hear that, nights? South-west. Like a bell with no tune in it. That's Gnawbone. Goblins, in a stockade built out of my trade: shafts, tailboards, spokes for pickets.",
-      "They've had the tyre off every wheel left on this hill, to hang on the fence and hit with bones. I can't shoe a wheel with wood. Five would mend two carts. There's some lying well out, rolled and left. Keep wide and they'll not see you. Go nearer and they will.",
+      "They've had the tyre off every wheel left on this hill, to hang on the fence and hit with bones. I can't shoe a wheel with wood. Five would mend two carts. Three lie well out, rolled and left; keep wide for those. Two are hard by the fence. For those they'll see you.",
     ],
     accept: "Five tyres.",
     acceptLine: "Back toward town a little, then south off the road, two hundred and fifty paces; there's a trodden way. Follow the ringing. A tyre's an iron hoop as high as your hip. You'll want to roll them. Everyone carries the first one.",
     decline: 'Not now.',
     declineLine: "Then I've two carts on blocks. Go on.",
     journal: [
-      "Goblins at Gnawbone Stockade, south-west of Hillfoot Halt, hang the iron tyres from broken carts on their fence. Pick up five of the tyres lying round the stockade, well out from it.",
+      "Goblins at Gnawbone Stockade, south-west of Hillfoot Halt, hang the iron tyres from broken carts on their fence. Pick up five of the tyres: three lie well out from the stockade, two hard by its fence.",
       "Take the tyres back to Tobin Wain at Hillfoot Halt.",
     ],
     progress: [
-      "Five. Round the outside, well back from the fence. If it rings when you kick it, it's mine.",
+      "Five. Three well back, two by the fence. If it rings when you kick it, it's mine.",
     ],
     done: [
       "Five! Roll them over here. Careful, that one's hot. No. It's only been in the sun. I'm jumpy.",
@@ -814,13 +814,14 @@ export const QUESTS = {
   candlewick: {
     title: 'Candlewick',
     giver: 'tobin',
-    about: "The kobolds that draw the linchpins at Hillfoot Halt carry them to Candlewick Diggings, south-east of the Halt, where kobolds dig by candlelight under the Hill Road. The road has begun to sink. Empty the diggings: every one of them, and the foreman who points.",
+    needs: 'linchpins',
+    about: "The kobolds that drew the linchpins at Hillfoot Halt were carrying them to Candlewick Diggings, south-east of the Halt, where kobolds dig by candlelight under the Hill Road. The road has begun to sink. Empty the diggings: every one of them, and the foreman who points.",
     offer: [
       "I walked the road yesterday with a level. A carter's level: a bowl of water on the tailboard. The road's sunk a hand, this side of the Gallows fork. A hand, since spring.",
       "South-east there's a hole with lights in it. Kobolds, digging, each with a candle stuck to its head in its own wax. My pins are their wedges. And a big one in an iron hat, who points. A loaded cart goes through that road, and it's the cart, the horse and the man. Empty it.",
     ],
     accept: "I'll empty the diggings.",
-    acceptLine: "South-east, past the rocks where the pin-thieves den, three hundred paces; there's a way in off the Gallows fork, by the spoil heaps. Mind the big one. When he swings that pick the ground opens. Don't be stood where he's looking.",
+    acceptLine: "South-east, past the rocks where you found the pin-thieves, three hundred paces; there's a way in off the Gallows fork, by the spoil heaps. Mind the big one. When he swings that pick the ground opens. Don't be stood where he's looking.",
     decline: 'Not yet.',
     declineLine: "No. But I'll not take a load over that road, and nor will anyone I can stop.",
     journal: [
@@ -1128,9 +1129,9 @@ export const QUESTS = {
     about: "Old Perrin Lowe and Dag Colley of Ashgate Halt used to meet on the first of each month at a stone halfway between them, to lay their tallies side by side. Goat men have sat at the stone since spring. Put down two of the three: west along the Vigil Road, just south of it. And look on the stone.",
     offer: [
       "I notch a stick for everyone who goes west past my arch. Dag Colley, at Ashgate Halt, notches one for everyone who comes back east past his. First of the month we'd meet at the halfway stone and lay them side by side.",
-      "Mine's always the longer. That's the road. But I like to know by how much. Since spring there's been goat men sat at the stone. Three. I went as far as I could see them, and came home. I expect Dag did the same. Two fewer, and an old man could get by.",
+      "Mine's always the longer. That's the road. But I like to know by how much. Since spring there's been goat men sat at the stone. Three. I went as far as I could see them, and came home. I expect Dag did the same. Shift them, and an old man could get by.",
     ],
-    accept: "Two fewer.",
+    accept: "I'll shift them.",
     acceptLine: "West along the Vigil Road, three hundred and fifty paces. The stone's south of the road, flat-topped, high as a table. They sit against it, and they lead with the horns. And look on the stone, would you. I left nothing there. I'd like to know if anyone did.",
     decline: 'Not now.',
     declineLine: "Then I'll keep cutting, and not knowing. I'm used to half of that.",
@@ -1139,7 +1140,7 @@ export const QUESTS = {
       "There was a notched stick on the stone, under a pebble. Take it back to Old Perrin Lowe at Palmers' Rest.",
     ],
     progress: [
-      "West, south of the road. The flat stone. Two. And look on top of it.",
+      "West, south of the road. The flat stone. And look on top of it.",
     ],
     done: [
       "A stick? On the stone, under a pebble? Give it here. ...Nineteen notches. That's Dag's hand; he cuts on the slant. Grey with weather. That's lain there since the first of the month. In spring.",
@@ -1150,56 +1151,29 @@ export const QUESTS = {
     ],
   },
 
-  what_mumblefast_says: {
-    title: 'What Mumblefast Says',
-    giver: 'perrin',
-    about: "West of Palmers' Rest and north of the Vigil Road, hooded folk stand in a ring at a place called Mumblefast and say something over and over, dusk to dawn. Old Perrin Lowe wants to know what. Go up the path near enough to hear, and no nearer: they're more than a match for you yet.",
-    offer: [
-      "West of here, north off the road, there's a ring of them. Hoods. They stand and they mumble, dusk to dawn. It carries. I've lain awake to it since midsummer.",
-      "I know every prayer said on this road, and it's none of them. It's a list. It goes up at the end of each. I want to know what's on it. Don't go in. Don't be brave. Get near enough to hear, and come and tell an old man what he's been sleeping next to.",
-    ],
-    accept: "I'll go and listen.",
-    acceptLine: "West along the road, near four hundred paces, past the halfway stone. Then a path north. When you can hear words, stop. They're more than you want yet. If one turns its hood your way, you've heard enough.",
-    decline: 'Not now.',
-    declineLine: "Then I'll go on guessing. I'm good at it. It's all wrong, but it passes the night.",
-    journal: [
-      "Hooded folk mumble all night at Mumblefast, west of Palmers' Rest. Go west along the Vigil Road and up the path north of it, near enough to hear what they say. Don't go in.",
-      "From the path the words carry: first stone, second stone, up to the seventh. Then down again. Go back to Old Perrin Lowe at Palmers' Rest and tell him what Mumblefast says.",
-    ],
-    progress: [
-      "West, then north by the path. Near enough to hear. No nearer.",
-    ],
-    done: [
-      "The stations. They're saying the stations. First stone, second stone, up to the seventh. And then down again. ...Backwards. They're walking my road backwards, standing still.",
-      "I don't know what that does. I don't think they do; I think they've been told. Here. You've given me something to lie awake over that's at least mine. I'll have to think what to ask of you. I've a feeling I know.",
-    ],
-    after: [
-      "I say them forwards now, at dusk, out loud, facing west. Seven up. It's probably nothing. It felt rude not to.",
-    ],
-  },
-
   seven_down: {
     title: 'Seven Down',
     giver: 'perrin',
-    needs: 'what_mumblefast_says',
-    about: "The hooded folk at Mumblefast, west of Palmers' Rest, say the seven stations backwards all night, and since they began almost nobody has come back down the Pilgrims' Road. Old Perrin Lowe wants the ring emptied: every one of them, and whoever leads the saying.",
+    about: "West of Palmers' Rest and north of the Vigil Road, hooded folk stand in a ring at a place called Mumblefast and say something over and over, dusk to dawn; and since they began, almost nobody has come back down the Pilgrims' Road. Old Perrin Lowe wants to know what they say. Then he wants it stopped: every one of them, and whoever leads.",
     offer: [
-      "I've lain and listened, now I know what it is. Seven, six, five. Down to one. And I've looked at my stick. Forty-four went up since spring. One came down, and she turned back at the fifth.",
-      "I don't say the one makes the other. I'm a palmer. I don't know how anything works; I only walk. But they began at midsummer, and that's when the road stopped giving people back. Empty the ring. Whoever stands in the middle and leads: that one above all.",
+      "West of here, north off the road, there's a ring of them. Hoods. They stand and they mumble, dusk to dawn. It carries. I've lain awake to it since midsummer. I know every prayer said on this road, and it's none of them. It's a list. It goes up at the end of each.",
+      "And I've looked at the peg-book, not the stick. Thirty took a first token since midsummer. One came down, and she turned back at the fifth. I don't say the one makes the other. I'm a palmer; I only walk. Go and hear what's on the list. Then stop it. Whoever leads, above all.",
     ],
-    accept: "I'll empty the ring.",
-    acceptLine: "West along the road, near four hundred paces, then the path north, as before. This time don't stop. What they throw you'll not see till it lands, and the one in the middle calls weather. Keep moving. I'll say the seven forwards from here. It can't hurt.",
+    accept: "I'll hear it, and stop it.",
+    acceptLine: "West along the road, near four hundred paces, past the halfway stone, then the path north. Stop when you can hear words, and listen. Then don't stop. What they throw you'll not see till it lands, and the one in the middle calls weather. Keep moving.",
     decline: 'Not yet.',
     declineLine: "No. It's a great deal to ask. I've asked it of nobody else. I'd nobody else to ask.",
     journal: [
-      "The hooded folk of Mumblefast say the stations backwards, and the Pilgrims' Road gives nobody back. Empty the ring, west of Palmers' Rest and north of the Vigil Road: put down every one of them, and whoever leads.",
-      "Go back to Old Perrin Lowe at Palmers' Rest.",
+      "Hooded folk mumble all night at Mumblefast, west of Palmers' Rest. Go west along the Vigil Road and up the path north of it, near enough to hear what they say.",
+      "From the path the words carry: seventh stone, sixth stone, down to the first. Then again. They are saying Perrin's stations backwards. Empty the ring: put down every one of them, and whoever leads.",
+      "Go back to Old Perrin Lowe at Palmers' Rest and tell him what Mumblefast said.",
     ],
     progress: [
-      "West, then north by the path. All of them. I'm saying the seven forwards. I've lost my place twice.",
+      "West, then north by the path. Hear it first. I'd like to know what I've been sleeping next to.",
+      "All of them. I'm saying the seven forwards from here. I've lost my place twice.",
     ],
     done: [
-      "It stopped. Mid-count. At four. I was saying mine, and there was suddenly nobody to say them against. I finished anyway. It seemed only civil.",
+      "The stations? Seven down to one? ...They were walking my road backwards, standing still. And it stopped at four. I heard it stop. I was saying mine, and there was suddenly nobody to say them against. I finished anyway. It seemed only civil.",
       "Take this. The Stations, written out fair, the words for each stone, forwards. I've said them forty-one times and nothing ever happened. I'm no longer sure nothing was the wrong thing to happen. You've a different sort of voice.",
     ],
     after: [
@@ -1345,9 +1319,9 @@ export const QUESTS = {
     about: "Great spiders have webbed the path north of Withy Landing, tree to tree, where Maren Rush cuts her best osier and where the Fen Way goes on to Sedgebank. Kill two of the three and the web comes down.",
     offer: [
       "My best osier bed's north, where the path comes down to the water. I've not cut it since the web went up. It's across the whole path, tree to tree, and it's not the sort you brush off your face.",
-      "Three of them. Each the size of a calf. They don't come out. They wait, and the web tells them. I threw a stick in to see. It was wrapped before it stopped swinging. That's the way to Sedgebank too. Kill two. One can't keep a web that size.",
+      "Three of them. Each the size of a calf. They don't come out. They wait, and the web tells them. I threw a stick in to see. It was wrapped before it stopped swinging. That's the way to Sedgebank too. Kill them, and I'll have the web down myself.",
     ],
-    accept: "Two of them.",
+    accept: "I'll kill them.",
     acceptLine: "North along the Fen Way, two hundred and fifty paces. They're just west of it, where the alders close over. Burn the web if you can do that. Not the osiers. I'll know which you did.",
     decline: 'Not now.',
     declineLine: "Then that bed goes to seed and Odo goes without. It's not you he'll blame.",
@@ -1359,7 +1333,7 @@ export const QUESTS = {
       "North, under the alders. Two. Don't touch the web with anything you want back.",
     ],
     done: [
-      "Two? That'll bring it down. I'm cutting at first light.",
+      "Dead? Then I'm cutting at first light.",
       "Here. I went and looked, while you were washing. There was a punt-pole in it, wrapped to the top. Odo's, by the notches. He never said he'd tried to come.",
     ],
     after: [

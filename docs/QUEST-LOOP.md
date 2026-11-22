@@ -116,10 +116,10 @@ A quest's words: `title`, `giver`, `about`, `offer` (2+), `accept`, `acceptLine`
 step names (what they say when you bring the word). Lines are 280 letters at most (a journal line 320; `accept`,
 `decline` and a step's `say` 70). `tests/quests-beyond.test.mjs` walks every one through.
 
-Pay (as a guide; the first pass paid twice this and the ring round Bellmourn came to ten levels): a small kill or
-gather quest about 45 xp a level; a den about 90 a level and something to keep; an errand 60 to 100; a dungeon's boss
-250 a level and an item; gold about a tenth of the xp. A level is `90 * (level - 1) ^ 1.75` xp in all
-(`src/items/levels.js`): a hub should be worth a level or two with its kills, not five.
+Pay (as a guide; the first pass paid three times this and the ring round Bellmourn came to ten levels): a small kill,
+gather or visit quest about 22 xp a level; a den about 40 a level and something to keep; an errand 30 to 35; a
+dungeon's boss 250 a level and an item; gold about a tenth of the xp. A level is `90 * (level - 1) ^ 1.75` xp in all
+(`src/items/levels.js`): a hub's quests should come to about half a level, its kills the rest.
 
 What the critics of the first region found, which holds for every region:
 
@@ -164,11 +164,11 @@ here are what the other regions' errands point at.
 
 | Region | Hub | Level | Who | Sent here from | Sends on to |
 | --- | --- | --- | --- | --- | --- |
-| bellmourn | Bellmourn | 1-9 | the town; Lisandra | | hillfoot (Hob), forkstone (Jory), palmers (Aldric), withy (Sabine) |
-| | hillfoot, Hillfoot Halt | 3-5 | *`tobin` Tobin Wain, carter | Bellmourn | cairnwatch |
-| | forkstone, the Forkstone | 4-6 | *`nan` Nan Dray, drover | Bellmourn | trackside; fellfoot |
-| | palmers, Palmers' Rest | 4-6 | *`perrin` Old Perrin Lowe, palmer | Bellmourn | ashgate; mossgate |
-| | withy, Withy Landing | 4-6 | *`maren` Maren Rush, withy-cutter | Bellmourn | sedgebank |
+| bellmourn | Bellmourn | 1-9 | the town; Lisandra | | hillfoot (Hob), withy (Sabine), forkstone (Jory), palmers (Aldric) |
+| | hillfoot, Hillfoot Halt | 3-5 | `tobin` Tobin Wain, carter; `bet` Bet Carrow, carter | Bellmourn | cairnwatch |
+| | withy, Withy Landing | 4-6 | `maren` Maren Rush, withy-cutter; `tully` Tully Rush, her cousin | Bellmourn | sedgebank |
+| | forkstone, the Forkstone | 5-7 | `nan` Nan Dray, drover; `dickon` Dickon, her herd-lad | Bellmourn | trackside; fellfoot |
+| | palmers, Palmers' Rest | 6-8 | `perrin` Old Perrin Lowe, palmer; `hild` Hild Ames, palmer | Bellmourn | ashgate; mossgate |
 | downs | cairnwatch | 5-6 | *`cuddy` Cuddy Stone, cairn-keeper | hillfoot | hamlet |
 | | hamlet, Millhaven (with the farm and mill) | 5-7 | *`abel` Abel Fenwick, farmer (Hob's cousin); *`joan` Joan Millward, at the mill | cairnwatch | belltower; dunmow |
 | | belltower | 6-9 | `bellwright`, `hale` | hamlet | stonecarters |
