@@ -1,6 +1,6 @@
 // The quests of the land beyond Bellmourn: the roads out to the small towns, what besets each of them, and the party
 // dungeons (the Hollowfang Warrens, Blackvigil Keep, the Howling Deeps, and the four made after them: the Drowned Vaults,
-// the Sporehold, the Hollow Playhouse, the Kingsbarrow) and the cathedral's catacombs. Their workings only:
+// the Sporehold, the Hollow Playhouse, the Kingsbarrow). Their workings only:
 // every word of them is in src/folk/lines/land.js, and how a step is finished is src/folk/quests.js (which spreads these
 // into RULES). Givers: Bellmourn's own (the ones Lisandra sends you round), the people posted in the small towns
 // (src/folk/people.js POSTED), and the two at the Bell Tower (src/folk/lines/beyond.js BEYOND).

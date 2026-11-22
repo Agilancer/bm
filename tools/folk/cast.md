@@ -439,9 +439,12 @@ From one person of a hub to the next (a word carried, paid where it's said; each
 then on offer): **A Plate at the Hare** (Osric to Dorcas), **The Man at the Cross** (Dorcas to Wymond), **Sacks Nobody Came
 For** (Hasket to Colm), **Out of Khel** (Colm to Ysolt). And **The Arch Before the Gate** (Hasket): to the end of the Vigil
 Road and through the portal before Blackvigil's gate.
-The catacombs: 23. **Further Down** (Silas): twenty more. 24. **Waxed Thread** (Tamsin): six Grave Wax, to proof a winter's stock.
-The Hollowfang Warrens: 25. **Something Dug This** (Corran): go through. 26. **Barley Thieves** (Hob): twelve goblins or kobolds.
-27. **The Tunnel-King** (Corran): Grubnash. 28. **Mother of the Warren** (Aldric): Skrit and Skrat, then Venomaw.
+(The catacombs' two, **Further Down** and **Waxed Thread**, were cut when the quests were remade round the camps: more of
+the same work under the church. docs/QUEST-LOOP.md.)
+The Hollowfang Warrens (`src/folk/regions/bellmourn.js`): 25. **Something Dug This** (Corran): go through, and put down
+twelve goblins or kobolds while you're there (what was Hob's **Barley Thieves** is folded into it: his barrow's wheel-mark
+goes in at the arch, and Corran pays him out of it). 27. **The Tunnel-King** (Corran): Grubnash. 28. **Mother of the
+Warren** (Aldric): Skrit and Skrat, then Venomaw.
 Thornwick: 29. **Hedge-Breakers** and 30. **The Black Ram** (Osric; the Ram pays the Goatfoot). 31. **Up from the Hanging
 Wood** and 32. **Thursdays** (Dorcas; the Old Toll, and Wat Arden's pie). 33. **Salt for the Hanged** (Wymond; Hangman's
 Cross and the Twisted Grove).
@@ -452,6 +455,53 @@ Frostwatch: 39. **What Sits on Your Chest** (the Glimmerstone), 40. **Ravens' To
 Ser Hale: 43. **The Howling** and 44. **The Sleeper** (the Deeps); 45. **The Gate at the End of the West Road**,
 46. **Twenty of the Garrison**, 47. **The First of the Lords**, 48. **Sorvane and the Brothers**, 49. **The Castellan**
 (he pays with a skull he had Silas carve, for everything Abel ever sent him).
+
+## The four roads out (`src/folk/regions/bellmourn.js`, lines in `src/folk/lines/regions/bellmourn.js`)
+
+A quarter of an hour out of Bellmourn on each road there's a camp with one person at it, who has its work and keeps its
+board (a sutler: buys anything). They're the first people a player meets out of town, at level three to six. **Plain
+folk's**: none of them names Velscour or Tessariel, the keep, the tower or the sisters. Each is sent to from town by one of
+the eleven Lisandra sends you round to (a word carried, paid at the camp), and each sends you on.
+
+- **Tobin Wain**, 54, carter, at **Hillfoot Halt** on the Hill Road (`c_worker_2_1`). Thirty years carting barley up the
+  hill to the Downs and flour down. Measured, dry, thinks in loads, wheels and gradients; everything he knows is "take it
+  loaded, at a walk, and don't stop". His mare is Pudding, nineteen, and he trusts her nose over his eyes. Sleeps under the
+  cart ("the one roof I trust. I know what it weighs"). His line: "Everything's a load. It's only a question of how far."
+  Sent to by Hob (**The Carter's Late**: the barley's sacked and he hasn't come). His work: **Linchpins** (kobolds draw the
+  pins from the wheels and nothing else), **A Pole Across the Road** (three goblins who've half understood a toll),
+  **Iron on the Fence** (the tyres off his wheels, hung on Gnawbone Stockade to be beaten with bones; he can't sleep without
+  the ringing after), **Candlewick** (the kobolds' diggings under the road, where the pins went; pays his father's cart
+  shaft, a staff), and on: **A Light for the Bend** (to Cuddy Stone at Cairnwatch, to light the beacon).
+- **Nan Dray**, 47, drover, at **the Forkstone** where the Barrow Track leaves the Frost Road (`c_wife_big_1`). Minds
+  other folks' cattle and is paid by the head that comes home. Blunt, unsentimental, reads people by their feet and
+  treats them as she treats beasts ("stand where it doesn't want to be"). Her husband Tam is buried in Lychfield, three
+  years; she kept the name and the dog. Sent to by Jory (**One Fire at the Fork**: he counts the drovers' fires from the
+  south lamp, and they wave to each other after). Her work: **Salt** (kobolds rolled away the salt, and a beast without
+  salt wanders), **Bring Me the Bells** (the strays are hung in the Hanging Larder; she owes each owner a bell and an
+  account; the sixth bell is nobody's, and old), **They Drive Them** (goat men who cut cattle out of the herd as a drover
+  would, and keep them well), **Whistled Up** (Lychfield, where something calls and they get up for it: "he never once
+  came when I called him"; pays Tam's coat, a robe), and on: **Word Down the Track** (to Amos Tye at the Drovers' Stance)
+  and **Ponies for the Winter** (to Berin Stoat at Fellfoot, at level eight).
+- **Old Perrin Lowe**, 73, palmer, at **Palmers' Rest** where the Pilgrims' Road leaves the Vigil Road (`c_old_man_1`).
+  Has walked the seven stations to the foot of the Sorrowhorn forty-one times and never gone up it. Gentle, exact about
+  paces, vague about years, wry about faith without naming any: "Nobody's ever said what 'it' is. That's why it's lasted."
+  Notches a stick for everyone who goes west. Sent to by Aldric (**The Palmer's Tally**: forty-four since spring). His
+  work: **Left Boots** (kobolds take one boot from each sleeper, always the left), **How Far They Got** (the Thornpit's
+  goblins throw the palmers' lead tokens in the thorns; he sends them home so a family knows how far; one is a seven;
+  pays the Stations written out, a scroll), **The Two Who Stand** (two hooded figures by the Pilgrims' Road who waved
+  back wrong), **What Mumblefast Says** (go near enough to hear: they're saying his stations backwards), and on: **Two
+  Tallies** (to Dag Colley at Ashgate Halt) and **The First Station** (to Fenn Hollis at Mossgate Hide, at level eight).
+- **Maren Rush**, 31, withy-cutter, at **Withy Landing** on the Fen Way (`c_young_3_1`). Cuts and boils willow for
+  Bellmourn's baskets, hurdles and wattle; her hands never stop and she doesn't stop for talk. Quick, short, practical;
+  a craftswoman who grudgingly admires good tying wherever she finds it. "Cut it to the ground and it comes back thicker.
+  I've tried that with people. It doesn't take." Sent to by Sabine (**Willow Bark**). Her work: **Cut Loose** (goblins who
+  cut her bundles' ties and watch; one claps), **Hats** (Muddle Camp wears her eel baskets; one comes back mended, over
+  and under), **The Path to the Water** (two spiders' web across the path north; she learns something from it and hates
+  that), **The Silk Dell** (the great one in the middle "sits and ties, all day, like me"; pays the skull that came up on
+  her hook), and on: **Rods for Sedgebank** (to Odo Marsh; say it twice).
+
+The six their errands are said to (**Cuddy Stone**, **Amos Tye**, **Berin Stoat**, **Dag Colley**, **Fenn Hollis**, **Odo
+Marsh**) stand at their camps as placeholders, with a line each, till their own regions are made.
 
 ## Where people go (for the life sim)
 

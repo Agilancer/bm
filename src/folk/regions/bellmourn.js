@@ -62,7 +62,7 @@ export const RULES = {
   how_far_they_got: { needs: 'left_boots', steps: [{ clear: 'den_thornpit' }, { gather: 'outpost:den_thornpit', n: 6, what: "palmers' tokens" }, { back: true, say: 'The pit is empty. Six tokens.' }], gold: 60, xp: 650, item: 'scroll' },
   two_who_stand: { steps: [{ kill: 'lair:pilgrim_dolls', n: 2 }, { back: true, say: "They weren't palmers. They're down." }], gold: 60, xp: 540 },
   what_mumblefast_says: { steps: [{ enter: 'outpost:den_mumblefast' }, { back: true, say: "I listened. It's your road they're saying." }], gold: 40, xp: 400 },
-  dry_wheels: { needs: 'left_boots', steps: [{ talk: 'dag', say: 'Old Perrin Lowe sends his tally, and asks after yours.', end: true }], gold: 30, xp: 270 },
+  two_tallies: { needs: 'left_boots', steps: [{ talk: 'dag', say: 'Old Perrin Lowe sends his tally, and asks after yours.', end: true }], gold: 30, xp: 270 },
   first_station: { needs: 'two_who_stand', steps: [{ talk: 'fenn', say: "Perrin Lowe says the Pilgrims' Road is walked again.", end: true }], gold: 40, xp: 360 },
 
   // ---- Withy Landing, north on the Fen Way (Maren Rush): goblins by the road back to town, her baskets in Muddle Camp,
@@ -79,6 +79,6 @@ export const LEVELS = [
   ['warrens_mouth', 7], ['tunnel_king', 8], ['mother_of_the_warren', 9],
   ['linchpins', 3], ['pole_across_the_road', 4], ['iron_on_the_fence', 4], ['candlewick', 5], ['beacon_for_the_bend', 5],
   ['salt_for_the_beasts', 4], ['bring_me_the_bells', 5], ['they_drive_them', 5], ['down_the_track', 5], ['whistled_up', 6], ['ponies_for_the_winter', 8],
-  ['left_boots', 4], ['how_far_they_got', 5], ['two_who_stand', 6], ['what_mumblefast_says', 6], ['dry_wheels', 6], ['first_station', 8],
+  ['left_boots', 4], ['how_far_they_got', 5], ['two_who_stand', 6], ['what_mumblefast_says', 6], ['two_tallies', 6], ['first_station', 8],
   ['cut_loose', 4], ['hats', 4], ['path_to_the_water', 5], ['silk_dell', 6], ['rods_for_sedgebank', 6],
 ];

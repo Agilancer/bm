@@ -44,7 +44,8 @@ test('there are plenty of them, and three or more go into each party dungeon', (
   // (And two or more into each of the four made after them. Phobos's sewers' and its castle's are the city's: tests/sewers.test.mjs,
   // tests/castle.test.mjs.)
   for (const d of DELVES.filter((q) => !q.sewer && !q.castle)) assert.ok(into(d.key).length >= 2, `${d.key}: ${into(d.key)}`);
-  assert.ok(IDS.filter((id) => LAND_RULES[id].steps.some((s) => s.kill === 'catacombs' || (s.bring && !s.at))).length >= 2, 'the catacombs');
+  // (The catacombs' are the town's own starter work now, docs/QUEST-LOOP.md: the dead, and what's brought up off them.)
+  assert.ok(Object.keys(RULES).filter((id) => RULES[id].steps.some((s) => s.kill === 'catacombs' || (s.bring && !s.at))).length >= 2, 'the catacombs');
   // Each dungeon's first boss and its last have a quest.
   for (const d of DELVES.filter((q) => !q.sewer && !q.castle)) {
     const mine = BOSSES.filter((b) => b.delve === d.key).map((b) => b.key);
