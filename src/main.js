@@ -71,7 +71,7 @@ import { Arrange } from './ui/arrange.js';
 import { groundAt, setHomes } from './ui/places.js';
 import { HallUI } from './ui/testhall.js';
 import { HALL, SPAWN, hallAt, inHall } from './core/testhall.js';
-import { CritterField, lineClear, meshHeight, REACH as CRITTER_REACH } from './core/critters.js';
+import { CritterField, lineClear, meshHeight, REACH as CRITTER_REACH, PICK_ROOM } from './core/critters.js';
 import { CritterLook } from './gfx/critters.js';
 import { CritterWords } from './ui/critterwords.js';
 import { beginRun, deathWords, noteEvent, noteRun, trailSentence } from './core/lastrun.js';
@@ -1815,8 +1815,10 @@ class GameView {
     const seen = (c) => { const q = c.middle(); return lineClear(eye[0], eye[1], eye[2], q[0], q[1] + 0.04, q[2], ground); };
     // (The crosshair: its body, or 10 pixels round it if that's more. A pointer, a little round it; a thumb, more round a ripe
     // one than one not.)
-    const room = how === 'tap' ? (q) => (q.ripe ? 46 : 24) : how === 'stick' ? (q) => (q.ripe ? 30 : 18) : how === 'aim' ? 10 : 24;
-    const c = f.pick(screen, sx, sy, room, seen, how === 'aim' ? 1 : 1.35);
+    // (PICK_ROOM: made a good deal bigger, so a far one, tiny on the screen, isn't a fiddle to hit.)
+    const P = PICK_ROOM, two = P[how];
+    const room = Array.isArray(two) ? (q) => (q.ripe ? two[0] : two[1]) : two || P.cursor;
+    const c = f.pick(screen, sx, sy, room, seen, how === 'aim' ? P.aimBody : P.body);
     return c ? { c, reach: Math.hypot(c.x - s[H.PX], c.z - s[H.PZ]) <= CRITTER_REACH } : null;
   }
 
