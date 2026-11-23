@@ -2341,7 +2341,8 @@ export class Brain {
         const st = Q.step(id);
         if (!st || this.skipping(`q:${id}`) || !(st.night || st.warden)) continue;
         const job = this.questJob(id, m, lvl);
-        if (job) return job;
+        // (Only what it can get to before morning: it was pulled back a country for a night step at dusk.)
+        if (job && this.jobDist(job, m) < 1200) return job;
       }
     }
     // Lisandra's door east, once Bram's errand's done: before the rest of her round of the town, a letter or anything else in
@@ -2357,7 +2358,7 @@ export class Brain {
     // so the camp's whole round is in hand before it sets out. It used to take only what the one it was sent to had, and
     // came back for the other's when everything else in the land was done.)
     if (questing && !visiting && !m.town) { const by = this.offerJob(m, null, 120); if (by) return by; }
-    let near1 = null, nd1 = Infinity, low1 = null, lowLvl = 0, lowD = Infinity;
+    let near1 = null, nd1 = Infinity, low1 = null, lowLvl = 0, lowD = Infinity, mid1 = null, midD = Infinity;
     for (const [id, lvl] of PLAN_ALL) {
       const s = Q.state(id), st = Q.step(id);
       if (!s || s.stage === 'done' || this.skipping(`q:${id}`)) continue;
@@ -2369,12 +2370,17 @@ export class Brain {
       if (d < nd1) { nd1 = d; near1 = job; }
       // (The first of them in the plan's order, the lowest level's, and the nearest of that level: for when none is near.)
       if (!low1 || (lvl === lowLvl && d < lowD)) { low1 = job; lowLvl = lvl; lowD = d; }
+      // (And a word that's the end of an errand already under way, its fight on the road done: the nearest such.)
+      if (st?.talk && s.step > 0 && d < midD) { mid1 = job; midD = d; }
     }
     // (A hand-in close by waits while another quest's work is as close: a camp's work is done in one round, the lair, the
     // den past it and the things lying round the den, and then all of it told. Each used to be its own walk out and back.)
     if (near1 && nd1 < 500) return this.nearWork(m, 450) || near1;
     // (None near: the lowest level's, not the nearest as the crow flies. With an errand in hand for each road out of
     // Bellmourn, the nearest took it from one spoke's end across the town to the next and back.)
+    // (But an errand half done is finished first, when its end is within a kilometre: with the goat on the Gallows Road
+    // down and Thornwick 700 m on, it turned round for a lower word three kilometres behind.)
+    if (mid1 && midD < 1000) return mid1;
     if (near1 && low1) near1 = low1;
     // (A hand-in a country away waits while there's a quest's work close by: the hunt over the hedge before the road home.)
     if (near1) {
@@ -2595,6 +2601,9 @@ export class Brain {
     if (st.boss || DELVE_KEYS.includes(st.enter) || DELVE_KEYS.includes(st.kill) || roomDelve(st.kill) || roomDelve(st.enter) || (st.visit || []).some((v) => roomDelve(v) && !(s.seen || []).includes(v))) return null;
     if (st.enter) {
       if (st.night && !isNight(m.hour) && !(m.hour >= 19.5)) return null;
+      // (A lair or a den to come to by night: not at dusk. It got there early, stood in its monsters' sight and fought
+      // them under "by night" with the step not yet to be had.)
+      if (st.night && !isNight(m.hour) && (st.enter.startsWith('outpost:') || st.enter.startsWith('lair:'))) return null;
       const a = area(st.enter);
       if (!a) return null;
       return { kind: 'go', why: `q:${id}`, x: a.x, z: a.z, r: a.r, below: a.below, say: `${title}: to ${st.enter === 'catacombs' ? 'the catacombs' : st.enter === 'bellcrypt' ? 'the Bell Crypt' : placeName(st.enter)}${st.night ? ', by night' : ''}.` };
