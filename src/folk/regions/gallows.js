@@ -59,13 +59,13 @@ export const RULES = {
   the_warlocks_stones: { needs: 'names_in_lead', steps: [{ clear: 'den_warlockstones' }, { back: true, say: "The Warlocks' Stones are empty. Nobody's saying names." }], gold: 40, xp: 400, item: 'staff' },
   old_toll: { needs: ['black_ram', 'the_warlocks_stones'], steps: [{ kill: 'lair:gallows_bat', n: 1 }, { talk: 'ann', say: "Dorcas Pym sent Wat Arden's pie down. It's Thursday.", end: true }], gold: 5, xp: 40 },
 
-  // ---- the Old Toll, halfway down the Gallows Road, levels 11 to 13 (Ann Arden). Come to with Wat's pie. Its work is
-  // round the burnt tollhouse: what stands at the broken bar each dusk, facing south (the possessed, and man-high dolls
-  // among them); the pieces of her father's rate-board, kicked about the same ground; and the Toll Roost south-west, which
-  // he walked past coming home every Thursday. Then on down the road to the Cross, past the two night things off it ----
+  // ---- the Old Toll, halfway down the Gallows Road, levels 11 to 13 (Ann Arden). Come to with Wat's pie. Its work: what
+  // stands on the rise north each dusk, facing south down at the broken bar (the possessed, and a man-high doll or more
+  // among them); the pieces of her father's rate-board, carried up there; and the Toll Roost south-west, whose bats cross
+  // the road he walked home by every Thursday. Then on down the road to the Cross, past the two night things off it ----
   what_waits_at_the_bar: { steps: [{ kill: 'lair:toll_ambush', n: 4 }, { back: true, say: 'Four of what stands on the rise are down.' }], gold: 24, xp: 240 },
   corpses_nothing: { steps: [{ gather: 'lair:toll_ambush', n: 4, what: 'pieces of the rate-board', spots: [[-38, 18], [22, 41], [44, -14], [10, -9]] }, { back: true, say: 'Four pieces of the board. One has fresher paint.' }], gold: 24, xp: 240 },
-  the_toll_roost: { steps: [{ clear: 'den_duskroost' }, { back: true, say: 'The Toll Roost is empty. The big one too.' }], gold: 48, xp: 480, item: 'robe' },
+  the_toll_roost: { steps: [{ clear: 'den_duskroost' }, { back: true, say: 'The Toll Roost is empty, the Gallows-Wing with it.' }], gold: 38, xp: 380, item: 'robe' },
   not_coming_back: { needs: 'the_toll_roost', steps: [{ kill: 'lair:gallows_demons', n: 1 }, { talk: 'crowle', say: "Ann Arden says she isn't coming back. The toll's kept.", end: true }], gold: 5, xp: 45 },
 
   // ---- Hangman's Cross, where the Gallows Road meets the lanes, levels 13 to 15 (Master Crowle). Come to with Ann's word
@@ -75,54 +75,59 @@ export const RULES = {
   // to ask if there's a light over the Cross yet; and north-east to Mother Grawl past the old gibbet, for his jar ----
   salt_for_the_hanged: { steps: [{ visit: ['lair:gallows_plague', 'outpost:den_burningground'] }, { back: true, say: 'The salt is down at the pit and on the Burning Ground.' }], gold: 28, xp: 285 },
   the_big_man: { steps: [{ kill: 'lair:gallows_plague', n: 3 }, { back: true, say: 'Three of the four at the pit are down.' }], gold: 29, xp: 290 },
-  the_burning_ground: { steps: [{ clear: 'den_burningground' }, { back: true, say: 'The Burning Ground is empty. Its fires are out.' }], gold: 56, xp: 560, item: 'skull' },
-  a_light_over_the_cross: { needs: 'the_big_man', steps: [{ kill: 'lair:gallows_giant', n: 3 }, { talk: 'tansy', say: "Master Crowle asks if there's a light over the Cross yet.", end: true }], gold: 5, xp: 45 },
+  the_burning_ground: { steps: [{ clear: 'den_burningground' }, { back: true, say: 'The Burning Ground is empty. Its fires are out.' }], gold: 42, xp: 420, item: 'skull' },
+  a_light_over_the_cross: { needs: 'the_big_man', steps: [{ kill: 'lair:gallows_giant', n: 2 }, { talk: 'tansy', say: "Master Crowle asks if there's a light over the Cross yet.", end: true }], gold: 5, xp: 45 },
   crowles_jar: { needs: 'the_burning_ground', steps: [{ kill: 'lair:gibbet_possessed', n: 3 }, { talk: 'grawl', say: "Master Crowle's jar wants filling. He says you'll know.", end: true }], gold: 5, xp: 50 },
 
   // ---- Corpse-Candle Camp, off the lanes south-west of the Cross, levels 14 to 15 (Tansy Wight; Gil Mosse). A light has
   // gone the same road every night, from the Lazar Field to Nightfall Ruin, which is the road somebody will be carried:
-  // walk it by night to the ruin and put down three; then empty the ruin. Gil's: the lepers' clappers, thrown away round
-  // the Lazar Field, so he can't hear the plague-taken coming. Then on south-west to the players' wagon, past
-  // Leatherwing Roost ----
-  the_candle_road: { steps: [{ enter: 'outpost:den_nightfall', night: true }, { kill: 'outpost:den_nightfall', n: 3 }, { back: true, say: 'I walked the candle road to the ruin. Three there are down.' }], gold: 31, xp: 310 },
-  clappers: { steps: [{ gather: 'outpost:den_lazarfield', n: 5, what: 'clappers', spots: [[42, 11], [-14, 43], [-40, -17], [13, -12], [-11, 10]] }, { back: true, say: 'Five clappers, from round the Lazar Field.' }], gold: 31, xp: 310 },
-  nightfall_ruin: { needs: 'the_candle_road', steps: [{ clear: 'den_nightfall' }, { back: true, say: 'Nightfall Ruin is empty. The long one too.' }], gold: 60, xp: 600, item: 'scroll' },
-  the_players_bill: { needs: 'nightfall_ruin', steps: [{ kill: 'outpost:den_leatherwing', n: 2 }, { talk: 'fabian', say: 'Tansy Wight sends back your playbill. She went.', end: true }], gold: 5, xp: 50 },
+  // walk it to the ruin before the light does and put down three; then empty the ruin. Gil's: the lepers' clappers, thrown
+  // away round the Lazar Field, so he can't hear the plague-taken coming. Then on south-west to the players' wagon, by
+  // the Lazar Field's edge ----
+  the_candle_road: { steps: [{ enter: 'outpost:den_nightfall' }, { kill: 'outpost:den_nightfall', n: 3 }, { back: true, say: 'I walked the candle road to the ruin. Three there are down.' }], gold: 25, xp: 250 },
+  clappers: { steps: [{ gather: 'outpost:den_lazarfield', n: 5, what: 'clappers', spots: [[42, 11], [-14, 43], [-40, -17], [38, -34], [-36, 32]] }, { back: true, say: 'Five clappers, from round the Lazar Field.' }], gold: 25, xp: 250 },
+  nightfall_ruin: { steps: [{ clear: 'den_nightfall' }, { back: true, say: 'Nightfall Ruin is empty, the long one with it.' }], gold: 30, xp: 300, item: 'scroll' },
+  the_players_bill: { needs: ['the_candle_road', 'nightfall_ruin'], steps: [{ kill: 'outpost:den_lazarfield', n: 2 }, { talk: 'fabian', say: 'Tansy Wight sends back your playbill. She went.', end: true }], gold: 4, xp: 40 },
 
   // ---- the Players' Wagon, by the Twisted Grove, levels 15 to 16 (Master Fabian Larke; Peg Hollin), and the Hollow
   // Playhouse under the grove (Fabian's). The audience that sits in the grove at dusk, facing the door; Poxhollow, north-west,
   // where the company played for nothing on the way in and Fabian caught the cough that kept him out of the play (Peg's);
   // then the house itself: the seamstress, and the last night of the run. The end of its road ----
-  the_audience: { steps: [{ kill: 'lair:grove_demons', n: 3 }, { back: true, say: 'Three of your audience are down.' }], gold: 33, xp: 330 },
-  poxhollow: { steps: [{ clear: 'den_poxhollow' }, { back: true, say: 'Poxhollow is empty. The big one too.' }], gold: 60, xp: 600 },
-  the_winter_company: { needs: 'the_audience', steps: [{ enter: 'playhouse' }, { boss: 'seamstress' }, { back: true, say: 'I found your company. Their seamstress is dead.' }], gold: 350, xp: 3500, item: 'robe' },
-  last_night_of_the_run: { needs: 'the_winter_company', steps: [{ boss: 'leadingman' }, { boss: 'dollmaker' }, { back: true, say: 'The play is over. The Dollmaker is dead.' }], gold: 400, xp: 4000, item: 'skull' },
+  the_audience: { steps: [{ kill: 'lair:grove_demons', n: 3 }, { back: true, say: 'Three of your audience are down.' }], gold: 26, xp: 265 },
+  poxhollow: { steps: [{ clear: 'den_poxhollow' }, { back: true, say: 'Poxhollow is empty, its master with it.' }], gold: 30, xp: 300 },
+  the_winter_company: { needs: 'the_audience', steps: [{ enter: 'playhouse' }, { boss: 'seamstress' }, { back: true, say: 'I found your company. Their seamstress is dead.' }], gold: 50, xp: 500, item: 'robe' },
+  last_night_of_the_run: { needs: 'the_winter_company', steps: [{ boss: 'leadingman' }, { boss: 'dollmaker' }, { back: true, say: 'The play is over. The Dollmaker is dead.' }], gold: 60, xp: 600, item: 'skull' },
+  // (Its pay is small for a delve's: the Playhouse pays its own, in what its bosses and packs give, and a quest's worth on
+  // top of that took a player out of the Wagon at 23 or 24, past the region's top; at 500 and 600 still about three over.)
+  // And back up the lane to the Cross with word the house is shut, past Nightfall Ruin, filling again: Crowle's jar waits there.
+  the_closing_notice: { needs: 'last_night_of_the_run', steps: [{ kill: 'outpost:den_nightfall', n: 2 }, { talk: 'crowle', say: 'Master Fabian Larke says the Winter Company has closed.', end: true }], gold: 5, xp: 45 },
 
   // ---- Mother Grawl's Hut, up her lane off the Marshal's Road, levels 15 to 17 (Mother Grawl). Come to with Crowle's jar.
   // Her henbane, from the ground round Grawl's Kennel north-east (where her six dogs lie up, that the wood gave back
-  // upright); the Kennel; and what sits in the dead oak south-west and watches her pot. Then east to Roadsend with the
-  // fleece Wilf sent her, the wrong colour, past the carters stood round their carts by the road ----
-  henbane: { steps: [{ gather: 'outpost:den_grawlden', n: 5, what: 'henbane', spots: [[40, 14], [-17, 41], [-42, -13], [12, -11], [-12, 12]] }, { back: true, say: 'Five of henbane, with the dirt on.' }], gold: 33, xp: 330 },
-  grawls_kennel: { needs: 'henbane', steps: [{ clear: 'den_grawlden' }, { back: true, say: 'The Kennel is empty. The big one came when I called.' }], gold: 60, xp: 600, item: 'staff' },
-  under_the_eaves: { steps: [{ kill: 'lair:grawl_bats', n: 1 }, { back: true, say: 'One of the two in your oak is down.' }], gold: 35, xp: 350 },
-  the_wrong_fleece: { needs: ['grawls_kennel', 'under_the_eaves'], steps: [{ kill: 'lair:carters_halt', n: 3 }, { talk: 'wilf', say: "Mother Grawl sends your fleece back. It's the wrong colour.", end: true }], gold: 6, xp: 55 },
+  // upright); the Kennel; and what beds down on the burnt ground south-west and watches her pot. Then east to Roadsend
+  // with the fleece Wilf sent her, the wrong colour, past Thornwick's carters stood by the road where they stopped ----
+  henbane: { steps: [{ gather: 'outpost:den_grawlden', n: 5, what: 'henbane', spots: [[46, 16], [-19, 46], [-47, -14], [40, -30], [-38, 30]] }, { back: true, say: 'Five of henbane, with the dirt on.' }], gold: 26, xp: 265 },
+  grawls_kennel: { needs: 'henbane', steps: [{ clear: 'den_grawlden' }, { back: true, say: 'The Kennel is empty. The big one came when I called.' }], gold: 33, xp: 330, item: 'staff' },
+  under_the_eaves: { steps: [{ kill: 'lair:grawl_bats', n: 1 }, { back: true, say: 'One of the two on the burnt ground is down.' }], gold: 28, xp: 280 },
+  the_wrong_fleece: { needs: ['grawls_kennel', 'under_the_eaves'], steps: [{ kill: 'lair:carters_halt', n: 3 }, { talk: 'wilf', say: "Mother Grawl sends your fleece back. It's the wrong colour.", end: true }], gold: 5, xp: 45 },
 
-  // ---- Roadsend, where the Gallowswood's lanes come out on the Marshal's Road, levels 17 to 18 (Wilf Carder). The last
-  // clip, stacked to air on the rise north and found unrolled and laid out flat; what lies on it of a night (three night
-  // things); and on to the Long Queue in the East, past the plague giant by the road ----
-  last_clip: { steps: [{ gather: 'lair:roadsend_demons', n: 4, what: 'fleeces', spots: [[-39, 15], [18, 42], [41, -17], [-10, -10]] }, { back: true, say: 'Four fleeces off the rise. They were laid out flat.' }], gold: 37, xp: 375 },
-  what_lies_on_it: { needs: 'last_clip', steps: [{ kill: 'lair:roadsend_demons', n: 2 }, { back: true, say: 'Two of the three on your rise are down.' }], gold: 38, xp: 380, item: 'scroll' },
-  wool_for_the_gate: { needs: 'what_lies_on_it', steps: [{ kill: 'lair:marshal_rd_plague', n: 2 }, { talk: 'rollo', say: "Wilf Carder asks if they'll take wool at the gate.", end: true }], gold: 6, xp: 60 },
+  // ---- Roadsend, where the Gallowswood's lanes come out on the Marshal's Road, levels 17 to 18 (Wilf Carder). Come to
+  // with Grawl's fleece. Thornwick's spring clip, lying about where its carters stopped by the road west; his old stock on
+  // the rise north, laid out flat of a night, and the three tall things that lie on it (taken together); then, with both,
+  // on up the road to the Long Queue in the East, past the plague giant halfway ----
+  last_clip: { steps: [{ gather: 'lair:carters_halt', n: 4, what: 'fleeces', spots: [[-40, -12], [44, 18], [-14, 45], [30, -38]] }, { back: true, say: "Four of Thornwick's fleeces, from round the carters." }], gold: 37, xp: 375 },
+  what_lies_on_it: { steps: [{ kill: 'lair:roadsend_demons', n: 2 }, { back: true, say: 'Two of the three on your rise are down.' }], gold: 38, xp: 380, item: 'scroll' },
+  wool_for_the_gate: { needs: ['last_clip', 'what_lies_on_it'], steps: [{ kill: 'lair:marshal_rd_plague', n: 2 }, { talk: 'rollo', say: "Wilf Carder asks if they'll take wool at the gate.", end: true }], gold: 6, xp: 60 },
 };
 // The level each wants (src/ui/autobrain.js PLAN; the quest log suggests the same). Each hub steps up; each errand on is a
 // level above the work it waits for. Kestrel Hide (9 to 11) comes between Thornwick's first work and its last; the
 // Players' Wagon (the end of its road) before Mother Grawl's, so the road east is taken last.
 export const LEVELS = [
-  ['hedge_breakers', 8], ['up_from_the_gallowswood', 8], ['names_in_lead', 9], ['nothing_for_the_pot', 9], ['black_ram', 10], ['the_warlocks_stones', 10], ['old_toll', 11],
+  ['hedge_breakers', 8], ['up_from_the_gallowswood', 8], ['names_in_lead', 8], ['nothing_for_the_pot', 9], ['black_ram', 10], ['the_warlocks_stones', 10], ['old_toll', 11],
   ['what_waits_at_the_bar', 11], ['corpses_nothing', 11], ['the_toll_roost', 12], ['not_coming_back', 13],
-  ['salt_for_the_hanged', 13], ['the_big_man', 13], ['the_burning_ground', 14], ['a_light_over_the_cross', 14], ['crowles_jar', 15],
+  ['salt_for_the_hanged', 13], ['the_big_man', 13], ['the_burning_ground', 14], ['a_light_over_the_cross', 14], ['crowles_jar', 16],
   ['the_candle_road', 14], ['clappers', 14], ['nightfall_ruin', 15], ['the_players_bill', 15],
-  ['the_audience', 15], ['poxhollow', 15], ['the_winter_company', 15], ['last_night_of_the_run', 16],
+  ['the_audience', 15], ['poxhollow', 15], ['the_winter_company', 15], ['last_night_of_the_run', 16], ['the_closing_notice', 16],
   ['henbane', 15], ['grawls_kennel', 15], ['under_the_eaves', 16], ['the_wrong_fleece', 17],
   ['last_clip', 17], ['what_lies_on_it', 17], ['wool_for_the_gate', 18],
 ];

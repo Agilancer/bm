@@ -12,7 +12,7 @@ export const LINES = {
   // ---------------------------------------------------------------- Thornwick
   dorcas: {
     first: [
-      "Dust to the knee and nothing on your back. You've walked from Bellmourn. Sit. You'll eat before you tell me why. That's the rule of this house, and I made it.",
+      "Dust to the knee and nothing on your back. You've walked off the downs. Sit. You'll eat before you tell me why. That's the rule of this house, and I made it.",
     ],
     greet: {
       morning: [

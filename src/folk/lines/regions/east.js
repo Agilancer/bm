@@ -30,7 +30,7 @@ export const LINES = {
       player: ["West boots. Fancy.", "Stand by the fire, not in front of it."],
       morning: ["Fire's in."],
       evening: ["Bank it up, somebody."],
-      magic: ["Not by the hurdles! They're dry as tinder."],
+      magic: ["Not by the pens! The hay's all we've got."],
     },
     shop: { open: ["I'll buy what you've got and sell you what I have, which is a roll and a dressing. Don't ask for more. There isn't any."], closed: ["Not now. I'm feeding people."] },
   },
@@ -182,10 +182,10 @@ export const QUESTS = {
   back_of_the_line: {
     title: 'The Back of the Line',
     giver: 'hester',
-    about: "Wolves come down off the March after dark and take whoever's last into Marchfoot's fold. Three lie up in the gorse south of it, under three hundred paces off, one bigger than the others. Hester Pyke wants two of them dead. The third won't stay on its own.",
+    about: "Wolves come down off the March after dark and take whoever's last into Marchfoot's fold. Three lie up in the gorse south of it, under three hundred paces off, on two legs when they want, one bigger. Hester Pyke wants two of them dead. The third won't stay on its own.",
     offer: [
       "They come down in a line. Nobody tells them to. The strong first, then the ones with children, then the old. And behind the old, at dusk, the wolves.",
-      "Three of them. One's bigger, and walks on two legs when it wants. They lie up in the gorse down there, south, a short walk. Kill two. The third won't stay on its own.",
+      "Three of them, on two legs when they want. One bigger. They lie up in the gorse down there, south, a short walk. Kill two. The third won't stay on its own.",
     ],
     accept: "I'll go down into the gorse.",
     acceptLine: "South, down the slope, where the gorse is thick. They sleep by day. Don't let them.",
@@ -200,10 +200,10 @@ export const QUESTS = {
     ],
     done: [
       "Two? Then the third's gone back up the March. ...I worked something out while you were down there. They've never once gone for Mother Tibb's, at Last Hearth. Only here.",
-      "It's the fold. Twenty years of sheep in these pens. They come down the March after the smell, and find people in the pens instead. The hurdles go on the fire tonight. Take this. It's what the last ones had on them. Spend it on something with teeth.",
+      "It's the fold. Twenty years of sheep in these pens. They come down the March after the smell, and find people in the pens instead. Nobody sleeps in the pens from tonight. Take this. It's what the last ones had on them. Spend it on something with teeth.",
     ],
     after: [
-      "The hurdles went up last night. Nobody sleeps in a pen now. Nobody's been taken off the back, either.",
+      "Nobody sleeps in the pens now. We'll burn them when it's dry. Nobody's been taken off the back, either.",
     ],
   },
 
@@ -257,7 +257,7 @@ export const QUESTS = {
     ],
     done: [
       "Down? Then nobody's going back to the keep to say he's here. They'd have had a likeness of him. 'A clerk. Lean. Ink on the right hand.'",
-      "So everyone who's come down since him, I've had ink their right hands before I sent them west. A whole road of clerks, walking to Last Hearth. ...It was my husband's. He'd want it on somebody going east.",
+      "So everyone who's come down since him, I've inked their right hands before I sent them west. A whole road of clerks, walking to Last Hearth. ...It was my husband's. He'd want it on somebody going east.",
     ],
     after: [
       "Piers is teaching the ones who stop here their letters, ink and all. He says it's for cover. He's smiling, though.",
@@ -457,7 +457,7 @@ export const QUESTS = {
     about: "Something big stands in Widow's Notch, east of the Lee, on the only way over the ridge to the city. They call him the Toll-Giant. He takes the coats off everyone who crosses, and two sick knights stand with him. Ines Mar wants him dead.",
     offer: [
       "Widow's Notch. East, up. Something stands in it, big as a house end, with two sick knights who never fall over. Somebody called him the Toll-Giant once, and it stuck. There's no gate. There's him.",
-      "Everything over the ridge goes past him. He takes coats, blankets, the boots off your feet. They come down this side barefoot in the snow. Kill him, and they'll come over in their boots.",
+      "Everything over the ridge goes past him. He takes coats, blankets, the boots off your feet. They come down this side barefoot on the stones. Kill him, and they'll come over in their boots.",
     ],
     accept: "I'll kill the Toll-Giant.",
     acceptLine: "East, up into the Notch. He wakes when you're a good way off. Let him come to you down the slope. It's harder for him than for you.",

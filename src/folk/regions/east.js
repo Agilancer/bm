@@ -57,7 +57,7 @@ export const RULES = {
   // Sill, past what waits at the Broken Span: paid to bring you to the Sill at the city's level ----
   oswys_quills: { steps: [{ gather: 'lair:lee_roost', n: 5, what: 'long quills' }, { back: true, say: 'Five quills, from round the roost.' }], gold: 42, xp: 420 },
   the_birds_go_up: { steps: [{ kill: 'lair:lee_roost', n: 3 }, { back: true, say: 'The roost is dead. The queen first.' }], gold: 44, xp: 440 },
-  the_toll_giant: { needs: ['oswys_quills', 'the_birds_go_up'], steps: [{ kill: 'lair:notch_giant', n: 2 }, { back: true, say: 'The Toll-Giant is dead. The Notch is open.' }], gold: 84, xp: 840, item: 'staff' },
+  the_toll_giant: { needs: ['oswys_quills', 'the_birds_go_up'], steps: [{ kill: 'lair:notch_giant', n: 2 }, { back: true, say: 'The Toll-Giant is dead. The Notch is open.' }], gold: 90, xp: 900, item: 'staff' },
   down_to_the_sill: { needs: 'the_toll_giant', steps: [{ kill: 'lair:span_ambush', n: 4 }, { talk: 'fv_wenna', say: 'Ines Mar says the Notch is open. Light a lamp for the dye works.', end: true }], gold: 130, xp: 1300 },
 
   // ---- the Sill, levels 22 to 23 (Wenna Coyle, once Ines's word has come down): three words into the city, one to each

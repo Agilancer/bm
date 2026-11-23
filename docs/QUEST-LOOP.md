@@ -119,7 +119,8 @@ step names (what they say when you bring the word). Lines are 280 letters at mos
 Pay (as a guide; the first pass paid three times this and the ring round Bellmourn came to ten levels): a small kill,
 gather or visit quest about 22 xp a level; a den about 40 a level and something to keep; an errand 30 to 35; a
 dungeon's boss 250 a level and an item; gold about a tenth of the xp. A level is `90 * (level - 1) ^ 1.75` xp in all
-(`src/items/levels.js`): a hub's quests should come to about half a level, its kills the rest.
+(`src/items/levels.js`): a hub's quests should come to about half a level, its kills the rest. (One exception, not to
+be copied: the Marches' `down_to_the_sill` pays 1300 xp, the catch-up that brings you to the Sill at the city's level, 22.)
 
 What the critics of the first region found, which holds for every region:
 
@@ -212,10 +213,10 @@ here are what the other regions' errands point at.
 | | wagon, the Players' Wagon (the Hollow Playhouse's door) | 14-15 | *`fabian` Master Fabian Larke, last of the Winter Company | crossroads | (road's end) |
 | | witch, Mother Grawl's Hut | 13-14 | *`grawl` Mother Grawl | crossroads | roadsend |
 | | roadsend | 16-18 | *`wilf` Wilf Carder, wool-factor | witch | tollqueue |
-| east | marchfoot | 14-16 | *`hester` Hester Pyke | lasthearth | widowslee |
-| | tollqueue, the Long Queue | 17-18 | *`rollo` Rollo Bask, carter | roadsend | widowslee |
-| | widowslee, Widow's Lee (hidden) | 18-22 | *`ines` Sergeant Ines Mar | marchfoot; tollqueue | sill |
-| | sill, the Sill | 3-5, then 20 | `fv_wenna` Wenna Coyle | widowslee (and Lisandra's door, at 1) | Phobos (`ph_penny`) |
+| east | marchfoot | 16-17 | *`hester` Hester Pyke; `piers` Piers Lusk | lasthearth | widowslee |
+| | tollqueue, the Long Queue | 18 | *`rollo` Rollo Bask, carter; `bride` Bride Sayer | roadsend | widowslee |
+| | widowslee, Widow's Lee (hidden) | 19-21 | *`ines` Sergeant Ines Mar; `oswy` Oswy Holm | marchfoot; tollqueue | sill |
+| | sill, the Sill | 3-5, then 22-23 (arrived at 22: `down_to_the_sill`'s 1300 xp is the catch-up into the city) | `fv_wenna` Wenna Coyle | widowslee (and Lisandra's door, at 1) | Phobos (`ph_penny`, `ph_ash`, `ph_watch`) |
 | phobos | the city, its sewers and the castle | 20-110 | its three hubs and its streets | sill | (its own) |
 
 The dungeons' quests move to whoever stands by their doors: the Vaults' to `tamar`, the Sporehold's to `dilly`, the

@@ -235,9 +235,9 @@ export const LAIRS = [
   // The Rimeholt Fells.
   { key: 'fell_harpies', x: 920, z: 4120, r: 9, boss: ['harpy_queen'], pick: ['harpy_warrior'], n: 3, pal: ['Base', 'Bone-white', 'Abyssal'] },
   // The Gallowswood.
-  { key: 'gallows_plague', x: 4020, z: 3080, r: 9, boss: ['plague_giant_armored'], pick: ['plague_knight_black', 'plague_knight_red', 'plague_giant_1', 'plague_giant_2'], n: 3, pal: ['Base', 'Blighted', 'Bloodsoaked'] },
+  { key: 'gallows_plague', x: 4020, z: 3080, r: 9, boss: ['plague_giant_armored'], pick: ['plague_knight_black', 'plague_knight_red'], n: 3, pal: ['Base', 'Blighted', 'Bloodsoaked'] },
   { key: 'grawl_bats', x: 4652, z: 1741, r: 6, boss: ['werebat'], pick: ['dragonling_black'], n: 1, pal: ['Base', 'Bloodsoaked'] },
-  { key: 'grove_demons', x: 3140, z: 4440, r: 8, pick: DEMONS.concat(MANNEQUINS), n: 4, pal: ['Base', 'Abyssal', 'Corrupted'] },
+  { key: 'grove_demons', x: 3140, z: 4440, r: 8, boss: MANNEQUINS, pick: DEMONS.concat(MANNEQUINS), n: 3, pal: ['Base', 'Abyssal', 'Corrupted'] },
   // The Marches (src/core/marches.js): Velscour's garrisons, each keep's in a colour of its own (the owner: palette swaps, a
   // different one at each); his necromancers at the tower lights; the Old Marshal, the Toll-Giant, what waits at the Span, and the
   // carrion birds on the plain under the Sill. (lvl: what auto-play takes them for, src/ui/autobrain.js lairLevel.)
@@ -320,9 +320,9 @@ export const LAIRS = [
   { key: 'gallows_rd_goblins', x: 1264, z: 478, r: 4, pick: GOBLINS, n: 2, pal: ['Base', 'Ashen'] },
   { key: 'cliff_harpies', x: 2563, z: 424, r: 8, pick: ['harpy_warrior'], n: 3, pal: ['Base', 'Bone-white'] },
   { key: 'downs_goats', x: 1784, z: 1321, r: 5, pick: ['goatman_white', 'goatman_bw'], n: 2, pal: ['Base'] },
-  { key: 'thorn_goats', x: 2183, z: 1514, r: 7, pick: GOATS, n: 3, pal: ['Base'] },
+  { key: 'thorn_goats', x: 2183, z: 1514, r: 7, pick: GOATS.filter((g) => g !== 'goatman_black'), n: 3, pal: ['Base'] },
   { key: 'thorn_ram', x: 2067, z: 2064, r: 6, boss: ['goatman_black'], pick: ['goatman_bw', 'goatman_gold_bad'], n: 2, pal: ['Base', 'Abyssal'], tricks: true },
-  { key: 'thorn_stragglers', x: 2655, z: 2103, r: 7, pick: ['plague_knight_black', 'plague_knight_red', 'possessed_man_1', 'possessed_woman_1'], n: 4, pal: ['Base', 'Blighted'] },
+  { key: 'thorn_stragglers', x: 2655, z: 2103, r: 7, boss: ['plague_knight_black', 'plague_knight_red'], pick: ['possessed_man_1', 'possessed_woman_1'], n: 3, pal: ['Base', 'Blighted'] },
   // The Weeping Fen: the drowned, along the Fen Way and on the Sunken Mile.
   { key: 'fenway_children', x: 17, z: -1807, r: 6, pick: CHILDREN, n: 3, pal: ['Blighted'] },
   { key: 'fenway_drowned', x: -190, z: -2450, r: 6, pick: POSSESSED, n: 3, pal: ['Blighted', 'Abyssal'] },
@@ -381,16 +381,16 @@ export const LAIRS = [
   { key: 'tor_roost', x: 1493, z: 4516, r: 8, boss: ['harpy_queen'], pick: ['harpy_warrior'], n: 2, pal: ['Base', 'Abyssal'], tricks: true },
   { key: 'tor_demons', x: 1640, z: 4700, r: 6, pick: DEMONS, n: 2, pal: ['Base', 'Bone-white'], tricks: true },
   // The Gallowswood.
-  { key: 'toll_ambush', x: 3360, z: 2420, r: 7, pick: POSSESSED.concat(MANNEQUINS), n: 5, pal: ['Base', 'Blighted', 'Bloodsoaked'] },
-  { key: 'gallows_bat', x: 2967, z: 2384, r: 4, boss: ['werebat'], n: 0, pal: ['Base', 'Bloodsoaked'] },
+  { key: 'toll_ambush', x: 3360, z: 2420, r: 7, boss: MANNEQUINS, pick: POSSESSED.concat(MANNEQUINS), n: 4, pal: ['Base', 'Blighted', 'Bloodsoaked'] },
+  { key: 'gallows_bat', x: 2967, z: 2384, r: 4, boss: ['werebat'], pick: ['harpy_warrior'], n: 1, dress: 'roost', pal: ['Base', 'Bloodsoaked'] },
   { key: 'gallows_demons', x: 3680, z: 2960, r: 6, pick: DEMONS, n: 2, pal: ['Base', 'Corrupted'], tricks: true },
-  { key: 'gibbet_possessed', x: 4393, z: 2504, r: 7, pick: POSSESSED, n: 4, pal: ['Blighted', 'Ashen'] },
+  { key: 'gibbet_possessed', x: 4393, z: 2504, r: 7, pick: POSSESSED, n: 4, pal: ['Blighted', 'Ashen'], dress: 'gibbets' },
   { key: 'gallows_giant', x: 3707, z: 3796, r: 8, boss: ['plague_giant_1', 'plague_giant_2'], pick: ['plague_knight_black', 'plague_knight_red'], n: 2, pal: ['Base', 'Blighted'], tricks: true },
   // Where the wood's lanes come out on the Marshal's Road, by Roadsend (src/folk/regions/gallows.js): Thornwick's wool carters,
-  // stopped by the road; what lies on Wilf Carder's wool on the rise north; and a plague giant on the road east.
-  { key: 'carters_halt', x: 5245, z: 1693, r: 7, pick: POSSESSED.concat(['plague_knight_black']), n: 4, pal: ['Blighted', 'Ashen'] },
+  // stopped by the road; what lies on Wilf Carder's wool on the rise north; and a plague giant halfway up the road to the Long Queue.
+  { key: 'carters_halt', x: 5245, z: 1693, r: 7, pick: POSSESSED, n: 4, pal: ['Blighted', 'Ashen'] },
   { key: 'roadsend_demons', x: 5577, z: 1423, r: 7, pick: DEMONS, n: 3, pal: ['Base', 'Abyssal'], tricks: true },
-  { key: 'marshal_rd_plague', x: 5859, z: 1861, r: 8, boss: ['plague_giant_1'], pick: ['plague_knight_black', 'plague_knight_red'], n: 2, pal: ['Base', 'Blighted'], tricks: true },
+  { key: 'marshal_rd_plague', x: 6303, z: 1076, r: 8, boss: ['plague_giant_1'], pick: ['plague_knight_black', 'plague_knight_red'], n: 2, pal: ['Base', 'Blighted'], tricks: true },
 ];
 
 // The outposts out in the land and the standing battles (src/core/wilds.js, laid by tools/wilds/place.mjs): lairs like any
