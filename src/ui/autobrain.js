@@ -709,8 +709,18 @@ export function planWay(m, end, o = {}) {
     const pre = A ? downStairs(A).filter((q, k, all) => k === all.length - 1 || (q.x - m.x) * A.fx + (q.z - m.z) * A.fz > 0.3) : [], post = B ? upStairs(B) : [];
     const door = { x: EAST_DOOR[0], z: EAST_DOOR[1], r: 6, gate: true };
     if (ea && eb) return pre.concat(post, [end]);
-    if (eb) return planWay(m, door, o).concat(post, [end]);
-    return pre.concat([door], planWay(door, end, { ...o, below: false }));
+    // (From one map to the other where the road crosses into the east's box, not at the gate: everything inside the box is
+    // the east map's, the road in included. Through the gate every time, the Gibbet Field and the carrion under the Sill,
+    // inside the box but this side of the city, were gone to by the gate and back up the road, 300 m past them and back, and
+    // Wenna on the Sill the same way home: to and fro along the road for good.)
+    if (eb) {
+      const way = planWay(m, door, o), k = way.findIndex((q) => !q.seal && inEast(q.x, q.z));
+      return (k >= 0 ? way.slice(0, k + 1) : way).concat(post, [end]);
+    }
+    const way = planWay(door, end, { ...o, below: false });
+    let k = -1;
+    for (let i = 0; i < way.length - 1; i++) if (inEast(way[i].x, way[i].z)) k = i; else break;
+    return pre.concat(k >= 0 ? way.slice(k) : [door].concat(way));
   }
   // On a delve's terrace or bound for one: by its steps.
   const A = stairsOf(m.x, m.z), B = stairsOf(end.x, end.z);

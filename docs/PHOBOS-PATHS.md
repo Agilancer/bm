@@ -38,7 +38,9 @@ layered:
   - counts progress along the route, not as the crow flies, so a stair winding up under its own deck isn't
     taken for "stuck";
   - gives up (`lost`) only after 30 s with no progress, or three asks in a row with no route.
-- `planWay`: in and out of the east goes through the Drawbridge Gate road (`EAST_DOOR`).
+- `planWay`: in and out of the east hands over between the roads and the east's map where the road crosses into its box,
+  not at the Drawbridge Gate road (`EAST_DOOR`): the plain under the Sill (the Gibbet Field, the carrion) is in the box
+  this side of the city, and by the gate it walked down the road past them to the gate and back, to and fro.
 
 ## What the map found, and what was fixed
 
