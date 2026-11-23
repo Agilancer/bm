@@ -13,6 +13,8 @@ import { allWays, nearestRoad, roadGraph } from '../src/core/roads.js';
 import { SITES } from '../src/core/lands.js';
 import { SEALS, portalStair } from '../src/core/sites.js';
 import { DELVES } from '../src/core/dungeon.js';
+import { LAIRS } from '../src/core/tripo-monsters.js';
+import { SILL_DOOR } from '../src/folk/first-visit.js';
 import { World } from '../src/sim/world.js';
 import { navFor } from '../src/sim/nav.worker.js';
 
@@ -195,4 +197,25 @@ test('a way is worked out in a few milliseconds, even at level 1 with every seal
   }
   t.sort((p, q) => p - q);
   assert.ok(t[15] < 25, `half of them took more than ${t[15].toFixed(1)} ms`);
+});
+
+// Inside the east's box but this side of the city (the plain under the Sill: the Gibbet Field, the carrion), it crosses onto
+// the east's map where the road comes into the box, not at the Drawbridge Gate. It used to go to the gate whenever one end
+// was in the box: from Wenna down the road past the Gibbet Field to the gate and back up to it, and from there home by the
+// gate again, to and fro along the road under the castle.
+test('to and from the plain under the Sill: not by the Drawbridge Gate, and no further than the road there and back', () => {
+  const sill = { x: SILL_DOOR.x, z: SILL_DOOR.z };
+  for (const key of ['sill_gibbets', 'sill_carrion']) {
+    const l = LAIRS.find((q) => q.key === key), at = { x: l.x, z: l.z };
+    for (const [a, b] of [[sill, at], [at, sill]]) {
+      const way = planWay(a, b);
+      assert.ok(!way.some((q) => q.gate), `${key}: by the gate`);
+      let L = 0, x = a.x, z = a.z;
+      for (const q of way) { L += Math.hypot(q.x - x, q.z - z); x = q.x; z = q.z; }
+      assert.ok(L < Math.hypot(b.x - a.x, b.z - a.z) * 1.7, `${key}: ${L.toFixed(0)} m of way for ${Math.hypot(b.x - a.x, b.z - a.z).toFixed(0)} m`);
+    }
+  }
+  // (Into the city itself, the east's map still takes it in by the gate road: the way hands over inside the box.)
+  const city = planWay(sill, { x: 9600, z: 0 });
+  assert.ok(inEast(city.at(-2).x, city.at(-2).z), 'handed over to the east map outside its box');
 });
