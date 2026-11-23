@@ -455,23 +455,23 @@ export const QUESTS = {
     decline: 'Not now.',
     declineLine: "Then I'll go on looking at it. It's what I do.",
     journal: [
-      "Cuddy Stone can see three things from Cairnwatch that he can't account for. Stand at each and look: the Cairnfield, east of the camp; Strawman's Acre, the scarecrows' field, north; and Paupers' Field, north-west.",
+      "Cuddy Stone can see three things from Cairnwatch that he can't account for. Stand at each and look: Strawman's Acre, the scarecrows' field, north; Paupers' Field, north-west; and the Cairnfield, east of the camp.",
       "Go back to Cuddy Stone at Cairnwatch and tell him what's at each.",
     ],
     progress: [
       "East, north, north-west. Any order. I can see you at all three, and I still can't see what you'll see.",
     ],
     heard: {
-      cairnfield: "Cairns stand open, their stones stacked square beside them. Someone small is moving among them, carrying.",
-      'outpost:den_strawacre': "Scarecrows, on ground nobody has sown. Far too many to be for crows, and none of them faces the field.",
+      cairnfield: "Cairns stand open, their stones stacked square beside them, largest at the bottom.",
+      'outpost:den_strawacre': "Ground nobody has sown, and straw trodden into it in a ring, facing the camp.",
       'outpost:den_paupers': "Paupers' Field. The graves are open, and what was in them is walking the wall.",
     },
     done: [
-      "Children, on the Cairnfield, carrying the stones. And one in a robe, who points. I'd seen the small ones. I took them for Millhaven's, playing. I'd meant to shout at them.",
-      "And the straw ones face here, and the Field's up and walking. Well. I asked. Here: that's for the legs. I'll have work for the rest of you when I've thought which of the three I mind most.",
+      "Opened, and stacked largest at the bottom. That's how my father showed me. I don't like having a thing in common with it. And I'd seen small ones up there. I took them for Millhaven's, playing.",
+      "And the straw ones faced here, and the Field's up and walking. Well. I asked. Here: that's for the legs. Knowing's no better. But it's what a lookout's for.",
     ],
     after: [
-      "I look at the three of them differently now. It's no better. But I know what I'm looking at, and that's all a lookout's for.",
+      "I look at the three of them differently now. I can't say I like it more. But I know what it is I'm looking at.",
     ],
     others: {
       ede: ["He's sent you to look at the Field? Then tell me too. No. Tell him, and I'll watch his face."],
@@ -498,7 +498,7 @@ export const QUESTS = {
       "East. The south side of the field. Whoever it is can read; they've been at the name-stones.",
     ],
     done: [
-      "Down? And the stones? ...Stacked by size, the largest at the bottom. That's how I'd do it. That's how my father showed me. I don't like having a thing in common with it.",
+      "Down? Three of the four. That'll end the stocktaking. A tidy mind, whoever it was. I'd have got on with it, if it had kept to its own dead.",
       "Silas Crane in Bellmourn has people under six of those. I'll put them back myself; I know which stone is which. Here. It's what the parish pays me a quarter. I'm not sure the parish knows it's still paying.",
     ],
     after: [
@@ -544,15 +544,15 @@ export const QUESTS = {
   one_more_each_morning: {
     title: 'One More Each Morning',
     giver: 'cuddy',
-    about: "North of Cairnwatch is a field nobody has sown in Cuddy Stone's time. There were three scarecrows in it at midsummer. There is one more each morning, they face the camp and not the crows, and yesterday's was wearing his other coat. Empty Strawman's Acre: every one that moves, and the big wicker one in the middle. Two hundred and fifty paces north.",
+    about: "North of Cairnwatch is a field nobody has sown in Cuddy Stone's time. There were no scarecrows in it at midsummer. There has been one more each morning since Monday, they face the camp and not the crows, and yesterday's was wearing his other coat. Empty Strawman's Acre: every one that moves, and the big wicker one in the middle. Two hundred and fifty paces north.",
     offer: [
-      "North, two hundred and fifty paces: a field nobody's sown in my time. Three scarecrows in it at midsummer. I count them. I count everything; I can't help it. Twenty-six this morning.",
-      "One more each morning. And they don't face the crows. They face here. Yesterday's was wearing my other coat, which was hung on the palisade the night before. I've not slept since. Empty it. All that move, and the big wicker one in the middle, which the rest stand round.",
+      "North, two hundred and fifty paces: a field nobody's sown in my time. None in it at midsummer. One on Monday, and one more each morning since. I count them; I can't help it. Five today, with the big wicker one.",
+      "And they don't face the crows. They face here. Yesterday's was wearing my other coat, which was hung on the palisade the night before. I've not slept since. Empty it. All that move, and the big wicker one in the middle, which the rest stand round.",
     ],
     accept: "I'll empty the field.",
     acceptLine: "North, by the trodden way. They stand still till you're in among them; that's the whole of their cunning. The wicker one throws fire, in a wheel. I've watched it practise. Don't stand where the wheel's going.",
     decline: 'Not yet.',
-    declineLine: "Twenty-seven tomorrow, then. I'll take the washing in.",
+    declineLine: "Six tomorrow, then. I'll take the washing in.",
     journal: [
       "Scarecrows gather in Strawman's Acre, north of Cairnwatch: one more each morning, all facing the camp. Empty the field: put down every one of them, and the wicker man in their middle.",
       "Go back to Cuddy Stone at Cairnwatch.",
@@ -568,7 +568,7 @@ export const QUESTS = {
       "The field's empty. I count it anyway, mornings. None. I say it out loud. None. It's the best number I've got.",
     ],
     others: {
-      ede: ["The straw ones? I walked past that field coming up. I thought, that's a lot of scarecrows for no corn. Then one of them wasn't where it had been."],
+      ede: ["The straw ones? I walked past that field coming up. I thought, that's an odd thing to stand in a field with no corn. Then one of them wasn't where it had been."],
     },
   },
 
@@ -579,7 +579,7 @@ export const QUESTS = {
     about: "From Cairnwatch, Cuddy Stone can see Millhaven's windmill, and its sails haven't turned in a month; and Tobin Wain is bringing barley up to be ground. Three goblins sit by the Abbey Road on the way: put down two. Then, on the green at Millhaven, ask the miller's daughter why the mill has stopped, and tell Abel Fenwick there's a cart coming. A quarter of an hour east. It's paid there.",
     offer: [
       "See the mill? South-east, on its rise, past the Abbey Road. Sails at a slant. They've not moved in a month, and I've watched for it. A miller doesn't leave them so.",
-      "Tobin Wain's bringing Hob Fenwick's barley up, now the beacon's lit, to a mill that isn't turning. Ask the miller's daughter why. Then tell Abel Fenwick, Hob's cousin, what's coming. And there's goblins sat where the path meets the Abbey Road. Three. Go through them.",
+      "Tobin Wain's bringing Hob Fenwick's barley up, now the beacon's lit, to a mill that isn't turning. Ask the miller's daughter why. Then tell Abel Fenwick, Hob's cousin, what's coming. And there's goblins sat on the way, this side of the Abbey Road. Three. Go through them.",
     ],
     accept: "I'll go to Millhaven.",
     acceptLine: "East, a quarter of an hour. The goblins are better than halfway, this side of the Abbey Road: two down, and the third will find somewhere else to sit. Then on over the road to the street of houses. Both of them stand on the green. Fenwick's the one who looks rained on.",
@@ -616,24 +616,24 @@ export const QUESTS = {
   millhaven_jelly: {
     title: 'Jelly in the Millpond',
     giver: 'abel',
-    about: "Something green came up out of Abel Fenwick's pond at lambing and ate a ewe, slowly, while he watched. The pond lies beside the Hill Road just past his farmhouse, four hundred paces west of Millhaven, and there are more of them now. Put down six of the jellies there.",
+    about: "Something green came up out of Abel Fenwick's pond at lambing and ate a ewe, slowly, while he watched. The pond lies beside the Hill Road just past his farmhouse, four hundred paces west of Millhaven, and there are more of them now. Put down four of the jellies there.",
     offer: [
       "I've a pond, by the farm. At lambing something came up out of it. Green, and it moves on its own, and it ate a ewe.",
-      "Ate it slow. I watched. Not because I wanted to: it was between me and the gate. There's more of them now, and the pond meadow's the one field I could reach without help, if I could reach it. You've that staff. Six would give me my gate back.",
+      "Ate it slow. I watched. Not because I wanted to: it was between me and the gate. There's more of them now, and the pond meadow's the one field I could reach without help, if I could reach it. You've that staff. Four would give me my gate back.",
     ],
     accept: "I'll clear your pond.",
     acceptLine: "West along the road, four hundred paces, on the north side, just past the farmhouse. Don't let one sit on you. They hold on. And they come apart when you hit them, so count the pieces, not the blows.",
     decline: 'Not now.',
     declineLine: "No. Why would you. It's only sheep.",
     journal: [
-      "Jellies have come up out of Abel Fenwick's pond, on the north side of the Hill Road just past Millhaven Farm, four hundred paces west of Millhaven. Put down six of them.",
+      "Jellies have come up out of Abel Fenwick's pond, on the north side of the Hill Road just past Millhaven Farm, four hundred paces west of Millhaven. Put down four of them.",
       "Go back to Abel Fenwick on the green at Millhaven.",
     ],
     progress: [
-      "West, by the farm. Six. They're slow till they aren't.",
+      "West, by the farm. Four. They're slow till they aren't.",
     ],
     done: [
-      "Six? There were three, when I last dared count. ...They come apart. Hit one and it's two. That's my luck in a bucket: even what eats my sheep breeds better than they do.",
+      "Four? There were two, when I last dared count. ...They come apart. Hit one and it's two. That's my luck in a bucket: even what eats my sheep breeds better than they do.",
       "Here. I'd rather pay than go and look, and I can't well afford either. I'll send word to Hob. He'll say he's sorry. He was sorry about the ewe.",
     ],
     after: [
@@ -706,35 +706,35 @@ export const QUESTS = {
       "It rained on Mudwall. The wall's risen. I'm not making that up.",
     ],
     others: {
-      abel: ["Mudwall? It's on my land. I'd have said something, but there were thirty of them and one of me, and I've a bad back."],
+      abel: ["Mudwall? It's on my land. I'd have said something, but there were five of them and one of me, and I've a bad back."],
     },
   },
 
   barley_rows: {
     title: 'The Barley Rows',
     giver: 'abel',
-    about: "Abel Fenwick has forty acres of barley ripe south of Millhaven, and can't set foot in it: scarecrows stand all down the rows, and he put up only one. They turn to watch a man walk the headland. Empty the Barley Rows, three hundred and fifty paces south of the green: every one that moves, and the wicker one they stand round.",
+    about: "Abel Fenwick has forty acres of barley ripe south of Millhaven, and can't set foot in it: scarecrows stand in the rows, and he put up only one: his own, nine years ago, which isn't where he stood it. They turn to watch a man walk the headland. Empty the Barley Rows, three hundred and fifty paces south of the green: every one that moves, and the wicker one they stand round.",
     offer: [
-      "I've one scarecrow. I made him myself: my father's hat, a turnip, one arm, because I ran out of pole. He's stood in the south barley nine years and never frightened a crow.",
-      "Now there's a rowful. Dozens, stood down the rows where a reaper would walk, and a big wicker one in the middle. I never made them. Hale's not here to have made them. They turn and watch me along the headland. I can't cut barley that's being stood guard over. Empty it.",
+      "I've one scarecrow. I made him myself: my father's felt hat, a turnip, one arm, because I ran out of pole. Nine years in the south barley, and never frightened a crow. He's not where I stood him.",
+      "Now there's four more, and a big wicker one in the middle, stood where a reaper would walk. I never made them. Hale's not here to have made them. They turn and watch me along the headland. I can't cut barley that's being stood guard over. Empty it.",
     ],
     accept: "I'll empty the rows.",
-    acceptLine: "South off the green, three hundred and fifty paces; there's a trodden way. They stand still till you're in among them. Mind the big one: it spins fire. In my barley. Ripe. If the field goes up, I'd as soon you didn't come back and tell me.",
+    acceptLine: "South off the green, three hundred and fifty paces; there's a trodden way. They'll let you walk right down the row. It's the one in my father's hat you want. And no more fire than you must: it's ripe. If the field goes up, I'd as soon you didn't come back and tell me.",
     decline: 'Not yet.',
     declineLine: "Another fortnight and it sheds. Take your time. Everyone else has.",
     journal: [
-      "Scarecrows that Abel Fenwick never made stand guard over his ripe barley in the Barley Rows, south of Millhaven. Empty the rows: put down every one of them, and the wicker man in their middle.",
+      "Scarecrows that Abel Fenwick never made stand guard over his ripe barley in the Barley Rows, south of Millhaven, and the one he did make has gone from its place. Empty the rows: put down every one of them, and the wicker man in their middle.",
       "Go back to Abel Fenwick on the green at Millhaven.",
     ],
     progress: [
       "South. All of them. And not a spark more than you need.",
     ],
     done: [
-      "All down? And mine? Old hat, one arm, a turnip for a face? ...Not among them. Then he's still stood where I put him, doing his job. He's the only thing on this farm that ever has.",
-      "Take this. It was the pole holding up the big one. Ash, and straight, and better than any I own, and I'll not have it in my field. Now I've forty acres I can get at, and nobody to cut it. Which brings me to the knoll.",
+      "All down? The big one had a hat? Felt, with a hole in the crown? ...Then that's him. Nine years I left him out there on his own. He's made himself company.",
+      "Take this. It was the pole I stood him on. Ash, and straight. It's grown since. I'll not have it in my field. Now I've forty acres I can get at, and nobody to cut it. Which brings me to the knoll.",
     ],
     after: [
-      "I cut two acres yesterday. My back's gone. But I cut them, with the old fellow in the hat looking on. He never said a word against it.",
+      "I cut two acres yesterday. My back's gone. I've put up no scarecrow. The crows can have their share. I know what the other thing costs.",
     ],
     others: {
       joan: ["Abel's barley's clear? Then there'll be grist, if there's hands to cut it. There's a ploughman up the knoll he might ask. He'll not like asking."],
@@ -885,17 +885,17 @@ export const QUESTS = {
   two_of_three: {
     title: 'Two of the Three',
     giver: 'hale',
-    about: "A black drake has the cliff-top above Brightwater Falls, south-east of the Bell Tower, with two goblins who feed it, or whom it feeds. Ser Hale Orrowick is sworn to the hill and can't go. He doesn't ask for all three: two, and he doesn't mind which. Three hundred and fifty paces south-east, and up the scarp.",
+    about: "A black drake has the cliff-top above Brightwater Falls, south-east of the Bell Tower, with two goblins who feed it, or whom it feeds. Ser Hale Orrowick is sworn to the hill and can't go. He doesn't ask for all three: two, and he doesn't mind which. Three hundred and fifty paces south-east, on top of the scarp.",
     offer: [
-      "South-east, on top of the cliff over the falls, there's a drake. Black, the length of a plough-team. And two goblins with it. They bring it things. Or it brings them things. I've watched a fortnight and I can't tell who keeps whom.",
+      "South-east, on top of the cliff, there's a drake. Black, the length of a plough-team. And two goblins with it. They bring it things. Or it brings them things. I've watched a fortnight and I can't tell who keeps whom.",
       "It's not on the hill, so it's not mine to fight, and Ser Anselm says a watch that leaves its post isn't one. He's right. I'd still sooner it weren't there. Two of the three would do. I don't mind which two. A drake with nobody to feed it moves on. Goblins with no drake go home.",
     ],
     accept: "Two of the three.",
-    acceptLine: "South-east, three hundred and fifty paces, and up the scarp: it's steep, and it goes. The drake breathes a long way, in a line. Stand to one side of where it's looking. The goblins are only goblins.",
+    acceptLine: "South-east, three hundred and fifty paces, and up by the ramp cut in the scarp. The drake breathes a long way, in a line. Stand to one side of where it's looking. The goblins are only goblins.",
     decline: 'Not that.',
     declineLine: "No. It's a great deal to ask, for somebody else's oath.",
     journal: [
-      "A black drake and two goblins hold the cliff-top above Brightwater Falls, south-east of the Bell Tower and up the scarp. Put down two of the three.",
+      "A black drake and two goblins hold the cliff-top above Brightwater Falls, south-east of the Bell Tower, on top of the scarp. Put down two of the three.",
       "Go back to Ser Hale Orrowick at the Bell Tower.",
     ],
     progress: [
@@ -917,22 +917,22 @@ export const QUESTS = {
     title: 'What Answers',
     giver: 'bellwright',
     dayHint: "By day the Horned Stones are only stones. What answers the Bellwright keeps night hours: come back after dark.",
-    about: "At the third watch of the night the Bellwright counts, with nothing to ring; and since Lammas something east of the tower has answered him, once, stone on stone. Go by night to the Horned Stones, east-north-east of the tower and up the scarp, and see what keeps the third watch with him. Then empty the ring: every one of them, and the great ram. Three hundred and fifty paces.",
+    about: "At the third watch of the night the Bellwright counts, with nothing to ring; and since Lammas something east of the tower has answered him, once, stone on stone. Go by night to the Horned Stones, east-north-east of the tower on top of the scarp, and see what keeps the third watch with him. Then empty the ring: every one of them, and the great ram. Three hundred and fifty paces.",
     offer: [
       "At the third watch I count. One. That is all there is to it, with nothing to ring. For forty years nothing has answered, and I had grown used to that. Since Lammas, something answers.",
-      "East, up the scarp: a ring of stones with horns cut on them. At the third watch, a knock. Once. Stone on stone, or something as hard. Go there by night and see what keeps my watch with me. Then, if it is what I think, empty the ring. I will not be answered by that.",
+      "East, on top of the scarp: a ring of stones with horns cut on them. At the third watch, a knock. Once. Stone on stone, or something as hard. Go there by night and see what keeps my watch with me. Then, if it is what I think, empty the ring. I will not be answered by that.",
     ],
     accept: "By night, then. I'll go.",
-    acceptLine: "East-north-east, three hundred and fifty paces, and up the scarp: it is steep, and it goes. Go after dark; by day they only stand. The rams come head down, in a line. The great one shakes the ground. Do not stand where he has stamped.",
+    acceptLine: "East-north-east, three hundred and fifty paces, up by the ramp in the scarp. Go after dark; by day they only stand. Hale has work that wants daylight; do his first. The rams come head down, in a line. Do not stand where the great one has stamped.",
     decline: 'Not yet.',
     declineLine: "No. Then I count alone tonight, and am answered. I have borne worse.",
     journal: [
-      "Something answers the Bellwright's count at the third watch. Go by night to the Horned Stones, east-north-east of the Bell Tower and up the scarp, near enough to see what keeps the watch there.",
+      "Something answers the Bellwright's count at the third watch. Go by night to the Horned Stones, east-north-east of the Bell Tower on top of the scarp, near enough to see what keeps the watch there.",
       "Goat men, in a ring of standing stones; and the great ram among them puts his horns to the tallest stone, once. Empty the Horned Stones: put down every one of them, and the great ram.",
       "Go back to the Bellwright at the Tower of the Four Watches and tell him what answered.",
     ],
     progress: [
-      "East, up the scarp, after dark. See it first. I would like to know what I have been keeping time with.",
+      "East, on the scarp, after dark. See it first. I would like to know what I have been keeping time with.",
       "All of them. And the one that knocks.",
     ],
     done: [
@@ -950,7 +950,7 @@ export const QUESTS = {
   block_for_the_frame: {
     title: 'A Block for the Frame',
     giver: 'bellwright',
-    needs: 'what_answers',
+    needs: 'two_of_three',
     about: "One of the four stones under the tenor's frame has cracked, and the Bellwright won't have a hung bell sit on a cracked stone, rung or not. The stone-carters halt north-west of the tower, by a great block that never got where it was going. Ask for Jem Sledge, and whether a yard of good stone can come up the knoll. Four hundred paces. It's paid there.",
     offer: [
       "The tenor sits in an oak frame, and the frame on four stones. One has cracked. Frost; or forty years of nothing happening to it. A bell that is never rung should at least be held up properly.",
@@ -986,17 +986,17 @@ export const QUESTS = {
   plucked: {
     title: 'Plucked',
     giver: 'rafe',
-    about: "Harpies roost on the Screaming Crag, east of Dunmow Fold. Before the flock went they would come down on a ewe, two to hold her and a third to pluck, and let her up bare. Rafe Dunmow wants to see the wool: five tufts from under the Crag, three blown well out and two close in under the nests. Three hundred paces east.",
+    about: "Harpies roost on the Screaming Crag, east of Dunmow Fold. Before the flock went they would come down on a ewe, two to hold her and a third to pluck, and let her up bare. Rafe Dunmow wants to see the wool: five tufts of what has blown out from under the Crag. Three hundred paces east.",
     offer: [
       "They don't take lambs. I'd understand lambs. They come down on a ewe, two of them, and hold her, and a third plucks. Then they let her up, bare as an egg, in March. I lost eleven to the cold that way, before ever the rest went.",
-      "East, three hundred paces: the Crag. They line their nests with it, and what blows out lies about. Fetch me five tufts. Three are blown well out; two are close in under the nests, and for those they'll come down. I want to see the tar. Mine are tarred on the near hip.",
+      "East, three hundred paces: the Crag. They line their nests with it, and what blows out lies about. Fetch me five tufts. Some have blown a long way; the best are right under the nests, and for those they'll come down. I want to see the tar. Mine are tarred on the near hip.",
     ],
     accept: "Five tufts.",
-    acceptLine: "East, by the trodden way. You'll hear the Crag before you see it. Keep wide for the first three. For the others, be quick: they stoop from behind, and the big one brings the wind with her.",
+    acceptLine: "East, by the trodden way. You'll hear the Crag before you see it. Take what's blown furthest first. Under the nests, be quick: they stoop from behind, and the big one brings the wind with her.",
     decline: 'Not now.',
     declineLine: "No. It's only wool. It's only what I had.",
     journal: [
-      "Harpies on the Screaming Crag, east of Dunmow Fold, line their nests with wool plucked from living sheep. Pick up five tufts from under the Crag: three lie well out, two close in under the nests.",
+      "Harpies on the Screaming Crag, east of Dunmow Fold, line their nests with wool plucked from living sheep. Pick up five tufts from under and about the Crag.",
       "Take the wool back to Rafe Dunmow at Dunmow Fold.",
     ],
     progress: [
@@ -1017,18 +1017,18 @@ export const QUESTS = {
   six_bar_hurdles: {
     title: 'Six-Bar Hurdles',
     giver: 'madge',
-    about: "Two goblins by the Gallows Road, west of Dunmow Fold, have carried off Madge Wattle's new hurdles one at a time. She wants one of the two put down, so the other learns a hurdle is somebody's; and four hurdles back: three lie out in the grass, one close in where the goblins sit. Two hundred paces west.",
+    about: "Two goblins by the Gallows Road, west of Dunmow Fold, have carried off Madge Wattle's new hurdles one at a time. She wants one of the two put down, so the other learns a hurdle is somebody's; and four hurdles back, from where the goblins have stood them. Two hundred paces west.",
     offer: [
       "A hurdle's six bars, two heads, two braces, and a morning's work. I brought forty up at shearing. I've thirty-one. There's two goblins by the big road, west, two hundred paces, and every few nights they come and take one. Just one. They carry it between them like a bier.",
       "I went to look. They've stood them up in a ring, and they sit in the middle of it. Both of them. All day. I think somebody told them a fold's where you put what you want kept. Put one of the two down, so the other knows a hurdle's somebody's. And fetch me four back.",
     ],
     accept: "One goblin, and four hurdles.",
-    acceptLine: "West, two hundred paces, this side of the road. Three have blown down and lie out in the grass. One's close in, where they sit. A hurdle's light. Carry it on your back, points up. Everyone tries it under the arm first.",
+    acceptLine: "West, two hundred paces, this side of the road. Some have blown down and lie about in the grass. A hurdle's light. Carry it on your back, points up. Everyone tries it under the arm first.",
     decline: 'Not now.',
     declineLine: "Thirty by Friday, then. I can count as well as Rafe.",
     journal: [
       "Two goblins by the Gallows Road, west of Dunmow Fold, have made off with Madge Wattle's hurdles. Put down one of the two, so the other learns whose they are.",
-      "Pick up four of the hurdles: three lie out in the grass, one close in where the goblins sat.",
+      "Pick up four of the hurdles from the grass round where the goblins sat.",
       "Take the hurdles back to Madge Wattle at Dunmow Fold.",
     ],
     progress: [
@@ -1050,31 +1050,31 @@ export const QUESTS = {
   yan_tan_tethera: {
     title: 'Yan, Tan, Tethera',
     giver: 'rafe',
-    about: "North of Dunmow Fold is Bleatmoot, a ring of stones with horns cut on them, where the goat men meet. Every night since shearing one of them has stood up on a stone while the rest file past him, and he counts them: in scores, the way a shepherd does. Rafe Dunmow won't be neighbour to that. Empty Bleatmoot, every one, and the one who counts. Two hundred and fifty paces north.",
+    about: "The tar-pot has gone from the bothy at Dunmow Fold, and the brand with it. North of the fold, at the old moot stones called Bleatmoot, goat men stand about of an evening, and every one of them is tarred on the near hip with Dunmow's mark. Rafe Dunmow counts them from his gate, and gets to five. Empty Bleatmoot: every one, and the big one. Two hundred and fifty paces north.",
     offer: [
-      "North, two hundred and fifty paces, there's a ring of stones with horns cut on them. Bleatmoot. The goat men meet there. Since shearing, every night, one gets up on a stone and the rest go by him in a line, and he nods at each.",
-      "He's counting them. I know a count when I see one. He does it in scores, and puts a pebble down for each score, the way I do. So they've a shepherd. I've sat here a month wondering who taught him, and I've come to an answer I don't like. Empty it. Him above all.",
+      "My tar-pot's gone from the bothy. Pot, brush and brand. I'd not have missed it, with nothing to mark. Then the wind came round north, and I smelt it. Stockholm tar. You don't mistake it.",
+      "North, two hundred and fifty paces: the old moot stones. Bleatmoot. Goat men. I've counted them from the gate. Yan, tan, tethera, methera, pimp. Five. And every one that turns his near side to me is tarred on the hip. My mark. Dunmow's. I'll not have that walking about. Empty it.",
     ],
     accept: "I'll empty Bleatmoot.",
-    acceptLine: "North, by the trodden way. The rams come at you head down, in a straight line: step off the line. The one who counts is the biggest. When he stamps, the ground shakes. Keep moving.",
+    acceptLine: "North, by the trodden way. They come at you head down, in a straight line: step off the line. When the big one stamps, the ground shakes. Keep moving. And look at his hip, if he gives you the leisure. I can never get him to turn.",
     decline: 'Not yet.',
-    declineLine: "No. Well. He'll count them again tonight, and I'll lie here and count along. I can't help it.",
+    declineLine: "No. Well. I'll count them again tonight. Five. With my mark on. I can't help counting.",
     journal: [
-      "Goat men meet at Bleatmoot, a ring of horned stones north of Dunmow Fold, and one of them counts the rest like a flock. Empty Bleatmoot: put down every one of them, and the one who counts.",
+      "Goat men at Bleatmoot, the old moot stones north of Dunmow Fold, are tarred on the near hip with Rafe Dunmow's own mark. Empty Bleatmoot: put down every one of them, and the big one that leads them.",
       "Go back to Rafe Dunmow at Dunmow Fold.",
     ],
     progress: [
-      "North. All of them. I'll know it's done when there's nobody to count along with.",
+      "North. All five. And see whether the big one's marked.",
     ],
     done: [
-      "All of them. And the one on the stone? ...Had he a crook? Hazel, with a ram's-horn head, and a nick near the ferrule? ...No. No. Mine's here in my hand. I only wondered where he'd seen one used.",
-      "Bleatmoot. There's been a moot on that hill since before there were Dunmows. We always took it the name was for the sheep. Here. I'd give you a fleece, if this were any other year.",
+      "All of them. Tarred, the four? On the near hip, a hand below the bone, where I'd put it? ...Aye. That's a shepherd's place for it. Nobody finds that place by chance.",
+      "And the big one. Was he marked? ...No. Then he did the marking. He's had my pot and my brand, and he's been making a flock of his own, and using my name for it. Here. I'd give you a fleece, if this were any other year.",
     ],
     after: [
-      "Quiet, north. I counted to a score last night, out of habit, and there was nobody counting against me. I slept after. First time since shearing.",
+      "Quiet, north. I counted at dusk, out of habit. None. It's an easier number than five was. I slept after. First time since shearing.",
     ],
     others: {
-      madge: ["He lies awake counting along with it. Yan, tan, tethera, under his breath, in time with a goat. I put my fingers in my ears, and I can still see his lips going."],
+      madge: ["His tar-pot? He turned the bothy out for it twice, and then stood at the gate sniffing the wind like a dog. I thought he'd gone simple. Then I smelt it too."],
     },
   },
 
@@ -1150,17 +1150,17 @@ export const QUESTS = {
   bird_calls: {
     title: 'Borrowed Voices',
     giver: 'sib',
-    about: "Sib Kestrel's bird-calls went off the game pole in the night. South of the hide, hooded folk stand among crooked stones and whistle, and the birds come down to them and don't go up again. Bring back five of her calls from round the Crooked Circle: three lie well out, two close in among the stones. Two hundred and fifty paces south.",
+    about: "Sib Kestrel's bird-calls went off the game pole in the night. South of the hide, hooded folk stand among crooked stones and whistle, and the birds come down to them and don't go up again. Bring back five of her calls from round the Crooked Circle, where they've been dropped. Two hundred and fifty paces south.",
     offer: [
       "A fowler's calls. Quail-pipe, plover whistle, a wigeon call I had from my mother. Bone and elder, most of them. They hung on the game pole, in a bag. Nine days back the bag was there and the calls weren't.",
-      "South, two hundred and fifty paces, there are stones set crooked, and people in hoods who stand among them and whistle. With my whistles. The birds come down to them. I've not seen one go up. Fetch me five back. Three they've dropped, well out. Two are in among the stones.",
+      "South, two hundred and fifty paces, there are stones set crooked, and people in hoods who stand among them and whistle. With my whistles. The birds come down to them. I've not seen one go up. Fetch me five back. They drop them when they've done, in the grass and among the stones.",
     ],
     accept: "Five calls.",
-    acceptLine: "South, by the trodden way. Keep wide for the three in the grass. For the others they'll see you: they throw something you don't see till it lands, and the one in the middle drops stones out of a clear sky. Don't blow any of them. Not even to see.",
+    acceptLine: "South, by the trodden way. Take the ones in the grass first. Among the stones they'll see you: they throw something you don't see till it lands, and the one in the middle drops stones out of a clear sky. Don't blow any of them. Not even to see.",
     decline: 'Not now.',
     declineLine: "Then I'll go on standing under an empty sky. Go soft.",
     journal: [
-      "Hooded folk at the Crooked Circle, south of Kestrel Hide, whistle the birds down with Sib Kestrel's calls. Pick up five of the calls: three lie well out from the stones, two close in among them.",
+      "Hooded folk at the Crooked Circle, south of Kestrel Hide, whistle the birds down with Sib Kestrel's calls. Pick up five of the calls from the grass round the stones and among them.",
       "Take the calls back to Sib Kestrel at Kestrel Hide.",
     ],
     progress: [
@@ -1244,10 +1244,11 @@ export const QUESTS = {
   the_gnawed_hollow: {
     title: 'The Gnawed Hollow',
     giver: 'sib',
+    needs: ['off_the_spit', 'the_crooked_circle'],
     about: "Wolfkin from the Gnawed Hollow come down to Kestrel Hide at night and gnaw the great ribs, low down. There has been no meat on those bones in a thousand years: they are sharpening. Empty the Hollow, two hundred and fifty paces north of the hide: every one of them, and the great one the colour of a cut.",
     offer: [
       "Look at the ribs, low down, on the north side. Those marks. That's not weather. They come down from the Hollow, nights, and work at them. I lie in the hide and listen. It goes on for hours.",
-      "There's been no meat on those in a thousand years. They're not feeding. They're sharpening. And they walk upright now, and they looked at Joss. I'll not sleep under bones that something's whetting its teeth on. North. All of them, and the big one.",
+      "There's been no meat on those in a thousand years. They're not feeding. They're sharpening. Joss thinned them. There's as many again tonight. And they walk upright now. I'll not sleep under bones that something's whetting its teeth on. North. All of them, and the big one.",
     ],
     accept: "I'll empty the Hollow.",
     acceptLine: "North, two hundred and fifty paces, where the ground dips. They're quick, and they come round behind. The big one's the colour of a cut, and half again your height. Don't let him close with you. Keep ground between, and keep it burning.",

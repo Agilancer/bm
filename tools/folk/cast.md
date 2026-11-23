@@ -535,9 +535,9 @@ empty, Joss's snares are empty, and that is what each of them talks about.
   count it anyway, mornings. None. It's the best number I've got." Sent to by Tobin (**A Light for the Bend**). His work:
   **Three I Can't Account For** (go and stand at the three things he can see and can't explain: the opened cairns, the
   scarecrows' field, Paupers' Field), **Stones on the Cairnfield** (a robed one and three raised children, opening the
-  cairns and stacking the stones by size: "That's how my father showed me. I don't like having a thing in common with
-  it"), **One More Each Morning** (Strawman's Acre: a scarecrow more each day, all facing the camp, the newest in his
-  other coat; pays the coat, a robe), and on: **Sails at a Slant** (through the goblins on the Abbey Road to Millhaven:
+  cairns and stacking the stones by size, as his father showed him), **One More Each Morning** (Strawman's Acre: none at
+  midsummer, five now, all facing the camp, the newest in his other coat; nobody was seen making them: the Barley Rows
+  answer it; pays the coat, a robe), and on: **Sails at a Slant** (through the goblins on the Abbey Road to Millhaven:
   a word with Joan, then Abel).
 - **Ede Lowry**, 34, washerwoman, up from Bellmourn (`c_young_2_1`). Her father Ned, a thatcher, died owing and went into
   Paupers' Field under a board; this year she has the money for a stone (Silas cut it "at the family rate. I'm not
@@ -547,9 +547,9 @@ empty, Joss's snares are empty, and that is what each of them talks about.
   the wife who can cook". Stands by the well with a shilling for any man who'll swing a scythe, and gets no takers.
   Put upon, exact about what everything has cost him, not asking to be pitied: "I say it so you'll not stand too near."
   Keeps Hale Orrowick's hearth lit and his barley cut, and burns too green. His work: **Jelly in the Millpond** (what
-  ate the ewe, by the farm: "even what eats my sheep breeds better than they do"), **The Barley Rows** (scarecrows he
-  never made, standing guard over forty ripe acres; his own, with his father's hat and one arm, isn't among them; pays
-  the pole that held up the big one, a staff), and on: **The Millhaven Man** (up the knoll: is Hale coming home for the
+  ate the ewe, by the farm: "even what eats my sheep breeds better than they do"), **The Barley Rows** (four scarecrows he
+  never made, standing guard over forty ripe acres; his own, nine years old in his father's felt hat, isn't where he
+  stood it: it's the big wicker one, and "He's made himself company"; pays the pole he stood it on, a staff), and on: **The Millhaven Man** (up the knoll: is Hale coming home for the
   barley, and why do the dead walk wide of that hill and straight through his field? No; and the tenor bell).
 - **Joan Millward**, 38, the miller's daughter, at her board on the green (`c_wife_jolly_1`; Millhaven's sutler). Old
   Enoch Millward, 71, is the miller, abed at her aunt's with his chest (the Bellwright's "Millhaven's miller ... He
@@ -570,7 +570,8 @@ empty, Joss's snares are empty, and that is what each of them talks about.
   lambing; one night at shearing the hurdles were down and the fold empty. Slow, counts in the old score ("Yan, tan,
   tethera"), sleeps by the gate from habit. A stone goes on the cairn for each ewe lost; he hasn't put this year's on.
   His work: **Plucked** (wool from under the Screaming Crag: two tufts are his, one is Thornwick's, one is hair),
-  **Yan, Tan, Tethera** (Bleatmoot, where a goat man counts the rest in scores, like a shepherd), **The Screaming Crag**
+  **Yan, Tan, Tethera** (his tar-pot is gone, and the five goat men at the old moot stones of Bleatmoot wear Dunmow's
+  mark on the near hip; the big one doesn't: "Then he did the marking"), **The Screaming Crag**
   (pays the last of last year's clip, a robe: "I was keeping it to be buried in"), and on: **Strays** (past the goat men
   on the Gallows Road to Osric Thorne: two hundred and six of his ewes are in Thornwick pound).
 - **Madge Wattle**, 52, hurdle-maker, from the hazel coppice Thornwick way (`c_worker_f_2`). Brought forty hurdles up at
