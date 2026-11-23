@@ -5,8 +5,12 @@
 // lays the region out to be read.
 //
 // Five hubs, north of Bellmourn up the Fen Way: Sedgebank (6 to 8), Mile-End Camp by the Sunken Mile and the Drowned
-// Vaults' door (8 to 11), Sallowmere (10 to 12), Eelpot Hythe far off the roads to the east (10 to 12, the end of its
-// road) and the Drowned Chapel (12 to 14, Tessariel's, the end of its road).
+// Vaults' door (9 to 11), Eelpot Hythe far off the roads to the east (10, the end of its road, done before the Vaults
+// and the road north), Sallowmere (11 to 12) and the Drowned Chapel (12 to 13, Tessariel's, the end of its road). Each
+// quest's level is its den's or a little over (the critics' third round); the Vaults' bosses pay far more than all of it.
+// (The critics' second round: one burying ground in the region, Sallowmere's Yard; one left standing, the fifth on the
+// Mile; gather-then-empty at Sedgebank only; every den's chief as the game makes it (src/core/wilds.js FACTIONS); the
+// chapel's last quest the wyrm's bed; the errand to Eelpot through Lanefast; nothing on the road north waits on night.)
 import { campPost, campFace } from '../../core/camps-data.js';
 
 // Who stands where (taken into src/folk/people.js POSTED). camp: the camp they're at, on one of its posts (campPost(key, 0-3):
@@ -42,49 +46,57 @@ export const RULES = {
   a_hand_a_week: { steps: [{ clear: 'den_sinkfoot' }, { back: true, say: "Sinkfoot is empty. The dam's yours to pull." }], gold: 33, xp: 330, item: 'robe' },
   a_hand_of_water: { needs: 'a_hand_a_week', steps: [{ kill: 'lair:fenway_drowned', n: 2 }, { talk: 'tamar', say: "Odo Marsh has pulled Sinkfoot's dam. Your water will drop.", end: true }], gold: 4, xp: 35 },
 
-  // ---- Mile-End Camp, where the Sunken Mile leaves the Fen Way, levels 8 to 11 (Tamar Dyke; Corby Lunn): the crane's
-  // weights from round Leechwater Camp, the drowned on the Mile (four of the five: the fifth is still asking the toll),
-  // Leechwater itself, the Sunk Plot, and the Drowned Vaults, whose door is by the broken arch. Then a word north to the
-  // ferry (through the huts on the south shore; the chapman on the jetty first, then her) and a word east to Eelpot ----
-  counterweight: { steps: [{ gather: 'outpost:den_leechwater', n: 5, what: 'crane weights', spots: [[36, 21], [42, -24], [-14, -39], [5, 14], [13, -7]] }, { back: true, say: 'Five weights. One has been sat on a good while.' }], gold: 18, xp: 180 },
+  // ---- Mile-End Camp, where the Sunken Mile leaves the Fen Way, levels 9 to 11 (Tamar Dyke; Corby Lunn): the drowned on
+  // the Mile (four of the five: the fifth is still asking the toll), Leechwater Camp, whose goblins sit on the crane's
+  // weights (Corby's), the Sunk Plot, the toll's fenced strong-ground (its takings buried in boxes under marker stones,
+  // a stone strong-house by the gate: what a drowned den's plot is dressed as), and the Drowned Vaults,
+  // whose door is by the broken arch. Then a word east to Eelpot, through Lanefast on the lane (first: auto-play goes down
+  // LEVELS, and Eelpot's are below the road north's), and a word north to the ferry, through the huts on the south shore ----
   sunken_mile: { steps: [{ enter: 'causeway' }, { kill: 'lair:mile_drowned', n: 4 }, { back: true, say: 'Four are down on the Mile. The fifth has his hand out.' }], gold: 20, xp: 200 },
-  thrown_back: { steps: [{ clear: 'den_leechwater' }, { back: true, say: 'Leechwater is empty. Your lead is in their pool.' }], gold: 36, xp: 360 },
-  the_sunk_plot: { steps: [{ clear: 'den_sunkplot' }, { back: true, say: 'The Sunk Plot is lying down. All of it.' }], gold: 40, xp: 400 },
-  under_the_mile: { needs: 'sunken_mile', steps: [{ enter: 'vaults' }, { boss: 'bloat' }, { back: true, say: 'What wallowed under the Mile is dead.' }], gold: 220, xp: 1700, item: 'robe' },
-  what_sank_the_mile: { needs: 'under_the_mile', steps: [{ boss: 'sallow' }, { boss: 'leviathan' }, { back: true, say: 'The thing that sank the causeway is dead.' }], gold: 380, xp: 2800, item: 'staff' },
+  counterweight: { steps: [{ clear: 'den_leechwater' }, { back: true, say: 'Leechwater is empty. Your weights are lying about it.' }], gold: 36, xp: 360 },
+  the_sunk_plot: { steps: [{ clear: 'den_sunkplot' }, { back: true, say: 'The Sunk Plot is empty. Your boxes are still in the ground.' }], gold: 40, xp: 400 },
+  under_the_mile: { needs: 'sunken_mile', steps: [{ enter: 'vaults' }, { boss: 'bloat' }, { back: true, say: 'What wallowed under the Mile is dead.' }], gold: 170, xp: 1700, item: 'robe' },
+  what_sank_the_mile: { needs: 'under_the_mile', steps: [{ boss: 'sallow' }, { boss: 'leviathan' }, { back: true, say: 'The thing that sank the causeway is dead.' }], gold: 280, xp: 2800, item: 'staff' },
+  his_fathers_punt: { needs: 'the_sunk_plot', steps: [{ kill: 'outpost:den_lanefast', n: 3 }, { talk: 'pike', say: "Tamar Dyke has lifted a punt with your father's mark on it.", end: true }], gold: 4, xp: 35 },
   the_crossing: { needs: 'the_sunk_plot', steps: [{ kill: 'lair:sallow_drowned', n: 4 }, { talk: 'davy', say: "I've word for the ferrywoman, from Mile-End." }, { talk: 'grizel', say: "Tamar Dyke says the Mile's not coming up. The crossing is yours.", end: true }], gold: 4, xp: 35 },
-  his_fathers_punt: { needs: 'the_sunk_plot', steps: [{ talk: 'pike', say: "Tamar Dyke has lifted a punt with your father's mark on it.", end: true }], gold: 4, xp: 35 },
 
-  // ---- Sallowmere, the east shore, levels 10 to 12 (Grizel Wade; Davy Scrip): the jellies on her landing, the lights that
-  // cross the mere (by night to the Drowned Yard, and the fares laid along the way in), the Yard, and the four on the west
-  // shore with Davy's whistles (three of them). Then a word to the chapel, under the harpies' pool ----
-  sallowmere: { steps: [{ kill: 'fen', n: 6, of: 9 }, { back: true, say: 'Six jellies. Your landing is clear.' }], gold: 22, xp: 220 },
-  lights_on_the_mere: { steps: [{ enter: 'outpost:den_drownedyard', night: true }, { gather: 'outpost:den_drownedyard', n: 5, what: 'fare pennies', spots: [[-32, 58], [-27, 49], [-22, 40], [-16, 30], [-8, 15]] }, { back: true, say: 'They walk to the Yard. They left these on the path.' }], gold: 26, xp: 260 },
-  the_drowned_yard: { needs: 'lights_on_the_mere', steps: [{ clear: 'den_drownedyard' }, { back: true, say: 'The Yard is lying down. The one who called them too.' }], gold: 44, xp: 440, item: 'skull' },
-  four_whistles: { steps: [{ kill: 'lair:fen_children', n: 3 }, { back: true, say: "Three are down. I didn't look for the smallest." }], gold: 24, xp: 240 },
-  forty_names: { needs: 'the_drowned_yard', steps: [{ kill: 'lair:fen_harpies', n: 2 }, { talk: 'oriel', say: 'Grizel Wade has forty names from the Yard to be read over.', end: true }], gold: 4, xp: 35 },
+  // ---- Eelpot Hythe, far off the roads to the east, level 10 (Pike Hallam): the wind the Mere Coven sells in
+  // knotted cord (five off its outer stakes, 42 to 46 m out: all outside its sight, so the Coven's own fight is the next
+  // quest's, not this one's), and the Coven itself; come to through Lanefast, the goblins half way down the lane.
+  // The end of its road, so the way out is back down the lane: the last of its work empties Lanefast on that walk and
+  // carries Pike's word to Tamar (send the punt). (The Reed Graves, north-east, are left to the land: the fen's one
+  // burying ground is Sallowmere's.) ----
+  five_knots: { steps: [{ gather: 'outpost:den_merecoven', n: 5, what: 'knotted cords', spots: [[-40, 13], [10, -43], [36, 25], [-27, -36], [44, -14]] }, { back: true, say: 'Five cords. I undid none of them.' }], gold: 22, xp: 220 },
+  the_price_of_wind: { needs: 'five_knots', steps: [{ clear: 'den_merecoven' }, { back: true, say: "The Mere Coven is empty. Nobody's selling." }], gold: 40, xp: 400, item: 'staff' },
+  the_lane: { needs: 'the_price_of_wind', steps: [{ clear: 'den_lanefast' }, { talk: 'tamar', say: "Pike Hallam says the lane's open. Send the punt.", end: true }], gold: 43, xp: 430 },
 
-  // ---- Eelpot Hythe, far off the roads to the east, levels 10 to 12 (Pike Hallam): the wind the Mere Coven sells in
-  // knotted cord (five from round its stakes, three lying out, two close in), the Coven, and the Reed Graves, where one
-  // grave has been kept empty forty years, last. The end of its road ----
-  five_knots: { steps: [{ gather: 'outpost:den_merecoven', n: 5, what: 'knotted cords', spots: [[-40, 13], [10, -43], [36, 25], [-13, 12], [11, -10]] }, { back: true, say: 'Five cords. I undid none of them.' }], gold: 22, xp: 220 },
-  the_price_of_wind: { needs: 'five_knots', steps: [{ clear: 'den_merecoven' }, { back: true, say: "The Mere Coven is empty. Nobody's selling." }], gold: 44, xp: 440 },
-  kept_empty: { steps: [{ clear: 'den_reedgraves' }, { back: true, say: 'The Reed Graves are quiet. I looked in the empty one.' }], gold: 48, xp: 480, item: 'staff' },
+  // ---- Sallowmere, the east shore, levels 11 to 12 (Grizel Wade; Davy Scrip): the jellies on her landing (hunted in the
+  // shallows off it, its own spots, a kilometre from the worm's pool to the east), Davy's ribbons off the reeds round the
+  // four children on the west shore, the Drowned Yard (the fen's one burying ground), and, after it and off the road on,
+  // a look at it by night (stood up again, as a den does) and the fare pennies on its path. Then a word to the chapel, under the harpies' pool ----
+  sallowmere: { steps: [{ kill: 'fen', n: 6, of: 9, spots: [[-165, -3335], [-185, -3315], [-150, -3305]] }, { back: true, say: 'Six jellies. Your landing is clear.' }], gold: 24, xp: 242 },
+  ribbon_on_the_reeds: { steps: [{ gather: 'lair:fen_children', n: 5, what: 'ribbons', spots: [[0, -40], [24, -36], [-26, -32], [38, -14], [-38, -8]] }, { back: true, say: 'Five ribbons, off the reeds.' }], gold: 24, xp: 242 },
+  the_drowned_yard: { steps: [{ clear: 'den_drownedyard' }, { back: true, say: 'The Yard is lying down, and what kept it.' }], gold: 44, xp: 440, item: 'skull' },
+  lights_on_the_mere: { needs: 'the_drowned_yard', steps: [{ enter: 'outpost:den_drownedyard', night: true }, { gather: 'outpost:den_drownedyard', n: 5, what: 'fare pennies', spots: [[-32, 58], [-27, 49], [-22, 40], [-16, 30], [-8, 15]] }, { back: true, say: 'The Yard is stood up again. These were on the path.' }], gold: 24, xp: 242 },
+  one_way_fare: { needs: 'the_drowned_yard', steps: [{ kill: 'lair:fen_harpies', n: 2 }, { talk: 'oriel', say: 'Grizel Wade says the ferry runs again, and you are owed a crossing.', end: true }], gold: 5, xp: 40 },
 
-  // ---- the Drowned Chapel, levels 12 to 14 (Sister Oriel): the leaves of the office-book from round the walls, among
-  // what lives in the nave's water; the way-lamps from round the Reed Stockade (three lying out, two close in); and the
-  // Stockade, which has the chapel's bell and rings it at dinner, last. Tessariel's: nothing here names the other power.
-  // The end of its road ----
-  leaves_on_the_water: { steps: [{ gather: 'chapel', n: 5, what: 'leaves of the office', spots: [[-20, -9], [-21, 7], [0, 11], [17, 5], [3, -10.5]] }, { back: true, say: 'Five leaves, from round the walls.' }], gold: 26, xp: 265 },
-  seven_lamps: { steps: [{ gather: 'outpost:den_reedstockade', n: 5, what: 'way-lamps', spots: [[-39, 15], [12, 42], [-34, -24], [-14, 10], [9, 13]] }, { back: true, say: 'Five lamps. One has oil in it yet.' }], gold: 26, xp: 265 },
-  rung_wrong: { steps: [{ clear: 'den_reedstockade' }, { back: true, say: 'The Reed Stockade is empty. Your bell is quiet.' }], gold: 52, xp: 520, item: 'scroll' },
+  // ---- the Drowned Chapel, levels 12 to 13 (Sister Oriel): the leaves of the office-book from round the walls, among
+  // what lives in the nave's water; the hands on the bell-rope at the Reed Stockade (four of its five: she asks no more of
+  // it); and the Drake's Scrape (den_wyrmbed), the marsh drake's, on the way in she has sent everyone by, last.
+  // Tessariel's: nothing here names the other power. The end of its road ----
+  leaves_on_the_water: { steps: [{ gather: 'chapel', n: 5, what: 'leaves of the office', spots: [[-20, -9], [-21, 7], [0, 11], [17, 5], [3, -10.5]] }, { back: true, say: 'Five leaves, from round the walls.' }], gold: 26, xp: 264 },
+  rung_wrong: { steps: [{ kill: 'outpost:den_reedstockade', n: 4 }, { back: true, say: 'Four are down at the stockade. Nobody is at the rope.' }], gold: 26, xp: 264 },
+  the_sunk_bed: { steps: [{ clear: 'den_wyrmbed' }, { back: true, say: "The Drake's Scrape is empty. The drake is dead." }], gold: 54, xp: 540, item: 'scroll' },
 };
 // The level each wants (src/ui/autobrain.js PLAN; the quest log suggests the same). Each hub steps up, and each errand
-// on is at the first level of where it leads.
+// on is at the first level of where it leads. (The order counts as well: auto-play takes the first in this list it's of a
+// level for, so the errand to Eelpot and Eelpot's work come before the Vaults and the road north: the Hythe is done while it's near,
+// and at its own level, before the Bloat's pay lifts it past the Coven.)
 export const LEVELS = [
-  ['empty_traps', 6], ['reed_hooks', 6], ['punt_in_the_reeds', 7], ['a_hand_a_week', 8], ['a_hand_of_water', 8],
-  ['counterweight', 8], ['sunken_mile', 9], ['thrown_back', 9], ['the_sunk_plot', 10], ['under_the_mile', 10], ['what_sank_the_mile', 11], ['the_crossing', 10], ['his_fathers_punt', 10],
-  ['sallowmere', 10], ['lights_on_the_mere', 10], ['four_whistles', 11], ['the_drowned_yard', 11], ['forty_names', 12],
-  ['five_knots', 10], ['the_price_of_wind', 11], ['kept_empty', 12],
-  ['leaves_on_the_water', 12], ['seven_lamps', 12], ['rung_wrong', 13],
+  ['empty_traps', 6], ['reed_hooks', 6], ['punt_in_the_reeds', 7], ['a_hand_a_week', 7], ['a_hand_of_water', 8],
+  ['sunken_mile', 9], ['counterweight', 9], ['the_sunk_plot', 10], ['his_fathers_punt', 10],
+  ['five_knots', 10], ['the_price_of_wind', 10], ['the_lane', 10],
+  ['under_the_mile', 12], ['what_sank_the_mile', 13], ['the_crossing', 11],
+  ['sallowmere', 11], ['ribbon_on_the_reeds', 11], ['the_drowned_yard', 11], ['lights_on_the_mere', 11], ['one_way_fare', 12],
+  ['leaves_on_the_water', 12], ['rung_wrong', 12], ['the_sunk_bed', 13],
 ];

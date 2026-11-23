@@ -1634,12 +1634,15 @@ function sorrowhorn(K) {
     const t = i / 40 * TAU + hash2(i, 9) * 0.1, r = MOUNT.crown - 6 + hash2(i, 10) * 14, x = MOUNT.x + Math.cos(t) * r, z = MOUNT.z + Math.sin(t) * r;
     K.spike('obsidian', x, Y(x, z) - 2, z, 2 + hash2(i, 11) * 2, 8 + hash2(i, 12) * 16, 5, t, [(hash2(i, 13) - 0.5) * 0.4, (hash2(i, 14) - 0.5) * 0.4]);
   }
+  // Isla Crag's mother's cairn, below the rim where the shoulder comes up: whoever gets that high puts their name in the tin
+  // in it (src/folk/regions/deepwood.js crown_of_teeth, the tin picked up a stride off it).
+  K.cairn(MOUNT.x + 71, MOUNT.z + 225.4, 1.1, 1.7, 'pale:rubble');
 }
 
 
 // Where the flattest ground for each site's seal was found (flattest, below). After the land's shape changes, run
 // `node --test tests/sites-apart.test.mjs`: it says which of these have moved, and what to write here.
-const SEAL_AT = { farm: [1683.1, 138], hamlet: [2058, 14], falls: [2576, -130], belltower: [2430.5, -512], sallow: [-132, -3376], chapel: [-898, -4272],
+const SEAL_AT = { farm: [1683.1, 138], hamlet: [2054, 14], falls: [2576, -130], belltower: [2430.5, -512], sallow: [-132, -3376], chapel: [-898, -4272],
   abbey: [3975.6, -2864], khel: [-3696, -664.4], stones: [-1900, 4414], frostwatch: [700, 3928], shrine: [-700, 3312], crossroads: [4088, 3212.5],
   stair: [-1663.1, -1890], crown: [-2496.9, -2996] };
 

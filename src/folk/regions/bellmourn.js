@@ -23,11 +23,9 @@ export const PEOPLE = [
   { id: 'hild', name: 'Hild Ames', title: "Palmer, at Palmers' Rest", body: 'c_young_5_1', sex: 'f', age: 17, ...by('palmers'), idles: ['idle', 'look_around', 'wait'] },
   // placeholders: moved to their own region's file when it's made (four the ring's errands on are said to: each stands
   // at their camp so the errand can be walked and paid; their region's maker gives them their work and the rest of their words).
-  // (Odo Marsh, whom Maren's errand is said to, is the Weeping Fen's now: src/folk/regions/fen.js.)
-  { id: 'amos', name: 'Amos Tye', title: "Drover, at Drovers' Stance", body: 'c_dude_1', sex: 'm', age: 38, ...at('trackside'), idles: ['fold_arms', 'idle'] },
-  { id: 'berin', name: 'Berin Stoat', title: 'Packman, at Fellfoot', body: 'c_wes_1', sex: 'm', age: 44, ...at('fellfoot'), idles: ['look_around', 'idle'] },
-  { id: 'dag', name: 'Dag Colley', title: 'Carter, at Ashgate Halt', body: 'c_smith_1', sex: 'm', age: 50, ...at('ashgate'), idles: ['fold_arms', 'idle'] },
-  { id: 'fenn', name: 'Fenn Hollis', title: 'Trapper, at Mossgate Hide', body: 'c_worker_1', sex: 'm', age: 35, ...at('mossgate'), idles: ['look_around', 'idle'] },
+  // (Odo Marsh, whom Maren's errand is said to, is the Weeping Fen's now: src/folk/regions/fen.js; Dag Colley, whom Perrin's
+  // is, the Ashen Waste's: src/folk/regions/waste.js; Amos Tye, whom Nan's is, the Barrow Moor's: src/folk/regions/moor.js; Berin Stoat, whom Nan's other is,
+  // the Rimeholt Fells': src/folk/regions/fells.js; Fenn Hollis, whom Perrin's other is, the Deepwood's: src/folk/regions/deepwood.js.)
 ];
 
 export const RULES = {
@@ -62,13 +60,13 @@ export const RULES = {
 
   // ---- the Forkstone, south where the Barrow Track leaves the Frost Road, levels 5 to 7 (Nan Dray; Dickon, her lad): what
   // walks round the herd, the bells under the spiders' larder (three lying out, two close in), the goat men on the way
-  // to Lychfield, and Lychfield last ----
+  // to Lychfield, and Lychfield last. The word down the track has the four little ones on its bank in the way ----
   what_walks_round: { steps: [{ kill: 'lair:frost_spiders', n: 2 }, { back: true, say: 'Two of what walked round you are dead.' }], gold: 11, xp: 110 },
   bring_me_the_bells: { steps: [{ gather: 'outpost:den_hanginglarder', n: 5, what: 'herd bells', spots: [[-41, 12], [9, -44], [37, 26], [-13, 11], [12, -9]] }, { back: true, say: 'Five bells. And one more.' }], gold: 11, xp: 110 },
   they_drive_them: { steps: [{ kill: 'lair:dark_goats_e', n: 2 }, { back: true, say: 'Two of your drovers on two legs are dead.' }], gold: 13, xp: 130 },
   whistled_up: { steps: [{ clear: 'den_lychfield' }, { back: true, say: "Lychfield is quiet. All of it's lying down." }], gold: 28, xp: 280, item: 'robe' },
-  down_the_track: { needs: 'whistled_up', steps: [{ talk: 'amos', say: 'Nan Dray has six of your blacks, safe, on her grass.', end: true }], gold: 3, xp: 30 },
-  ponies_for_the_winter: { needs: 'whistled_up', steps: [{ talk: 'berin', say: "Nan Dray will winter your ponies. The road's fit as far as her.", end: true }], gold: 4, xp: 35 },
+  down_the_track: { needs: 'whistled_up', steps: [{ kill: 'lair:track_children', n: 3 }, { talk: 'amos', say: 'Nan Dray has six of your blacks, safe, on her grass.', end: true }], gold: 4, xp: 35 },
+  ponies_for_the_winter: { needs: 'whistled_up', steps: [{ kill: 'lair:frost_wolf', n: 1 }, { talk: 'berin', say: "Nan Dray will winter your ponies. The road's fit as far as her.", end: true }], gold: 4, xp: 35 },
 
   // ---- Palmers' Rest, west where the Pilgrims' Road leaves the Vigil Road, levels 6 to 8 (Old Perrin Lowe; Hild Ames):
   // the goblins' pit north, what stands by the Pilgrims' Road, the goat men at the halfway stone, and Mumblefast last (past that stone:
@@ -78,7 +76,7 @@ export const RULES = {
   halfway_stone: { steps: [{ kill: 'lair:vigil_goats', n: 2 }, { back: true, say: 'Two goat men down. This was on the stone.' }], gold: 13, xp: 130 },
   seven_down: { steps: [{ enter: 'outpost:den_mumblefast' }, { clear: 'den_mumblefast' }, { back: true, say: 'They said your stations backwards. They have stopped.' }], gold: 34, xp: 340, item: 'scroll' },
   two_tallies: { needs: ['halfway_stone', 'how_far_they_got'], steps: [{ talk: 'dag', say: 'Old Perrin Lowe sends his tally. He found yours on the stone.', end: true }], gold: 3, xp: 30 },
-  first_station: { needs: 'seven_down', steps: [{ talk: 'fenn', say: "Perrin Lowe says they're coming back down the Pilgrims' Road.", end: true }], gold: 4, xp: 35 },
+  first_station: { needs: 'seven_down', steps: [{ kill: 'lair:pilgrim_spiders', n: 2 }, { talk: 'fenn', say: "Perrin Lowe says they're coming back down the Pilgrims' Road.", end: true }], gold: 4, xp: 35 },
 };
 // The level each wants (src/ui/autobrain.js PLAN; the quest log suggests the same). The ring steps up: Hillfoot 3 to 5,
 // Withy 4 to 6, the Forkstone 5 to 7, Palmers' Rest 6 to 8; each errand on at the first level of where it leads.

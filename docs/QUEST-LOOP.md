@@ -40,7 +40,7 @@ kilometre or so, each ending somewhere with something to do.
 | 6 | **A hub's work is of several kinds.** With four quests or more, three kinds at least among: kill, clear (a den), gather, visit, bring, delve (a dungeon), word (an errand), night. | `KINDS_MIN` = 3 |
 | 7 | **Each hub sends you on**, unless it's the end of its road (`ROADS_END` in `tools/quests/rules.mjs`). | |
 | 8 | **A den to empty is pinned** (`DENS`), within reach, and of a level with the quest. | quest level no more than 2 under the den's |
-| 9 | **A lair to hunt at is of a level with the quest** (`LAIR_LEVEL` in `src/ui/autobrain.js`, or the lair's own `lvl`). | no more than 2 under |
+| 9 | **A lair to hunt at is of a level with the quest** (`LAIR_LEVEL` in `src/core/tripo-monsters.js`, or the lair's own `lvl`). | no more than 2 under |
 
 What makes it fun to play and to watch, which no test can hold and the critics are for:
 
@@ -119,7 +119,8 @@ step names (what they say when you bring the word). Lines are 280 letters at mos
 Pay (as a guide; the first pass paid three times this and the ring round Bellmourn came to ten levels): a small kill,
 gather or visit quest about 22 xp a level; a den about 40 a level and something to keep; an errand 30 to 35; a
 dungeon's boss 250 a level and an item; gold about a tenth of the xp. A level is `90 * (level - 1) ^ 1.75` xp in all
-(`src/items/levels.js`): a hub's quests should come to about half a level, its kills the rest.
+(`src/items/levels.js`): a hub's quests should come to about half a level, its kills the rest. (One exception, not to
+be copied: the Marches' `down_to_the_sill` pays 1300 xp, the catch-up that brings you to the Sill at the city's level, 22.)
 
 What the critics of the first region found, which holds for every region:
 
@@ -142,7 +143,7 @@ What the critics of the first region found, which holds for every region:
 ### Things to fight and find
 
 - **Lairs** (`LAIRS` in `src/core/tripo-monsters.js`): hand-placed, 101 of them. A new one near a hub is a line there
-  and a level in `LAIR_LEVEL` (`src/ui/autobrain.js`); then the chain above from `lay.mjs` on. Keep it 150 m from
+  and a level in `LAIR_LEVEL` (`src/core/tripo-monsters.js`); then the chain above from `lay.mjs` on. Keep it 150 m from
   anyone posted (85 m at a camp) and off the roads.
 - **Dens** (`DENS` in `src/core/camps-data.js`): 78 outposts pinned near the hubs, named, each of a faction
   (`FACTIONS` in `src/core/wilds.js` says who's in it, how it's built and its level). They're "overworld dungeons": a
@@ -184,12 +185,12 @@ here are what the other regions' errands point at.
 | | stair, the Broken Stair | 11-13 | *`isla` Isla Crag, guide | hermit | crown |
 | | crown, the Crown of Teeth (the Elder Gods' door, 100) | 11+ | *`yrsa` Yrsa, who watches the lights | stair | (road's end) |
 | rustwood | stonecarters | 8-9 | *`jem` Jem Sledge, stone-carter | belltower | quarry |
-| | quarry, Ossery Quarry | 9-10 | *`marta` Marta Rudd, quarry-mistress | stonecarters | abbey |
+| | quarry, Ossery Quarry | 9-11 | *`marta` Marta Rudd, quarry-mistress | stonecarters | abbey |
 | | abbey, the Abbey of Saint Ossery (Tessariel's) | 11-12 | *`caddoc` Brother Caddoc, almoner | quarry | emberwatch; cutters |
-| | emberwatch (off the roads) | 12-13 | *`rowan` Rowan Slate, fire-watcher | abbey | fungus |
-| | fungus, the Fungal Ring (the Sporehold's door) | 12-14 | *`dilly` Dilly Roe, mushroomer | emberwatch | (road's end) |
-| | cutters, the Woodcutters' Camp | 12-13 | *`huw` Huw Axton, foreman | abbey | lasthearth |
-| | lasthearth, Last Hearth | 13-15 | *`tibb` Mother Tibb; *`corin` Corin Vale, outrider | cutters | marchfoot |
+| | emberwatch (off the roads) | 12-13 | *`rowan` Rowan Slate, fire-watcher; *`hollis` Hollis Wick, collier | abbey | fungus |
+| | fungus, the Fungal Ring (the Sporehold's door) | 13-14 | *`dilly` Dilly Roe, mushroomer | emberwatch | abbey |
+| | cutters, the Woodcutters' Camp | 15-16 | *`huw` Huw Axton, foreman; *`bryn` Bryn Pitt, sawyer | abbey | lasthearth |
+| | lasthearth, Last Hearth | 16-17 | *`tibb` Mother Tibb; *`corin` Corin Vale, outrider | cutters | marchfoot |
 | waste | ashgate, Ashgate Halt | 6-7 | *`dag` Dag Colley, carter | palmers | cinderford |
 | | cinderford | 7-12 | `hasket`, `colm`, `ysolt` | ashgate | khel |
 | | khel, the Caravanserai (and the Charred Mill) | 12-13 | *`sarn` Old Sarn, last porter of Khel | cinderford | hollowwatch; scavengers |
@@ -212,10 +213,10 @@ here are what the other regions' errands point at.
 | | wagon, the Players' Wagon (the Hollow Playhouse's door) | 14-15 | *`fabian` Master Fabian Larke, last of the Winter Company | crossroads | (road's end) |
 | | witch, Mother Grawl's Hut | 13-14 | *`grawl` Mother Grawl | crossroads | roadsend |
 | | roadsend | 16-18 | *`wilf` Wilf Carder, wool-factor | witch | tollqueue |
-| east | marchfoot | 14-16 | *`hester` Hester Pyke | lasthearth | widowslee |
-| | tollqueue, the Long Queue | 17-18 | *`rollo` Rollo Bask, carter | roadsend | widowslee |
-| | widowslee, Widow's Lee (hidden) | 18-22 | *`ines` Sergeant Ines Mar | marchfoot; tollqueue | sill |
-| | sill, the Sill | 3-5, then 20 | `fv_wenna` Wenna Coyle | widowslee (and Lisandra's door, at 1) | Phobos (`ph_penny`) |
+| east | marchfoot | 16-17 | *`hester` Hester Pyke; `piers` Piers Lusk | lasthearth | widowslee |
+| | tollqueue, the Long Queue | 18 | *`rollo` Rollo Bask, carter; `bride` Bride Sayer | roadsend | widowslee |
+| | widowslee, Widow's Lee (hidden) | 19-21 | *`ines` Sergeant Ines Mar; `oswy` Oswy Holm | marchfoot; tollqueue | sill |
+| | sill, the Sill | 3-5, then 22-23 (arrived at 22: `down_to_the_sill`'s 1300 xp is the catch-up into the city) | `fv_wenna` Wenna Coyle | widowslee (and Lisandra's door, at 1) | Phobos (`ph_penny`, `ph_ash`, `ph_watch`) |
 | phobos | the city, its sewers and the castle | 20-110 | its three hubs and its streets | sill | (its own) |
 
 The dungeons' quests move to whoever stands by their doors: the Vaults' to `tamar`, the Sporehold's to `dilly`, the

@@ -9,10 +9,10 @@ import { RULES_CASTLE, LEVELS_CASTLE } from './phobos-quests-castle.js';
 import { RULES_TOWN, LEVELS_TOWN } from './phobos-quests-town.js';
 
 export const PHOBOS_RULES = {
-  // ---- the way in: from the people who'd know ----
-  smoke_in_the_east: { steps: [{ enter: 'phobos' }, { talk: 'ph_penny', say: 'Brenna Hasket of Cinderford sent me to see if you were real.', end: true }], gold: 300, xp: 2400 },
-  quiet_men: { steps: [{ enter: 'ph:tanners' }, { talk: 'ph_watch', say: 'Ser Hale Orrowick sends word: the oath still holds.', end: true }], gold: 300, xp: 2600 },
-  wardens_of_ash: { steps: [{ enter: 'ph:bones' }, { talk: 'ph_ash', say: "Hew Garrick of Frostwatch says he's still holding.", end: true }], gold: 320, xp: 2800 },
+  // ---- the way in is the Marches' to give now (docs/QUEST-LOOP.md): Wenna Coyle on the Sill has a word for each hub,
+  // smoke_in_the_east to the Pennyless, wardens_of_ash to the Ashwardens, quiet_men to the Quiet Watch
+  // (src/folk/regions/east.js). They were Sergeant Hasket's from Cinderford (11.7 km), Hew Garrick's from Frostwatch
+  // (10.4 km) and Ser Hale's from the Bell Tower (7.7 km). ----
   // ---- the Pennyless, behind the burnt chandlery in the Cinder Quarter ----
   cinder_floors: { steps: [{ kill: 'lair:phobos_cinder', n: 4 }, { back: true, say: "The burnt houses on Ash Lane are empty. Of them, anyway." }], gold: 380, xp: 3000 },
   loaves_for_the_rookeries: { steps: [{ visit: ['ph:rookeries', 'ph:barbican'] }, { back: true, say: 'The loaves are given out, and nobody followed me back.' }], gold: 360, xp: 2600 },
@@ -89,11 +89,11 @@ export const PHOBOS_RULES = {
 };
 // The level each wants (src/ui/autobrain.js PLAN): you come to Phobos at about twenty.
 export const PHOBOS_LEVELS = [
-  ['smoke_in_the_east', 20], ['loaves_for_the_rookeries', 20], ['the_pennyless_word', 21], ['quiet_men', 22], ['asking_around', 22], ['cinder_floors', 22],
-  ['wardens_of_ash', 23], ['the_watchs_word', 23], ['still_the_rows', 24], ['bone_tithe', 25], ['the_wharf_web', 25], ['red_purses', 26],
+  ['loaves_for_the_rookeries', 20], ['the_pennyless_word', 21], ['asking_around', 22], ['cinder_floors', 22],
+  ['the_watchs_word', 23], ['still_the_rows', 24], ['bone_tithe', 25], ['the_wharf_web', 25], ['red_purses', 26],
   ['lamps_on_the_rise', 27], ['the_approach_by_night', 28],
   // (The streets', from the people of the districts.)
-  ['shoes_for_the_gate', 21], ['the_cheese_round', 21], ['pawned', 22], ['rivets_from_the_dead', 22], ['the_old_furnace', 23], ['ink_and_gall', 24],
+  ['shoes_for_the_gate', 21], ['the_cheese_round', 21], ['pawned', 22], ['rivets_from_the_dead', 22], ['the_old_furnace', 23], ['ink_and_gall', 25],
   ['contraband', 24], ['eels_gone_wrong', 25], ['lamechs_keys', 25], ['what_the_stars_say', 26], ['the_dead_watch', 27], ['fresh_stock', 28],
   ['the_garrison_round', 21], ['a_sailors_tale', 21], ['the_glovers_order', 21], ['a_room_for_the_night', 21], ['the_burnt_binding', 22], ['a_duel_at_dawn', 22],
   ['silk_for_the_shafts', 22], ['grave_wax', 23], ['coal_by_night', 23], ['the_warm_heaps', 24], ['the_slab_walkers', 26], ['bitter_caps', 30],

@@ -47,7 +47,7 @@ export const CAMPS = [
   // ---- the Marches, on the roads east to Phobos (past the old edge: nothing's pinned out here, tools/wilds/place.mjs
   // lays the land only west of it, and their ways are the roads they stand beside) ----
   { key: 'roadsend', name: 'Roadsend', x: 5506, z: 1700, yaw: -0.42, style: 'halt', mark: 'block' },
-  { key: 'marchfoot', name: 'Marchfoot', x: 6432, z: -1510, yaw: -0.93, style: 'refugees', mark: 'mast' },
+  { key: 'marchfoot', name: 'Marchfoot', x: 6432, z: -1510, yaw: -0.93, style: 'fold', mark: 'cairn' },
   { key: 'tollqueue', name: 'The Long Queue', x: 6779, z: 392, yaw: 1.93, style: 'halt', mark: 'waystone' },
   { key: 'widowslee', name: "Widow's Lee", x: 7144, z: 79, yaw: -3.1, style: 'scouts', mark: 'deadtree' },
 ];
@@ -117,14 +117,22 @@ export const DENS = [
   { key: 'den_spoilheaps', faction: 'dig', name: "the Spoil Heaps", x: -453, z: 1616, camp: 'trackside' },
   { key: 'den_coldhowe', faction: 'barrow', name: "Coldhowe", x: -2290, z: 2323, camp: 'peatrick' },
   { key: 'den_moonbite', faction: 'pack', name: "Moonbite Hollow", x: -2412, z: 2676, camp: 'peatrick' },
-  { key: 'den_ravenhowe', faction: 'barrow', name: "Ravenhowe", x: -2558, z: 3493, camp: 'diggers' },
+  { key: 'den_ravenhowe', faction: 'barrow', name: "Ravenhowe", x: -2500, z: 3470, camp: 'diggers' },
   { key: 'den_sleepless', faction: 'night', name: "the Sleepless Stones", x: -2430, z: 3145, camp: 'diggers' },
   { key: 'den_chilblain', faction: 'rime', name: "Chilblain Camp", x: 61, z: 2276, camp: 'fellfoot' },
-  { key: 'den_frozenmoot', faction: 'rimeherd', name: "the Frozen Moot", x: 126, z: 2600, camp: 'fellfoot' },
+  { key: 'den_frozenmoot', faction: 'herd', name: "the Frozen Moot", x: 126, z: 2600, camp: 'fellfoot' },
   { key: 'den_whitelarder', faction: 'frostbrood', name: "the White Larder", x: -282, z: 3934, camp: 'hoarhide' },
   { key: 'den_frozenscrape', faction: 'howlers', name: "the Frozen Scrape", x: 108, z: 4009, camp: 'hoarhide' },
   { key: 'den_thundercrag', faction: 'storm', name: "the Thunder Crag", x: 1087, z: 4689, camp: 'climbers' },
   { key: 'den_winterfast', faction: 'rimecoven', name: "Winterfast", x: 1255, z: 4959, camp: 'climbers' },
+  // (The Rimeholt Fells' critics: rams by the Frost Road halfway up to the fort, for the purse carried up through them; the
+  // shrine's goat men's stones, its second coven and the goblins under it, so its work isn't all at the Hoar Circle; and the
+  // goblins short of Climbers' Rest, for the fort's errand there to go through.)
+  { key: 'den_rimering', faction: 'rimeherd', name: "the Rime Ring", x: 620, z: 2990, camp: 'fellfoot' },
+  { key: 'den_hornfrost', faction: 'rimeherd', name: "Hornfrost Stones", x: -474, z: 3539, camp: 'shrine' },
+  { key: 'den_rimecoven', faction: 'rimecoven', name: "the Rime Coven", x: -943, z: 3655, camp: 'shrine' },
+  { key: 'den_snowgate', faction: 'rime', name: "Snowgate Camp", x: -452, z: 3168, camp: 'shrine' },
+  { key: 'den_icestockade', faction: 'rime', name: "the Ice Stockade", x: 1412, z: 4219, camp: 'climbers' },
   { key: 'den_lazarfield', faction: 'plague', name: "the Lazar Field", x: 3732, z: 4161, camp: 'candlecamp' },
   { key: 'den_nightfall', faction: 'night', name: "Nightfall Ruin", x: 3433, z: 3766, camp: 'candlecamp' },
   { key: 'den_leatherwing', faction: 'dusk', name: "Leatherwing Roost", x: 3268, z: 4124, camp: 'wagon' },
@@ -137,7 +145,7 @@ export const DENS = [
   { key: 'den_scarecrowrows', faction: 'effigy', name: "the Scarecrow Rows", x: -2291, z: -391, camp: 'cinderford' },
   { key: 'den_ashden', faction: 'pack', name: "the Ash Den", x: -2154, z: -657, camp: 'cinderford' },
   { key: 'den_whitefang', faction: 'rime', name: "Whitefang Camp", x: 700, z: 4210, camp: 'frostwatch' },
-  { key: 'den_moonbitefell', faction: 'howlers', name: "the Howling Scrape", x: 852, z: 3361, camp: 'frostwatch' },
+  { key: 'den_moonbitefell', faction: 'howlers', name: "the Bitter Gully", x: 852, z: 3361, camp: 'frostwatch' },
   { key: 'den_drownedyard', faction: 'drowned', name: "the Drowned Yard", x: -10, z: -3640, camp: 'sallow' },
   { key: 'den_reedstockade', faction: 'mire', name: "the Reed Stockade", x: -706, z: -4494, camp: 'chapel' },
   { key: 'den_orefall', faction: 'rustdig', name: "Orefall Delve", x: 2649, z: -1676, camp: 'quarry' },
@@ -146,17 +154,19 @@ export const DENS = [
   { key: 'den_redtooth', faction: 'ember', name: "Redtooth Camp", x: 4375, z: -1300, camp: 'cutters' },
   { key: 'den_sextonsrest', faction: 'grave', name: "Sexton's Rest", x: -1720, z: 2113, camp: 'wayhouse' },
   { key: 'den_ninthstone', faction: 'hedge', name: "the Ninth Circle", x: -2154, z: 4295, camp: 'stones' },
+  // (The Barrow Moor's critics: the Nine Maidens' last den at the moor's own level, the night's ruin south of the ring.)
+  { key: 'den_coldhearth', faction: 'night', name: 'Cold Hearth', x: -1846, z: 4669, camp: 'stones' },
   { key: 'den_burningground', faction: 'plague', name: "the Burning Ground", x: 3832, z: 3089, camp: 'crossroads' },
   { key: 'den_widowshollow', faction: 'ashbrood', name: "the Widows' Hollow", x: -3700, z: -1010, camp: 'khel' },
-  { key: 'den_weavershollow', faction: 'brood', name: "the Weavers' Hollow", x: -1109, z: -1691, camp: 'hermit' },
-  { key: 'den_brokenvigil', faction: 'night', name: "the Broken Vigil", x: -1650, z: -1580, camp: 'stair' },
-  { key: 'den_hoarcircle', faction: 'rimecoven', name: "the Hoar Circle", x: -1042, z: 3158, camp: 'shrine' },
+  { key: 'den_weavershollow', faction: 'rustbrood', name: "the Weavers' Hollow", x: -1109, z: -1691, camp: 'hermit' },
+  { key: 'den_brokenvigil', faction: 'night', name: "the Wakehouse", x: -1650, z: -1580, camp: 'stair' },
+  { key: 'den_hoarcircle', faction: 'night', name: "the Hoar Circle", x: -1042, z: 3158, camp: 'shrine' },
   { key: 'den_duskroost', faction: 'dusk', name: "the Toll Roost", x: 3127, z: 2768, camp: 'oldtoll' },
-  { key: 'den_grawlden', faction: 'pack', name: "Grawl's Kennel", x: 5049, z: 1497, camp: 'witch' },
+  { key: 'den_grawlden', faction: 'howlers', name: "Grawl's Kennel", x: 5049, z: 1497, camp: 'witch' },
   { key: 'den_burnthollow', faction: 'whelps', name: "the Burnt Hollow", x: 2793, z: -4559, camp: 'fungus' },
   // (Asked for by the fen's critics: the goblins on the lane out to Eelpot Hythe, half way, for the errand there to go
   // through; and a wyrm's bed north-east of the Drowned Chapel, away from the dragon, for the fen's last and hardest den.)
   { key: 'den_lanefast', faction: 'mire', name: 'Lanefast', x: 520, z: -2740, camp: 'eelpot' },
-  { key: 'den_wyrmbed', faction: 'marshwyrm', name: 'the Sunk Bed', x: -560, z: -4130, camp: 'chapel' },
+  { key: 'den_wyrmbed', faction: 'marshwyrm', name: "the Drake's Scrape", x: -560, z: -4130, camp: 'chapel' },
 ];
 export const denOf = (key) => DENS.find((d) => d.key === key) || null;

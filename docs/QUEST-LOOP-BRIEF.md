@@ -14,7 +14,7 @@ pinned, the new steps (`clear`, `gather`) work, auto-play knows them, and the ru
   someone who stands near the work. Reuse the old words where they still fit the new mouth. Remove their entries from
   `PLAN` in `src/ui/autobrain.js` (yours go in `LEVELS`). Leave other regions' old quests alone, even where they break
   the rules: their region's maker will move them.
-- `LAIR_LEVEL` in `src/ui/autobrain.js` if you add a lair; `tools/folk/cast.md` (a paragraph a person, under a heading
+- `LAIR_LEVEL` in `src/core/tripo-monsters.js` if you add a lair; `tools/folk/cast.md` (a paragraph a person, under a heading
   for your region); `README.md` only if told to.
 - Tests that name a quest you moved (grep `tests/` for its id) so they still test the same thing.
 - Do **not** move camps, dens or lairs, or add any, unless you truly must (it means re-running the land's tools and

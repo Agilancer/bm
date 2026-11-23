@@ -626,6 +626,9 @@ async function boot(plan, poolSize) {
   // out in the countries pay for the time they take: src/core/tripo-monsters.js GROUPS.)
   // (x, z: where it died. Only a death near you is yours: the sim says when anything dies anywhere, and a knight of his
   // put down by Bellmourn's guard while you were in Phobos, nine kilometres off, paid you six hundred.)
+  // (A delve's worth to one over its level: a fifth less a level, to a quarter, for its kills and its clear alike. The
+  // Playhouse at 18 was 6,000 xp, three levels, and the Gallowswood's last camps done five over. cleared, below.)
+  const overDelve = (d) => (d?.level ? Math.max(0.25, 1 - 0.2 * Math.max(0, (pack.level || 1) - d.level)) : 1);
   game.gainXp = (kind, what = 0, x = null, z = null) => {
     const s = game.currentSnap();
     if (s && x !== null && Math.hypot(x - s[H.PX], z - s[H.PZ]) > KILL_REACH) return;
@@ -635,7 +638,7 @@ async function boot(plan, poolSize) {
     // knights are the castle's, worth a castle knight's, and it's met at five. src/core/delve-redoubt.js.)
     // (The same of a lair made low for a new player: the Sill's, src/core/tripo-monsters.js LAIRS.)
     const d = s && delveOf(s[H.PX], s[H.PZ]), l = x !== null && XP_LAIRS.find((q) => Math.hypot(x - q.x, z - q.z) < q.r + 40);
-    game.addXp(Math.max(1, Math.round(Math.max(XP_OF[kind | 0] ?? 10, g ? Math.round(g.hp * 0.35) : 0) * (d?.xpScale ?? (l ? l.xpScale : 1)))));
+    game.addXp(Math.max(1, Math.round(Math.max(XP_OF[kind | 0] ?? 10, g ? Math.round(g.hp * 0.35) : 0) * (d?.xpScale ?? (l ? l.xpScale : 1)) * overDelve(d))));
   };
   // So much experience, for whatever earned it (a kill above; a tear sealed, an outpost cleared: src/ui/wilds.js).
   game.addXp = (amount) => {
@@ -692,7 +695,9 @@ async function boot(plan, poolSize) {
       closed: () => { input.menu = false; resume(); },
       click: () => title.chime?.(),
       // (Each delve pays its own: src/core/dungeon.js DELVES' pay. The Warrens 1,500 xp and 250 gold, the Deeps and the keep more.)
-      cleared: (d) => { const pay = d?.pay || { xp: 1500, gold: 250 }; giveXp?.(pay.xp); pack.gold += pay.gold; hud.tip(`The Free Company pays out ${pay.gold} gold for ${d?.short || 'the Warrens'}, and the tale is worth more.`, 5); autosave(); },
+      // (Less of the tale the further over its level you go down: overDelve. The Sporehold's 3,000 at level 14 was three
+      // levels at once, and the next country's work was done five over.)
+      cleared: (d) => { const pay = d?.pay || { xp: 1500, gold: 250 }; giveXp?.(Math.round(pay.xp * overDelve(d))); pack.gold += pay.gold; hud.tip(`The Free Company pays out ${pay.gold} gold for ${d?.short || 'the Warrens'}, and the tale is worth more.`, 5); autosave(); },
     });
     addPart('party', { save: () => game.party.save(), load: (d) => game.party.load(d) });
     // Their gear: on their bodies and in their hands (src/gfx/herolook.js), dropped for them by the dead and in the bosses'

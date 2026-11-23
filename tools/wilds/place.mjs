@@ -161,6 +161,10 @@ for (let cx = -EDGE; cx <= EDGE; cx += 560) for (let cz = -EDGE; cz <= EDGE; cz 
   break;
 }
 
+// (Each named from its faction's places, but never by a name a den pinned for a camp's quest goes by: that name is the den's.)
+const PINNED = new Set(DENS.map((d) => d.name));
+const freeNames = (f) => { const l = f.places.filter((n) => !PINNED.has(n)); return l.length ? l : f.places; };
+
 // ---- the outposts: tried on a jittered grid, in a shuffled order, each given to one of its country's factions.
 const cells = [];
 for (let x = -EDGE; x <= EDGE; x += 470) for (let z = -EDGE; z <= EDGE; z += 470) cells.push([x, z, rnd()]);
@@ -182,7 +186,7 @@ for (const [cx, cz] of cells) {
     const trail = trailTo(x, z, r, OUTPOSTS);
     if (trail) trails.push(trail);
     const to = trail ? trail[trail.length - 2] : [0, 0];
-    OUTPOSTS.push({ key: `wo_${fk}_${k + 1}`, faction: fk, name: f.places[k % f.places.length], x, z, r, yaw: +Math.atan2(to[0] - x, to[1] - z).toFixed(2), trail });
+    OUTPOSTS.push({ key: `wo_${fk}_${k + 1}`, faction: fk, name: freeNames(f)[k % freeNames(f).length], x, z, r, yaw: +Math.atan2(to[0] - x, to[1] - z).toFixed(2), trail });
     placed.push({ x, z, r, count }); taken.push([x, z, r + 8]);
     break;
   }

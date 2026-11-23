@@ -58,9 +58,8 @@ export const RULES = {
   toll_of_bell: { steps: [{ enter: 'bellcrypt', night: true }, { warden: true }, { back: true, say: "The bell's warden is put down." }], item: 'scroll', xp: 400 },
   letter: { steps: [{ talk: 'elowen', say: 'A letter from Cedric Ashby. Into your hand.' }, { back: true, say: "Elowen's answer." }], xp: 120 },
   // Out past the town (src/folk/lines/beyond.js; the places are src/core/lands.js SITES). of: what must die (9 a jelly).
-  black_road: { steps: [{ enter: 'keep' }, { back: true, say: 'I saw the keep at the end of the west road.' }], gold: 200, xp: 900 },
-  crown_of_teeth: { needs: 'toll_of_bell', steps: [{ enter: 'crown' }, { back: true, say: "I've been to the top of the Sorrowhorn." }], item: 'scroll', gold: 150, xp: 1200 },
-  barrow_lights: { steps: [{ enter: 'barrows', night: true }, { kill: 'barrows', n: 6, of: 9 }, { back: true, say: 'The lights were jellies. Full of bones.' }], gold: 140, xp: 700 },
+  // (The Black Road, a look at the keep, is the Hollow Watch's now, by the keep: src/folk/regions/waste.js.)
+  // (The climb to the Crown of Teeth is the Broken Stair's now, Isla Crag's at its foot: src/folk/regions/deepwood.js.)
   // The small towns, the land's monsters and the party dungeons (src/folk/land-quests.js; words in src/folk/lines/land.js).
   ...LAND_RULES,
   // City State Phobos's (src/folk/phobos-quests.js; words in src/folk/lines/phobos-hubs.js).
@@ -377,7 +376,8 @@ export class QuestBook {
       if (!st) continue;
       if (st.warden && kind === 8 && AREAS.catacombs(x, y, z)) { this.on.toast('The warden is down. Somewhere above, a rope goes slack.', 'step'); this.advance(id); continue; }
       if (!st.kill || !AREAS[st.kill](x, y, z) || kind === 2 || (st.of != null && kind !== st.of)) continue;
-      if (st.foe ? !st.foe.includes(group) : st.kill.startsWith('lair:') && !group) continue;
+      // (A den's ground is a lair's: only its own count, not a jelly that wanders in and dies there.)
+      if (st.foe ? !st.foe.includes(group) : (st.kill.startsWith('lair:') || st.kill.startsWith('outpost:')) && !group) continue;
       const s = this.q[id];
       s.n++;
       if (s.n >= st.n) this.advance(id);

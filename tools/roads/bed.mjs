@@ -134,16 +134,24 @@ for (const n of order) {
   const merged = [];
   for (const f of fl) { if (merged.length && f[0] - merged.at(-1)[1] < 8) merged.at(-1)[1] = f[1]; else merged.push(f); }
   const kept = routeSamples(r.pts, BED_STEP), total = kept.at(-1)[2];
-  const flights = [];
-  for (const [a, b] of merged) {
-    if (b - a < 6) continue;
-    const A = Math.max(0, Math.floor(a / BED_STEP) * BED_STEP), B = Math.min(total, Math.ceil(b / BED_STEP) * BED_STEP);
-    flights.push(A, Math.abs(B - total) < 1e-6 ? total : B);
-    flightsM += B - A; nFlights++;
-  }
   // The kept heights: every BED_STEP, from the worked ones (2 m apart, so every other, and the last).
   const yAt = (s) => { const f = s / SUB, i = Math.min(p.length - 2, Math.floor(f)); const t = Math.max(0, Math.min(1, (s - at[i][2]) / (at[i + 1][2] - at[i][2] || 1))); return p[i] + (p[i + 1] - p[i]) * t; };
   const skAt = (s) => skip[Math.min(skip.length - 1, Math.round(s / SUB))];
+  // (A flight is cut where the way has no bed of its own, a place's ground (NO_BED): two steep runs merged over one, or a
+  // flight's ends rounded out on to one, left a stretch of steps with the land unsunk under them. tests/roadbed.test.mjs.)
+  const flights = [];
+  const keep = (A, B) => { if (B - A < 6) return; flights.push(A, Math.abs(B - total) < 1e-6 ? total : B); flightsM += B - A; nFlights++; };
+  for (const [a, b] of merged) {
+    if (b - a < 6) continue;
+    const A = Math.max(0, Math.floor(a / BED_STEP) * BED_STEP), B = Math.min(total, Math.ceil(b / BED_STEP) * BED_STEP);
+    let from = A;
+    for (let i = Math.round(A / BED_STEP); i <= Math.round(B / BED_STEP) && i < kept.length; i++) {
+      if (!skAt(kept[i][2])) continue;
+      keep(from, Math.max(from, (i - 1) * BED_STEP));
+      from = Math.min(B, (i + 1) * BED_STEP);
+    }
+    keep(from, B);
+  }
   const yk = kept.map((q) => (at.length > 1 ? yAt(q[2]) : p[0]));
   // Landings: a flight that climbs more than LAND_RISE is broken by a level stretch (one BED_STEP) every LAND_RISE or so of
   // climb, its other stretches each a little steeper to make it up (not past LAND_GRADE: fewer landings, then). Each is put
