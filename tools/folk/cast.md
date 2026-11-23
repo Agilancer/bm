@@ -1051,7 +1051,7 @@ Wilf on the wool you're not carrying.
   was right; the Goatfoot). Dorcas: **Up from the Hanging Wood** (the plague stragglers stopped where the wool carts
   watered), **Nothing for the Pot** (Sib Kestrel's brace has stopped: past Featherfall to the hide; nothing's flown over
   in nine days, and something south of the hide whistles them down), **Thursdays** (Wat Arden's missed five Thursdays;
-  past the werebat in the dead elm, to the Old Toll with his pie: he's dead, and his daughter eats it). Wymond: **Names in
+  past the werebat on the forked poles, to the Old Toll with his pie: he's dead, and his daughter eats it). Wymond: **Names in
   Lead** (the pest-house tags off the stragglers; one is Hal Fitch, whom he buried in March: he's at the Fs), **A Night
   Behind Me** (the Warlocks' Stones say his list back of a night, raising where he lays; empty, they'd only listened:
   "I've never had such attention"; his cut-down staff).
@@ -1060,39 +1060,41 @@ Wilf on the wool you're not carrying.
   off him (she lifts the bar at first light for nobody). Her work: **Waiting to Be Let Through** (the possessed and
   man-high dolls on the rise north face south at the bar; they came up the night it burned and he let them through, as he
   let anything that paid), **Corpses, Nothing** (the rate-board, in pieces up there; the bottom line, new this spring:
-  "Corpses, nothing."), **His Way Home** (the Toll Roost he walked past every Thursday; his coat), and on: **The Pan on
+  "Corpses, nothing."), **His Way Home** (the Toll Roost, whose bats cross the road he walked home by every Thursday; his coat), and on: **The Pan on
   the Hook** (past the two tall things off the road, to Crowle: she isn't coming back).
 - **Master Crowle**, 66, the hangman, retired, at Hangman's Cross (`c_old_man_1`; by the stocks). A reckoner: weight,
   height, drop; never untidy. Measures you by eye ("Eleven stone, near enough. Old habit.") and can't boil an egg. His
   work: **Salt for the Hanged** (Ebb's yearly salt, never a pinch down: the lime-pit and the Burning Ground; he puts a
   pinch on his own step, and don't tell the priest), **No Rope for Him** (the giant at the pit is the drover he hanged and
-  limed in the plague year: he'd only carried it), **Crosswise** (the Burning Ground's fires are fed off his woodpile,
-  stacked the way he stacks it; the last man's skull), and on: **A Light Over the Cross** (past the giants on the lane, to
+  limed in the plague year: he'd only carried it), **An Armful a Night** (the Burning Ground's fires are fed off his
+  woodpile: he's been carrying it there in his sleep; the last man's skull), and on: **A Light Over the Cross** (past the giants on the lane, to
   Tansy: not yet), **Crowle's Jar** (past the gibbet, to Grawl: it's for his hands, which shake since the last one).
 - **Tansy Wight**, 58, who reads the corpse-candles, at Corpse-Candle Camp (`c_worker_f_3`; sutler). Not who, only where
-  to. Her work: **The Candle Road** (one light every night from the Lazar Field to Nightfall Ruin: walk it by night, and
+  to. Her work: **The Candle Road** (one light every night from the Lazar Field to Nightfall Ruin: walk it first, and
   it's gone), **Three Roads** (then three, all to the ruin: the ruin's calling; the Long Nightmare; her teacher's reading),
-  and on: **Every Night Till Spring** (past Leatherwing, the Winter Company's playbill back to Fabian: she saw them go in).
+  and on: **Every Night Till Spring** (by the Lazar Field's edge, the Winter Company's playbill back to Fabian: she saw them go in).
 - **Gil Mosse**, 38, her hunter (`c_wes_1`). Hunts by ear. His work: **Clappers** (the Lazar Field's sick have untied
   their clappers, careful, the way you'd muffle your feet; he'll wear one so they take him for theirs).
 - **Master Fabian Larke**, 58, last of the Winter Company, at the Players' Wagon (`c_elder_2`; sutler). On, always on;
   did the talking, never had the money; stayed out with a cough. His work: **The Audience** (night things and the
   company's own painted figures sit in the grove at dusk facing the door), **The Winter Company** and **Last Night of the
-  Run** (the Hollow Playhouse: Seamstress, then the Leading Man, then the Dollmaker, the woman with the box who paid).
+  Run** (the Hollow Playhouse: Seamstress, then the Leading Man, then the Dollmaker, the woman with the box who paid; small pay, the delve pays its
+  own), and on: **House Closed** (by Nightfall Ruin, where the company lost its last cart, to Crowle: he heard every speech from behind the beam).
 - **Peg Hollin**, 24, who sold the tickets (`c_young_5_2`). Flat; minds him. Stayed out because the woman with the box
   asked how tall she was. Her work: **For Nothing** (Poxhollow, where the company played for nothing on the way in and
   he caught the cough that kept him out: he wishes every night he'd gone; she never once has).
 - **Mother Grawl**, 77, at her hut (`c_crone_3`). Smells where you've been; everything costs; spite kept warm. Her work:
   **Henbane** (it grows fat round the Kennel: they've fed it), **Grawl's Kennel** (her six dogs the wood gave back upright,
-  and Gnash: "Don't call him."; her walking stick), **Something in the Oak** (a werebat and a black dragonling watch her
+  and Gnash: "Don't call him."; her walking stick), **The Burnt Ring** (a werebat and a black dragonling on a scorched bed watch her
   pot: she brews to bring them, and didn't think they'd stay), and on: **The Wrong Colour** (past the stopped carts of
   Thornwick's carters on the Marshal's Road, Wilf's dyed fleece back to him).
-- **Wilf Carder**, 47, wool-factor at Roadsend (`c_smith_2`; sutler). Grades everything; out of wool. His work: **Laid
-  Out Flat** (his last clip, on the rise north, unrolled each night in rows, and warm under), **What Lies on It** (the
-  three tall things that lie on it by day), and on: **Wool for the Gate** (past the plague giant on the road east, up to
+- **Wilf Carder**, 47, wool-factor at Roadsend (`c_smith_2`; sutler). Grades everything; out of wool. His work, the first two taken together: **Short by
+  a Pound** (Thornwick's spring clip, in the grass round its stopped carters: every tally a pound light), **Laid Out
+  Flat** (his old stock on the rise north, unrolled in rows, and the three tall things that lie on it), and on: **Wool for the Gate** (past the plague giant halfway up the road, to
   Rollo Bask at the Long Queue: they'll take anything at the gate).
-- Lairs made for it: `carters_halt` (the carters, 16), `roadsend_demons` (17), `marshal_rd_plague` (17); `grawl_bats`
-  raised to 15 and moved off the hut, `toll_ambush` moved up onto the rise north of the toll (src/core/tripo-monsters.js).
+- Lairs made for it: `carters_halt` (the carters, 16), `roadsend_demons` (17), `marshal_rd_plague` (17, halfway to the Queue);
+  `grawl_bats` raised to 15 and moved off the hut, `toll_ambush` moved up onto the rise north of the toll; `gallows_bat`
+  given a harpy on a roost; Grawl's Kennel made a howlers' den (14); one-of-a-kind boss slots where the words count them (src/core/tripo-monsters.js).
 
 ## Where people go (for the life sim)
 

@@ -4,13 +4,17 @@
 // beside anything of the other (README "The two sides"; tests/quests-beyond.test.mjs reads every line for it).
 //
 // Each with a voice of their own (tools/folk/cast.md, "Thornwick and the Gallowswood"): Ann Arden at the Old Toll (plain,
-// short, her father's habits caught off him), Master Crowle the hangman at the Cross (a reckoner: weights and drops, dry,
+// short, her father's ways caught off him), Master Crowle the hangman at the Cross (a reckoner: weights and drops, dry,
 // never untidy), Tansy Wight who reads the lights (not who, only where to), Gil Mosse her hunter (by ear), Master Fabian
 // Larke of the Winter Company (on, always on), Peg Hollin who sold its tickets (flat, and minds him), Mother Grawl (costs,
 // jars, spite kept warm) and Wilf Carder the wool-factor at Roadsend (grades everything; out of wool). Osric's, Dorcas's
 // and Wymond's own are in src/folk/lines/land.js. The hubs open differently: Osric on his pound (the Downs' errand in),
 // Ann on the toll nobody pays, Crowle by your weight, Tansy on the light that isn't over you, Fabian with an entrance,
 // Grawl by your smell, Wilf on the wool you're not carrying.
+//
+// What the game shows at each lair is what the words say (src/core/lair-dress.js): the werebat by the Gallows Road on a
+// roost of forked poles with a harpy for company, the dragonling by Grawl's on a scorched bed, the old gibbet hung; Thornwick's carters stand by the
+// road with no carts (so their carts are told of, not seen).
 const DELVE_HINT = "The door under the stone table won't open for one alone: Sergeant Maud Halloway, beside it in the grove, hires out a company.";
 
 export const LINES = {
@@ -26,15 +30,15 @@ export const LINES = {
       ],
       day: [
         "Nothing up the road, nothing down it. In a good year there'd be a cart every hour and an argument with each.",
-        "If you want the rates, they were on the post. They're about the grass now.",
+        "If you want the rates, they were on the post. They're up the rise now, in pieces.",
       ],
       evening: [
-        "Dusk. Stand by me, not by the bar. Things come to the bar.",
+        "Dusk. Don't look up the rise. They like being looked at.",
         "He'd light the lamp on the post about now. I've no oil. I light it anyway, in my head.",
       ],
       night: [
         "Can't sleep? I sit up. The house has no roof; it's warmer by the well than in it.",
-        "Something went over, low, toward Thornwick. It'll be back before light. They always are.",
+        "Something went over, low, toward Thornwick. It'll be back before light.",
       ],
     },
     about: [
@@ -43,7 +47,7 @@ export const LINES = {
     ],
     ask: {
       dead: [
-        "They stand at the bar like they're waiting to be let through. Through to where, I don't know. South's only the Cross, and the Cross is only where you stop.",
+        "They face the bar, every one of them. South's only the Cross, and the Cross is only where you stop. I don't know what they think is past it.",
       ],
       town: [
         "Bellmourn? Father went once, to see the bell. He said it was a bell. He'd have liked it better if it had a bar across it and a box.",
@@ -57,13 +61,13 @@ export const LINES = {
     },
     topics: { toll: 'The toll', crowle: 'Master Crowle' },
     bye: [
-      "Mind the elm on the way up.",
-      "Go on. I'll lift the bar for you. Out of habit.",
+      "Mind the poles on the way up.",
+      "Go on. I'll lift the bar for you. Nobody else will.",
     ],
     barks: {
       player: ['Nothing to pay.', "Bar's up."],
       day: ['Nobody up, nobody down.'],
-      evening: ['Stand by me, not the bar.'],
+      evening: ["Don't look up the rise."],
       night: ['Something went over.'],
       magic: ["That's more light than this place has had since it burned.", "Don't. The thatch is gone, but the beams aren't."],
     },
@@ -85,7 +89,7 @@ export const LINES = {
       ],
       evening: [
         "Evening. I'd sit out, but things come to the fires on the Ground now. I sit in and listen.",
-        "The sun goes behind the gallows about now. The shadow comes right up to my door. It always did. I put the door there.",
+        "The sun goes behind the gallows about now. The shadow comes right up to my door. I put the door there.",
       ],
       night: [
         "Can't sleep? Nor can I. I go through them. Not by name. By weight. I remember every one by the weight.",
@@ -98,7 +102,7 @@ export const LINES = {
     ],
     ask: {
       dead: [
-        "They walk past the Cross and never look up at the beam. The living always looked up. That's how I tell which is which, at a distance.",
+        "They walk past the Cross and never look up at the beam. The living looked up, every one. That's how I tell which is which, at a distance.",
       ],
       town: [
         "Bellmourn sent me a man once, in a cart, with a letter. The letter was very civil. The man wasn't. I gave him seven foot. He was a big man.",
@@ -113,7 +117,7 @@ export const LINES = {
     topics: { trade: 'The trade', ann: 'Ann Arden' },
     bye: [
       "Go on. Walk round the beam, not under it. Old manners.",
-      "Off you go. I'll be here. I'm always here. It's in the name of the place.",
+      "Off you go. I'll be here. It's in the name of the place.",
     ],
     barks: {
       player: ['Eleven stone, near enough.', 'Walk round, not under.'],
@@ -128,7 +132,7 @@ export const LINES = {
   // ---------------------------------------------------------------- Corpse-Candle Camp
   tansy: {
     first: [
-      "No light over you. I looked as you came up the lane; I always look. Tansy Wight. They call this Corpse-Candle Camp because of me. I'd have called it something with fewer bodies in.",
+      "No light over you. I looked as you came up the lane. Tansy Wight. They call this Corpse-Candle Camp because of me. I'd have called it something with fewer bodies in.",
     ],
     greet: {
       morning: [
@@ -137,7 +141,7 @@ export const LINES = {
       ],
       day: [
         "Trade? I'll trade. I'm not so wise I don't need salt.",
-        "Ask me anything but who. People always want to know who. I never know who. Only where to.",
+        "Ask me anything but who. People want to know who. I never know who. Only where to.",
       ],
       evening: [
         "I'll sit up soon and watch the wood. You needn't. It's not catching.",
@@ -189,7 +193,7 @@ export const LINES = {
 
   gil: {
     first: [
-      "Don't mind the bow. I keep it strung; it's a habit, and it's ruining the bow. Gil Mosse. I hunt for the camp. Mostly I listen for it.",
+      "Don't mind the bow. I keep it strung. It's ruining the bow, and I can't stop. Gil Mosse. I hunt for the camp. Mostly I listen for it.",
     ],
     greet: {
       morning: ["Morning. Heard a roe go by at four. First in a month. I let it go. Something might have been following it."],
@@ -234,7 +238,7 @@ export const LINES = {
       ],
       night: [
         "Can't sleep? Nor I. I listen at the door under the table. Some nights there's singing. I know the song. I wrote the second verse.",
-        "Hush. ...No. I thought I heard the overture. It's only the wind in the grove. It always gets the tune wrong.",
+        "Hush. ...No. I thought I heard the overture. It's only the wind in the grove. It's got the tune wrong.",
       ],
     },
     about: [
@@ -261,7 +265,7 @@ export const LINES = {
     },
     shop: {
       open: [
-        "The company's stock, what's left. Rolls, lint, and I'll buy what you've got for more than it's worth; I was always bad at money.",
+        "The company's stock, what's left. Rolls, lint, and I'll buy what you've got for more than it's worth; I was never any good with money.",
         "Lay it out. I'll value it as a prop. A prop's worth whatever the audience believes.",
       ],
       closed: ["Not now. I'm rehearsing."],
@@ -272,7 +276,7 @@ export const LINES = {
 
   peg: {
     first: [
-      "Ticket? ...No. There's no play. I just say it when someone comes up the lane. Three winters' habit. Peg Hollin. I sold the tickets.",
+      "Ticket? ...No. There's no play. I just say it when someone comes up the lane. Three winters, and I still say it. Peg Hollin. I sold the tickets.",
     ],
     greet: {
       morning: ["He was at the door under the table again all night. I put a blanket on him at three."],
@@ -293,7 +297,7 @@ export const LINES = {
       player: ['Ticket? ...No. Sorry.'],
       day: ["It's wood."],
       evening: ["Don't look at them long."],
-      magic: ['He\'ll want you in the company now. Run.', "Better than our lightning. Ours was a sheet of tin."],
+      magic: ["He'll want you in the company now. Run.", "Better than our lightning. Ours was a sheet of tin."],
     },
   },
 
@@ -317,7 +321,7 @@ export const LINES = {
       ],
       night: [
         "Out late? So am I. The best of it comes up by moonlight. So does the worst. You learn which.",
-        "Hush. That's the oak. Something in it, shifting. Let it sit.",
+        "Hush. That's out on the burnt ground. Something turning over in its sleep. Let it.",
       ],
     },
     about: [
@@ -339,7 +343,7 @@ export const LINES = {
       morning: ["Dew's for picking."],
       day: ['Everything costs.'],
       evening: ["Pot's on."],
-      night: ['Let it sit.'],
+      night: ['Let it sleep.'],
       magic: ["Showy. I'd have done it with half.", 'Mind my garden with that.'],
     },
   },
@@ -360,7 +364,7 @@ export const LINES = {
       ],
       evening: [
         "Dusk. I sit facing the rise. Don't ask. You'll find out if you stop.",
-        "The road east goes dark first. It always did. It's the hills.",
+        "The road east goes dark first. It's the hills.",
       ],
       night: [
         "Can't sleep? Nor can I. I go over the clips in my head: Thornwick, Dunmow, the downs. Every fleece I ever bought. It passes the dark.",
@@ -391,7 +395,7 @@ export const LINES = {
     shop: {
       open: [
         "A roll, lint, and coin for whatever you're carrying. Wool, specially. I'll give you a fair price, and I've never said that and meant it before.",
-        "Lay it out. I grade everything. It's a habit. Don't take it to heart.",
+        "Lay it out. I grade everything. Don't take it to heart.",
       ],
       closed: ["Not now. I'm watching the rise."],
       buy: ['Done. Carry it dry.'],
@@ -422,7 +426,7 @@ export const QUESTS = {
       "North-west, on the downs. The hollow with the dead thorn. Two, and watch the third.",
     ],
     done: [
-      "South-west? Up the high down, where there's no hedge and no reason for one? ...Then he's gone home. My father always said there was a black one up there. I thought it was to keep me in at night.",
+      "South-west? Up the high down, where there's no hedge and no reason for one? ...Then he's gone home. My father said there was a black one up there. I thought it was to keep me in at night.",
       "Here. It's the hedge-penny: what every house pays me to keep the thorn. This month you kept it.",
     ],
     after: [
@@ -468,28 +472,28 @@ export const QUESTS = {
   up_from_the_gallowswood: {
     title: 'Up from the Hanging Wood',
     giver: 'dorcas',
-    about: "Plague stragglers up the road from the Gallowswood have stopped beside it four hundred paces south-east of Thornwick, where the wool carts used to water: two in iron, two not. Dorcas Pym can't serve supper with that at the end of the lane. Put three of the four down.",
+    about: "Plague stragglers up the road from the Gallowswood have stopped beside it four hundred paces south-east of Thornwick, where the wool carts used to water: one in iron, three not. Dorcas Pym can't serve supper with that at the end of the lane. Put three of the four down.",
     offer: [
-      "They come up the road from the south-east. Not walkers like yours. Ours have iron on, some of them, and the sickness under it. You smell them before you see them.",
-      "There's four stopped just off the road past the south gate, where the wool carts used to water. They don't come on and they don't go back. I can't serve supper with that sat at the end of the lane. Three down and I'll open the south shutters.",
+      "They come up the road from the south-east. Not walkers like yours. Ours carry the sickness, and one or two have iron on over it. You smell them before you see them.",
+      "There's four stopped just off the road past the south gate, where the wool carts used to water: one in iron, three not. They don't come on and they don't go back. I can't serve supper with that sat at the end of the lane. Three down and I'll open the south shutters.",
     ],
     accept: "I'll see to them.",
     acceptLine: "Out the south-east gate and down the road, four hundred paces. You'll know the place by the smell. Don't let them cough on you. And come straight back; I'll have water on to wash.",
     decline: 'Not now.',
     declineLine: "Then I'll keep the shutters to. Again.",
     journal: [
-      "Plague stragglers out of the Gallowswood have stopped beside the road south-east of Thornwick, where the wool carts used to water. Put down three of the four.",
+      "Plague stragglers out of the Gallowswood have stopped beside the road south-east of Thornwick, where the wool carts used to water: one in iron, three not. Put down three of the four.",
       "Go back to Dorcas Pym at the Hare and Harrow in Thornwick.",
     ],
     progress: [
-      "South-east, off the road. Two in iron. You'll smell them.",
+      "South-east, off the road. One in iron. You'll smell them.",
     ],
     done: [
       "Down? Then stand there. No, there, on the flags. Don't touch anything. I'm fetching the lye.",
       "Right. You'll do. Here's the house's thanks, and there's mutton, and you're having both.",
     ],
     after: [
-      "I had the south shutters open at supper. First time since the wool fair. Somebody nearly smiled.",
+      "I had the south shutters open at supper. Somebody nearly smiled. I'll not push it.",
     ],
     others: {
       osric: ["The ones in iron don't mind the hedge. They don't mind anything. I've seen one walk through a gorse fire to get nowhere."],
@@ -535,7 +539,7 @@ export const QUESTS = {
     about: "Of a night, from the Warlocks' Stones three hundred paces south of Thornwick, Wymond Ebb hears his own list of the buried said back, in his order, a night behind him. Hal Fitch, whom he'd said, came up walking. Empty the Stones: every warlock in the ring, and the one who keeps it.",
     offer: [
       "I've thought. Listen tonight, when I'm done. South, past the hedge, you'll hear it: somebody at the Stones saying names. Mine. My list, in my order, a night behind me. Last night they got to Farrow.",
-      "I say them to lay them. Somebody's saying them the other way, and Hal Fitch heard. Go and stop the mouths at the Stones. All of them, and whoever stands in the middle and keeps the time.",
+      "I say them to lay them. Somebody's saying them the other way, and Hal Fitch heard. Go and stop the mouths at the Stones. Every one, and whoever stands in the middle and keeps the time.",
     ],
     accept: "I'll stop their mouths.",
     acceptLine: "South, three hundred paces: the ring of standing stones with the flat one. Robes. They cast from a distance; go in close, and quick. I'd come, but I'd only bless them.",
@@ -546,14 +550,14 @@ export const QUESTS = {
       "Go back to Wymond Ebb by the market cross in Thornwick.",
     ],
     progress: [
-      "South. The Stones. All of them, and the one in the middle.",
+      "South. The Stones. Every mouth, and the one in the middle.",
     ],
     done: [
-      "Empty. ...Had they written it down? No. They'd only listened. Every night, in the dark, hoods up, getting it by heart off an old man by a cross. I've never had such attention.",
+      "Nobody left at the Stones? ...Had they written it down? No. They'd only listened. Every night, in the dark, hoods up, getting it by heart off an old man by a cross. I've never had such attention.",
       "Take this. It was a staff of office, in the house that had a roof. I cut the top off so it'd fit any hand. It'll fit yours.",
     ],
     after: [
-      "I said the whole list last night. Nothing said it after me. I went on past the Gs for the first time in a year.",
+      "I said the whole list last night, and nothing said it after me. I got past the Gs. There are a great many Gs.",
     ],
     others: {
       dorcas: ["He's sent you to the Stones? Good. He's been saying the names in a whisper all week, like a man with a secret. I can't hear myself think."],
@@ -564,33 +568,33 @@ export const QUESTS = {
     title: 'Nothing for the Pot',
     giver: 'dorcas',
     needs: 'up_from_the_gallowswood',
-    about: "Sib Kestrel sends a brace of birds up to the Hare and Harrow every week from Kestrel Hide, north-east of Thornwick. Nine days, nothing. Ask her why. Featherfall's harpies, east of the village, come down on whoever walks under them: put two down on the way. Near half an hour. It's paid there.",
+    about: "Sib Kestrel sends a brace of birds up to the Hare and Harrow every week from Kestrel Hide, north-east of Thornwick. Nine days, nothing. Ask her why. Dorcas thinks Featherfall's harpies, east of the village, are having them on the way: put two down as you pass. Near half an hour. It's paid there.",
     offer: [
       "Sib Kestrel at the hide, north-east, sends me a brace a week by whoever's going. Partridge, plover, a duck if I'm lucky. It's what's on the board when it isn't mutton.",
-      "Nine days, nothing. Not a feather. She's never missed. Go and ask her where my birds are. And mind Featherfall, east of us, on the way: the harpies come down on anyone who walks under them.",
+      "Nine days, nothing. Not a feather. She's never missed. Go and ask her. And look at Featherfall as you pass, east of us: if the harpies are having my birds on the way, put two down and see what's in their nests.",
     ],
     accept: "I'll ask after your birds.",
     acceptLine: "North-east, past Featherfall, then off the road over the down to a hide by a great set of ribs. Near half an hour. If she shushes you, it's not rudeness. It's the trade.",
     decline: 'Not now.',
     declineLine: "Mutton, then. Again. Nobody's surprised.",
     journal: [
-      "Harpies at Featherfall Roost, east of Thornwick, come down on whoever passes under them. Put down two.",
+      "Dorcas Pym thinks the harpies of Featherfall Roost, east of Thornwick, are taking the birds Sib Kestrel sends her. Put down two.",
       "Go on north-east to Kestrel Hide and ask Sib Kestrel, the fowler, why no birds have come up to the Hare and Harrow in nine days.",
     ],
     progress: [
       "North-east. Featherfall first. Then the hide by the ribs.",
     ],
     done: [
-      "Her birds? There's none. Shh. ...Look up. Nine days and nothing over, not a lark. I've nothing to send and nothing to eat, and something south of the hide whistling them down.",
-      "Here; she'd pay you, so I will. And now you're here, keep your voice down and listen to me. I've work, if you're any use quietly.",
+      "Her birds? There's none. Shh. ...Look up. Nine days and nothing over, not a lark. It's not the harpies; they're as hungry as I am. Something south of the hide is whistling them down.",
+      "Here; Dorcas would pay you, so I will, and she can owe me. Now keep still. Hear it? That whistle. That's not a bird.",
     ],
     after: [
       "None anywhere? Then it's mutton till spring. I've told the board. The board took it badly.",
     ],
     others: {
       sib: [
-        "Her birds? There's none. Shh. ...Look up. Nine days and nothing over, not a lark. I've nothing to send and nothing to eat, and something south of the hide whistling them down.",
-        "Here; she'd pay you, so I will. And now you're here, keep your voice down and listen to me. I've work, if you're any use quietly.",
+        "Her birds? There's none. Shh. ...Look up. Nine days and nothing over, not a lark. It's not the harpies; they're as hungry as I am. Something south of the hide is whistling them down.",
+        "Here; Dorcas would pay you, so I will, and she can owe me. Now keep still. Hear it? That whistle. That's not a bird.",
       ],
       osric: ["Sib's birds? Plover, mostly. I'd not say no to plover. Featherfall's on your way; go round it wide, or straight through. Not halfway."],
     },
@@ -600,21 +604,21 @@ export const QUESTS = {
     title: 'Thursdays',
     giver: 'dorcas',
     needs: ['black_ram', 'the_warlocks_stones'],
-    about: "Wat Arden, who keeps the toll on the Gallows Road south-east of Thornwick, has eaten at the Hare and Harrow every Thursday of Dorcas Pym's keeping, and missed five. She's kept his pie back each time. Take it down. A werebat hangs in a dead elm past halfway: put it down. Twenty minutes.",
+    about: "Wat Arden, who keeps the toll on the Gallows Road south-east of Thornwick, has eaten at the Hare and Harrow every Thursday of Dorcas Pym's keeping, and missed five. She's kept his pie back each time. Take it down. A werebat and a harpy roost on the forked poles past halfway: put one of the two down. Twenty minutes.",
     offer: [
       "There's a toll on the road halfway to the Cross. A bar, a hut and Wat Arden, who's kept it longer than I've kept this house. He's eaten here every Thursday of it. Pie, and the end of the bread.",
-      "He's missed five Thursdays. I've kept the pie back each time, like a fool. It's Thursday. Take it down to him. And past halfway there's a dead elm with something hanging in it the size of a man. It isn't a man.",
+      "He's missed five Thursdays. I've kept the pie back each time, like a fool. It's Thursday. Take it down to him. Past halfway there's forked poles where they hung crows. Something hangs there now the size of a man, and a thing with a woman's face beside it.",
     ],
     accept: "I'll take the pie down.",
     acceptLine: "Straight down the road, south-east, twenty minutes. You can't miss a toll; that's what they're for. And whatever you find, tell me plain. I've had enough of people being kind.",
     decline: 'Not that far.',
     declineLine: "No. I'll keep it back, then. One more Thursday.",
     journal: [
-      "A werebat hangs in a dead elm beside the Gallows Road, past halfway from Thornwick to the Old Toll. Put it down.",
+      "A werebat and a harpy roost on the forked poles beside the Gallows Road, past halfway from Thornwick to the Old Toll. Put one of the two down.",
       "Go on to the Old Toll with Dorcas Pym's pie for Wat Arden, who has missed five Thursdays at the Hare and Harrow.",
     ],
     progress: [
-      "Down the road. The elm, then the toll. Don't eat the pie.",
+      "Down the road. The poles, then the toll. Don't eat the pie.",
     ],
     done: [
       "Dorcas's pie. ...He's dead. Five weeks. I came up from the Cross when word stopped coming, and found the house like that. He's the near grave, by the well.",
@@ -636,28 +640,28 @@ export const QUESTS = {
   what_waits_at_the_bar: {
     title: 'Waiting to Be Let Through',
     giver: 'ann',
-    about: "Every dusk things stand on the rise a hundred and eighty paces north of the Old Toll, facing south down at its broken bar, the way carts stood to pay: the possessed, and man-high dolls among them. Ann Arden would like four of them put down.",
+    about: "Every dusk things stand on the rise a hundred and eighty paces north of the Old Toll, facing south down at its broken bar, the way carts stood to pay: the possessed, and a man-high doll among them, sometimes more. Ann Arden would like four of them put down.",
     offer: [
       "Look up at the rise, north. No, at dusk you'd see them. They stand up there facing south, down at the bar, like carts in a line. Waiting to be let through. Every dusk since I came.",
-      "Some are folk. Some are... dolls. Man-high, painted. I've watched them from the well. Four of them down and I'd lower the bar again. I'd like to. It's the one thing here I know how to do.",
+      "Some are folk. One at least is... a doll. Man-high, painted. I've watched them from the well. Four of them down and I'd lower the bar again. It's the one thing here I know how to do.",
     ],
-    accept: "I'll clear your bar.",
+    accept: "I'll clear your rise.",
     acceptLine: "North, up the rise, a hundred and eighty paces. The dolls are quicker than they look. The folk aren't, but they don't stop.",
     decline: 'Not now.',
     declineLine: "Then I'll stand at the well again tonight and watch them wait.",
     journal: [
-      "At dusk the possessed, and man-high dolls among them, stand on the rise north of the Old Toll facing south, down at its broken bar. Put down four.",
+      "At dusk the possessed, and a man-high doll or more among them, stand on the rise north of the Old Toll facing south, down at its broken bar. Put down four.",
       "Go back to Ann Arden by the bar of the Old Toll.",
     ],
     progress: [
       "North, up the rise. Four. The dolls are quick.",
     ],
     done: [
-      "Dolls. Painted faces, jointed like a puppet. ...They'll have come up from the south the night it burned, and he let them through. He let anything through that paid. They've come back to be let through again.",
+      "A doll. Painted face, jointed like a puppet. ...It'll have come up from the south the night it burned, and he let it through. He let anything through that paid.",
       "Here. It's out of the box, the little that was left in it. Father would say it's the toll's, not mine to give. It's mine now. So's the toll.",
     ],
     after: [
-      "I lowered the bar last night. Then I lifted it again in the morning for nobody. The habit's his. I've caught it.",
+      "I lowered the bar last night. In the morning I lifted it again, for nobody. I've caught that off him.",
     ],
   },
 
@@ -692,28 +696,28 @@ export const QUESTS = {
   the_toll_roost: {
     title: 'His Way Home',
     giver: 'ann',
-    about: "Dusk bats roost in the Toll Roost, two hundred and fifty paces south-west of the Old Toll, under a great one, the Gallows-Wing, that hunts the road by night. Wat Arden walked home past it every Thursday after dark. Empty the roost: every bat, and the big one.",
+    about: "Dusk bats roost in the Toll Roost, two hundred and fifty paces south-west of the Old Toll, under a great one, the Gallows-Wing. Every dusk they cross the road toward Thornwick: the road Wat Arden walked home by every Thursday after dark. Empty the roost, and the Gallows-Wing.",
     offer: [
-      "There's a roost south-west, the dead trees off the road. Bats, at dusk, more than I can see the end of, and one as big as the bar. They go up the road toward Thornwick every night, and come back before light.",
-      "Father walked home from the Hare every Thursday, after dark, past there. Every Thursday of my life. This spring something moved into those trees. I'd like them empty. All of it, and the big one.",
+      "There's a roost south-west, the dead trees off the road. Bats, more than I can see the end of, and one as big as the bar. Every dusk they go over the road toward Thornwick, low, and come back before light.",
+      "Father walked that road home from the Hare every Thursday, after dark. Every Thursday of my life. This spring they started crossing it. I'd like that roost empty: the bats, and the big one over them.",
     ],
     accept: "I'll empty the roost.",
-    acceptLine: "South-west, two hundred and fifty paces, off the road. Go in daylight, if you can; they hang till dusk. The big one doesn't hang. It watches.",
+    acceptLine: "South-west, two hundred and fifty paces, off the road. Go by day, if you can; they hang till dusk. The big one doesn't hang. It watches.",
     decline: 'Not yet.',
-    declineLine: "No. ...No. I'll not walk that way, then. Nobody will.",
+    declineLine: "No. ...No. I'll not walk that way after dark, then. Nobody will.",
     journal: [
-      "Dusk bats roost in the Toll Roost, south-west of the Old Toll, under the great one that hunts the Gallows Road at night. Wat Arden walked past it coming home. Empty the roost, and the Gallows-Wing.",
+      "Dusk bats roost in the Toll Roost, south-west of the Old Toll, and cross the Gallows Road every dusk, the road Wat Arden walked home by. Empty the roost, and the Gallows-Wing over it.",
       "Go back to Ann Arden by the bar of the Old Toll.",
     ],
     progress: [
-      "South-west. The dead trees. All of them, and the big one.",
+      "South-west. The dead trees. The bats, and the big one.",
     ],
     done: [
-      "Empty. And the big one. ...I'll not ask what was under the trees. I can see you'd tell me if I did.",
+      "The big one too? ...I'll not ask what was under the trees. I can see you'd tell me if I did.",
       "Here. His coat. It was on its peg the morning I came; he'd gone out without it. Thursday was warm. It's too big for me. It'll be right on you.",
     ],
     after: [
-      "I walked to the elm and back last night, after dark, his way. Nothing came. I didn't stop shaking till the bar.",
+      "I walked up the road to the poles and back last night, after dark, his way. Nothing came over. I didn't stop shaking till the bar.",
     ],
   },
 
@@ -721,33 +725,33 @@ export const QUESTS = {
     title: 'The Pan on the Hook',
     giver: 'ann',
     needs: 'the_toll_roost',
-    about: "Ann Arden kept house for Master Crowle at Hangman's Cross from a girl, and came up to the toll when the word stopped. She's staying. Tell him so. Two tall night things stand off the road past halfway: put one down. A quarter of an hour south-east. It's paid there.",
+    about: "Ann Arden kept house for Master Crowle at Hangman's Cross from a girl, and came up to the toll when the word stopped. She's staying. Tell him so; and if he asks whether the road's safe for her, put down one of the two tall night things in the trees past halfway. A quarter of an hour south-east.",
     offer: [
       "I kept house at the Cross for Master Crowle from fifteen. He's the hangman. Was. He'll have been cooking for himself five weeks, and he can't.",
-      "I'm not going back. Somebody has to keep this, and it's mine. Go down and tell him; he'll take it better from a stranger. And there's two tall things off the road past halfway, in the dark of the trees. Put one down. The other's slower alone.",
+      "I'm not going back. Go down and tell him; he'll take it better from a stranger. He'll ask if the road's safe for me to come back by. Tell him it isn't: there's two tall things in the trees past halfway. Put one down, and it'll only be half a lie.",
     ],
     accept: "I'll tell him.",
     acceptLine: "Down the road, south-east, a quarter of an hour. The Cross is where it meets the lanes: the gallows on its mound, his hut by it. He'll be out by the stocks. He likes to see who's coming.",
     decline: 'Not yet.',
     declineLine: "No. He'll guess. He's good at guessing what people are for.",
     journal: [
-      "Two tall night things stand off the Gallows Road past halfway from the Old Toll to Hangman's Cross. Put one down.",
+      "Two tall night things stand in the trees off the Gallows Road past halfway from the Old Toll to Hangman's Cross. Put one down.",
       "Go on to Hangman's Cross and tell Master Crowle, the hangman, that Ann Arden is staying to keep her father's toll.",
     ],
     progress: [
-      "Down the road. One of the tall ones off it. Then the Cross, and Crowle.",
+      "Down the road. One of the tall ones in the trees. Then the Cross, and Crowle.",
     ],
     done: [
-      "Not coming back. ...No. She wouldn't be. She'll have left the pan on the hook. She always left it on the hook. I've been looking at it five weeks.",
-      "Well. You walked it, and past the two in the trees. Here. And stand still a moment. ...Eleven stone, near enough. Old habit. I don't do it now. I've work, if you'll take it off a hangman.",
+      "Not coming back. ...No. She wouldn't be. She'll have left the pan on the hook. It's been on the hook five weeks. I've been looking at it.",
+      "Here; you walked it. Stand still a moment. ...Eleven stone, near enough. Old habit. I don't do it now. Not on purpose.",
     ],
     after: [
-      "He took it? ...He'll have said 'the pan'. He always says the pan.",
+      "He took it? ...He said 'the pan', didn't he. I'd have put money on the pan.",
     ],
     others: {
       crowle: [
-        "Not coming back. ...No. She wouldn't be. She'll have left the pan on the hook. She always left it on the hook. I've been looking at it five weeks.",
-        "Well. You walked it, and past the two in the trees. Here. And stand still a moment. ...Eleven stone, near enough. Old habit. I don't do it now. I've work, if you'll take it off a hangman.",
+        "Not coming back. ...No. She wouldn't be. She'll have left the pan on the hook. It's been on the hook five weeks. I've been looking at it.",
+        "Here; you walked it. Stand still a moment. ...Eleven stone, near enough. Old habit. I don't do it now. Not on purpose.",
       ],
     },
   },
@@ -773,28 +777,28 @@ export const QUESTS = {
       "The pit, then the Burning Ground. A pinch. Don't stop to watch.",
     ],
     done: [
-      "Both? ...Good. I put a pinch on the step myself while you were gone. Don't tell the priest. He'll think it worked.",
+      "Both. I put a pinch on my own step while you were gone. Don't tell the priest. He'll think it worked.",
       "Here. Hangman's pay was the clothes off the man, once. I've money now instead, and fewer clothes. Take it.",
     ],
     after: [
-      "I've written to Ebb. First time. I said the salt was down, and thank you, and that the step doesn't seem any different.",
+      "I've written to Ebb. I said the salt was down, and thank you, and that the step doesn't seem any different.",
     ],
   },
 
   the_big_man: {
     title: 'No Rope for Him',
     giver: 'crowle',
-    about: "Four stand at the lime-pit a hundred and sixty paces north-west of Hangman's Cross, where Master Crowle's hanged were put: plague knights, and one in plate the size of a cart that no rope would take. Crowle wants him gone. Put three of the four down.",
+    about: "Four stand at the lime-pit a hundred and sixty paces north-west of Hangman's Cross, where Master Crowle's hanged were put: three plague knights, and one in plate the size of a cart that no rope would take. Crowle wants him gone. Put three of the four down.",
     offer: [
       "You'll have seen him at the pit. The big one, in plate. You'd want a rope like a ship's cable and a drop of no length at all, and he'd still pull the beam down.",
-      "I'd like him gone from there. He stands at the edge and looks in. Three of the four down, and he'll come to you himself; that kind always does, in the end.",
+      "I'd like him gone from there. He stands at the edge and looks in. Three of the four down, and he'll come to you himself; that kind does, in the end.",
     ],
     accept: 'Three of the four.',
     acceptLine: "North-west, a hundred and sixty paces. The knights stand in front of him. He's slow. Don't be where he's going to be.",
     decline: 'Not him.',
     declineLine: "No. He's waited this long. So have I.",
     journal: [
-      "Plague knights and a giant in plate stand at the lime-pit north-west of Hangman's Cross, where Master Crowle's hanged were put. Put down three of the four.",
+      "Three plague knights and a giant in plate stand at the lime-pit north-west of Hangman's Cross, where Master Crowle's hanged were put. Put down three of the four.",
       "Go back to Master Crowle by the stocks at Hangman's Cross.",
     ],
     progress: [
@@ -805,35 +809,35 @@ export const QUESTS = {
       "They wanted it done at the Cross, so it was seen. I did it. That's the trade. Here; it's yours.",
     ],
     after: [
-      "I walked to the pit's edge this morning. First time in years. It's a hole with lime in.",
+      "I walked to the pit's edge this morning. It's a hole with lime in. I don't know what I thought it was.",
     ],
   },
 
   the_burning_ground: {
-    title: 'Crosswise',
+    title: 'An Armful a Night',
     giver: 'crowle',
-    about: "The Burning Ground, three hundred paces north-west of Hangman's Cross, where the plague dead were burned, has its fires lit again every night, and Master Crowle's woodpile goes down by the same. Empty it: every one of the sick, and the great one that keeps them.",
+    about: "The Burning Ground, three hundred paces north-west of Hangman's Cross, where the plague dead were burned, has its fires lit again every night, and Master Crowle's woodpile goes down an armful a night. He wants the Ground emptied: the sick, the nurses, and the Pestilent they stand round.",
     offer: [
       "The Burning Ground. I lit those fires, the plague year, for the dead nobody would touch. Nobody's lit them since. They're lit. Every night.",
-      "And my woodpile goes down an armful a night. Somebody's carrying it there, a stick at a time. I'd like the Ground empty. All of it, and the big one in the middle the rest stand round.",
+      "And my woodpile goes down an armful a night. Somebody's carrying it there. I'd like the Ground empty: the sick, the nurses, and the great one in the middle that the rest stand round.",
     ],
     accept: "I'll empty the Burning Ground.",
-    acceptLine: "North-west, past the pit, three hundred paces. You'll see the fires. The sick are slow and many; the nurses throw the sickness at you; the big one's bigger than him at the pit. Burn it all, if you've fire. It's what the place is for.",
+    acceptLine: "North-west, past the pit, three hundred paces. You'll see the fires. The sick are slow and many; the nurses throw the sickness at you; the great one's bigger than him at the pit. Burn it, if you've fire. It's what the place is for.",
     decline: 'Not yet.',
     declineLine: "No. I'll stack the wood closer to the door.",
     journal: [
-      "The plague-taken on the Burning Ground, north-west of Hangman's Cross, keep its fires lit with wood off Master Crowle's pile. Empty it: every one, and the Pestilent that keeps them.",
+      "The plague-taken on the Burning Ground, north-west of Hangman's Cross, keep its fires lit with wood off Master Crowle's pile. Empty it, and put down the Pestilent that keeps them.",
       "Go back to Master Crowle by the stocks at Hangman's Cross.",
     ],
     progress: [
-      "North-west, past the pit. The fires. All of it.",
+      "North-west, past the pit. The fires, and the great one.",
     ],
     done: [
-      "Out. ...How was the wood stacked? Crosswise? Two this way, two that, and a gap for the air? ...That's mine. That's how I stack it. They'd been watching me do it.",
-      "Here. The last man I hanged carried it in his coat to the end; his grandfather's, he said. It's sat on my shelf nine years, looking at me. Let it look at somebody else.",
+      "Out, the fires? ...There was bark in my sheets this morning, and lime on my boots. Thirty-one years I didn't sleep. Now I sleep, and carry wood to the Ground in it.",
+      "Here. The last man I hanged carried it in his coat to the end; his grandfather's, he said. It's sat on my shelf nine years. Take it. And if you meet me on the lane at night with an armful, don't wake me. Turn me round.",
     ],
     after: [
-      "No smoke last night. I slept with the window shut for the first time since spring, and woke at three to open it.",
+      "No smoke last night. I tied my ankle to the bedpost, to be sure. It held.",
     ],
   },
 
@@ -841,33 +845,33 @@ export const QUESTS = {
     title: 'A Light Over the Cross',
     giver: 'crowle',
     needs: 'the_big_man',
-    about: "Tansy Wight, at Corpse-Candle Camp south-west of the Cross, reads the lights that go before a burying. Every spring Master Crowle sends to ask if there's one over the Cross yet. Plague giants stand by the lane past halfway: put down three. A quarter of an hour. It's paid there.",
+    about: "Tansy Wight, at Corpse-Candle Camp south-west of the Cross, reads the lights that go before a burying. Every spring Master Crowle sends to ask if there's one over the Cross yet. A plague giant and his knights stand where the lane bends: put down two. A quarter of an hour. It's paid there.",
     offer: [
       "Every spring I send up to Tansy Wight at the camp south-west, and ask if there's a light over the Cross yet. She reads them: a light that goes from a house to where it'll be buried. Mine'd go about four yards.",
-      "Ann carried it. Ann's at the toll. You carry it. And there's giants on the lane past halfway, two and their knights. Put three down, or they'll follow you into her camp, and she'll not thank you.",
+      "Ann carried it. You carry it. There's a giant at the bend of the lane with two knights, and they'll walk after you into her camp if you let them. Put two down; she's enough to read without them.",
     ],
     accept: "I'll ask her.",
-    acceptLine: "South-west down the lane, a quarter of an hour. The giants are off to the right where it bends. Her camp's in the trees after, with the stones at its back. Ask her plain. She answers plain.",
+    acceptLine: "South-west down the lane, a quarter of an hour. The giant's off to the right where it bends. Her camp's in the trees after, with the stones at its back. Ask her plain. She answers plain.",
     decline: 'Not now.',
     declineLine: "No hurry. That's rather the point of asking.",
     journal: [
-      "Plague giants and their knights stand off the lane south-west of Hangman's Cross, past halfway to Corpse-Candle Camp. Put down three of the four.",
+      "A plague giant and his knights stand off the lane south-west of Hangman's Cross, where it bends toward Corpse-Candle Camp. Put down two of the three.",
       "Go on to Corpse-Candle Camp and ask Tansy Wight, for Master Crowle, if there's a light over the Cross yet.",
     ],
     progress: [
-      "South-west. The giants at the bend. Then Tansy.",
+      "South-west. The giant at the bend. Then Tansy.",
     ],
     done: [
-      "Over the Cross? No. Not this spring. Tell him not yet. He'll be disappointed. He always is.",
-      "Here. He sends a coin with the asking; I send it back with whoever carried it. Now you're in my camp, and I've looked, and there's nothing over you either. Stay and work, then.",
+      "Over the Cross? No. Not this spring. Tell him not yet. He'll be put out; he likes things settled.",
+      "Here. He sends a coin with the asking; I send it back with whoever carried it. ...And there's nothing over you either. I looked as you came up the lane.",
     ],
     after: [
       "Not yet, she said. ...Well. I'd the pan clean, in case.",
     ],
     others: {
       tansy: [
-        "Over the Cross? No. Not this spring. Tell him not yet. He'll be disappointed. He always is.",
-        "Here. He sends a coin with the asking; I send it back with whoever carried it. Now you're in my camp, and I've looked, and there's nothing over you either. Stay and work, then.",
+        "Over the Cross? No. Not this spring. Tell him not yet. He'll be put out; he likes things settled.",
+        "Here. He sends a coin with the asking; I send it back with whoever carried it. ...And there's nothing over you either. I looked as you came up the lane.",
       ],
     },
   },
@@ -876,17 +880,17 @@ export const QUESTS = {
     title: "Crowle's Jar",
     giver: 'crowle',
     needs: 'the_burning_ground',
-    about: "Master Crowle has had a jar filled by Mother Grawl, at her hut north-east of the Cross, every month since before Ann kept his house, and won't say what's in it. The possessed stand under the old gibbet on the way: put three down. Half an hour. It's paid there.",
+    about: "Master Crowle has a jar filled by Mother Grawl, at her hut north-east of the Cross, every month, and won't say what's in it. It's gone a month and a half. The possessed stand under the old gibbet where the lane turns, and follow whoever goes by: put three down. Half an hour. It's paid there.",
     offer: [
-      "One more. There's a jar on my shelf, by the salt. Empty. Mother Grawl fills it, at her hut north-east, every month since before Ann came. Ann carried it. Ann's at the toll.",
-      "Don't ask what's in it. Take the jar, say it wants filling, and she'll know. And there's an old gibbet where the lane turns, halfway. Folk stand under it. Not living. Put three down; they walk after you.",
+      "One more. There's a jar on my shelf, by the salt. Empty. Mother Grawl, at her hut north-east, fills it every month. It's gone a month and a half.",
+      "Don't ask what's in it. Take the jar, say it wants filling, and she'll know. You'll go by the old gibbet where the lane turns. There's folk under it again, the way there were on a hanging day. They follow anyone up the lane. Put three down.",
     ],
     accept: "I'll take the jar.",
     acceptLine: "North-east up the lane, half an hour, past the gibbet. Her hut's the crooked one with skulls on poles. They're not meant for you. Mostly.",
     decline: 'Not now.',
     declineLine: "No. It'll keep empty. That's the trouble with it.",
     journal: [
-      "The possessed stand under the old gibbet where the lane north-east of Hangman's Cross turns. Put down three.",
+      "The possessed stand under the old gibbet where the lane north-east of Hangman's Cross turns, and follow whoever goes by. Put down three.",
       "Go on north-east to Mother Grawl's hut with Master Crowle's empty jar, and tell her it wants filling.",
     ],
     progress: [
@@ -894,7 +898,7 @@ export const QUESTS = {
     ],
     done: [
       "Crowle's jar. ...He's sent a stranger the length of the wood with it. Ann's gone, then. She'd not have let him.",
-      "It's for his hands. Since the last one he hanged, they shake, and he'll not have anyone see. I'll fill it, and you'll not tell him I said. Here; he pays me too much, so I pay you. Now stand still and let me look at what the wood's sent me.",
+      "It's for his hands. Since the last one he hanged, they shake, and he'll not have anyone see. I'll fill it, and you'll not tell him I said. Here; he pays me too much, so I pay you.",
     ],
     after: [
       "She filled it. ...She'll have told you what for. She tells everybody, and they all tell me she didn't.",
@@ -902,7 +906,7 @@ export const QUESTS = {
     others: {
       grawl: [
         "Crowle's jar. ...He's sent a stranger the length of the wood with it. Ann's gone, then. She'd not have let him.",
-        "It's for his hands. Since the last one he hanged, they shake, and he'll not have anyone see. I'll fill it, and you'll not tell him I said. Here; he pays me too much, so I pay you. Now stand still and let me look at what the wood's sent me.",
+        "It's for his hands. Since the last one he hanged, they shake, and he'll not have anyone see. I'll fill it, and you'll not tell him I said. Here; he pays me too much, so I pay you.",
       ],
     },
   },
@@ -911,25 +915,25 @@ export const QUESTS = {
   the_candle_road: {
     title: 'The Candle Road',
     giver: 'tansy',
-    about: "A corpse-candle goes from where someone is to where they'll be laid. Every night this week Tansy Wight has seen one go the same road: from the Lazar Field to Nightfall Ruin, two hundred and fifty paces north-west. Walk it by night to the ruin, and put down three there.",
+    about: "A corpse-candle goes from where someone is to where they'll be laid. Every night this week Tansy Wight has seen one go the same road: from the Lazar Field to Nightfall Ruin, two hundred and fifty paces north-west. Walk it to the ruin before the light does, and put down three there.",
     offer: [
       "A corpse-candle goes from where somebody is to where they'll be laid. It walks the road the bearers will take. I read them. That's the camp's name, and mine, near enough.",
-      "Every night this week there's been one from the Lazar Field to Nightfall Ruin, north-west. The same road. Somebody's to be carried it. Walk it, by night, to the ruin, and put down three of what's there. I'd like to know whose road it is.",
+      "Every night this week there's been one from the Lazar Field to Nightfall Ruin, north-west. The same road. Somebody's to be carried it. Walk it before the light does, to the ruin, and put down three of what's there. A road's only walked that way once.",
     ],
-    accept: "I'll walk it by night.",
-    acceptLine: "North-west, two hundred and fifty paces, when it's dark. Broken walls, and things in them that walk tall and pale. Don't follow anything that's lit. Go to the ruin and nowhere else.",
-    decline: 'Not tonight.',
-    declineLine: "No. It'll go again tomorrow. It always does.",
+    accept: "I'll walk it first.",
+    acceptLine: "North-west, two hundred and fifty paces. Broken walls, and things in them that walk tall and pale. Go to the ruin and nowhere else; it's the bearers' road, and you'll want to keep to it.",
+    decline: 'Not today.',
+    declineLine: "No. It'll go again tonight. It goes every night.",
     journal: [
-      "A corpse-candle goes every night from the Lazar Field to Nightfall Ruin, north-west of Corpse-Candle Camp. Go to the ruin by night.",
+      "A corpse-candle goes every night from the Lazar Field to Nightfall Ruin, north-west of Corpse-Candle Camp. Walk that road to the ruin before it does.",
       "Things stand in Nightfall Ruin. Put down three of them.",
       "Go back to Tansy Wight at Corpse-Candle Camp.",
     ],
     progress: [
-      "By night. North-west, to the ruin. Three.",
+      "North-west, to the ruin, ahead of the light. Three.",
     ],
     done: [
-      "You walked it? To the ruin, by night? ...There was no light on it after. First night this week. You walked it for whoever it was going to be.",
+      "You walked it, to the ruin. ...Then there'll be no light on it tonight. You walked it for whoever it was going to be.",
       "Here. Somebody'll live who wasn't going to. They don't know it. Nor do I, who. That's how it mostly is.",
     ],
     after: [
@@ -949,7 +953,7 @@ export const QUESTS = {
       "A month back it stopped. They've dropped them round the field, in the grass. Now they walk quiet, and so do I, and one of us is going to be surprised. Fetch me five of the clappers.",
     ],
     accept: "I'll fetch the clappers.",
-    acceptLine: "South-east, two hundred and fifty paces, round the outside of the field: they dropped them going in and out. A couple close in. Don't let one breathe on you.",
+    acceptLine: "South-east, two hundred and fifty paces, round the outside of the field: they dropped them going in and out. Keep to the edge. Don't let one breathe on you.",
     decline: 'Not now.',
     declineLine: "I'll keep my back to the stones, then.",
     journal: [
@@ -957,7 +961,7 @@ export const QUESTS = {
       "Go back to Gil Mosse at Corpse-Candle Camp.",
     ],
     progress: [
-      "South-east. The Lazar Field. Five clappers.",
+      "South-east. The Lazar Field. Five clappers, round the edge.",
     ],
     done: [
       "Five. ...The cord's not broken on any of them. Untied. They took them off careful, the way you'd muffle your own feet before you went after something.",
@@ -974,25 +978,24 @@ export const QUESTS = {
   nightfall_ruin: {
     title: 'Three Roads',
     giver: 'tansy',
-    needs: 'the_candle_road',
-    about: "The night after the candle road went dark, Tansy Wight saw three lights, on three roads, all to Nightfall Ruin. The ruin's calling for them. She wants it empty: the dream-eaters, the pale ones, and the long one that keeps them. Two hundred and fifty paces north-west.",
+    about: "Some nights Tansy Wight sees three lights, on three roads, all to Nightfall Ruin. It isn't that somebody's to be carried there: the ruin's calling for them. She wants it emptied: the dream-eaters, the pale ones, and the long one that keeps them. Two hundred and fifty paces north-west.",
     offer: [
-      "Last night there were three. Three candles, three roads, all to the ruin. It isn't that somebody's to be carried there. It's that the ruin's calling for them.",
+      "Some nights there's three. Three candles, three roads, all to Nightfall Ruin, north-west. It isn't that somebody's to be carried there. It's that the ruin's calling for them.",
       "Empty it. The tall pale ones, the ones that eat dreams, the burning one, and the long one at the back that you'll know when you see it. It's longer than it ought to be.",
     ],
     accept: "I'll empty the ruin.",
-    acceptLine: "North-west, the same road. In daylight, this time; you've no need of the dark now. And if one of the lights is over you when you come out, I'll tell you. I'll not lie.",
+    acceptLine: "North-west, two hundred and fifty paces, along the bearers' road. And if one of the lights is over you when you come out, I'll tell you. I'll not lie.",
     decline: 'Not yet.',
     declineLine: "No. I'll watch the roads again tonight.",
     journal: [
-      "Three corpse-candles went to Nightfall Ruin last night, on three roads. Empty the ruin, north-west of Corpse-Candle Camp: every one, and the Long Nightmare that keeps it.",
+      "Some nights three corpse-candles go to Nightfall Ruin, on three roads. Empty the ruin, north-west of Corpse-Candle Camp, and put down the Long Nightmare that keeps it.",
       "Go back to Tansy Wight at Corpse-Candle Camp.",
     ],
     progress: [
-      "North-west. The ruin. All of it, and the long one.",
+      "North-west. The ruin, and the long one at the back.",
     ],
     done: [
-      "Empty. And no light over you; I looked as you came up the lane. ...Nor any to the ruin. The roads are dark.",
+      "No light over you; I looked as you came up the lane. ...Nor any to the ruin. The roads are dark.",
       "Here. It came to me from the woman who taught me the lights. A reading, of a sort. 'Read it when you've a light over you,' she said. I've never needed it. You might.",
     ],
     after: [
@@ -1006,34 +1009,34 @@ export const QUESTS = {
   the_players_bill: {
     title: 'Every Night Till Spring',
     giver: 'tansy',
-    needs: 'nightfall_ruin',
-    about: "Three winters back the players by the Twisted Grove gave Tansy Wight a bill for their play, and she never went. She wants it taken back to Master Fabian Larke at their wagon, with word that she saw them go in. Leatherwing's bats are on the way: put down two. Ten minutes south-west.",
+    needs: ['the_candle_road', 'nightfall_ruin'],
+    about: "Three winters back the players by the Twisted Grove gave Tansy Wight a bill for their play, and she never went. She wants it taken back to Master Fabian Larke at their wagon, with word that she saw them go in. Go by the Lazar Field's edge, where the sick come out after anyone passing: put two down. A quarter of an hour.",
     offer: [
       "Three winters ago a man came up from the grove in a coat with a fur collar and gave me this. A playbill. 'The Winter Company. Every night till spring.' I said I'd come. I never did.",
-      "Take it back to him: Master Fabian Larke, by the wagon at the grove, south-west. Tell him I saw them go in. He'll know what I mean, and he'll not want to. And mind the bats at Leatherwing on the way; they'll come down on you.",
+      "Take it back to him: Master Fabian Larke, by the wagon at the grove, south-west. Tell him I saw them go in. He'll know what I mean, and he'll not want to. Go by the Lazar Field's edge; the sick come out after anyone passing, and Gil would sooner it was you than him.",
     ],
     accept: "I'll take the bill.",
-    acceptLine: "South-west, ten minutes. Leatherwing Roost's off the way past halfway; they hang in the trees by day and wake for anyone. Then the wagon. You'll hear him before you see it.",
+    acceptLine: "By the Lazar Field's edge, then south-west to the grove: a quarter of an hour. Put two down and keep walking. Then the wagon. You'll hear him before you see it.",
     decline: 'Not now.',
     declineLine: "No. It's kept three winters. It's good paper.",
     journal: [
-      "Dusk bats from Leatherwing Roost come down on whoever passes it, between Corpse-Candle Camp and the Twisted Grove. Put down two.",
+      "The sick of the Lazar Field, south-east of Corpse-Candle Camp, come out after anyone passing its edge. Put down two.",
       "Go on south-west to the Players' Wagon by the Twisted Grove and give Master Fabian Larke back his playbill, from Tansy Wight, who saw his company go in.",
     ],
     progress: [
-      "South-west. Two of the bats. Then the wagon, and the bill.",
+      "The Lazar Field's edge. Two. Then south-west to the wagon, and the bill.",
     ],
     done: [
       "My bill. 'Every night till spring.' ...She saw them go in. The lights. Yes. I knew. I've stood here three winters knowing, and saying 'tomorrow' to Peg.",
-      "Thank you. That's the first honest notice the company ever had. Here, off the wagon's takings, which are mine now. Stay. There's work, if you've the stomach for an audience.",
+      "Thank you. That's the first honest notice the company ever had. Here, off the wagon's takings, which are mine now. All of them. It's not a fortune.",
     ],
     after: [
-      "He took it? He'll have it up on the wagon by now. He always did like his name in print.",
+      "He took it? It'll be up on the wagon by now. He likes his name in print.",
     ],
     others: {
       fabian: [
         "My bill. 'Every night till spring.' ...She saw them go in. The lights. Yes. I knew. I've stood here three winters knowing, and saying 'tomorrow' to Peg.",
-        "Thank you. That's the first honest notice the company ever had. Here, off the wagon's takings, which are mine now. Stay. There's work, if you've the stomach for an audience.",
+        "Thank you. That's the first honest notice the company ever had. Here, off the wagon's takings, which are mine now. All of them. It's not a fortune.",
       ],
       peg: ["That's our bill. I wrote those out by hand, the week we came. ...He's going to put it up. Let him."],
     },
@@ -1045,26 +1048,26 @@ export const QUESTS = {
     giver: 'fabian',
     about: "Every dusk an audience gathers in the Twisted Grove, ninety paces south of the Players' Wagon, facing the door under the stone table: tall things of the night, and painted figures from the company's own stock among them. Master Fabian Larke would like the house thinned. Put three down.",
     offer: [
-      "At dusk they come and sit in the grove, facing the door under the table. Tall, dark, still; and the painted ones from our own stock among them, that we stood in the wings to make a crowd. An audience, waiting for the house to open.",
-      "The house is open. That's the trouble. Before anyone goes down to find my company, I'd like the stalls thinned. Three of them. A short walk; I'll watch from the steps.",
+      "At dusk they come and sit in the grove, facing the door under the table. Tall, dark, still; and the painted ones from our own stock among them, that we stood in the wings to make a crowd. An audience, in for the night.",
+      "Before anyone goes down to find my company, I'd like the stalls thinned. Three of them. A short walk; I'll watch from the steps.",
     ],
     accept: "I'll thin the stalls.",
     acceptLine: "South, ninety paces: the grove with the stone table. They stand when you come at them; they're quick for an audience. The painted ones are ours. Break them; they're only paint.",
     decline: 'Not now.',
     declineLine: "No. They're patient. Audiences are, at the start.",
     journal: [
-      "Night demons and haunted mannequins sit in the Twisted Grove at dusk, facing the Hollow Playhouse's door, south of the Players' Wagon. Put down three.",
+      "Night demons and a haunted mannequin or more sit in the Twisted Grove at dusk, facing the Hollow Playhouse's door, south of the Players' Wagon. Put down three.",
       "Go back to Master Fabian Larke at the Players' Wagon.",
     ],
     progress: [
       "South. The grove. Three of the audience.",
     ],
     done: [
-      "Three. ...They kept their faces to the door, Peg says, even going down. Waiting for the play. Well. It's been playing three winters. Somebody ought to go and see it.",
+      "Three. ...Peg says they kept their faces to the door going down. Well. It's been playing three winters. Somebody ought to go and see it.",
       "Here, from the takings, such as they are. You've seen the door now. I've stood at it every night and my feet won't go down. Yours will.",
     ],
     after: [
-      "Fewer in the grove last night. I bowed to them from the steps, out of habit. Nobody clapped.",
+      "Fewer in the grove last night. I bowed to them from the steps. Nobody clapped. Nobody ever does, from the stalls.",
     ],
     others: {
       peg: ["He calls them the audience. They're not. An audience pays."],
@@ -1074,24 +1077,24 @@ export const QUESTS = {
   poxhollow: {
     title: 'For Nothing',
     giver: 'peg',
-    about: "On the way in, three winters back, the Winter Company played Poxhollow, the pest-house two hundred and fifty paces north-west of their wagon, for nothing. Fabian Larke came away with a cough and missed the opening. Peg Hollin wants the place emptied: every one of the sick, and the great one that keeps them.",
+    about: "On the way in, three winters back, the Winter Company played Poxhollow, the pest-house two hundred and fifty paces north-west of their wagon, for nothing. Fabian Larke came away with a cough and missed the opening. Peg Hollin wants the place emptied: the sick, and the great one that keeps them.",
     offer: [
       "On the way in, three winters back, Fabian had the company play Poxhollow. The pest-house, north-west. For nothing. 'For the sick,' he said. I said the sick can't clap. He said that's why it's charity.",
-      "He came away with a cough and lay in the wagon a month, and they opened without him, and they're all down there and he's up here. He wishes every night he'd gone. I've never once wished it. Empty that place. All of it.",
+      "He came away with a cough and lay in the wagon a month, and they opened without him, and they're all down there and he's up here. He wishes every night he'd gone. I've never once wished it. Empty that place, and whatever keeps it.",
     ],
     accept: "I'll empty Poxhollow.",
     acceptLine: "North-west, two hundred and fifty paces. You'll smell it. Knights in iron, nurses who throw what they've got at you, and a big one. Don't take anything off them.",
     decline: 'Not now.',
     declineLine: "No. It's done its harm. It can wait to be paid for.",
     journal: [
-      "Poxhollow, the pest-house north-west of the Players' Wagon, is where the Winter Company played for nothing and Fabian Larke caught his cough. Empty it: every one, and its master.",
+      "Poxhollow, the pest-house north-west of the Players' Wagon, is where the Winter Company played for nothing and Fabian Larke caught his cough. Empty it, and put down its master.",
       "Go back to Peg Hollin at the Players' Wagon.",
     ],
     progress: [
-      "North-west. Poxhollow. All of it.",
+      "North-west. Poxhollow, and the big one.",
     ],
     done: [
-      "Empty. ...Good. I've wanted to thank that place for three winters, and I couldn't, for what it'd mean. So I'll thank you.",
+      "Done? Then I can say it. I've wanted to thank that place for three winters, and I couldn't, for what it'd mean. So I'll thank you.",
       "Here: what I took at the door the last night, before I gave up selling. Nobody's come back to ask for it.",
     ],
     after: [
@@ -1164,10 +1167,46 @@ export const QUESTS = {
       "This came out of one of their trunks the night they went down; I found it under the wagon's step. It's an ugly thing, and worth more than the wagon. Yours. Call it eleven players and the change.",
     ],
     after: [
-      "A carter came up the lane and asked was there anything to see hereabouts. I said no. First time in three winters that's been true.",
+      "A carter came up the lane and asked was there anything to see hereabouts. I said no, and it was true. I'm not sure I like it.",
     ],
     others: {
       peg: ["The Dollmaker? I sold her dolls at the door. They looked at you. I put them face down on the board, and they were face up by the interval."],
+    },
+  },
+
+  the_closing_notice: {
+    title: 'House Closed',
+    giver: 'fabian',
+    needs: 'last_night_of_the_run',
+    about: "The Winter Company played the foot of Hangman's Cross on hanging days, twenty springs, and Master Crowle never once came round the beam to watch. Fabian Larke wants him told the company's closed. The company lost its last cart at Nightfall Ruin coming in, and the ruin's filling again: put two down there.",
+    offer: [
+      "We played the Cross on hanging days. Twenty springs. A crowd that's come to see a man die is in the mood for a tragedy. Crowle never once came round the beam to watch. He'd have heard every word.",
+      "Go up and tell him the company's closed. He'll want it in the book; he's a tidy man. And Nightfall Ruin, off the lane by Tansy's: we lost our last cart there coming in, the scenery and the horse. Tansy says it's filling again. Put two down for the horse.",
+    ],
+    accept: "I'll tell him.",
+    acceptLine: "Up the lane, north-east, past Tansy's: the better part of half an hour. Nightfall Ruin's off the lane above Tansy's. Crowle'll be by the stocks; we built our stage against them.",
+    decline: 'Not now.',
+    declineLine: "No. A house can be closed a while before anyone's told. Most are.",
+    journal: [
+      "Nightfall Ruin, off the lane by Corpse-Candle Camp, where the Winter Company lost its last cart, is filling again. Put down two there.",
+      "Go on to Hangman's Cross and tell Master Crowle, from Master Fabian Larke, that the Winter Company has closed.",
+    ],
+    progress: [
+      "Up the lane. Two at Nightfall Ruin. Then Crowle, by the stocks.",
+    ],
+    done: [
+      "Closed. ...I heard them. Twenty springs, from behind the beam. Larke did a dying speech that went on longer than any I ever arranged, and they clapped him, with a man still turning on the rope.",
+      "Here. I'll not owe a player anything; they never let you forget it.",
+    ],
+    after: [
+      "You told him? ...He heard it all, then. Every speech. Best house I ever had, and he never paid.",
+    ],
+    others: {
+      crowle: [
+        "Closed. ...I heard them. Twenty springs, from behind the beam. Larke did a dying speech that went on longer than any I ever arranged, and they clapped him, with a man still turning on the rope.",
+        "Here. I'll not owe a player anything; they never let you forget it.",
+      ],
+      peg: ["He's sending word to the hangman? We played his hanging days. I sold the tickets. I never once looked at the beam."],
     },
   },
 
@@ -1181,7 +1220,7 @@ export const QUESTS = {
       "Six dogs, I had. The wood took them one winter and gave them back walking on two legs. They know me. That's worse. Go and pull me five. Roots and all, dirt on. Don't stop to be looked at.",
     ],
     accept: "I'll pull your henbane.",
-    acceptLine: "North-east, two hundred and seventy paces. Round the edge of where they lie, mostly; a couple close in where it's richest. Sticky leaves, a stink, a purple eye in the flower. Don't lick your fingers after.",
+    acceptLine: "North-east, two hundred and seventy paces. Round the edge of where they lie; it's fattest there. Sticky leaves, a stink, a purple eye in the flower. Don't lick your fingers after.",
     decline: 'Not now.',
     declineLine: "No. Crowle's hands can shake a week. They've shaken longer.",
     journal: [
@@ -1204,52 +1243,52 @@ export const QUESTS = {
     title: "Grawl's Kennel",
     giver: 'grawl',
     needs: 'henbane',
-    about: "Mother Grawl kept six dogs at the hut. One winter the wood took them and gave them back on two legs, and now they lie up two hundred and seventy paces north-east, at Grawl's Kennel, and sit at her gate at dusk. The biggest was hers from a pup. Empty the Kennel: every one, and him.",
+    about: "Mother Grawl kept six dogs at the hut. One winter the wood took them and gave them back on two legs, and now they lie up two hundred and seventy paces north-east, at Grawl's Kennel, and sit at her gate at dusk. The biggest was hers from a pup. Empty the Kennel, and put him down.",
     offer: [
-      "They kept the lane quiet, my dogs. Nothing came up from the road to the hut while they were by it. Now they're up on the rise, and they come down at dusk and sit at the gate and look at the door, and wait to be let in. I don't let them in.",
-      "Put them down. All of them, and the big one: that's Gnash. He was mine from a pup. He'll come when he's called. Don't call him.",
+      "They kept the lane quiet, my dogs. Nothing came up from the road to the hut while they were by it. Now they're up on the rise, and they come down at dusk and sit at the gate and look at the door. I don't open it.",
+      "Put them down, and the big one: that's Gnash. He was mine from a pup. He'll come when he's called. Don't call him.",
     ],
     accept: "I'll empty the Kennel.",
-    acceptLine: "North-east, the rise. You've been round its edge; now go in. Gnash'll be the red-eyed one, the size of a door. He'll come. Don't call him. Don't.",
+    acceptLine: "North-east, the rise. You've been round its edge; now go in. Gnash'll be the biggest, the size of a door. He'll come. Don't call him. Don't.",
     decline: 'Not yet.',
     declineLine: "No. They'll sit at the gate again tonight. They're good at sitting. I taught them.",
     journal: [
-      "Mother Grawl's six dogs, which the wood gave back as wolfkin, lie up at Grawl's Kennel, north-east of her hut. Empty the Kennel: every one, and the Blood-Moon that was her Gnash.",
+      "Mother Grawl's six dogs, which the wood gave back as wolfkin, lie up at Grawl's Kennel, north-east of her hut. Empty the Kennel, and put down the great one that was her Gnash.",
       "Go back to Mother Grawl at her hut.",
     ],
     progress: [
-      "North-east. The Kennel. All of them, and Gnash.",
+      "North-east. The Kennel, and Gnash.",
     ],
     done: [
       "...You called him. I said not to. And he came, and you had to. Well. That's what I'd have done.",
-      "Here. My stick, that I walked them with. I'll not walk anything now. The lane'll be busy without them. Something will come up it. Something always does.",
+      "Here. My stick, that I walked them with. I'll not walk anything now. The lane'll be busy without them. Something will come up it. It's a lane.",
     ],
     after: [
-      "Nothing at the gate last night. I left the door open a crack all the same. Habit. Nothing comes up the lane to it now.",
+      "Nothing at the gate last night. I left the door open a crack all the same, and sat up. Nothing came.",
     ],
   },
 
   under_the_eaves: {
-    title: 'Something in the Oak',
+    title: 'The Burnt Ring',
     giver: 'grawl',
-    about: "A bat as big as a man and a little black winged lizard sit in a dead oak two hundred paces south-west of Mother Grawl's hut, side by side, and watch her pot day and night. She brews to bring them. She didn't think they'd stop. Put one of the two down.",
+    about: "A little black dragon beds down on a ring of scorched ground two hundred paces south-west of Mother Grawl's hut, with a bat as big as a man beside it, and the two watch her pot day and night. She brews to bring them. She didn't think they'd stop. Put one of the two down.",
     offer: [
-      "See the oak, south-west, the dead one? There's a bat in it as big as you, and a little black dragon with wings like a wet cloak, the two of them side by side, watching my pot. Day and night now.",
+      "See the burnt ground south-west, the black ring in the grass? A little black dragon beds down there, wings like a wet cloak, and a bat as big as you with it. The two of them watch my pot. Day and night now.",
       "Of course they come. I brew to bring them; there's things in a bat a woman needs, and a dragon's better. I didn't think they'd stop. They've stopped. One down, and the other'll think about it.",
     ],
     accept: 'One of the two.',
-    acceptLine: "South-west, two hundred paces, the dead oak. The little one breathes fire; keep off its front. The bat goes for your neck. They all do. Bring me nothing off them; I'll fetch what I want.",
+    acceptLine: "South-west, two hundred paces, the scorched ring. The little one breathes fire; keep off its front. The bat goes for your neck. Bring me nothing off them; I'll fetch what I want.",
     decline: 'Not now.',
     declineLine: "No. I'll brew something that smells worse.",
     journal: [
-      "A werebat and a dragonling sit in a dead oak south-west of Mother Grawl's hut, watching her cauldron. Put down one of the two.",
+      "A werebat and a dragonling bed down on a scorched ring south-west of Mother Grawl's hut, watching her cauldron. Put down one of the two.",
       "Go back to Mother Grawl at her hut.",
     ],
     progress: [
-      "South-west. The dead oak. One of the two.",
+      "South-west. The burnt ring. One of the two.",
     ],
     done: [
-      "One down, and the other gone off over the wood to sulk. Good. I'll brew lighter for a while.",
+      "One down, and the other gone off over the wood to sulk. I'll brew lighter for a while.",
       "Here. Now. Wilf Carder, at Roadsend, east. He's sent me a fleece, and I've a word for him.",
     ],
     after: [
@@ -1261,88 +1300,87 @@ export const QUESTS = {
     title: 'The Wrong Colour',
     giver: 'grawl',
     needs: ['grawls_kennel', 'under_the_eaves'],
-    about: "Wilf Carder, the wool-factor at Roadsend, sent Mother Grawl a black fleece for her work. It isn't black. Take it back. Thornwick's carters stand round their carts by the Marshal's Road on the way, where they stopped: put down three. Ten minutes east. It's paid there.",
+    about: "Wilf Carder, the wool-factor at Roadsend, sent Mother Grawl a black fleece for her work. It isn't black. Take it back. Thornwick's carters, who were bringing Wilf his wool, stand by the Marshal's Road where they stopped: put down three. Ten minutes east. It's paid there.",
     offer: [
       "Wilf Carder, at Roadsend, east, where my lane comes out on the big road. Wool-factor. I buy a black fleece off him every year; black's for some work, and white's for none. This year he's sent me this.",
-      "It's white. Under the black, it's white: he's had it dyed and thinks I can't tell. Take it back to him. And there's carts on the road on the way, stood still, with their carters round them. Not living, the carters. Put three down.",
+      "It's white. Under the black, it's white: he's had it dyed. Take it back. You'll pass Thornwick's carters on the big road. They were bringing Wilf his clip, and they stopped, and they're stood there yet. Not living. Where the carts went, don't ask me. Put three down.",
     ],
     accept: "I'll take it back.",
-    acceptLine: "East, ten minutes, down the lane and along the big road. The carts are by it, where it runs straight. Then Roadsend: a block of stone at the road's end, a fire, and Wilf, arguing.",
+    acceptLine: "East, ten minutes, down the lane and along the big road. The carters are by it where it runs straight. Then Roadsend: a block of stone at the road's end, a fire, and Wilf, arguing.",
     decline: 'Not now.',
     declineLine: "No. I'll keep it. It'll do for bandages. White's good for that.",
     journal: [
-      "Carters, not living, stand round their stopped carts beside the Marshal's Road between Mother Grawl's lane and Roadsend. Put down three.",
+      "Thornwick's carters, not living, stand where they stopped beside the Marshal's Road, between Mother Grawl's lane and Roadsend. Put down three.",
       "Go on east to Roadsend and give Wilf Carder, the wool-factor, Mother Grawl's fleece back: it's the wrong colour.",
     ],
     progress: [
-      "East. The carts. Then Wilf, and the fleece.",
+      "East. The carters by the road. Then Wilf, and the fleece.",
     ],
     done: [
-      "The wrong colour? It's black. Look at it. ...On the outside. She can always tell. I've never known how.",
-      "You came past the carts on the road? Then you've seen the carters. Thornwick's, bringing me the spring clip. They stopped there. They're still stopped. Here, for Grawl's trouble and yours. And I've a trouble of my own, if you're stopping.",
+      "The wrong colour? It's black. Look at it. ...On the outside. She can tell. I've never known how.",
+      "You came past the carters on the road? Thornwick's, bringing me the spring clip. They stopped there, and my clip with them, in the grass. Here, for Grawl's trouble and yours.",
     ],
     after: [
-      "He argued? He always argues. Then he sends the black one the next week, and a cheese. I'll have the cheese.",
+      "He argued? Then the black one comes next week, and a cheese. That's how it goes with Wilf.",
     ],
     others: {
       wilf: [
-        "The wrong colour? It's black. Look at it. ...On the outside. She can always tell. I've never known how.",
-        "You came past the carts on the road? Then you've seen the carters. Thornwick's, bringing me the spring clip. They stopped there. They're still stopped. Here, for Grawl's trouble and yours. And I've a trouble of my own, if you're stopping.",
+        "The wrong colour? It's black. Look at it. ...On the outside. She can tell. I've never known how.",
+        "You came past the carters on the road? Thornwick's, bringing me the spring clip. They stopped there, and my clip with them, in the grass. Here, for Grawl's trouble and yours.",
       ],
     },
   },
 
   // ================================================================ Roadsend (Wilf Carder)
   last_clip: {
-    title: 'Laid Out Flat',
+    title: 'Short by a Pound',
     giver: 'wilf',
-    about: "Wilf Carder had the last clip he bought, Thornwick's best, stacked to air on the rise three hundred paces north of Roadsend. Each morning more of it is unrolled and laid out flat on the grass, in rows, like beds. Bring him back four fleeces from round the rise.",
+    about: "Thornwick's carters were bringing Wilf Carder the spring clip when they stopped by the Marshal's Road, two hundred and sixty paces west of Roadsend. They stand there yet, and the fleeces lie about in the grass round them. Bring Wilf four.",
     offer: [
-      "The last clip I had in before the carts stopped. Thornwick's best. I stacked it on the rise north, under sailcloth, to air before it went east. You don't send damp wool east. They weigh it, and the damp's yours.",
-      "Every morning more of it's unstacked and unrolled and laid out flat on the grass. In rows. Like beds at a fair. I've not been up since I saw that. Fetch me four back, from round the rise. Don't lie on any.",
+      "The spring clip. Thornwick's, paid for in the winter, because Thornwick was short and asked. It was coming on the carts with the carters you came past. Where the carts went, I couldn't tell you. The wool's in the grass round where they stand.",
+      "Fetch me four. I'll know them; Thornwick ties a tally on every fleece, the shepherd's mark and the weight. I'll not ask you to bring the carters.",
     ],
-    accept: "I'll fetch your wool.",
-    acceptLine: "North, three hundred paces, the rise. The fleeces are round about it, flat. Something lies up there by day, tall and dark. Don't wake it if you can help it. You can't.",
+    accept: "I'll fetch four.",
+    acceptLine: "West, two hundred and sixty paces, back the way you came. The fleeces are round about them, rolled. Don't get between a carter and his load. They've not forgotten that much.",
     decline: 'Not now.',
-    declineLine: "No. It's flat already. It'll keep flat.",
+    declineLine: "No. It's paid for. It'll keep.",
     journal: [
-      "Wilf Carder's last clip, stacked on the rise north of Roadsend, has been unrolled and laid out flat in rows. Bring him back four fleeces from round it.",
+      "Thornwick's spring clip lies in the grass round its carters, stopped by the Marshal's Road west of Roadsend. Bring Wilf Carder four fleeces.",
       "Go back to Wilf Carder at Roadsend.",
     ],
     progress: [
-      "North. The rise. Four fleeces.",
+      "West, where the carters stand. Four fleeces.",
     ],
     done: [
-      "Warm. ...They're warm, under. Middle of the morning, on a cold rise. Something's been lying on my wool, and not long gone.",
-      "Here; that's the carrying rate, and over. I'll not send this lot east now. I'll not sell it to anyone I like.",
+      "Four. ...Look at the tallies. Every one a pound light of what's written on it. Thornwick shorts me a pound a fleece, every year.",
+      "Stood dead by the road, and they've still shorted me. Here; that's the carrying rate, and over. I'll not short you.",
     ],
     after: [
-      "I burned the four you brought. Thornwick's best. It went up like anything else.",
+      "I've put the four in the book, at their own weight, less a pound. Somebody has to be honest about Thornwick.",
     ],
   },
 
   what_lies_on_it: {
-    title: 'What Lies on It',
+    title: 'Laid Out Flat',
     giver: 'wilf',
-    needs: 'last_clip',
-    about: "Three tall night things lie on Wilf Carder's wool on the rise north of Roadsend by day, and get up at dusk and stand looking down at his fire till morning. Put two of them down. Three hundred paces.",
+    about: "Wilf Carder's old stock lay stacked to air on the rise three hundred paces north of Roadsend. Each night more of it is unrolled and laid out flat, in rows, like beds; three tall night things lie on it by day and stand over his fire after dark. Put two of them down.",
     offer: [
-      "Now I know what. Three of them, tall and dark, that lie on my wool by day and get up at dusk and stand on the rise, looking down at the fire. All night. They don't come down. They don't need to.",
-      "Put two of them down. The third can lie on what's left and get cold. I'd like to sit with my back to that rise again.",
+      "My old stock. I stacked it on the rise north, under sailcloth, to air. You don't send damp wool east; they weigh it, and the damp's yours. Every morning more of it's unrolled and laid out flat. In rows. Like beds at a fair.",
+      "Now I know what for. Three of them, tall and dark, that lie on it by day and stand on the rise at dusk looking down at my fire, all night. Put two of them down. I'd like to sit with my back to that rise again.",
     ],
     accept: 'Two of the three.',
-    acceptLine: "North, three hundred paces. They'll be lying down if it's day. They get up fast, for something lying down. Go in quick.",
+    acceptLine: "North, three hundred paces, the rise. By day they'll be lying on it, or stood about it. They're slower to start than to finish. Go in quick.",
     decline: 'Not yet.',
     declineLine: "No. I'll sit facing it, then. I'm used to it.",
     journal: [
-      "Three night demons lie on Wilf Carder's wool on the rise north of Roadsend by day and stand over his fire by night. Put down two.",
+      "Three night demons lie on Wilf Carder's wool, laid out flat in rows on the rise north of Roadsend, and stand over his fire by night. Put down two.",
       "Go back to Wilf Carder at Roadsend.",
     ],
     progress: [
       "North. The rise. Two of the three.",
     ],
     done: [
-      "Two. And the third's off over the hill. ...Good. That was the one that looked longest. Let it look at somebody else's fire.",
+      "Two, and the third off over the hill. ...Warm under, was it? Middle of the day, on a cold rise. I'll burn the lot. Thornwick's best, and I'll burn it.",
       "Here. A drover left this against his reckoning, the last year anything came this way to be driven. It's writing. I can't read it. You'll get more out of it than I would.",
     ],
     after: [
@@ -1353,26 +1391,26 @@ export const QUESTS = {
   wool_for_the_gate: {
     title: 'Wool for the Gate',
     giver: 'wilf',
-    needs: 'what_lies_on_it',
-    about: "Wilf Carder has wool and no carts, and the Long Queue, north-east up the Marshal's Road, is where everything waits that's going in at the gate. He wants to know if they'll take wool there. A plague giant stands by the road east with two in iron: put down two. Near forty minutes.",
+    needs: ['last_clip', 'what_lies_on_it'],
+    about: "Wilf Carder has wool and no carts, and the Long Queue, north-east up the Marshal's Road, is where everything waits that's going in at the gate. He wants to know if they'll take wool there. A plague giant has stood halfway up the road since the carts stopped: put down two of his three. More than half an hour.",
     offer: [
       "I've wool. Not much, and none of it black enough for Grawl. And no carts to take it, and nobody to take it to. Except the Long Queue: north-east, up the road, where everything that's going in at the gate waits to go.",
-      "Go up and ask if they'll take wool at the gate. Ask Rollo Bask; he's a carter, he's been in it longest. And there's a plague giant stood by the road east, with two in iron. Two of the three down and the road's passable.",
+      "Go up and ask if they'll take wool at the gate. Ask Rollo Bask; he's a carter, he's been in it longest. Halfway, you'll see why no carts come down: a plague giant stands in the road, and two in iron with him. Two of the three down, and I might send one.",
     ],
     accept: "I'll ask at the Queue.",
-    acceptLine: "East along the road, past the giant, and on round where it turns north: near forty minutes. The giant's slow and his knights aren't; take them first.",
+    acceptLine: "North-east up the road, more than half an hour. The giant's about halfway. He's slow and his knights aren't; take them first.",
     decline: 'Not now.',
     declineLine: "No. It's wool. It's patient. It's mostly air.",
     journal: [
-      "A plague giant and two plague knights stand beside the Marshal's Road east of Roadsend. Put down two of the three.",
+      "A plague giant and two plague knights stand by the Marshal's Road, halfway from Roadsend to the Long Queue. Put down two of the three.",
       "Go on up the road to the Long Queue and ask Rollo Bask, the carter, for Wilf Carder, if they'll take wool at the gate.",
     ],
     progress: [
-      "East, past the giant. Then north, to the Queue, and Rollo.",
+      "North-east up the road. The giant halfway. Then the Queue, and Rollo.",
     ],
     done: [
       "Wool? They'll take anything at the gate. They take everything at the gate. It's getting to the gate that's the thing. I've been in this queue since the leaves turned.",
-      "Here; Wilf'd want you paid, and I've more coin than road. Stop a while. There's plenty to do here while you wait, and you will wait.",
+      "Here; Wilf'd want you paid, and I've more coin than road. Mind, if you're going in, the end of the queue's back there. Everyone asks.",
     ],
     after: [
       "They'll take it, he says? Everything goes in at that gate. I've been wondering what comes out.",
@@ -1380,7 +1418,7 @@ export const QUESTS = {
     others: {
       rollo: [
         "Wool? They'll take anything at the gate. They take everything at the gate. It's getting to the gate that's the thing. I've been in this queue since the leaves turned.",
-        "Here; Wilf'd want you paid, and I've more coin than road. Stop a while. There's plenty to do here while you wait, and you will wait.",
+        "Here; Wilf'd want you paid, and I've more coin than road. Mind, if you're going in, the end of the queue's back there. Everyone asks.",
       ],
     },
   },
