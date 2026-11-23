@@ -54,6 +54,7 @@ import { TUMBLER_SIZES } from '../sim/tumblers.js';
 import { TRADES, offerFor, worth } from '../folk/shops.js';
 import { GEMS, GEM_GRADES, ROBES, gearTotals, matName } from '../items/items.js';
 import { BOSSES, DELVES, delveAt, delveByKey, delveOf, inDungeon, toWorld as caveWorld } from '../core/dungeon.js';
+import { hirePrice } from './party.js';
 import { caveStep, delveWay, doHire, doWarrens, hireJob, hiring, perilsNear, tactics, warrensCoverage, warrensJob } from './autowarrens.js';
 import { HallNav, STATIONS, hallAt, inArena, inHall } from '../core/testhall.js';
 import { thirdLead } from './autocam.js';
@@ -63,6 +64,7 @@ import { CHANNEL } from '../items/beacon.js';
 import { PHOBOS_LEVELS } from '../folk/phobos-quests.js';
 import { DOOR_STEP, FIRST_VISIT, FIRST_VISIT_LEVELS, SILL_DOOR } from '../folk/first-visit.js';
 import { EAST_DOOR, inEast } from '../sim/east-nav.js';
+import { CITY } from '../core/east.js';
 
 // The beacon stone (src/ui/beacon.js): used when the work's in Bellmourn and further off than BEACON_FAR, with nothing
 // within BEACON_CLEAR to break it off; while it's at work, it stands still for it unless something's within BEACON_HOLD.
@@ -84,11 +86,51 @@ function ahead(x, z, pts, far) {
   }
   return [px, pz];
 }
+// Where it is on a way it's walking (pts, [[x, z, ...], ...], the first the place it was asked from): the points it has
+// already gone by dropped, so the first left is the one it's making for. A way comes back from the walking thread a moment
+// after it's asked for (in Phobos, a second or two), by when it's gone on a stride or three: its first points were behind
+// it, so it stopped, turned round, walked back to them, turned again and came on, every time a way came in, every few
+// seconds (the owner, 2026-11-21: "swing back and forth"). Its place: the nearest of the first few stretches, within
+// NEAR_WAY of it (at its height, where y(p) says one: in the east a bridge runs over a street); once it's along a stretch,
+// that stretch's far end. A good way off its line (a fight, a shove), a point a stride on along the line instead, so it
+// comes back onto it and doesn't cut across a corner the line goes round.
+const NEAR_WAY = 2.5, BACK_ON = 0.8;
+export function onWay(m, P, y = null, look = 10) {
+  if (!P || P.length < 2) return P;
+  let best = -1, bd = NEAR_WAY, bt = 0;
+  for (let i = 0; i + 1 < Math.min(P.length, look + 1); i++) {
+    const a = P[i], b = P[i + 1];
+    // (Never on past a doorway's point it hasn't stood on: the two either side of one are each walked to, square on.)
+    if (i > 0 && a[3] >= 0 && dist(m.x, m.z, a[0], a[1]) > 0.35) break;
+    if (y) { const ya = y(a), yb = y(b); if (Math.abs((ya ?? m.y) - m.y) > 1.2 && Math.abs((yb ?? m.y) - m.y) > 1.2) continue; }
+    const dx = b[0] - a[0], dz = b[1] - a[1], L2 = dx * dx + dz * dz;
+    const t = L2 > 1e-6 ? clamp(((m.x - a[0]) * dx + (m.z - a[1]) * dz) / L2, 0, 1) : 1;
+    const d = dist(a[0] + dx * t, a[1] + dz * t, m.x, m.z);
+    if (d < bd - 1e-6) { bd = d; best = i; bt = t; }
+  }
+  if (best < 0 || (best === 0 && bt <= 0)) return P;
+  // (On stretch `best`, bt of the way along it: everything before its far end is behind. Well off the line, a point on it
+  // a stride on from where it's level with it, made for first.)
+  const a = P[best], b = P[best + 1], L = dist(a[0], a[1], b[0], b[1]), u = Math.min(1, bt + (L > 1e-6 ? 1.5 / L : 1));
+  P.splice(0, best + 1);
+  if (bd > BACK_ON && u < 0.98) {
+    const q = b.slice();
+    q[0] = a[0] + (b[0] - a[0]) * u; q[1] = a[1] + (b[1] - a[1]) * u;
+    if (q.length > 3) q[3] = -1;
+    if (q.length > 4 && a[4] !== undefined && b[4] !== undefined) q[4] = a[4] + (b[4] - a[4]) * u;
+    P.unshift(q);
+  }
+  return P;
+}
 const SP = Object.fromEntries(SPELLS.map((s, i) => [s.key, i]));
 // A hired hero's part in the party, as the snapshot has it (src/sim/hero.js writeHero).
 const ROLE = ['', 'tank', 'heal', 'dps'];
 const NAME = 'Jamie';   // what it answers Lisandra with, if nobody has yet
 const MAX_SIGHT = 26;   // how far off it'll take on what it's hunting
+const DREAD_R = 32, DREAD_FOR = 150, DREAD_GIVE = 3;   // (dreadOf: how wide, how long, how many runs from it)
+const LOOT_GIVE = 20;   // (loot: how long it goes for what's lying about without getting any of it before it leaves it)
+const DOOR_EARN = 300;   // (partyForDoor: how long it earns the price of a party before Lisandra's door, at most)
+const SILL_NEAR = 600;   // (sillJob: the lairs that count as the Sill's own, this far from Wenna's door at most)
 // Bold (the Auto menu's temperament, src/ui/autoplay.js): it takes on what it would have left two levels more, is beaten back
 // one level instead of two, and stays in a fight it's hurt in while there's a kill to finish.
 const BOLD_LEVELS = 2;
@@ -694,6 +736,9 @@ function bends(pts, tol) {
 // steps: walked, square on), seal and to (a seal to step through, and where to). The last is end itself. o: seals (the woken
 // ones), avoid (circles to keep out of: [x, z, r]), grid(x, z, below) (on the nav thread's ground), below (m is down under
 // the town).
+// Out on the open ground in the east's box before City State Phobos's wall (the Sill's plain, the Gibbet Field, the carrion
+// under the Sill), not in the city or past it.
+export const onPlain = (p) => p.x < CITY.x - CITY.a + 20 && ((p.x - CITY.x) / CITY.a) ** 2 + ((p.z - CITY.z) / CITY.b) ** 2 > 1;
 export function planWay(m, end, o = {}) {
   const { seals = [], avoid = [], grid = () => false, below = false } = o;
   // In City State Phobos and Castle Velscour (src/sim/east-nav.js), or bound there: the east's own map walks it, streets,
@@ -702,8 +747,12 @@ export function planWay(m, end, o = {}) {
   // (The road before the gate is in the east's box itself: it's the meeting of the two maps, on neither side of it, or a way to
   // it went to it by way of it for ever.)
   const ea = inEast(m.x, m.z) && !below && !m.gate, eb = inEast(end.x, end.z) && !end.below && !end.gate;
+  // (But between the land and the open ground before the city's wall, the Sill's plain, where Wenna sends you first: over the
+  // land, as anywhere outside. By the gate road it went down to the Drawbridge Gate and back up the Throne Road to the Sill,
+  // twice as far, every time it came back to her: onPlain.)
+  const plainOnly = ea !== eb && onPlain(ea ? m : end);
   // (A delve's steps there are still gone up square on and down, as everywhere: east.bin is the way between them.)
-  if (ea || eb) {
+  if ((ea || eb) && !plainOnly) {
     const A = ea ? stairsOf(m.x, m.z) : null, B = eb ? stairsOf(end.x, end.z) : null;
     if (A && A === B) return [end];
     const pre = A ? downStairs(A).filter((q, k, all) => k === all.length - 1 || (q.x - m.x) * A.fx + (q.z - m.z) * A.fz > 0.3) : [], post = B ? upStairs(B) : [];
@@ -1046,7 +1095,32 @@ export class Brain {
     }
     const qg = this.questGround(m);
     for (const l of LAIRS) if (m.lvl < (lairLevel(l) || 10) && !(qg && dist(l.x, l.z, qg.x, qg.z) < 30)) out.push([l.x, l.z, passing ? lairPass(l) : (l.wake || 110) + 15]);
-    return out;
+    return out.concat(this.dreads());
+  }
+
+  // Where it's had to run from something it can't beat yet, lately: kept clear of by its ways for DREAD_FOR (avoid). It
+  // used to run, get clear, turn back the way it was going, meet the same thing and run again, for as long as it was
+  // watched: in Phobos, where his knights stand about the streets, most of all (the owner, 2026-11-21: "run, stop, swing
+  // back and forth ... stuck in these loops forever"). Run from the same place DREAD_GIVE times, with where it's going in
+  // there, it gives that up (lost()).
+  dreadOf(f, m) {
+    const D = (this.dread ||= []);
+    let d = D.find((q) => dist(q.x, q.z, f.x, f.z) < DREAD_R * 0.8);
+    if (!d) { d = { x: f.x, z: f.z, n: 0, t: -99 }; D.push(d); }
+    // (One run is one, however many thoughts it lasts: counted again only after a few seconds clear of it.)
+    if (this.t - d.t > 4) {
+      d.n++;
+      // (Ways asked for again round it.)
+      this.macro = null; this.sub = null; this.subFor = null; this.loc = null; this.eastWay = null;
+      const g = this.goal;
+      if (d.n >= DREAD_GIVE && g && dist(g.x, g.z, f.x, f.z) < DREAD_R + 10) { this.say('Something too strong stands where it was going: leaving that for now.'); this.lost(); }
+    }
+    d.t = this.t; d.x = f.x; d.z = f.z;
+  }
+  dreads() {
+    if (!this.dread?.length) return [];
+    this.dread = this.dread.filter((q) => this.t - q.t < DREAD_FOR);
+    return this.dread.map((q) => [q.x, q.z, DREAD_R]);
   }
 
   // The ground the quest it's working on has sent it to fight on (a lair's, a den's, the things to gather round one), once
@@ -1753,6 +1827,7 @@ export class Brain {
     const scary = foes.filter((f) => !fightable(f.kind, lvl, f.maxHp, f.slime, f) && !inLowLair(f, m.lvl) && f.kind !== 1 && f.hostile && f.d < 26 && !(boss && f.id === 0));
     if (scary.length) {
       const f = scary.reduce((a, b) => (a.d < b.d ? a : b));
+      this.dreadOf(f, m);
       const [ex, ez] = this.escape(m, scary, true);
       noRide();
       this.face = null;
@@ -2131,8 +2206,19 @@ export class Brain {
       if (k < bd) { bd = k; best = d; }
     }
     if (best) {
+      // (The one it's going for it keeps going for, unless another's well nearer; and a heap it hasn't had a thing from in
+      // LOOT_GIVE is left, all of it. Two it couldn't get to, a step apart, and it turned from one to the other and back,
+      // each turn starting its time on that one again, for as long as it was watched: the owner's "swing back and forth".)
+      const cur = this.lootFor;
+      if (cur && cur !== best && !this.skipping(cur) && Math.abs(cur.y - m.y) <= 3 && g.drops.list.includes(cur) && dist(m.x, m.z, cur.x, cur.z) < bd + 2.5) { best = cur; bd = dist(m.x, m.z, cur.x, cur.z); }
       if (!this.lootT || this.lootFor !== best) { this.lootFor = best; this.lootT = this.t; }
-      if (this.t - this.lootT > 9) { this.giveUp(best, 120); return false; }
+      if (this.t - (this.lootLast ?? -99) > 2) this.lootSince = this.t;
+      this.lootLast = this.t;
+      if (this.t - this.lootT > 9 || this.t - this.lootSince > LOOT_GIVE) {
+        for (const d of g.drops.list) if (dist(d.x, d.z, best.x, best.z) < 5) this.giveUp(d, 120);
+        this.lootSince = this.t;
+        return false;
+      }
       this.say(best.auto || best.coins ? 'Picking up what fell.' : 'Taking up something worth having.');
       // (Never through a wall: round to it first.)
       const reach = !best.auto && !best.coins && bd < 1.7 ? this.within(m, best, best.x, best.y + 0.3, best.z) : false;
@@ -2144,6 +2230,7 @@ export class Brain {
           if (!this.o.spellbar.learn(best.item.spell)) pack.gold += 40;
           g.drops.take(best); g.onTaken?.();
         } else if (pack.add(best.item)) { g.drops.take(best); g.onTaken?.(); } else this.giveUp(best, 600);
+        this.lootSince = this.t;
         return true;
       }
       // (Coin, orbs and stuff come to hand within two metres; gear wants E within that.)
@@ -2308,6 +2395,9 @@ export class Brain {
     const busy = questing && !m.town && !!this.nearWork(m, 500);
     const hire = visiting || busy ? null : hireJob(this, m);
     if (hire) return hire;
+    // (And before Lisandra's door east the first time: its party, whatever its level. partyForDoor.)
+    const doorParty = questing && !visiting && Q.needsMet(FIRST_VISIT[0]) && !Q.done(FIRST_VISIT[0]) && RULES[FIRST_VISIT[0]] ? this.partyForDoor(m) : null;
+    if (doorParty) return doorParty;
     // (With a quest still to do, only the dungeon a quest in hand wants: delveOwed. Round them for their own sake after.)
     const delve = questing && !busy && warrensJob(this, m, this.delveWants(m), this.delveOwed());
     if (delve && !wantsTown) return delve;
@@ -2332,6 +2422,8 @@ export class Brain {
     // What the land's calling it to, close by and now: a raid, a tear, something left lying.
     const wild = this.wildJob(m);
     if (wild) return wild;
+    // (Out on the first visit with none of Wenna's work it can do yet: on the Sill's own dead, not the town's work. sillJob.)
+    if (visiting && questing) return this.sillJob(m);
     // Set to grinding: only that. Set to dungeon runs: the next dungeon round, or grinding while there's none it can run.
     if (this.mode === 'grind') return this.wildJob(m, true) || this.grindJob(m, this.grind, 'grind');
     if (this.mode === 'dungeons') return this.dungeonJob(m) || this.grindJob(m, this.grind, 'grind', 'No dungeon it can run just now: grinding meanwhile.');
@@ -2420,6 +2512,33 @@ export class Brain {
     const bounty = this.wildJob(m, true);
     if (bounty) return bounty;
     return this.grindJob(m, m.lvl >= 6 && Q.state('dead_cant_wait') ? 'catacombs' : 'woods', 'level');
+  }
+
+  // Its party picked up before it goes through Lisandra's door east the first time (src/folk/first-visit.js: "you, with your
+  // party, are set down on the Sill"): the owner, 2026-11-21, "Make sure the player picks up his NPC players before he heads
+  // to Phobos for the first time." Whoever it can pay for at Aldous Fenn's (hireJob's door: a tank, a healer, then the
+  // rest), at any level. With fewer than two and not the price of another, it earns it first (the woods' dead and what they
+  // drop, sold), for DOOR_EARN at most: the door's to come in the game's first quarter hour.
+  partyForDoor(m) {
+    const P = this.o.game.party;
+    if (!P || P.fit() || !this.allow('aiHire')) return null;
+    const job = hireJob(this, m, true);
+    if (job) return job;
+    if (P.members.length >= 2 || this.skipping('earn:door')) return null;
+    this.earnDoor ??= this.t;
+    if (this.t - this.earnDoor > DOOR_EARN) { this.giveUp('earn:door', 3600); return null; }
+    return this.grindJob(m, 'woods', 'earn:door', `Earning the price of a party before Lisandra's door (${this.o.pack.purse()} of ${hirePrice(m.lvl + 1)} gold).`);
+  }
+
+  // Out on the first visit to Phobos with Wenna's work in hand and none of it that it's up to yet (her Redoubt's a delve of
+  // level five, and she gives it at four): the Sill's own lairs till it is, the hanged, the carrion birds, the Redoubt's gate,
+  // as they stand again; once they're empty for now (HUNT_DRY_FOR), the woods round Bellmourn. Not the town's offers a country
+  // away: a run, 2026-11-22, went home by the beacon stone at level four with the Redoubt in hand, for Silas Crane's work, and
+  // took up seven of Bellmourn's quests before it was back.
+  sillJob(m) {
+    const spots = LAIRS.filter((l) => m.lvl >= (lairLevel(l) || 10) && dist(l.x, l.z, SILL_DOOR.x, SILL_DOOR.z) < SILL_NEAR).map((l) => [l.x, l.z]);
+    if (spots.length && !this.skipping('level:sill')) return { kind: 'hunt', why: 'level:sill', spots, say: `Not up to the rest of Wenna's work at level ${m.lvl}: on the Sill's dead meanwhile.` };
+    return this.grindJob(m, 'woods', 'level', `Not up to the rest of Wenna's work at level ${m.lvl}: the woods round Bellmourn meanwhile.`);
   }
 
   // What the living land's calling it to, if it's up to it (src/ui/wilds.js calls): a town that's raided, an open tear in
@@ -3014,7 +3133,7 @@ export class Brain {
         // while and does something else. (It used to go round and round the Bell Crypt and the Reliquary for as long
         // as it was watched, with twenty more to put down for the Sexton and nobody there; and to stand at the
         // millpond ten minutes, five jellies down of the miller's eight, till the pond filled.)
-        if (j.dries || j.why.startsWith('q:')) {
+        if (j.dries || j.why.startsWith('q:') || j.why === 'level:sill') {
           const R = this.dryRun && this.dryRun.why === j.why && (this.foughtT ?? -99) < this.dryRun.t ? this.dryRun : (this.dryRun = { why: j.why, t: this.t, seen: new Set() });
           R.seen.add(`${px},${pz}`);
           // (And most of a minute of looking at the least: a hunt with one spot has seen it all at the first look, and
@@ -3104,14 +3223,17 @@ export class Brain {
     // On through what's being said.
     // (And through Lisandra's door, once a quest's opened it: src/ui/folk.js lisDoor.)
     let k = at((o) => ['Go on.', '...', 'To bed.', DOOR_STEP].includes(label(o)));
+    // (Out on the first visit to Phobos, only Wenna's work is taken up: home to sell, a word at Homunculus's counter took
+    // up his quest, and one trip home took up seven of Bellmourn's. firstVisit, sillJob.)
+    const away = this.firstVisit(m), mayTake = (qid) => !away || FIRST_VISIT.includes(qid);
     // Yes to an offer.
-    if (k < 0) k = at((o) => Object.values(QUESTS).some((q) => q.accept === label(o)));
+    if (k < 0) k = at((o) => Object.entries(QUESTS).some(([qid, q]) => q.accept === label(o) && mayTake(qid)));
     // The quest talk it came for, or anything else this person has for it.
     if (k < 0) {
       const want = this.wanted(id), Q = townUI.quests;
       // (Not an offer of something you've lately dropped from the quest log: wanted() leaves those out, and so does this.)
-      const rested = new Set(Object.keys(RULES).filter((qid) => Q.droppedLately?.(qid, DROP_REST)).map((qid) => QUESTS[qid].title));
-      k = at((o) => want.has(label(o)) || (o.cls === 'offer' && !rested.has(label(o))));
+      const rested = new Set(Object.keys(RULES).filter((qid) => Q.droppedLately?.(qid, DROP_REST) || (!Q.state(qid) && !mayTake(qid))).map((qid) => QUESTS[qid].title));
+      k = at((o) => !rested.has(label(o)) && (want.has(label(o)) || o.cls === 'offer'));
     }
     if (k >= 0) { townUI.choose(k); return; }
     // Wes Harrow letting the pack out: asked, then a pocket at a time while it's still worth the coin (wantsRoom).
@@ -3289,6 +3411,8 @@ export class Brain {
         if (!this.nav.ready && this.t > 12) { if (!this.door(dt, m, leg.x - m.x, leg.z - m.z)) this.steer(leg.x - m.x, leg.z - m.z, false); } else this.halt();
         return;
       }
+      // (Past what it's gone by since the way was asked for: onWay.)
+      onWay(m, P);
       // On to the next point once it's at this one, or has gone by it: not from a stride short of it, since the way on from
       // a corner is only clear from the corner. The two places either side of a doorway it stands on, each in turn.
       while (P.length > 1) {
@@ -3356,6 +3480,7 @@ export class Brain {
         this.nav.ask('local', { from: [m.x, m.z], to: aim }).then((pts) => { if (this.loc === ask) { ask.pending = false; ask.pts = pts; ask.t = this.t; } });
       }
       const pts = this.loc?.pts;
+      if (pts) onWay(m, pts);
       while (pts && pts.length > 1 && dist(m.x, m.z, pts[0][0], pts[0][1]) < 1.2) pts.shift();
       if (pts?.length && dist(m.x, m.z, pts[0][0], pts[0][1]) > 0.5) {
         const k = dist(m.x, m.z, pts[0][0], pts[0][1]);
@@ -3397,7 +3522,7 @@ export class Brain {
     if (!E?.pending && (!P0 || this.t - E.t > 7 || (left < 14 && P0.some((p) => p[2] === 2)) || dist(W.x, W.z, E.to[0], E.to[1]) > 2.5)) {
       const last = W === this.macro.at(-1), r = Math.max(0.5, (last ? g.near : W.r ?? 3.5) - 0.3);
       const ask = this.eastWay = { leg: W, t: this.t, to: [W.x, W.z], pts: P0, pending: true };
-      this.nav.ask('east', { from: [m.x, m.y, m.z], to: [W.x, W.z, W.y ?? null], r }).then((pts) => {
+      this.nav.ask('east', { from: [m.x, m.y, m.z], to: [W.x, W.z, W.y ?? null], r, avoid: this.avoid(m, true) }).then((pts) => {
         if (this.eastWay !== ask) return;
         ask.pending = false; ask.t = this.t;
         // (A fresh way, walked out further than the last was, is longer than the line it was guessed by: nearer from there.)
@@ -3409,6 +3534,8 @@ export class Brain {
       if ((this.eastMiss || 0) >= 3) { this.eastMiss = 0; this.eastWay = null; this.say('No way there from here.'); this.lost(); return true; }
       return false;
     }
+    // (Past what it's gone by since the way was asked for, a second or two back: onWay, at its height.)
+    onWay(m, P, (p) => p[4] ?? null);
     // On to the next point once it's at it (at its height: a bridge over the street isn't the street), or has gone by it; a point
     // of the long way's, not walked out yet, once it's near.
     while (P.length > 1) {

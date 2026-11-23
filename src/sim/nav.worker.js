@@ -659,7 +659,7 @@ if (typeof self !== 'undefined') self.onmessage = async (e) => {
       self.postMessage({ type: 'local', id: m.id, result: local(m.from, m.to) });
     } else if (m.type === 'east') {
       const E = await eastNav();
-      self.postMessage({ type: 'east', id: m.id, result: E ? E.route(m.from, m.to, m.r ?? 1) : null, none: !E });
+      self.postMessage({ type: 'east', id: m.id, result: E ? E.route(m.from, m.to, m.r ?? 1, { avoid: m.avoid }) : null, none: !E });
     } else if (m.type === 'probe') {
       self.postMessage({ type: 'probe', id: m.id, result: probe(m.x, m.z, m.y ?? 0, m.hx, m.hz, m.look || 5) });
     } else if (m.type === 'sight') {

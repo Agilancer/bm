@@ -40,6 +40,57 @@ layered:
   - gives up (`lost`) only after 30 s with no progress, or three asks in a row with no route.
 - `planWay`: in and out of the east goes through the Drawbridge Gate road (`EAST_DOOR`).
 
+### Trails, props and the way met where it stands (2026-11-21)
+
+The owner: auto-play "gets stuck in these swing back and forth motions ... especially in phobos", "Phobos needs
+defined paths or trails connected to the main road", and "the alleys that the player travels through is filled with
+stuff, and he clips through it".
+
+- **The swinging.** Every way (the local walk, the land's paths, the east's) is asked for from where auto-play
+  stands, and the answer comes back a moment later, after it has walked on. It used to walk back to the way's first
+  points, turn about, and turn again: a swing every few seconds, worst in Phobos, where the east's asks take longest.
+  `onWay` in `src/ui/autobrain.js` now meets the way where it stands: what's behind it is dropped, well off the line
+  it makes for a point a stride on along it, and it never goes on past a doorway's point it hasn't stood in. On the
+  walk from the Sill to the Gibbet Field this took turnabouts from 13.8 a minute to under 1.
+- **Running from the same thing.** A foe too strong to fight made it run, walk back towards its goal, and run again.
+  `dreadOf` remembers where it ran from (`DREAD_R` round it, for `DREAD_FOR` seconds): its ways are asked for again
+  round the place (the east's too: `avoid` on the `'east'` ask makes the walking map's steps there `AVOIDED` times
+  dearer), and after `DREAD_GIVE` runs it gives that goal up for a while.
+- **Trails.** `src/core/phobos-trails.js`: the named streets and the Throne Road, plus a trail from every place it
+  goes (tools/paths/targets.mjs's, everyone posted in the east, the lairs, the sites) to them or to a trail laid
+  before it, walked on east.bin (`tools/paths/trails.mjs`, into `src/core/phobos-trails-data.js`). `EastNav.coarse`
+  prices a step off a trail `OFF_TRAIL` (1.8) times one on it, so the long way keeps to the streets and the trails
+  and leaves them only at the end, instead of cutting through yards and alleys.
+- **Out of people's houses.** Every Phobos door is open to the walking map, and a way across the city went in at one
+  house's door and stuck against its inside wall. A step inside a house's walls now costs `INDOORS` (4) of one
+  outside, unless it's within `HOME_NEAR` (15 m) of where the way starts or ends (a bit in `onTrail`, so no more memory).
+- **Picking things up.** Two drops it couldn't get to, a step apart, and it turned from one to the other and back for
+  minutes, each turn starting its give-up time on that one again. `loot` now keeps to the one it's going for unless
+  another's well nearer, and leaves a heap it's had nothing from in `LOOT_GIVE` (20 s).
+- **Props.** The crates, barrels, woodpiles, carts and lean-tos behind the houses, the goods by a shop's step, what
+  stands along the streets, the Chainmarket's stalls: they are only drawn near the eye (`src/gfx/phobos-near.js`),
+  and their boxes were thrown away, so bodies walked through them. `keepProps` (`src/core/phobos-build.js`) keeps
+  them; `tools/paths/props.mjs` builds every cell and writes them, merged and packed eight bytes a box, to
+  `src/core/phobos-props-data.js`, which `World.buildSites` stands up as colliders (the sim, the nav thread, the bake).
+  Low things (under 0.3 m) are left out: the feet go over them.
+  Nothing is set down in a house's doorway (`inDoorway`, the Kit's `clear`): one house's crates stood before the
+  next one's door, and once solid the house was a trap. The merge only joins boxes that all but touch (a wider one
+  spread over a cart into the yard path past it, and auto-play stuck there). The map's baseline moved by a few hundred
+  cells: tops of crates a body can climb onto, and two houses whose floors are a metre over the land, got into over a
+  crate.
+- **The Sill's plain.** `planWay` took every way into or out of the east's box by the Drawbridge Gate's road, the plain
+  before the wall too: from the Gibbet Field back to Wenna it went down to the gate and back up the Throne Road. Now
+  between the land and the plain (`onPlain`: west of the wall, outside it) it's the land's own way.
+- **Its party before the door east.** `partyForDoor`: before Lisandra's door east the first time it hires whoever it
+  can pay for at Aldous Fenn's, at any level (`hireJob(b, m, true)`); with fewer than two and not the price of
+  another, it earns it in the woods first, for `DOOR_EARN` at most.
+- **Out on the first visit with nothing it's up to.** Wenna gives the Redoubt at level four, but it's a delve of level
+  five, so with her other work done at four there was nothing out there it would do. It went home by the beacon stone
+  for Silas Crane's work and took up seven of Bellmourn's quests. `sillJob` now keeps it on the Sill's own lairs (the
+  hanged, the carrion birds, the Redoubt's gate) till it's up to her work; once they're empty for now, the woods round
+  Bellmourn. Not the town's offers. Nor a trader's: `converse` said yes to any offer in a talk panel, so a trip home to
+  sell took up the quests of whoever it sold to. Out there it now takes up only Wenna's.
+
 ## What the map found, and what was fixed
 
 | Found | Fix |
@@ -78,7 +129,19 @@ every room of each from its way in ("The delves hold together").
 
 ## What's still not right
 
-trips.mjs, on main with the Phobos cliffs: 333 of 340 walks get there. The seven that don't (all in tools/paths/baseline.json, so
+With the props solid, the trails and the houses priced (2026-11-22): 333 of 341 walks get there, eight in the baseline.
+The trails help (without them 14 fail; with them kept to the city, the castle's own four stalls at 11104.6, 316.5 come
+back), but they lead two walks over castle joins the walker can't take, both to be fixed in the castle, not the paths:
+
+- **The Storm Spire's deck (441 m):** a stair's last tread (440.21) is a metre under the deck it runs into (441.20); the
+  bake lifts feet onto it, the walker steps off the tread under the deck and falls to the bridge (380 m).
+- **The Ash Needle's stair (11017, 225):** its head (263 m) is under the next point at 267 m; the walker climbs, falls back
+  to 248 and climbs again until its time's up. The Smoke Turret's walk dies on the same stair.
+- Still in from before: the Sally Tower's deck (out of time), the Shrike Turret's two, spire3994's start, corner11 to
+  the widow-to-storm bridge.
+
+Before them, on main with the Phobos cliffs:
+trips.mjs: 333 of 340 walks got there. The seven that don't (all in tools/paths/baseline.json, so
 a new one fails the run): the Sally Tower's deck (465 m), still climbing when the run's 900 s ran out (auto-play itself has
 no limit, only 30 s without getting nearer); three from or to the Shrike Turret, stalled 30 s at its stair head (311 m)
 and on its stair (259 m); one from the Blood Spire's deck, "no way there" (below); and 30 s stalls by the Charnel Gate's
@@ -103,11 +166,16 @@ spire (105 m) and on the way to the Cistern Turret (265 m).
 ```
 node tools/paths/bake.mjs 14                 # or a box round what changed
 node tools/paths/map.mjs                     # fails if anything's worse than tools/paths/baseline.json
+node tools/paths/props.mjs                   # first, if a Phobos cell's props changed (then the bake)
 node tools/paths/graph.mjs                   # assets/game/nav/east.bin
+node tools/paths/trails.mjs                  # src/core/phobos-trails-data.js, from the new east.bin
 node tools/paths/trips.mjs                   # fails on a walk failing that the baseline doesn't list
 node tools/paths/ingame.mjs                  # auto-play in the game itself, to a list of places
-node --test tests/east-paths.test.mjs
+node --test tests/east-paths.test.mjs tests/phobos-trails.test.mjs tests/auto-onway.test.mjs
 ```
+
+`NO_TRAILS=1` on trips.mjs walks without the trails, `TRAILS_WEST=x` with only those west of x (to tell what the trails
+change from what the map does).
 
 `--baseline` on map.mjs or trips.mjs writes that run's numbers as the new baseline: only after looking them over.
 
@@ -117,5 +185,5 @@ into a new wall; it just takes the long way round.
 
 Scratch probes (not part of the run): `probe.mjs x0 z0 x1 z1 step` (places along a line), `_what.mjs x z` (floors
 and boxes at a point), `_layer.mjs`, `_cells.mjs`, `_tower.mjs`, `_walls.mjs`, `_house.mjs`, `_at.mjs x y z target` (the route from a spot),
-`_cpath.mjs` (its long way), `_edges.mjs` (east.bin's steps at a spot), `_holes.mjs` (holes in a deck), `_walk.mjs` / `_wk.mjs`, `_fine.mjs`, `_spiral.mjs`, `_tread.mjs` (a stair's treads), `_border.mjs` (where a trap meets the rest), `_asks.mjs` (how long each ask takes)
+`_cpath.mjs` (its long way), `_edges.mjs` (east.bin's steps at a spot), `_holes.mjs` (holes in a deck), `_walk.mjs` / `_wk.mjs`, `_fine.mjs`, `_spiral.mjs`, `_tread.mjs` (a stair's treads), `_border.mjs` (where a trap meets the rest), `_asks.mjs` (how long each ask takes), `draw.mjs out.png [box] --trails` (the trails over the map)
 (the sim's body and `walkable` along a line).

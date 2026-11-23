@@ -525,7 +525,8 @@ export function streetLife(K, cell, o) {
       }
     }
   }
-  K.colliders.length = n0;
+  // (What stands up is in a body's way: src/core/phobos-build.js keepProps.)
+  o.keep(K, n0);
 }
 
 // A house built across one of the Slough's footbridges: a toll-house on the deck, its way through under it a pointed arch

@@ -58,14 +58,15 @@ export const PIECES = {
     }
   },
 
-  crate(x, z, s = 0.45, yaw = 0, y = null) { this.box(inPhobos(x, z) ? 'soot:wood' : 'wood', x, (y ?? Y(x, z)) - 0.05, z, s, s * 1.7 + 0.05, s, yaw, { collide: y === null }); },
+  crate(x, z, s = 0.45, yaw = 0, y = null) { if (this.clear?.(x, z, s * 1.42)) return; this.box(inPhobos(x, z) ? 'soot:wood' : 'wood', x, (y ?? Y(x, z)) - 0.05, z, s, s * 1.7 + 0.05, s, yaw, { collide: y === null }); },
   barrel(x, z, r = 0.36, h = 0.95, y = null) {
+    if (this.clear?.(x, z, r)) return;
     const y0 = y ?? Y(x, z) - 0.05;
     this.drum(inPhobos(x, z) ? 'soot:wood' : 'wood', x, y0, z, r, h, 8, { r2: r * 0.92, collide: y === null });
     this.drum('iron', x, y0 + h * 0.62, z, r * 1.0, h * 0.09, 8, { r2: r * 0.985, open: true, collide: false });
   },
   // (In Phobos the hessian sooted brown: its pale oat cloth on the streets there read as cheeses, the critics.)
-  sack(x, z, r = 0.34, y = null) { this.drum(inPhobos(x, z) ? 'umber:cloth_oat' : 'cloth_oat', x, (y ?? Y(x, z)) - 0.05, z, r, r * 1.5, 6, { r2: r * 0.55, collide: false, turn: x }); },
+  sack(x, z, r = 0.34, y = null) { if (this.clear?.(x, z, r)) return; this.drum(inPhobos(x, z) ? 'umber:cloth_oat' : 'cloth_oat', x, (y ?? Y(x, z)) - 0.05, z, r, r * 1.5, 6, { r2: r * 0.55, collide: false, turn: x }); },
   // A heap of goods: crates, barrels and sacks about a middle, n of them, the same every time for the same place.
   goods(x, z, n = 5, spread = 1.4) {
     for (let i = 0; i < n; i++) {
@@ -223,6 +224,7 @@ export const PIECES = {
   // A cart: a bed on two wheels, its shafts down on the ground in front (+x). load: what's in it (a painting), or nothing.
   // wreck: on its side with a wheel off.
   cart(x, z, yaw = 0, o = {}) {
+    if (this.clear?.(x, z, 1.6)) return;
     const y = Y(x, z), P = this.frame(x, z, yaw), W = (u, v, w) => { const [px, pz] = P(u, w); return [px, y + v, pz]; };
     const L = o.len ?? 1.5, B = 0.75, r = 0.62;
     if (o.wreck) {
@@ -249,6 +251,7 @@ export const PIECES = {
 
   // A market stall: four posts, a counter, an awning of cloth falling to the front, what's sold laid out on it.
   stall(x, z, yaw = 0, cloth = 'cloth_oat', sells = 0) {
+    if (this.clear?.(x, z, 1.6)) return;
     const y = Y(x, z), P = this.frame(x, z, yaw), W = (u, v, w) => { const [px, pz] = P(u, w); return [px, y + v, pz]; };
     const hx = 1.5, hz = 0.9;
     for (const [u, w, hh] of [[-hx, -hz, 2.5], [hx, -hz, 2.5], [hx, hz, 2.0], [-hx, hz, 2.0]]) this.beam('wood', W(u, -0.2, w), W(u, hh, w), 0.09);
@@ -418,6 +421,7 @@ export const PIECES = {
 
   // A stack of cut wood: bark along it, the cut ends pale.
   woodpile(x, z, yaw = 0, hx = 1.4, h = 1.0, hz = 0.45) {
+    if (this.clear?.(x, z, Math.hypot(hx, hz))) return;
     const y = Y(x, z) - 0.1, P = this.frame(x, z, yaw), W = (u, v, w) => { const [px, pz] = P(u, w); return [px, y + v, pz]; };
     this.box('bark', x, y, z, hx, h + 0.1, hz, yaw);
     for (const sd of [-1, 1]) this.quad('wood', W(sd * (hx + 0.012), 0, -hz), W(sd * (hx + 0.012), 0, hz), W(sd * (hx + 0.012), h + 0.1, hz), W(sd * (hx + 0.012), h + 0.1, -hz));
