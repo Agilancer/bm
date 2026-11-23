@@ -22,6 +22,7 @@
 // And 'outpost:<key>', the ground round one of the land's outposts (kill, enter, visit, gather).
 // bring takes at: where what's wanted is found, for the trail (a place as above).
 // gather takes spots: [[dx, dz], ...] from the place's middle, where the things lie; else they're laid in a ring round it.
+// kill takes spots: [[x, z], ...] on the land, where auto-play hunts for it, when its place is wide (the fen's jellies).
 // wait: what's handed over is made overnight, and collected the next day.
 // door: taken on, the giver opens Lisandra's door of candles and you're through it ('sill': to the Sill, 'home': back to her;
 // src/ui/folk.js lisDoor).

@@ -2606,6 +2606,9 @@ export class Brain {
       if (st.night && !isNight(m.hour) && (st.enter.startsWith('outpost:') || st.enter.startsWith('lair:'))) return null;
       const a = area(st.enter);
       if (!a) return null;
+      // (Nor a night step from a country away, whichever part of choose asks: it set off at dusk, lost the job at dawn,
+      // turned round, and did the same the next night.)
+      if (st.night && dist(m.x, m.z, a.x, a.z) > 1200) return null;
       return { kind: 'go', why: `q:${id}`, x: a.x, z: a.z, r: a.r, below: a.below, say: `${title}: to ${st.enter === 'catacombs' ? 'the catacombs' : st.enter === 'bellcrypt' ? 'the Bell Crypt' : placeName(st.enter)}${st.night ? ', by night' : ''}.` };
     }
     if (st.visit) {
@@ -2630,7 +2633,7 @@ export class Brain {
     if (st.kill) {
       if (st.kill === 'catacombs') return this.grindJob(m, 'catacombs', `q:${id}`, `${title}: the dead below (${s.n} of ${st.n}).`);
       const a = area(st.kill);
-      return { kind: 'hunt', why: `q:${id}`, spots: huntsFor(st.kill) || (a ? [[a.x, a.z]] : HUNTS.woods), below: !!a?.below, say: `${title}: ${st.n - s.n} more to put down.` };
+      return { kind: 'hunt', why: `q:${id}`, spots: st.spots || huntsFor(st.kill) || (a ? [[a.x, a.z]] : HUNTS.woods), below: !!a?.below, say: `${title}: ${st.n - s.n} more to put down.` };
     }
     if (st.warden) {
       if (!isNight(m.hour)) return null;
