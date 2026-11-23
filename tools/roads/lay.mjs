@@ -394,6 +394,42 @@ for (const t of [...outposts, ...finds]) {
 }
 log(`${foot} footpaths to outposts and finds`);
 
+// And a footpath from each hub to every lair and den its quests send you to (docs/QUEST-LOOP.md): the work is within 650 m
+// of whoever gives it, and by the ways it was twice that, out to a road and back up another, or straight over a scarp.
+// Walked from the lair's edge to the hub's front, along what's laid already where that serves.
+{
+  const { RULES } = await import('../../src/folk/quests.js');
+  const { QUESTS } = await import('../../src/folk/lines/quests.js');
+  const { whereIs } = await import('../quests/geo.mjs');
+  const freeNear = (x, z, r0, r1, open) => { let s = -1, bd = 1e9; each(x, z, r1, (k, px, pz) => { const d = Math.hypot(px - x, pz - z); if (d >= r0 && costAt(k, open) !== Infinity && d < bd) { bd = d; s = k; } }); return s; };
+  const seen = new Set();
+  let quest = 0;
+  for (const [id, R] of Object.entries(RULES)) {
+    const g = QUESTS[id] && whereIs(QUESTS[id].giver);
+    if (!g || g.down || Math.abs(g.x) > EDGE || Math.abs(g.z) > EDGE || g.where === 'bellmourn') continue;
+    const camp = CAMPS.find((c) => c.key === g.where), from = camp ? campAt(camp, 0, 19) : [g.x, g.z];
+    for (const st of R.steps) for (const k of [st.kill, st.gather, st.enter, st.clear && `outpost:${st.clear}`, ...(st.visit || [])]) {
+      if (typeof k !== 'string' || !(k.startsWith('lair:') || k.startsWith('outpost:'))) continue;
+      const t = k.startsWith('lair:') ? LAIRS.find((l) => l.key === k.slice(5)) : OUTPOSTS.find((o) => o.key === k.slice(8));
+      const key = `${g.where}>${k}`;
+      if (!t || seen.has(key) || Math.hypot(t.x - from[0], t.z - from[1]) > 720) continue;
+      // (A den whose own trail sets out from this hub has its way already: tools/wilds/place.mjs.)
+      if (t.trail && Math.hypot(t.trail[0][0] - g.x, t.trail[0][1] - g.z) < 60) { seen.add(key); continue; }
+      seen.add(key);
+      const open = new Set();
+      disc(t.x, t.z, (t.r || 6) + 18, (c) => open.add(c));
+      const a = freeNear(t.x, t.z, (t.r || 6) + 26, (t.r || 6) + 50, open)   // (short of its ground: a path's bed banked up to a den's edge on a slope stood a man's height off the land)
+        , b = freeNear(from[0], from[1], 0, 24, null);
+      if (a < 0 || b < 0) continue;
+      const sq = walk(a, b, open, 200000);
+      if (!sq) continue;
+      lay(sq, 'path', `the path from ${shortName(SITES[g.where]?.name || g.where)} to ${t.name ? t.name.replace(/^(a|an|the) /i, 'the ') : 'the lair'}`, open);
+      quest++;
+    }
+  }
+  log(`${quest} footpaths from the hubs to their quests' lairs and dens`);
+}
+
 // ---------------------------------------------------------------- nothing built on a way
 // (The grid's squares are 8 m: a way smoothed between them can still graze the corner of a wall, and a way's end runs on into
 // the place it goes to. Cut it there, so what's left stops short of whatever it would walk into, as

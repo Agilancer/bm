@@ -348,13 +348,11 @@ gift: a bell the size of a thumb; ring it in the air and the air holds you one s
 
 ## Quests beyond the town
 
-9. **The Long Way Round** (Corran). The dead walk wide of a knoll far east. Go to the Bell Tower, ask the Bellwright why, tell
-   Corran. (He says: the bells.)
-10. **Jelly in the Millpond** (Hob). Something in Abel's millpond at Millhaven ate a ewe. Put down 8 jellies round Millhaven. Paid with Abel's money ("He'd rather pay than come").
-11. **The Four Watches** (the Bellwright). Stand in the abbey, the chapel and the shrine, in any order, and see if their seals
-    wake. Reward: the Wingbell (double jump).
-12. **What the Fen Keeps** (Sabine). Clear 10 jellies from the fen so she can reach the bog myrtle for the winter fevers. Paid in coin
-    (robes are Tamsin's trade, not hers).
+9. to 11. (**The Long Way Round**, **Jelly in the Millpond** and **The Four Watches** were given from Bellmourn and the Bell
+    Tower and sent you kilometres and back. They're the Green Downs' now, below: the millpond is Abel's own to ask about,
+    why the dead walk wide of the knoll is asked on Abel's errand up it, and the Wingbell is paid for **What Answers**.)
+12. (**What the Fen Keeps** was Sabine's, 3.4 km out and back. It's the Weeping Fen's now, below: the east shore is the
+    ferry's landing, and Grizel Wade's to ask about. Sabine's work is **Willow Bark**, up the Fen Way to Maren Rush.)
 13. **The Black Road** (Aldric). Go and look at what's at the end of the west road. Only look. (Blackvigil.)
 14. **The Crown of Teeth** (Orrin, after the Toll). Climb the Sorrowhorn and tell him what's at the top. Reward: a scroll and a true page.
 15. **Lights on the Barrow Moor** (Jory). Go at night; put down 6 of whatever carries the lights. (Jellies full of bones.)
@@ -429,9 +427,10 @@ Out of Bellmourn:
 16. **Word to Thornwick** (Aldric). The yearly letter got no answer. Ask Osric Thorne if the Gallows Road still runs.
 17. **Tracks Going West** (Corran, after the Pines). The dead in the pines came down the Vigil Road. Ask Sergeant Hasket.
 18. **Owed to Frostwatch** (Bram, after the Bed). The one mark on his slate that's the wrong way round: pay Hew Garrick.
-19. **The Millhaven Man** (Hob, after the Millpond). Abel wants to know if Hale Orrowick is coming home for the barley.
-20. **Stones on the Cairnfield** (Silas, after the Dead). Someone is opening the cairns where the Cranes lie.
-21. **The Sunken Mile** (Sabine, after the Fen). Five of the drowned stand on the causeway.
+19. and 20. (**The Millhaven Man** and **Stones on the Cairnfield** are the Green Downs' now, below: Abel asks after Hale
+    himself, and Cuddy Stone, who keeps the cairns, wants them let alone.)
+21. (**The Sunken Mile**, and the Drowned Vaults' two after it, **Under the Mile** and **What Sank the Mile**, were
+    Sabine's. They're Tamar Dyke's now, the salvager at Mile-End Camp beside the causeway: the Weeping Fen, below.)
 22. **The Wayhouse on the Moor** (Jory, after the Lights). A lamp in a window that's been shut since he was a lad.
 Also out of Bellmourn: **The Masons' Marks** (Orrin): kobolds tunnelling behind the face of Ossery Quarry, where each of
 the abbey's masons cut his mark.
@@ -517,8 +516,137 @@ built at the camps**: Tobin's mare is in the lean-to and is only heard; Nan's he
   stubborn, means to go back up for six and seven. Gives **The Two Who Stand** (hooded things by the road that turned
   their heads together as she passed, "and kept turning"; there was a third she never saw).
 
-The six their errands are said to (**Cuddy Stone**, **Amos Tye**, **Berin Stoat**, **Dag Colley**, **Fenn Hollis**, **Odo
-Marsh**) stand at their camps as placeholders, with a line each, till their own regions are made.
+Four their errands are said to (**Amos Tye**, **Berin Stoat**, **Dag Colley**, **Fenn Hollis**) stand at their camps as
+placeholders, with a line each, till their own regions are made. (Cuddy Stone is the Green Downs', and Odo Marsh the
+Weeping Fen's: below.)
+
+## The Green Downs (`src/folk/regions/downs.js`, lines in `src/folk/lines/regions/downs.js`)
+
+East of Bellmourn, levels five to eleven: Cairnwatch, Millhaven, the Bell Tower, Dunmow Fold and, far off the roads,
+Kestrel Hide. The camps and Millhaven are **plain folk's**: none of them names either power; they say "the knoll", "the old
+one in white", "the one in iron". The Bell Tower's two are **Tessariel's** (their own paragraphs are under "Beyond
+Bellmourn" and "The small towns"), and nothing they say in these quests names Velscour, his keep or anything of his.
+**No animals are built at the camps or in Millhaven, and none is said to stand there**: Rafe's fold is empty, Sib's sky is
+empty, Joss's snares are empty, and that is what each of them talks about.
+
+- **Cuddy Stone**, 61, cairn-keeper, at **Cairnwatch** above the Cairnfield (`c_sage_1`). Keeps the two hundred and twelve
+  cairns of Bellmourn's first dead, and the beacon over the bad bend on the hill. Hasn't left the rise in eleven years:
+  he sees everything from the platform and gets to none of it. Counts (cairns, smokes at dusk, scarecrows); gives
+  bearings and paces. "Stand anywhere long enough and it all comes past. Lately it comes past and stops." His line: "I
+  count it anyway, mornings. None. It's the best number I've got." Sent to by Tobin (**A Light for the Bend**). His work:
+  **Three I Can't Account For** (go and stand at the three things he can see and can't explain: the opened cairns, the
+  scarecrows' field, Paupers' Field), **Stones on the Cairnfield** (a robed one and three raised children, opening the
+  cairns and stacking the stones by size, as his father showed him), **One More Each Morning** (Strawman's Acre: none at
+  midsummer, five now, all facing the camp, the newest in his other coat; nobody was seen making them: the Barley Rows
+  answer it; pays the coat, a robe), and on: **Sails at a Slant** (through the goblins on the Abbey Road to Millhaven:
+  a word with Joan, then Abel).
+- **Ede Lowry**, 34, washerwoman, up from Bellmourn (`c_young_2_1`). Her father Ned, a thatcher, died owing and went into
+  Paupers' Field under a board; this year she has the money for a stone (Silas cut it "at the family rate. I'm not
+  family. He said everybody is, in the end"). Plain, restless, not used to sitting. Gives **Name-Boards** (five boards
+  from round the Field: all five say Lowry, four of them new wood: something in there is learning the name).
+- **Abel Fenwick**, 49, farmer, on the green at **Millhaven** (`c_worker_2_2`). Hob's cousin: Hob "got the easy land, and
+  the wife who can cook". Stands by the well with a shilling for any man who'll swing a scythe, and gets no takers.
+  Put upon, exact about what everything has cost him, not asking to be pitied: "I say it so you'll not stand too near."
+  Keeps Hale Orrowick's hearth lit and his barley cut, and burns too green. His work: **Jelly in the Millpond** (what
+  ate the ewe, by the farm: "even what eats my sheep breeds better than they do"), **The Barley Rows** (four scarecrows he
+  never made, standing guard over forty ripe acres; his own, nine years old in his father's felt hat, isn't where he
+  stood it: it's the big wicker one, and "He's made himself company"; pays the pole he stood it on, a staff), and on: **The Millhaven Man** (up the knoll: is Hale coming home for the
+  barley, and why do the dead walk wide of that hill and straight through his field? No; and the tenor bell).
+- **Joan Millward**, 38, the miller's daughter, at her board on the green (`c_wife_jolly_1`; Millhaven's sutler). Old
+  Enoch Millward, 71, is the miller, abed at her aunt's with his chest (the Bellwright's "Millhaven's miller ... He
+  worries"); she lifts the sacks and dresses the stones. Brisk, weighs everything. "A miller takes a sixteenth. It's the
+  only law I ever liked." The sails have stood a month. Her work: **Three Under the Sails** (three who stand in the
+  mill yard like men being measured; the third has a sack held open with an old penny in it: "Then it's paid. Damn it.
+  Now I owe it flour"), **Flour and Water** (Mudwall Stockade emptied, then her sacks from round it: the wall is paste
+  of her fine white, "It's a receipt"), and on: **Bran for Dunmow** (through the goblins who wear her sacking to Rafe).
+- **Ser Anselm Toller**'s work at the tower now: **Four Ropes** (the four bell ropes he took down forty years ago lash
+  Bramble Stockade; the tenor's hangs from a thorn with a kettle on it, and they pulled it: "I have wanted to for
+  forty years, and it took a goblin to do it"), **What Answers** (at nine: by night to the Horned Stones, where the great
+  ram knocks the tall stone once at the third watch, then the ring emptied; pays the Wingbell), and on: **A Block for
+  the Frame** (to Jem Sledge at Stonecarters' Halt). **Ser Hale Orrowick**'s: **A Right Pauldron** (five pieces of
+  harness from the falls' shore, among the crabs: every one a left) and **Two of the Three** (the drake on the
+  cliff-top and its two goblins: any two; it isn't on the hill, so it isn't his to fight). His eight older quests, down
+  the Deeps and Blackvigil, wait for those dungeons' own people; the two that needed The Millhaven Man still do.
+- **Rafe Dunmow**, 68, shepherd, at **Dunmow Fold** under its great cairn (`c_old_man_2`). Three hundred and forty ewes at
+  lambing; one night at shearing the hurdles were down and the fold empty. Slow, counts in the old score ("Yan, tan,
+  tethera"), sleeps by the gate from habit. A stone goes on the cairn for each ewe lost; he hasn't put this year's on.
+  His work: **Plucked** (wool from under the Screaming Crag: two tufts are his, one is Thornwick's, one is hair),
+  **Yan, Tan, Tethera** (his tar-pot is gone, and the five goat men at the old moot stones of Bleatmoot wear Dunmow's
+  mark on the near hip; the big one doesn't: "Then he did the marking"), **The Screaming Crag**
+  (pays the last of last year's clip, a robe: "I was keeping it to be buried in"), and on: **Strays** (past the goat men
+  on the Gallows Road to Osric Thorne: two hundred and six of his ewes are in Thornwick pound).
+- **Madge Wattle**, 52, hurdle-maker, from the hazel coppice Thornwick way (`c_worker_f_2`). Brought forty hurdles up at
+  shearing, and makes two a day still, with nothing to fold. Sees that Rafe eats. Gives **Six-Bar Hurdles** (two goblins
+  who stand her hurdles in a ring and sit in it; they've carved faces on the heads).
+- **Sib Kestrel**, 33, fowler, at **Kestrel Hide** by the ribs (`c_redhead_1`). Net, lime and call. Speaks low, shushes
+  out of habit, looks up: nothing has flown over in nine days. "A call's a lie told to a bird. You have to mean it
+  kindly, even then." Her work: **Borrowed Voices** (her bird-calls from round the Crooked Circle; the fifth isn't hers,
+  has no stop in it, and doesn't burn), **The Crooked Circle**, **The Gnawed Hollow** (the wolfkin gnaw the ribs by
+  night: "They're not feeding. They're sharpening"; pays an old skull Joss dug up as a boy). The end of its road: she's
+  sent to from Thornwick, by an errand the Gallows Road's maker writes.
+- **Joss Kestrel**, 29, her brother, hunts what runs (`c_dude_3`). Says half of what he hears. Gives **Off the Spit** (two
+  wolfkin walked in upright, took the hare off his spit, and looked at him: "It's not hunger, that look. It's more like
+  counting").
+- **Jem Sledge**, 46, stone-carter, at Stonecarters' Halt: a placeholder with a line, till the Rustwood is made.
+
+## The Weeping Fen (`src/folk/regions/fen.js`, lines in `src/folk/lines/regions/fen.js`)
+
+North of Bellmourn up the Fen Way, levels six to fourteen: Sedgebank, Mile-End Camp by the Sunken Mile (the Drowned
+Vaults' door), Sallowmere, Eelpot Hythe far off the roads to the east, and the Drowned Chapel. The camps and Sallowmere
+are **plain folk's**: none of them names either power; they say "the sisters", "the chapel road". Sister Oriel is
+**Tessariel's**: she speaks of the order and its four watches, and names nothing of Velscour's. **No boats move and no
+lights are drawn on the mere**: Grizel's ferry is the boat tied at the half-sunk jetty, and the lights are what she tells
+of. The green dragon south of the chapel (level 24) is warned of by Grizel and by Oriel, and no quest goes near it.
+
+- **Odo Marsh**, 66, eel-catcher, under the mast at **Sedgebank** (`c_elder_1`; the camp's sutler). Forty years on the
+  bank; mends things and swears at them; goes deaf when money's named ("It's the water"). His wife went to her sister's
+  in Bellmourn to be dry: "She writes. I can't read. It suits us both." Cuts a notch on the mast for every hand the
+  water rises. Sent to by Maren Rush (**Rods for Sedgebank**; he promised her a punt he hasn't got, and lost his pole
+  in the web trying to come for rods). His work: **Empty Traps** (three children at his stakes haul his traps and tip
+  the eels back, neater than he sets them: "Somebody taught them to let things go"), **A Punt in the Reeds** (the Reed
+  Larder: his twelve-foot punt hangs in it, ten foot up), **A Hand a Week** (Sinkfoot Stockade has dammed the lode;
+  pays his eelskin coat, a robe: "My wife said I looked like bait in it"), and on: **A Hand of Water** (the same lode
+  drains the Mile: through the three by the road to Tamar Dyke).
+- **Ness Carr**, 27, reed-cutter for thatch (`c_young_4_1`). The one of six cutters who didn't go home. Short with
+  everyone; counts in bundles. "Everything's easier cut dead." Gives **Reed-Hooks** (five hooks from round the Reed
+  Larder; the fifth is a hundred years old: somebody cut that bed before there was a Sedgebank, ran, and never came back).
+- **Tamar Dyke**, 44, salvager, at **Mile-End Camp** (`c_worker_f_3`; its sutler). Lifts the Sunken Mile a slab at a time
+  for lead and dressed stone: "It's not robbing. It's the other thing." Prices everything, reasons included. Eleven of
+  her gang went home when the drowned turned round on the slabs. Her line: "Everything that went down is still there.
+  That's the whole of my trade." Sent to by Odo. Her work: **The Sunken Mile** (four of the five on the causeway; the
+  fifth has his hand out for the toll, and she pays him a penny a morning), **Thrown Back** (Leechwater's goblins put
+  her salvage back in the water every night: they think that's what the place is for), **The Sunk Plot** (one stands
+  up for every slab she lifts; her tally was a salvager's, and wrong), **Under the Mile** (the toll's strongroom, and
+  the Bloat) and **What Sank the Mile** (Mother Sallow and the Leviathan: "Stone on a hard bottom doesn't sink unless
+  something takes the bottom away"), and on: **The Crossing** (the Mile isn't coming up: through the huts to the ferry)
+  and **His Father's Punt** (a punt off the Mile with the Hallams' mark: by the lane to Eelpot).
+- **Corby Lunn**, 36, crane-hand (`c_smith_3`). Built the crane from a barge's ribs and a mill's windlass; she is "she",
+  and not for leaning on. Gives **Counterweight** (the goblins sit on her lead weights like a jury; with them back she
+  stops pulling left: "Two years I thought it was her nature").
+- **Grizel Wade**, 71, ferrywoman, by her boat at the half-sunk jetty on **Sallowmere's** east shore (`c_crone_1`). The
+  seventh Wade to hold the crossing: the Mile put five of them out of work, and they waited for it to fall down. A penny
+  a leg, the living and the dead alike ("They sit stiller"). She rowed every one of the drowned in the huts to the Yard
+  or would have. Her work: **What the Fen Keeps** (six jellies on her landing; one has her mooring-ring in it, and she'd
+  blamed Davy), **Lights on the Mere** (by night to the Drowned Yard: the dead walk there themselves, and leave the
+  ferry's notched pennies on the path), **The Drowned Yard** (laid down; pays a skull that turned up in her bows "like a
+  passenger"), and on: **Forty Names** (the Yard's dead to be read over: under the harpies' pool to Sister Oriel).
+- **Davy Scrip**, 52, chapman, nine days waiting on a ferry that has no call to run (`c_wes_3`; Sallowmere's sutler, out
+  of his pack). All patter, with something under it. "A chapman's welcome is the best there is. Everybody's glad of you
+  and nobody wants you to stop." Gives **Four Whistles** (he sold four tin whistles a year to four children at the
+  huts; they were waiting on the west shore with their pennies out; three, and he won't ask for the fourth).
+- **Pike Hallam**, 43, eel-trapper, under the upturned hull at **Eelpot Hythe** (`c_worker_2_3`; its sutler). The last
+  roof of nine, and it's a boat. Gets weather for news; the wind has been south-west since Martinmas. His father went out
+  the night the Mile sank. Sent to by Tamar. His work: **Five Knots** (the Mere Coven sells wind in knotted cord; he
+  undoes one, and nothing: the Hythe was never buying wind, it was paying them not to send it), **The Price of Wind**
+  (the Coven), **Kept Empty** (the Reed Graves, and the grave kept open forty years for his father: empty, and every
+  one of the others turned to face it; pays his father's eel-glaive, a staff). The end of its road.
+- **Sister Oriel**, 58, the last of eleven sisters at **the Drowned Chapel** (`c_wife_big_2`; by the graves on its north
+  side, since black jellies live in the nave's water). Came at eleven with a fever, in Grizel's ferry. Exact, dry, keeps
+  hours: "I keep the fourth watch. I am told it is no longer kept. I find that if one keeps it, it is." Sent to by
+  Grizel. Her work: **Leaves on the Water** (the office-book's leaves from round the walls: four washed clean, and the
+  office of the fourth watch kept dry inside a jelly), **Seven Lamps** (the path's lamps from round the Reed Stockade;
+  the goblins keep frogs in them), **Rung Wrong** (the goblins hung the chapel's sunk bell and ring it for dinner; she
+  had been keeping time by it; pays the hours of the watch in her own hand, a scroll). The end of its road.
 
 ## Where people go (for the life sim)
 

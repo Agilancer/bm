@@ -399,19 +399,7 @@ export const LINES = {
   },
 
   // ---------------------------------------------------------------- placeholders: moved to their own region's file when
-  // it's made (the six the ring's errands on are said to; what each says to the errand is in its quest's `others`).
-  cuddy: {
-    first: ["Up through the cairns on your own feet. Well. Cuddy Stone. I keep the beacon, when there's anyone to keep it for."],
-    greet: {
-      morning: ["Morning. The cairns are all where I left them. I look."],
-      day: ["You can see four roads from here. Nothing on any of them."],
-      evening: ["Light's going. That's when a beacon earns its oil."],
-      night: ["Keep by the fire. The cairns aren't for walking among after dark."],
-    },
-    about: ["Cuddy Stone. Cairn-keeper at Cairnwatch, as my father was. I mind the stones and the light."],
-    bye: ["Mind the path going down."],
-    shop: { open: ["I've a little to sell and I'll buy what you've carried up."], closed: ["Not now."] },
-  },
+  // it's made (four the ring's errands on are said to; Odo Marsh is the Weeping Fen's now: what each says to the errand is in its quest's `others`).
   amos: {
     first: ["You're no drover. You walk like you're going somewhere. Amos Tye. This is the Stance."],
     greet: {
@@ -459,18 +447,6 @@ export const LINES = {
     about: ["Fenn Hollis. I trap the wood's edge from Mossgate Hide, and I keep the first station's peg in tokens for old Perrin."],
     bye: ["Go quiet."],
     shop: { open: ["Pelts I don't want, I sell. Things I can use, I buy."], closed: ["Not now."] },
-  },
-  odo: {
-    first: ["Mind that line; it's an hour's work. Odo Marsh. Eels. This is Sedgebank, and it's as dry as you'll get."],
-    greet: {
-      morning: ["Morning. Traps were empty. They'll say it's the moon."],
-      day: ["If you're standing there, you can hold this."],
-      evening: ["Mist's coming up off the water. Get near the fire."],
-      night: ["Don't follow the lights. I shouldn't have to say."],
-    },
-    about: ["Odo Marsh. Eel-catcher, at Sedgebank, on the Fen Way. I weave my own traps, when I can get the rods."],
-    bye: ["Keep to the path."],
-    shop: { open: ["I'll trade. Eels or coin, it's the same to me."], closed: ["Not now."] },
   },
 };
 

@@ -218,9 +218,13 @@ export const LAIRS = [
   { key: 'ash_worm', x: -3980, z: -1250, r: 4, boss: ['worm_2'], n: 0, pal: ['Base', 'Ashen'], wake: 140 },
   // The Sorrowhorn.
   { key: 'crown_dragon', x: -2560, z: -2960, r: 4, boss: ['dragon_red'], n: 0, pal: ['Base'], wake: 220 },
-  { key: 'stair_demons', x: -1600, z: -1840, r: 7, pick: DEMONS, n: 2, pal: ['Base', 'Abyssal'] },
+  // (Beside the Pilgrims' Road below the Broken Stair, where the errand up from the hermit goes by them: 78 m from the
+  // stair's middle, nobody could be posted there. docs/QUEST-LOOP.md.)
+  { key: 'stair_demons', x: -1510, z: -1745, r: 7, pick: DEMONS, n: 2, pal: ['Base', 'Abyssal'] },
   // The Deepwood.
-  { key: 'hollow_dolls', x: -1330, z: -1460, r: 6, pick: MANNEQUINS.concat(POSSESSED), n: 4, pal: ['Base', 'Ashen'] },
+  // (Below the Hermit's Hollow, between the Pilgrims' Road and his lane, where the errand up from Mossgate goes by
+  // them: 50 m from the hollow's middle, the hermit couldn't stand in it.)
+  { key: 'hollow_dolls', x: -1300, z: -1315, r: 6, pick: MANNEQUINS.concat(POSSESSED), n: 4, pal: ['Base', 'Ashen'] },
   // The Barrow Moor.
   { key: 'barrow_lords', x: -2900, z: 3260, r: 9, boss: ['necromancer_lord', 'necromancer_lord_2'], pick: NECROS.concat(CHILDREN), n: 4, pal: ['Base', 'Ashen', 'Corrupted'] },
   { key: 'barrow_wyrm', x: -2740, z: 3600, r: 5, boss: ['dragon_undead'], pick: ['dragonling_undead'], n: 1, pal: ['Base'], wake: 200 },

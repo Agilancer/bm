@@ -31,6 +31,8 @@ function inside(k) {
   if (d) return [d.x + (d.entry?.x ?? 0), d.y ?? -50, d.z + (d.entry?.z ?? 3)];
   if (k === 'catacombs') return null;
   if (k === 'waste') return [-4200, 0, -900];
+  if (k === 'millhaven') return [SITES.farm.x - 60, 0, SITES.farm.z - 50];   // (the pond by the farm, where its jellies are: src/sim/slimes.js)
+  if (k === 'fen') return [SITES.sallow.x + 70, 0, SITES.sallow.z + 80];   // (Sallowmere's east shore, where its jellies are: src/sim/slimes.js)
   const at = placeSpot(k);
   return at ? [at.x, 0, at.z] : null;
 }
@@ -137,7 +139,9 @@ test('each can be taken, walked through as the game reports it, and handed in', 
       if (st.enter) {
         // (Elsewhere first: it doesn't count; then there.)
         Q.where(30, 2, 30, 12); assert.equal(Q.state(id).step, k, `${id}: ${st.enter} counted from Bellmourn`);
-        Q.where(...inside(st.enter), 12);
+        // (By night only, where the step says so: by day it doesn't count.)
+        if (st.night) { Q.where(...inside(st.enter), 12); assert.equal(Q.state(id).step, k, `${id}: ${st.enter} counted by day`); }
+        Q.where(...inside(st.enter), st.night ? 23 : 12);
       } else if (st.visit) {
         for (const v of st.visit) Q.where(...inside(v), 12);
       } else if (st.kill) {
@@ -147,7 +151,10 @@ test('each can be taken, walked through as the game reports it, and handed in', 
         if (st.kill.startsWith('lair:') || st.kill.startsWith('outpost:')) Q.kill(...at, 9, null);
         if (st.kill !== 'catacombs') Q.kill(40, 2, 40, 5, g);
         assert.equal(Q.state(id).n, 0, `${id}: a kill counted that shouldn't`);
-        for (let i = 0; i < st.n; i++) Q.kill(...at, 5, g);
+        // (One kind only, where the step says which: of. Anything else there doesn't count.)
+        if (st.of != null) Q.kill(...at, 5, g);
+        assert.equal(Q.state(id).n, 0, `${id}: a kill of the wrong kind counted`);
+        for (let i = 0; i < st.n; i++) Q.kill(...at, st.of ?? 5, g);
       } else if (st.clear) {
         Q.cleared('wo_nothing'); assert.equal(Q.state(id).step, k);
         Q.cleared(st.clear);
@@ -324,7 +331,11 @@ test('every hub is led to: a quest from somewhere you already are sends you to e
       for (const st of RULES[id].steps) if (st.talk) { met.add(st.talk); const c = POSTED.find((q) => q.id === st.talk)?.camp; if (c) for (const q of POSTED) if (q.camp === c) met.add(q.id); }
     }
   }
-  for (const id of IDS) assert.ok(open.has(id), `${id} can't be come by from Bellmourn`);
+  // (Hubs whose errand in is another region's to write, and isn't written yet: Kestrel Hide's comes from Thornwick, with
+  // the Gallows Road's quests. docs/QUEST-LOOP.md. Take each out of here when its errand is made.)
+  const AWAITED = new Set(['kestrel']);
+  const awaited = (pid) => AWAITED.has(POSTED.find((q) => q.id === pid)?.camp);
+  for (const id of IDS) assert.ok(open.has(id) || awaited(QUESTS[id].giver), `${id} can't be come by from Bellmourn`);
   const steps = [...open].flatMap((id) => RULES[id].steps.map((st) => [id, st]));
   // Each person out in the land who gives work is someone a quest sends you to speak to, or stands at a hub with someone who
   // is (a camp's second and third: you meet them when you're sent to the first).
@@ -332,7 +343,7 @@ test('every hub is led to: a quest from somewhere you already are sends you to e
   const ledTo = new Set(steps.map(([, st]) => st.talk).filter(Boolean));
   for (const p of [...POSTED.filter((q) => !q.firstVisit || q.id === 'fv_wenna'), ...BEYOND]) {
     const mates = POSTED.filter((q) => q !== p && hubOf(q) && hubOf(q) === hubOf(p));
-    assert.ok(ledTo.has(p.id) || mates.some((q) => ledTo.has(q.id)) || p.delve || p.sewer || p.hub, `no quest leads to ${p.id}`);
+    assert.ok(ledTo.has(p.id) || mates.some((q) => ledTo.has(q.id)) || p.delve || p.sewer || p.hub || awaited(p.id), `no quest leads to ${p.id}`);
   }
   // And each dungeon is somewhere a step sends you.
   for (const k of DELVES.filter((q) => !q.sewer && !q.castle).map((q) => q.key)) {

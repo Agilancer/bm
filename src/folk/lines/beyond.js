@@ -16,7 +16,7 @@ export const LINES = {
   bellwright: {
     first: [
       "Stop there. Let me see your hands. No sword. No sunburst. A staff, and something in the other hand that looks back. Well. The seal by my door woke when you came over the rise. First time in forty years.",
-      { after: 'quest:long_way_round', say: "Corran Thrale's tracks came as far as my bracken last autumn, and went away again. Now he sends people. The seal by my door woke for you. First time in forty years." },
+      { after: 'quest:not_for_the_barley', say: "Up from Millhaven. Abel Fenwick sends somebody up this knoll every quarter-day, and it is always about barley. Let me see your hands. ...Well. The seal by my door woke when you came over the rise. First time in forty years." },
     ],
     greet: {
       morning: [
@@ -26,7 +26,7 @@ export const LINES = {
       day: [
         "No watch by day. The bells want oil whether they ring or not. Hold the ladder, or stand out of the light.",
         "Nothing on the downs but sheep and Millhaven's smoke. That is a good day.",
-        { after: 'four_watches', say: "When the wind's right I hear the abbey's bell-cote answer. It's only the wind. I listen anyway." },
+        { after: 'what_answers', say: "When the wind's right I hear the abbey's bell-cote answer. It's only the wind. I listen anyway." },
       ],
       evening: [
         "First watch. I rang it myself, once, a boy on the rope, and the barrow moor lay down.",
@@ -74,140 +74,6 @@ LINES.bellwright.ask.seals = [
 ];
 
 export const QUESTS = {
-  long_way_round: {
-    title: 'The Long Way Round',
-    giver: 'corran',
-    about: "Corran Thrale has tracked the dead east over the downs, where they go wide round a knoll with a tower on it. A man in white plate keeps bells there that he doesn't ring: the Bellwright. Find him, and ask him why the dead won't walk his hill.",
-    offer: [
-      "Everyone in this town thinks the world stops at my pines. It doesn't. I've tracked the dead east, out where the downs open, a long day's walk. They go round a knoll with a tower on it. Wide round.",
-      "There's a man up there in white plate who keeps bells he doesn't ring. Folk on the downs call him the Bellwright. Go and see him. Ask him why the dead won't walk his hill. I'd like to know before I'm dead.",
-    ],
-    accept: "East, then. The tower on the knoll.",
-    acceptLine: "Out the east side, where the downs open. Walk into the sunrise. It's a long way. Longer than anyone here walks. Take bread.",
-    decline: 'Not that far. Not yet.',
-    declineLine: "It'll be there. That's the point of it.",
-    journal: [
-      "Corran Thrale has followed the dead east over the downs, to a tower on a knoll they won't go near. Find the Bell Tower of the Four Watches, far east of Bellmourn.",
-      "Speak to the man in white plate at the tower: the Bellwright.",
-      "Go back to Corran Thrale at the hunter's lodge and tell him what the Bellwright said.",
-    ],
-    progress: [
-      "East, on the downs road. Leave the hill road to the hill. You'll see the tower long before you're there.",
-      "Still here? It doesn't come to you.",
-    ],
-    done: [
-      "Bells. The dead walk wide of a tower because of bells nobody rings. Huh.",
-      "I'll put that with the other things I know and nobody believes. Here. You walked a long way for a hunter's question.",
-    ],
-    after: [
-      "Went out east again. Saw the tower from the downs. Didn't go up. Didn't need to.",
-    ],
-    others: {
-      bellwright: [
-        "Corran Thrale sent you? Tell him the dead walk wide of my hill because my hill has the tenor bell on it, hung and whole. They remember it even silent.",
-        "And tell him I saw him last autumn, lying in the bracken watching my door for a day and a night. He can knock next time.",
-      ],
-      edric: ["The Bell Tower of the Four Watches? It still stands? Then someone still keeps it. Don't say that loudly in this square."],
-      orrin: ["The dead keep off this town, and the watch thanks its lamps. I've always said it was older than lamps. Bells, is it? Bells."],
-      homunculus: ["A PALADIN? In white? On a hill? Then he has heard of me and is preparing. Tell him I am well. Tell him I am VERY well."],
-    },
-  },
-
-  millhaven_jelly: {
-    title: 'Jelly in the Millpond',
-    giver: 'hob',
-    about: "Hob Fenwick's cousin Abel farms at Millhaven, far east on the downs. Something green came up out of his millpond and ate a ewe, slowly. Put down eight of the jellies round Millhaven, then tell Hob the pond's clear.",
-    offer: [
-      "My cousin Abel farms out at Millhaven, on the downs. Sent word by the carter. Something's come up out of his millpond. Green, he says, and it moves on its own, and it ate a ewe.",
-      "Ate it slow. He watched. I'd go, but the barley won't cut itself and the tithe's at month's end. You've that staff. Would you?",
-    ],
-    accept: "I'll go to Millhaven.",
-    acceptLine: "Out east along the downs. Abel's is the farmhouse with the windmill on the rise behind it. Tell him Hob sent you, and that I'm sorry about the ewe.",
-    decline: "Not now, Hob.",
-    declineLine: "Abel'll lose another, then. He's got more. Not many more.",
-    journal: [
-      "Hob Fenwick's cousin Abel at Millhaven, far east on the downs, has something living in his millpond that eats sheep. Put down eight of the jellies round Millhaven.",
-      "Go back to Hob Fenwick and tell him the millpond's clear.",
-    ],
-    progress: [
-      "East, on the downs. Windmill. Can't miss it, says Abel, and Abel misses most things.",
-    ],
-    done: [
-      "Eight of them? In a millpond? I'd not have believed it from Abel. From you I will.",
-      "Abel sent this. He'd rather pay than come. Bess says take it and don't argue.",
-    ],
-    after: [
-      "Abel sent a cheese as well. He's never sent a cheese in his life. I think you frightened him into manners.",
-    ],
-    others: {
-      bess: ["Hob's sent you to Abel's? Good. Don't eat anything Abel cooks."],
-      tilly: ["A jelly that eats SHEEP? Can I come? I'll be quiet. I won't be quiet."],
-    },
-  },
-
-  four_watches: {
-    title: 'The Four Watches',
-    giver: 'bellwright',
-    about: "Three houses kept the watches with the Bellwright's tower: the Abbey of Saint Ossery, the Drowned Chapel and the Frozen Shrine. Their seals went dark when the ringing stopped. Stand in all three; if their seals wake for you, he has something for you. It rings.",
-    offer: [
-      "Three houses kept the watches with this tower: the abbey of Saint Ossery in the rust wood, the chapel on the fen, the shrine up under the snow. Their seals went dark when the ringing stopped. Mine woke for you.",
-      "Walk to all three. Stand in each. If their seals wake for you too, I'll know the order isn't only me. I've something for you if they do. It isn't much. It rings.",
-    ],
-    accept: "I'll walk to all three.",
-    acceptLine: "North-east for the abbey, through the rust wood. North-west past Sallowmere for the chapel; mind the water. South-west, a long way, for the shrine. Your feet will hate you. Then the seals will forgive them.",
-    decline: "Not yet.",
-    declineLine: "Forty years they've waited. They'll wait a little longer.",
-    journal: [
-      "The Bellwright wants to know if the order's three houses still answer. Stand in each, in any order: the Abbey of Saint Ossery (far north-east, the rust wood), the Drowned Chapel (the fen, north past Sallowmere), the Frozen Shrine (far south, Rimeholt).",
-      "Go back to the Bellwright at the Tower of the Four Watches.",
-    ],
-    progress: [
-      "The abbey, the chapel, the shrine. Any order. The seals don't mind which wakes first.",
-      "You're footsore. Good. It means you went.",
-    ],
-    done: [
-      "All three woke. All three. Sit down. No, sit. I need a moment and I'd rather you didn't watch.",
-      "Here. The order gave these to wardens who had to cross the ice. A bell no bigger than your thumb. Ring it in the air and the air rings back, and holds you one step more. It's yours. I'm too old to jump.",
-    ],
-    after: [
-      "I rang the treble yesterday. Once. Very small. Nobody came to hang me. I'll do it again in a year or so.",
-    ],
-    others: {
-      orrin: ["Saint Ossery's abbey? It's in my books as a ruin in a red wood. If you go, look for the bell-cote over the west door. Tell me if it's still there. Don't tell me if it isn't."],
-      edric: ["My grandmother was married at the Frozen Shrine. It wasn't frozen then. Go carefully up there."],
-    },
-  },
-
-  sallowmere: {
-    title: 'What the Fen Keeps',
-    giver: 'sabine',
-    about: "Sabine Moss, the herbalist, gathers bog myrtle on Sallowmere's east shore for the winter fevers, and this spring the shore moved: it was jelly. Put down ten of them on the fen so she can reach it again.",
-    offer: [
-      "Bog myrtle grows thick on Sallowmere's east shore and nowhere else I can reach. I've gone every spring for twelve years. This spring the shore moved. It was jelly. Lots of it.",
-      "They're slow until they aren't. My knife did nothing. Your fire might. Clear the east shore and I'll have myrtle for the winter fevers, which this year will be bad.",
-    ],
-    accept: "I'll clear the shore.",
-    acceptLine: "North. A long way past the pines, where the ground goes soft. Don't drink the water. Don't let one sit on you; they hold on.",
-    decline: "Not just now.",
-    declineLine: "Then the fevers will have their way. They usually do.",
-    journal: [
-      "Sabine Moss can't reach the bog myrtle on Sallowmere's east shore for the jellies. Put down ten of them on the fen, far north of Bellmourn.",
-      "Go back to Sabine Moss at the herbalist's.",
-    ],
-    progress: [
-      "Ten, I'd say. Fewer and they'll be back by morning. More and you'll get careless.",
-    ],
-    done: [
-      "Ten. You smell of the fen and you've got something green in your hair. Hold still.",
-      "There. The myrtle will keep half this town breathing through the wet months. Nobody will thank you for it. So I will.",
-    ],
-    after: [
-      "The myrtle's drying in the rafters. The house smells like a fen in summer. Bryony loves it.",
-    ],
-    others: {
-      bryony: ["Jory says the moor's jellies have bones in them. Bring me one. A bone, I mean. Not a jelly. Well."],
-    },
-  },
 
   black_road: {
     title: 'The Black Road',

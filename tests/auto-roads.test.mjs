@@ -66,7 +66,8 @@ for (const lvl of [1, 12, 30]) {
       on += s.on * s.all; all += s.all;
       // (Off a road only to get to one, or from one to where it's going: the Sorrowhorn's crown is a kilometre from any road.)
       const far = nearestRoad(x, z, 3000).d;
-      assert.ok(s.worst < Math.max(160, far + 60), `${name}: ${s.worst.toFixed(0)} m at a stretch off a road (it's ${far.toFixed(0)} m from one)`);
+      // (At level 1 it keeps clear of every den pinned by the far camps: 230 m there, where it cuts round one to a place it has no business at yet.)
+      assert.ok(s.worst < Math.max(lvl === 1 ? 230 : 160, far + 60), `${name}: ${s.worst.toFixed(0)} m at a stretch off a road (it's ${far.toFixed(0)} m from one)`);
     }
     assert.ok(on / all > 0.95, `${(100 * on / all).toFixed(1)}% of the way on a road`);
   });

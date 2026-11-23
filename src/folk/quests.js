@@ -22,6 +22,7 @@
 // And 'outpost:<key>', the ground round one of the land's outposts (kill, enter, visit, gather).
 // bring takes at: where what's wanted is found, for the trail (a place as above).
 // gather takes spots: [[dx, dz], ...] from the place's middle, where the things lie; else they're laid in a ring round it.
+// kill takes spots: [[x, z], ...] on the land, where auto-play hunts for it, when its place is wide (the fen's jellies).
 // wait: what's handed over is made overnight, and collected the next day.
 // door: taken on, the giver opens Lisandra's door of candles and you're through it ('sill': to the Sill, 'home': back to her;
 // src/ui/folk.js lisDoor).
@@ -57,10 +58,6 @@ export const RULES = {
   toll_of_bell: { steps: [{ enter: 'bellcrypt', night: true }, { warden: true }, { back: true, say: "The bell's warden is put down." }], item: 'scroll', xp: 400 },
   letter: { steps: [{ talk: 'elowen', say: 'A letter from Cedric Ashby. Into your hand.' }, { back: true, say: "Elowen's answer." }], xp: 120 },
   // Out past the town (src/folk/lines/beyond.js; the places are src/core/lands.js SITES). of: what must die (9 a jelly).
-  long_way_round: { steps: [{ enter: 'belltower' }, { talk: 'bellwright', say: 'Corran Thrale asks why the dead walk wide of your hill.' }, { back: true, say: 'The Bellwright says it is the bells.' }], gold: 90, xp: 400 },
-  millhaven_jelly: { steps: [{ kill: 'millhaven', n: 8, of: 9 }, { back: true, say: "Abel's millpond is clear." }], gold: 60, xp: 450 },
-  four_watches: { steps: [{ visit: ['abbey', 'chapel', 'shrine'] }, { back: true, say: 'All three seals woke.' }], charm: 'wingbell', charmName: 'the Wingbell', xp: 900 },
-  sallowmere: { steps: [{ kill: 'fen', n: 10, of: 9 }, { back: true, say: 'The east shore is clear.' }], gold: 90, xp: 600 },
   black_road: { steps: [{ enter: 'keep' }, { back: true, say: 'I saw the keep at the end of the west road.' }], gold: 200, xp: 900 },
   crown_of_teeth: { needs: 'toll_of_bell', steps: [{ enter: 'crown' }, { back: true, say: "I've been to the top of the Sorrowhorn." }], item: 'scroll', gold: 150, xp: 1200 },
   barrow_lights: { steps: [{ enter: 'barrows', night: true }, { kill: 'barrows', n: 6, of: 9 }, { back: true, say: 'The lights were jellies. Full of bones.' }], gold: 140, xp: 700 },

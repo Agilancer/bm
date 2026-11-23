@@ -21,7 +21,7 @@ test('every quest says what it is, who gave it and what it pays', () => {
   assert.equal(describe('jory'), 'Jory Pell, the night watchman');
   assert.equal(describe('aldric'), 'Ser Aldric Halloway, the captain of the Watch');
   assert.equal(rewardOf('dead_cant_wait'), '60 gold, 200 experience');
-  assert.equal(rewardOf('four_watches'), 'the Wingbell, 900 experience');
+  assert.equal(rewardOf('what_answers'), 'the Wingbell, 360 experience');
 });
 
 test('every step of every quest has a place on the map, and its steps so far', () => {
@@ -61,10 +61,10 @@ test("the places: the Sexton's Door the first time down, the dead below, a list 
   assert.match(placeOf('dead_cant_wait', { Q, person }).where, /Sexton's Door/);
   Q.advance('dead_cant_wait');
   assert.equal(placeOf('dead_cant_wait', { Q, person }).spots[0].below, true);
-  Q.begin('four_watches');
-  assert.equal(placeOf('four_watches', { Q, person }).spots.length, 3);
-  Q.state('four_watches').seen = ['abbey'];
-  assert.equal(placeOf('four_watches', { Q, person }).spots.length, 2);
+  Q.begin('from_the_platform');
+  assert.equal(placeOf('from_the_platform', { Q, person }).spots.length, 3);
+  Q.state('from_the_platform').seen = ['cairnfield'];
+  assert.equal(placeOf('from_the_platform', { Q, person }).spots.length, 2);
   // Someone who can't be found just now: named, with nowhere on the map.
   Q.begin('letter');
   const p = placeOf('letter', { Q, person: () => null });

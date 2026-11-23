@@ -154,5 +154,9 @@ export const DENS = [
   { key: 'den_duskroost', faction: 'dusk', name: "the Toll Roost", x: 3127, z: 2768, camp: 'oldtoll' },
   { key: 'den_grawlden', faction: 'pack', name: "Grawl's Kennel", x: 5049, z: 1497, camp: 'witch' },
   { key: 'den_burnthollow', faction: 'whelps', name: "the Burnt Hollow", x: 2793, z: -4559, camp: 'fungus' },
+  // (Asked for by the fen's critics: the goblins on the lane out to Eelpot Hythe, half way, for the errand there to go
+  // through; and a wyrm's bed north-east of the Drowned Chapel, away from the dragon, for the fen's last and hardest den.)
+  { key: 'den_lanefast', faction: 'mire', name: 'Lanefast', x: 520, z: -2740, camp: 'eelpot' },
+  { key: 'den_wyrmbed', faction: 'marshwyrm', name: 'the Sunk Bed', x: -560, z: -4130, camp: 'chapel' },
 ];
 export const denOf = (key) => DENS.find((d) => d.key === key) || null;

@@ -50,6 +50,10 @@ export const MOUNT = { x: -2600, z: -3000, R: 1750, peak: 980, crown: 170, lake:
 
 // The Green Downs' cliff: the land steps up 30 m east of this line, and Brightwater comes over it.
 export const CLIFF = { x: 2640, z0: -900, z1: 700, top: 30 };
+// And the one way up it that isn't the long way round: a ramp cut back into the scarp south of Bell Knoll, where the trail to
+// the stones on the clifftop crosses it. Between z0 and z1 the 30 m is taken over 140 m, not twelve (about twelve degrees).
+export const RAMP = { z0: -700, z1: -590, half: 70 };
+export const rampAt = (z) => sstep(RAMP.z0 - 25, RAMP.z0, z) * (1 - sstep(RAMP.z1, RAMP.z1 + 25, z));
 export const POOL = { x: 2612, z: -120, r: 30 };
 export const KNOLL = { x: 2440, z: -540, r: 80, h: 22 };
 // The barrows' mounds: [x, z, radius, height, which way the door faces] (their doors: src/core/sites.js).
@@ -356,7 +360,8 @@ export function landHeight(x, z, level, raw = false) {
   if (m > 0) h = Math.max(h, m + h * 0.15);
   // The Downs' cliff, with the falls' notch, and Bell Knoll.
   if (x > CLIFF.x - 30 && z > CLIFF.z0 - 200 && z < CLIFF.z1 + 200) {
-    const e = sstep(CLIFF.x - 6, CLIFF.x + 6, x + (fbm(z * 0.03, 3, 2) - 0.5) * 18) * (1 - sstep(CLIFF.z1, CLIFF.z1 + 200, z)) * (1 - sstep(CLIFF.z0, CLIFF.z0 - 200, z));
+    const rp = rampAt(z), hw = 6 + (RAMP.half - 6) * rp;
+    const e = sstep(CLIFF.x - hw, CLIFF.x + hw, x + (fbm(z * 0.03, 3, 2) - 0.5) * 18 * (1 - rp)) * (1 - sstep(CLIFF.z1, CLIFF.z1 + 200, z)) * (1 - sstep(CLIFF.z0, CLIFF.z0 - 200, z));
     h += CLIFF.top * e;
   }
   const kd = Math.hypot(x - KNOLL.x, z - KNOLL.z);
@@ -432,7 +437,7 @@ export function landTrees(x, z) {
   if (rd.road && rd.d < rd.road.w + 7) return 0;
   if (siteAt(x, z, 15)) return 0;
   for (const wt of WATERS) if ((x - wt.x) ** 2 + (z - wt.z) ** 2 < (wt.r + 10) ** 2) return 0;
-  if (Math.abs(x - CLIFF.x) < 14 && z > CLIFF.z0 && z < CLIFF.z1) return 0;
+  if (Math.abs(x - CLIFF.x) < 14 && z > CLIFF.z0 && z < CLIFF.z1 && rampAt(z) < 0.5) return 0;
   if (x > 7000 && eastSteep(x, z)) return 0;   // (nor on the east's cliffs)
   if (x > 6400 && x < 7700) for (const [bx, bz, br] of BARE) if ((x - bx) ** 2 + (z - bz) ** 2 < br * br) return 0;
   const w = countryWeights(x, z);
@@ -470,7 +475,7 @@ export function groundCover(x, z, h, slope) {
   snow = Math.max(snow, sstep(480, 640, h + (fbm(x * 0.01, z * 0.01, 2) - 0.5) * 80));
   rock = Math.max(sstep(0.55, 0.9, slope), md < MOUNT.R ? sstep(0.6, 0.85, 1 - md / MOUNT.R) * 0.6 : 0);
   if (md < MOUNT.crown + 50) rock = Math.max(rock, sstep(MOUNT.lake + 20, MOUNT.crown - 20, md));
-  if (Math.abs(x - CLIFF.x) < 12 && z > CLIFF.z0 && z < CLIFF.z1) rock = 1;
+  if (Math.abs(x - CLIFF.x) < 12 && z > CLIFF.z0 && z < CLIFF.z1 && rampAt(z) < 0.5) rock = 1;
   return [Math.min(1, snow), Math.min(1, rock)];
 }
 

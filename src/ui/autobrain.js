@@ -135,7 +135,7 @@ const lairLevel = (l) => l.lvl ?? LAIR_LEVEL[l.key];
 // sight (24 m, a stalker's 34, a dragon's 48), and ten metres more.
 const lairPass = (l) => l.r * 0.6 + 2 + ((l.wake || 110) >= 200 || (l.boss || []).some((b) => /dragon|wyrm/.test(b)) ? 48 : 34) + 10;
 const LAIR_LEVEL = {
-  werewolf: 6, nest: 4, goblin_camp: 2, kobold_den: 2, lost_children: 1, goat_ring: 6, mill_dolls: 5, falls_drake: 8, sallow_drowned: 5,
+  werewolf: 6, nest: 4, goblin_camp: 2, kobold_den: 2, lost_children: 1, goat_ring: 6, mill_dolls: 5, falls_drake: 8, sallow_drowned: 9,
   fen_worm: 16, fen_harpies: 8, fen_dragon: 24, cutter_raiders: 6, fungal_brood: 7, abbey_road_goats: 7, vigil_guard: 16, obelisk_guard: 16,
   bone_field: 18, ash_dragon: 24, ash_worm: 16, crown_dragon: 24, stair_demons: 12, hollow_dolls: 8, barrow_lords: 10, barrow_wyrm: 20,
   maiden_coven: 9, fell_harpies: 9, gallows_plague: 14, grawl_bats: 10, grove_demons: 12,
@@ -179,17 +179,17 @@ function fightableAt(kind, lvl, maxHp = 0, slime = false) {
 // The quests, in the order it takes them on, and the level it wants for each.
 const PLAN = [
   ['lisandra_work', 1], ['bed_and_bell', 1], FIRST_VISIT_LEVELS[0], ['letter', 1], ['pines', 1], ['iron_from_dead', 2], ['dead_cant_wait', 3], ['shroud_and_thread', 3], ['bones_for_carver', 3],
-  ['long_way_round', 4], ['toll_of_bell', 5], ['millhaven_jelly', 5], ['barrow_lights', 8], ['sallowmere', 8], ['four_watches', 9],
+  ['toll_of_bell', 5], ['barrow_lights', 8],
   ['crown_of_teeth', 11], ['black_road', 13],
   // The land's (src/folk/land-quests.js): out to the small towns, what besets them, and down the party dungeons.
-  ['word_to_thornwick', 6], ['millhaven_man', 6], ['hare_and_harrow', 6], ['man_at_the_cross', 6],
-  ['cairnfield', 6], ['tracks_west', 7], ['ask_the_burner', 7], ['girl_from_khel', 7],
-  ['hedge_breakers', 8], ['owed_to_frostwatch', 9], ['sunken_mile', 9], ['moor_wayhouse', 9], ['ossery_quarry', 9],
+  ['word_to_thornwick', 6], ['hare_and_harrow', 6], ['man_at_the_cross', 6],
+  ['tracks_west', 7], ['ask_the_burner', 7], ['girl_from_khel', 7],
+  ['hedge_breakers', 8], ['owed_to_frostwatch', 9], ['moor_wayhouse', 9], ['ossery_quarry', 9],
   ['up_from_the_gallowswood', 9], ['ash_on_the_wind', 9], ['black_ram', 10], ['old_toll', 11], ['red_scouts', 11], ['salt_for_the_hanged', 12],
   ['charcoal_for_khel', 12], ['charred_mill', 12], ['mouth_guard', 13], ['ravens_tor', 13], ['vigil_patrols', 14], ['arch_before_the_gate', 14],
   ['into_the_deeps', 14], ['the_howling', 14], ['gate_of_blackvigil', 14], ['broodmother', 15], ['red_cloth', 15], ['first_lord', 15], ['the_sleeper',
   16], ['lords_of_the_keep', 17], ['the_castellan', 18],  // The four delves made after those, each at its own level and a little over for its last boss.
-  ['under_the_mile', 10], ['what_sank_the_mile', 11], ['the_ring_below', 12], ['what_it_fruits_from', 13], ['the_winter_company', 14], ['last_night_of_the_run', 15],
+  ['the_ring_below', 12], ['what_it_fruits_from', 13], ['the_winter_company', 14], ['last_night_of_the_run', 15],
   ['sung_open', 17], ['king_under_the_moor', 18],
   // The regions' (src/folk/regions/, docs/QUEST-LOOP.md).
   ...LAND_LEVELS,
@@ -2341,7 +2341,8 @@ export class Brain {
         const st = Q.step(id);
         if (!st || this.skipping(`q:${id}`) || !(st.night || st.warden)) continue;
         const job = this.questJob(id, m, lvl);
-        if (job) return job;
+        // (Only what it can get to before morning: it was pulled back a country for a night step at dusk.)
+        if (job && this.jobDist(job, m) < 1200) return job;
       }
     }
     // Lisandra's door east, once Bram's errand's done: before the rest of her round of the town, a letter or anything else in
@@ -2357,7 +2358,7 @@ export class Brain {
     // so the camp's whole round is in hand before it sets out. It used to take only what the one it was sent to had, and
     // came back for the other's when everything else in the land was done.)
     if (questing && !visiting && !m.town) { const by = this.offerJob(m, null, 120); if (by) return by; }
-    let near1 = null, nd1 = Infinity, low1 = null, lowLvl = 0, lowD = Infinity;
+    let near1 = null, nd1 = Infinity, low1 = null, lowLvl = 0, lowD = Infinity, mid1 = null, midD = Infinity;
     for (const [id, lvl] of PLAN_ALL) {
       const s = Q.state(id), st = Q.step(id);
       if (!s || s.stage === 'done' || this.skipping(`q:${id}`)) continue;
@@ -2369,12 +2370,17 @@ export class Brain {
       if (d < nd1) { nd1 = d; near1 = job; }
       // (The first of them in the plan's order, the lowest level's, and the nearest of that level: for when none is near.)
       if (!low1 || (lvl === lowLvl && d < lowD)) { low1 = job; lowLvl = lvl; lowD = d; }
+      // (And a word that's the end of an errand already under way, its fight on the road done: the nearest such.)
+      if (st?.talk && s.step > 0 && d < midD) { mid1 = job; midD = d; }
     }
     // (A hand-in close by waits while another quest's work is as close: a camp's work is done in one round, the lair, the
     // den past it and the things lying round the den, and then all of it told. Each used to be its own walk out and back.)
     if (near1 && nd1 < 500) return this.nearWork(m, 450) || near1;
     // (None near: the lowest level's, not the nearest as the crow flies. With an errand in hand for each road out of
     // Bellmourn, the nearest took it from one spoke's end across the town to the next and back.)
+    // (But an errand half done is finished first, when its end is within a kilometre: with the goat on the Gallows Road
+    // down and Thornwick 700 m on, it turned round for a lower word three kilometres behind.)
+    if (mid1 && midD < 1000) return mid1;
     if (near1 && low1) near1 = low1;
     // (A hand-in a country away waits while there's a quest's work close by: the hunt over the hedge before the road home.)
     if (near1) {
@@ -2595,8 +2601,14 @@ export class Brain {
     if (st.boss || DELVE_KEYS.includes(st.enter) || DELVE_KEYS.includes(st.kill) || roomDelve(st.kill) || roomDelve(st.enter) || (st.visit || []).some((v) => roomDelve(v) && !(s.seen || []).includes(v))) return null;
     if (st.enter) {
       if (st.night && !isNight(m.hour) && !(m.hour >= 19.5)) return null;
+      // (A lair or a den to come to by night: not at dusk. It got there early, stood in its monsters' sight and fought
+      // them under "by night" with the step not yet to be had.)
+      if (st.night && !isNight(m.hour) && (st.enter.startsWith('outpost:') || st.enter.startsWith('lair:'))) return null;
       const a = area(st.enter);
       if (!a) return null;
+      // (Nor a night step from a country away, whichever part of choose asks: it set off at dusk, lost the job at dawn,
+      // turned round, and did the same the next night.)
+      if (st.night && dist(m.x, m.z, a.x, a.z) > 1200) return null;
       return { kind: 'go', why: `q:${id}`, x: a.x, z: a.z, r: a.r, below: a.below, say: `${title}: to ${st.enter === 'catacombs' ? 'the catacombs' : st.enter === 'bellcrypt' ? 'the Bell Crypt' : placeName(st.enter)}${st.night ? ', by night' : ''}.` };
     }
     if (st.visit) {
@@ -2621,7 +2633,7 @@ export class Brain {
     if (st.kill) {
       if (st.kill === 'catacombs') return this.grindJob(m, 'catacombs', `q:${id}`, `${title}: the dead below (${s.n} of ${st.n}).`);
       const a = area(st.kill);
-      return { kind: 'hunt', why: `q:${id}`, spots: huntsFor(st.kill) || (a ? [[a.x, a.z]] : HUNTS.woods), below: !!a?.below, say: `${title}: ${st.n - s.n} more to put down.` };
+      return { kind: 'hunt', why: `q:${id}`, spots: st.spots || huntsFor(st.kill) || (a ? [[a.x, a.z]] : HUNTS.woods), below: !!a?.below, say: `${title}: ${st.n - s.n} more to put down.` };
     }
     if (st.warden) {
       if (!isNight(m.hour)) return null;

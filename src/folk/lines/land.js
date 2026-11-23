@@ -397,7 +397,7 @@ export const LINES = {
   hale: {
     first: [
       "Mind the left pauldron if you come close. It's off a bigger man and it swings. Hale Orrowick. I was ploughing at Millhaven two springs back. Now I'm this. Ser Anselm says the seal woke for you. I'd like to shake your hand, if the gauntlet lets me.",
-      { after: 'quest:millhaven_man', say: "You'll be from Abel. He sends somebody every quarter-day. Mind the left pauldron; it's off a bigger man and it swings. Hale Orrowick. I'd shake your hand, if the gauntlet lets me." },
+      { after: 'quest:not_for_the_barley', say: "You'll be from Abel. He sends somebody every quarter-day. Mind the left pauldron; it's off a bigger man and it swings. Hale Orrowick. I'd shake your hand, if the gauntlet lets me." },
     ],
     greet: {
       morning: [
@@ -568,43 +568,6 @@ export const QUESTS = {
     },
   },
 
-  millhaven_man: {
-    title: 'The Millhaven Man',
-    giver: 'hob',
-    needs: 'millhaven_jelly',
-    offer: [
-      "Abel's sent word again. Not jelly this time. His neighbour. Hale Orrowick, that had the low field. Left his plough stood in the furrow two springs back and went up the knoll, to the old tower.",
-      "He's up there yet, in iron, Abel says, stood like a post. Abel's been cutting his barley for him two years and wants to know if he's to cut a third. You've been up that way. Would you ask him?",
-    ],
-    accept: "I'll ask him.",
-    acceptLine: "The tower on the knoll, east past Millhaven. You'll know him. Abel says he's the one who isn't old.",
-    decline: "Not now, Hob.",
-    declineLine: "Then Abel cuts it. He'll moan. He'd moan anyway.",
-    journal: [
-      "Hob Fenwick's cousin Abel wants to know if his neighbour Hale Orrowick is ever coming home to Millhaven. He's at the Bell Tower of the Four Watches, on the knoll far east of Bellmourn. Go there.",
-      "Speak to Hale Orrowick, the younger of the two in plate before the tower's door.",
-      "Go back to Hob Fenwick and tell him what Hale said.",
-    ],
-    progress: [
-      "The knoll. Past Abel's. The one in iron who isn't old.",
-    ],
-    done: [
-      "Not coming. Sworn. To an hour of the night? ...Well. Orrowicks were always a bit particular.",
-      "Abel can have the barley, then, and welcome. He sent this for the asking. It's two years of somebody else's harvest, so it's not mean.",
-    ],
-    after: [
-      "Abel's ploughed the low field himself. Says it's the straightest furrow on the downs and he can't match it. He's quite put out.",
-    ],
-    others: {
-      hale: [
-        "Abel. He'd send the king if he could, to ask about that barley. Tell him no. I'm sworn, and it isn't the sort you plough round.",
-        "Tell him the low field's his till I'm back, and that he burns too green. And thank you for walking it. It's a long way to carry a farmer's question.",
-      ],
-      bellwright: ["They want my ploughman back? They can't have him. ...Don't tell him I said that."],
-      bess: ["Hale Orrowick? He danced with me at Abel's wedding. Trod on both feet. And now he's a knight? Mind his feet."],
-    },
-  },
-
   // ---- hub to hub ----
   hare_and_harrow: {
     title: 'A Plate at the Hare',
@@ -735,69 +698,7 @@ export const QUESTS = {
   },
 
   // ---- the land's own troubles, given in Bellmourn ----
-  cairnfield: {
-    title: 'Stones on the Cairnfield',
-    giver: 'silas',
-    needs: 'dead_cant_wait',
-    offer: [
-      "Before there was a churchyard, Bellmourn put its dead on the downs' edge, north-east, under stones. The Cairnfield. My great-grandfather's there. Every Crane before him.",
-      "A drover tells me the cairns are being opened. Not robbed. Opened, tidy, and the stones stacked. Somebody up there is taking stock. I won't have my people counted by a stranger. Go and stop it.",
-    ],
-    accept: "I'll go to the Cairnfield.",
-    acceptLine: "East on the downs road, then north before the Abbey Road forks. Grey heaps on a green rise. If one's open, don't look in. Or look. They're mine, and they won't mind you.",
-    decline: 'Not today.',
-    declineLine: "They've waited two hundred years. But they weren't being unpacked, then.",
-    journal: [
-      "Someone is opening the old cairns on the Cairnfield, on the downs' edge north-east of Bellmourn, where Silas Crane's people lie. Go there.",
-      "Put down whoever is opening the cairns, and the four they've raised.",
-      "Go back to Silas Crane at the coffin yard.",
-    ],
-    progress: [
-      "The Cairnfield. Grey stones, green rise. Whoever's there can read; they've been at the name-stones.",
-    ],
-    done: [
-      "A robed one, and children. Raised children, to carry the stones. ...No. I'll not say what I think of that. I'd have to wash my mouth.",
-      "I'll go up myself at the month's end and put the stones back. I know which is which. Here. It's what I'd charge for a reburial. You've earned the family rate.",
-    ],
-    after: [
-      "I've restacked nine. My knees say that's a year's work. The Cranes say thank you. I'm translating.",
-    ],
-    others: {
-      orrin: ["The Cairnfield! The name-stones there are older than my oldest book. If you could rub one for me... no. Silas would know. He always knows."],
-    },
-  },
 
-  sunken_mile: {
-    title: 'The Sunken Mile',
-    giver: 'sabine',
-    needs: 'sallowmere',
-    offer: [
-      "There's a causeway in the fen, north-west of the Fen Way, before you reach the mere. A mile of old stone with the water over it to the ankle. The Sunken Mile. It's the only dry way to the west pools.",
-      "I tried it for marsh-mallow. There are people standing on it. In the water. Not jelly. People, and they turned round, all together. Clear it. I'll not ask how.",
-    ],
-    accept: "I'll clear the causeway.",
-    acceptLine: "Take the Fen Way north till the ground goes soft, then bear left of it. Stones under the water, in a line. If they call to you, they'll be very polite about it. Don't answer.",
-    decline: 'Not the fen again.',
-    declineLine: "No. I wouldn't either. I'll do without mallow.",
-    journal: [
-      "Sabine Moss can't cross the Sunken Mile, an old causeway in the fen north of Bellmourn, west of the Fen Way. Go there.",
-      "Put down five of the drowned who stand on the Sunken Mile.",
-      "Go back to Sabine Moss at the herbalist's.",
-    ],
-    progress: [
-      "The causeway. West of the Fen Way, short of the mere. Five of them, I counted, before I ran.",
-    ],
-    done: [
-      "All five. You're wet to the thigh and you're shaking. Sit. Drink this. It's only nettle, but it's hot.",
-      "Somebody's family, those were. I'll burn something for them. And this is for you. Mallow root's worth more than I can pay, so that's most of what I have.",
-    ],
-    after: [
-      "I walked the Mile yesterday. Nobody on it. I kept turning round anyway.",
-    ],
-    others: {
-      bryony: ["Mam says there were people in the water. Were their eyes open? Don't tell Mam I asked."],
-    },
-  },
 
   moor_wayhouse: {
     title: 'The Wayhouse on the Moor',
@@ -1330,7 +1231,7 @@ export const QUESTS = {
   the_howling: {
     title: 'The Howling',
     giver: 'hale',
-    needs: 'millhaven_man',
+    needs: 'not_for_the_barley',
     hint: DELVE_HINT,
     offer: [
       "When the wind's from the south you can hear it from the tower top. A long way off. A howl that doesn't stop for breath. Ser Anselm says it's the fells. He says it too quickly.",
@@ -1399,7 +1300,7 @@ export const QUESTS = {
   gate_of_blackvigil: {
     title: 'The Gate at the End of the West Road',
     giver: 'hale',
-    needs: 'millhaven_man',
+    needs: 'not_for_the_barley',
     hint: DELVE_HINT,
     offer: [
       "I told you what I saw ride out of the keep past Khel, the year I drove west for salt. I've carried it since. Everyone's seen the fires. Nobody's been through the gate.",
@@ -1557,72 +1458,7 @@ export const QUESTS = {
   },
 
   // ---- the Drowned Vaults, under the Sunken Mile ----
-  under_the_mile: {
-    title: 'Under the Mile',
-    giver: 'sabine',
-    needs: 'sunken_mile',
-    hint: DELVE_HINT,
-    offer: [
-      "I went back to the Mile for my mallow. The water by the broken arch is going down. Not drying. Going down, into a stair. There was always a stair. The old toll kept its strongroom under the causeway.",
-      "Something's wallowing at the foot of it. I heard it breathe, and then I heard it stop, the way you stop when you've noticed somebody. I'd like it dead before it comes up for air. Would you look?",
-    ],
-    accept: "I'll go down the stair.",
-    acceptLine: "By the broken arch, where the slabs tip. It's a doorway now, with a light in it. It won't take one alone, they say: bring a company. And if it swells up, get something between you and it.",
-    decline: 'Not under the fen.',
-    declineLine: "No. I only went as far as the first step, and I've washed three times since.",
-    journal: [
-      "A stair has opened by the Sunken Mile, in the fen north of Bellmourn: the old toll's vaults, drowned. Go down, with a company.",
-      "Kill the Bloat, which wallows in the Drowned Vaults.",
-      "Go back to Sabine Moss at the herbalist's.",
-    ],
-    progress: [
-      "The stair by the broken arch. Something big, in a pool, breathing. That's all I know, and it's more than I wanted.",
-    ],
-    done: [
-      "It burst? No, don't tell me. Tell me it's dead and tell me nothing else. ...Good. Sit. You smell of the fen and of something I haven't a name for.",
-      "This was my mother's. It's kept the damp off two of us. You'll need it more than my hook does, where you keep going.",
-    ],
-    after: [
-      "The mallow's coming back along the Mile. It likes what's under it gone. So do I.",
-    ],
-    others: {
-      bryony: ["Mam says there's a stair under the water now. Does it go all the way down? How do you know when it's all the way?"],
-    },
-  },
 
-  what_sank_the_mile: {
-    title: 'What Sank the Mile',
-    giver: 'sabine',
-    needs: 'under_the_mile',
-    hint: DELVE_HINT,
-    offer: [
-      "I asked Orrin why a causeway sinks. He said they don't, not stone on a hard bottom, not unless something takes the bottom away. He looked quite pleased. Then he looked at me and stopped.",
-      "So it's still there. Whatever dug the fen out from under a mile of stone is at the bottom of those vaults, where the water all goes. And there's a woman's voice down there calling the water in. End both.",
-    ],
-    accept: "I'll go to the bottom.",
-    acceptLine: "Past where the big one was, and round, and down. When the water comes up, find the high ground. When the mud moves, don't stand still. That's fen sense. It's all I've got to give you.",
-    decline: 'Not yet.',
-    declineLine: "No. Nor would I. But the Mile's sinking a hand a year, and I've counted my hands.",
-    journal: [
-      "Below the Bloat's wallow a voice is calling the fen in. Kill Mother Sallow, the Tidecaller, in the Drowned Vaults.",
-      "At the bottom of the Vaults is what sank the causeway. Kill the Leviathan of the Mile.",
-      "Go back to Sabine Moss at the herbalist's.",
-    ],
-    progress: [
-      "The bottom. Where the water goes. The voice first, I think; then the thing itself.",
-      "High ground when it floods. Keep moving when the mud does.",
-    ],
-    done: [
-      "A worm. The length of the square, and it ate the bottom out of a causeway. And you went down a hole after it. I'm going to make you something hot and you're going to drink all of it.",
-      "Here. It came up in the reeds the spring the Mile first cracked, and I never knew what to do with a staff. You do.",
-    ],
-    after: [
-      "I stood on the Mile and stamped. It stamped back, like ground. First time in my life.",
-    ],
-    others: {
-      orrin: ["A burrowing thing, under the Mile. I said 'something took the bottom away' to be clever. I should like, in future, to be wrong when I'm clever."],
-    },
-  },
 
   // ---- the Sporehold, under the Fungal Ring ----
   the_ring_below: {
