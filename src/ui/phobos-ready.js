@@ -17,9 +17,12 @@ export const OUTSIDE = [GATE.x - 70, GATE.z];
 
 // Each: what it's called, the level you're put at, the quests done before it, the ones it begins, and the rarities of the
 // kit (RARITIES in src/items/items.js: 2 rare, 3 epic, 4 legendary, 5 mythical; the skull takes the higher).
+// (The way in: Wenna Coyle's word from the Sill to each of the city's three hubs, src/folk/regions/east.js. Out in the land
+// they wait on Ines Mar's word coming down to her; begun here, you're past the land already.)
+export const WAY_IN = ['smoke_in_the_east', 'wardens_of_ash', 'quiet_men'];
 export const READY = [
-  { key: 'city', name: 'The City', what: "Its three hubs, and the way in: Hasket's, Ser Hale's and Garrick's quests", level: 21,
-    done: [], begin: ['smoke_in_the_east', 'quiet_men', 'wardens_of_ash'], rarity: [3, 3] },
+  { key: 'city', name: 'The City', what: "Its three hubs, and the way in: Wenna Coyle's three words from the Sill", level: 22,
+    done: [], begin: WAY_IN, rarity: [3, 3] },
   { key: 'sewers', name: 'The Sewers', what: "Under the city: the keepers' Great Grate, down to the High Conduits", level: 31,
     done: upTo('the_approach_by_night'), begin: ['down_the_drains'], rarity: [3, 4] },
   { key: 'lowerward', name: 'The Lower Ward', what: "Up the Aqueduct into Castle Velscour: the Gate Captain and the Iron Barracks", level: 61,
@@ -47,14 +50,14 @@ export function readyQuests(book, r) {
 
 // ---- PHOBOS SUMMONS ME (the owner, 2026-11-20): everything at once, ready to take down Velscour. -----------------------
 // Outside the Drawbridge Gate; every quest that leads into the city or the castle from a hub out in the land begun (the
-// three that do: Hasket's at Cinderford, Ser Hale's, Garrick's at Frostwatch); you and your party at a level for every
+// three that do: Wenna Coyle's from the Sill, WAY_IN); you and your party at a level for every
 // encounter and every dungeon in Phobos and Castle Velscour (the Feast That Walks, the last of them, wants 88: SUMMON_LEVEL
 // is past it); legendary gear on you in every slot there's gear for (staff, shield, robes), a mythical skull, every socket
 // filled with the finest gems, a second set and more gems in the pack, and every cell of the pack let out; and a full
 // party, each of them in legendary gear in all eight of their slots and a spare set in their bag.
 
 export const SUMMON_LEVEL = 100;
-export const SUMMON_QUESTS = ['smoke_in_the_east', 'quiet_men', 'wardens_of_ash'];
+export const SUMMON_QUESTS = WAY_IN;
 const ROBE_SLOTS = ['head', 'chest', 'shoulders', 'legs', 'feet'];
 const TOP_GEM = 4;   // Perfect (items.js GEM_GRADES)
 

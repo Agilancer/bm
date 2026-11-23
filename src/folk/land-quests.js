@@ -10,62 +10,29 @@
 // tests/quests-beyond.test.mjs walks every one of them through.
 import { REGION_RULES, REGION_LEVELS } from './regions/index.js';
 
-const KNIGHTS = ["Velscour's Knights"];
-
 export const LAND_RULES = {
   // ---- out of Bellmourn, to the small towns and the forts ----
-  word_to_thornwick: { steps: [{ enter: 'thornwick' }, { talk: 'osric', say: 'Ser Aldric Halloway asks if the Gallows Road still runs.' }, { back: true, say: "Thornwick's hedge-reeve sends his answer." }], gold: 80, xp: 500 },
-  tracks_west: { needs: 'pines', steps: [{ enter: 'cinderford' }, { talk: 'hasket', say: 'Corran Thrale tracked the dead to your wall.' }, { back: true, say: 'The sergeant at Cinderford counted them too.' }], gold: 90, xp: 550 },
-  owed_to_frostwatch: { needs: 'bed_and_bell', steps: [{ enter: 'frostwatch' }, { talk: 'garrick', say: 'Bram Kettle pays what he owes.' }, { back: true, say: "The warden's taken it off your slate." }], gold: 100, xp: 600 },
-  // ---- hub to hub: a word that sends you on to the next person with work, and ends with them (end: true) ----
-  hare_and_harrow: { steps: [{ talk: 'dorcas', say: 'Osric Thorne says you feed whoever keeps the road.', end: true }], gold: 20, xp: 200 },
-  man_at_the_cross: { steps: [{ talk: 'wymond', say: 'Dorcas Pym says you want something carried.', end: true }], gold: 20, xp: 200 },
-  ask_the_burner: { steps: [{ talk: 'colm', say: 'Sergeant Hasket says you have sacks nobody came for.', end: true }], gold: 20, xp: 200 },
-  girl_from_khel: { steps: [{ talk: 'ysolt', say: 'Colm Burrage says you kept the weighing table at Khel.', end: true }], gold: 20, xp: 200 },
-  // ---- the land's own troubles, given in Bellmourn ----
-  moor_wayhouse: { needs: 'barrow_lights', steps: [{ enter: 'wayhouse' }, { kill: 'lair:wayhouse_dead', n: 4 }, { back: true, say: "The wayhouse is empty. It's a better empty." }], gold: 150, xp: 900 },
-  ossery_quarry: { steps: [{ enter: 'quarry' }, { kill: 'lair:quarry_kobolds', n: 5, foe: ['Kobolds'] }, { back: true, say: "The quarry's empty. I read the marks." }], gold: 150, xp: 1000 },
-  // ---- Thornwick ----
-  hedge_breakers: { steps: [{ kill: 'lair:thorn_goats', n: 3, foe: ['Goat Men'] }, { back: true, say: "Three goat men won't be through your hedge again." }], gold: 120, xp: 800 },
-  black_ram: { needs: 'hedge_breakers', steps: [{ kill: 'lair:thorn_ram', n: 3, foe: ['Goat Men'] }, { back: true, say: 'The Black Ram is dead, and his two with him.' }], charm: 'goatfoot', charmName: 'the Goatfoot', xp: 1100 },
-  up_from_the_gallowswood: { steps: [{ kill: 'lair:thorn_stragglers', n: 4 }, { back: true, say: "They're down. Burn what's left." }], gold: 130, xp: 900 },
-  old_toll: { needs: 'up_from_the_gallowswood', steps: [{ enter: 'oldtoll' }, { kill: 'lair:toll_ambush', n: 5 }, { back: true, say: "Wat Arden won't be coming for his supper." }], gold: 170, xp: 1200 },
-  salt_for_the_hanged: { steps: [{ visit: ['crossroads', 'grove'] }, { back: true, say: 'The salt is down at the Cross and in the Grove.' }], gold: 150, xp: 1400 },
-  // ---- Cinderford ----
-  ash_on_the_wind: { steps: [{ kill: 'lair:cinder_refugees', n: 4, foe: ['The Possessed'] }, { back: true, say: 'The four above the ford are down.' }], gold: 130, xp: 900 },
-  red_scouts: { needs: 'ash_on_the_wind', steps: [{ kill: 'lair:cinder_scouts', n: 2, foe: KNIGHTS }, { back: true, say: 'Your two watchers are dead.' }], gold: 180, xp: 1300 },
-  vigil_patrols: { needs: 'red_scouts', steps: [{ kill: 'waste', n: 8, foe: KNIGHTS }, { back: true, say: 'Eight fewer on the Vigil Road.' }], gold: 260, xp: 2000 },
-  arch_before_the_gate: { steps: [{ enter: 'keep' }, { enter: 'blackvigil' }, { back: true, say: 'The arch before the gate is a way in.' }], gold: 200, xp: 1500 },
-  charcoal_for_khel: { steps: [{ enter: 'khel' }, { kill: 'lair:khel_ghouls', n: 4 }, { back: true, say: "Nobody at Khel is buying. I'm sorry." }], gold: 160, xp: 1300 },
-  charred_mill: { steps: [{ enter: 'charmill' }, { kill: 'lair:charmill_possessed', n: 5 }, { back: true, say: 'Edmer is at rest. I saw to it myself.' }], item: 'robe', xp: 1500 },
-  // ---- Frostwatch and the Howling Deeps ----
-  mouth_guard: { steps: [{ kill: 'lair:mouth_demons', n: 2, foe: ['Night Paralysis Demons'] }, { back: true, say: 'The two at the Mouth are dead.' }], charm: 'glimmerstone', charmName: 'the Glimmerstone', xp: 1500 },
-  ravens_tor: { steps: [{ enter: 'tor' }, { kill: 'lair:tor_roost', n: 3, foe: ['Harpies'] }, { back: true, say: "The Tor's queen is dead." }], gold: 200, xp: 1600 },
-  into_the_deeps: { needs: 'mouth_guard', steps: [{ enter: 'deeps' }, { boss: 'hrymgar' }, { back: true, say: "Hrymgar's dead. I counted the doors." }], gold: 250, xp: 2000, item: 'staff' },
-  broodmother: { needs: 'into_the_deeps', steps: [{ boss: 'broodmother' }, { back: true, say: 'The Broodmother is dead.' }], gold: 300, xp: 2600, item: 'robe' },
-  // ---- Ser Hale's: Blackvigil Keep, and the bottom of the Deeps ----
-  the_howling: { needs: 'not_for_the_barley', steps: [{ talk: 'garrick', say: 'Ser Hale Orrowick asks what howls under your fell.' }, { enter: 'deeps' }, { back: true, say: "I've stood inside the Howling Deeps." }], gold: 180, xp: 1500 },
-  the_sleeper: { needs: 'the_howling', steps: [{ boss: 'sleeper' }, { back: true, say: 'What slept under the fells is dead.' }], gold: 500, xp: 4500, item: 'scroll' },
-  gate_of_blackvigil: { needs: 'not_for_the_barley', steps: [{ enter: 'blackvigil' }, { back: true, say: "I've been through the gate at the end of the west road." }], gold: 150, xp: 1200 },
-  red_cloth: { needs: 'gate_of_blackvigil', steps: [{ kill: 'blackvigil', n: 20, foe: ["Velscour's Knights", 'Necromancers', 'Plague Knights'] }, { back: true, say: 'Twenty of the garrison are dead.' }], gold: 300, xp: 2200 },
-  first_lord: { needs: 'gate_of_blackvigil', steps: [{ boss: 'maldrec' }, { back: true, say: 'Maldrec is dead.' }], gold: 250, xp: 2000, item: 'staff' },
-  lords_of_the_keep: { needs: 'first_lord', steps: [{ boss: 'sorvane' }, { boss: 'brothers' }, { back: true, say: 'Sorvane is dead, and the Brothers.' }], gold: 350, xp: 3000, item: 'robe' },
-  the_castellan: { needs: 'lords_of_the_keep', steps: [{ boss: 'castellan' }, { back: true, say: 'The Castellan of Blackvigil is dead.' }], gold: 600, xp: 5000, item: 'skull', rarity: 4 },
+  // (Ser Aldric's word to Thornwick is cut: it was a walk of 3.3 km to say the road still runs.)
+  // (Bram's purse for Frostwatch is carried up from Fellfoot now, by Berin Stoat the packman: src/folk/regions/fells.js.)
+  // (The two hub-to-hub words in Thornwick, hare_and_harrow and man_at_the_cross, are cut: the hubs there open on their own.)
+  // (Cinderford's two, and the road west from Bellmourn to it, are the Ashen Waste's now: src/folk/regions/waste.js.)
+  // (Orrin Vey's quarry, and the Sporehold under the Fungal Ring after it, are the Rustwood's now, each given by
+  // whoever stands by the work: src/folk/regions/rustwood.js.)
+  // (Thornwick's own, and the Old Toll's, the Cross's and the salt, are given by whoever stands by the work: src/folk/regions/gallows.js.)
+  // (Cinderford's, Khel's and the Vigil Road's are the Ashen Waste's now, each given by someone by the work:
+  // src/folk/regions/waste.js.)
+  // (Frostwatch's and the Howling Deeps', Ser Hale's bottom of the Deeps among them, are Hew Garrick's at the Deeps' door,
+  // and Ravens' Tor is the climbers' under it: src/folk/regions/fells.js. Ser Hale's first, the_howling, is cut: it was
+  // into_the_deeps' door asked about from the Bell Tower, 4.8 km off.)
+  // (Blackvigil Keep's are Captain Renn's, at the Hollow Watch by its door: src/folk/regions/waste.js. The gate's and the
+  // arch's were one quest given twice, by Ser Hale and Sergeant Hasket; it and the lords' are one, the_castellan, there.)
   // ---- the four delves made after those: two quests each, the first to its door and its first boss, the second to its last ----
   // (The Drowned Vaults' two, under the Sunken Mile, are Tamar Dyke's at Mile-End Camp now: src/folk/regions/fen.js.)
-  // The Sporehold, under the Fungal Ring (Orrin's, after the quarry).
-  the_ring_below: { needs: 'ossery_quarry', steps: [{ enter: 'fungus' }, { enter: 'sporehold' }, { boss: 'mouldfang' }, { back: true, say: 'I went down under the ring. The wolf is dead.' }], gold: 260, xp: 2200, item: 'scroll' },
-  what_it_fruits_from: { needs: 'the_ring_below', steps: [{ boss: 'morel' }, { boss: 'heart' }, { back: true, say: 'The thing the ring fruits from is dead.' }], gold: 420, xp: 3800, item: 'staff' },
-  // The Hollow Playhouse, in the Twisted Grove (Dorcas Pym's, at Thornwick).
-  the_winter_company: { needs: 'hare_and_harrow', steps: [{ enter: 'grove' }, { enter: 'playhouse' }, { boss: 'seamstress' }, { back: true, say: 'I found your players. Their seamstress is dead.' }], gold: 300, xp: 2800, item: 'robe' },
-  last_night_of_the_run: { needs: 'the_winter_company', steps: [{ boss: 'leadingman' }, { boss: 'dollmaker' }, { back: true, say: 'The play is over. The Dollmaker is dead.' }], gold: 480, xp: 4400, item: 'skull' },
-  // The Kingsbarrow, in the great mound of the Barrows (Jory's, after the wayhouse).
-  sung_open: { needs: 'moor_wayhouse', steps: [{ enter: 'barrows' }, { enter: 'kingsbarrow' }, { boss: 'gravewarden' }, { back: true, say: 'The great mound is open. Its warden is down.' }], gold: 360, xp: 3400, item: 'robe' },
-  king_under_the_moor: { needs: 'sung_open', steps: [{ boss: 'golem' }, { boss: 'wyrm' }, { back: true, say: 'What the king rode is dead. The moor is dark.' }], gold: 650, xp: 5600, item: 'skull', rarity: 4 },
-  // The Elder Dragon Gods, through the door in the Sorrowhorn's caldera (Hasket's, at Cinderford, once Blackvigil's lords
-  // are dead): the first god, then the other three.
-  storm_over_the_horn: { needs: 'the_castellan', steps: [{ enter: 'elder' }, { boss: 'thyrraxis' }, { back: true, say: 'There is a storm god on an island over nothing. It is dead.' }], gold: 2400, xp: 42000, item: 'staff', rarity: 4 },
-  the_hollow_star: { needs: 'storm_over_the_horn', steps: [{ boss: 'kaldurra' }, { boss: 'morvekh' }, { boss: 'nihvaroth' }, { back: true, say: 'The Hollow Star went into its own Maw. The lights on the Horn are out.' }], gold: 5200, xp: 96000, item: 'skull', rarity: 4 },
+  // (The Sporehold's two, under the Fungal Ring, are Dilly Roe's at the ring now: src/folk/regions/rustwood.js.)
+  // The Hollow Playhouse, in the Twisted Grove.
+  // (Its two are Master Fabian Larke's at the Players' Wagon by its door now: src/folk/regions/gallows.js.)
+  // (The Kingsbarrow's two, and the Moor Wayhouse's, are the Barrow Moor's now: src/folk/regions/moor.js.)
+  // (The Elder Dragon Gods' two are Yrsa's now, on the Crown of Teeth by their door: src/folk/regions/deepwood.js.)
 };
 // And the land's quests made region by region since (src/folk/regions/, docs/QUEST-LOOP.md), and the level each wants.
 Object.assign(LAND_RULES, REGION_RULES);

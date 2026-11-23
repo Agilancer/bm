@@ -36,7 +36,9 @@ test('the land\'s corners are typed arrays of just their length, and can be let 
   for (const p of phone.parts.values()) { assert.ok(typed(p) && whole(p)); pv += p.pos.length / 3; }
   // (975,000 since the camps, 2026-11-22: a phone has each camp's fire, one shelter, its cart and its landmark, 21,000
   // corners among the twenty-nine of them and the dens pinned by them: about 0.7 MB.)
-  assert.ok(pv > 150000 && pv < 975000, `${pv} corners on a phone`);   // (as above: Phobos's block-out is 350,000 of them even with flat-lidded houses, and a phone holds them all; and its sewers' eight stairs down)
+  // (980,000 since the quest loop's camps were finished, 2026-11-23: Marchfoot's fold, Isla's mother's cairn on the Crown and
+  // the dens pinned by the Fells' camps, 2,500 corners, under a tenth of a megabyte.)
+  assert.ok(pv > 150000 && pv < 980000, `${pv} corners on a phone`);   // (as above: Phobos's block-out is 350,000 of them even with flat-lidded houses, and a phone holds them all; and its sewers' eight stairs down)
   assert.equal(phone.colliders.length, full.colliders.length, 'a phone is stopped by what a PC is');
   dropSiteGeometry();
   assert.equal(buildSites().parts.size, 0);

@@ -29,9 +29,7 @@ export const PEOPLE = [
   // Kestrel Hide: the fowler, and her brother across the fire.
   { id: 'sib', name: 'Sib Kestrel', title: 'Fowler, at Kestrel Hide', body: 'c_redhead_1', sex: 'f', age: 33, ...at('kestrel'), idles: ['look_around', 'idle', 'wait'] },
   { id: 'joss', name: 'Joss Kestrel', title: "Sib's brother, at Kestrel Hide", body: 'c_dude_3', sex: 'm', age: 29, ...by('kestrel'), idles: ['idle', 'scratch', 'look_around'] },
-  // placeholder: moved to the Rustwood's file when it's made (the one the Bell Tower's errand on is said to: he stands at
-  // his camp so the errand can be walked and paid; that region's maker gives him his work and the rest of his words)
-  { id: 'jem', name: 'Jem Sledge', title: "Stone-carter, at Stonecarters' Halt", body: 'c_smith_2', sex: 'm', age: 46, ...at('stonecarters'), idles: ['fold_arms', 'idle'] },
+  // (Jem Sledge, whom the Bell Tower's errand on is said to, is the Rustwood's: src/folk/regions/rustwood.js.)
 ];
 
 export const RULES = {

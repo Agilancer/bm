@@ -321,14 +321,25 @@ test('every hub is led to: a quest from somewhere you already are sends you to e
   // What can be come by starting from Bellmourn's own givers: a quest is open when its giver is one of the town's or someone
   // an open quest has already sent you to speak to, and whatever it needs is open too.
   const town = new Set(PEOPLE.map((p) => p.id)), met = new Set(), open = new Set();
-  for (let round = 0; round < 12; round++) {
+  // (Standing within seventy paces of each other, out of any camp, in sight across one yard: the porter and the cook at
+  // Khel's gate, a small town's three round its square. Not a whole site's width: two ends of a town aren't met at once.)
+  const loose = (q) => q.post && !q.camp && !q.hub && !q.delve && !q.sewer;
+  const beside = (p, q) => Math.hypot(p.post[0] - q.post[0], p.post[1] - q.post[1]) < 70;
+  // (Rounds enough for the longest chain: Bellmourn to the Hollow Watch is five errands, then Blackvigil's five, then the Horn's.)
+  for (let round = 0; round < 30; round++) {
     for (const id of Object.keys(RULES)) {
       if (open.has(id) || !QUESTS[id]) continue;
       const g = QUESTS[id].giver;
       if (!(town.has(g) || g === 'lisandra' || met.has(g)) || ![RULES[id].needs].flat().every((n) => !n || open.has(n))) continue;
       open.add(id);
-      // (Sent to someone at a camp, you've met whoever else is posted there: its second, across the fire.)
-      for (const st of RULES[id].steps) if (st.talk) { met.add(st.talk); const c = POSTED.find((q) => q.id === st.talk)?.camp; if (c) for (const q of POSTED) if (q.camp === c) met.add(q.id); }
+      // (Sent to someone at a camp, you've met whoever else is posted there: its second, across the fire. And at one of the
+      // land's places with more than one posted, a small town or Khel, whoever stands within seventy paces of them.)
+      for (const st of RULES[id].steps) if (st.talk) {
+        met.add(st.talk);
+        const p = POSTED.find((q) => q.id === st.talk), c = p?.camp;
+        if (c) for (const q of POSTED) if (q.camp === c) met.add(q.id);
+        if (p && loose(p)) for (const q of POSTED) if (loose(q) && beside(p, q)) met.add(q.id);
+      }
     }
   }
   // (Hubs whose errand in is another region's to write, and isn't written yet: Kestrel Hide's comes from Thornwick, with
