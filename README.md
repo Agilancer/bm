@@ -1025,6 +1025,15 @@ That menu keeps the last choice after 12 seconds.
   is looked at again a few times a second, and is let go when something's between; out of doors it's kept off the
   ground. In third person the X is the camera's, a step to his right, so the head turns its look that much
   (`thirdLead`) to put the X on its mark.
+- **The Critter camera** (`src/ui/crittercam.js`). While it plays a small **C** sits on the Auto button's left, under the
+  map, on a desk and a phone (`CRIT` in `src/ui/thumbs.js`). Pressed, the whole interface goes (`body.critter-cam`: every
+  layer of the page but the picture, the C and the words a catch is worth) and the C moves to the top left corner. The view
+  is then yours: drag anywhere, with the mouse or a finger, and it swings round him, up over him and down to the ground;
+  the wheel or a pinch brings it nearer or further; a tap or a click catches a gilded critter there. A full-screen pad
+  takes every touch, so neither the stick nor a button wakes under it. Where it's left it stays, the same way round him
+  and as far, as he walks on (never swung back behind him), out of doors kept off the ground. No director's shot is taken
+  meanwhile, and only the picture moves: his aim is his own. The C again, auto-play stopped, or the pause, and it's as it
+  was. `node --test tests/critter-cam.test.mjs`.
 - **The narrator** (`src/ui/autoshow.js`; Banners in auto-play). Under its line, what that amounts to: how many are on
   him and how much life he has left, how far there is to go. Below that, the last few
   things worth telling (not on a phone). The same things come large over the picture for a few seconds: a level, a

@@ -10,7 +10,9 @@
 // (The town's people, those posted out in the land, and City State Phobos's street crowd: src/folk/people.js FOLK.)
 // (448 since 2026-11-19: Phobos's Meshy-made people and five palette swaps of each joined the crowd, and the castle's eight
 // its wards. A phone loads only CROWD_LEAN of the crowd; the rest are parked till you're near their district.)
-export const FOLK_MAX = 448;
+// (512 since 2026-11-22: the people posted at the camps and the land's other hubs, about fifty of them, src/folk/regions/.
+// Each place in the buffer is 7 KB; their bodies are the town's own, recoloured, tools/folk/camp_swaps.mjs.)
+export const FOLK_MAX = 512;
 // Palette joints a person can have: their own (55 at most in the owner's models) and the four the skirt borrows.
 export const FOLK_JOINTS = 72;
 

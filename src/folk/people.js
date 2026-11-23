@@ -5,6 +5,8 @@
 // HOUSES), bed: which of its beds, side: 0/1 where two share. job: the shape of their day (src/folk/brain.js DAYS). work: where.
 // walk: their gait (a clip). idles: what they do standing about. trade: what they sell (src/folk/shops.js).
 
+import { REGION_PEOPLE } from './regions/index.js';
+
 export const PEOPLE = [
   // The Tolling Bell
   { id: 'bram', name: 'Bram Kettle', title: 'Innkeeper', body: 'bram', sex: 'm', age: 50, home: 'inn', bed: 0, side: 0, job: 'innkeep', work: 'inn_bar', trade: 'inn', walk: 'walk', idles: ['fold_arms', 'idle', 'wait'] },
@@ -307,6 +309,8 @@ const swapsOf = (p, n) => {
 };
 CROWD.push(...CROWD.filter((p) => MESHY.has(p.body)).flatMap((p, n) => swapsOf(p, n)));
 // Everyone with a body on the town's thread: the town's people, then the posted, then Phobos's crowd (the folk buffer's order).
+// And those posted at the camps and the land's other hubs, region by region (src/folk/regions/, docs/QUEST-LOOP.md).
+for (const p of REGION_PEOPLE) POSTED.push(posted(p));
 export const FOLK = PEOPLE.concat(POSTED, CROWD);
 
 export const BY_ID = Object.fromEntries(FOLK.map((p) => [p.id, p]));

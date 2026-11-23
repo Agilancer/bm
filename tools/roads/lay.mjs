@@ -20,6 +20,7 @@ const { DELVES } = await import('../../src/core/dungeon.js');
 const { CHURCH_FOOTPRINT, CHURCH_WING } = await import('../../src/core/church.js');
 const { HUNT_GROUNDS } = await import('../../src/core/hunts.js');
 const { TUMBLER_CAMPS } = await import('../../src/sim/tumblers.js');
+const { CAMPS, campAt } = await import('../../src/core/camps-data.js');
 
 const quiet = process.argv.includes('--quiet');
 const log = (...a) => { if (!quiet) console.log(...a); };
@@ -70,7 +71,9 @@ each((TOWN_BOX.x0 + TOWN_BOX.x1) / 2, (TOWN_BOX.z0 + TOWN_BOX.z1) / 2, 120, (k, 
 // for the squares and the smoothing. Dearer round them, and through a standing battle.
 for (const l of LAIRS) {
   if (Math.hypot(l.x, l.z) >= 330 && !siteAt(l.x, l.z, 40)) disc(l.x, l.z, (l.r || 6) + 16, block);
-  disc(l.x, l.z, (l.r || 6) + 30, (k) => { C[k] *= 4; });
+  // (Dear out to as far as its monsters would see a traveller go by, src/ui/autobrain.js lairPass, and a square more: a
+  // way that runs nearer is one auto-play leaves for the open country until it's of a level for what lives there.)
+  disc(l.x, l.z, Math.max((l.r || 6) + 30, (l.r || 6) * 0.6 + 56), (k) => { C[k] *= 4; });
 }
 for (const b of BATTLES) for (let t = 0; t <= 1; t += 0.25) disc(b.x + (b.x2 - b.x) * t, b.z + (b.z2 - b.z) * t, 26, (k) => { C[k] *= 5; });
 for (const [x, z] of TEAR_SPOTS) { disc(x, z, 26, (k) => { C[k] *= 2.5; }); disc(x, z, 16, block); }
@@ -218,10 +221,21 @@ function offRoad(sq, open) {
 
 // ---------------------------------------------------------------- what's joined to what
 const shortName = (n) => n.replace(/^The /, '').replace(/^the /, '');
+const NEAR = 1300;
 const TOWNS = new Set(['hamlet', 'farm', 'thornwick', 'cinderford', 'frostwatch', 'sallow', 'abbey', 'khel', 'keep', 'crossroads', 'belltower']);
 const nodes = [];
 const node = (x, z, o) => { nodes.push({ x, z, ...o }); return nodes.length - 1; };
-for (const [k, s] of Object.entries(SITES)) node(s.x, s.z, { key: k, name: shortName(s.name), kind: TOWNS.has(k) ? 'town' : 'site', r: s.r });
+// (A camp in the woods round Bellmourn, src/core/camps-data.js, is one of the woods' own: footpaths to it, and no lane
+// driven over the town's hills to the next place or to the Warrens' door.)
+// (And a camp's way comes to its front, between its two lanterns, whose square is kept open as a portal's is: its middle
+// is its fire and its yard, and a way driven at that was cut short at the first tent and left in pieces round it.)
+for (const [k, s] of Object.entries(SITES)) {
+  const kind = TOWNS.has(k) ? 'town' : s.camp && Math.hypot(s.x, s.z) < NEAR ? 'near' : 'site';
+  if (!s.camp) { node(s.x, s.z, { key: k, name: shortName(s.name), kind, r: s.r }); continue; }
+  const [x, z] = campAt(CAMPS.find((c) => c.key === k), 0, 19).map(Math.round);
+  if (Math.abs(x) < EDGE && Math.abs(z) < EDGE) C[ci(z) * N + ci(x)] = 1;
+  node(x, z, { key: k, name: shortName(s.name), kind, r: 0, own: true });
+}
 // (A delve's portal stands on its terrace: its way ends out in front of the foot of its steps, whose square is kept open.)
 for (const d of DELVES) {
   if (!d.portal || d.within || Math.abs(d.portal.x) >= HALF || Math.abs(d.portal.z) >= HALF || nodes.some((n) => Math.hypot(n.x - d.portal.x, n.z - d.portal.z) < 120)) continue;
@@ -231,7 +245,6 @@ for (const d of DELVES) {
 }
 for (const b of BATTLES) node((b.x + b.x2) / 2 + 40, (b.z + b.z2) / 2 + 40, { key: b.key, name: 'the battlefield', kind: 'battle', r: 0 });
 // The woods round Bellmourn: the hunting grounds, the lairs and camps there, so the woods are walked between.
-const NEAR = 1300;
 for (const g of HUNT_GROUNDS) node(g.x, g.z, { key: g.key, name: 'the hunting ground', kind: 'near', r: g.r });
 for (const l of LAIRS) if (!l.wild && Math.hypot(l.x, l.z) < NEAR && !nodes.some((n) => Math.hypot(n.x - l.x, n.z - l.z) < 60)) node(l.x, l.z, { key: l.key, name: 'the lair', kind: 'near', r: l.r });
 for (const c of TUMBLER_CAMPS) if (c.r && !nodes.some((n) => Math.hypot(n.x - c.x, n.z - c.z) < 80)) node(c.x, c.z, { key: 'camp', name: 'the camp', kind: c.x * c.x + c.z * c.z < NEAR * NEAR ? 'near' : 'site', r: c.r * 0.5 });

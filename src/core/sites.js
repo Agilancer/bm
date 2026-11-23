@@ -19,6 +19,7 @@ import { buildDelves } from './delve-build.js';
 import { buildHall } from './testhall.js';
 import { PIECES, cinderford, lesser, street, thornwick, way } from './places.js';
 import { dressLairs } from './lair-dress.js';
+import { camps } from './camps.js';
 import { dressWilds } from './wild-dress.js';
 import { dressRoads } from './roadside.js';
 import { smithYard } from './smithyard.js';
@@ -1722,6 +1723,7 @@ export function buildSites(geometry = false, lean = false) {
   K.lean = lean;
   downs(K); fen(K); rustwood(K); ashen(K); barrow(K); rimeholt(K); gallows(K); deepwood(K); sorrowhorn(K);
   thornwick(K); cinderford(K); lesser(K);   // (the small towns and the lesser places: src/core/places.js)
+  camps(K);     // (the camps out in the land, where the quests are given: src/core/camps.js)
   marches(K);   // (the east's keeps and towers, and the way to Phobos: src/core/marches.js)
   sillCorner(K);   // (Wenna Coyle's corner of the Sill, and where Lisandra's door sets you down: src/folk/first-visit.js)
   phobos(K);    // (City State Phobos, Castle Velscour and the Keep, blocked out: src/core/phobos-build.js)

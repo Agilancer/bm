@@ -776,7 +776,7 @@ export function lesser(K) {
       rects.push([x, z, 1.15, 0.52, -a, ty]);
     }
     K.deck(rects);
-    for (const [dx, dz, r, hh] of [[-13, 9, 3.2, 3.6], [9, 10.5, 4, 5], [12.5, -6, 3.4, 4.2], [-4, -13.5, 2.6, 2.4], [15, 3, 2.2, 2.6], [-15, -7, 1.8, 1.8]]) K.rock(FR, s.x + dx, s.z + dz, r, hh, { turn: dx });
+    for (const [dx, dz, r, hh] of [[-13, 9, 3.2, 3.6], [9, 10.5, 4, 5], [12.5, -6, 3.2, 4.2], [-4, -13.5, 2.6, 2.4], [15, 3, 2.2, 2.6], [-15, -7, 1.8, 1.8]]) K.rock(FR, s.x + dx, s.z + dz, r, hh, { turn: dx });
     // (The cell: a slab roof on two stones in the lee of the second lift, a dead fire, a bowl.)
     { const cx = s.x - 4.6, cz = s.z + 3.4; for (const sd of [-1, 1]) K.box(FR, cx + sd * 1.1, top, cz + sd * 0.5, 0.25, 1.5, 0.9, 0.6, { collide: false }); K.box(FR, cx, top + 1.5, cz, 1.7, 0.25, 1.3, 0.6, { collide: false });
       K.drum('rubble', cx - 1.2, top, cz + 2.3, 0.4, 0.16, 7, { collide: false, lid: 'dark:rubble' }); K.drum('wood', cx + 1.2, top, cz + 1.9, 0.16, 0.1, 6, { collide: false, lid: 'water' }); }

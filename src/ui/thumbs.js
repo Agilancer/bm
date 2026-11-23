@@ -47,6 +47,9 @@ export const ARC = {
 export const TOP = { pad: 8, side: 5, medal: 44, bars: 150, mini: 92, dock: 38, gap: 3, auto: 32 };
 // Auto's place: so far from the right edge, its top level with the skull's.
 export const AUTO = { right: 40, top: TOP.pad + TOP.mini - 12 };
+// The Critter camera's C (src/ui/crittercam.js), on Auto's left while auto-play plays: so far from the right edge, so far below
+// Auto's top, and so big.
+export const CRIT = { right: 78, top: 4, s: 26 };
 // The left thumb: where the stick's ring waits.
 export const LEFT = { stick: { left: 86, bottom: 42, s: 112 } };
 // Your party's frames on the left (src/ui/party.js; hud.css #partyFrames), so far down from the top. Over the stick's side of
@@ -65,6 +68,7 @@ export function boxes(w, h) {
   const m = TOP;
   out.push({ id: 'mapMini', x: w - (m.side + m.mini / 2) * u, y: (m.pad + m.mini / 2) * u, r: (m.mini / 2) * u, square: true });     // (the corner map is a square: r is half its side)
   out.push({ id: 'autoBtn', x: w - (AUTO.right + m.auto / 2) * u, y: (AUTO.top + m.auto / 2) * u, r: (m.auto / 2) * u });
+  out.push({ id: 'critCam', x: w - (CRIT.right + CRIT.s / 2) * u, y: (AUTO.top + CRIT.top + CRIT.s / 2) * u, r: (CRIT.s / 2) * u });
   // The skull, beside Auto under the map (src/ui/lands.js; its place is hud.css's #vskull).
   out.push({ id: 'vskull', x: w - (2 + 15) * u, y: (m.pad + m.mini - 12 + 15) * u, r: 15 * u });
   // The dock, right to left from the map: the menu, the pack, the book, the journal, the view.
@@ -79,7 +83,7 @@ export function boxes(w, h) {
 export const VARS = {
   'home-r': HOME.right, 'home-b': HOME.bottom,
   pad: TOP.pad, side: TOP.side, medal: TOP.medal, bars: TOP.bars, mini: TOP.mini, dock: TOP.dock, gap: TOP.gap,
-  auto: TOP.auto, 'auto-r': AUTO.right,
+  auto: TOP.auto, 'auto-r': AUTO.right, crit: CRIT.s, 'crit-r': CRIT.right, 'crit-t': CRIT.top,
   'stick-l': LEFT.stick.left, 'stick-b': LEFT.stick.bottom, 'stick-s': LEFT.stick.s,
   'party-top': PARTY.top, 'party-play': PARTY.play, 'party-reach': PARTY.reach, 'party-call': PARTY.call,
 };

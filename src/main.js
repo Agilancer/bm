@@ -48,6 +48,10 @@ import { Inventory } from './ui/inventory.js';
 import { SpellBar } from './ui/spellbar.js';
 import { WorldMap } from './ui/map.js';
 import { WildsUI } from './ui/wilds.js';
+import { WILD } from './core/wilds.js';
+import { OUTPOSTS } from './core/wilds-data.js';
+import { GATHER_SHOWN } from './folk/quests.js';
+const WILD_CLEARED = WILD.CLEARED;
 import { SpellSound } from './spellsound.js';
 import { HERO_SLOTS, makeCast, withBrokers } from './core/heroes.js';
 import { HeroTalk } from './ui/heroes.js';
@@ -767,6 +771,15 @@ async function boot(plan, poolSize) {
     },
   });
   game.townUI = townUI;
+  // What a quest wants gathered, handed to the sim to put a light over (src/sim/wilds.js draw; INPUT.QMARKS): the nearest
+  // few of them, looked at twice a second, which is as often as the quest book looks at where you are.
+  setInterval(() => {
+    const snap = game.currentSnap?.(), marks = townUI.quests.marks();
+    if (snap && marks.length > GATHER_SHOWN) marks.sort((a, b) => Math.hypot(a.x - snap[H.PX], a.z - snap[H.PZ]) - Math.hypot(b.x - snap[H.PX], b.z - snap[H.PZ]));
+    const n = Math.min(GATHER_SHOWN, marks.length);
+    for (let i = 0; i < n; i++) { shared.input[INPUT.QMARKS + i * 2] = marks[i].x; shared.input[INPUT.QMARKS + i * 2 + 1] = marks[i].z; }
+    shared.input[INPUT.QMARK_N] = n;
+  }, 500);
   // The quests you track, under the map (src/ui/tracker.js): one clicked opens the quest log on it.
   const tracker = new Tracker({ el: $('qTrack'), quests: townUI.quests, pack, day: () => town.day,
     open: (id) => { if (townUI.book || !townUI.act.canMenu()) return false; townUI.openBook('active', id); return true; } });
@@ -2361,7 +2374,8 @@ class GameView {
       case EV.HERO: this.heroTalk?.onEvent(a, b, c, d, e, f); break;
       case EV.HERO_FX: this.heroFx(a | 0, b, c, d, e, f, g); break;
       // (A boss down is told to the quests too: src/folk/quests.js QuestBook.boss.)
-      case EV.WILD: this.wilds?.on(a, b, c, d, e, f, g); break;
+      // (An outpost emptied is told to the quests too: src/folk/quests.js QuestBook.cleared.)
+      case EV.WILD: if ((a | 0) === WILD_CLEARED) this.townUI?.quests.cleared(OUTPOSTS[b | 0]?.key); this.wilds?.on(a, b, c, d, e, f, g); break;
       case EV.DELVE:
         if ((a | 0) === DELVE_CODE.ENTER) this.wantEntry = true;
         this.party?.onDelve(a, b, c, d); if ((a | 0) === DELVE_CODE.BOSS_DOWN) { this.castleKey(DELVE_BOSSES[b | 0]?.gives); this.townUI?.quests.boss(DELVE_BOSSES[b | 0]?.key); this.music?.stinger('triumph'); }

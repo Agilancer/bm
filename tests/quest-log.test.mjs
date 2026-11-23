@@ -37,9 +37,10 @@ test('every step of every quest has a place on the map, and its steps so far', (
       const done = stepsOf(id, Q);
       assert.equal(done.length, k + 1, id);
       assert.deepEqual(done.map((d) => d.done), [...Array(k).fill(true), false], id);
-      // (Something to bring: from the catacombs till the satchel holds it, then to the giver.)
+      // (Something to bring: from the catacombs, or from where the quest says it's found, till the satchel holds it; then
+      // to the giver.)
       if (steps[k].bring) {
-        assert.ok(p.spots[0].below, `${id}: not from below`);
+        if (!steps[k].at) assert.ok(p.spots[0].below, `${id}: not from below`);
         const full = placeOf(id, { Q, person, mats: { [steps[k].bring]: steps[k].n } });
         assert.equal(full.spots[0].who, QUESTS[id].giver, id);
       }
@@ -89,7 +90,7 @@ test('the hint: only while nothing is taken on, and it follows the game along', 
   for (const g of who) assert.ok(Q.offers(g).length, g);
   assert.ok(who.includes('silas') && who.includes('cedric'));
   assert.ok(who.indexOf('cedric') < who.indexOf('aldric'), 'what suits level 1 comes first');
-  // (Ser Aldric's nearest work is word to Thornwick, which wants 6; the west road wants 13.)
+  // (Ser Aldric's nearest work is the palmer's tally, down the west road to Palmers' Rest, which wants 6; the west road's end wants 13.)
   assert.match(h.items.find((i) => i.spot.who === 'aldric').text, /level 6/);
   assert.ok(who.indexOf('silas') < who.indexOf('aldric'), 'work beyond you, the nearest to your level first');
   // Someone with work who can't be found (Lisandra, before she's walked you down) isn't sent to.

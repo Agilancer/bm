@@ -124,7 +124,7 @@ test("auto-play never runs the world's clock faster: he goes at the pace anyone 
 
 test('the view is only lent to auto-play: your own is as it was after, and V chooses first person or behind him while it plays', async () => {
   const view = read('../src/ui/view.js'), auto = read('../src/ui/autoplay.js');
-  assert.ok(view.includes('this.third && allowed') && auto.includes('vs.auto = this.on ? this.cam.view : null') && auto.includes('viewSwitch.auto = null'));
+  assert.ok(view.includes('this.third && allowed') && auto.includes("vs.auto = this.on ? (this.critter.on ? 'third' : this.cam.view) : null") && auto.includes('viewSwitch.auto = null'));
   assert.ok(read('../src/ui/settings-spec.js').includes("['first', 'First person"), 'first person is a choice in Settings');
   // The switch itself, with no page: a stub for the two elements it makes and finds. (dataset: the eye on the bar keeps
   // which picture it's showing there, so it's only drawn again when that changes.)
