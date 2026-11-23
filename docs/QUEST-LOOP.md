@@ -13,6 +13,9 @@ and all the other interesting places."*
 Before this, 50 quests sent you more than 800 m from their giver and back; five of Ser Hale's were a 14.7 km round
 trip each (the Bell Tower to Blackvigil); 36 of the land's quests were given in Bellmourn.
 `node tools/quests/report.mjs` prints every quest's walk.
+`node tools/quests/errands.mjs [region]` lists the long errands (a `talk` 800 m or more from the step before) and fails
+on any with 600 m of its line and no lair within 250 m, or none of its level (what auto-play goes by on the way,
+`viaLair` in `src/ui/autobrain.js`).
 
 ## The loop
 
@@ -144,7 +147,8 @@ What the critics of the first region found, which holds for every region:
 
 - **Lairs** (`LAIRS` in `src/core/tripo-monsters.js`): hand-placed, 101 of them. A new one near a hub is a line there
   and a level in `LAIR_LEVEL` (`src/core/tripo-monsters.js`); then the chain above from `lay.mjs` on. Keep it 150 m from
-  anyone posted (85 m at a camp) and off the roads.
+  anyone posted (85 m at a camp) and off the roads. One stood beside a road for an errand to meet on the way is
+  `roadside: true`: `lay.mjs` lays it no lane of its own (`node tools/monsters/place-lairs.mjs` finds it a spot).
 - **Dens** (`DENS` in `src/core/camps-data.js`): 78 outposts pinned near the hubs, named, each of a faction
   (`FACTIONS` in `src/core/wilds.js` says who's in it, how it's built and its level). They're "overworld dungeons": a
   stockade, diggings, a barrow, a ruin, with a chief. Renaming one or changing its faction is a change there and then
