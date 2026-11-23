@@ -1,20 +1,21 @@
 {
  "map": {
-  "trapped": 24040,
-  "decksMissed": 3726,
-  "trapSquares": 570,
+  "trapped": 24590,
+  "decksMissed": 4024,
+  "trapSquares": 590,
   "missing": 0
  },
  "trips": {
-  "failed": 7,
+  "failed": 8,
   "known": [
-   "sat1 to sat2 -> the Cistern Turret",
-   "spire3605 -> the Shrike Turret",
-   "spire3994 -> The Charnel Gate",
-   "the Blood Spire -> the Latch Turret",
+   "The Charnel Gate -> the Smoke Turret",
+   "corner11 -> widow to storm",
+   "spire3994 -> The Drawbridge Gate",
    "the Shrike Turret -> gibbet",
    "the Shrike Turret -> the North Belvedere",
-   "the road before the Drawbridge Gate -> the Sally Tower"
+   "the road before the Drawbridge Gate -> the Ash Needle",
+   "the road before the Drawbridge Gate -> the Sally Tower",
+   "the road before the Drawbridge Gate -> the Storm Spire"
   ]
  }
 }

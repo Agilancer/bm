@@ -59,6 +59,10 @@ if (isMainThread) {
   const world = new World(read('assets/game/village.json'), read('assets/game/interior/interior.json'));
   world.setPhobosDoors(new Set(world.phDoors.keys()));
   const nav = new EastNav(fs.readFileSync(new URL('../../assets/game/nav/east.bin', import.meta.url)), world);
+  // (NO_TRAILS=1: the walks without the trails, to tell what they change from what the map does: src/core/phobos-trails.js.)
+  if (process.env.NO_TRAILS) nav.setTrails([]);
+  // (TRAILS_WEST=x: only the trails west of x, the experiment that kept them to the city.)
+  if (process.env.TRAILS_WEST) { const { trailLines } = await import('../../src/core/phobos-trails.js'); nav.setTrails(trailLines().filter((L) => L.every((p) => p[0] < +process.env.TRAILS_WEST))); }
   const DT = 1 / 30, RUN = 6.2, WALK = 3.2;
   const settle = (x, z, y) => nav.ground(x, z, y);
   for (const { from, to, trace } of workerData.trips) {

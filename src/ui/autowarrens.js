@@ -145,18 +145,20 @@ const caveNav = (x, z) => { const d = delveOf(x, z) || DELVES[0]; let n = navs.g
 // ---- hiring ----------------------------------------------------------------------------------------------------------------
 
 // A job to go and hire, if it wants a party and can pay for one: to the nearer quartermaster.
-export function hireJob(b, m) {
+// door: before Lisandra's door east the first time (src/ui/autobrain.js partyForDoor): at any level, and whoever it can pay
+// for, not only the whole party with a little kept back.
+export function hireJob(b, m, door = false) {
   const P = b.o.game.party;
-  if (!P || P.fit() || m.lvl < HIRE_LEVEL || b.skipping('hire') || !b.allow('aiHire')) return null;
+  if (!P || P.fit() || (m.lvl < HIRE_LEVEL && !door) || b.skipping('hire') || !b.allow('aiHire')) return null;
   // (What's still to hire, and what it costs: it keeps a little back.)
   const r = P.roles(), want = PARTY.size - P.members.length;
-  const cost = hirePrice(m.lvl + 1) * want;
-  if (b.o.pack.purse() < cost + 100) return null;
+  const cost = hirePrice(m.lvl + 1) * (door ? 1 : want);
+  if (b.o.pack.purse() < cost + (door ? 0 : 100)) return null;
   // (Whichever post is nearest: the town's, the Warrens', one at a later delve's portal. Not the Test Dungeon's keeper.)
   const which = Object.keys(BROKER_SPOTS).filter((k) => k !== 'hall').sort((p, q) => dist(m.x, m.z, BROKER_SPOTS[p][0], BROKER_SPOTS[p][1]) - dist(m.x, m.z, BROKER_SPOTS[q][0], BROKER_SPOTS[q][1]))[0];
   const [x, z] = BROKER_SPOTS[which], post = POSTS.find((q) => q.broker === which);
   void r;
-  return { kind: 'hire', why: 'hire', which, x, z, say: `To ${which === 'town' ? 'Aldous Fenn by the square' : post ? `${post.name} at ${post.delve}` : 'Captain Vale at the Warrens'}, to hire a party.` };
+  return { kind: 'hire', why: 'hire', which, x, z, say: `To ${which === 'town' ? 'Aldous Fenn by the square' : post ? `${post.name} at ${post.delve}` : 'Captain Vale at the Warrens'}, to hire a party${door ? ' before the door east' : ''}.` };
 }
 
 export function doHire(b, m, j) {

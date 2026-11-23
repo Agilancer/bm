@@ -13,6 +13,20 @@
 // topUnder) from where they were; free where resolve doesn't push a body) on a half-metre grid round it, one over another.
 //
 // Every door is open to it (auto-play opens a Phobos door on its way: src/ui/autobrain.js phDoor).
+//
+// The long way keeps to the city's trails (src/core/phobos-trails.js): its streets, the road in from the gate, and a path
+// from them to every place auto-play goes, laid by tools/paths/trails.mjs. A step off them costs OFF_TRAIL of one on them,
+// so it walks down the streets as a person does and leaves them only to get where it's going, not through the back yards
+// of the shortest line. (The owner, 2026-11-21: "Phobos needs defined paths or trails connected to the main road".)
+// And it keeps out of the places it's asked to (avoid: [x, z, r], where it's had to run from something it can't beat), a
+// step in one AVOIDED of one outside, unless it starts or ends in one. And out of people's houses (every door's open to it):
+// a step inside a house's walls costs INDOORS of one out, unless it's within HOME_NEAR of where it starts or ends. A way
+// across the city went in at one house's door and stuck against its inside wall (tools/paths/trips.mjs, spire4195).
+import { trailLines } from '../core/phobos-trails.js';
+import { houseDoor, phobosHouses } from '../core/phobos-build.js';
+export const OFF_TRAIL = 1.8, AVOIDED = 8, TRAIL_NEAR = 2.2, H_WEIGHT = 1, INDOORS = 4, HOME_NEAR = 15;
+// (onTrail's bits: on a trail, and inside a house.)
+const TRAIL = 1, INSIDE = 2;
 export const CELL = 0.5, X0 = 9000, Z0 = -860, X1 = 11720, Z1 = 860, TILE = 4;
 // (RISE: the land's own slope never stops the sim's feet, steep as it is: only a deck more than a step over them, or a box
 // they'd walk into. So a cell's climb is let up to RISE, dear past STEEP; a drop of more than DROP isn't taken.)
@@ -87,6 +101,32 @@ export class EastNav {
     { const q = []; for (const n of this.nodesNear(EAST_DOOR[0], EAST_DOOR[1], null, 8)) { this.live[n] = 1; q.push(n); }
       for (let h = 0; h < q.length; h++) { const n = q[h]; for (let e = this.eStart[n]; e < this.eStart[n + 1]; e++) { const m = this.eTo[e]; if (!this.live[m]) { this.live[m] = 1; q.push(m); } } } }
     this.tmp = [0, 0, 0];
+    // (On a trail: each node within TRAIL_NEAR of one, about level with it. A trail's points carry their height; a node a
+    // storey over or under the line, a bridge over a street, isn't on it.)
+    this.onTrail = new Uint8Array(nodes);
+    this.offTrail = OFF_TRAIL; this.hWeight = H_WEIGHT; this.indoors = INDOORS; this.homes = [];
+    this.setTrails(trailLines());
+    // (Inside a house: within its walls, from its floor up a few storeys; not a street under a house built across it.)
+    for (const h of phobosHouses()) {
+      const c = Math.cos(h.yaw), s = Math.sin(h.yaw), fy = houseDoor(h).fy;
+      for (const q of this.nodesNear(h.x, h.z, null, Math.hypot(h.hx, h.hz))) {
+        const dx = this.x[q] - h.x, dz = this.z[q] - h.z, u = dx * c - dz * s, v = dx * s + dz * c;
+        if (Math.abs(u) < h.hx - 0.3 && Math.abs(v) < h.hz - 0.3 && this.y[q] > fy - 0.8 && this.y[q] < fy + 14) this.onTrail[q] |= INSIDE;
+      }
+    }
+  }
+
+  // The trails ([[x, z, y], ...] each): which nodes are on one.
+  setTrails(lines) {
+    for (let q = 0; q < this.onTrail.length; q++) this.onTrail[q] &= ~TRAIL;
+    for (const L of lines || []) for (let i = 0; i + 1 < L.length; i++) {
+      const a = L[i], b = L[i + 1], d = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.max(1, Math.ceil(d / 1.5));
+      for (let k = 0; k <= n; k++) {
+        const x = a[0] + (b[0] - a[0]) * k / n, z = a[1] + (b[1] - a[1]) * k / n, y = a[2] === null || b[2] === null ? null : a[2] + (b[2] - a[2]) * k / n;
+        for (const q of this.nodesNear(x, z, y, TRAIL_NEAR, 2)) this.onTrail[q] |= TRAIL;
+      }
+    }
+    this.trailCount = this.onTrail.reduce((s, v) => s + (v & TRAIL), 0);
   }
 
   // ---- the sim's rules, at a half-metre cell's middle (kept: the ground never changes; the doors are all open to it)
@@ -137,12 +177,14 @@ export class EastNav {
   }
 
   // ---- the long way: A* over the nodes, from any of `from` (node -> cost so far) to any of `goal` (a Set), or null.
-  coarse(from, goal, tx, tz, budget = 3000000) {   // (a walk across the whole east is a million pops and more)
+  // (Each step's cost: its length, OFF_TRAIL dearer off the trails, AVOIDED dearer into ground kept clear of, avoid: a Set of
+  // nodes, or null.)
+  coarse(from, goal, tx, tz, budget = 3000000, avoid = null) {   // (a walk across the whole east is a million pops and more)
     if (++this.stamp > 4e9) { this.stamp = 1; this.seen.fill(0); this.shut.fill(0); }
     const S = this.stamp, heap = [];
     const push = (n, f) => { heap.push([f, n]); let i = heap.length - 1; while (i > 0) { const p = (i - 1) >> 1; if (heap[p][0] <= f) break; [heap[i], heap[p]] = [heap[p], heap[i]]; i = p; } };
     const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let i = 0; for (;;) { let c = 2 * i + 1; if (c >= heap.length) break; if (c + 1 < heap.length && heap[c + 1][0] < heap[c][0]) c++; if (heap[c][0] >= heap[i][0]) break; [heap[i], heap[c]] = [heap[c], heap[i]]; i = c; } } return top[1]; };
-    const h = (n) => Math.hypot(this.x[n] - tx, this.z[n] - tz);
+    const hw = this.hWeight, off = this.offTrail, homes = this.homes, h = (n) => hw * Math.hypot(this.x[n] - tx, this.z[n] - tz);
     for (const [n, c] of from) { this.seen[n] = S; this.g[n] = c; this.par[n] = -1; push(n, c + h(n)); }
     while (heap.length && budget-- > 0) {
       const n = pop();
@@ -152,7 +194,8 @@ export class EastNav {
       for (let e = this.eStart[n]; e < this.eStart[n + 1]; e++) {
         const m = this.eTo[e];
         if (this.shut[m] === S) continue;
-        const ng = this.g[n] + this.eLen[e] * 0.1;
+        const tm = this.onTrail[m], inside = tm & INSIDE && !homes.some(([hx, hz]) => (this.x[m] - hx) ** 2 + (this.z[m] - hz) ** 2 < HOME_NEAR * HOME_NEAR);
+        const ng = this.g[n] + this.eLen[e] * 0.1 * (this.onTrail[n] & tm & TRAIL ? 1 : off) * (inside ? this.indoors : 1) * (avoid && avoid.has(m) ? AVOIDED : 1);
         if (this.seen[m] === S && ng >= this.g[m]) continue;
         this.seen[m] = S; this.g[m] = ng; this.par[m] = n;
         push(m, ng + h(m));
@@ -265,9 +308,18 @@ export class EastNav {
   // From (x, y, z) to (tx, tz) (at about ty, if it's given; within r): the way, as [[x, z, close, door, y], ...]: walked out
   // to about AHEAD metres on, then the long way's nodes on from there (close = 2: not walked out yet: ask again on the way).
   // Null: there's no way there.
-  route(from, to, r = 1) {
+  // o.avoid: circles [x, z, r] it's to keep out of where it can (not one it's in, or that the place it's going is in).
+  route(from, to, r = 1, o = {}) {
     const [fx, fy, fz] = from, [tx, tz] = to, ty = to[2] ?? null;
+    let avoid = null;
+    for (const [ax, az, ar] of o.avoid || []) {
+      if (Math.hypot(fx - ax, fz - az) < ar || Math.hypot(tx - ax, tz - az) < ar + r || ar > 80) continue;
+      avoid ||= new Set();
+      for (const q of this.nodesNear(ax, az, null, ar)) avoid.add(q);
+    }
     this.spent = 0;
+    // (Its own house, or the one it's going to: gone into as it must be. INDOORS.)
+    this.homes = [[fx, fz], [tx, tz]];
     const left = (cap = FINE_BUDGET) => Math.max(0, Math.min(cap, ROUTE_BUDGET - this.spent));
     // (Near: one walk out, all the way.)
     if (Math.hypot(tx - fx, tz - fz) < 26 && (ty === null || Math.abs(ty - fy) < 8)) {
@@ -285,7 +337,7 @@ export class EastNav {
     const s0 = start ? near[start.mark] : near[0];
     const ends = this.nodesNear(tx, tz, ty, Math.max(4, Math.min(r + 2, 30)), ty === null ? 1e9 : 3).filter((n) => this.live[n]);
     if (!ends.length) return null;
-    const path = this.coarse([[s0, 0]], new Set(ends.slice(0, 64)), tx, tz);
+    const path = this.coarse([[s0, 0]], new Set(ends.slice(0, 64)), tx, tz, undefined, avoid);
     if (!path) return null;
     // Walked out: from where it stands through the nodes, a stretch at a time, as far as AHEAD.
     const out = [[fx, fz, 0, -1, fy]];

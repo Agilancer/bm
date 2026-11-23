@@ -242,6 +242,15 @@ export function onFloor(K, x, z, y, fn) {
   if (Math.abs(dy) < 0.01) return;
   for (const [l, q] of K.parts) { const a = q.pos.a || q.pos; for (let i = (before.get(l) || 0) + 1; i < q.pos.length; i += 3) a[i] += dy; }
 }
+// What a near cell's things put in a body's way (a crate in an alley, a cart at the kerb, a stall in the market) kept
+// aside in K.props, when there is one, and taken out of K.colliders: the near cells are drawn only round the eye, so
+// nothing they build stops a body (that's the far build's), but these are baked for the whole city by
+// tools/paths/props.mjs into src/core/phobos-props-data.js, which buildSites() stands in the way. (The owner,
+// 2026-11-21: auto-play walked through what fills the alleys.)
+export function keepProps(K, n0) {
+  if (K.props) for (let i = n0; i < K.colliders.length; i++) K.props.push(K.colliders[i]);
+  K.colliders.length = n0;
+}
 // The same house from near: a shell you walk into. Outside: its walls with the doorway cut, windows (most of them lit),
 // a lamp by the door of one in three, its roof with a chimney and now and then a dormer. Inside: plastered walls, a board
 // floor, a ceiling, and a little of somebody's life. A ruin has no roof or ceiling, and rubble for furniture.
@@ -278,7 +287,7 @@ function shopSign(K, h, P, fy, fz, i, at = null) {
 // The back of a house, on its yard or the alley behind: a back door with a step (a lamp over some), and along the wall what
 // a household leaves out: a rain butt under the eaves with its puddle, firewood stacked to dry, crates and sacks, a
 // heap of refuse, a bucket, now and then a handcart. (The owner, 2026-11-19: "there should be more than just walls in
-// alley ways. This is a city full of people.") Nothing here stops you; no ladders (their rungs are bars across).
+// alley ways. This is a city full of people.") What stands up is in the way (keepProps); no ladders (their rungs are bars across).
 function backyard(K, h, P, fy, r) {
   const f = h.front, bz = -f * (h.hz + 0.5), N = [-f * Math.sin(h.yaw), -f * Math.cos(h.yaw)], n0 = K.colliders.length;
   const at = (lx, lz = bz) => { const q = P(lx, 0, lz); return [q[0], q[2]]; };
@@ -302,7 +311,7 @@ function backyard(K, h, P, fy, r) {
     else if (v < 0.73 && h.hx > 3) { const [cx, cz] = at(x, -f * (h.hz + 1.4)); K.cart(cx, cz, h.yaw + Math.PI / 2 + (r(98 + k) - 0.5) * 0.6); x += 1.2; }
     else if (v < 0.86) { K.sack(px, pz); if (r(99 + k) < 0.6) { const [qx, qz] = at(x + 0.55); K.sack(qx, qz, 0.3); } }
   }
-  K.colliders.length = n0;
+  keepProps(K, n0);
 }
 function houseNear(K, h) {
   const F = footing(h), { lo, hi, c, s } = F, f = h.front, top = hi + eavesOf(h), fy = hi + 0.1, ceil = Math.min(top - 0.3, fy + 3.1);
@@ -451,6 +460,7 @@ function houseNear(K, h) {
     if (!h.shop) { const py = jy - 0.05; K.quad(h.roof, P(-h.hx, py + 0.5, fz + f * 0.02), P(h.hx, py + 0.5, fz + f * 0.02), P(h.hx, py - 0.15, fz + f * 0.85), P(-h.hx, py - 0.15, fz + f * 0.85), [f * s * 0.6, 0.8, f * c * 0.6]); }
   }
   // A lean-to against the back of one house in five off the named streets: a woodstore, a pen, somewhere out of the rain.
+  const nProps = K.colliders.length;
   if (!h.spine && !ruin && h.hx > 2.6 && r(34) < 0.2) { const [lx, , lz] = P((r(35) - 0.5) * (h.hx - 1.2), 0, -f * (h.hz + 0.65)); K.leanTo(lx, lz, h.yaw + (f > 0 ? Math.PI : 0), 0.9 + 0.4 * r(36), 0.65, 2.3, h.roof || 'roof_4', 'dark:wood'); }
   if (h.mark?.kind !== 'shell' && r(8) < (h.shop ? 0.9 : 0.5)) { const q = P(DOOR + 0.5, fy + 2.5, fz); K.wallLamp(...q, [f * s, f * c]); if (r(8) < 0.3) (K.lamps ||= []).push({ p: [q[0] + f * s * 0.5, q[1] - 0.4, q[2] + f * c * 0.5], c: [1, 0.62, 0.3], r: 18, i: 11, flicker: 0.4 }); }
   // A shop's front, on the named streets: an awning over the door, a board hung out on an iron bracket, goods by the step.
@@ -464,6 +474,7 @@ function houseNear(K, h) {
     if (sign && h.mark?.kind !== 'tavern') shopSign(K, h, P, fy, fz, Math.floor(r(24) * SIGNS), aw ? -(aw + 0.45) : null);   // (a tavern has a bigger board of its own: phobos-houses.js)
     if (r(24) < 0.45) { const g = P(DOOR + 1.6, 0, fz + f * 0.8); K.goods(g[0], g[2], 4, 0.7); }
   }
+  keepProps(K, nProps);
   if (!ruin) backyard(K, h, P, fy, r);
   // What's its own: its style's and its district's dress (src/core/phobos-houses.js).
   if (!ruin) { const nd = K.colliders.length; dressHouse(K, h, { P, F, fy, top, f, storeys, wins, R: roofOf(h), flag, BANNER, lamp: (p, rr, i) => (K.lamps ||= []).push({ p, c: [1, 0.62, 0.3], r: rr, i, flicker: 0.35 }) }); K.colliders.length = nd; }
@@ -473,7 +484,7 @@ function houseNear(K, h) {
   // washing's over the sills and the galleries now: src/core/phobos-houses.js.)
   if (r(19) < 0.14) { const q = P(-DOOR - 1.1, 0, fz + f * 0.5); K.barrel(q[0], q[2]); }
   else if (r(19) < 0.2) { const q = P(h.hx - 1.2, 0, fz + f * 0.45); K.woodpile(q[0], q[2], h.yaw, 0.9, 0.8, 0.3); }
-  K.colliders.length = n1;
+  keepProps(K, n1);
   // The hearth: on the side wall across from the stair, in the house's back half, as a town house had its stack on a party
   // wall behind the hall (Pantin's and Quiney's plans); a chimney breast up through every floor to the stack over it, a
   // black firebox in it, a mantel beam, logs and a fire if anyone's home; and upstairs another in the same breast, on the
@@ -1510,8 +1521,32 @@ function sloughNear(K, cell) {
     }
   });
 }
+// Is (x, z), r round, in a house's doorway, in or out: its width, and a little over a metre before and behind it? A barrel,
+// a crate, a cart or a stall isn't set down there (K.clear, src/core/places.js): one house's back-yard crates or a street's
+// barrels stood square before the next one's door, and once they were solid (keepProps) the house was a trap, got into
+// and never out (tools/paths/map.mjs). Every house's, the whole city's, since one cell's things stand at another's doors.
+let DOORWAYS = null;
+export function inDoorway(x, z, r) {
+  if (!DOORWAYS) {
+    DOORWAYS = new Map();
+    for (const h of phobosHouses()) {
+      if (h.door === undefined) continue;
+      const lz = h.front * (h.hz - WALL - 0.05), c = Math.cos(h.yaw), s = Math.sin(h.yaw), d = { x: h.x + lz * s, z: h.z + lz * c, c, s };
+      const k = Math.floor(d.x / 8) * 10000 + Math.floor(d.z / 8);
+      if (!DOORWAYS.has(k)) DOORWAYS.set(k, []);
+      DOORWAYS.get(k).push(d);
+    }
+  }
+  const i0 = Math.floor(x / 8), j0 = Math.floor(z / 8);
+  for (let i = i0 - 1; i <= i0 + 1; i++) for (let j = j0 - 1; j <= j0 + 1; j++) for (const d of DOORWAYS.get(i * 10000 + j) || []) {
+    const dx = x - d.x, dz = z - d.z, u = dx * d.c - dz * d.s, v = dx * d.s + dz * d.c;
+    if (Math.abs(u) < DOOR + r - 0.15 && Math.abs(v) < 1.3 + r) return true;
+  }
+  return false;
+}
 export function phobosCell(K, cell) {
   const n0 = K.colliders.length;
+  K.clear = inDoorway;
   for (const l of phobosLamps()) if (l.cell === cell) {
     const hh = l.iron ? 4.2 : 2.8, out = l.iron ? 0.62 : 0.45;
     if (l.iron) streetLamp(K, l.x, l.z, hh, l.yaw); else K.lantern(l.x, l.z, hh, l.yaw, 'dark:wood');
@@ -1519,7 +1554,7 @@ export function phobosCell(K, cell) {
   }
   for (const h of byCell().get(cell) || []) if (!h.spire) houseNear(K, h);
   // (What stands along its streets, and the toll-houses on the Slough's footbridges: src/core/phobos-houses.js.)
-  streetLife(K, cell, { streets: STREETS, cellOf, districtAt, cityIn, sloughD, segD, BANNER, inSquare: (x, z) => inSealSquare(x, z, 2) || inHub(x, z, 2) || SEWER_MOUTHS.some((m) => Math.hypot(x - m.x, z - m.z) < MOUTH_SQUARE + 12) });
+  streetLife(K, cell, { keep: keepProps, streets: STREETS, cellOf, districtAt, cityIn, sloughD, segD, BANNER, inSquare: (x, z) => inSealSquare(x, z, 2) || inHub(x, z, 2) || SEWER_MOUTHS.some((m) => Math.hypot(x - m.x, z - m.z) < MOUTH_SQUARE + 12) });
   for (const b of footbridges()) if (cellOf(b.x, b.z) === cell) bridgeHouse(K, b, false);
   // (Its towers and spires, gone into: their rooms, stairs and things.)
   for (const t of cityTowers()) if (t.cell === cell) towerNear(K, t);

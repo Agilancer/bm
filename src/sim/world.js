@@ -7,6 +7,7 @@ import { LAND_EDGE, openingTerrain, terrainHeight } from '../core/terrain.js';
 import { caveFloor, caveKeep } from '../core/opening.js';
 import { CHURCH_BOUNDS, churchSite } from '../core/church.js';
 import { FLOOR_RECT, buildSites } from '../core/sites.js';
+import { phobosProps } from '../core/phobos-props.js';
 import { CaveNav, caveFloorY, caveKeep as warrenKeep, caveRay, caveRoom, delveOf, inDungeon, isVoid, voidGround } from '../core/dungeon.js';
 import { HallNav, hallFloorY, hallKeep, hallRay, hallRoom, inHall } from '../core/testhall.js';
 
@@ -83,6 +84,10 @@ export class World {
       this.addSiteBox(o);
       if (o.phDoor !== undefined) this.phDoors.set(o.phDoor, o);
     }
+    // What fills City State Phobos's alleys and lines its streets, the crates, barrels, woodpiles, carts and stalls: drawn only
+    // round the eye (src/core/phobos-build.js keepProps), stood up here for the whole city from what tools/paths/props.mjs
+    // baked, so a body (yours, auto-play's, the walking map's) goes round them and not through.
+    for (const c of phobosProps()) this.addSiteBox(c);
     this.lightsData = data.lights;
     this.grid = new Uint8Array(NAV_W * NAV_H);
     this.slots = new Map();
