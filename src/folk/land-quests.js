@@ -23,7 +23,6 @@ export const LAND_RULES = {
   ask_the_burner: { steps: [{ talk: 'colm', say: 'Sergeant Hasket says you have sacks nobody came for.', end: true }], gold: 20, xp: 200 },
   girl_from_khel: { steps: [{ talk: 'ysolt', say: 'Colm Burrage says you kept the weighing table at Khel.', end: true }], gold: 20, xp: 200 },
   // ---- the land's own troubles, given in Bellmourn ----
-  sunken_mile: { needs: 'sallowmere', steps: [{ enter: 'causeway' }, { kill: 'lair:mile_drowned', n: 5 }, { back: true, say: 'The Sunken Mile can be walked.' }], gold: 120, xp: 800 },
   moor_wayhouse: { needs: 'barrow_lights', steps: [{ enter: 'wayhouse' }, { kill: 'lair:wayhouse_dead', n: 4 }, { back: true, say: "The wayhouse is empty. It's a better empty." }], gold: 150, xp: 900 },
   ossery_quarry: { steps: [{ enter: 'quarry' }, { kill: 'lair:quarry_kobolds', n: 5, foe: ['Kobolds'] }, { back: true, say: "The quarry's empty. I read the marks." }], gold: 150, xp: 1000 },
   // ---- Thornwick ----
@@ -53,9 +52,7 @@ export const LAND_RULES = {
   lords_of_the_keep: { needs: 'first_lord', steps: [{ boss: 'sorvane' }, { boss: 'brothers' }, { back: true, say: 'Sorvane is dead, and the Brothers.' }], gold: 350, xp: 3000, item: 'robe' },
   the_castellan: { needs: 'lords_of_the_keep', steps: [{ boss: 'castellan' }, { back: true, say: 'The Castellan of Blackvigil is dead.' }], gold: 600, xp: 5000, item: 'skull', rarity: 4 },
   // ---- the four delves made after those: two quests each, the first to its door and its first boss, the second to its last ----
-  // The Drowned Vaults, under the Sunken Mile (Sabine's, after she's had the Mile cleared).
-  under_the_mile: { needs: 'sunken_mile', steps: [{ enter: 'vaults' }, { boss: 'bloat' }, { back: true, say: 'What wallowed under the Mile is dead.' }], gold: 220, xp: 1700, item: 'robe' },
-  what_sank_the_mile: { needs: 'under_the_mile', steps: [{ boss: 'sallow' }, { boss: 'leviathan' }, { back: true, say: 'The thing that sank the causeway is dead.' }], gold: 380, xp: 3200, item: 'staff' },
+  // (The Drowned Vaults' two, under the Sunken Mile, are Tamar Dyke's at Mile-End Camp now: src/folk/regions/fen.js.)
   // The Sporehold, under the Fungal Ring (Orrin's, after the quarry).
   the_ring_below: { needs: 'ossery_quarry', steps: [{ enter: 'fungus' }, { enter: 'sporehold' }, { boss: 'mouldfang' }, { back: true, say: 'I went down under the ring. The wolf is dead.' }], gold: 260, xp: 2200, item: 'scroll' },
   what_it_fruits_from: { needs: 'the_ring_below', steps: [{ boss: 'morel' }, { boss: 'heart' }, { back: true, say: 'The thing the ring fruits from is dead.' }], gold: 420, xp: 3800, item: 'staff' },

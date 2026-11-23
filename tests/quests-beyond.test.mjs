@@ -32,6 +32,7 @@ function inside(k) {
   if (k === 'catacombs') return null;
   if (k === 'waste') return [-4200, 0, -900];
   if (k === 'millhaven') return [SITES.farm.x - 60, 0, SITES.farm.z - 50];   // (the pond by the farm, where its jellies are: src/sim/slimes.js)
+  if (k === 'fen') return [SITES.sallow.x + 70, 0, SITES.sallow.z + 80];   // (Sallowmere's east shore, where its jellies are: src/sim/slimes.js)
   const at = placeSpot(k);
   return at ? [at.x, 0, at.z] : null;
 }

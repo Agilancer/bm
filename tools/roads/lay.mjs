@@ -413,10 +413,13 @@ log(`${foot} footpaths to outposts and finds`);
       const t = k.startsWith('lair:') ? LAIRS.find((l) => l.key === k.slice(5)) : OUTPOSTS.find((o) => o.key === k.slice(8));
       const key = `${g.where}>${k}`;
       if (!t || seen.has(key) || Math.hypot(t.x - from[0], t.z - from[1]) > 720) continue;
+      // (A den whose own trail sets out from this hub has its way already: tools/wilds/place.mjs.)
+      if (t.trail && Math.hypot(t.trail[0][0] - g.x, t.trail[0][1] - g.z) < 60) { seen.add(key); continue; }
       seen.add(key);
       const open = new Set();
       disc(t.x, t.z, (t.r || 6) + 18, (c) => open.add(c));
-      const a = freeNear(t.x, t.z, (t.r || 6) + 6, (t.r || 6) + 30, open), b = freeNear(from[0], from[1], 0, 24, null);
+      const a = freeNear(t.x, t.z, (t.r || 6) + 26, (t.r || 6) + 50, open)   // (short of its ground: a path's bed banked up to a den's edge on a slope stood a man's height off the land)
+        , b = freeNear(from[0], from[1], 0, 24, null);
       if (a < 0 || b < 0) continue;
       const sq = walk(a, b, open, 200000);
       if (!sq) continue;

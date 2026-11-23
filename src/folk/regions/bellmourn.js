@@ -21,13 +21,13 @@ export const PEOPLE = [
   { id: 'tully', name: 'Tully Rush', title: "Maren's cousin, at Withy Landing", body: 'c_dude_2', sex: 'm', age: 24, ...by('withy'), idles: ['idle', 'scratch', 'look_around'] },
   { id: 'dickon', name: 'Dickon', title: "Nan Dray's herd-lad, at the Forkstone", body: 'c_wes_2', sex: 'm', age: 16, ...by('forkstone'), idles: ['look_around', 'idle', 'wait'] },
   { id: 'hild', name: 'Hild Ames', title: "Palmer, at Palmers' Rest", body: 'c_young_5_1', sex: 'f', age: 17, ...by('palmers'), idles: ['idle', 'look_around', 'wait'] },
-  // placeholders: moved to their own region's file when it's made (the five the ring's errands on are said to: each stands
-  // at their camp so the errand can be walked and paid; their region's maker gives them their work and the rest of their words)
+  // placeholders: moved to their own region's file when it's made (four the ring's errands on are said to: each stands
+  // at their camp so the errand can be walked and paid; their region's maker gives them their work and the rest of their words).
+  // (Odo Marsh, whom Maren's errand is said to, is the Weeping Fen's now: src/folk/regions/fen.js.)
   { id: 'amos', name: 'Amos Tye', title: "Drover, at Drovers' Stance", body: 'c_dude_1', sex: 'm', age: 38, ...at('trackside'), idles: ['fold_arms', 'idle'] },
   { id: 'berin', name: 'Berin Stoat', title: 'Packman, at Fellfoot', body: 'c_wes_1', sex: 'm', age: 44, ...at('fellfoot'), idles: ['look_around', 'idle'] },
   { id: 'dag', name: 'Dag Colley', title: 'Carter, at Ashgate Halt', body: 'c_smith_1', sex: 'm', age: 50, ...at('ashgate'), idles: ['fold_arms', 'idle'] },
   { id: 'fenn', name: 'Fenn Hollis', title: 'Trapper, at Mossgate Hide', body: 'c_worker_1', sex: 'm', age: 35, ...at('mossgate'), idles: ['look_around', 'idle'] },
-  { id: 'odo', name: 'Odo Marsh', title: 'Eel-catcher, at Sedgebank', body: 'c_elder_1', sex: 'm', age: 66, ...at('sedgebank'), idles: ['scratch', 'idle'] },
 ];
 
 export const RULES = {

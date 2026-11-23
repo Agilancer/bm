@@ -56,7 +56,7 @@ test("Lisandra's quest ticks off each giver as you take their work, counting any
   assert.equal(Q.mark('lisandra', {}, 0), 'busy');
   assert.match(Q.journalLine('lisandra_work'), /\(1 of 11\).*Still to see: Silas/);
   const first = { silas: 'dead_cant_wait', homunculus: 'iron_from_dead', tamsin: 'shroud_and_thread', corran: 'pines', orrin: 'toll_of_bell',
-    cedric: 'letter', hob: 'carter_is_late', sabine: 'sallowmere', aldric: 'black_road', jory: 'barrow_lights' };
+    cedric: 'letter', hob: 'carter_is_late', sabine: 'willow_bark', aldric: 'black_road', jory: 'barrow_lights' };
   for (const id of Object.values(first)) Q.begin(id);
   assert.equal(Q.step('lisandra_work').back, true);
   assert.equal(Q.mark('lisandra', {}, 0), 'ready');

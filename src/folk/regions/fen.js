@@ -45,14 +45,14 @@ export const RULES = {
   // ---- Mile-End Camp, where the Sunken Mile leaves the Fen Way, levels 8 to 11 (Tamar Dyke; Corby Lunn): the crane's
   // weights from round Leechwater Camp, the drowned on the Mile (four of the five: the fifth is still asking the toll),
   // Leechwater itself, the Sunk Plot, and the Drowned Vaults, whose door is by the broken arch. Then a word north to the
-  // ferry (through the huts on the south shore) and a word east to Eelpot ----
+  // ferry (through the huts on the south shore; the chapman on the jetty first, then her) and a word east to Eelpot ----
   counterweight: { steps: [{ gather: 'outpost:den_leechwater', n: 5, what: 'crane weights', spots: [[36, 21], [42, -24], [-14, -39], [5, 14], [13, -7]] }, { back: true, say: 'Five weights. One has been sat on a good while.' }], gold: 18, xp: 180 },
   sunken_mile: { steps: [{ enter: 'causeway' }, { kill: 'lair:mile_drowned', n: 4 }, { back: true, say: 'Four are down on the Mile. The fifth has his hand out.' }], gold: 20, xp: 200 },
   thrown_back: { steps: [{ clear: 'den_leechwater' }, { back: true, say: 'Leechwater is empty. Your lead is in their pool.' }], gold: 36, xp: 360 },
   the_sunk_plot: { steps: [{ clear: 'den_sunkplot' }, { back: true, say: 'The Sunk Plot is lying down. All of it.' }], gold: 40, xp: 400 },
   under_the_mile: { needs: 'sunken_mile', steps: [{ enter: 'vaults' }, { boss: 'bloat' }, { back: true, say: 'What wallowed under the Mile is dead.' }], gold: 220, xp: 1700, item: 'robe' },
   what_sank_the_mile: { needs: 'under_the_mile', steps: [{ boss: 'sallow' }, { boss: 'leviathan' }, { back: true, say: 'The thing that sank the causeway is dead.' }], gold: 380, xp: 2800, item: 'staff' },
-  the_crossing: { needs: 'the_sunk_plot', steps: [{ kill: 'lair:sallow_drowned', n: 4 }, { talk: 'grizel', say: "Tamar Dyke says the Mile's not coming up. The crossing is yours.", end: true }], gold: 4, xp: 35 },
+  the_crossing: { needs: 'the_sunk_plot', steps: [{ kill: 'lair:sallow_drowned', n: 4 }, { talk: 'davy', say: "I've word for the ferrywoman, from Mile-End." }, { talk: 'grizel', say: "Tamar Dyke says the Mile's not coming up. The crossing is yours.", end: true }], gold: 4, xp: 35 },
   his_fathers_punt: { needs: 'the_sunk_plot', steps: [{ talk: 'pike', say: "Tamar Dyke has lifted a punt with your father's mark on it.", end: true }], gold: 4, xp: 35 },
 
   // ---- Sallowmere, the east shore, levels 10 to 12 (Grizel Wade; Davy Scrip): the jellies on her landing, the lights that

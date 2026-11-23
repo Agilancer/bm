@@ -699,37 +699,6 @@ export const QUESTS = {
 
   // ---- the land's own troubles, given in Bellmourn ----
 
-  sunken_mile: {
-    title: 'The Sunken Mile',
-    giver: 'sabine',
-    needs: 'sallowmere',
-    offer: [
-      "There's a causeway in the fen, north-west of the Fen Way, before you reach the mere. A mile of old stone with the water over it to the ankle. The Sunken Mile. It's the only dry way to the west pools.",
-      "I tried it for marsh-mallow. There are people standing on it. In the water. Not jelly. People, and they turned round, all together. Clear it. I'll not ask how.",
-    ],
-    accept: "I'll clear the causeway.",
-    acceptLine: "Take the Fen Way north till the ground goes soft, then bear left of it. Stones under the water, in a line. If they call to you, they'll be very polite about it. Don't answer.",
-    decline: 'Not the fen again.',
-    declineLine: "No. I wouldn't either. I'll do without mallow.",
-    journal: [
-      "Sabine Moss can't cross the Sunken Mile, an old causeway in the fen north of Bellmourn, west of the Fen Way. Go there.",
-      "Put down five of the drowned who stand on the Sunken Mile.",
-      "Go back to Sabine Moss at the herbalist's.",
-    ],
-    progress: [
-      "The causeway. West of the Fen Way, short of the mere. Five of them, I counted, before I ran.",
-    ],
-    done: [
-      "All five. You're wet to the thigh and you're shaking. Sit. Drink this. It's only nettle, but it's hot.",
-      "Somebody's family, those were. I'll burn something for them. And this is for you. Mallow root's worth more than I can pay, so that's most of what I have.",
-    ],
-    after: [
-      "I walked the Mile yesterday. Nobody on it. I kept turning round anyway.",
-    ],
-    others: {
-      bryony: ["Mam says there were people in the water. Were their eyes open? Don't tell Mam I asked."],
-    },
-  },
 
   moor_wayhouse: {
     title: 'The Wayhouse on the Moor',
@@ -1489,72 +1458,7 @@ export const QUESTS = {
   },
 
   // ---- the Drowned Vaults, under the Sunken Mile ----
-  under_the_mile: {
-    title: 'Under the Mile',
-    giver: 'sabine',
-    needs: 'sunken_mile',
-    hint: DELVE_HINT,
-    offer: [
-      "I went back to the Mile for my mallow. The water by the broken arch is going down. Not drying. Going down, into a stair. There was always a stair. The old toll kept its strongroom under the causeway.",
-      "Something's wallowing at the foot of it. I heard it breathe, and then I heard it stop, the way you stop when you've noticed somebody. I'd like it dead before it comes up for air. Would you look?",
-    ],
-    accept: "I'll go down the stair.",
-    acceptLine: "By the broken arch, where the slabs tip. It's a doorway now, with a light in it. It won't take one alone, they say: bring a company. And if it swells up, get something between you and it.",
-    decline: 'Not under the fen.',
-    declineLine: "No. I only went as far as the first step, and I've washed three times since.",
-    journal: [
-      "A stair has opened by the Sunken Mile, in the fen north of Bellmourn: the old toll's vaults, drowned. Go down, with a company.",
-      "Kill the Bloat, which wallows in the Drowned Vaults.",
-      "Go back to Sabine Moss at the herbalist's.",
-    ],
-    progress: [
-      "The stair by the broken arch. Something big, in a pool, breathing. That's all I know, and it's more than I wanted.",
-    ],
-    done: [
-      "It burst? No, don't tell me. Tell me it's dead and tell me nothing else. ...Good. Sit. You smell of the fen and of something I haven't a name for.",
-      "This was my mother's. It's kept the damp off two of us. You'll need it more than my hook does, where you keep going.",
-    ],
-    after: [
-      "The mallow's coming back along the Mile. It likes what's under it gone. So do I.",
-    ],
-    others: {
-      bryony: ["Mam says there's a stair under the water now. Does it go all the way down? How do you know when it's all the way?"],
-    },
-  },
 
-  what_sank_the_mile: {
-    title: 'What Sank the Mile',
-    giver: 'sabine',
-    needs: 'under_the_mile',
-    hint: DELVE_HINT,
-    offer: [
-      "I asked Orrin why a causeway sinks. He said they don't, not stone on a hard bottom, not unless something takes the bottom away. He looked quite pleased. Then he looked at me and stopped.",
-      "So it's still there. Whatever dug the fen out from under a mile of stone is at the bottom of those vaults, where the water all goes. And there's a woman's voice down there calling the water in. End both.",
-    ],
-    accept: "I'll go to the bottom.",
-    acceptLine: "Past where the big one was, and round, and down. When the water comes up, find the high ground. When the mud moves, don't stand still. That's fen sense. It's all I've got to give you.",
-    decline: 'Not yet.',
-    declineLine: "No. Nor would I. But the Mile's sinking a hand a year, and I've counted my hands.",
-    journal: [
-      "Below the Bloat's wallow a voice is calling the fen in. Kill Mother Sallow, the Tidecaller, in the Drowned Vaults.",
-      "At the bottom of the Vaults is what sank the causeway. Kill the Leviathan of the Mile.",
-      "Go back to Sabine Moss at the herbalist's.",
-    ],
-    progress: [
-      "The bottom. Where the water goes. The voice first, I think; then the thing itself.",
-      "High ground when it floods. Keep moving when the mud does.",
-    ],
-    done: [
-      "A worm. The length of the square, and it ate the bottom out of a causeway. And you went down a hole after it. I'm going to make you something hot and you're going to drink all of it.",
-      "Here. It came up in the reeds the spring the Mile first cracked, and I never knew what to do with a staff. You do.",
-    ],
-    after: [
-      "I stood on the Mile and stamped. It stamped back, like ground. First time in my life.",
-    ],
-    others: {
-      orrin: ["A burrowing thing, under the Mile. I said 'something took the bottom away' to be clever. I should like, in future, to be wrong when I'm clever."],
-    },
-  },
 
   // ---- the Sporehold, under the Fungal Ring ----
   the_ring_below: {

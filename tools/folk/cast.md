@@ -351,8 +351,8 @@ gift: a bell the size of a thumb; ring it in the air and the air holds you one s
 9. to 11. (**The Long Way Round**, **Jelly in the Millpond** and **The Four Watches** were given from Bellmourn and the Bell
     Tower and sent you kilometres and back. They're the Green Downs' now, below: the millpond is Abel's own to ask about,
     why the dead walk wide of the knoll is asked on Abel's errand up it, and the Wingbell is paid for **What Answers**.)
-12. **What the Fen Keeps** (Sabine). Clear 10 jellies from the fen so she can reach the bog myrtle for the winter fevers. Paid in coin
-    (robes are Tamsin's trade, not hers).
+12. (**What the Fen Keeps** was Sabine's, 3.4 km out and back. It's the Weeping Fen's now, below: the east shore is the
+    ferry's landing, and Grizel Wade's to ask about. Sabine's work is **Willow Bark**, up the Fen Way to Maren Rush.)
 13. **The Black Road** (Aldric). Go and look at what's at the end of the west road. Only look. (Blackvigil.)
 14. **The Crown of Teeth** (Orrin, after the Toll). Climb the Sorrowhorn and tell him what's at the top. Reward: a scroll and a true page.
 15. **Lights on the Barrow Moor** (Jory). Go at night; put down 6 of whatever carries the lights. (Jellies full of bones.)
@@ -429,7 +429,8 @@ Out of Bellmourn:
 18. **Owed to Frostwatch** (Bram, after the Bed). The one mark on his slate that's the wrong way round: pay Hew Garrick.
 19. and 20. (**The Millhaven Man** and **Stones on the Cairnfield** are the Green Downs' now, below: Abel asks after Hale
     himself, and Cuddy Stone, who keeps the cairns, wants them let alone.)
-21. **The Sunken Mile** (Sabine, after the Fen). Five of the drowned stand on the causeway.
+21. (**The Sunken Mile**, and the Drowned Vaults' two after it, **Under the Mile** and **What Sank the Mile**, were
+    Sabine's. They're Tamar Dyke's now, the salvager at Mile-End Camp beside the causeway: the Weeping Fen, below.)
 22. **The Wayhouse on the Moor** (Jory, after the Lights). A lamp in a window that's been shut since he was a lad.
 Also out of Bellmourn: **The Masons' Marks** (Orrin): kobolds tunnelling behind the face of Ossery Quarry, where each of
 the abbey's masons cut his mark.
@@ -515,9 +516,9 @@ built at the camps**: Tobin's mare is in the lean-to and is only heard; Nan's he
   stubborn, means to go back up for six and seven. Gives **The Two Who Stand** (hooded things by the road that turned
   their heads together as she passed, "and kept turning"; there was a third she never saw).
 
-The five their errands are said to (**Amos Tye**, **Berin Stoat**, **Dag Colley**, **Fenn Hollis**, **Odo Marsh**) stand
-at their camps as placeholders, with a line each, till their own regions are made. (The sixth, Cuddy Stone, is the Green
-Downs': below.)
+Four their errands are said to (**Amos Tye**, **Berin Stoat**, **Dag Colley**, **Fenn Hollis**) stand at their camps as
+placeholders, with a line each, till their own regions are made. (Cuddy Stone is the Green Downs', and Odo Marsh the
+Weeping Fen's: below.)
 
 ## The Green Downs (`src/folk/regions/downs.js`, lines in `src/folk/lines/regions/downs.js`)
 
@@ -587,6 +588,65 @@ empty, Joss's snares are empty, and that is what each of them talks about.
   wolfkin walked in upright, took the hare off his spit, and looked at him: "It's not hunger, that look. It's more like
   counting").
 - **Jem Sledge**, 46, stone-carter, at Stonecarters' Halt: a placeholder with a line, till the Rustwood is made.
+
+## The Weeping Fen (`src/folk/regions/fen.js`, lines in `src/folk/lines/regions/fen.js`)
+
+North of Bellmourn up the Fen Way, levels six to fourteen: Sedgebank, Mile-End Camp by the Sunken Mile (the Drowned
+Vaults' door), Sallowmere, Eelpot Hythe far off the roads to the east, and the Drowned Chapel. The camps and Sallowmere
+are **plain folk's**: none of them names either power; they say "the sisters", "the chapel road". Sister Oriel is
+**Tessariel's**: she speaks of the order and its four watches, and names nothing of Velscour's. **No boats move and no
+lights are drawn on the mere**: Grizel's ferry is the boat tied at the half-sunk jetty, and the lights are what she tells
+of. The green dragon south of the chapel (level 24) is warned of by Grizel and by Oriel, and no quest goes near it.
+
+- **Odo Marsh**, 66, eel-catcher, under the mast at **Sedgebank** (`c_elder_1`; the camp's sutler). Forty years on the
+  bank; mends things and swears at them; goes deaf when money's named ("It's the water"). His wife went to her sister's
+  in Bellmourn to be dry: "She writes. I can't read. It suits us both." Cuts a notch on the mast for every hand the
+  water rises. Sent to by Maren Rush (**Rods for Sedgebank**; he promised her a punt he hasn't got, and lost his pole
+  in the web trying to come for rods). His work: **Empty Traps** (three children at his stakes haul his traps and tip
+  the eels back, neater than he sets them: "Somebody taught them to let things go"), **A Punt in the Reeds** (the Reed
+  Larder: his twelve-foot punt hangs in it, ten foot up), **A Hand a Week** (Sinkfoot Stockade has dammed the lode;
+  pays his eelskin coat, a robe: "My wife said I looked like bait in it"), and on: **A Hand of Water** (the same lode
+  drains the Mile: through the three by the road to Tamar Dyke).
+- **Ness Carr**, 27, reed-cutter for thatch (`c_young_4_1`). The one of six cutters who didn't go home. Short with
+  everyone; counts in bundles. "Everything's easier cut dead." Gives **Reed-Hooks** (five hooks from round the Reed
+  Larder; the fifth is a hundred years old: somebody cut that bed before there was a Sedgebank, ran, and never came back).
+- **Tamar Dyke**, 44, salvager, at **Mile-End Camp** (`c_worker_f_3`; its sutler). Lifts the Sunken Mile a slab at a time
+  for lead and dressed stone: "It's not robbing. It's the other thing." Prices everything, reasons included. Eleven of
+  her gang went home when the drowned turned round on the slabs. Her line: "Everything that went down is still there.
+  That's the whole of my trade." Sent to by Odo. Her work: **The Sunken Mile** (four of the five on the causeway; the
+  fifth has his hand out for the toll, and she pays him a penny a morning), **Thrown Back** (Leechwater's goblins put
+  her salvage back in the water every night: they think that's what the place is for), **The Sunk Plot** (one stands
+  up for every slab she lifts; her tally was a salvager's, and wrong), **Under the Mile** (the toll's strongroom, and
+  the Bloat) and **What Sank the Mile** (Mother Sallow and the Leviathan: "Stone on a hard bottom doesn't sink unless
+  something takes the bottom away"), and on: **The Crossing** (the Mile isn't coming up: through the huts to the ferry)
+  and **His Father's Punt** (a punt off the Mile with the Hallams' mark: by the lane to Eelpot).
+- **Corby Lunn**, 36, crane-hand (`c_smith_3`). Built the crane from a barge's ribs and a mill's windlass; she is "she",
+  and not for leaning on. Gives **Counterweight** (the goblins sit on her lead weights like a jury; with them back she
+  stops pulling left: "Two years I thought it was her nature").
+- **Grizel Wade**, 71, ferrywoman, by her boat at the half-sunk jetty on **Sallowmere's** east shore (`c_crone_1`). The
+  seventh Wade to hold the crossing: the Mile put five of them out of work, and they waited for it to fall down. A penny
+  a leg, the living and the dead alike ("They sit stiller"). She rowed every one of the drowned in the huts to the Yard
+  or would have. Her work: **What the Fen Keeps** (six jellies on her landing; one has her mooring-ring in it, and she'd
+  blamed Davy), **Lights on the Mere** (by night to the Drowned Yard: the dead walk there themselves, and leave the
+  ferry's notched pennies on the path), **The Drowned Yard** (laid down; pays a skull that turned up in her bows "like a
+  passenger"), and on: **Forty Names** (the Yard's dead to be read over: under the harpies' pool to Sister Oriel).
+- **Davy Scrip**, 52, chapman, nine days waiting on a ferry that has no call to run (`c_wes_3`; Sallowmere's sutler, out
+  of his pack). All patter, with something under it. "A chapman's welcome is the best there is. Everybody's glad of you
+  and nobody wants you to stop." Gives **Four Whistles** (he sold four tin whistles a year to four children at the
+  huts; they were waiting on the west shore with their pennies out; three, and he won't ask for the fourth).
+- **Pike Hallam**, 43, eel-trapper, under the upturned hull at **Eelpot Hythe** (`c_worker_2_3`; its sutler). The last
+  roof of nine, and it's a boat. Gets weather for news; the wind has been south-west since Martinmas. His father went out
+  the night the Mile sank. Sent to by Tamar. His work: **Five Knots** (the Mere Coven sells wind in knotted cord; he
+  undoes one, and nothing: the Hythe was never buying wind, it was paying them not to send it), **The Price of Wind**
+  (the Coven), **Kept Empty** (the Reed Graves, and the grave kept open forty years for his father: empty, and every
+  one of the others turned to face it; pays his father's eel-glaive, a staff). The end of its road.
+- **Sister Oriel**, 58, the last of eleven sisters at **the Drowned Chapel** (`c_wife_big_2`; by the graves on its north
+  side, since black jellies live in the nave's water). Came at eleven with a fever, in Grizel's ferry. Exact, dry, keeps
+  hours: "I keep the fourth watch. I am told it is no longer kept. I find that if one keeps it, it is." Sent to by
+  Grizel. Her work: **Leaves on the Water** (the office-book's leaves from round the walls: four washed clean, and the
+  office of the fourth watch kept dry inside a jelly), **Seven Lamps** (the path's lamps from round the Reed Stockade;
+  the goblins keep frogs in them), **Rung Wrong** (the goblins hung the chapel's sunk bell and ring it for dinner; she
+  had been keeping time by it; pays the hours of the watch in her own hand, a scroll). The end of its road.
 
 ## Where people go (for the life sim)
 

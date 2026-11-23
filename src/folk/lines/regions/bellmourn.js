@@ -399,7 +399,7 @@ export const LINES = {
   },
 
   // ---------------------------------------------------------------- placeholders: moved to their own region's file when
-  // it's made (the five the ring's errands on are said to; what each says to the errand is in its quest's `others`).
+  // it's made (four the ring's errands on are said to; Odo Marsh is the Weeping Fen's now: what each says to the errand is in its quest's `others`).
   amos: {
     first: ["You're no drover. You walk like you're going somewhere. Amos Tye. This is the Stance."],
     greet: {
@@ -447,18 +447,6 @@ export const LINES = {
     about: ["Fenn Hollis. I trap the wood's edge from Mossgate Hide, and I keep the first station's peg in tokens for old Perrin."],
     bye: ["Go quiet."],
     shop: { open: ["Pelts I don't want, I sell. Things I can use, I buy."], closed: ["Not now."] },
-  },
-  odo: {
-    first: ["Mind that line; it's an hour's work. Odo Marsh. Eels. This is Sedgebank, and it's as dry as you'll get."],
-    greet: {
-      morning: ["Morning. Traps were empty. They'll say it's the moon."],
-      day: ["If you're standing there, you can hold this."],
-      evening: ["Mist's coming up off the water. Get near the fire."],
-      night: ["Don't follow the lights. I shouldn't have to say."],
-    },
-    about: ["Odo Marsh. Eel-catcher, at Sedgebank, on the Fen Way. I weave my own traps, when I can get the rods."],
-    bye: ["Keep to the path."],
-    shop: { open: ["I'll trade. Eels or coin, it's the same to me."], closed: ["Not now."] },
   },
 };
 

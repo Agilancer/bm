@@ -74,36 +74,6 @@ LINES.bellwright.ask.seals = [
 ];
 
 export const QUESTS = {
-  sallowmere: {
-    title: 'What the Fen Keeps',
-    giver: 'sabine',
-    about: "Sabine Moss, the herbalist, gathers bog myrtle on Sallowmere's east shore for the winter fevers, and this spring the shore moved: it was jelly. Put down ten of them on the fen so she can reach it again.",
-    offer: [
-      "Bog myrtle grows thick on Sallowmere's east shore and nowhere else I can reach. I've gone every spring for twelve years. This spring the shore moved. It was jelly. Lots of it.",
-      "They're slow until they aren't. My knife did nothing. Your fire might. Clear the east shore and I'll have myrtle for the winter fevers, which this year will be bad.",
-    ],
-    accept: "I'll clear the shore.",
-    acceptLine: "North. A long way past the pines, where the ground goes soft. Don't drink the water. Don't let one sit on you; they hold on.",
-    decline: "Not just now.",
-    declineLine: "Then the fevers will have their way. They usually do.",
-    journal: [
-      "Sabine Moss can't reach the bog myrtle on Sallowmere's east shore for the jellies. Put down ten of them on the fen, far north of Bellmourn.",
-      "Go back to Sabine Moss at the herbalist's.",
-    ],
-    progress: [
-      "Ten, I'd say. Fewer and they'll be back by morning. More and you'll get careless.",
-    ],
-    done: [
-      "Ten. You smell of the fen and you've got something green in your hair. Hold still.",
-      "There. The myrtle will keep half this town breathing through the wet months. Nobody will thank you for it. So I will.",
-    ],
-    after: [
-      "The myrtle's drying in the rafters. The house smells like a fen in summer. Bryony loves it.",
-    ],
-    others: {
-      bryony: ["Jory says the moor's jellies have bones in them. Bring me one. A bone, I mean. Not a jelly. Well."],
-    },
-  },
 
   black_road: {
     title: 'The Black Road',
