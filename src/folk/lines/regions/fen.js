@@ -37,11 +37,11 @@ export const LINES = {
     },
     about: [
       "Odo Marsh. Eel-catcher, at Sedgebank, on the Fen Way. I weave my own traps, when I can get the rods, and I smoke what's in them, when there's anything in them.",
-      "Forty years on this bank. My wife said I'd grow gills. She went to her sister's in Bellmourn to be dry. She writes. I can't read. It suits us both.",
+      "Since I was a lad on this bank. My wife said I'd grow gills. She went to her sister's in Bellmourn to be dry. She writes. I can't read. It suits us both.",
     ],
     ask: {
       dead: [
-        "They stand in the water up to the chest and don't mind it. I've minded it forty years. I'll not say I envy them. I'll say they don't get the ache in the knees.",
+        "They stand in the water up to the chest and don't mind it. I've minded it since I was breeched. I'll not say I envy them. I'll say they don't get the ache in the knees.",
       ],
       town: [
         "Bellmourn eats my eels and wrinkles its nose at me. Bram Kettle takes a barrel a month, smoked. He calls it river fish on the slate. There's no river.",
@@ -131,6 +131,7 @@ export const LINES = {
       night: [
         "You'll hear the Mile, nights. Slabs shifting. It's only stone settling. I say that every night, out loud, at about this hour.",
         "Don't go west in the dark. There's some on the causeway who still think it's theirs.",
+        "Up the road north there's a drake bedded down, just west of it, three hundred paces off. It's not mine and it's not for selling. Keep to the road and it keeps to its bed.",
       ],
     },
     about: [
@@ -145,7 +146,7 @@ export const LINES = {
         "Bellmourn buys my lead and doesn't ask where it lay. Orrin Vane asked. I told him. He wrote it down and went the colour of the lead.",
       ],
       mile: [
-        "The Sunken Mile. A causeway, west off the Fen Way, pale stone on piers: a toll at this end, and the way to the west pools at the other. Went under in one night, in my grandmother's time. Stone on a hard bottom doesn't do that.",
+        "The Sunken Mile. A causeway, west off the Fen Way, pale stone on piers: a toll at this end, and the way to the west pools at the other. Went under in one night, the year I was born. Stone on a hard bottom doesn't do that.",
         "There's one arch of the bridge left, and a waymark down in the reeds in two pieces. I've left those. You don't sell the sign off the shop.",
       ],
       crane: [
@@ -344,7 +345,7 @@ export const LINES = {
         "A hythe lives by its wind. You want it behind you going out and behind you coming home, and nobody gets that for nothing. My father bought his. So did his. From the ring of stakes south-west. It was eels, then. A basket a knot.",
       ],
       hull: [
-        "The Hythe's barge. Forty foot, oak. A wind took her out of the water on a still morning and set her down there, keel up, gentle as a hat. Nobody was under. We took the meaning. We'd been slow paying.",
+        "The Hythe's barge. Thirteen yards of oak. A wind took her out of the water on a still morning and set her down there, keel up, gentle as a hat. Nobody was under. We took the meaning. We'd been slow paying.",
       ],
     },
     topics: { wind: 'The wind', hull: 'The hull' },
@@ -435,7 +436,7 @@ export const QUESTS = {
     giver: 'odo',
     about: "Odo Marsh's eel traps have come up empty for a month. Three children stand in the water at his stakes, a hundred paces north-east of Sedgebank, and haul them. Put down two of the three.",
     offer: [
-      "A month of empty traps. Forty years I've set that run. I know what an empty trap means: you've set it wrong, or somebody's been before you. I've not set a trap wrong since my wife was speaking to me.",
+      "A month of empty traps. Since I was a lad I've set that run. I know what an empty trap means: you've set it wrong, or somebody's been before you. I've not set a trap wrong since my wife was speaking to me.",
       "So I sat up. North-east, at my stakes: three children, stood in the water to the chest. They haul a trap, open it, and tip it out. Then they set it again. Neat. Neater than me. I can't smoke neatness. See to them. Two would break them of it.",
     ],
     accept: "I'll go to your stakes.",
@@ -454,10 +455,10 @@ export const QUESTS = {
       "Here. ...They never took an eel, you know. Not one. I watched four nights. Up, open, and back in the water with the lot, like a child with a hedgehog. Somebody taught them to let things go. I can't think it did them much good.",
     ],
     after: [
-      "Full traps all week. There's a small one still out at the stakes, some dusks. Stands and watches me haul. I've not said anything. I let one go, Tuesday, to see. It didn't clap or anything.",
+      "Full traps all week. I've smoked a barrel for Bram Kettle, and he's sent word it'll go on the slate as river fish again. There's no river. I've told the carter to say so, and to watch his face.",
     ],
     others: {
-      ness: ["Odo's eating again. You can tell; he's stopped talking about nettles. He left an eel out on the far stake last night. Says he dropped it. Odo's never dropped an eel in his life."],
+      ness: ["Odo's eating again. You can tell; he's stopped talking about nettles. He talks about eels instead. All day. I'd nearly have the nettles back."],
     },
   },
 
@@ -533,7 +534,7 @@ export const QUESTS = {
       "East. The lode that drains us runs that way, or did. Goblins have staked it bank to bank, wattled it, and sat a stockade on top. It stands in its own pond, pleased with itself. Black little things; they like it wet. Empty it, their king and all. I'll have the wattle out myself.",
     ],
     accept: "I'll empty Sinkfoot.",
-    acceptLine: "East, three hundred and forty paces; there's a trodden way off the road past my stakes. Mind the ones that spit: stand where it lands and you'll stand there a while. The king's the fat one. He throws what he's sat on.",
+    acceptLine: "East, three hundred and fifty paces; there's a trodden way off the road past my stakes. Mind the ones that spit: stand where it lands and you'll stand there a while. The king's the fat one. He spits up, and it comes down round him.",
     decline: 'Not yet.',
     declineLine: "No. I'll cut another notch, then. I'm good at notches.",
     journal: [
@@ -545,7 +546,7 @@ export const QUESTS = {
     ],
     done: [
       "Empty? Then that dam's out by dark, and I'll sleep with my feet dry for the first time since Lammas. I'll cut no more notches. I'll leave those there. Let it be known what I put up with.",
-      "Take this. Eelskin. Forty skins; it took me a winter. Water goes off it, and so does most else. My wife said I looked like bait in it. It'll sit better on you. It could hardly sit worse.",
+      "Take this. Eelskin. Sixty skins; it took me a winter. Water goes off it, and so does most else. My wife said I looked like bait in it. It'll sit better on you. It could hardly sit worse.",
     ],
     after: [
       "Down a hand already. There's a stretch of bank out that I'd forgotten I owned. I stood on it. It's not much. It's dry.",
@@ -595,31 +596,31 @@ export const QUESTS = {
   counterweight: {
     title: 'Counterweight',
     giver: 'corby',
-    about: "The goblins of Leechwater Camp, west of Mile-End, have carried off the crane's counterweights, and she can't lift without them. They use them to sit on. Bring back five from round the camp: three lie well out from it, two close in.",
+    about: "The goblins of Leechwater Camp, west of Mile-End past the Sunken Mile, have carried off the crane's five lead counterweights and sit on them round their fire. Corby Lunn's crane can't lift without them. Empty the camp: every goblin in it, and their king. He'll fetch the weights himself.",
     offer: [
-      "She's got no answer. See the box on her tail? Empty. Five blocks of lead went in that, forty pound each, with a ring cast in the top. The goblins from Leechwater had them. Two to a block. Singing.",
-      "I followed. They sit on them. Round the outside of their camp, a goblin to a block, like a jury. Their kind hate to sink, and a block's the one dry seat in a fen. When they get up they leave them. Five. Three are well out. Two are close in. For those you'll be looked at.",
+      "She's got no answer. See the box on her tail? Empty. Five blocks of lead went in that, three stone each, with a ring cast in the top. The goblins from Leechwater had them away in one night. Two to a block. Singing.",
+      "I followed them. They sit on them, round their fire, a goblin to a block, like a jury. A block's the one dry seat in a fen. They'll not get up for me. Put them down, the lot, and their king. Then I'll swing her over and lift the weights out myself.",
     ],
-    accept: "Five weights.",
-    acceptLine: "West, past the Mile, four hundred paces, up on the hump; there's a way trodden. They're heavy. Take them by the ring. And if one's warm, put it down and try another.",
+    accept: "I'll empty Leechwater.",
+    acceptLine: "West along the Mile and on, four hundred paces, up on the hump; there's a way trodden. They'll be sat on my blocks. They get up all at once, and the spitters don't get up at all: they spit from where they sit. Their king has the biggest block. He would.",
     decline: 'Not now.',
     declineLine: "No. Well. She'll keep. She's chocked.",
     journal: [
-      "Goblins at Leechwater Camp, west of Mile-End past the Sunken Mile, sit on the crane's lead counterweights. Pick up five of them: three lie well out from the camp, two close in.",
-      "Take the weights back to Corby Lunn at Mile-End Camp.",
+      "Goblins at Leechwater Camp, west of Mile-End past the Sunken Mile, sit on the crane's lead counterweights. Empty the camp: put down every one of them, and their king.",
+      "Go back to Corby Lunn at Mile-End Camp.",
     ],
     progress: [
-      "West, on the hump. Five, by the ring. Not off a goblin. Wait till it's stood up.",
+      "West, on the hump. All of them, and the king. Leave the blocks where they lie. They're heavy, and they're hers.",
     ],
     done: [
-      "Five. In the box with them. There. Hear that? That's her settling. She's stopped pulling left. She only ever pulled left because she was a block light. Two years I thought it was her nature.",
-      "Here. It's what I've put by. ...Look at the top of this one. There's a hollow worn in it. Goblin-sized. They've only had it a month. That's a great deal of sitting. I don't know what they were waiting for.",
+      "Empty? Then I'll have her over there by dark. ...Hear that? No. Nor do I. First evening in a month nobody's sung on the hump.",
+      "Here. It's what I've put by. I'll swing her out for the blocks at first light. Tamar says their pool's full of her lead as well. Four ton. They never kept a nail of it; they carried it to the water and put it in. I don't know what they think a fen is for.",
     ],
     after: [
-      "She lifted a slab this morning. Straight up, no left in it. I miss the left. I'll not put it back.",
+      "Five blocks in the box, and she lifted a slab this morning straight up. No left in it. Two years I thought pulling left was her nature. She was a block light. I miss it. I'll not put it back.",
     ],
     others: {
-      tamar: ["She's lifting? Then Corby's a crane-hand again, and I'm not paying a man to look at timber. Don't tell him I timed him. Nine hours, yesterday. Looking."],
+      tamar: ["Corby's had the crane over the hump and back with his blocks. Nine hours. I timed him. Two of them he spent looking at her against the sky. Don't tell him I docked him."],
     },
   },
 
@@ -655,65 +656,34 @@ export const QUESTS = {
     },
   },
 
-  thrown_back: {
-    title: 'Thrown Back',
-    giver: 'tamar',
-    about: "Every morning what Tamar Dyke lifted off the Mile the day before is back in the water. The goblins of Leechwater Camp, west of Mile-End past the causeway, come over at night and throw it in. Empty the camp: every one of them, and their king.",
-    offer: [
-      "I've lifted the same pig of lead three times. I know it by the dents. Up on the crane by day, on the heap by dusk, and back in the Mile by morning. That's not salvage. That's a pump.",
-      "Leechwater. West, on the hump past the causeway. They come over at night, two to a load, and put it all back. Not for themselves. They don't keep a nail of it. They carry it to the edge, and in it goes, and they clap. Empty that camp. The king as well.",
-    ],
-    accept: "I'll empty Leechwater.",
-    acceptLine: "West along the Mile and on, four hundred paces, up the hump. Corby's blocks came from round it. The king sits highest. He throws, and what he throws spreads. Don't be where he's looking. And mind the spitters: it sticks.",
-    decline: 'Not yet.',
-    declineLine: "Then I lift it a fourth time. I'm paid by what's on the heap at Michaelmas. Go on.",
-    journal: [
-      "Goblins from Leechwater Camp, west of Mile-End past the Sunken Mile, throw Tamar Dyke's salvage back into the water every night. Empty the camp: put down every one of them, and their king.",
-      "Go back to Tamar Dyke at Mile-End Camp.",
-    ],
-    progress: [
-      "West, on the hump. All of them, and the king. If you see a pig of lead with three dents in it, it's mine. They all are.",
-    ],
-    done: [
-      "Empty. Good. And my lead? ...In a pool. In the middle of their camp. With everything else. Slabs. A cart. Their own pots. Their own king's chair, you say.",
-      "Here. ...So they weren't robbing me. They think that's what the place is for. A mile of stone went into this fen in a night; they've only been keeping it up. I've been at war with a parish custom. Well. It's ended.",
-    ],
-    after: [
-      "The heap stays where I put it. I had Corby drag their pool. Four ton of lead, and a goblin's hat. I've kept the hat. It's on the scale.",
-    ],
-    others: {
-      corby: ["We dragged their pool. She lifted a cart out of it. A whole cart. I asked her where they'd got a cart. She'd nothing to say. She looked proud of them."],
-    },
-  },
-
   the_sunk_plot: {
     title: 'The Sunk Plot',
     giver: 'tamar',
-    about: "The toll-keepers' burying ground, south-south-west of Mile-End Camp, went under the same night as the Mile. For every slab Tamar Dyke lifts off the causeway, one more stands up in the Plot next morning. Empty it: every one of them, and whatever calls them up.",
+    about: "The old toll kept its takings in the Sunk Plot, south-south-west of Mile-End Camp: a fenced ground with a stone strong-house by the gate, and lead boxes buried under marker stones. It went under with the Mile, and the toll's own drowned stand in it yet. Empty it, so Tamar Dyke can lift the boxes.",
     offer: [
-      "The toll kept its own burying ground. South-south-west, two hundred and eighty paces. It went under the night the Mile did. The Sunk Plot. You can see the stones standing out of the wet, and what stands between them.",
-      "I keep a tally. A slab off the Mile by day; one more stood up in the Plot next morning. Forty-one slabs. Forty-one stood. I'm a salvager; I know when I'm being charged. I'll not pay it. Empty the Plot. And whatever's keeping the book.",
+      "South-south-west, two hundred and eighty paces: the Sunk Plot. It looks like a burying ground. It isn't. It's a bank. The toll fenced it, put a strong-house at the gate, and buried the takings in lead boxes, a stone over each, so a thief would need to know which.",
+      "It went down the night the Mile did, and the toll's men with it, at their posts. They're at their posts yet. I'd like the boxes. It's not robbing. It's the other thing. Empty it for me, and I'll price my conscience after.",
     ],
     accept: "I'll empty the Plot.",
-    acceptLine: "South-south-west, the trodden way past the spoil. There's a tall one in the middle, a woman, who sings to the water, and it comes. Get to high ground when she lifts her arms. The small ones hold your legs. Don't let them.",
+    acceptLine: "South-south-west, the trodden way past the spoil. Something stands in the middle and keeps them. If it opens wings, back off: it throws blades round itself, then screams. If it's a woman in weed, she throws green; don't stand where it lands.",
     decline: 'Not yet.',
-    declineLine: "No. Then I lift nothing tomorrow. I can't afford forty-two.",
+    declineLine: "No. Then the boxes keep. Lead's patient. So am I, for a fee.",
     journal: [
-      "The dead stand up in the Sunk Plot, the toll-keepers' burying ground south-south-west of Mile-End Camp, one for every slab lifted off the Mile. Empty it: put down every one of them, and the one who calls them.",
+      "The old toll's drowned men stand in the Sunk Plot, its fenced strong-ground south-south-west of Mile-End Camp, over the lead boxes of its takings. Empty it: put down every one of them, and the one that keeps the middle.",
       "Go back to Tamar Dyke at Mile-End Camp.",
     ],
     progress: [
-      "South-south-west. The Plot. All of them, and the tall one who sings. Count them for me, if you've the leisure.",
+      "South-south-west. The Plot. All of them, and whatever's in the doorway.",
     ],
     done: [
-      "All of them. How many? ...You didn't count. No. But more than forty-one. More than there are stones in that Plot. Half of them children, and the toll never buried a child there.",
-      "So it wasn't a charge. My tally was a salvager's tally: I counted what I'd lifted and thought it was about me. She'd have called them if I'd never touched a slab. Here. I priced that wrong. I don't, often.",
+      "Empty. Good. I'll have Corby swing her over in the morning, and the first box up by noon. ...You're looking at me. Go on. Say it.",
+      "No. You're right, and you've not said a word. Here. I'll leave them. They went down with the boxes and they've stood over them since the year I was born. I don't know what they'd do if I took one. I've priced not knowing. It's dear.",
     ],
     after: [
-      "I've burned the tally. First paper I've burned in my life. Corby asked was I ill.",
+      "The boxes are still in the Plot. I've written them in the book, at nothing. First thing off this Mile I've written at nothing. Corby asked was I ill.",
     ],
     others: {
-      corby: ["She burned a paper. With figures on. I've seen her go into the water after a paper with figures on."],
+      corby: ["She's left a whole ground of lead boxes where they lie. Lead. I've seen her go into the water after a nail."],
     },
   },
 
@@ -740,7 +710,7 @@ export const QUESTS = {
       "The stair by the broken arch. Something big, in a pool, breathing. That's all I know, and it's more than I wanted.",
     ],
     done: [
-      "It burst? No, don't tell me. Tell me it's dead and tell me nothing else. ...Good. Sit. You smell of the fen and of something I haven't a name for. And the strongroom? ...Under water. Of course it is.",
+      "It burst? No, don't tell me. Tell me it's dead and tell me nothing else. ...Good. There's something on your boots I haven't a name for. Leave them outside. And the strongroom? ...Under water. Of course it is.",
       "This was my mother's. Oiled wool; it's kept the damp off two of us on this Mile. You'll need it more than its peg does, where you keep going.",
     ],
     after: [
@@ -775,7 +745,7 @@ export const QUESTS = {
       "High ground when it floods. Keep moving when the mud does.",
     ],
     done: [
-      "A worm. The length of the Mile's first reach, and it ate the bottom out of a causeway. And you went down a hole after it. I'm going to make you something hot, and you're going to drink all of it.",
+      "A worm. The length of the Mile's first reach, and it ate the bottom out of a causeway. And you went down a hole after it. I've nothing on these heaps worth that. I've looked twice.",
       "Here. It came up on the crane the first week, tangled in a cramp. I never knew what to do with a staff. It was the one thing off this Mile I couldn't price. You'll know what it's worth.",
     ],
     after: [
@@ -797,7 +767,7 @@ export const QUESTS = {
       "Somebody ought to tell her it's not coming back up. I lift it; I don't mend it. Tell Grizel Wade the crossing's hers, from me, who'd know. Mind the huts, where the road meets the water. It was the fishers' end. They're still in. Four down, and the rest will let you by.",
     ],
     accept: "I'll tell the ferrywoman.",
-    acceptLine: "North on the Fen Way, a quarter of an hour, to the mere. They're in the huts on legs at the water's edge. Then round the shore to your right, to a jetty with half of it gone and a boat tied to it. There's a pedlar camped on it; ask him. She'll want a penny. Don't pay it.",
+    acceptLine: "North on the Fen Way, a quarter of an hour. Keep to the road: a drake's bedded down just west of it, three hundred paces up. Then the huts on legs at the water's edge, and round the shore right to a half-gone jetty. Ask the pedlar on it. The ferry's a penny. Don't pay.",
     decline: 'Not now.',
     declineLine: "Then she goes on waiting. She'll not mind. It's in the blood.",
     journal: [
@@ -810,7 +780,7 @@ export const QUESTS = {
     ],
     done: [
       "The salvager says that? Not coming up? ...Seven Wades have sat on this bank to be told so. My mother had it all ready, what she'd say. I've forgotten the most of it. It was rude.",
-      "And you came through the huts. Four? Then that's Hal Reedy, and the Marrams. I'll not ask which was the fourth. So the crossing's mine, and everybody I'd carry is walking. Sit down. I've a use for somebody who isn't.",
+      "And you came through the huts. Four? Then that's Hal Cope, and the Dunns. I'll not ask which was the fourth. So the crossing's mine, and everybody I'd carry is walking. Sit down. I've a use for somebody who isn't.",
     ],
     after: [
       "The carter says she laughed. Then she charged him a penny for bringing word that she'd laughed. That's a Wade. I'd have done the same.",
@@ -818,7 +788,7 @@ export const QUESTS = {
     others: {
       grizel: [
         "The salvager says that? Not coming up? ...Seven Wades have sat on this bank to be told so. My mother had it all ready, what she'd say. I've forgotten the most of it. It was rude. Here. News is a penny. That was a great deal of news.",
-        "And you came through the huts. Four? Then that's Hal Reedy, and the Marrams. I'll not ask which was the fourth. So the crossing's mine, and everybody I'd carry is walking. Sit down. I've a use for somebody who isn't.",
+        "And you came through the huts. Four? Then that's Hal Cope, and the Dunns. I'll not ask which was the fourth. So the crossing's mine, and everybody I'd carry is walking. Sit down. I've a use for somebody who isn't.",
       ],
       davy: ["Word for the ferry? From the Mile? Then say it loud, and say Davy Scrip's first in the queue. I'm the queue. That's her, sat by the boat, not looking at me. Nine days she's not looked at me. She'll ask you for a penny. Everybody pays but me; I've not been let."],
     },
@@ -828,32 +798,33 @@ export const QUESTS = {
     title: "His Father's Punt",
     giver: 'tamar',
     needs: 'the_sunk_plot',
-    about: "Tamar Dyke's crane has lifted an eel-punt off the Sunken Mile, forty years drowned, with the Hallams' mark burned in its thwart. There's a Hallam still at Eelpot Hythe, far off the roads to the east: half an hour by the lane. Tell Pike Hallam. It's paid there.",
+    about: "Tamar Dyke's crane has lifted an eel-punt off the Sunken Mile, drowned since the night the Mile went under, with the Hallams' mark burned in its thwart. There's a Hallam still at Eelpot Hythe, far off the roads to the east, half an hour by the lane. Goblins hold Lanefast, across the lane half way: put down three going through, and tell Pike Hallam. It's paid there.",
     offer: [
-      "We lifted a punt off the Mile last week. Under a slab; it had gone down with the stone. Forty years in the peat and you could float her tomorrow. There's a mark burned in the thwart. A pike, the fish, and a letter H.",
+      "We lifted a punt off the Mile last week. Under a slab; it had gone down with the stone. All those years in the peat and you could float her tomorrow. There's a mark burned in the thwart. A pike, the fish, and a letter H.",
       "That's Hallam. Eelpot Hythe, east, off every road there is. There's one of them left, they say. I don't sell a man's father's boat without asking. I'd sell it after. Go and tell Pike Hallam what I've got, and that it's his for the carriage.",
     ],
     accept: "I'll go to Eelpot.",
-    acceptLine: "North a little on the Fen Way, then the lane east: half an hour, and it's a lane in the way a ditch is. There are goblins camped on it about half way. Go round or go through. You'll know the Hythe by a barge's hull, upside down, with smoke coming out from under it.",
+    acceptLine: "North a little on the Fen Way, then the lane east: half an hour, and it's a lane the way a ditch is. Half way, goblins have staked a camp across it: Lanefast. There's no going round. Three down and you're through. Then look for a barge's hull, upside down, smoking.",
     decline: 'Not now.',
     declineLine: "Then she sits on my heap. I'll not sell her. Not this month.",
     journal: [
-      "Tamar Dyke has lifted a punt with the Hallams' mark off the Sunken Mile. Find Pike Hallam at Eelpot Hythe, far to the east of Mile-End Camp: north a little on the Fen Way, then half an hour by the lane.",
+      "Tamar Dyke has lifted a punt with the Hallams' mark off the Sunken Mile. Goblins hold Lanefast, across the lane east to Eelpot Hythe about half way: put down three of them going through.",
+      "Find Pike Hallam at Eelpot Hythe, at the end of the lane east, and tell him about the punt.",
     ],
     progress: [
-      "Eelpot Hythe. East, by the lane. Pike Hallam. A punt, with a pike and an H on the thwart.",
+      "The lane east. Three at Lanefast, then on to the Hythe. Pike Hallam. A punt, with a pike and an H on the thwart.",
     ],
     done: [
       "A pike and an H. On the thwart. Burned, not cut. ...He burned it in with the poker the night I was born. My mother said so. He went out to see what the noise was, the night the Mile sank. So he got there. He saw what the noise was.",
-      "Tell her... no. You're not going back that lane today. I'll fetch it myself, when the wind lets me. There's a place been kept for him in the Graves forty years. I'd thought it'd want a body. A boat will do. Stop a while. There's work, and nobody else coming.",
+      "Tell her... no. Not yet. Not through what's on that lane. There's a place been kept for him in the Graves since I was a boy. I'd thought it'd want a body. A boat will do. Stop a while. There's work, and nobody else coming.",
     ],
     after: [
-      "He came for it. Poled it home himself, the long way, by water. Never said a word but 'that's her'. Paid the carriage in smoked eel. I'd have let him off. He'd not be let.",
+      "Pike Hallam wants her, then. Good. She'll go when the lane's fit to carry a punt down. It isn't, yet.",
     ],
     others: {
       pike: [
-        "A pike and an H. On the thwart. Burned, not cut. ...He burned it in with the poker the night I was born. My mother said so. He went out to see what the noise was, the night the Mile sank. So he got there. Here. You walked the lane for it.",
-        "Tell her... no. You're not going back that lane today. I'll fetch it myself, when the wind lets me. There's a place been kept for him in the Graves forty years. I'd thought it'd want a body. A boat will do. Stop a while. There's work, and nobody else coming.",
+        "A pike and an H. On the thwart. Burned, not cut. ...He burned it in with the poker the night I was born. My mother said so. He went out to see what the noise was, the night the Mile sank. So he got there. Here. You came through Lanefast for it.",
+        "Tell her... no. Not yet. Not through what's on that lane. There's a place been kept for him in the Graves since I was a boy. I'd thought it'd want a body. A boat will do. Stop a while. There's work, and nobody else coming.",
       ],
     },
   },
@@ -862,17 +833,17 @@ export const QUESTS = {
   sallowmere: {
     title: 'What the Fen Keeps',
     giver: 'grizel',
-    about: "The east shore of Sallowmere is the ferry's landing, and this spring the shore moved: it was jelly. Put down six of them, south along the shore from Grizel Wade's jetty, so a boat can be brought in again.",
+    about: "The east shore of Sallowmere is the ferry's landing, and this spring the shore moved: it was jelly. Put down six of them in the shallows south along the shore from Grizel Wade's jetty, so a boat can be brought in again.",
     offer: [
       "The east shore's my landing. Seven Wades have run a keel up that mud. This spring the shore moved. It was jelly. Lots of it.",
-      "They're slow until they aren't. My boathook did nothing; it came back shorter. Your fire might. They're south along the shore, eighty paces, where the mud shelves. Six would give me somewhere to land. Not that I've anyone to land. It's the principle.",
+      "They're slow until they aren't. My boathook did nothing; it came back shorter. Your fire might. They're south along the shore, sixty paces, where the mud shelves. Six would give me somewhere to land. Not that I've anyone to land. It's the principle.",
     ],
     accept: "I'll clear the shore.",
     acceptLine: "South along the water from the jetty. You'll see the mud breathing. Don't drink the mere. Don't let one sit on you; they hold on. And the big ones come apart into small ones, so don't stop to feel pleased.",
     decline: 'Not just now.',
     declineLine: "Then the shore keeps what it's got. It usually does.",
     journal: [
-      "Jellies hold Sallowmere's east shore, eighty paces south along the water from Grizel Wade's jetty. Put down six of them.",
+      "Jellies hold Sallowmere's east shore, in the shallows sixty paces south along the water from Grizel Wade's jetty. Put down six of them.",
       "Go back to Grizel Wade at the jetty on Sallowmere's east shore.",
     ],
     progress: [
@@ -893,28 +864,29 @@ export const QUESTS = {
   lights_on_the_mere: {
     title: 'Lights on the Mere',
     giver: 'grizel',
-    dayHint: "By day there's nothing on the mere to follow. Grizel Wade's lights cross after dark: come back to the Drowned Yard at night.",
-    about: "Every night lights cross Sallowmere, slowly, in a line, from the huts on the south shore toward the Drowned Yard, where Grizel Wade has rowed the fen's dead for forty years. Go by night to the Yard, north-north-east of her jetty, and see where they end. Then pick up what has been left along the path in.",
+    needs: 'the_drowned_yard',
+    dayHint: "Grizel Wade wants the Yard looked at after dark, when she sees her lights: come back to the Drowned Yard at night.",
+    about: "The Drowned Yard is lying down, and still Grizel Wade sees lights go round Sallowmere at night, slow, in a line, toward it. She won't go and look in the dark at seventy-one. Go to the Yard by night, north-north-east of her jetty, and see if it's stood up again. And look at the path in.",
     offer: [
-      "Every night since Candlemas: lights on the mere. From the huts to the north-east side. Slow. In a line. Not in a boat; I'd hear a boat. I'd know whose.",
-      "North-east is the Yard. Forty years I've rowed Sallowmere's dead over to it. A penny a body; the family pays. Now something's going over without me, and I want to know where it fetches up. Go to the Yard after dark, and look. By day there's nothing to follow.",
+      "You laid the Yard down. I went over and saw them straight. And last night: lights, on the shore. Round, toward the Yard. Slow. In a line. Not in a boat; I'd hear a boat.",
+      "I'll not go and look in the dark at seventy-one. You go. After dark, when I see them. Tell me if the Yard's stood up again. And look at the path under your feet coming up to it. I've a notion. I hope I'm wrong.",
     ],
     accept: "By night, then. I'll look.",
-    acceptLine: "North-north-east, two hundred and eighty paces; the path leaves the shore behind the jetty. Go after dark. Stop short of the stones and watch. And look at the path under your feet as you come up to it. I've a notion. I hope I'm wrong.",
+    acceptLine: "North-north-east, the same path, after dark. Stop short of the stones and look. Then the path.",
     decline: 'Not tonight.',
-    declineLine: "No. Then I'll sit and count them over again. Eleven, last night.",
+    declineLine: "No. Then I'll sit and count the lights over again. Eleven, last night.",
     journal: [
-      "Lights cross Sallowmere by night toward the Drowned Yard. Go by night to the Yard, north-north-east of Grizel Wade's jetty, near enough to see who comes to it.",
-      "The drowned walk round the mere to the Drowned Yard and stand among its stones. Along the path in, something glints: pick up five of them, the last hard by the Yard.",
+      "Grizel Wade sees lights go round Sallowmere by night toward the Drowned Yard. Go by night to the Yard, north-north-east of her jetty, and see whether it's stood up again.",
+      "The Yard is stood up again, as it was before you emptied it. Along the path in, something glints: pick up five of them, the last hard by the stones.",
       "Go back to Grizel Wade at the jetty on Sallowmere's east shore.",
     ],
     progress: [
-      "The Yard. North-north-east, after dark. See where they go. Then the path.",
+      "The Yard. North-north-east, after dark. Is it stood up? Then the path.",
       "Five, off the path. Mind the last. It's nearer to them than I'd like.",
     ],
     done: [
-      "The Yard. So they know the way. They ought to. I rowed most of their mothers there. ...And those? Give them here. Pennies. Old ones. That's a fare penny: see the notch? My mother cut that, so they'd not come round twice.",
-      "They're paying. Walking it themselves, round by the shore, and still leaving the ferry's penny on the path. Forty years, and never a one of them tipped. I've never been so insulted, nor so... no. Here. That's yours. Not out of those.",
+      "Stood up again. Back where you laid them. Well. A yard's a yard; it fills. ...And those? Give them here. Pennies. Old ones. That's a fare penny: see the notch? My mother cut that, so they'd not come round twice.",
+      "They're paying. Walking it themselves, round by the shore, and leaving the ferry's penny on the path for a crossing I never made. Forty years, and never a one of them tipped. I've never been so insulted, nor so... no. Here. That's yours. Not out of those.",
     ],
     after: [
       "I've the five pennies on the thwart. I'll not spend them. You don't spend a fare you never rowed.",
@@ -927,97 +899,96 @@ export const QUESTS = {
   the_drowned_yard: {
     title: 'The Drowned Yard',
     giver: 'grizel',
-    needs: 'lights_on_the_mere',
-    about: "The dead of Sallowmere walk to their own burying ground and pay the ferry for it, and then they stand there. Grizel Wade wants them lying down. Empty the Drowned Yard, north-north-east of her jetty: every one of them, and the tall one who called them out of the huts.",
+    about: "Forty years Grizel Wade rowed Sallowmere's dead over the mere to the Drowned Yard, a penny a body. This spring they got up out of it, and the dead of the huts walk round the shore to stand in it with them. Something keeps them there. Empty the Yard, north-north-east of her jetty: every one of them, and what keeps them.",
     offer: [
-      "They can pay all they like. They don't lie down. A yard's for lying down in. I didn't row them over there, forty years, a penny a body, to have them stood about in it like a market.",
-      "There's a tall one among the stones. A woman, all weed. She's not one of mine. I never carried her; I'd know. She sings, and the huts empty, and they come. Put them down. All of them. Her first, if you can get at her. Then they're only where I left them.",
+      "I carried them. Every one stood in those huts, and the most of what's in the Yard, went over the mere in my boat, in a box, with a penny from the family. North-north-east. I put them down there myself, and they lay. A yard's for lying down in.",
+      "They don't lie now. They stand about the stones like a market, and there's something in the middle of them I never carried. Some nights it's got wings, and screams. Some nights it's an old woman all weed, that throws. Put them down. All of it. Then they're only where I left them.",
     ],
     accept: "I'll lay them down.",
-    acceptLine: "The same path, north-north-east. When she lifts her arms the water comes up round your knees: get on a stone. The children hold on to you. And there's a hag at the back who throws. I'd tell you their names. Better I don't.",
+    acceptLine: "North-north-east, two hundred and eighty paces; the path leaves the shore behind the jetty. I've watched from the boat: the brides scream, and they're quick. The children hold on to you. The one in the middle you'll know when you see it. I'd tell you their names. Better I don't.",
     decline: 'Not yet.',
     declineLine: "No. Then they stand another night. They've the patience for it.",
     journal: [
-      "The dead Grizel Wade rowed to the Drowned Yard stand among its stones, north-north-east of her jetty. Empty the Yard: put down every one of them, and the tall one who calls them.",
+      "The dead Grizel Wade rowed to the Drowned Yard stand among its stones, north-north-east of her jetty, and the huts' dead with them. Empty the Yard: put down every one of them, and the thing that keeps them.",
       "Go back to Grizel Wade at the jetty on Sallowmere's east shore.",
     ],
     progress: [
-      "The Yard. All of them, and the one in the weed. Don't tell me who was nearest the gate.",
+      "The Yard. All of them, and what's in the middle. Don't tell me who was nearest the gate.",
     ],
     done: [
-      "Lying down? All? ...Then I'll go over tomorrow and see they're straight. In the boat. I'll take the pennies and put them back on the stones. A fare's a fare. I'll not be paid for a crossing I didn't make.",
+      "Lying down? All? ...Then I'll go over tomorrow and see they're straight. In the boat. First crossing since Candlemas. I've rowed that leg home empty forty years. I never minded it.",
       "Take this. It was in the boat one morning, eleven years back. In the bows, looking forward, like a passenger. I never found who set it there. It's never paid. A skull's no use to a ferry. It might be to you.",
     ],
     after: [
-      "I rowed over. First crossing since Candlemas. Forty-one stones, and I said each name at it. Nobody answered. That's as it should be.",
+      "I rowed over. Forty-one stones, and I said each name at it. Nobody answered. That's as it should be.",
     ],
     others: {
       davy: ["She took the boat out. Alone. Nine days I've asked, and she goes with nobody in it. ...She came back with her face washed. I didn't ask for the ferry. I sold her nothing. We had a quiet evening."],
     },
   },
 
-  four_whistles: {
-    title: 'Four Whistles',
+  ribbon_on_the_reeds: {
+    title: 'Ribbon on the Reeds',
     giver: 'davy',
-    about: "Every spring Davy Scrip sold four tin whistles to four children at Sallowmere's huts. This spring four children were waiting for him on the west shore, where the chapel road comes round the mere, with their pennies held out. He ran. He wants three of them put down, and won't ask for the fourth. Ten minutes round the north of the mere.",
+    about: "Davy Scrip came round Sallowmere by the west shore this spring, and four children from the huts were waiting for him on the path where the chapel road comes down. He ran, and left his tray. His ribbon is out there yet, tied on the reeds round where they stand. Fetch him five lengths of it.",
     offer: [
-      "Tin whistles. Penny each. Every spring, four to the huts: the two Marram boys, Jenny Reedy, and a little one who never had her penny. I'd give her hers. A chapman can afford one whistle a year.",
-      "I came round the mere by the west, this time. They were on the path. All four. Stood in a row with their hands out, and the pennies in them. Three pennies. I ran. I left a tray of ribbon. See to them. ...Three. I'll not ask for the fourth. I never did.",
+      "Every spring I came to the huts by the west, with a tray of ribbon, and the children met me on the path. The two Marram boys, Jenny Reedy, and a little one. They'd have my ribbon out of the tray and on the reeds before I'd my strap off. A fair, they called it.",
+      "This spring they were on the path. All four, the same as ever, in the water to the knee. I ran. Left the tray. That's the Reed sisters' ribbon; it doesn't rot, and it's three shillings a bolt. Five lengths would set me up again. It's on the reeds round them.",
     ],
-    accept: "Three of them.",
-    acceptLine: "Round the mere by the north, and west: ten minutes, where the chapel road comes down. Keep north of them. South of there something wallows that's bigger than both of us. They'll come at you quick. They always did run to meet me.",
+    accept: "Five lengths of ribbon.",
+    acceptLine: "Round the mere by the north, and west: ten minutes, where the chapel road comes down. Come at them from the north. South of there something big wallows, and you'll not want it. They'll come at you quick. They always did run to meet me.",
     decline: 'Not that.',
     declineLine: "No. No, I'd not either. I didn't. Pins?",
     journal: [
-      "Four children wait on Sallowmere's west shore for Davy Scrip, the chapman: ten minutes round the north of the mere from the jetty, where the chapel road comes down. Put down three of them.",
-      "Go back to Davy Scrip at the jetty on Sallowmere's east shore.",
+      "Four drowned children stand on Sallowmere's west shore, where the chapel road comes down, ten minutes round the north of the mere from the jetty. Davy Scrip's ribbon is tied on the reeds round them: pick up five lengths of it.",
+      "Take the ribbon back to Davy Scrip at the jetty on Sallowmere's east shore.",
     ],
     progress: [
-      "West shore, round by the north. Three. If one's very small, and hangs back... you'll do as you see fit.",
+      "West shore, round by the north. Five lengths, off the reeds. Come at them from the north side.",
     ],
     done: [
-      "Three. And the... no. Don't say. Did they still have them? The whistles? ...Round their necks. On the ribbon. It's good ribbon, that. It's the Reeds'. It doesn't rot.",
-      "Here. It's more than three pennies. ...She'll want hers, the little one. If she's still stood there next spring, with her hand out and nothing in it. I'll take one round. I always gave her hers.",
+      "Five. And tied, look. Bows. Every one on its own reed, a hand apart. ...They'd done it for me. They'd set the fair out, and stood in it, waiting for the tray.",
+      "Here. It's more than the ribbon's worth. ...I'll not sell this. I'll go round by the west next spring and tie it on the reeds myself, before I go by. That's what the fair was. I only ever brought the tray.",
     ],
     after: [
-      "I've four whistles in the pack again. I'll not sell them this side of the mere. ...One of them's not for selling.",
+      "Five lengths in the pack, and not for sale. I've told her I'm going round by the west next spring. She said she knew. She knows everything on this mere. She charges for most of it.",
     ],
     others: {
-      grizel: ["Davy told you about the whistles. He's not told me, and I carried all four of those children over the mere the week they were born. He thinks I don't know why he came by the west. He was hoping."],
+      grizel: ["Davy's been by the west shore. He'll not say. He came back with ribbon he won't sell me. I carried all four of those children over this mere the week they were born, and he thinks I don't know who it was for."],
     },
   },
 
-  forty_names: {
-    title: 'Forty Names',
+  one_way_fare: {
+    title: 'One Way',
     giver: 'grizel',
     needs: 'the_drowned_yard',
-    about: "The dead of the Drowned Yard are lying down again, and Grizel Wade wants them read over by someone whose trade it is. There is one sister left at the Drowned Chapel, north-west across the fen: twenty minutes by the chapel road, which passes under the harpies' roost at the black pool. Put down two of the three, and take Sister Oriel the names. It's paid there.",
+    about: "With the Drowned Yard lying down, Grizel Wade's ferry runs again, every leg of it. Sister Oriel at the Drowned Chapel came over the mere at eleven in Grizel's boat, and her fare was paid both ways. Tell her she's owed the crossing back. The chapel is twenty minutes north-west by the chapel road, under the harpies' roost at the black pool: put down two of the three going by. It's paid there.",
     offer: [
-      "I said their names at them. That's not the same as having them read. I'm a ferrywoman. I can get them over the water. I can't get them any further; that's a different trade, and I never had the hands for it.",
-      "There's a sister at the Drowned Chapel yet. One. I carried her there when she was eleven, with a fever. Tell her Grizel Wade has forty names from the Yard to be read over. And one I haven't. She'll know what to do about that. I don't.",
+      "The Yard's quiet, so the ferry runs. Every leg: the huts, the jetty, the Yard, round to the west shore for the chapel road. A penny a leg. I've hung the lantern on the post again, for what it's worth.",
+      "There's a sister at the Drowned Chapel. One. I carried her there at eleven, with a fever, and her mother paid me both ways, the going and the coming back. She never came back. Forty-seven years I've owed her a crossing. Tell her. A Wade doesn't keep what she's not rowed.",
     ],
-    accept: "I'll take her the names.",
+    accept: "I'll tell her.",
     acceptLine: "Round the mere by the north, then the chapel road north-west: twenty minutes. Half way there's a black pool with three harpies roosting over it; have two down or they'll have your hat. Come at the chapel from the east. Not the south. There's a thing asleep, south. Leave it so.",
     decline: 'Not now.',
-    declineLine: "Then they lie unread. They've lain worse.",
+    declineLine: "Then I owe her another year. I'll put it on the slate. I've no slate.",
     journal: [
-      "Grizel Wade wants the dead of the Drowned Yard read over. Three harpies roost over the black pool beside the chapel road, north-west of Sallowmere: put down two of them.",
-      "Find Sister Oriel at the Drowned Chapel, on north-west by the chapel road. Come to it from the east, not the south.",
+      "Grizel Wade owes Sister Oriel a crossing. Three harpies roost over the black pool beside the chapel road, north-west of Sallowmere: put down two of them.",
+      "Find Sister Oriel at the Drowned Chapel, on north-west by the chapel road, and tell her the ferry runs. Come to it from the east, not the south.",
     ],
     progress: [
-      "North-west, the chapel road. Two harpies at the black pool. Then the sister. Forty names, and one I haven't.",
+      "North-west, the chapel road. Two harpies at the black pool. Then the sister. She's owed a crossing back.",
     ],
     done: [
-      "Grizel Wade. She is alive, then, and still charging. Forty names. She will have them by heart, and in the order she carried them. And one she has not. That will be the one who sang. I shall read for her as well. One reads for whoever was there.",
-      "At the fourth watch, then; it is the hour for it. I have no book. That is a difficulty, and since you came by the pool dry-shod, perhaps it is yours. Stay, if you will. This house has work, and I have been its only hands.",
+      "Grizel Wade. She is alive, then, and still charging. A crossing back. ...My mother paid it. I remember the coin; it was the only one she had that was not bent. I had thought it was all for the coming here.",
+      "If you are by the mere again, tell her I shall keep it. One does not go back the way one came. But tell her I knew she would not forget. Stay, if you will. This house has work, and I have been its only hands.",
     ],
     after: [
-      "There was a light north-west, at the hour before dawn. Small. I'd not seen one there in a year. So she's read them. I'll row over and tell them so. No. They'll know.",
+      "There's been a light north-west, at the hour before dawn. Small. I'd not seen one there in a year. That'll be her answer. I've hung mine on the post, back.",
     ],
     others: {
       oriel: [
-        "Grizel Wade. She is alive, then, and still charging. Forty names. She will have them by heart, and in the order she carried them. And one she has not: the one who sang. I shall read for her as well. Take this, for the road. It was in the alms dish. Nobody else has come for it.",
-        "At the fourth watch, then; it is the hour for it. I have no book. That is a difficulty, and since you came by the pool dry-shod, perhaps it is yours. Stay, if you will. This house has work, and I have been its only hands.",
+        "Grizel Wade. She is alive, then, and still charging. A crossing back. ...My mother paid it. I remember the coin; it was the only one she had that was not bent. Take this, for the road. It was in the alms dish. Nobody else has come for it.",
+        "If you are by the mere again, tell her I shall keep it. One does not go back the way one came. But tell her I knew she would not forget. Stay, if you will. This house has work, and I have been its only hands.",
       ],
     },
   },
@@ -1026,28 +997,28 @@ export const QUESTS = {
   five_knots: {
     title: 'Five Knots',
     giver: 'pike',
-    about: "The Mere Coven, south-west of Eelpot Hythe, sells wind tied up in knotted cord, and the Hythe has bought it for longer than anyone remembers. The cords hang on stakes round the ring. Pike Hallam wants five, taken and not paid for: three hang well out from the ring, two close in. Don't undo one.",
+    about: "The Mere Coven, south-west of Eelpot Hythe, sells wind tied up in knotted cord, and the Hythe has bought it for longer than anyone remembers. The cords hang on stakes round the ring. Pike Hallam wants five, off the outer stakes, taken and not paid for. Don't undo one.",
     offer: [
       "South-west there's a ring of stakes, with folk in hoods stood in it. The Coven. They sell wind. Three knots on a cord: undo one for a breeze, two for a blow. Nobody undoes the third. My father paid a basket of eels a cord. So did his.",
-      "This year the price went up. It's not eels. They've not said what. They looked at me, and then at the hull, and then at me. I'll not pay it. But I can't lift a pot in this. Fetch me five cords off their stakes. Three hang well out. Two are close in. Don't undo one.",
+      "This year the price went up. It's not eels. They've not said what. They looked at me, and then at the hull, and then at me. I'll not pay it. But I can't lift a pot in this. Fetch me five cords off their outer stakes. You'll not need to go in. Don't undo one.",
     ],
     accept: "Five cords. Not undone.",
     acceptLine: "South-west, two hundred and fifty paces; there's a path, and we made it, more shame to us. Grey cord, three knots, tied to a stake at head height. They hum when the wind's in them. Carry them in your fist, not your pocket.",
     decline: 'Not now.',
     declineLine: "Then I fold the nets again. I'm quick at it now.",
     journal: [
-      "The Mere Coven, south-west of Eelpot Hythe, sells wind in knotted cords hung on stakes round its ring. Take five of them: three hang well out from the ring, two close in. Don't undo one.",
+      "The Mere Coven, south-west of Eelpot Hythe, sells wind in knotted cords hung on stakes round its ring. Take five of them off the outer stakes. Don't undo one.",
       "Take the cords back to Pike Hallam at Eelpot Hythe.",
     ],
     progress: [
-      "Five. Three wide, two close. In your fist. If one comes undone on the way, lie down flat and tell me after.",
+      "Five. Off the outside; don't go in. In your fist. If one comes undone on the way, lie down flat and tell me after.",
     ],
     done: [
       "Five. Give them here. ...I'm going to undo one. I know what I said. Stand in the lee of the hull. There. ...Nothing. Not a breath. Try the second. Nothing.",
-      "Here. That's for the fetching. ...Three generations of Hallams, a basket a cord. It's string. The wind was never in the cord. It was in them. We weren't buying wind. We were paying them not to send it. That's a different trade. That one has a name.",
+      "Here. That's for the fetching. ...Three generations of Hallams, a basket a cord. It's string. The wind was never in the cord. It was in them. We were paying them not to send it. That's a different trade. That one has a name.",
     ],
     after: [
-      "I've hung the cords on the smoke-house door. Forty years of them would've gone round the hull twice. My father kept every one, in a box. I've burned the box.",
+      "I've hung the cords on the smoke-house door. My whole life of them would've gone round the hull twice. My father kept every one, in a box. I've burned the box.",
     ],
   },
 
@@ -1055,59 +1026,66 @@ export const QUESTS = {
     title: 'The Price of Wind',
     giver: 'pike',
     needs: 'five_knots',
-    about: "The Mere Coven never sold Eelpot Hythe its wind: the Hythe paid them not to send it. Now they want more than eels, and the wind hasn't dropped since Martinmas. Empty the ring, south-west of the Hythe: every one of them, and the two who do the calling.",
+    about: "The Mere Coven has put its price up, and it isn't eels any more, and the wind hasn't dropped since Martinmas. Empty the ring, south-west of the Hythe: every one of them, and the one in the middle who calls the weather.",
     offer: [
       "So it's not a shop. It's a toll. And they've put the toll up, and I know what they looked at when they named it. There's one of me. There's no basket that holds that.",
-      "South-west. The ring. All of them. There's an old one who reads the stones and a young one who calls the weather, and the weather comes. It'll come for you. It set a forty-foot barge on its back for being slow with a basket. Think what it'll do to somebody who's rude.",
+      "South-west. The ring. All of them. Whoever stands in the middle calls it: an old woman who points, and stones come down out of a clear sky, or a man in blue who stands up a wall of lightning. I've seen both. It set the Hythe's barge on its back for being slow with a basket.",
     ],
     accept: "I'll empty the ring.",
-    acceptLine: "The same path, south-west. When the young one lifts her hands, look up, and don't be under where it's going dark. The hooded ones throw from the back. Close on them. They're only strong at a distance. So's most weather.",
+    acceptLine: "The same path, south-west. If it's the old woman, move when she points: the stones come, then the ground splits. If it's the man in blue, go round his lightning, not through it. The hooded ones throw from the back. Close on them. So's most weather.",
     decline: 'Not yet.',
     declineLine: "No. It's a deal to ask. I'll pay them in nothing a while longer, and see what nothing costs.",
     journal: [
-      "The Mere Coven, south-west of Eelpot Hythe, sends the wind the Hythe once paid it to hold back. Empty the ring: put down every one of them, and the two who call the weather.",
+      "The Mere Coven, south-west of Eelpot Hythe, sends the wind the Hythe once paid it to hold back. Empty the ring: put down every one of them, and the one in the middle who calls the weather.",
       "Go back to Pike Hallam at Eelpot Hythe.",
     ],
     progress: [
-      "South-west. All of them, and the two in the middle. I'll know. I'll feel it drop.",
+      "South-west. All of them, and the one in the middle. I'll know. I'll feel it drop.",
     ],
     done: [
       "It dropped. An hour since. I was folding a net, and it lay down in my hands like a dog. I've not heard the reeds stand still since I was a boy. I'd forgotten they made a noise at it.",
-      "Here. I'd say it's what I'd have paid them. It's not. It's more. I'd sooner you had it. ...I'll stake the nets tonight. With pegs. I'll have to find the pegs.",
+      "Here. And this: one of their stakes. Blackthorn, and it's had weather in it longer than I've been alive. Knock the cord off and it's a staff. ...I'll stake the nets tonight. With pegs. I'll have to find the pegs.",
     ],
     after: [
       "Wind's gone round to the north. Then east. Then it stopped a whole day. That's weather. I'd forgotten weather doesn't mean anything by it.",
     ],
+    others: {
+      tamar: ["The wind's off the Mile for the first time since Martinmas. My heaps have stopped walking. If that's Pike Hallam's doing, he can have his father's punt for nothing. Say for a shilling."],
+    },
   },
 
-  kept_empty: {
-    title: 'Kept Empty',
+  the_lane: {
+    title: 'The Lane',
     giver: 'pike',
-    about: "The Hythe buries its dead in the reed, feet to the water, north-east of Eelpot. One grave there has been kept open and empty forty years, for Pike Hallam's father. Now the Reed Graves are sitting up. Empty them: every one, and whoever is calling them. And look in the empty one.",
+    needs: 'the_price_of_wind',
+    about: "Tamar Dyke has Pike Hallam's father's punt at Mile-End, and he'll not have it carried to him through goblins. Empty Lanefast, the camp staked across the lane half way back to the Fen Way: every goblin in it, and their king. Then tell Tamar Dyke the lane is open. It's paid there.",
     offer: [
-      "North-east, the Graves. We lay ours in reed, feet to the water, and stand their glaive at the head. Forty graves. One's been kept open forty years, lined fresh each spring. My father's. For when he came home. My mother did it, and then I did.",
-      "They're sitting up. I see the lights, nights. I'll not have him come home to that: his place, and the neighbours all stood round it. Lay them down. All of them. And look in his. I've not been able to. Tell me it's empty. Or tell me the other.",
+      "I've been thinking about that punt. It's been a long time coming. I'll not have it come the last mile through Lanefast, with goblins spitting at the carter and a king sat on the fence. It'd come in with a hole in it. It's waited for worse. It'll wait for that.",
+      "You're going back down the lane. Everybody does; it's the only way out. Empty Lanefast as you go, the king and all, and tell the salvager the lane's open. Tell her to send it. Tell her I'll pay the carriage. Don't tell her in what.",
     ],
-    accept: "I'll lay them down, and look.",
-    acceptLine: "North-east, two hundred and fifty paces; the path's the one we carry them by. A tall one sings the water up: get off the low ground when she does. His is the last on the left, with no glaive. You'll know it. It's the tidy one.",
+    accept: "I'll open the lane.",
+    acceptLine: "Back the way you came, half way. You went through them once; they'll have stood up again by now, and they'll know you. This time the king comes out for you. Then on, west, to Mile-End and the salvager.",
     decline: 'Not yet.',
-    declineLine: "No. Then I'll line it again in spring, and not look. I'm practised.",
+    declineLine: "Then she sits on the salvager's heap, and I sit here. We're both good at it.",
     journal: [
-      "The dead of Eelpot Hythe are sitting up in the Reed Graves, north-east of the Hythe. Empty the Graves: put down every one of them, and the tall one who calls them. The grave kept empty is the last on the left, with no glaive at its head.",
-      "Go back to Pike Hallam at Eelpot Hythe and tell him what was in his father's grave.",
+      "Pike Hallam's father's punt waits at Mile-End Camp. Empty Lanefast, the goblins' camp across the lane half way back to the Fen Way: put down every one of them, and their king.",
+      "Go on to Mile-End Camp and tell Tamar Dyke the lane to Eelpot Hythe is open.",
     ],
     progress: [
-      "North-east. All of them. Then the last on the left. Empty, or the other. I'll take either. I can't take not knowing.",
+      "Lanefast. All of them, and the king. Then the salvager: the lane's open, send the punt.",
     ],
     done: [
-      "Quiet. All of them. And his? ...Empty. Lined, and dry, and empty. And every one of the others turned to face it. Forty years of neighbours, got up out of the reed to look at the one bed nobody was in.",
-      "They were waiting for him, same as me. Take this. His glaive; it never went in the ground, having nobody to stand over. Three tines, on ash. Knock the tines off and it's a staff. He'd say it always was, and the eels were incidental.",
+      "Open? Lanefast's empty? ...Then she goes tomorrow, on the cart, and I walk beside her. I've not walked beside a load since I was a girl. I'll not have a carter take that one.",
+      "He'll pay me in smoked eel, and I'll eat it, and say nothing. You did the walking, both ways. I'll put you in the book under carriage.",
     ],
     after: [
-      "I've put the punt in it. Keel down, lined round with reed. It fits. He always said she was the best part of him. The neighbours are lying easy. So am I, some nights.",
+      "She came down the lane on Tamar's cart, with Tamar walking beside it the whole way. I looked at her a long time. 'That's her,' I said. I'd meant to say more. Paid the carriage in smoked eel. She'd not be let off either.",
     ],
     others: {
-      tamar: ["He buried the punt? A sound punt, forty years in peat, tight as a drum? ...No. No, I'd not have got eight shillings for her anyway. Say I said seven."],
+      tamar: [
+        "Open? Lanefast's empty? ...Then she goes tomorrow, on the cart, and I walk beside her. I've not walked beside a load since I was a girl. I'll not have a carter take that one. Here. For the lane.",
+        "He'll pay me in smoked eel, and I'll eat it, and say nothing. You did the walking, both ways. I'll put you in the book under carriage.",
+      ],
     },
   },
 
@@ -1115,93 +1093,90 @@ export const QUESTS = {
   leaves_on_the_water: {
     title: 'Leaves on the Water',
     giver: 'oriel',
-    about: "When the west end of the Drowned Chapel dropped, the office-book went off its desk into the water that stands in the nave, and its leaves have washed out through the empty windows. Things live in that water now. Sister Oriel has forty names to read and no book. Bring back five leaves from round the chapel's walls.",
+    about: "When the west end of the Drowned Chapel dropped, the office-book went off its desk into the water that stands in the nave, and its leaves have washed out through the empty windows. Black jellies with bones in them live in that water now, and come out at whoever walks the walls. Bring Sister Oriel five leaves from round the walls.",
     offer: [
       "The book stood on a desk at the west end. At Michaelmas the west end went down a hand in a night, and the desk with it. The binding gave. The leaves have gone out through the windows and lie round the walls, in the wet.",
-      "I would fetch them. But something has come into the water of the nave. Black, and slow, with bones in it that are not ours. It comes out at whoever walks the walls. I have forty names to read, and I would read them from the page. Five leaves would be the office, near enough.",
+      "I would fetch them. But something has come into the water of the nave. Black, and slow, with bones in it that are not ours. It comes out at whoever walks the walls. I keep the office by heart. I should like it from the page as well. Five leaves would be the office, near enough.",
     ],
     accept: "Five leaves.",
     acceptLine: "They are all outside the walls: two by the sunk end, one against the south side, one at the east under the gable, one on the north by the graves. Vellum; it does not mind water. The black things mind fire. Do not go into the nave for any reason.",
     decline: 'Not now.',
-    declineLine: "Then I shall read from memory. It is a good memory. It is fifty years old.",
+    declineLine: "Then I shall say it from memory. It is a good memory. It is fifty years old.",
     journal: [
       "The leaves of the Drowned Chapel's office-book lie round the outside of its walls, where black jellies come out of the nave's water. Pick up five of them.",
       "Take the leaves back to Sister Oriel, by the graves on the chapel's north side.",
     ],
     progress: [
-      "Five, from round the walls. Outside them. If one of the black things has a leaf in it, I would rather have the leaf than the courtesy.",
+      "Five, from round the walls. Outside them. The black things mind fire. I mind the nave.",
     ],
     done: [
-      "Five. Let me see. ...This is washed clean. And this. And these two. Not a letter left; the fen has had the ink. I had thought vellum did not mind water. It is the ink that minds.",
-      "And this. Dry. Every word. It was inside one of them? ...It is the office for the fourth watch. The one leaf of that book nobody has opened in forty years but me, and that is the one it kept. I do not know what to make of that. I shall read from it tonight. Take this.",
+      "Five. Let me see. ...This is washed clean. And this. And all of them. Not a letter left; the fen has had the ink. I had thought vellum did not mind water. It is the ink that minds.",
+      "No. Do not be sorry. Give them here. ...I find it was the weight of it I wanted, not the words. I have had the words fifty years. I shall hold these at the fourth watch and say it as I always have. Take this. Nobody else has come for it.",
     ],
     after: [
-      "I read the forty names from the leaf's margin, where I had written them small. And the one that Grizel had not. I gave her the name Avice. It was to spare.",
+      "I said the office tonight with five blank leaves in my hands. It went no better. It went no worse. But I knew where I was in it by the feel, and that is what a book is for.",
     ],
-    others: {
-      grizel: ["She read them? From the book? ...One leaf. Well. One's enough, if it's the right one. I got forty over the water in a boat that'd shame a duck."],
-    },
-  },
-
-  seven_lamps: {
-    title: 'Seven Lamps',
-    giver: 'oriel',
-    about: "Seven lamps on posts marked the plank path to the Drowned Chapel through the mire. The goblins of the Reed Stockade, north-east of the chapel, have carried them off. Bring back five from round the stockade: three lie well out from it, two close in.",
-    offer: [
-      "There were seven lamps on the path in, on posts, a chain apart. One for each of the hours a traveller might be abroad. I trimmed them at dusk. It was the whole of what this house did for the road, and it was enough; nobody was lost between them in my time.",
-      "The goblins of the stockade north-east took them in the autumn. All seven, posts and all, in one night. I do not grudge them the light. I do grudge them the road. Five would mark the path to the first firm ground. Three lie well out from their fence. Two are close in.",
-    ],
-    accept: "Five lamps.",
-    acceptLine: "North-east, two hundred and forty paces; they have trodden a way to it from the plank path, which was thoughtful. A horn lamp in an iron cage, the height of your knee. Carry them upright, if you would. I do not know why. I always have.",
-    decline: 'Not now.',
-    declineLine: "Then the path keeps its own counsel. It has, since autumn.",
-    journal: [
-      "Goblins of the Reed Stockade, north-east of the Drowned Chapel, took the seven lamps from the chapel's path. Pick up five of them: three lie well out from the stockade, two close in.",
-      "Take the lamps back to Sister Oriel at the Drowned Chapel.",
-    ],
-    progress: [
-      "Five. Three well out, two close in. Upright, please.",
-    ],
-    done: [
-      "Five. Thank you. Set them there. ...There is something in this one. And this. Frogs. They have been keeping frogs in them. One to a lamp, with a little weed. I cannot tell if that is a larder or a kindness.",
-      "And this one has its oil yet. They never lit it; they did not know it was for lighting. Then it shall be the first. It will show as far as the mere, on a clear night. Take this. I shall put the frogs in the nave. No. I shall not put them in the nave.",
-    ],
-    after: [
-      "Five lamps on the path, and one lit each dusk, in turn, to spare the oil. The frogs are in the alms dish. They seem content. It is more than the dish has held in a year.",
-    ],
-    others: {
-      grizel: ["So that's her light. I'd wondered. North-west, low, where there's been none since autumn. I've hung my own on the post again. Somebody ought to answer."],
-    },
   },
 
   rung_wrong: {
     title: 'Rung Wrong',
     giver: 'oriel',
-    about: "The bell of the fourth watch went into the mire with the west end of the Drowned Chapel. The goblins of the Reed Stockade, north-east, pulled it out and hung it, and ring it whenever they eat. Sister Oriel can bear a bell that's silent, and not one that's rung at the wrong hour. Empty the stockade: every one of them, and their king.",
+    about: "The bell of the fourth watch went into the mire with the west end of the Drowned Chapel. The goblins of the Reed Stockade, north-east, pulled it out and hung it, and ring it whenever they eat. Sister Oriel does not ask for the stockade emptied. She wants every hand off the rope. Put down four of them.",
     offer: [
       "You will have heard it. A bell, north-east, at no hour at all. Noon. Dusk. Twice in the night. That is the bell of the fourth watch. It went into the mire with the west end, and I said the office for it, as for a sister. The goblins of the stockade had it out within the week.",
-      "They ring it when they eat. I have borne forty years of its silence; that was obedience. I cannot bear it rung for dinner. The fourth watch is rung at the fourth watch. Empty the stockade. All of them, and the one who pulls the rope. He is the largest. He would be.",
+      "They ring it when they eat. Forty years of its silence I have borne; that was obedience. I cannot bear it rung for dinner. I do not ask you to empty the place; I am not a captain. Put down the hands at the rope. Four take turns at it.",
     ],
-    accept: "I'll empty the stockade.",
-    acceptLine: "North-east, where you found the lamps. Their king throws what is to hand, and it scatters: do not stand before him. The small ones spit, and it holds the feet. I ask one thing more. Do not ring it. Not even once, to see.",
+    accept: "Four, at the rope.",
+    acceptLine: "North-east, two hundred and forty paces; they have trodden a way to it from the plank path, which was thoughtful. The one who rings the hours wears iron and is slow to turn; go round him. The small ones spit, and it holds the feet. And do not ring it. Not once, to see.",
     decline: 'Not yet.',
     declineLine: "No. Then I shall say the office through it. One can. One would rather not.",
     journal: [
-      "Goblins at the Reed Stockade, north-east of the Drowned Chapel, have the bell of the fourth watch and ring it at their meals. Empty the stockade: put down every one of them, and their king.",
+      "Goblins at the Reed Stockade, north-east of the Drowned Chapel, have the bell of the fourth watch and ring it at their meals. Put down four of them.",
       "Go back to Sister Oriel at the Drowned Chapel.",
     ],
     progress: [
-      "North-east. All of them, and the one at the rope. And do not ring it.",
+      "North-east. Four. And do not ring it.",
     ],
     done: [
       "Quiet. Since a little after noon. I noticed at once. ...I find I have been keeping time by it. Wrong hours and all. Noon, dusk, twice in the night: I knew where I was in the day. Forty years I told myself I did not miss it. One season of goblins' dinners, and I am found out.",
-      "It will stay where they hung it. I cannot carry it, and I will not ring it; the order said stop. But I shall know it is there, and whole. Take this: the hours of the fourth watch, in my hand, from memory. It is a scroll. It will do more in yours than it has in mine.",
+      "It will stay where they hung it. I cannot carry it, and I will not ring it; the order said stop. But I shall know it is there, and whole, and nobody at the rope. Here. For the walk, and for the quiet.",
     ],
     after: [
-      "I walked out to the stockade and stood under it. I did not ring it. I put my hand flat on it, in the wind, and it hummed. That is not ringing. I have examined my conscience on the point.",
+      "I stood on the plank path where I could see it hang. I did not ring it. The wind did, a little, once. That is not ringing. I have examined my conscience on the point.",
     ],
     others: {
-      grizel: ["The bell's stopped. I'd set my day by it since autumn; I knew it was goblins and I set my day by it all the same. She'll have had it stopped. She'd be right. I'll miss it. Don't tell her."],
+      grizel: ["The chapel bell's stopped. I'd set my day by it since autumn; I knew it was goblins and I set my day by it all the same. She'll have had it stopped. She'd be right. I'll miss it. Don't tell her."],
+    },
+  },
+
+  the_sunk_bed: {
+    title: "The Drake's Scrape",
+    giver: 'oriel',
+    about: "For forty years Sister Oriel has told everyone who comes to the Drowned Chapel to come by the east, away from what sleeps to the south. Since the spring a marsh drake has had its bed east-south-east of the chapel, on that very way, with bog worms about it. Empty the Drake's Scrape: the worms, and the drake.",
+    offer: [
+      "Come from the east, I tell them. Not the south. I have said it to everyone who has found this house in forty years, and it has been good counsel. There is a hill to the south that breathes.",
+      "In the spring something else came. Smaller. Green, as the hill is, and winged. It lies in a scrape of the wet east-south-east, with worms about it. On the way in. My way. A pilgrim came by it at Whitsun. He did not come here. Empty that bed. I have been sending them to it.",
+    ],
+    accept: "I'll empty the bed.",
+    acceptLine: "East-south-east, three hundred and eighty paces, off the plank path where it bends. The worms come up out of the wet at you; the drake is quick for its size, and it bites. If it goes south, do not follow it. That way is the hill.",
+    decline: 'Not yet.',
+    declineLine: "Then I shall tell them the north. The north is a mire. It is better than the other.",
+    journal: [
+      "A marsh drake has made its bed east-south-east of the Drowned Chapel, on the way in Sister Oriel has sent everyone by. Empty the Drake's Scrape: put down the bog worms, and the drake.",
+      "Go back to Sister Oriel at the Drowned Chapel.",
+    ],
+    progress: [
+      "East-south-east, where the plank path bends. The worms, and the drake. Not the hill.",
+    ],
+    done: [
+      "Dead. The worms, and the drake. ...Then I shall say the east again. I had stopped. For a week I have told them the north, and the north is a mire, and two came in wet to the neck and very civil about it.",
+      "Take this: the hours of the fourth watch, in my hand, from memory. It is a scroll. It has kept nothing in my keeping. It may keep you, out there, by whatever way you go. Go well. Go by the east.",
+    ],
+    after: [
+      "Two came in by the east this week. Dry. I gave them the north walk to sit on, and did not say why I was pleased. I said a word for the pilgrim at Whitsun. I had been owing it.",
+    ],
+    others: {
+      grizel: ["Somebody came over the mere asking for the chapel road. I told them the east way, and for once I didn't add anything after. The sister will have had it seen to."],
     },
   },
 };

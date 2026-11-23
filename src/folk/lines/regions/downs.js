@@ -424,20 +424,8 @@ export const LINES = {
     },
   },
 
-  // ---------------------------------------------------------------- placeholder: moved to the Rustwood's file when it's
-  // made (the one the Bell Tower's errand on is said to; what he says to the errand is in its quest's `others`).
-  jem: {
-    first: ["Mind the sledge. It's going nowhere, but mind it. Jem Sledge. Stone-carter. That block's sat there since my father's team died in the traces, and I've stopped beside it ever since."],
-    greet: {
-      morning: ["Morning. Frost in the block. You can hear it tick."],
-      day: ["Carters halt here. That's all it is. A place to stop being on the road."],
-      evening: ["Fire's lit. Sit on the drum. It's the one seat that won't walk off."],
-      night: ["Keep in by the block. Whatever's out on the down goes round it."],
-    },
-    about: ["Jem Sledge. I bring stone down from the quarry on sledges, as my father did. The Halt's where the teams rest before the long pull."],
-    bye: ["Go steady."],
-    shop: { open: ["I'll buy, and I've a little to sell. A carter's always got something under the sheet."], closed: ["Not now."] },
-  },
+  // (Jem Sledge, whom the Bell Tower's errand on is said to, is the Rustwood's: src/folk/lines/regions/rustwood.js. What
+  // he says to that errand is in its quest's `others`, below.)
 };
 
 export const QUESTS = {

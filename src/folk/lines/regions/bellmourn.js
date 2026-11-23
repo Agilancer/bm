@@ -399,55 +399,10 @@ export const LINES = {
   },
 
   // ---------------------------------------------------------------- placeholders: moved to their own region's file when
-  // it's made (four the ring's errands on are said to; Odo Marsh is the Weeping Fen's now: what each says to the errand is in its quest's `others`).
-  amos: {
-    first: ["You're no drover. You walk like you're going somewhere. Amos Tye. This is the Stance."],
-    greet: {
-      morning: ["Morning. Mist on the moor. Keep to the track."],
-      day: ["Beasts are quiet. I don't trust it."],
-      evening: ["Fire's lit. Sit where the smoke isn't."],
-      night: ["Don't go out on the moor by night. There are lights. They're not ours."],
-    },
-    about: ["Amos Tye. Drover. I hold the Stance on the Barrow Track for whoever's driving over the moor."],
-    bye: ["Keep to the track."],
-    shop: { open: ["I'll trade. Drovers always will."], closed: ["Not now."] },
-  },
-  berin: {
-    first: ["Who's that on the road? On foot, and no pack? Berin Stoat. Packman. This is Fellfoot, and that's the last flat ground you'll see."],
-    greet: {
-      morning: ["Morning. There's ice on the water butt. There always is."],
-      day: ["The ponies know more about that fell than I do. I just walk in front."],
-      evening: ["Cold's coming down off the top. Get by the fire."],
-      night: ["Listen to that wind. It's got a long way to come, and nothing to stop it."],
-    },
-    about: ["Berin Stoat. I pack goods up to the fort on the fells with a string of ponies, and bring down what they've no use for."],
-    bye: ["Wrap up. I mean it."],
-    shop: { open: ["A packman's always selling. And buying, if it's light."], closed: ["Not now."] },
-  },
-  dag: {
-    first: ["Dag Colley. Ashgate Halt. You'll have come from the east; nobody comes from the other way on foot."],
-    greet: {
-      morning: ["Morning. Wind's from the west. Shut your mouth when you walk; it's grit."],
-      day: ["This is where the trees stop. I stop here too."],
-      evening: ["Fire's lit. I keep it small."],
-      night: ["Speak low. It carries, out here."],
-    },
-    about: ["Dag Colley. Carter. I hold the last halt on the west road before the grey ground."],
-    bye: ["Go careful."],
-    shop: { open: ["I buy and I sell. Not much of either, lately."], closed: ["Not now."] },
-  },
-  fenn: {
-    first: ["Stand there. I saw you a hundred paces back. Fenn Hollis. Trapper. Don't touch the lines."],
-    greet: {
-      morning: ["Morning. Two snares sprung in the night, and nothing in them."],
-      day: ["Quiet. I'm listening to the wood. It's saying you're here."],
-      evening: ["Fire's banked low. I like to see out, not be seen."],
-      night: ["Don't walk about. Half of what's set out there is mine, and the other half isn't."],
-    },
-    about: ["Fenn Hollis. I trap the wood's edge from Mossgate Hide, and I keep the first station's peg in tokens for old Perrin."],
-    bye: ["Go quiet."],
-    shop: { open: ["Pelts I don't want, I sell. Things I can use, I buy."], closed: ["Not now."] },
-  },
+  // it's made (four the ring's errands on are said to; Odo Marsh is the Weeping Fen's now, Amos Tye the Barrow Moor's: what each says to the errand is in its quest's `others`).
+  // (Berin Stoat's are the Rimeholt Fells' now: src/folk/lines/regions/fells.js.)
+  // (Dag Colley's are the Ashen Waste's now: src/folk/lines/regions/waste.js.)
+  // (Fenn Hollis's are the Deepwood's now: src/folk/lines/regions/deepwood.js.)
 };
 
 export const QUESTS = {
@@ -974,32 +929,33 @@ export const QUESTS = {
     title: 'Word Down the Track',
     giver: 'nan',
     needs: 'whistled_up',
-    about: "Six of Amos Tye's black cattle walked up the Barrow Track to the Forkstone on their own. Nan Dray has them, and Amos will be thinking them stolen. Tell him, at the Drovers' Stance, twenty minutes south-west down the Barrow Track. It's paid there.",
+    about: "Six of Amos Tye's black cattle walked up the Barrow Track to the Forkstone on their own. Nan Dray has them, and Amos will be thinking them stolen. Four small dead sit on the bank of the track short of the Stance: put down three on the way. Tell him, at the Drovers' Stance, twenty minutes south-west down the Barrow Track. It's paid there.",
     offer: [
       "There's six blacks down in the dip that stand apart with their noses up. Not mine. Amos Tye's, from the Drovers' Stance, down the Barrow Track. They walked up here on their own, a month back.",
       "A drover who's short six head thinks one thing: thief. And he knows I'm nearest. Go down the track and tell him I've six of his, on my salt, eating my grass, and he can fetch them or pay their keep. Say it civil. He's bigger than he sounds.",
     ],
     accept: "I'll tell him.",
-    acceptLine: "South-west, the track that leaves the Frost Road at the stone. Twenty minutes. A waystone and a ring of hurdles: that's the Stance. Keep to the track. There's a den south of it where things howl on two legs. That's not for you yet.",
+    acceptLine: "South-west, the track that leaves the Frost Road at the stone. Twenty minutes. A waystone and a ring of hurdles: that's the Stance. Short of it there's little ones sat in a row on the bank, four of them. Three'll do. Keep to the track after.",
     decline: 'Not now.',
     declineLine: "Then he'll come up here with a stick, and we'll do it the long way.",
     journal: [
+      "Four small dead sit in a row on the bank of the Barrow Track, short of the Drovers' Stance. Put down three of them.",
       "Nan Dray has six of Amos Tye's strayed cattle at the Forkstone. Find Amos at the Drovers' Stance, twenty minutes south-west of the Forkstone down the Barrow Track, and tell him.",
     ],
     progress: [
-      "Down the Barrow Track, south-west. The Stance. Amos Tye. Civil, mind.",
+      "Down the Barrow Track, south-west. Through the little ones on the bank. The Stance. Amos Tye. Civil, mind.",
     ],
     done: [
       "Six? On her grass? ...I'd them down as stolen and her down as the thief, and I was halfway to fetching a stick. Well. That's the stick put back.",
-      "I'll fetch them Friday, and bring a block of salt for their keep. And you: stop a while. There's work on the moor, if you'll have it.",
+      "Six went up the track to her, and not home. They'll not have liked the bank, I'd think, with those little ones sat on it. I'll fetch them Friday, with salt for their keep. And you: stop a while. There's work on the moor.",
     ],
     after: [
       "Amos came up for his blacks. Brought salt. Looked every one of them in the mouth in front of me, the dog.",
     ],
     others: {
       amos: [
-        "Six? On her grass? ...I'd them down as stolen and her down as the thief, and I was halfway to fetching a stick. Well. That's the stick put back. And that's for your walk.",
-        "I'll fetch them Friday, and bring a block of salt for their keep. And you: stop a while. There's work on the moor, if you'll have it.",
+        "Six? On her grass? ...I'd them down as stolen and her down as the thief, and I was halfway to fetching a stick. Well. That's the stick put back. And that's for your trouble; she'll not have paid you.",
+        "Six went up the track to her, and not home. They'll not have liked the bank, I'd think, with those little ones sat on it. I'll fetch them Friday, with salt for their keep. And you: stop a while. There's work on the moor.",
       ],
     },
   },
@@ -1008,23 +964,24 @@ export const QUESTS = {
     title: 'Ponies for the Winter',
     giver: 'nan',
     needs: 'whistled_up',
-    about: "Berin Stoat, the packman at Fellfoot, brings his ponies down off the fells each year to winter with Nan Dray. This year he hasn't come: he'll think the road shut at Lychfield. Tell him it's fit as far as the Fork. Fellfoot is half an hour south down the Frost Road, where the fells begin. It's paid there.",
+    about: "Berin Stoat, the packman at Fellfoot, winters his ponies with Nan Dray. This year he hasn't come: he'll think the road shut at Lychfield. Tell him it's fit. Two white wolves keep the Frost Road where it starts to climb: put one down. Fellfoot is half an hour south. It's paid there.",
     offer: [
       "You've been a use to me, and I don't say that of much on two legs. One more, and it's a long one. South, where the Frost Road starts to climb, there's a packman's camp. Fellfoot. Berin Stoat.",
       "He brings his ponies down off the fells to winter with me, every year. This year he's not come. He'll think the road's shut at Lychfield, and till lately he was right. Tell him it's fit as far as the Fork, and I've grass. It's half an hour's walk, and cold at the end of it.",
     ],
     accept: "I'll go south.",
-    acceptLine: "The Frost Road, south, and don't leave it. You'll pass under a lot of sky. When you can see your breath and a beacon post, that's Fellfoot. He's a small man with a big voice. The ponies are the other way about.",
+    acceptLine: "The Frost Road, south, and don't leave it. Where it climbs there's two white wolves that stand up when they see you: put one down. When you can see your breath and a beacon post, that's Fellfoot. He's a small man with a big voice. The ponies are the other way about.",
     decline: 'Not yet.',
     declineLine: "It's a long road. Go when your legs want it.",
     journal: [
+      "Two white wolves that stand up keep the Frost Road where it starts to climb, south of the Forkstone. Put one down.",
       "Nan Dray will winter Berin Stoat's ponies, now the road's fit. Find Berin at Fellfoot, half an hour south of the Forkstone down the Frost Road, where the fells begin.",
     ],
     progress: [
-      "South, the Frost Road, till it climbs. Fellfoot. Berin Stoat.",
+      "South, the Frost Road, till it climbs. One of the white wolves. Then Fellfoot, and Berin Stoat.",
     ],
     done: [
-      "Nan Dray's got grass? And the road's fit past Lychfield? Who made it fit? ...You. Hm. You don't look it.",
+      "Nan Dray's got grass? And the road's fit past Lychfield? Who made it fit? ...You. You don't look it.",
       "I'll bring them down this week. Twenty-two, and a foal she's not seen. And if you came all that road, you'll want a fire. Sit. There's things up here want doing too.",
     ],
     after: [
@@ -1032,7 +989,7 @@ export const QUESTS = {
     ],
     others: {
       berin: [
-        "Nan Dray's got grass? And the road's fit past Lychfield? Who made it fit? ...You. Hm. You don't look it. Here. A packman pays for the road walked.",
+        "Nan Dray's got grass? And the road's fit past Lychfield? Who made it fit? ...You. You don't look it. And the white ones on the climb? One down? The other'll go up. Then it's fit all the way. Here. A packman pays for the road walked.",
         "I'll bring them down this week. Twenty-two, and a foal she's not seen. And if you came all that road, you'll want a fire. Sit. There's things up here want doing too.",
       ],
     },
@@ -1209,10 +1166,11 @@ export const QUESTS = {
     decline: 'Not yet.',
     declineLine: "It's a long road for a short message. Go when you're going that way.",
     journal: [
-      "Old Perrin Lowe sends word to Fenn Hollis, the trapper at Mossgate Hide, that palmers are coming back down. Mossgate is twenty minutes up the Pilgrims' Road, north-west of Palmers' Rest.",
+      "Old Perrin Lowe sends word to Fenn Hollis, the trapper at Mossgate Hide, that palmers are coming back down. Two-thirds of the way up the Pilgrims' Road, spiders have come down to the trees east of it: put down two on the way.",
+      "Take Perrin's word to Fenn Hollis at Mossgate Hide, the trappers' hide by the first station, up the Pilgrims' Road north-west of Palmers' Rest.",
     ],
     progress: [
-      "Up the Pilgrims' Road, north-west, twenty minutes. Mossgate Hide. Fenn Hollis.",
+      "Up the Pilgrims' Road, north-west. Two of the spiders by it, then Mossgate Hide. Fenn Hollis.",
     ],
     done: [
       "You walked right past me. Twice. ...Perrin sent you? Then the old man's still upright. Coming down, are they. A girl with five, you say. Which heel? Never mind.",

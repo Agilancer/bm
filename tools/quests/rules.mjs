@@ -47,8 +47,15 @@ export const hubOf = (id) => personHub(QUESTS[id].giver);
 export function personHub(pid) { const w = whereIs(pid); return !w ? null : w.down || w.where === 'phobos' || w.x > 9300 ? 'phobos' : w.where; }
 
 // Every quest, walked: { id, hub, level, kinds, far, total, oneWay, to (the hub it ends at) }.
+// (Quests with workings but no words yet, mid-write: left out, and said so once.)
+let warned = false;
+const ready = () => {
+  const ids = Object.keys(RULES), miss = ids.filter((id) => !QUESTS[id]);
+  if (miss.length && !warned) { warned = true; console.warn(`(left out, no words yet: ${miss.join(', ')})`); }
+  return ids.filter((id) => QUESTS[id]);
+};
 export function table() {
-  return Object.keys(RULES).map((id) => {
+  return ready().map((id) => {
     const w = walk(id), last = RULES[id].steps.at(-1);
     return { id, hub: hubOf(id), level: questLevel(id), kinds: kindsOf(id), far: w?.far ?? 0, total: w?.total ?? 0, oneWay: !!w?.oneWay, to: w?.oneWay ? personHub(last.talk) : null, legs: w?.legs || [] };
   });

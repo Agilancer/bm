@@ -10,8 +10,8 @@
 // those and a status line that keeps changing found its way. (A place it walks to and fro in shows as neither till the
 // half minute is up: read where it is, too.) One run at a time: the page takes several gigabytes on a software GPU.
 // On a software GPU the page dies within seconds of auto-play starting unless drawing is stubbed, so start PRE with
-// `bm.renderer.frame = () => {}`. A scene, for example Ser Hale's first quest at Blackvigil's gate with a party:
-//   PRE='bm.renderer.frame = () => {}; bm.hire(4); bm.view.townUI.quests.begin("gate_of_blackvigil"); bm.cmd(19, 0, -4880, 200)'
+// `bm.renderer.frame = () => {}`. A scene, for example Captain Renn's first quest at Blackvigil's gate with a party:
+//   PRE='bm.renderer.frame = () => {}; bm.hire(4); bm.view.townUI.quests.begin("the_castellan"); bm.cmd(19, 0, -4880, 200)'
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
