@@ -259,6 +259,12 @@ export const LAIRS = [
   { key: 'queue_dummies', lvl: 18, x: 6950, z: 450, r: 7, pick: MANNEQUINS, n: 4, pal: ['Base', 'Ashen'] },
   { key: 'queue_watchers', lvl: 18, x: 7110, z: 570, r: 6, pick: VKNIGHTS, n: 3, pal: ['Infernal'] },
   { key: 'lee_roost', lvl: 19, x: 7470, z: 260, r: 8, boss: ['harpy_queen'], pick: ['harpy_warrior'], n: 3, pal: ['Base', 'Ashen'] },
+  // (On the way from the Lantern to Widow's Lee, the Lantern's errand: 1.6 km up the March Road and along the Throne Road with
+  // nothing on it, two minutes' riding. Demons in the scrub east of the March Road halfway up, and a werebat's roost south of
+  // the Throne Road short of the Lee: wild, nobody's, off the roads (tools/monsters/place-lairs.mjs), at the errand's level.
+  // tools/quests/errands.mjs. roadside: the road's their way, no lane of their own, tools/roads/lay.mjs.)
+  { key: 'march_rd_demons', roadside: true, lvl: 17, x: 6853, z: -524, r: 7, pick: DEMONS, n: 3, pal: ['Base', 'Abyssal'], tricks: true },
+  { key: 'throne_rd_bat', roadside: true, lvl: 17, x: 6975, z: -16, r: 6, boss: ['werebat'], pick: ['dragonling_black'], n: 2, pal: ['Base', 'Bloodsoaked'] },
   // (The carrion birds and the gibbets on the plain under the Sill are the first you meet there: Lisandra's door sets you down
   // on the Sill at about level three, src/folk/first-visit.js. So they're low, whichever way you came.)
   // (xpScale: a kill's share of what its kind is worth, src/main.js gainXp: the birds and the hanged are the city's own kinds, made
@@ -380,6 +386,9 @@ export const LAIRS = [
   { key: 'mouth_demons', x: 1025, z: 3867, r: 6, pick: ['night_demon_blue', 'night_demon_black'], n: 2, pal: ['Base', 'Abyssal'], tricks: true },
   { key: 'tor_roost', x: 1493, z: 4516, r: 8, boss: ['harpy_queen'], pick: ['harpy_warrior'], n: 2, pal: ['Base', 'Abyssal'], tricks: true },
   { key: 'tor_demons', x: 1640, z: 4700, r: 6, pick: DEMONS, n: 2, pal: ['Base', 'Bone-white'], tricks: true },
+  // (Kobolds in the rocks above the Frost Road, half way up from the Rime Ring to Frostwatch: Bram Kettle's purse carried up
+  // to Hew Garrick, 900 m, met nothing of its level. tools/quests/errands.mjs.)
+  { key: 'frost_rd_kobolds', roadside: true, lvl: 11, x: 643, z: 3345, r: 6, pick: KOBOLDS, n: 4, pal: ['Bone-white', 'Abyssal'] },
   // The Gallowswood.
   { key: 'toll_ambush', x: 3360, z: 2420, r: 7, boss: MANNEQUINS, pick: POSSESSED.concat(MANNEQUINS), n: 4, pal: ['Base', 'Blighted', 'Bloodsoaked'] },
   { key: 'gallows_bat', x: 2967, z: 2384, r: 4, boss: ['werebat'], pick: ['harpy_warrior'], n: 1, dress: 'roost', pal: ['Base', 'Bloodsoaked'] },

@@ -248,8 +248,9 @@ for (const b of BATTLES) node((b.x + b.x2) / 2 + 40, (b.z + b.z2) / 2 + 40, { ke
 for (const g of HUNT_GROUNDS) node(g.x, g.z, { key: g.key, name: 'the hunting ground', kind: 'near', r: g.r });
 for (const l of LAIRS) if (!l.wild && Math.hypot(l.x, l.z) < NEAR && !nodes.some((n) => Math.hypot(n.x - l.x, n.z - l.z) < 60)) node(l.x, l.z, { key: l.key, name: 'the lair', kind: 'near', r: l.r });
 for (const c of TUMBLER_CAMPS) if (c.r && !nodes.some((n) => Math.hypot(n.x - c.x, n.z - c.z) < 80)) node(c.x, c.z, { key: 'camp', name: 'the camp', kind: c.x * c.x + c.z * c.z < NEAR * NEAR ? 'near' : 'site', r: c.r * 0.5 });
-// And each far lair that isn't a wild one, on a lane: the land's named fights.
-for (const l of LAIRS) if (!l.wild && Math.hypot(l.x, l.z) >= NEAR && !nodes.some((n) => Math.hypot(n.x - l.x, n.z - l.z) < 220)) node(l.x, l.z, { key: l.key, name: 'the lair', kind: 'lair', r: l.r });
+// And each far lair that isn't a wild one, on a lane: the land's named fights. (Not one stood beside a road for those going by
+// to meet, `roadside`: the road's its way, and a lane of its own was 5,000 corners more on a phone. tools/quests/errands.mjs.)
+for (const l of LAIRS) if (!l.wild && !l.roadside && Math.hypot(l.x, l.z) >= NEAR && !nodes.some((n) => Math.hypot(n.x - l.x, n.z - l.z) < 220)) node(l.x, l.z, { key: l.key, name: 'the lair', kind: 'lair', r: l.r });
 
 // Rings of crossings in the woods round Bellmourn, and a loose lattice of them over all the land: where the footpaths meet,
 // so there's a way through every stretch of country, not only out to its places.

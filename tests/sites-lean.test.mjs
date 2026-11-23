@@ -40,7 +40,10 @@ test('the land\'s corners are typed arrays of just their length, and can be let 
   // the dens pinned by the Fells' camps, 2,500 corners, under a tenth of a megabyte.)
   // (985,000 since the Gallowswood's lairs were dressed as their words say, 2026-11-23: the gibbets' irons and the forked-pole
   // roost, 6,000 corners, about 0.2 MB.)
-  assert.ok(pv > 150000 && pv < 985000, `${pv} corners on a phone`);   // (as above: Phobos's block-out is 350,000 of them even with flat-lidded houses, and a phone holds them all; and its sewers' eight stairs down)
+  // (987,000 since three lairs were stood by the roads of the longest errands with nothing on them, 2026-11-23: the March
+  // Road's demons, the Throne Road's werebat and the Frost Road's kobolds, src/core/tripo-monsters.js roadside: their camps'
+  // dress, 2,100 corners, under a tenth of a megabyte. No lane of their own: that was 5,000 more.)
+  assert.ok(pv > 150000 && pv < 987000, `${pv} corners on a phone`);   // (as above: Phobos's block-out is 350,000 of them even with flat-lidded houses, and a phone holds them all; and its sewers' eight stairs down)
   assert.equal(phone.colliders.length, full.colliders.length, 'a phone is stopped by what a PC is');
   dropSiteGeometry();
   assert.equal(buildSites().parts.size, 0);
