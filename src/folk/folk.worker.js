@@ -60,7 +60,7 @@ async function boot({ buffer, base, lean }) {
   life = new Life({ ground, town, clips, emit, people: FOLK });
   talk = new Talk(life, { lines: { ...LA, ...LB, ...LC, ...LLAND, ...LPHOBOS, ...LHUBS, ...LROAD }, scenes: SCENES, smalltalk: SMALLTALK }, emit);
   // (Phobos's street crowd: fewer of them on a phone.)
-  if (lean) life.crowdCap = Math.min(life.crowdCap, CROWD_LEAN);
+  if (lean) { life.crowdCap = Math.min(life.crowdCap, CROWD_LEAN); life.lean = true; }
   // Each body's skeleton out of its model (the mesh is the renderer's), one fetch a model. A few models at a time, and each
   // file let go as soon as its skeletons are read: there are 153 of them, 185 MB with their pictures, and asked for all at
   // once they were all held at once, by a thread that wants a few kilobytes of each (src/core/files.js dropFile).

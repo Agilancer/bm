@@ -512,7 +512,9 @@ export function streetLife(K, cell, o) {
         if (spine && v > 0.62) {
           const [kx, kz] = at(st.w - 4.1), ky = Y(kx, kz);
           if (v < 0.76) K.cart(kx, kz, yaw + (u - 0.5) * 0.5 + (sd > 0 ? Math.PI : 0));
-          else if (v < 0.9) K.stall(kx, kz, face + Math.PI / 2, u < 0.5 ? 'cloth_red' : 'umber:cloth_oat', Math.floor(w * 4));
+          // (Facing the street, its counter to the passers-by and its back to the kerb. It used to stand side on, its
+          // counter looking down the street: the owner.)
+          else if (v < 0.9) K.stall(kx, kz, face, u < 0.5 ? 'cloth_red' : 'umber:cloth_oat', Math.floor(w * 4));
           else if (o.BANNER && w < 0.6) {
             const [px, pz] = at(st.w + 0.2);
             K.box('dark:wood', px, Y(px, pz), pz, 0.09, 6.2, 0.09, 0, { collide: false });

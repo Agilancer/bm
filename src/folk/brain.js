@@ -13,7 +13,7 @@ import { AXE_SAID } from './lines/smithy.js';
 import { CHATTER, LINES as CROWD_LINES, MEETS } from './lines/phobos.js';
 import { PHOBOS } from '../core/phobos-data.js';
 import { CITY, cityIn } from '../core/east.js';
-import { phobosLanes } from '../core/phobos-build.js';
+import { phobosLanes, phobosStalls } from '../core/phobos-build.js';
 // (Baked from the houses' plans, tools/homes/bake-beds.mjs: this thread never lays out the city's houses.)
 import { bakedBed } from './phobos-beds.js';
 
@@ -263,6 +263,8 @@ export class Life {
     this.clock += dt;
     if (first || this.jumped(world)) this.place();
     this.started = true;
+    // (Phobos's stalls near you, kept: a keeper behind each counter. Once a second.)
+    if ((this.stallsAt = (this.stallsAt ?? 0) - dt) <= 0) { this.stallsAt = 1; this.manStalls(); }
     for (const me of this.folk) {
       me.dt = dt;
       const b = this.blockAt(me, this.hour, this.day);
@@ -271,7 +273,7 @@ export class Life {
       if (me.posted) this.attend(me);
       // (One of Phobos's crowd left far behind (or one who lives in a district, when you've gone far from it: AREA_REACH), or the player gone out of the city: what they were at is dropped, and roam
       // starts again, setting them down near the player or parking them.)
-      if (me.crowd && !me.parked && !me.abed && (!this.inCity || (me.p.area ? farFrom(me.p.area, this.player) : Math.hypot(me.x - this.player[0], me.z - this.player[2]) > RECALL))) { me.task?.return(); me.task = null; me.taskDone = true; }
+      if (me.crowd && !me.parked && !me.abed && !me.stall && (!this.inCity || (me.p.area ? farFrom(me.p.area, this.player) : Math.hypot(me.x - this.player[0], me.z - this.player[2]) > RECALL))) { me.task?.return(); me.task = null; me.taskDone = true; }
       // (One of the road's folk left far behind you, or you gone from them by a portal or a seal: parked, wherever they were.)
       if (me.trip && Math.hypot(me.x - this.player[0], me.z - this.player[2]) > ROAD_LEAVE) { this.roadLeft(me); me.task?.return(); me.task = null; me.taskDone = true; }
       // (A script that won't wind down when its hour's up is stopped.)
@@ -319,6 +321,58 @@ export class Life {
         if (wq) ease(q, ux * step * wq, uz * step * wq);
       }
     }
+  }
+
+  // Phobos's stalls (src/core/phobos-build.js phobosStalls), kept by the crowd: every one within KEEP_NEAR of you that has
+  // none gets a keeper behind its counter, the nearest first, up to a share of the crowd (keepCap); one you've left KEEP_LET
+  // behind is let go, and its keeper goes back to the streets. A keeper is one of the crowd who's parked or out of your
+  // sight, set down behind the counter where they stand facing out over it (keepStall). A trade's people before the rest,
+  // their own district's before another's, and never someone a quest wants, a child, or one abed. (The owner: "make sure
+  // the vendor stalls have vendors in them". A phone has only the King's Mile's: Chainmarket's aren't built on one.)
+  manStalls() {
+    const list = this.stalls ||= phobosStalls().filter((q) => !(this.lean && q.market)).map((q) => ({ ...q, keeper: null }));
+    const [px, , pz] = this.player;
+    let manned = 0;
+    for (const q of list) {
+      q.d = Math.hypot(q.x - px, q.z - pz);
+      const k = q.keeper;
+      if (!k) continue;
+      if (!this.inCity || q.d > KEEP_LET || k.stall !== q || k.abed || abedNow(k, this.hour) || k.crowdK >= this.crowdCap) this.unkeep(q);
+      else manned++;
+    }
+    if (!this.inCity) return;
+    const cap = Math.max(2, Math.min(KEEP_MAX, Math.floor(this.crowdCap * 0.3)));
+    if (manned >= cap) return;
+    for (const q of list.filter((o) => !o.keeper && o.d < KEEP_NEAR).sort((a, b) => a.d - b.d)) {
+      if (manned >= cap) break;
+      const me = this.keeperFor(q);
+      if (!me) break;
+      q.keeper = me; me.stall = q; manned++;
+      me.task?.return(); me.task = null; me.taskDone = true;
+    }
+  }
+
+  unkeep(q) {
+    const me = q.keeper;
+    q.keeper = null;
+    if (!me || me.stall !== q) return;
+    // (Back to the streets: set down again on a lane, out of sight, as anyone of the crowd is.)
+    me.stall = null; me.parked = true; me.moving = 0;
+    me.task?.return(); me.task = null; me.taskDone = true;
+  }
+
+  keeperFor(q) {
+    // (Who's up and about near it, so two on the one body aren't set side by side.)
+    const near = this.crowd.filter((o) => !o.parked && Math.hypot(o.x - q.x, o.z - q.z) < 30);
+    let best = null, bs = -Infinity;
+    for (const me of this.crowd) {
+      if (me.stall || me.abed || me.child || me.crowdK >= this.crowdCap || me.inScene || me.talking || me.pairWith || QUEST_AWAKE.has(me.id) || abedNow(me, this.hour)) continue;
+      if (!me.parked && me.seen) continue;
+      let sc = (KEEPS.has(me.p.kind) ? 2 : 0) + (me.p.area === q.district ? 3 : 0) + me.rng() * 0.5;
+      if (near.some((o) => o !== me && kin(me, o))) sc -= 4;
+      if (sc > bs) { bs = sc; best = me; }
+    }
+    return best;
   }
 
   jumped(world) {
@@ -1056,6 +1110,8 @@ const laneHash = () => {
 function* roam(me, key) {
   const life = me.life;
   while (me.alive(key)) {
+    // (Keeping a stall: Life.manStalls.)
+    if (me.stall) { yield* keepStall(me, key); if (me.stall) yield; continue; }
     // (Their hours abed: home to it, below.)
     if (abedNow(me, life.hour)) { yield* phSleep(me, key); if (abedNow(me, life.hour)) yield; continue; }
     const [px, , pz] = life.player, area = me.p.area && DISTRICT[me.p.area];
@@ -1071,6 +1127,27 @@ function* roam(me, key) {
     if (r < still) yield* loiter(me, key);
     else if (r < still + talky) { if (o0) yield* chatWith(me, o0, key); else yield* loiter(me, key); }
     else yield* amble(me, key);
+  }
+}
+
+// Keeping one of Phobos's stalls (Life.manStalls): set down behind its counter (they were parked or out of sight when it was
+// given them), facing out over it to the street, doing what they do stood about; turned to whoever comes up to it. Till
+// it's let go.
+const KEEP_NEAR = 45, KEEP_LET = 65, KEEP_MAX = 72;
+// (The trades that keep a stall, before anyone else of the crowd.)
+const KEEPS = new Set(['baker', 'butcher', 'tanner', 'fishwife', 'apothecary', 'chandler', 'grinder', 'merchant', 'fortune', 'bonecarver', 'weaver', 'dyer',
+  'joiner', 'fence', 'ragwoman', 'barber', 'moneylender', 'smelter', 'washer']);
+function* keepStall(me, key) {
+  const q = me.stall, life = me.life;
+  me.x = q.kx; me.z = q.kz; me.level = 0; me.y = life.ground.landHeight(q.kx, q.kz); me.yaw = q.yaw;
+  me.parked = false; me.posedAt = -1; me.pairWith = null; me.hold = 0; me.look = null; me.face = null; me.moving = 0;
+  me.posture = 'stand'; me.act = ACT.IDLE;
+  me.play('idle', { fade: 0 });
+  while (me.alive(key) && me.stall === q) {
+    // (Whoever's come up to the counter, they turn to; else back to facing out over it.)
+    const [px, , pz] = life.player, d = Math.hypot(px - q.x, pz - q.z), front = ((px - q.x) * Math.sin(q.yaw) + (pz - q.z) * Math.cos(q.yaw)) > 0;
+    yield* turnTo(me, d < 6 && front ? Math.atan2(px - me.x, pz - me.z) : q.yaw);
+    yield* idle(me, 4 + me.rng() * 6, key);
   }
 }
 

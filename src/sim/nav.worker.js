@@ -660,6 +660,12 @@ if (typeof self !== 'undefined') self.onmessage = async (e) => {
     } else if (m.type === 'east') {
       const E = await eastNav();
       self.postMessage({ type: 'east', id: m.id, result: E ? E.route(m.from, m.to, m.r ?? 1) : null, none: !E });
+    } else if (m.type === 'ring') {
+      // (How clear it is each of 16 ways round (x, z), from straight ahead +z round by +x: auto-play's backing off in a fight
+      // picks among them, not into a wall. src/ui/autobrain.js escape.)
+      const out = new Array(16);
+      for (let k = 0; k < 16; k++) { const a = k / 16 * Math.PI * 2; out[k] = clearFor(m.x, m.z, m.y ?? 0, Math.sin(a), Math.cos(a), m.look || 6); }
+      self.postMessage({ type: 'ring', id: m.id, result: out });
     } else if (m.type === 'probe') {
       self.postMessage({ type: 'probe', id: m.id, result: probe(m.x, m.z, m.y ?? 0, m.hx, m.hz, m.look || 5) });
     } else if (m.type === 'sight') {

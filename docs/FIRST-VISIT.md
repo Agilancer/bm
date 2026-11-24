@@ -8,7 +8,7 @@ full of Velscour's Knights and other things worth seeing early. Then you go back
 
 | Quest | Giver | What | Level | Pays |
 |---|---|---|---|---|
-| A Door in the East (`the_door_east`) | Lisandra | Once Bram's first errand (`bed_and_bell`) is done, she opens a **door of candles** (violet fade, `src/ui/folk.js lisDoor`) and you, with your party, are set down on the Sill above Phobos, in the morning (out of the dark or the evening, the candles burn all night). The Sill's seal wakes, so you can travel back. Talk to Wenna. | 1 | 30 g, 60 xp |
+| A Door in the East (`the_door_east`) | Lisandra | Once Bram's first errand (`bed_and_bell`) is done, she opens a **door of candles** (violet fade, `src/ui/folk.js lisDoor`) and you, with your party, are set down on the Sill above Phobos at eight in the morning (the next morning, if it's past eight: `PHOBOS_FIRST_HOUR` in `src/main.js`), so the city's streets are full when you first walk down into them. The Sill's seal wakes, so you can travel back. Talk to Wenna. | 1 | 30 g, 60 xp |
 | The Gibbet Field (`fv_gibbet_field`) | Wenna | Put down the eight hanged debtors walking under the gibbets on the plain (lair `sill_gibbets`, level 3, new `gibbets` lair dress: the hanged in the cages, the fallen ones' dead beside them). | 3 | 45 g, 110 xp |
 | Carrion on the Sill (`fv_carrion`) | Wenna | Kill five carrion birds (lair `sill_carrion`, now level 4, was 20; nests in the perches, a picked body under them). | 3 | 45 g, 80 xp |
 | The Way Down (`fv_the_way_down`) | Wenna Coyle | Walk in through the Drawbridge Gate and the Barbican to the Chainmarket (overheard lines on the way), then find Fennick Lowe of the Pennyless. | 3 | 40 g, 100 xp |
@@ -37,6 +37,11 @@ play time, counted by `played` in `src/main.js`), the flag `door_due` is set. Li
 note "Lisandra has a door to show you" comes up, and the gold trail turns to her. The rule's `due` reads that flag
 (`needsMet()` in `src/folk/quests.js`). A run whose Silas was out of auto-play's reach in the evening, up in the inn,
 only came to the door at eighteen minutes.
+
+Before the door, auto-play hires a party from Aldous Fenn by the square, as many as it can pay for, a tank and a healer
+first (`hireJob(b, m, true)` in `src/ui/autowarrens.js`), so they come through with it; it won't say yes to the door while
+there's one still to hire that it can pay. The owner: "make sure the character picks up the NPC players before heading to
+Phobos for the first time". It used to go alone, the Free Company's hiring being for level six and up.
 
 Auto-play takes the door straight after Bram's errand: it's level 1 in its plan, next after `bed_and_bell`. In the town it
 takes Lisandra's work, then Bram's errand, before any other offer in the square (`offerJob` in `src/ui/autobrain.js`), and

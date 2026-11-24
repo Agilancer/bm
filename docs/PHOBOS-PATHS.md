@@ -32,7 +32,13 @@ layered:
 - `src/sim/east-nav.js` (in the nav worker, `'east'` ask): coarse A\* over east.bin's pieces. It then plans the
   next ~48 m of the route on half-metre cells, using the live world, so it never cuts through a wall or walks
   off a ledge.
+- The coarse A\* and the walk out both weigh a metre by where it is (`WAY_COST`): a street's 1, the alleys and yards on the
+  ground 2.5, a floor (a house, a stair, the wall-walk, a roof) 4, inside the city's wall; the castle and the plain 1. So
+  a way keeps to the King's Mile and its loops and leaves them nearest to where it's going (`tools/paths/streets.mjs`:
+  95% on the streets over eight trips across the city, from 88%; Chainmarket to the Pennyless' Purse from 0%).
 - `src/ui/autobrain.js` `eastWalk`:
+  - asks for the next way from a point 14 m on down the one it has, and joins it on there (`aheadOn`): asked from where
+    it stood, a way that took seconds to work out came back starting ten metres behind it, and it walked back to it;
   - asks again every 7 s, when the planned part runs short, or when the goal moves;
   - opens shut Phobos doors on the way (`phDoor`);
   - counts progress along the route, not as the crow flies, so a stair winding up under its own deck isn't

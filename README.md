@@ -803,6 +803,20 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
   - **It takes corners at the corner.** It turns for the next stretch once it's at the corner, not a stride short of it,
     and it walks rather than runs by a wall, through a door, and coming up to a sharp turn (a run takes a corner wide,
     into the far wall). Down a long straight street it still runs.
+  - **No turning back to where it asked from** (`trimWay`, `aheadOn` in `src/ui/autobrain.js`). A way from the nav thread
+    starts where it stood when it asked, and it's gone on since. It used to turn back to that first point, touch it and
+    turn round again each time a way came in: in Phobos, whose ways take the thread seconds to work out, it walked ten
+    metres on and ten back down every street, every seven seconds (the owner's "weird back and forth"). Now the next of
+    Phobos's ways is asked for from a point 14 m on down the one it's walking and joined on there, and any way that comes
+    in is taken up from the stretch it's beside, not its first point. `node tools/autoplay/trace.mjs` watches it play
+    headless and counts the turns about (`tools/autoplay/trace-read.mjs`).
+  - **Phobos by its streets** (`WAY_COST` in `src/sim/east-nav.js`). In the city a metre of the King's Mile, Ash Lane, the
+    Low Road, the High Loop or the Corpse Quay costs a metre; a metre of the alleys between the blocks costs two and a
+    half, and one through a house, up a stair or along the wall-walk four. It used to take whatever was shortest: from
+    Chainmarket to the Pennyless' Purse, 360 m of back alleys and not a metre of street. Now 95% of its way across the
+    city is on a street (`node tools/paths/streets.mjs`, `tests/east-streets.test.mjs`).
+  - **Not into a wall when it backs off in a fight** (`escape`). It asks the nav thread how clear each of sixteen ways
+    round it is (`ring` in `src/sim/nav.worker.js`) and backs off where there's room, not into the catacombs' walls.
   - **Through a door, square on, from outside and from in.** A path that goes through a doorway is taken to a place a
     pace before its middle and then to one a pace beyond (`DOORWAYS`), so it comes up to the door facing it, opens it,
     and walks through down the middle, and leaves a house the same way. It opens only the doors its path goes through,
@@ -989,12 +1003,13 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
   Not watched: Cinderford, Frostwatch's and Ser Hale's own work, the Waste, a lair with its tricks on.
 - **The run.** Shift is held for the run whenever it's going somewhere more than a few strides off, in long stretches:
   it lets go when its breath is short and takes it up again once it's back, rather than flickering between the two.
-- **Loot and gear.** It picks up what falls and opens every chest near by: out in the land, down in the catacombs, and in
-  the town's houses (in at the door, a hand to the chest with nothing between, and what spills out picked up). In the
-  town it opens only a chest it's passing (within `TOWN_CHEST` metres), one at a time and no sooner than `TOWN_CHEST_GAP`
-  seconds after the last: it used to go round every house for all fifteen before it took a quest, three minutes of a
-  new game. Once it's going for a chest it keeps to that one till it's open or given up. A chest upstairs it leaves: it
-  doesn't take stairs. It wears the best of what it carries, sets gems
+- **Loot and gear.** It picks up what falls and opens every chest near by: out in the land, in the woods round the town,
+  and down in the catacombs (a hand to the chest with nothing between, and what spills out picked up). **Never one of
+  Bellmourn's own** (`bellmourns`): the chests in the town's houses are its people's, and it leaves them shut. It used to
+  go in at their doors and empty them, one after another, the owner's "robbing everyone in the main town". (Elsewhere,
+  in a town it opens only a chest it's passing, within `TOWN_CHEST` metres, one at a time, `TOWN_CHEST_GAP` apart.) Once
+  it's going for a chest it keeps to that one till it's open or given up. A chest upstairs it leaves: it doesn't take
+  stairs. It wears the best of what it carries, sets gems
   in open sockets, sells what it won't wear, and buys upgrades, scrolls it lacks and a mending in the town's shops.
 - **Grinding.** It grinds for levels when no quest suits it yet.
 - **The Test Dungeon.** It fights whatever's been summoned, going in after it once the door's up, and otherwise waits in the
