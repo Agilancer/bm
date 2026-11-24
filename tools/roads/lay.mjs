@@ -11,7 +11,8 @@
 import fs from 'node:fs';
 
 globalThis.__bmNoWays = true;   // (lands.js leaves out the ways laid last time: this lays them again from nothing)
-const { terrainHeight, PATHS, ROADS } = await import('../../src/core/terrain.js');
+const { terrainHeight, CAVE_PATH, PATHS, ROADS } = await import('../../src/core/terrain.js');
+const { CAVE_MOUTH, WAY, WAY_FOOT } = await import('../../src/core/opening.js');
 const { SITES, ROUTES, WATERS, MOUNT, countryAt, siteAt } = await import('../../src/core/lands.js');
 const { buildSites, portalStair } = await import('../../src/core/sites.js');
 const { LAIRS } = await import('../../src/core/tripo-monsters.js');
@@ -63,6 +64,15 @@ for (const c of solid) {
   const m = c === CHURCH_FOOTPRINT || c === CHURCH_WING ? 5 : 2.6, r = Math.hypot(c.hx, c.hz) + m;
   each(c.x, c.z, r, (k, x, z) => { if (boxHit(c, x, z, m)) block(k); });
 }
+// Lisandra's cave and her way down from it are the game's first steps: the one way on is down her flights to the road, so no
+// footpath climbs the hill beside them or sets out from the cave's mouth over the hill the other way (the owner: a player
+// fresh out of the cave was shown flights of steps going off away from where they're meant to go). Shut round the mouth and
+// along her flights; her way isn't an old road to join, either (OLD below).
+disc(CAVE_MOUTH[0], CAVE_MOUTH[1], 30, block);
+for (let n = 0; n < WAY_FOOT; n++) {
+  const [ax, az] = WAY[n], [bx, bz] = WAY[n + 1], L = Math.hypot(bx - ax, bz - az), steps = Math.max(1, Math.ceil(L / 3));
+  for (let s = 0; s <= steps; s++) disc(ax + (bx - ax) * s / steps, az + (bz - az) * s / steps, 16, block);
+}
 // Bellmourn's own streets are its own: nothing new runs through the town (its ways out are on the road map below).
 const TOWN_BOX = { x0: -84, x1: 112, z0: -78, z1: 84 };
 each((TOWN_BOX.x0 + TOWN_BOX.x1) / 2, (TOWN_BOX.z0 + TOWN_BOX.z1) / 2, 120, (k, x, z) => { if (x > TOWN_BOX.x0 && x < TOWN_BOX.x1 && z > TOWN_BOX.z0 && z < TOWN_BOX.z1) block(k); });
@@ -83,7 +93,7 @@ const OUT = new Uint8Array(N * N);
 for (const o of OUTPOSTS) disc(o.x, o.z, o.r + 9, (k) => { OUT[k] = 1; });
 
 // The old roads, cheap to walk along: every square within a road's half-width of one.
-const OLD = [...ROUTES.map((r) => ({ pts: r.pts, w: r.w })), ...PATHS.map((p) => ({ pts: p.pts, w: p.w })), ...ROADS.map((r) => ({ pts: r.line, w: r.w }))];
+const OLD = [...ROUTES.map((r) => ({ pts: r.pts, w: r.w })), ...PATHS.filter((p) => p !== CAVE_PATH).map((p) => ({ pts: p.pts, w: p.w })), ...ROADS.map((r) => ({ pts: r.line, w: r.w }))];
 const markLine = (pts, w, v = 1) => {
   for (let n = 0; n + 1 < pts.length; n++) {
     const [ax, az] = pts[n], [bx, bz] = pts[n + 1], L = Math.hypot(bx - ax, bz - az), steps = Math.max(1, Math.ceil(L / 3));
@@ -257,7 +267,8 @@ for (const l of LAIRS) if (!l.wild && !l.roadside && Math.hypot(l.x, l.z) >= NEA
 const okAt = (x, z) => { const k = ci(z) * N + ci(x); return C[k] !== Infinity && !OUT[k]; };
 for (const [r, n] of [[430, 12], [820, 18]]) for (let q = 0; q < n; q++) {
   const a = (q + 0.5) / n * Math.PI * 2, x = Math.round(Math.cos(a) * r), z = Math.round(Math.sin(a) * r);
-  if (okAt(x, z) && !nodes.some((m) => Math.hypot(m.x - x, m.z - z) < 140)) node(x, z, { key: 'woods', name: 'the woods', kind: 'near', r: 0 });
+  // (None on the hill over Lisandra's cave: one stood there drew footpaths up beside her flights and over from her door.)
+  if (okAt(x, z) && Math.hypot(x - CAVE_MOUTH[0], z - CAVE_MOUTH[1]) > 120 && !nodes.some((m) => Math.hypot(m.x - x, m.z - z) < 140)) node(x, z, { key: 'woods', name: 'the woods', kind: 'near', r: 0 });
 }
 const LATTICE = 1150;
 for (let row = 0; ; row++) {
@@ -328,6 +339,8 @@ function lay(sq, cls, name, open) {
   for (const line of offRoad(sq, open)) {
     let L = 0; for (let i = 0; i + 1 < line.length; i++) L += Math.hypot(line[i + 1][0] - line[i][0], line[i + 1][1] - line[i][1]);
     if (L < 30) continue;
+    // (Nor one that forks off the road where her way comes down onto it: she leads you on along the road from there.)
+    if ([line[0], line.at(-1)].some(([x, z]) => Math.hypot(x - WAY.at(-1)[0], z - WAY.at(-1)[1]) < 40)) continue;
     ways.push({ name, cls, w: WIDTH[cls], pts: line });
     markLine(line, WIDTH[cls]);
   }
