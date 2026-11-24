@@ -443,8 +443,10 @@ export class Wilds {
       // blows in them before they break and run. Come close, or hurt one, and they turn on you instead.
       const takers = list.filter((k) => !FACTIONS[k].v && ['goblin', 'kobold', 'dead', 'plague', 'herd', 'pack', 'night', 'brood', 'cult', 'flock'].includes(FACTIONS[k].side));
       const F = FACTIONS[M.a = force?.a || (takers.length ? pick(takers) : 'moss')];
+      // (Never below the line from all of their life to none in ROAD.rescue.secs from now: time to get there.)
+      const t0 = sim.time;
       const W = M.folk = { x, z, y: sim.world.height(x, z), hp: 1, maxHp: 1, dead: false, dormant: false, wayfarer: true, vx: 0, vz: 0, hidden: false,
-        damage(s, amount) { if (this.dead) return false; this.hp -= amount; if (this.hp <= 0) { this.hp = 0; this.dead = true; } return true; } };
+        damage(s, amount) { if (this.dead) return false; this.hp = Math.max(this.hp - amount, this.maxHp * (1 - (sim.time - t0) / ROAD.rescue.secs)); if (this.hp <= 0) { this.hp = 0; this.dead = true; } return true; } };
       const set = (m) => {
         m.opts.sight = 30; m.opts.leash = 120; m.victim = W; m.rival = W; m.aggro = true; m.idleT = 0;
         // (Its blow as it lands on them: so many of them in the travellers before they run.)

@@ -273,11 +273,13 @@ export const WILD_CALLS = ['raid', 'tear', 'rescue', 'boss', 'find', 'bounty'];
 
 // ---- on the roads --------------------------------------------------------------------------------------------------------
 // The road's own meetings (MEETINGS ambush, rescue, heroes: src/sim/wilds.js startMeet). ambush: how far either side of the
-// way they rise, and how far ahead along it. rescue: the travellers' life (as so many blows of the monsters on them) and
-// how near the player must come before the monsters on them turn; folk: how many of them stand there (src/ui/roadfolk.js).
+// way they rise, and how far ahead along it. rescue: the travellers' life (as so many blows of the monsters on them), and
+// the least time they hold however hard they're hit (secs: their life can't fall faster than all of it in so long; three
+// harpies had fourteen blows in them in four seconds, before anyone could get there); folk: how many of them stand there
+// (src/ui/roadfolk.js).
 export const ROAD = {
   ambush: { side: [13, 19], ahead: [6, 16] },
-  rescue: { life: 14, folk: [2, 3] },
+  rescue: { life: 14, secs: 45, folk: [2, 3] },
   heroes: { n: [2, 4] },
   // How often the road's own come round against the rest (the weights above), when you're on a road.
   roadShare: 1,

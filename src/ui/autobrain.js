@@ -2386,7 +2386,9 @@ export class Brain {
     // to the Sporehold between a word and a hand-in, and four from the Marches. hubBusy.)
     const hubHeld = questing && !m.town && this.hubBusy(m);
     const delve = questing && !busy && !owedNear && !hubHeld && warrensJob(this, m, this.delveWants(m), this.delveOwed());
-    if (delve && !wantsTown) return delve;
+    // (But travellers under attack on the road ahead, or a world boss being fought close by, before a walk to a delve: over
+    // in a minute or two either way. A live run rode off to the Redoubt with the travellers sixty metres ahead.)
+    if (delve && !wantsTown) { const w = this.wildJob(m); return w && /^wild:(rescue|boss):/.test(w.why) && this.jobDist(w, m) < 200 ? w : delve; }
     // Out at Phobos on the first visit (src/folk/first-visit.js): Wenna's work, all of it, before anything a country away,
     // and her offers taken as they come (she's there on the Sill, by the door home). And back home through the door, the
     // word with Lisandra before the town's own errands and offers.
