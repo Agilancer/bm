@@ -90,6 +90,10 @@ export const RULES = {
   the_grey_larder: { needs: 'sick_in_iron', steps: [{ clear: 'den_greylarder' }, { back: true, say: 'The Grey Larder is empty. Your flour is still in it.' }], gold: 72, xp: 720, item: 'robe' },
   the_black_finger: { needs: 'sick_in_iron', steps: [{ clear: 'den_blackfinger' }, { back: true, say: 'The Black Finger is empty. Nobody up it takes a tithe now.' }], gold: 72, xp: 720, item: 'staff' },
   the_bone_field: { needs: ['the_grey_larder', 'the_black_finger'], steps: [{ kill: 'lair:bone_field', n: 1, foe: ['Bone Giants'] }, { back: true, say: 'The big one that walks the Bone Field is down.' }], gold: 95, xp: 950, item: 'skull' },
+
+  // ---- the Herald the Elder Dragon Gods sent this way (src/core/wilds.js WORLD_BOSSES, docs/ELDER-DRAGONS.md "On the land"): it
+  // rises at its ground (src/core/boss-grounds.js) once you've taken this, and the other Tessariels come in to it ----
+  the_heat_under_the_world: { needs: 'the_smoke_we_hide_in', steps: [{ wboss: 'herald_hearth', ground: 'bg_herald_hearth' }, { back: true, say: 'Oskarran is down. The rise is going cold.' }], gold: 120, xp: 1200, item: 'robe' },
 };
 // The level each wants (src/ui/autobrain.js PLAN; the quest log suggests the same). Each hub steps up, each errand on is a
 // level or two above the work it waits for: Ashgate 6 to 8, Cinderford 8 to 11, Khel 11 to 12, the Watch 13 to 16, and the
@@ -98,6 +102,6 @@ export const LEVELS = [
   ['mile_plates', 6], ['pickfall', 6], ['withy_bundles', 7], ['nineteen_going_west', 7],
   ['ash_on_the_wind', 8], ['tally_tags', 7], ['mule_shoes', 8], ['the_ash_den', 9], ['red_scouts', 10], ['word_to_the_porter', 11],
   ['weights_for_the_table', 11], ['salt_on_the_track', 11], ['charred_mill', 11], ['the_lost_captain', 12],
-  ['black_road', 12], ['vigil_patrols', 13], ['the_smoke_we_hide_in', 14], ['the_warden_of_the_gate', 14], ['the_castellan', 14], ['gallowgate', 16],
+  ['black_road', 12], ['vigil_patrols', 13], ['the_smoke_we_hide_in', 14], ['the_warden_of_the_gate', 14], ['the_castellan', 14], ['gallowgate', 16], ['the_heat_under_the_world', 15],
   ['copper_for_the_pit', 17], ['sick_in_iron', 17], ['turned_up', 16], ['the_grey_larder', 18], ['the_black_finger', 18], ['the_bone_field', 19],
 ];

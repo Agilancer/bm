@@ -6,6 +6,7 @@
 // walk: their gait (a clip). idles: what they do standing about. trade: what they sell (src/folk/shops.js).
 
 import { REGION_PEOPLE } from './regions/index.js';
+import { ROAD } from './road-folk.js';
 
 export const PEOPLE = [
   // The Tolling Bell
@@ -308,10 +309,13 @@ const swapsOf = (p, n) => {
   return out;
 };
 CROWD.push(...CROWD.filter((p) => MESHY.has(p.body)).flatMap((p, n) => swapsOf(p, n)));
-// Everyone with a body on the town's thread: the town's people, then the posted, then Phobos's crowd (the folk buffer's order).
+// Everyone with a body on the town's thread: the town's people, then the posted, the road's, then Phobos's crowd (the folk buffer's order).
 // And those posted at the camps and the land's other hubs, region by region (src/folk/regions/, docs/QUEST-LOOP.md).
 for (const p of REGION_PEOPLE) POSTED.push(posted(p));
-export const FOLK = PEOPLE.concat(POSTED, CROWD);
+// (And between the posted and the crowd, the folk you pass on the roads, parked till they're set down on one:
+// src/folk/road-folk.js. The crowd's kept last.)
+export { ROAD };
+export const FOLK = PEOPLE.concat(POSTED, ROAD, CROWD);
 
 export const BY_ID = Object.fromEntries(FOLK.map((p) => [p.id, p]));
 export const first = (p) => (p.id === 'homunculus' ? 'Homunculus' : p.id === 'aldric' ? 'Ser Aldric' : p.id === 'dusty' ? 'Dusty' : p.name.split(' ').slice(0, p.name.startsWith('Ser ') ? 2 : 1).join(' '));

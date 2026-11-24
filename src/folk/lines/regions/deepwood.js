@@ -239,8 +239,17 @@ export const LINES = {
         "A red one. It sleeps on the shore by the door, stands up when anyone comes near it, and lies down again when they go. It's never gone for the warden. It isn't guarding the door. I think it's waiting for what's in it.",
         { after: 'red_on_the_shore', say: "The shore's empty. I keep looking where it lay. You get used to a thing, in a hundred and ninety-one days. Even a dragon." },
       ],
+      // (The four Heralds out in the land, src/core/wilds.js WORLD_BOSSES: one quest each, at Kestrel Hide, Climbers' Rest,
+      // the Hollow Watch and the Broken Stair. She hears of each one put down.)
+      heralds: [
+        "Four of them, the palmers' books say: heralds, one for each of what sleeps behind the door. They come down off the edges of the world when it stirs, and walk this way. Green, red, bone and black. I've written where each was seen. The time first.",
+        { after: 'the_empty_sky', say: "The green one's down, on the downs? I'll write it. The wind behind the door went quiet the same hour. I can't tell you if that's sleep, or holding its breath." },
+        { after: 'the_cold_that_remembers', say: "The bone one, on the fells. Down. The frost on the arch of the door melted the same night, and froze again by morning in a new shape. I've drawn both." },
+        { after: 'the_heat_under_the_world', say: "The red herald, out in the Waste, down? The ice on the lake cracked at noon, all the way across, with nothing on it. I've written the time. I don't like the time." },
+        { after: 'a_tooth_of_the_star', say: "The black one was coming up the palmers' way. To here. To the door. You put it down a morning's walk below me, and I never knew. I'll be writing that one a long while." },
+      ],
     },
-    topics: { door: 'The door', red: 'The red one' },
+    topics: { door: 'The door', red: 'The red one', heralds: 'The heralds' },
     bye: ["Keep this side of the ice.", "Mind the rim going down. It's worse than coming up."],
     barks: {
       player: ["Stay off the ice.", "This side."],
@@ -757,5 +766,34 @@ export const QUESTS = {
     ],
     after: ["I'm going down. In the spring. Isla can take me; she'll want to say she told me so. Somebody should write the last page. I'll write it at the bottom."],
     others: {},
+  },
+
+  // ---------------------------------------------------------------- The Heralds (docs/ELDER-DRAGONS.md "On the land")
+  a_tooth_of_the_star: {
+    title: 'A Tooth of the Hollow Star',
+    giver: 'isla',
+    needs: ['the_shoulder'],
+    about: "Three hundred and eighty paces east of the Broken Stair, on the old palmers' way round the mountain, a black dragon has come down and lies across the path, and the snow round it doesn't shine. Lanterns go dim near it. Isla Crag keeps a candle in the window for whoever is up the mountain, and since it came, the candle won't stay lit. Umbraxes, the Herald of the Hollow Star. Put it down.",
+    offer: [
+      "I keep a candle in the window for whoever's up the mountain. It's kept since my mother's time. Four nights now it won't stay lit. No draught. It just goes small, and smaller, and out, like something's drinking it.",
+      "East, three hundred and eighty paces, on the palmers' way round. A black one, lying across the path. The snow doesn't shine round it. My lantern went to nothing at two hundred paces and came back when I turned round. I'd like my candle back.",
+    ],
+    accept: "I'll put it down.",
+    acceptLine: "It throws black lights that come after you: keep moving and they lose you. When it breathes in, long, everything goes towards it; get far off before it's done. If it marks every one of you, spread out. I'd tell you more. I turned round.",
+    decline: 'Not now.',
+    declineLine: "No. Then I'll light the candle again tonight, and watch it go out.",
+    journal: [
+      "East of the Broken Stair on the palmers' way, a black dragon lies across the path, and the light near it goes out. Umbraxes, the Herald of the Hollow Star. Put it down.",
+      'Go back to Isla Crag at the Broken Stair.',
+    ],
+    progress: ["East, on the palmers' way. Keep moving when the black lights come. Get away when it breathes in."],
+    done: [
+      "It stayed lit last night. All night. I sat up and watched it, like a fool. ...Thank you.",
+      "My mother said the Crown up there is a mouth, the pillars round its lake are teeth, and the door at the top is the throat. She said it to keep a child off a ledge. That black one wasn't from the Crown. It was going up to it. Here. It knows the way.",
+    ],
+    after: ["Candle's lit. If you're up the mountain, it's for you too. It's for whoever."],
+    others: {
+      ebba: ["Isla's candle's back. She came and told me, which she's never done in her life. You'll have done something."],
+    },
   },
 };

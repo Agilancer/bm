@@ -344,6 +344,21 @@ export function caveStep(b, m, g) {
 
 // ---- the fights inside ---------------------------------------------------------------------------------------------------
 
+// A world boss's mark to share or its pool of light (src/sim/worldboss.js: soak, out in the land), down near it and not yet
+// landed: to be stood in, at once, unless it's in one already. As an order: { to, urgent }, or null.
+export function soakNear(b, m) {
+  const G = b.o.game.perils;
+  if (!G?.marks?.length || performance.now() - G.at > 1500) return null;
+  let best = null, bd = 30;
+  for (const h of G.marks) {
+    if (!h.soak || h.live) continue;
+    const d = dist(m.x, m.z, h.x, h.z);
+    if (d < h.r - 1.2) return null;
+    if (d < bd) { bd = d; best = h; }
+  }
+  return best ? { to: [best.x, best.z], urgent: true } : null;
+}
+
 // Where to stand and whom to hit, by the boss's calls. Returns { to: [x, z] | null, run, target: foe | null, why }.
 export function tactics(b, m, foes) {
   const P = b.o.game.party, W = P?.warrens;
@@ -353,7 +368,8 @@ export function tactics(b, m, foes) {
   // What the fight itself wants of it just now (src/sim/dungeon.js order): not a step taken (the Dollmaker's music has
   // stopped; a pyre's on it and it's clear of everyone); or somewhere to be at once, whatever's under it (the high rock
   // above the tide, the far side of a pillar, his spotlight, the grave's circle).
-  const told = f?.order || null;
+  // (Out in the land, a world boss's marks to be stood in: the only such there are out of a delve. src/sim/worldboss.js order.)
+  const told = f?.order || (!inDungeon(m.x, m.z) ? soakNear(b, m) : null);
   // (Held to a place, or sent somewhere at once, and burning where it is: a step out of the fire first, as a player would.
   // Not if where it's sent is in the same fire.)
   if (told?.still || (told?.to && told.urgent)) {

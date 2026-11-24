@@ -953,4 +953,39 @@ export const QUESTS = {
       wynn: ["Winterfast? Good. The wind's been at my back on the face all month, pushing. You don't want a wind that's trying."],
     },
   },
+
+  // ---------------------------------------------------------------- The Heralds (docs/ELDER-DRAGONS.md "On the land")
+  the_cold_that_remembers: {
+    title: 'The Cold That Remembers',
+    giver: 'dain',
+    needs: ['winterfast'],
+    about: "Dain Scree's mast frosts over on its lee side, at noon, in the sun, and his ropes freeze stiff on the pins. It comes from the west: six hundred paces west of Climbers' Rest, on a level shelf below the scree, a dragon of old bone and ice lies with its head on its claws and the cold pouring off it like water off a bow. Selvhra, the Herald of the Cold. Put it down.",
+    offer: [
+      "Everyone looks up first. You did. Good. Now look at the mast. Frost. On the lee side, at noon, with the sun on her. That's not weather. Weather comes from somewhere, and it comes from all round. This comes from west.",
+      "I took the glass out. Six hundred paces west, on the shelf below the scree, there's a dragon of old bone and ice with its head on its claws, and the cold comes off it like water off a bow. I've seen whales, and the thing that eats whales. Not that. Put it down.",
+    ],
+    accept: "I'll put it down.",
+    acceptLine: "It stands when you come close. The cold goes out from it in rings; you'll see the frost run across the stone ahead of each. Be off the ring before it comes. Others will come to it when it stands. Let them in. There's no pride on a lee shore.",
+    decline: 'Not today.',
+    declineLine: "Then I'll be thawing rope over the kettle till you do. Mind the frost going down.",
+    journal: [
+      "Dain Scree's mast frosts on the lee side at noon. Six hundred paces west of Climbers' Rest, a dragon of bone and ice lies on a shelf below the scree with the cold pouring off it: Selvhra, the Herald of the Cold. Put it down.",
+      "Go back to Dain Scree at Climbers' Rest.",
+    ],
+    progress: [
+      'West, six hundred paces, on the shelf. You\'ll know it when your breath stops smoking and starts falling.',
+      "When it reaches for whoever's furthest off, don't be the furthest. Come in to the others.",
+      'At the end the cold comes down everywhere at once. Get in the light it leaves on the stone: the only warm place on that shelf.',
+    ],
+    done: [
+      "Hear that? The mast. The frost's coming off her, running. Drip, drip, off every pin. ...Best sound I've heard since I stepped her up here.",
+      "On ships we'd say a thing like that was running before something. The pilgrims up the Sorrowhorn say there's a door at the top with seals on it, and what's behind each seal turns over when its herald dies. Turns over to sleep, or to wake? Here. Take it.",
+    ],
+    after: [
+      "No frost on her since. I check every noon, all the same. Old habits. A ship teaches you that the thing you stopped watching is the thing that gets you.",
+    ],
+    others: {
+      wynn: ["Dain's had you after the ice-beast? He sat up all night with the glass. Two fingers short, and I'd still not go near that shelf. You've all yours. Use them."],
+    },
+  },
 };

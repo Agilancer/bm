@@ -38,7 +38,7 @@ import { inTown, townDist } from '../core/town.js';
 import { CHURCH_GUARD, churchAt, inChurch } from '../core/church.js';
 import { floorAt } from '../core/interior.js';
 import { GROUP_KEYS, GROUPS, LAIRS, TRIPO_KIND, LAIR_LEVEL } from '../core/tripo-monsters.js';
-import { WILD_CALLS } from '../core/wilds.js';
+import { WILD_CALLS, WORLD_BOSSES, groundOf, worldBossName } from '../core/wilds.js';
 import { CAMPS } from '../sim/slimes.js';
 import { REACH, SPELLS } from '../sim/spells.js';
 import { AMBUSH_AT } from '../sim/opening.js';
@@ -127,8 +127,13 @@ const WILD_SAY = {
   tear: (c) => (c.fight ? `Fighting what comes through ${c.name.toLowerCase()}.` : `${c.name.charAt(0)}${c.name.slice(1).toLowerCase()} is open near here: walking into it.`),
   find: (c) => `Something's been left over there (${c.name.toLowerCase()}): a look.`,
   bounty: (c) => `The bounty: to ${c.name.replace(/^an? /, 'the ')}, for its chief.`,
+  boss: (c) => (c.fight ? `A world boss, ${c.name}: in the fight with the other Tessariels.` : `${c.name.charAt(0).toUpperCase()}${c.name.slice(1)} has risen ${Math.round(c.d / 10) * 10} m off: going to it with the others.`),
+  rescue: () => 'Travellers on the road, with something at them: getting it off them.',
 };
-const WILD_UNDER = { raid: 3, tear: 1, find: 99, bounty: 0 };
+const WILD_UNDER = { raid: 3, tear: 1, find: 99, bounty: 0, boss: 2, rescue: 4 };
+// A world boss called from far off (src/sim/worldboss.js) takes it off its quests at most once in so many seconds, and only
+// whole; one it's in already, or right by (BOSS_NEAR metres), always. Travellers in a fix on the road it's on, always.
+const BOSS_GAP = 1200, BOSS_NEAR = 260;
 // (The land's outposts and standing battles carry their own, from their faction's: src/core/wilds.js.)
 const lairLevel = (l) => l.lvl ?? LAIR_LEVEL[l.key];
 // How near a lair it can go by without being seen: as far as one of them wanders from it (src/sim/tripo.js roam), and their
@@ -514,7 +519,7 @@ export function castWorth(sp, c) {
 // can't do, somewhere it can't find, a foe or a lair it has no measure of, a spell it casts that's gone, a shop it doesn't use.
 // Warned in the console when it starts, and the failing list of tools/autoplay/check.mjs. When something's added to the game,
 // it's taught here (and the check run), so auto-play keeps playing the whole of it. foeNames: FOE_NAMES from src/main.js.
-const STEP_KEYS = new Set(['talk', 'say', 'back', 'bring', 'n', 'enter', 'night', 'visit', 'kill', 'of', 'warden', 'start', 'foe', 'boss', 'end', 'at', 'clear', 'gather', 'what', 'spots']);
+const STEP_KEYS = new Set(['talk', 'say', 'back', 'bring', 'n', 'enter', 'night', 'visit', 'kill', 'of', 'warden', 'start', 'foe', 'boss', 'wboss', 'ground', 'end', 'at', 'clear', 'gather', 'what', 'spots']);
 // The Test Dungeon's counters (src/core/testhall.js STATIONS), and what auto-play does with each: nothing. In there it fights
 // whatever's been summoned, and what that is, what it's wearing and who's with it are for whoever's testing to choose
 // (hallRun below). A new counter is named here, with what it's for, or coverage() says so.
@@ -537,6 +542,7 @@ export function coverage(foeNames = null) {
       for (const a of [st.enter, st.kill, st.gather, st.clear && `outpost:${st.clear}`, ...(st.visit || [])].filter((q) => typeof q === 'string')) if (!area(a)) out.push(`quest ${id}: nowhere to walk to for "${a}" (area())`);
       if (st.gather && gatherSpots(id, st).length < st.n) out.push(`quest ${id}: ${st.n} to gather at "${st.gather}", and fewer than that lying there (gatherSpots)`);
       if (st.boss && !BOSSES.some((b) => b.key === st.boss)) out.push(`quest ${id}: a boss, "${st.boss}", that no dungeon has`);
+      if (st.wboss && !(WORLD_BOSSES.some((b) => b.key === st.wboss) && groundOf(st.ground))) out.push(`quest ${id}: a world boss, "${st.wboss}" at "${st.ground}", that the land hasn't got (WORLD_BOSSES, BOSS_GROUNDS)`);
       if (st.kill && st.kill !== 'catacombs' && !huntsFor(st.kill)) out.push(`quest ${id}: no hunting grounds for "${st.kill}" (HUNTS): it hunts round its middle`);
       if (st.bring && !FARMS.has(st.bring)) out.push(`quest ${id}: wants ${st.bring}, which it doesn't know where to farm`);
       if (st.talk && !people.has(st.talk)) out.push(`quest ${id}: a word with "${st.talk}", who isn't anyone it can find`);
@@ -1048,6 +1054,17 @@ export class Brain {
     if (typeof k !== 'string' || !(k.startsWith('lair:') || k.startsWith('outpost:'))) return null;
     const a = area(k);
     return a ? { x: a.x, z: a.z, r: 95 } : null;
+  }
+
+  // A world boss being fought that it's gone to (wildJob's boss, or a quest's wboss step), as { x, z, r }: the boss and its
+  // adds there are for fighting, whatever their bodies. Judged by its body's kind (a dragon's wants level 24) the boss was a
+  // thing to run from: in a live run it stood off "running from something too strong" for four minutes, the party with it,
+  // while the Herald's bar didn't move. Or null.
+  bossGround(m) {
+    const W = this.o.game?.wilds?.bossOn, j = this.job;
+    if (!W?.fight || !j || dist(m.x, m.z, W.x, W.z) > 120) return null;
+    const mine = j.why?.startsWith('wild:boss:') || (!!j.quest && !!this.o.townUI?.quests?.step?.(j.quest)?.wboss);
+    return mine ? { x: W.x, z: W.z, r: 50 } : null;
   }
 
   // Inside ground it's keeping clear of (a knight's post, a lair it isn't ready for).
@@ -1735,7 +1752,7 @@ export class Brain {
     // (And what the quest in hand has sent it to, a lair or a den and whatever stands there, its chief too, is for fighting
     // at the level the quest is wanted at: it used to run to a den it was told to empty, call its chief too big, run away
     // and come back. questGround.)
-    const qg = this.questGround(m);
+    const qg = this.questGround(m) || this.bossGround(m);
     const fightable = inDungeon(m.x, m.z) ? () => true : (k, l, hp, sl, f = null) => fightableAt(k, k === 0 || k === 3 ? m.lvl : l, hp, sl) || (!!qg && !!f && k >= TRIPO_KIND && dist(f.x, f.z, qg.x, qg.z) < qg.r);
     this.kiteCool -= 0.12; this.dodgeCool -= 0.12; this.reactT -= 0.12; this.rideCool -= 0.12;
     const noRide = () => { this.ride = null; this.rideHold = false; };
@@ -2369,7 +2386,9 @@ export class Brain {
     // to the Sporehold between a word and a hand-in, and four from the Marches. hubBusy.)
     const hubHeld = questing && !m.town && this.hubBusy(m);
     const delve = questing && !busy && !owedNear && !hubHeld && warrensJob(this, m, this.delveWants(m), this.delveOwed());
-    if (delve && !wantsTown) return delve;
+    // (But travellers under attack on the road ahead, or a world boss being fought close by, before a walk to a delve: over
+    // in a minute or two either way. A live run rode off to the Redoubt with the travellers sixty metres ahead.)
+    if (delve && !wantsTown) { const w = this.wildJob(m); return w && /^wild:(rescue|boss):/.test(w.why) && this.jobDist(w, m) < 200 ? w : delve; }
     // Out at Phobos on the first visit (src/folk/first-visit.js): Wenna's work, all of it, before anything a country away,
     // and her offers taken as they come (she's there on the Sill, by the door home). And back home through the door, the
     // word with Lisandra before the town's own errands and offers.
@@ -2606,6 +2625,15 @@ export class Brain {
       if (c.why !== 'bounty' && this.avoid(m).some(([x, z, r]) => dist(c.x, c.z, x, z) < r)) continue;
       const say = WILD_SAY[c.why](c);
       if (c.why === 'find') return { kind: 'go', why, x: c.x, z: c.z, r: 2.4, say };
+      if (c.why === 'boss') {
+        const near = c.fight ? c.d < 120 : c.d < BOSS_NEAR, mine = this.bossKey === `${c.key}:${Math.round(c.x)}`;
+        // (One a quest of its own is waiting on: always. src/folk/quests.js wantedBosses.)
+        const wanted = this.o.townUI?.quests?.wantedBosses?.().some((w) => w.key === c.key);
+        if (!near && !mine && !wanted && (this.t - (this.bossAt ?? -1e9) < BOSS_GAP || m.hpf < 0.6 || this.firstVisit(m))) continue;
+        if (c.fight && m.hpf < 0.2) { this.giveUp(why, 300); continue; }
+        if (!mine) { this.bossKey = `${c.key}:${Math.round(c.x)}`; this.bossAt = this.t; }
+        return c.fight || c.d < 40 ? { kind: 'hunt', why, spots: [[c.x, c.z]], say } : { kind: 'go', why, x: c.x, z: c.z, r: 24, say };
+      }
       if (c.why === 'tear') {
         if (c.fight) { if (m.hpf < 0.3) { this.giveUp(why, 600); continue; } return { kind: 'hunt', why, spots: [[c.x, c.z]], say }; }
         if (m.hpf < 0.7) continue;
@@ -2772,6 +2800,14 @@ export class Brain {
       return null;
     }
     if (m.lvl < this.need(id, lvl)) return null;
+    // A world boss to put down (a wboss step): to the ground it rises at for the quest; its fight there is wildJob's, once
+    // it's up (src/sim/worldboss.js setWant raises it soon after the step's come to).
+    if (st.wboss) {
+      const g = groundOf(st.ground);
+      if (!g) return null;
+      const there = dist(m.x, m.z, g.x, g.z) < 60;
+      return { kind: there ? 'hunt' : 'go', why: `q:${id}`, x: g.x, z: g.z, r: 30, spots: [[g.x, g.z]], say: `${title}: to where ${worldBossName(st.wboss)} rises${there ? ', and waiting for it' : ''}.` };
+    }
     // Down a party dungeon (to go in, to kill there, a boss of it, a room of it to walk): the delve's own work, with a party (delveWants).
     if (st.boss || DELVE_KEYS.includes(st.enter) || DELVE_KEYS.includes(st.kill) || roomDelve(st.kill) || roomDelve(st.enter) || (st.visit || []).some((v) => roomDelve(v) && !(s.seen || []).includes(v))) return null;
     if (st.enter) {

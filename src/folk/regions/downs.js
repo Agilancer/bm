@@ -76,6 +76,10 @@ export const RULES = {
   off_the_spit: { steps: [{ kill: 'lair:den_gnawedhollow', n: 2 }, { back: true, say: 'Two of them have stopped looking.' }], gold: 20, xp: 200 },
   the_crooked_circle: { needs: 'bird_calls', steps: [{ clear: 'den_crookedcircle' }, { back: true, say: 'The Crooked Circle is empty. Nobody is whistling.' }], gold: 40, xp: 400 },
   the_gnawed_hollow: { needs: ['off_the_spit', 'the_crooked_circle'], steps: [{ clear: 'den_gnawedhollow' }, { back: true, say: 'The Hollow is empty. The red-eyed one is dead.' }], gold: 44, xp: 440, item: 'skull' },
+
+  // ---- the Herald the Elder Dragon Gods sent this way (src/core/wilds.js WORLD_BOSSES, docs/ELDER-DRAGONS.md "On the land"): it
+  // rises at its ground (src/core/boss-grounds.js) once you've taken this, and the other Tessariels come in to it ----
+  the_empty_sky: { needs: 'the_gnawed_hollow', steps: [{ wboss: 'herald_gale', ground: 'bg_downs_1' }, { back: true, say: 'Veyrasz is down. The grass is getting up.' }], gold: 90, xp: 900, item: 'staff' },
 };
 // The level each wants (src/ui/autobrain.js PLAN; the quest log suggests the same). Each hub steps up, each errand on is
 // a level above the work it waits for, and Dunmow (6 to 7) comes before the tower (7 to 9).
@@ -84,5 +88,5 @@ export const LEVELS = [
   ['millhaven_jelly', 5], ['three_under_the_sails', 5], ['flour_and_water', 6], ['barley_rows', 6], ['bran_for_dunmow', 6], ['not_for_the_barley', 7],
   ['plucked', 6], ['six_bar_hurdles', 6], ['yan_tan_tethera', 7], ['the_screaming_crag', 7], ['strays', 7],
   ['four_ropes', 7], ['a_right_pauldron', 7], ['two_of_three', 8], ['what_answers', 9], ['block_for_the_frame', 8],
-  ['bird_calls', 9], ['off_the_spit', 9], ['the_crooked_circle', 10], ['the_gnawed_hollow', 11],
+  ['bird_calls', 9], ['off_the_spit', 9], ['the_crooked_circle', 10], ['the_gnawed_hollow', 11], ['the_empty_sky', 12],
 ];

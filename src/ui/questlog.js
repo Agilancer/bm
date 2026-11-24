@@ -11,6 +11,7 @@ import { COUNTRIES, SITES, countryAt } from '../core/lands.js';
 import { PHOBOS_RULES } from '../folk/phobos-quests.js';
 import { OPENING } from '../core/opening.js';
 import { BOSSES, DELVES, PORTAL } from '../core/dungeon.js';
+import { groundOf, worldBossName } from '../core/wilds.js';
 import { RULES, gatherSpots, outpostOf, placeSpot } from '../folk/quests.js';
 import { QUESTS } from '../folk/lines/quests.js';
 import { CROWD, PEOPLE, POSTED } from '../folk/people.js';
@@ -117,6 +118,8 @@ export function placeOf(id, ctx) {
   }
   if (st.warden) return one(areaSpot('bellcrypt'));
   if (st.boss) return one(bossSpot(st.boss));
+  // (A world boss, at the ground it rises at for the quest.)
+  if (st.wboss) { const g = groundOf(st.ground); return g ? one({ x: g.x, z: g.z, r: g.r, name: worldBossName(st.wboss) }) : null; }
   // (The way down to the dead, the first time: the Sexton's Door, which Silas's key opens.)
   if (st.enter === 'catacombs') return one({ x: SEXTON_DOOR[0], z: SEXTON_DOOR[1], name: "The Sexton's Door, the way down" });
   if (st.enter) return one(areaSpot(st.enter));

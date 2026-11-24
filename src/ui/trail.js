@@ -16,6 +16,7 @@ import { overLand as roadsOverLand } from '../core/roads.js';
 import { inTown } from '../core/town.js';
 import { RULES, areaAt, gatherSpots, placeSpot } from '../folk/quests.js';
 import { BOSSES } from '../core/dungeon.js';
+import { groundOf } from '../core/wilds.js';
 import { CAMPS } from '../sim/slimes.js';
 import { QUESTS } from '../folk/lines/quests.js';
 
@@ -119,6 +120,7 @@ export class QuestTrail {
     };
     if (st.bring) return place(st.at, true);
     if (st.boss) { const b = BOSSES.find((q) => q.key === st.boss); return b ? place(b.delve || 'warrens', true) : null; }
+    if (st.wboss) { const g = groundOf(st.ground); return g ? { x: g.x, z: g.z, near: g.r } : null; }
     if (st.warden) return below(CRYPT);
     if (st.enter) return place(st.enter, false);
     if (st.kill) {

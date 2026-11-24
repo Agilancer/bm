@@ -82,6 +82,10 @@ export const RULES = {
   ravens_tor: { steps: [{ enter: 'tor' }, { kill: 'lair:tor_roost', n: 2, foe: ['Harpies'] }, { back: true, say: "Two of the Tor's three are dead." }], gold: 33, xp: 330 },
   by_my_holds: { steps: [{ gather: 'outpost:den_thundercrag', n: 5, what: 'chisels', spots: [[39, 16], [-14, 41], [-40, -13], [12, -12], [-11, 12]] }, { back: true, say: 'Five of your chisels, from round the Thunder Crag.' }], gold: 33, xp: 330 },
   winterfast: { needs: 'ravens_tor', steps: [{ clear: 'den_winterfast' }, { back: true, say: 'Winterfast is empty. Its caller is down.' }], gold: 64, xp: 640, item: 'staff' },
+
+  // ---- the Herald the Elder Dragon Gods sent this way (src/core/wilds.js WORLD_BOSSES, docs/ELDER-DRAGONS.md "On the land"): it
+  // rises at its ground (src/core/boss-grounds.js) once you've taken this, and the other Tessariels come in to it ----
+  the_cold_that_remembers: { needs: 'winterfast', steps: [{ wboss: 'herald_cold', ground: 'bg_rimeholt_0' }, { back: true, say: 'Selvhra is down. The shelf is only cold now.' }], gold: 130, xp: 1300, item: 'skull', rarity: 3 },
 };
 // The level each wants (src/ui/autobrain.js PLAN; the quest log suggests the same). Each hub steps up a level at a time;
 // each errand on is at the first level of where it leads; the Deeps come last, after the Hide, the shrine and the Rest.
@@ -90,6 +94,6 @@ export const LEVELS = [
   ['whitefang_camp', 11], ['mouth_guard', 12], ['furs_for_the_fort', 13], ['the_beacon_out', 15],
   ['the_round', 13], ['the_white_larder', 13], ['white_at_the_root', 14], ['fat_for_the_lamps', 15],
   ['the_fires', 15], ['names_on_the_wind', 15], ['the_hoar_circle', 16],
-  ['ravens_tor', 15], ['by_my_holds', 15], ['winterfast', 16],
+  ['ravens_tor', 15], ['by_my_holds', 15], ['winterfast', 16], ['the_cold_that_remembers', 17],
   ['into_the_deeps', 17], ['the_sleeper', 18],
 ];

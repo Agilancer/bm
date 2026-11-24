@@ -513,7 +513,16 @@ export class PartyUI {
       const cls = `pf${dead ? ' dead' : hp < 0.35 ? ' low' : ''}`;
       if (cls !== f.cls) { f.cls = cls; f.el.className = cls; }
     }
-    if (this.boss) {
+    // (A world boss's bar only while its body's in reach of the picture: from the town after a fall it isn't, and isn't dead.)
+    if (this.boss?.world) {
+      const on = snap[CHARS_START + this.boss.ids[0] * C_SIZE + C.ACTIVE] > 0.5, disp = on ? 'block' : 'none';
+      if (this.bossEl.style.display !== disp) this.bossEl.style.display = disp;
+    }
+    // (The land's tracker (#wildTrack, src/ui/wilds.js) is put below a boss's bar while there's one up: on a PC it sat across
+    // the world boss's title. src/ui/hud.css body.bossup.)
+    const up = !!this.boss && this.bossEl.style.display !== 'none';
+    if (up !== this.bossUp) { this.bossUp = up; document.body.classList.toggle('bossup', up); }
+    if (this.boss && (!this.boss.world || this.bossEl.style.display !== 'none')) {
       const bars = this.boss.ids.map((id) => { const co = CHARS_START + id * C_SIZE; return snap[co + C.ACTIVE] > 0.5 ? Math.max(0, snap[co + C.HP] / (snap[co + C.MAX_HP] || 1)) : 0; });
       for (let i = 0; i < bars.length; i++) {
         const w = Math.round(bars[i] * 1000) / 10;
@@ -597,6 +606,16 @@ export class PartyUI {
 
   hideBoss() { this.boss = null; this.bossEl.style.display = 'none'; }
 
+  // A world boss out on the land (src/ui/wilds.js BOSS_FIGHT): its name and what it is over the one bar. Null takes it down
+  // (and only a world boss's: a delve's own bar is the delve's to take down).
+  showWorldBoss(name, slot, title) {
+    if (name == null) { if (this.boss?.world) this.hideBoss(); return; }
+    this.boss = { key: 'world', world: true, ids: [slot], w: [], bars: [] };
+    this.bossEl.innerHTML = `<div class="bn">${esc(name)}</div>` + (title ? `<div class="bs">${esc(title)}</div>` : '') + '<div class="bb"><i></i></div>';
+    this.boss.bars = [...this.bossEl.querySelectorAll('.bb i')];
+    this.bossEl.style.display = 'block';
+  }
+
   // EV.DELVE from the sim.
   onDelve(code, a, b, c) {
     // (Which delve, for its coming in, going out, clearing and wipe: the sim says. src/sim/dungeon.js)
@@ -625,7 +644,7 @@ export class PartyUI {
   // The sim's word on the fight, a few times a second (src/sim/dungeon.js post).
   onWarrens(m) {
     this.warrens = { ...m, at: performance.now() };
-    if (!m.fight && this.boss) this.hideBoss();
+    if (!m.fight && this.boss && !this.boss.world) this.hideBoss();
   }
 
   // ---- kept in the save ----------------------------------------------------------------------------------------------

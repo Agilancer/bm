@@ -1260,4 +1260,38 @@ export const QUESTS = {
       joss: ["The Hollow? She's asked you. Good. I'd have, but I'd already asked for two, and a man shouldn't ask twice in one week."],
     },
   },
+
+  // ---------------------------------------------------------------- The Heralds (docs/ELDER-DRAGONS.md "On the land")
+  the_empty_sky: {
+    title: 'The Empty Sky',
+    giver: 'sib',
+    needs: ['the_gnawed_hollow'],
+    about: "The birds came back to Kestrel Hide after the Hollow was emptied, and this morning they all went again at once, low and fast, south-west, the way they go before a storm. There's no storm. Five hundred paces north-east of the hide the grass lies flat in a ring, and in the middle of it sits a green dragon the size of the hide, with the wind going round it: Veyrasz, the Herald of the Gale. Put it down. Others will come to the fight when it stands.",
+    offer: [
+      "Shh. Listen. ...Nothing. They came back after the Hollow, you know. Three mornings of wings. Then today, all of it at once, low and fast, going south-west. That's how they go before a storm. Look at the sky. Clean as a plate.",
+      "I went up on the ribs and looked north-east. Five hundred paces: the grass lying flat in a ring, and the wind going round it and nowhere else. Something sits in the middle, green, big as the hide. When it breathes, the sky leans. Put it down. I want my birds.",
+    ],
+    accept: "I'll put it down.",
+    acceptLine: "It stands when you come near, and others will come running: folk like you, from all over. Let them. When it beats its wings the wind goes out in four lines, turning: stand between them. If it marks one of you, stand in the mark together.",
+    decline: 'Not yet.',
+    declineLine: "No. Then I'll sit in the hide and listen to the sky lean.",
+    journal: [
+      "The birds have fled Kestrel Hide again. Five hundred paces north-east, in a ring of flattened grass, a green dragon sits where the wind goes round: Veyrasz, the Herald of the Gale. Put it down.",
+      'Go back to Sib Kestrel at Kestrel Hide.',
+    ],
+    progress: [
+      'North-east. Where the grass lies flat. You\'ll feel it before you see it: your ears go.',
+      "At the end it roars, and the sky comes down after each of you. Keep moving. That's in the old calls too. I never thought I'd need the old calls.",
+    ],
+    done: [
+      "...Shh. Wait. There. Hear it? A peewit. One. Over the ribs, going back the way it went. ...And another.",
+      "Joss says the old calls have a word for that thing: a herald, something that goes before. I asked him, before what. He said the calls stop there. Take this. It was my grandmother's, for the long walks. She'd want it used on whatever comes after.",
+    ],
+    after: [
+      "The sky's full. I've not stopped since. I keep looking north-east, all the same. My grandmother used to, too. I thought it was her eyes.",
+    ],
+    others: {
+      joss: ["Sib's asked you about the flat ring. Good. I went out. I got within a hundred paces, and my ears went, and the grass lay down round my feet, and I came back. Don't tell her that part."],
+    },
+  },
 };

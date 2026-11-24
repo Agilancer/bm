@@ -1161,4 +1161,36 @@ export const QUESTS = {
       tad: ["The Finger? Good. They had my hat. I liked that hat. It was the only one I had that fitted."],
     },
   },
+
+  // ---------------------------------------------------------------- The Heralds (docs/ELDER-DRAGONS.md "On the land")
+  the_heat_under_the_world: {
+    title: 'The Heat Under the World',
+    giver: 'vesna',
+    needs: ['the_smoke_we_hide_in'],
+    about: "Since Smokefast's fires went out there has been smoke again over the Hollow Watch, and this time nothing is burning: it comes up out of the ground on the rise north-east of the Watch, three hundred and fifty paces off, where the stones have gone red. A red dragon lies in the middle of it with the ground running like wax round its feet: Oskarran, the Herald of the Hearth. Vesna Kell wants it down.",
+    offer: [
+      "You put the fires out, and I could see the wall from the bank. Three days. Then the smoke came back. Not from Smokefast. From the rise, north-east, three hundred and fifty paces. Nobody's lit a thing up there. I went and looked. The ground is lit.",
+      "There's a red one lying on the rise with its belly in the stones, and the stones round it running like candle-ends. The heat came through my boots at a hundred paces. It keeps still the way a kettle keeps still. Put it down before it boils.",
+    ],
+    accept: "I'll put it down.",
+    acceptLine: "When it slams the ground, fire goes out from it in a ring: be past where the ring stops. When it looks up at you, move; the sky comes down where you were. If it marks one of you, everyone into the mark. I watched it a long while.",
+    decline: 'Not now.',
+    declineLine: "No. Then we're hid in smoke again, and I said I'd sooner be seen. I'll keep watching it.",
+    journal: [
+      "Smoke rises again over the Hollow Watch, and nothing is burning: it comes out of the ground on the rise north-east of the Watch, where a red dragon lies with the stones running round it. Oskarran, the Herald of the Hearth. Put it down.",
+      'Go back to Vesna Kell at the Hollow Watch.',
+    ],
+    progress: [
+      "North-east. The rise with the red stones. When it looks up at you, move.",
+      'At the end it rears up, and the ground opens round it. Get in close, right under it. Under it is the only ground that holds.',
+    ],
+    done: [
+      "The smoke's thinning. I can see the wall again. ...Feel the bank. Cold. It's been warm under us for a week and I thought it was spring.",
+      "The captain says a herald is a thing sent ahead to say who's coming. I asked him who. He looked at the keep a long time and said it wasn't the keep. I don't like it when he's sure. Here: it's lined, and it doesn't burn. I'd not have believed that before this week.",
+    ],
+    after: ["Cold ground under the Watch, the way it ought to be. I still put my hand flat on it of a morning. You learn what to watch."],
+    others: {
+      renn: ["She's sent you at the thing on the rise. Good. I'd have sent you myself, and she knew it, and got there first. She does that."],
+    },
+  },
 };
