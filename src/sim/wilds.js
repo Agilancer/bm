@@ -523,7 +523,8 @@ export class Wilds {
 
   // For looking at it (bm.wild in the console, src/main.js): 1, a meeting of kind b ahead of you now; 2, to the nearest open
   // tear; 3, to outpost b; 4, to battle b's ground; 5, the next meeting as soon as there's room; 6, to raid town b, with a raid on it now;
-  // 7, world boss b called at the nearest boss ground; 8, the others at world boss b in the nearest clearing (src/sim/worldboss.js).
+  // 7, world boss b called at the nearest boss ground; 8, the others at world boss b in the nearest clearing; 9, the world boss
+  // being fought does move b of BOSS_MOVE_KEYS next (src/sim/worldboss.js).
   debug(a, b) {
     const sim = this.sim, p = sim.player, to = (x, z) => { p.x = x; p.z = z; p.y = sim.world.height(x, z); };
     if ((a | 0) === 1) {
@@ -537,6 +538,7 @@ export class Wilds {
     } else if ((a | 0) === 3) { const o = OUTPOSTS[(b | 0) % OUTPOSTS.length]; to(o.x + Math.sin(o.yaw) * (o.r + 26), o.z + Math.cos(o.yaw) * (o.r + 26)); }
     else if ((a | 0) === 4) { const l = sim.tripo.lairs.filter((q) => q.battle)[(b | 0) * 2]; if (l) to(l.x + 30, l.z); }
     else if ((a | 0) === 5) this.nextMeet = 0;
+    else if ((a | 0) === 9) this.boss.debug(9, b);
     else if ((a | 0) === 7 || (a | 0) === 8) { if (this.meet) { for (const l of this.meet.lairs) this.drop(l); this.meet = null; } this.boss.debug(a | 0, b); }
     else if ((a | 0) === 6) { const n = (b | 0) % RAID_TOWNS.length, s = SITES[RAID_TOWNS[n]]; to(s.x, s.z + s.r * 0.3); if (this.meet) { for (const l of this.meet.lairs) this.drop(l); this.meet = null; } this.lookRaid(n); }
   }

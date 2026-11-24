@@ -86,7 +86,10 @@ export const MOVES_WB = {
   // It goes under, and the ground heaves where each of you stands, then all round it.
   swallow: { clip: 'roar', at: 0, secs: 3, go: (P, F, m, t, k) => { for (const b of F.bodies()) P.mark({ x: b.x, z: b.z, r: 3.6, fuse: 2, dmg: k * 2.4, knock: 5, elem: STONE, follow: b, lock: 0.55, tag: 'wb_swallow' }); P.later(1.2, () => { if (!m.dead) ring(P, m, 0, tall(m) * 0.9, 1.4, k * 2, STONE, 'wb_swallow'); }); } },
   // A great blow marked on one of you, to be shared: everyone in it takes a part, one alone takes it all.
-  soak: { clip: 'roar', at: 0, secs: 2.6, go: (P, F, m, t, k) => { const who = F.pickSoak() || t; P.mark({ x: who.x, z: who.z, r: 4.2, fuse: 3.2, dmg: k * 9, share: true, soak: true, knock: 2, elem: F.elem, follow: who, lock: 0.55, tag: 'wb_soak' }); } },
+  // (Two thirds of a life of your level alone, not all of it: at nine blows' worth it killed you from full the one time the
+  // others were at its far side. And four seconds, still for the last two: time for them to come across. A live run, five
+  // in it: a fifth of a life each.)
+  soak: { clip: 'roar', at: 0, secs: 2.6, go: (P, F, m, t, k) => { const who = F.pickSoak() || t; P.mark({ x: who.x, z: who.z, r: 4.2, fuse: 4, dmg: k * 6, share: true, soak: true, knock: 2, elem: F.elem, follow: who, lock: 0.45, tag: 'wb_soak' }); } },
   // Every one of you marked: spread out, or the marks land on each other.
   spread: { clip: 'roar', at: 0, secs: 2.6, go: (P, F, m, t, k) => { for (const b of F.bodies()) P.mark({ x: b.x, z: b.z, r: 3.4, fuse: 2.6, dmg: k * 1.6, knock: 2, elem: F.elem, follow: b, lock: 0.85, tag: 'wb_spread' }); } },
 };
@@ -350,6 +353,8 @@ export class WorldBosses {
   // others at boss n in the nearest clearing.
   debug(a, b) {
     const sim = this.sim, p = sim.player;
+    // (9: the fight's next move is the bth of BOSS_MOVE_KEYS, now.)
+    if (a === 9) { const F = this.fight; if (F?.on) { F.deck.unshift(BOSS_MOVE_KEYS[b | 0]); F.moveT = 0; } return; }
     if (this.fight) { if (this.fight.lair) this.w.drop(this.fight.lair); for (const l of this.fight.adds || []) this.w.drop(l); sim.heroWorld?.sendBack?.(this.fight.help || []); this.fight = null; }
     const i = (b | 0) % WORLD_BOSSES.length;
     if (a === 7) {

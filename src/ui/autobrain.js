@@ -1056,6 +1056,17 @@ export class Brain {
     return a ? { x: a.x, z: a.z, r: 95 } : null;
   }
 
+  // A world boss being fought that it's gone to (wildJob's boss, or a quest's wboss step), as { x, z, r }: the boss and its
+  // adds there are for fighting, whatever their bodies. Judged by its body's kind (a dragon's wants level 24) the boss was a
+  // thing to run from: in a live run it stood off "running from something too strong" for four minutes, the party with it,
+  // while the Herald's bar didn't move. Or null.
+  bossGround(m) {
+    const W = this.o.game?.wilds?.bossOn, j = this.job;
+    if (!W?.fight || !j || dist(m.x, m.z, W.x, W.z) > 120) return null;
+    const mine = j.why?.startsWith('wild:boss:') || (!!j.quest && !!this.o.townUI?.quests?.step?.(j.quest)?.wboss);
+    return mine ? { x: W.x, z: W.z, r: 50 } : null;
+  }
+
   // Inside ground it's keeping clear of (a knight's post, a lair it isn't ready for).
   kept(m, x, z) {
     if (!this.avoidFor || this.t - this.avoidFor.t > 2) this.avoidFor = { t: this.t, list: this.avoid(m) };
@@ -1741,7 +1752,7 @@ export class Brain {
     // (And what the quest in hand has sent it to, a lair or a den and whatever stands there, its chief too, is for fighting
     // at the level the quest is wanted at: it used to run to a den it was told to empty, call its chief too big, run away
     // and come back. questGround.)
-    const qg = this.questGround(m);
+    const qg = this.questGround(m) || this.bossGround(m);
     const fightable = inDungeon(m.x, m.z) ? () => true : (k, l, hp, sl, f = null) => fightableAt(k, k === 0 || k === 3 ? m.lvl : l, hp, sl) || (!!qg && !!f && k >= TRIPO_KIND && dist(f.x, f.z, qg.x, qg.z) < qg.r);
     this.kiteCool -= 0.12; this.dodgeCool -= 0.12; this.reactT -= 0.12; this.rideCool -= 0.12;
     const noRide = () => { this.ride = null; this.rideHold = false; };

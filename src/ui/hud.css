@@ -400,6 +400,7 @@ html.art-icons #rotate > svg { display: none; }
 #wildTrack { position: absolute; left: 50%; top: 13.5%; transform: translateX(-50%); min-width: 230px; max-width: min(460px, 80vw); padding: 6px 14px 8px; text-align: center; pointer-events: none; opacity: 0; transition: opacity .4s;
   background: rgba(8, 6, 4, .58); box-shadow: 0 0 0 1px rgba(200, 170, 110, .35); border-radius: 3px; z-index: 6; }
 #wildTrack.on { opacity: 1; }
+body.bossup:not(.touch) #wildTrack { top: max(13.5%, 132px); }
 #wildTrack b { display: block; font: 600 12.5px/1.2 Cinzel, BmNum, Georgia, serif; letter-spacing: .18em; color: #e9cf8f; }
 #wildTrack i { display: block; margin-top: 3px; font: 13px/1.25 BmNum, Georgia, serif; font-style: normal; color: #ddd3bd; }
 #wildTrack u { display: block; height: 3px; margin-top: 6px; background: rgba(255, 255, 255, .12); text-decoration: none; }

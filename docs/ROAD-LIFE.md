@@ -28,6 +28,12 @@ light"), more at 70% and its last at 35%, adds that mend it while they live, and
 move is called on the ticker as it comes, as a thing happening and a thing to do (src/core/wilds.js BOSS_MOVES), and is a
 sim.perils mark or shot, so the party and auto-play dodge it as they dodge every other.
 
+Two kinds are to be stood in, not dodged (perils `soak`): the great blow marked on one of you, shared among all in it (six
+of its blows alone, two thirds of a life of your level; four seconds to gather), and the pool of light the rest of the
+ground isn't safe from. WorldBosses.order sends your party (src/sim/hero.js companion) and the others called to it (think)
+into the nearest within 30 m before it lands; auto-play goes too (src/ui/autowarrens.js soakNear). A live run with the mark
+on one of the party: all five in it as it landed, a fifth of a life each.
+
 ## The Elder Dragon Gods in the story
 
 The gods' delve was a door at the top of the Sorrowhorn at level 100. Now the land knows about them long before:
@@ -73,7 +79,8 @@ palettes. The two new grounds keep pines out (src/core/hunts.js FAR_GROUNDS), wh
 - `node tools/quests/check.mjs` and `node tools/autoplay/check.mjs`
 - Live (the built-in browser pane, `?auto&noopening&timer`): `bm.wild(1, 7)` an ambush, `bm.wild(1, 8)` travellers under
   attack, `bm.wild(1, 9)` the others in a fight; `bm.wild(7, n)` world boss n called at the nearest ground, `bm.wild(8, n)`
-  the others at it in a clearing; `bm.view.roadFolk.notes` the bands set down. A Herald quest: mark its needs done
+  the others at it in a clearing, `bm.wild(9, k)` the boss being fought does move k of BOSS_MOVE_KEYS next (38 the shared
+  blow); `bm.view.roadFolk.notes` the bands set down. A Herald quest: mark its needs done
   (`bm.view.townUI.quests.q[id] = { stage: 'done', step: 0 }`), take it from its giver, and go within 1.6 km of the ground.
 
 ## Not tuned yet

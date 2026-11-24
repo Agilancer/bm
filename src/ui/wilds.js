@@ -4,7 +4,7 @@
 // What you've found and the caches you've opened are kept in the save, so neither pays twice.
 import { SITES } from '../core/lands.js';
 import { inDungeon } from '../core/dungeon.js';
-import { BOSS_MOVES, BOSS_MOVE_KEYS, FACTIONS, FACTION_KEYS, MEETINGS, RAID_TOWNS, TEARS_KINDS, TEAR, WILD, WILD_VARIANTS, WORLD_BOSSES } from '../core/wilds.js';
+import { BOSS, BOSS_MOVES, BOSS_MOVE_KEYS, FACTIONS, FACTION_KEYS, MEETINGS, RAID_TOWNS, TEARS_KINDS, TEAR, WILD, WILD_VARIANTS, WORLD_BOSSES } from '../core/wilds.js';
 import { FIND_KINDS, FINDS, OUTPOSTS } from '../core/wilds-data.js';
 
 const SIDES = { goblin: 'goblins', kobold: 'kobolds', dead: 'the dead', brood: 'spiders', herd: 'goat men', pack: 'wolfkin', flock: 'harpies', wyrm: 'drakes',
@@ -142,6 +142,15 @@ export class WildsUI {
     let s = this.state;
     // (A world boss called and waiting: where it is, and how long it'll wait.)
     const W = this.bossOn;
+    // (A fight you've gone off from is let go here too. The sim lets it go 25 s after you're past BOSS.leave of it (or 8 s
+    // after a fall: src/sim/worldboss.js stepFight), and its word of that can be lost in a burst of events (the ring holds
+    // 512: a fall at it, and the long load home). A live run held a fight on for eight minutes after one, and auto-play walked
+    // three and a half kilometres back to nothing.)
+    if (W?.fight) {
+      const p = this.o.pos?.(), far = !!p && Math.hypot(W.x - p[0], W.z - p[1]) > BOSS.leave;
+      W.lostAt = far ? W.lostAt ?? performance.now() : null;
+      if (W.lostAt && performance.now() - W.lostAt > 40000) { this.bossOn = null; this.o.bossBar?.(null); this.o.bossMark?.(null); }
+    }
     if (!s && W && !W.fight && W.called) {
       const p = this.o.pos?.();
       if (p && performance.now() < W.until) {
@@ -247,7 +256,7 @@ export class WildsUI {
         if ((c | 0) === -2) { this.say('THE RITUAL IS DONE', 'You were too slow. What they called has come.', 4); this.show({ title: M.name, sub: 'Kill what they raised', fight: true }); break; }
         const sub = M.key === 'skirmish' ? `${who} against ${SIDES[B?.side] || 'something'}: let them thin each other, or wade in`
           : M.key === 'warband' ? `${who} are marching up the road at you`
-            : M.key === 'bounty' ? `One of ${who}'s chiefs is out with only a few of its own`
+            : M.key === 'bounty' ? `One of ${who}${who.endsWith('s') ? "'" : "'s"} chiefs is out with only a few of its own`
               : M.key === 'ritual' ? 'Stop them before it is finished'
                 : M.key === 'duel' ? 'Two sorcerers are settling something. The winner will be tired'
                   : M.key === 'drake' ? 'Something with wings has seen you'

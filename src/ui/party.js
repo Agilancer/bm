@@ -518,6 +518,10 @@ export class PartyUI {
       const on = snap[CHARS_START + this.boss.ids[0] * C_SIZE + C.ACTIVE] > 0.5, disp = on ? 'block' : 'none';
       if (this.bossEl.style.display !== disp) this.bossEl.style.display = disp;
     }
+    // (The land's tracker (#wildTrack, src/ui/wilds.js) is put below a boss's bar while there's one up: on a PC it sat across
+    // the world boss's title. src/ui/hud.css body.bossup.)
+    const up = !!this.boss && this.bossEl.style.display !== 'none';
+    if (up !== this.bossUp) { this.bossUp = up; document.body.classList.toggle('bossup', up); }
     if (this.boss && (!this.boss.world || this.bossEl.style.display !== 'none')) {
       const bars = this.boss.ids.map((id) => { const co = CHARS_START + id * C_SIZE; return snap[co + C.ACTIVE] > 0.5 ? Math.max(0, snap[co + C.HP] / (snap[co + C.MAX_HP] || 1)) : 0; });
       for (let i = 0; i < bars.length; i++) {
