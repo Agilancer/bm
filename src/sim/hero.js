@@ -878,11 +878,17 @@ export class Hero extends Knight {
   // burning or bleeding: no flinch, no sound), quiet (no sound).
   hit(sim, m, dmg, kind = 'gash', poise = 25, knock = 0, o = {}) {
     if (!fightable(m)) return false;
-    // (Someone else already at it: kept, so the kill can be a rescue or a theft.)
-    if (m.heroFoe && m.heroFoe !== this && sim.time - (m.heroFoeT ?? -1e9) < 4) { m.otherFoe = m.heroFoe; m.otherFoeT = sim.time; }
-    m.heroFoe = this; m.heroFoeT = sim.time;
-    // (Your tank holds what he hits; a twin's ward takes its share of anyone's blow.)
-    if (this.hired && this.role === 'tank') { m.tauntBy = this; m.tauntT = sim.time + 5; }
+    // (noAggro: a blow that hurts and leaves it after whoever it was after: the paladin's Blessed Shield. Felt as from
+    // that one, so the dead don't turn round to look for him either.)
+    let by = this;
+    if (o.noAggro) { const f = foeOf(m, sim); by = f && f !== sim.player && f !== this ? f : null; }
+    else {
+      // (Someone else already at it: kept, so the kill can be a rescue or a theft.)
+      if (m.heroFoe && m.heroFoe !== this && sim.time - (m.heroFoeT ?? -1e9) < 4) { m.otherFoe = m.heroFoe; m.otherFoeT = sim.time; }
+      m.heroFoe = this; m.heroFoeT = sim.time;
+      // (Your tank holds what he hits; a twin's ward takes its share of anyone's blow.)
+      if (this.hired && this.role === 'tank') { m.tauntBy = this; m.tauntT = sim.time + 5; }
+    }
     dmg *= m.shrug ?? 1;
     if (m instanceof Knight) {
       // Velscour's guards hold: a party can hold one off and slip by, not cut it down for the player to find gone.
@@ -898,8 +904,8 @@ export class Hero extends Knight {
     if (this.mods?.thirst && !this.dead) this.hp = Math.min(this.maxHp, this.hp + Math.min(dmg, Math.max(0, was)) * this.mods.thirst);
     struck(m, sim, this.x, this.z, poise);
     if (m instanceof Zombie) m.seenHp = m.hp;
-    if (!o.dot) m.onHit?.(sim, kind, this.x, this.z, poise, this);
-    if (o.stun) w.stun(m, o.stun, this);
+    if (!o.dot) m.onHit?.(sim, kind, this.x, this.z, poise, by);
+    if (o.stun) w.stun(m, o.stun, by);
     else if (knock && m instanceof Zombie && !m.crawling) m.reel?.(sim, 0.4, this);
     if (o.shove && radiusOf(m) <= 1 && !(m instanceof Gravehart)) {
       const dx = m.x - (o.fromX ?? this.x), dz = m.z - (o.fromZ ?? this.z), L = Math.hypot(dx, dz) || 1;
