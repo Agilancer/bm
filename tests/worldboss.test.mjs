@@ -102,3 +102,20 @@ test('a Herald a quest wants: risen at its ground once you are near, gone back w
   WB.setWant([{ key: 'nobody', at: 'bg_downs_1' }, { key: 'herald_gale', at: 'nowhere' }]);
   assert.deepEqual(WB.want, []);
 });
+
+test("a world boss's call to stand somewhere: into the mark to share or the light, before it lands; nobody already in one", () => {
+  const sim = { time: 0, level: 12, player: { x: 0, z: 0, dead: false }, event() {}, perils: { marks: [] } };
+  const WB = new WorldBosses(sim, { note() {}, room: () => 12, drop() {} });
+  WB.fight = { on: true, m: { dead: false }, x: 0, z: 0 };
+  const share = { soak: true, t: 0, fuse: 3.2, tag: 'wb_soak', x: 5, z: 0, r: 4.2 };
+  sim.perils.marks.push({ soak: false, t: 0, fuse: 1, tag: 'wb_cleave', x: 1, z: 1, r: 9 }, share);
+  assert.deepEqual(WB.order({ x: 20, z: 0 }), { to: [5, 0], urgent: true });
+  assert.equal(WB.order({ x: 5.5, z: 0 }), null, 'told to go where it is');
+  assert.equal(WB.order({ x: 60, z: 0 }), null, 'called in from off the ground');
+  share.t = 3.3;
+  assert.equal(WB.order({ x: 20, z: 0 }), null, 'sent to one that has landed');
+  share.t = 0; share.tag = 'pod';
+  assert.equal(WB.order({ x: 20, z: 0 }), null, "sent to one that isn't the boss's");
+  WB.fight = null;
+  assert.equal(WB.order({ x: 20, z: 0 }), null);
+});

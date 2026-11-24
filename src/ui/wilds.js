@@ -92,23 +92,25 @@ export class WildsUI {
   }
 
   // What the land is calling anyone at p ([x, z]) to, most pressing first (WILD_CALLS in src/core/wilds.js): a town being
-  // raided, an open tear in sight (fight: it's begun), a small thing to find close by, the bounty in hand. Each with where
-  // it is, how hard (lvl) and what it's called. Auto-play asks (src/ui/autobrain.js wildJob).
+  // raided, an open tear in sight (fight: it's begun), travellers on the road with something at them, a world boss risen or
+  // being fought, a small thing to find close by, the bounty in hand. Each with where it is, how hard (lvl) and what it's
+  // called. Auto-play asks (src/ui/autobrain.js wildJob), and takes the first it's up to.
   calls(p) {
     const out = [];
     if (this.raidOn) { const T = SITES[RAID_TOWNS[this.raidOn.n]]; out.push({ why: 'raid', x: T.x, z: T.z, lvl: level(T.x, T.z), name: T.name }); }
     const t = this.tearAt;
     if (t) out.push({ why: 'tear', x: t.x, z: t.z, lvl: level(t.x, t.z), fight: t.fight, name: TEARS_KINDS[t.kind].name });
+    const R = this.rescueOn;
+    if (R && R.life > 0) out.push({ why: 'rescue', x: R.x, z: R.z, lvl: R.lvl, name: 'the travellers' });
+    // (A world boss, risen or being fought: where, how hard, and whether the fight's begun. Before a find: a totem by the
+    // way is no reason to leave the others at it.)
+    const W = this.bossOn;
+    if (W && (W.fight || performance.now() < W.until)) out.push({ why: 'boss', x: W.x, z: W.z, lvl: W.lvl, fight: !!W.fight, name: bossName(WORLD_BOSSES[W.i]), key: WORLD_BOSSES[W.i].key, d: Math.hypot(W.x - p[0], W.z - p[1]) });
     let best = -1, bd = 60;
     for (let i = 0; i < FINDS.length; i++) { if (this.taken.has(i)) continue; const d = Math.hypot(FINDS[i][0] - p[0], FINDS[i][1] - p[1]); if (d < bd) { bd = d; best = i; } }
     if (best >= 0) out.push({ why: 'find', x: FINDS[best][0], z: FINDS[best][1], lvl: 0, name: FOUND[FIND_KINDS[FINDS[best][2]]] || 'something' });
     const O = this.bounty && OUTPOSTS.find((o) => o.key === this.bounty.key);
     if (O) out.push({ why: 'bounty', x: O.x, z: O.z, lvl: FACTIONS[O.faction].lvl, name: O.name, key: O.key });
-    // (A world boss, risen or being fought: where, how hard, and whether the fight's begun.)
-    const W = this.bossOn;
-    if (W && (W.fight || performance.now() < W.until)) out.push({ why: 'boss', x: W.x, z: W.z, lvl: W.lvl, fight: !!W.fight, name: bossName(WORLD_BOSSES[W.i]), key: WORLD_BOSSES[W.i].key, d: Math.hypot(W.x - p[0], W.z - p[1]) });
-    const R = this.rescueOn;
-    if (R && R.life > 0) out.push({ why: 'rescue', x: R.x, z: R.z, lvl: R.lvl, name: 'the travellers' });
     return out;
   }
 

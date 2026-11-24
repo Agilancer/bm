@@ -2798,6 +2798,12 @@ export class HeroWorld {
     }
     // Paladins and bards look after people, in a fight or out of it.
     this.care(h);
+    // Called to a world boss (answer): where its fight wants them first, into the mark to share it or the light, as the
+    // party does (src/sim/worldboss.js order).
+    if (h.task?.wild && !h.swing && !h.jump) {
+      const told = sim.wilds?.boss?.order?.(h);
+      if (told?.to && Math.hypot(told.to[0] - h.x, told.to[1] - h.z) > 0.7) { h.goal = { x: told.to[0], z: told.to[1], speed: 8, stop: 0.3 }; h.dodgeT = 0.25; return; }
+    }
     if (h.foe && !h.swing && !h.jump && (h.rethinkT = (h.rethinkT || 0) - dt) <= 0) { h.rethinkT = 0.8 + (h.slot % 4) * 0.1; this.rethink(h); }
     if (h.foe) {
       // Too hurt and on their own: back to the town's ground, where nothing follows.
@@ -3749,7 +3755,8 @@ export class HeroWorld {
     // cones, the burning.
     // What the fight itself wants of them (src/sim/dungeon.js order): not a step taken while the music's stopped; or
     // somewhere to be, once they're out of whatever's marked (the high rock, a pod to tread flat, the far side of a pillar).
-    const told = W?.inside ? W.order(h) : null;
+    // (Out in the land, a world boss's: into the mark to share it, into the light. src/sim/worldboss.js order.)
+    const told = W?.inside ? W.order(h) : sim.wilds?.boss?.order?.(h) || null;
     if (told?.still) { h.goal = null; h.hold = Math.max(h.hold, 0.25); h.dodgeT = 0; if (h.role === 'heal') this.mend(h, true); return; }
     // (urgent: it matters more than what's under them: the rock above the tide is through the tide.)
     const out = told?.to && told.urgent ? null : sim.perils.danger(h.x, h.z);

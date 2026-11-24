@@ -513,7 +513,12 @@ export class PartyUI {
       const cls = `pf${dead ? ' dead' : hp < 0.35 ? ' low' : ''}`;
       if (cls !== f.cls) { f.cls = cls; f.el.className = cls; }
     }
-    if (this.boss) {
+    // (A world boss's bar only while its body's in reach of the picture: from the town after a fall it isn't, and isn't dead.)
+    if (this.boss?.world) {
+      const on = snap[CHARS_START + this.boss.ids[0] * C_SIZE + C.ACTIVE] > 0.5, disp = on ? 'block' : 'none';
+      if (this.bossEl.style.display !== disp) this.bossEl.style.display = disp;
+    }
+    if (this.boss && (!this.boss.world || this.bossEl.style.display !== 'none')) {
       const bars = this.boss.ids.map((id) => { const co = CHARS_START + id * C_SIZE; return snap[co + C.ACTIVE] > 0.5 ? Math.max(0, snap[co + C.HP] / (snap[co + C.MAX_HP] || 1)) : 0; });
       for (let i = 0; i < bars.length; i++) {
         const w = Math.round(bars[i] * 1000) / 10;

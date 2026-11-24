@@ -220,6 +220,23 @@ export class WorldBosses {
     this.note(`${B.key} stood (life ${Math.round(life * 100)}%), ${F.help.length} came`);
   }
 
+  // Where the fight wants a body now, as a delve fight's order (src/sim/dungeon.js order): into a mark that's to be shared
+  // (soak) or the pool of light (lightOnly), the nearest down within 30 m of them, before it lands, if they're not in one
+  // already. { to: [x, z], urgent } or null. The party (src/sim/hero.js companion) and the others at it (think) go; auto-play
+  // reads the same marks as posted (src/ui/autowarrens.js tactics). Without it the one a share was marked on took it all.
+  order(b) {
+    const F = this.fight;
+    if (!F?.on || !F.m || F.m.dead || Math.hypot(b.x - F.x, b.z - F.z) > 46) return null;
+    let best = null, bd = 30;
+    for (const k of this.sim.perils.marks) {
+      if (!k.soak || k.dead || k.t >= k.fuse || !k.tag.startsWith('wb_')) continue;
+      const d = Math.hypot(k.x - b.x, k.z - b.z);
+      if (d < k.r - 1.2) return null;
+      if (d < bd) { bd = d; best = k; }
+    }
+    return best ? { to: [best.x, best.z], urgent: true } : null;
+  }
+
   // Everyone who can be hurt here: you, and the others, within the fight's ground.
   bodies() { const F = this.fight; return this.sim.perils.victims().filter((v) => Math.hypot(v.x - F.x, v.z - F.z) < 46); }
   furthest() { const m = this.fight?.m; let best = null, bd = 6; for (const b of this.bodies()) { const d = gap(b, m); if (d > bd) { bd = d; best = b; } } return best; }

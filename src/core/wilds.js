@@ -269,7 +269,7 @@ export const RAID = { near: 230, first: [50, 140], every: [540, 900], out: 95, h
 
 // What the living land can call anyone to (src/ui/wilds.js calls): auto-play answers each (src/ui/autobrain.js WILD_SAY,
 // and `node tools/autoplay/check.mjs` fails while it doesn't).
-export const WILD_CALLS = ['raid', 'tear', 'find', 'bounty', 'boss', 'rescue'];
+export const WILD_CALLS = ['raid', 'tear', 'rescue', 'boss', 'find', 'bounty'];
 
 // ---- on the roads --------------------------------------------------------------------------------------------------------
 // The road's own meetings (MEETINGS ambush, rescue, heroes: src/sim/wilds.js startMeet). ambush: how far either side of the
