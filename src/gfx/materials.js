@@ -1275,8 +1275,9 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
       mailH = puff * 0.0016 * qFade;
       // (A dyed party member's padded coat is in their coat's colour and about its light, or a brown linen under a navy coat
       // is a stain at the hips. Its colour rides in info.z's fraction, a code: hue in 32, colour in 2, light in 4. herolook.js
-      // coverCode. None: the brown linen.)
-      var linen = vec3f(0.07, 0.05, 0.035);
+      // coverCode. None: the brown linen, or under a suit of black leather a near-black one: brown, it showed through the
+      // gaps of the rogues' and the ninjas' black suits as patches of sacking, the critics' neck review, 2026-11-20.)
+      var linen = select(vec3f(0.07, 0.05, 0.035), vec3f(0.03, 0.028, 0.027), darkBake);
       let zf = -C.info.z - floor(-C.info.z);
       if (zf > 0.005) {
         let code = round((zf - 0.01) / 0.0015);

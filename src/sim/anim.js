@@ -84,6 +84,9 @@ export class Rig {
     this.pelvisBase = extras.pelvisBase;
     this.pelvisRest = extras.pelvisRest || (bank && bank.pelvisRest);
     this.motionScale = extras.motionScale || 1;
+    // (A few of the cloak's vertices under a shield worn on the back, for swinging it clear of them: src/sim/hero.js
+    // poseBack, tools/heroes/backpin.py --probes.)
+    this.backProbes = extras.backProbes || null;
     this.pelvisIndex = this.index.get('pelvis');
     this.bank = bank;
     const prim = glb.json.meshes.find((m) => m.primitives[0].attributes.WEIGHTS_0)?.primitives[0];

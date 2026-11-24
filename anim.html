@@ -129,7 +129,8 @@ function driven(g, scale = 1) {
   const p = new THREE.Vector3(), r = new THREE.Quaternion(), s = new THREE.Vector3(scale, scale, scale);
   return {
     meshes,
-    set(wq, wt) { for (let j = 0; j < bones.length; j++) bones[j].matrixWorld.compose(p.set(wt[j * 3], wt[j * 3 + 1], wt[j * 3 + 2]), r.set(wq[j * 4], wq[j * 4 + 1], wq[j * 4 + 2], wq[j * 4 + 3]), s); },
+    // (base: where the whole of him stands, for a pose recorded somewhere else.)
+    set(wq, wt, base) { for (let j = 0; j < bones.length; j++) { bones[j].matrixWorld.compose(p.set(wt[j * 3], wt[j * 3 + 1], wt[j * 3 + 2]), r.set(wq[j * 4], wq[j * 4 + 1], wq[j * 4 + 2], wq[j * 4 + 3]), s); if (base) bones[j].matrixWorld.premultiply(base); } },
     show(v) { for (const m of meshes) m.visible = v; },
     gone() { for (const m of meshes) scene.remove(m); },
   };
@@ -185,6 +186,61 @@ const LANES = {
   },
   // One of the other Tessariels, as they were: the library's sprint stretched onto its jog's cycle (src/sim/knight.js as it was).
   async heroOld({ v, body: who }) { return hero(who, v, false); },
+  // A hero as the game's own code posed him, recorded frame by frame (tools/heroes/reels.py): from main as it was
+  // ('before') or from this pass ('after'). scene: one of his recorded moves, or several played one after another.
+  async reel({ body, scene: want, when, label }) {
+    const R = await once(`r:${body}.${when}`, () => fetch(`tools/build/h3/reels/${body}.${when}.json`).then((r) => { if (!r.ok) throw new Error(`no reel ${body}.${when} (python tools/heroes/reels.py ${body})`); return r.json(); }));
+    const names = [].concat(want), gait = names.length === 1 && ['walk', 'jog', 'run', 'sprint'].includes(names[0]);
+    const frames = [], marks = [];
+    for (const nm of names) {
+      const S = R.scenes[nm];
+      if (!S) continue;
+      marks.push([frames.length, nm.replace('skill:', '').replace(/_/g, ' ')]);
+      frames.push(...S.frames);
+      // (A beat of stillness after each one-off move, so where it ends can be seen.)
+      if (!S.loop) for (let k = 0; k < Math.round(R.fps * 0.5); k++) frames.push(S.frames[S.frames.length - 1]);
+    }
+    if (!frames.length) throw new Error(`${body} has none of ${names.join(', ')}`);
+    const g = await gltf(R.glb), d = driven(g), n = frames.length, J = frames[0].q.length / 4;
+    const q = new Float32Array(J * 4), t = new Float32Array(J * 3), base = new THREE.Matrix4(), turn = new THREE.Matrix4().makeRotationY(YAW), M = new THREE.Matrix4();
+    // (What he carries: one model per hand and thing, made before he moves.)
+    const held = new Map();
+    for (const f of frames) f.p.forEach((pp, i) => {
+      if (!pp || held.has(`${i}:${pp[0]}`)) return;
+      held.set(`${i}:${pp[0]}`, gltf(R.kit + pp[0] + '.glb').then((m) => { const o = m.scene.clone(true); shade(o); o.matrixAutoUpdate = false; o.visible = false; scene.add(o); return o; }).catch(() => null));
+    });
+    const models = new Map();
+    for (const [k, v] of held) models.set(k, await v);
+    const pace = { run: 5.6, sprint: 8.6, jog: 3.1, walk: 1.4 }[names[0]] || 0;
+    let x = 0, z = 0, time = 0, now = marks[0][1];
+    return { kind: when === 'before' ? 'old' : 'new', name: label || (when === 'before' ? 'Before' : 'Now'), pace: () => (gait ? pace : 0),
+      sub: () => now,
+      place(a, c) { x = a; z = c; },
+      update(dt) {
+        time += dt;
+        const u = (time * R.fps) % n, i = Math.floor(u), k = u - i, a = frames[i], b = frames[(i + 1) % n];
+        for (const [at, nm] of marks) if (i >= at) now = nm;
+        for (let j = 0; j < J; j++) {
+          const o = j * 4, dot = a.q[o] * b.q[o] + a.q[o + 1] * b.q[o + 1] + a.q[o + 2] * b.q[o + 2] + a.q[o + 3] * b.q[o + 3], sg = dot < 0 ? -1 : 1;
+          let l = 0;
+          for (let c = 0; c < 4; c++) { q[o + c] = a.q[o + c] + (b.q[o + c] * sg - a.q[o + c]) * k; l += q[o + c] * q[o + c]; }
+          l = 1 / Math.sqrt(l); for (let c = 0; c < 4; c++) q[o + c] *= l;
+          for (let c = 0; c < 3; c++) t[j * 3 + c] = a.t[j * 3 + c] + (b.t[j * 3 + c] - a.t[j * 3 + c]) * k;
+        }
+        base.makeTranslation(x, 0, z).multiply(turn);
+        d.set(q, t, base);
+        for (const m of models.values()) if (m) m.visible = false;
+        a.p.forEach((pp, i) => {
+          const m = pp && models.get(`${i}:${pp[0]}`);
+          if (!m) return;
+          const bp = b.p[i] && b.p[i][0] === pp[0] ? b.p[i][1] : pp[1];
+          for (let c = 0; c < 16; c++) M.elements[c] = pp[1][c] + (bp[c] - pp[1][c]) * k;
+          m.matrix.multiplyMatrices(base, M); m.matrixWorld.copy(m.matrix); m.visible = true;
+          for (const ch of m.children) ch.updateMatrixWorld(true);
+        });
+      },
+      gone() { d.gone(); for (const m of models.values()) if (m) scene.remove(m); } };
+  },
   async heroNew({ v, body: who, label }) { return hero(who, v, true, label); },
   // Lisandra, as she was: her one run clip, sped up or slowed to the pace.
   async lisOld({ v }) {
@@ -271,6 +327,20 @@ async function hero(who, v, now, label) {
 
 // ---- the scenes ----
 const SCENES = [
+  { group: 'This pass: before and after', name: 'Paladin, great mace: the run', ds: 'Watch from Behind: the shield on his back swings clear of the cloak instead of the cloth showing through it. His run is yours now.', lanes: [['reel', { body: 'paladin_m1', scene: 'run', when: 'before' }], ['reel', { body: 'paladin_m1', scene: 'run', when: 'after' }]] },
+  { group: 'This pass: before and after', name: 'Paladin, great mace: the sprint', ds: 'Your sprint, with the shield and cloak at full stretch.', lanes: [['reel', { body: 'paladin_m1', scene: 'sprint', when: 'before' }], ['reel', { body: 'paladin_m1', scene: 'sprint', when: 'after' }]] },
+  { group: 'This pass: before and after', name: 'Paladin, great mace: his three blows', ds: 'Smash, cleave and rise: both hands on the haft, the head trailing its weight.', lanes: [['reel', { body: 'paladin_m1', scene: ['blow', 'blow1', 'blow2'], when: 'before' }], ['reel', { body: 'paladin_m1', scene: ['blow', 'blow1', 'blow2'], when: 'after' }]] },
+  { group: 'This pass: before and after', name: 'Paladin, great mace: his skills', ds: 'Zeal, smite, hammer throw, consecration.', lanes: [['reel', { body: 'paladin_m1', scene: ['skill:zeal', 'skill:smite', 'skill:hammer_throw', 'skill:consecration'], when: 'before' }], ['reel', { body: 'paladin_m1', scene: ['skill:zeal', 'skill:smite', 'skill:hammer_throw', 'skill:consecration'], when: 'after' }]] },
+  { group: 'This pass: before and after', name: 'Paladin, mace and shield: guard and blows', ds: 'The shield kept square in front of him through an overhead chop, a cut down across, and the bash. Before, a spinning pair of swings turned it face down and behind him.', lanes: [['reel', { body: 'paladin_m2', scene: ['guard', 'blow', 'blow1', 'blow2'], when: 'before' }], ['reel', { body: 'paladin_m2', scene: ['guard', 'blow', 'blow1', 'blow2'], when: 'after' }]] },
+  { group: 'This pass: before and after', name: 'Paladin, mace and shield: his skills', ds: 'Zeal, smite and blessed hammers, the shield up throughout.', lanes: [['reel', { body: 'paladin_m2', scene: ['skill:zeal', 'skill:smite', 'skill:blessed_hammers'], when: 'before' }], ['reel', { body: 'paladin_m2', scene: ['skill:zeal', 'skill:smite', 'skill:blessed_hammers'], when: 'after' }]] },
+  { group: 'This pass: before and after', name: 'Archer: volley, rain of arrows, strafe', ds: 'Fingers on the string and the arrow instead of a flat hand.', lanes: [['reel', { body: 'archer_f1', scene: ['blow', 'skill:volley', 'skill:rain_of_arrows', 'skill:strafe'], when: 'before' }], ['reel', { body: 'archer_f1', scene: ['blow', 'skill:volley', 'skill:rain_of_arrows', 'skill:strafe'], when: 'after' }]] },
+  { group: 'This pass: before and after', name: 'Rogue: blows, flurry, vanish', ds: 'The knives held in closed hands.', lanes: [['reel', { body: 'rogue_m2', scene: ['blow', 'blow1', 'skill:flurry', 'skill:vanish'], when: 'before' }], ['reel', { body: 'rogue_m2', scene: ['blow', 'blow1', 'skill:flurry', 'skill:vanish'], when: 'after' }]] },
+  { group: 'This pass: before and after', name: 'Ninja: kick, flurry, stars', ds: 'Open hand, fist and throw, each its own hand shape.', lanes: [['reel', { body: 'ninja_m1', scene: ['blow', 'skill:leaping_kick', 'skill:ninja_flurry', 'skill:throwing_stars'], when: 'before' }], ['reel', { body: 'ninja_m1', scene: ['blow', 'skill:leaping_kick', 'skill:ninja_flurry', 'skill:throwing_stars'], when: 'after' }]] },
+  { group: 'This pass: before and after', name: 'Bard: his songs', ds: 'Fingers on the lute\'s neck and strings.', lanes: [['reel', { body: 'bard_m1', scene: ['armed', 'skill:war_song', 'skill:mending_song'], when: 'before' }], ['reel', { body: 'bard_m1', scene: ['armed', 'skill:war_song', 'skill:mending_song'], when: 'after' }]] },
+  { group: 'This pass: before and after', name: 'Dragoon: spear barrage, jump', ds: 'Both hands closed round the spear.', lanes: [['reel', { body: 'dragoon_f1', scene: ['blow', 'skill:spear_barrage', 'skill:jump'], when: 'before' }], ['reel', { body: 'dragoon_f1', scene: ['blow', 'skill:spear_barrage', 'skill:jump'], when: 'after' }]] },
+  { group: 'This pass: before and after', name: 'Lancer: charge, shield bash', ds: '', lanes: [['reel', { body: 'lancer_m1', scene: ['blow', 'skill:charge', 'skill:shield_bash'], when: 'before' }], ['reel', { body: 'lancer_m1', scene: ['blow', 'skill:charge', 'skill:shield_bash'], when: 'after' }]] },
+  { group: 'This pass: before and after', name: 'Boomerang thrower: double throw', ds: '', lanes: [['reel', { body: 'boomerang_f1', scene: ['blow', 'skill:double_throw'], when: 'before' }], ['reel', { body: 'boomerang_f1', scene: ['blow', 'skill:double_throw'], when: 'after' }]] },
+  { group: 'This pass: before and after', name: 'Standing, armed', ds: 'Drag to walk round him: the coif, the collar and the mail at the shoulders.', lanes: [['reel', { body: 'paladin_m1', scene: 'armed', when: 'before' }], ['reel', { body: 'paladin_m1', scene: 'armed', when: 'after' }]] },
   { group: 'You', name: 'Run (5.6 m/s)', ds: 'Old beside new: weapons put away, and with the staff and skull in hand.', lanes: [['wizOld', { v: 5.6 }], ['wizNew', { v: 5.6 }], ['wizNew', { v: 5.6, armed: true }]] },
   { group: 'You', name: 'Sprint (8.6 m/s, Shift)', ds: 'The dash: its own gait now, leaned in, the staff trailed low.', lanes: [['wizOld', { v: 8.6 }], ['wizNew', { v: 8.6 }], ['wizNew', { v: 8.6, armed: true }]] },
   { group: 'You', name: 'Walk, jog, run, sprint', ds: 'The four gaits, each at its own pace.', lanes: [['wizNew', { v: 1.3, label: 'Walk' }], ['wizNew', { v: 3.1, label: 'Jog' }], ['wizNew', { v: 5.6, label: 'Run' }], ['wizNew', { v: 8.6, label: 'Sprint' }]] },

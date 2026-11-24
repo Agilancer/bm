@@ -103,7 +103,8 @@ def fill(r, default):
 
 def tube(rings, njoints, tone, caps=(True, True), cap_in=0.03):
     """Rings (centre, axis, SIDES radii, weights {joint: w}, deep) as a tube with a seam column (so u can run round it),
-    and each end closed by a fan to a point cap_in along the tube from it. Returns positions, normals, uvs, weights, tris."""
+    and each end closed by a fan to a point cap_in along the tube from it. Returns positions, normals, uvs, weights, tris.
+    deep: one flag for the whole ring, or one for each of its SIDES sectors."""
     vs, ns, uvs, ws = [], [], [], []
     along = 0.0
     prev = None
@@ -123,7 +124,8 @@ def tube(rings, njoints, tone, caps=(True, True), cap_in=0.03):
         for k, (p, d) in enumerate(pts):
             if k:
                 arc += np.linalg.norm(p - pts[k - 1][0])
-            vs.append(p); ns.append(d); uvs.append((base + min(arc, 1.9), along + (DEEP_V if deep else 0)))
+            dk = deep[k % SIDES] if np.ndim(deep) else deep
+            vs.append(p); ns.append(d); uvs.append((base + min(arc, 1.9), along + (DEEP_V if dk else 0)))
             wv = np.zeros(njoints)
             for j, x in w.items():
                 wv[j] += x
@@ -143,7 +145,7 @@ def tube(rings, njoints, tone, caps=(True, True), cap_in=0.03):
         apex = len(vs)
         # (A point a little way in along the tube from its end: a shallow cone into it.)
         vs.append(ring["c"] - ring["ax"] * sign * cap_in); ns.append(ring["ax"] * sign)
-        uvs.append((MAIL_UV + (DARK_UV if tone else 0), uvs[ri * per][1]))
+        uvs.append((MAIL_UV + (DARK_UV if tone else 0), max(uvs[ri * per + k][1] for k in range(SIDES))))
         wv = np.zeros(njoints)
         for j, x in ring["w"].items():
             wv[j] += x
@@ -290,9 +292,50 @@ def liner(B):
     return "mail_liner", rings, "spine_02"
 
 
+HELM_HOLE = 9          # of the SIDES sectors round the neck at a height, how many the helm must cover for a gap in it to be
+                       # a hole in a helm (a visor, a face opening: drawn as shadow) rather than the neck below its rim
+RIM_IN = 0.005         # how far inside a helm's rim (metres) the coif turns to shadow, at the least
+
+
+def helm_rim(B, nk, up):
+    """Where the helm comes down round the neck: for each of SIDES sectors (as section and tube go round), the height
+    of its lowest edge there (metres along the neck from neck_01; NaN where none of it comes near the neck), and a test of
+    whether it covers a sector at a height."""
+    u = B.u
+    hp = B.pts_on(("Head",), kinds=("plate", "flex"))
+    if not len(hp):
+        return np.full(SIDES, np.nan), (lambda k, h: False)
+    sa, sb = frame(up)
+    rel = hp - nk
+    h = rel @ up
+    rad = np.hypot(rel @ sa, rel @ sb)
+    ang = np.arctan2(rel @ sb, rel @ sa)
+    ok = (rad > 0.03 * u) & (rad < 0.2 * u) & (h > -0.08 * u) & (h < 0.4 * u)
+    h, ang = h[ok], ang[ok]
+    secs = []
+    rim = np.full(SIDES, np.nan)
+    for k in range(SIDES):
+        a0 = k / SIDES * 2 * np.pi - np.pi
+        d = np.abs(((ang - a0) + np.pi) % (2 * np.pi) - np.pi)
+        hk = h[d < np.pi / SIDES * 1.2]
+        secs.append(hk)
+        if len(hk) >= 4:
+            rim[k] = np.percentile(hk, 2)
+
+    def covers(k, at):
+        return int((np.abs(secs[k] - at) < 0.015 * u).sum()) >= 3
+    return rim, covers
+
+
 def coif(B):
     """The neck: flared under the gorget, narrow at the throat, flared again up inside the helm and closed at the top. The
-    rings above the jaw are deep: drawn as the shadow inside the helm."""
+    rings above the jaw are deep: drawn as the shadow inside the helm.
+
+    Deep sector by sector, and only inside the helm: a ring's vertex is deep where the helm comes down past the middle
+    of the quad below it in that sector (the shader's shadow begins halfway between a lit ring and a deep one), or, above
+    the jaw, where it's a hole in a helm that's all round it at that height. Where a helm's rim is high (boomerang_f1-3,
+    archer_f5, paladin_f2, dragoon_f3) the shadow had begun below it, a black column between the collar and the helm (the
+    critics' neck review, 2026-11-20); there the coif is mail up to the rim now."""
     u = B.u
     s3, nk, hd = B.P("spine_03"), B.P("neck_01"), B.P("Head")
     up = unit(hd - nk)
@@ -303,8 +346,24 @@ def coif(B):
              (nk + (hd - nk) * 0.7, 0.07, {B.j("neck_01"): 0.4, B.j("Head"): 0.6}, False),
              (hd + up * 0.01 * u, 0.066, {B.j("Head"): 1.0}, True),
              (hd + up * 0.05 * u, 0.05, {B.j("Head"): 1.0}, True)]
+    rim, covers = helm_rim(B, nk, up)
     rings = []
-    for c, r0, w, deep in stops:
+    prev_h = None
+    for i, (c, r0, w, deep) in enumerate(stops):
+        at = float((c - nk) @ up)
+        dk = np.zeros(SIDES, bool)
+        # (Only the rings that ride the head with the helm: one half on the neck, with the head turned, came out below it.)
+        if i >= 4 and prev_h is not None:
+            mid = (prev_h + at) / 2
+            inside = ~np.isnan(rim) & (np.nan_to_num(rim, nan=9.0) <= mid - RIM_IN * u)
+            cov = np.array([covers(k, at) for k in range(SIDES)])
+            hole = deep & (cov.sum() >= HELM_HOLE) & ~cov
+            dk = inside | hole
+            # (No helm round the neck, a hood or a mask over it (ninja_m2's comes down before his face alone): the shadow up
+            # inside as it always was.)
+            if (~np.isnan(rim)).sum() < HELM_HOLE:
+                dk[:] = deep
+        prev_h = at
         sec, n = section(pts, c, up, 0.03 * u, 0.16 * u)
         r = np.full(SIDES, r0 * u)
         have = ~np.isnan(sec)
@@ -314,7 +373,10 @@ def coif(B):
         # (Inside a helm, no wider anywhere than three quarters of its narrowest: a closed visor has few points to go by.)
         if deep and have.any():
             r = np.minimum(r, np.nanmin(sec) * 0.75)
-        rings.append({"c": c, "ax": up, "r": np.clip(r, 0.025 * u, 0.16 * u), "w": w, "deep": deep})
+        rings.append({"c": c, "ax": up, "r": np.clip(r, 0.025 * u, 0.16 * u), "w": w, "deep": dk})
+    if os.environ.get("MAIL_DEBUG"):
+        print("  coif deep sectors by ring:", [int(r["deep"].sum()) for r in rings], "rim (cm from neck_01):",
+              " ".join("--" if np.isnan(x) else f"{x * 100:.0f}" for x in rim), "head at", f"{float((hd - nk) @ up) * 100:.0f}")
     return "mail_coif", rings, "neck_01"
 
 

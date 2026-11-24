@@ -3,6 +3,8 @@
     python tools/heroes/review.py plan            writes tools/build/review_bodies_<n>.json, sixteen bodies to a plan
     node tools/heroes/moves.mjs tools/build/review_bodies_0.json <port> --real     (and _1, _2: the real GPU, at High)
     python tools/heroes/review.py sheets [ids]    lays each body's frames out: tools/build/shots/body_<id>.png
+    python tools/heroes/review.py plan neck       the neck and shoulders alone, close (NECK_STRIPS): one plan, all 44
+    python tools/heroes/review.py necks [ids]     their sheets: tools/build/shots/neck_<id>.png, and all of them on one
 
 A body's sheet, twelve pictures: walked round as it stands in town, its arms put away (from before it, the quarters, each
 side, behind); stood to a foe with its arms in hand (three sides); and held in a run, a cheer with both arms up and a
@@ -31,6 +33,59 @@ STRIPS = [
     ("arms", {"stance": True, "foes": 1, "lead": 150, "up": 1.55, "tail": 300}, [320, 80, 200], "armed"),
 ]
 CELL = (430, 40, 850, 700)
+# The neck and shoulders close, where the coif, the gorget and the mail at the arms' roots meet: walked round at ease, the
+# head turned (LP_look_around, where a coif shows most), and both arms up (where the armpits open). Heights are of a body's
+# own height (the eye stands at its collar and looks at its throat).
+NECK_STRIPS = [
+    ("nk", {"foes": 0, "lead": 40}, [0, 60, 120, 180, 240, 300], "at ease", 1.6),
+    ("nklook", {"clip": "LP_look_around", "at": 0.3, "foes": 0}, [0, 90, 270], "head turned", 1.6),
+    ("nkup", {"clip": "LP_cheer", "at": 0.5, "foes": 0}, [35, 325], "arms up", 1.9),
+]
+NECK_CELL = (340, 0, 940, 720)
+
+
+def plan_neck():
+    # (Sixteen bodies to a plan, as for plan(): the game has sixteen of them out at once.)
+    for n in range(0, len(ROSTER), 16):
+        strips = []
+        for h in ROSTER[n:n + 16]:
+            for name, o, turn, _, r in NECK_STRIPS:
+                H = h["height"]
+                strips.append({"name": f"N_{h['id']}_{name}", "body": h["id"], "turn": turn, "frames": len(turn), "every": 2, "dist": 2.4, "cam": [0, 6, 2],
+                               "r": r, "up": round(H * 0.86, 3), "lookY": round(H * 0.78, 3), "fov": 26, "tail": 6, **o})
+        path = os.path.join(BUILD, f"review_necks_{n // 16}.json")
+        json.dump({"name": f"necks{n // 16}", "size": [1280, 720], "hour": 13, "at": [80, -28], "gfx": "high", "bodies": [h["id"] for h in ROSTER[n:n + 16]], "strips": strips}, open(path, "w"), indent=1)
+        print(path, len(strips), "strips")
+
+
+def necks(only):
+    every = []
+    for h in ROSTER:
+        i = h["id"]
+        if only and i not in only:
+            continue
+        cells = []
+        for name, _, turn, label, _ in NECK_STRIPS:
+            for k, deg in enumerate(turn):
+                f = os.path.join(SHOTS, f"mv_N_{i}_{name}_{k:02d}.png")
+                if os.path.exists(f):
+                    cells.append((Image.open(f).convert("RGB").crop(NECK_CELL).resize((300, 360)), f"{label} {deg}"))
+        if not cells:
+            continue
+        w, hgt = cells[0][0].size
+        cols = 11
+        out = Image.new("RGB", (cols * w, hgt + 22), (16, 14, 12))
+        d = ImageDraw.Draw(out)
+        d.text((6, 5), f"{i}   {h['cls']} ({h['sex']})   palette: {h['palette']}   height {h['height']} m", fill=(230, 215, 170))
+        for n, (im, label) in enumerate(cells):
+            x = n * w
+            out.paste(im, (x, 22))
+            d.text((x + 5, 26), label, fill=(255, 240, 160))
+        path = os.path.join(SHOTS, f"neck_{i}.png")
+        out.save(path)
+        every.append(path)
+        print(path)
+    return every
 
 
 def plan():
@@ -77,7 +132,11 @@ def sheets(only):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1 and sys.argv[1] == "plan":
+    if len(sys.argv) > 2 and sys.argv[1] == "plan" and sys.argv[2] == "neck":
+        plan_neck()
+    elif len(sys.argv) > 1 and sys.argv[1] == "plan":
         plan()
+    elif len(sys.argv) > 1 and sys.argv[1] == "necks":
+        necks(sys.argv[2:])
     else:
         sheets(sys.argv[2:])

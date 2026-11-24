@@ -344,7 +344,7 @@ def cloaks(body_id, dry=False):
     index = {n: i for i, n in enumerate(names)}
     done = []
     for p in pieces:
-        if p["kind"] != "cloth":
+        if p["kind"] != "cloth" or p.get("feathered"):
             continue
         sl = slice(p["vstart"], p["vstart"] + p["vcount"])
         P = A["POSITION"][sl].astype(np.float64)
@@ -380,6 +380,114 @@ def cloaks(body_id, dry=False):
             full[:, index[n]] += tr[:, i] * moved
         _store(A, sl, full)
         done.append((p["name"], p["vcount"], round(float(moved.mean()), 3)))
+    if done and not dry:
+        write(path, g, blob, A, idx, pieces)
+    return done
+
+
+FEATHER = 0.94     # how much of an arm's hold on a cloth vertex its neighbour keeps, a step further from the arm
+
+
+def feather(body_id, dry=False):
+    """Where a cloak's lining lies along an arm (under the pauldron, paladin_m1's out to the elbow in the bind pose), it
+    rides the arm, or it would stand out sideways from a lowered arm; and the cloak it's sewn to rode the trunk, so a
+    raised arm (the cheer of holy nova, fist of the heavens, hammer storm) tore the cloth between them into black shards
+    standing up off the shoulder blade (the critics' joint review, 2026-11-20). Here the arm's hold is let out across the
+    cloth, vertex to welded vertex, a little less each step (FEATHER), so a raised arm lifts the cloak's edge as one drape.
+    Each arm joint's share is carried with it (a sleeve's cuff stays the forearm's). Run after cloaks(); the piece is
+    marked "feathered" and both leave it alone after (spreading it twice would spread it further)."""
+    path, g, blob, A, idx, pieces, names, T = _open(body_id)
+    nj = len(names)
+    done = []
+    for p in pieces:
+        if p["kind"] != "cloth" or p.get("feathered"):
+            continue
+        v0, vn = p["vstart"], p["vcount"]
+        sl = slice(v0, v0 + vn)
+        full = _full(A, sl, nj)
+        arms = [[i for i, n in enumerate(names) if n.endswith("_" + s_) and any(k in n for k in _ARM)] for s_ in "lr"]
+        if max(full[:, a].sum(1).max() for a in arms) < 0.1:
+            continue
+        tri = idx[p["tstart"]:p["tstart"] + p["tcount"]] - v0
+        tri = tri[(tri >= 0).all(1) & (tri < vn).all(1)]
+        _, weld = np.unique(np.round(A["POSITION"][sl].astype(np.float64) * 2e4).astype(np.int64), axis=0, return_inverse=True)
+        weld = weld.ravel(); nw = int(weld.max()) + 1
+        E = np.unique(np.sort(weld[np.concatenate([tri[:, [0, 1]], tri[:, [1, 2]], tri[:, [0, 2]]])], axis=1), axis=0)
+        E = E[E[:, 0] != E[:, 1]]
+        deg = np.maximum(np.bincount(E.ravel(), minlength=nw), 1).astype(np.float64)
+        total = np.zeros(vn)
+        for arm in arms:
+            # (Each welded vertex's hold on this arm, joint by joint: the most any copy of it has.)
+            H = np.zeros((nw, len(arm)))
+            np.maximum.at(H, weld, full[:, arm])
+            for _ in range(400):
+                S = np.zeros_like(H)
+                np.add.at(S, E[:, 0], H[E[:, 1]]); np.add.at(S, E[:, 1], H[E[:, 0]])
+                S *= FEATHER / deg[:, None]
+                take = S.sum(1) > H.sum(1) + 1e-6
+                if not take.any():
+                    break
+                H[take] = S[take]
+            add = np.maximum(H[weld] - full[:, arm], 0)
+            gain = add.sum(1)
+            if gain.max() < 0.02:
+                continue
+            rest = [j for j in range(nj) if j not in arm]
+            # (What the arm takes on comes off the rest of the vertex's hold, in proportion.)
+            full[:, rest] *= np.clip(1 - gain / np.maximum(full[:, rest].sum(1), 1e-9), 0, 1)[:, None]
+            full[:, arm] += add
+            total += gain
+        if total.max() < 0.02:
+            continue
+        p["feathered"] = 1
+        _store(A, sl, full)
+        done.append((p["name"], vn, int((total > 0.05).sum())))
+    if done and not dry:
+        write(path, g, blob, A, idx, pieces)
+    return done
+
+
+TAB_MIN = 8        # vertices of a trunk plate out over an arm before it's a tab worth moving
+TAB_PAST = 0.03    # how far past the shoulder joint (metres along the arm, in the bind pose) a tab is half the arm's
+
+
+def tabs(body_id, dry=False):
+    """A chest's or a back's plate bound to the trunk has tabs out over the shoulders (a strap end, a flange, the lip of
+    a mantle), lying along the arms in the bind pose. Arms down, they stayed out flat at shoulder height, their dark
+    undersides showing as black fins either side of the neck (archer_f6, the dragoons, the lancers: the critics' neck
+    review, 2026-11-20). Each vertex of such a plate out past the shoulder joint and up at its height goes over to the
+    upper arm by how far past it is, so a tab rides the arm as a pauldron does and the rest of the plate stays on the
+    trunk. The piece keeps its kind and its table joints (the sim's hit tests), its shape, paint and bind pose."""
+    path, g, blob, A, idx, pieces, names, T = _open(body_id)
+    index = {n: i for i, n in enumerate(names)}
+    trunkish = set(_TRUNK) | {"clavicle_l", "clavicle_r", "neck_01"}
+    done = []
+    for p in pieces:
+        if p["kind"] != "plate" or not p.get("joints"):
+            continue
+        if not all(names[j] in trunkish for j, _ in p["joints"]):
+            continue
+        sl = slice(p["vstart"], p["vstart"] + p["vcount"])
+        P = A["POSITION"][sl].astype(np.float64)
+        full = _full(A, sl, len(names))
+        moved = np.zeros(len(P))
+        for s_, sg in (("l", 1.0), ("r", -1.0)):
+            sh = T[f"upperarm_{s_}"]
+            sx = sg * P[:, 0]
+            t = smooth((sx - (sg * sh[0] + TAB_PAST - 0.04)) / 0.08) * smooth((P[:, 1] - (sh[1] - 0.13)) / 0.06)
+            ui = index[f"upperarm_{s_}"]
+            had = full[:, ui]
+            want = np.maximum(had, t)
+            add = want - had
+            if (t > 0.5).sum() < TAB_MIN:
+                continue
+            full *= (1 - add)[:, None]
+            full[:, ui] += add
+            moved += add
+        if moved.max() < 0.25:
+            continue
+        _store(A, sl, full)
+        done.append((p["name"], p["vcount"], int((moved > 0.5).sum())))
     if done and not dry:
         write(path, g, blob, A, idx, pieces)
     return done
@@ -470,6 +578,12 @@ def main():
             done = True
         for name, count, share in cloaks(b, dry):
             print(f"{b}: {name} ({count} vertices), cloth: {share * 100:.0f}% of its weight off the arms and collar, onto the trunk{' (dry)' if dry else ''}")
+            done = True
+        for name, count, k in feather(b, dry):
+            print(f"{b}: {name} ({count} vertices), cloth: the arm's hold let out across {k} more of them{' (dry)' if dry else ''}")
+            done = True
+        for name, count, k in tabs(b, dry):
+            print(f"{b}: {name} ({count} vertices): {k} of them out over an arm now ride it{' (dry)' if dry else ''}")
             done = True
         c = cops(b, dry)
         if c:

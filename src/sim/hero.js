@@ -7,7 +7,7 @@
 // raise here as EV.HERO events: (slot, trigger, other slot, place, mob, extra).
 import { CAUSES, CLASSES, MOVE_KEYS, DELVES, GESTURES, LONG_ROAD, MOBS, MOB_KEYS, PERSONAS, PLACES, PLACE_IDS, THE_FALL, ACTIVITIES, TRIG, TRIPO_MOB, WALK_ENDS, hourBand, placeOf, rng } from '../core/heroes.js';
 import { C, C_HERO, C_PROPS, EV } from '../core/layout.js';
-import { clamp, damp, mat4FromQT, quatAxisAngle, quatMul, quatNlerp, quatRotate, wrapAngle } from '../core/math.js';
+import { clamp, damp, mat4FromQT, quatAxisAngle, quatMul, quatNlerp, quatRotate, smoothstep, wrapAngle } from '../core/math.js';
 import { floorAt, homeFloor, inPit } from '../core/interior.js';
 import { ELEM, FX, FX_CARRIED, SHIELDS } from './spells.js';
 export { SKILLS } from './heroskills.js';
@@ -24,6 +24,7 @@ import { Gravehart } from './gravehart.js';
 import { Hydra } from './hydra.js';
 import { FieldCreature } from './field-creature.js';
 import { Pose, solveFK } from './anim.js';
+import { CLIP_HANDS, drift, follow, handState, mixShape, setShape } from './herohands.js';
 import { struck } from './ragdoll.js';
 import { BROKER_SPOTS, PORTAL, delveAt, delveOf, inDungeon, roleOf } from '../core/dungeon.js';
 import { foeOf } from './foes.js';
@@ -32,6 +33,42 @@ import { MORE_SKILLS, SKILLS, arrive, arrow3, castSkill, chooseSkill, classRouti
 
 const STRING_ELEM = { gold: ELEM.LIGHT, azure: ELEM.FROST, emerald: ELEM.HEAL, violet: ELEM.ARCANE, crimson: ELEM.DRAIN, silver: ELEM.SPIRIT, ember: ELEM.FIRE, rose: ELEM.STORM };
 const GAP = 1.2;                 // hips to hips, hero to anything
+const BK_Q = new Float32Array(4), BK_O = new Float32Array(3), BK_Y = new Float32Array(3), BK_Z = new Float32Array(3), BK_V = new Float32Array(3);
+const UP3 = new Float32Array([0, 1, 0]), FWD3 = new Float32Array([0, 0, 1]), RIGHT3 = new Float32Array([1, 0, 0]), BK_X = new Float32Array(3);
+const PR_R = new Float32Array(4), PR_T = new Float32Array(3), PR_A = new Float32Array(8);
+// How much nearer than its mark (Rig.backProbes face: just inside the painted face) a probe of the cloak may come.
+const PROBE_KEEP = 0;
+// The most the cloak swings it out (radians): past that, in the heaviest blows, a little of the cloak goes under its foot
+// rather than the shield standing out from his back like a door.
+const BACK_PROBE_MAX = 0.35;
+// One probe of the cloak (Rig.backProbes), where the GPU puts it this frame: its joints blended as dual quaternions, as
+// src/gfx/shaders.js skins the body.
+function skinProbe(out, P, i, wq, wt, rig) {
+  const A = PR_A; A.fill(0);
+  let rx = 0, ry = 0, rz = 0, rw = 0, first = true;
+  for (let k = 0; k < 4; k++) {
+    const w = P.w[i * 4 + k];
+    if (!(w > 0)) continue;
+    const j = P.j[i * 4 + k];
+    quatMul(PR_R, 0, wq, j * 4, rig.ibQ, j * 4);
+    quatRotate(PR_T, 0, wq, j * 4, rig.ibT, j * 3);
+    const tx = PR_T[0] + wt[j * 3], ty = PR_T[1] + wt[j * 3 + 1], tz = PR_T[2] + wt[j * 3 + 2];
+    const x = PR_R[0], y = PR_R[1], z = PR_R[2], q = PR_R[3];
+    let s = w;
+    if (first) { rx = x; ry = y; rz = z; rw = q; first = false; } else if (rx * x + ry * y + rz * z + rw * q < 0) s = -w;
+    A[0] += s * x; A[1] += s * y; A[2] += s * z; A[3] += s * q;
+    A[4] += s * 0.5 * (tx * q + ty * z - tz * y); A[5] += s * 0.5 * (-tx * z + ty * q + tz * x);
+    A[6] += s * 0.5 * (tx * y - ty * x + tz * q); A[7] += s * -0.5 * (tx * x + ty * y + tz * z);
+  }
+  const L = Math.hypot(A[0], A[1], A[2], A[3]) || 1;
+  for (let k = 0; k < 8; k++) A[k] /= L;
+  quatRotate(out, 0, A, 0, P.p, i * 3);
+  const x = A[0], y = A[1], z = A[2], q = A[3], dx = A[4], dy = A[5], dz = A[6], dw = A[7];
+  out[0] += 2 * (-dw * x + dx * q - dy * z + dz * y);
+  out[1] += 2 * (-dw * y + dx * z + dy * q - dz * x);
+  out[2] += 2 * (-dw * z - dx * y + dy * x + dz * q);
+  return out;
+}
 const VIEW = 170;                // past this from the player a hero isn't drawn, and only thinks
 const RESPAWN = [150, 300];      // seconds before something a hero killed stands again, MMO-style
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -70,10 +107,12 @@ export const radiusOf = (m) => (m instanceof Gravehart ? 2.2 : m instanceof Fiel
 // ---- class moves ----------------------------------------------------------------------------------------------------
 // clip: from the heroes' bank. hit: when in the clip it lands (fractions). dmg: before level. reach: past the hips.
 const BLOWS = {
-  // (Struck as the head comes down, measured on the clips: 0.28 of the overhead, 0.47 of the low sweep, 0.52 of the cut.
-  // L_Chop is gone: with a hero's grip its weapon never comes below his own head.)
-  two_hand: [{ clip: 'Sword_Attack', rate: 0.95, hit: [0.28], dmg: 16, reach: 2.4, end: 0.55 }, { clip: 'Sword_Regular_B', rate: 0.7, hit: [0.47], dmg: 15, reach: 2.3, soft: 0.6 }, { clip: 'Sword_Regular_A', rate: 0.8, hit: [0.52], dmg: 14, reach: 2.4 }],
-  sword_board: [{ clip: 'Sword_Regular_A', rate: 0.8, hit: [0.55], dmg: 10, reach: 2.1 }, { clip: 'Sword_Regular_B', rate: 0.8, hit: [0.48], dmg: 10, reach: 2.0 }, { clip: 'L_ShieldJab', rate: 1.1, hit: [0.55], dmg: 6, reach: 1.5, knock: 4 }],
+  // (A great mace is swung in both hands, its own way (maul: MAUL_SWINGS): the clips are for the feet and the hips under it.
+  // Struck as the head comes through: 0.28 of the overhead, 0.47 of the cleave, 0.52 of the rising blow.)
+  two_hand: [{ clip: 'Sword_Attack', rate: 0.95, hit: [0.28], dmg: 16, reach: 2.4, end: 0.55, soft: 0.6, maul: 'smash' }, { clip: 'Sword_Regular_B', rate: 0.7, hit: [0.47], dmg: 15, reach: 2.3, soft: 0.55, maul: 'cleave' }, { clip: 'Sword_Regular_A', rate: 0.62, hit: [0.52], dmg: 14, reach: 2.4, soft: 0.55, maul: 'rise' }],
+  // (A mace and board: brought down from over his head, and cut down across from over his shoulder, the board kept square
+  // before him through both; the sword-dancer's spinning pair turned him right round, the board face down or behind him.)
+  sword_board: [{ clip: 'L_Chop', rate: 1.5, hit: [0.5], dmg: 10, reach: 2.1, end: 0.78 }, { clip: 'LP_Overhand_cleaver_downward_ch', rate: 1.9, hit: [0.27], dmg: 10, reach: 2.1, end: 0.45 }, { clip: 'L_ShieldJab', rate: 1.1, hit: [0.55], dmg: 6, reach: 1.5, knock: 4 }],
   // (A lance or a spear goes in point first: a straight arm down the line, the body behind it. THRUST below.)
   lance: [{ clip: 'Punch_Cross', rate: 1.15, hit: [0.42], dmg: 14, reach: 3.1, thrust: true }, { clip: 'L_ShieldJab', rate: 1.75, from: 0.25, hit: [0.55], dmg: 7, reach: 1.9, knock: 5, shove: 1.7 }, { clip: 'Punch_Cross', rate: 1.35, hit: [0.42], dmg: 11, reach: 2.9, thrust: true }],
   // (Knives cut: slashes, a hook from the off hand, an overhand rip. Not a fist held out over its head.)
@@ -85,6 +124,78 @@ const BLOWS = {
   bow: [{ clip: 'L_SnapKick', rate: 1.1, hit: [0.6], dmg: 5, reach: 1.6, knock: 6 }],
   ninja: [{ clip: 'L_SnapKick', rate: 1.15, hit: [0.6], dmg: 8, reach: 1.7, knock: 4 }, { clip: 'Sword_Regular_A', rate: 1.6, hit: [0.55], dmg: 6, reach: 1.5, end: 0.8 }, { clip: 'Sword_Regular_B', rate: 1.6, hit: [0.48], dmg: 7, reach: 1.5, end: 0.8 }, { clip: 'LP_front_kick_01', rate: 1.1, hit: [0.45], dmg: 8, reach: 1.7 }],
 };
+
+// A great mace in both hands (Hero.lanceHold, poseLance): the right fist up the haft, the left below it near the butt, as a
+// right-handed man holds a long haft. Each key: p, how far into the swing (0 the start, 1 the blow, 2 the end: from the
+// guard, round, and back to it); e, how it comes to the key (io: eased both ends; in: faster as it comes, into a blow;
+// out: slowing as it comes, to the top of a lift or the end of a follow-through); h, the right wrist from its shoulder;
+// a, the haft from the right fist toward the head; pr, pl, where each elbow points: all [forward, to his right, down for
+// h and up for the rest] in a 1.8 m body's metres. tw: the shoulders round to his left; ln: the body forward; g: the left
+// fist along the haft from the right (toward the butt).
+const MAUL_GUARD = { h: [0.26, -0.12, 0.3], a: [0.74, -0.14, 0.66], tw: -0.18, ln: 0.04, pr: [-0.8, 0.45, -0.5], pl: [-0.35, -0.55, -0.75], g: -0.13 };
+const MAUL_SWINGS = {
+  // Overhead: lifted over the right shoulder, the head dropped behind it, then over the top and down through the line.
+  smash: [
+    { p: 0.45, e: 'io', h: [0.18, 0.0, 0.05], a: [-0.1, 0.12, 0.99], tw: -0.3, ln: -0.04, pr: [0.1, 0.75, -0.3], pl: [0.3, -0.5, -0.6], g: -0.12 },
+    { p: 0.8, e: 'out', h: [0.06, 0.05, -0.16], a: [-0.68, 0.18, 0.71], tw: -0.38, ln: -0.14, pr: [0.35, 0.8, 0.25], pl: [0.6, -0.45, -0.3], g: -0.11 },
+    { p: 1, e: 'in', h: [0.34, -0.16, 0.2], a: [0.95, -0.08, -0.25], tw: 0.18, ln: 0.28, pr: [-0.2, 0.55, -0.8], pl: [-0.1, -0.6, -0.8], g: -0.11 },
+    { p: 1.35, e: 'out', h: [0.28, -0.2, 0.26], a: [0.75, -0.15, -0.62], tw: 0.22, ln: 0.32, pr: [-0.4, 0.5, -0.75], pl: [-0.2, -0.6, -0.75], g: -0.11 },
+  ],
+  // A cleave: up behind the right ear, then down across him from high right to low left, the shoulders round after it.
+  cleave: [
+    { p: 0.75, e: 'out', h: [-0.02, 0.16, -0.08], a: [-0.45, 0.55, 0.7], tw: -0.55, ln: -0.08, pr: [0.1, 0.9, 0.2], pl: [0.55, -0.3, -0.5], g: -0.11 },
+    { p: 1, e: 'in', h: [0.32, -0.2, 0.2], a: [0.82, -0.45, -0.35], tw: 0.35, ln: 0.25, pr: [-0.3, 0.6, -0.75], pl: [-0.2, -0.6, -0.75], g: -0.11 },
+    { p: 1.4, e: 'out', h: [0.18, -0.3, 0.26], a: [0.15, -0.85, -0.5], tw: 0.55, ln: 0.28, pr: [-0.5, 0.5, -0.7], pl: [-0.5, -0.3, -0.8], g: -0.11 },
+  ],
+  // Rising: the head dropped low behind his right hip, the shoulders wound round after it; then up under the guard to the
+  // chin, the hips first, and on over his left shoulder.
+  rise: [
+    { p: 0.75, e: 'out', h: [0.1, 0.06, 0.3], a: [-0.55, 0.58, -0.5], tw: -0.45, ln: 0.15, pr: [-0.3, 0.8, -0.5], pl: [0.1, -0.7, -0.6], g: -0.11 },
+    { p: 1, e: 'in', h: [0.3, -0.14, 0.22], a: [0.75, -0.25, 0.6], tw: 0.15, ln: 0.08, pr: [-0.3, 0.7, -0.65], pl: [-0.2, -0.6, -0.75], g: -0.11 },
+    { p: 1.4, e: 'out', h: [0.12, -0.34, -0.02], a: [-0.25, -0.6, 0.75], tw: 0.5, ln: -0.1, pr: [0.2, 0.6, -0.4], pl: [-0.3, -0.8, -0.3], g: -0.11 },
+  ],
+};
+// Driven into the ground at his feet (a paladin's consecration): up over his shoulder as for the overhead, and down,
+// the head into the earth a stride before him, the body bowed over it, and held there.
+MAUL_SWINGS.ground = [
+  { p: 0.45, e: 'io', h: [0.18, 0.0, 0.05], a: [-0.1, 0.12, 0.99], tw: -0.3, ln: -0.04, pr: [0.1, 0.75, -0.3], pl: [0.3, -0.5, -0.6], g: -0.12 },
+  { p: 0.8, e: 'out', h: [0.06, 0.05, -0.16], a: [-0.68, 0.18, 0.71], tw: -0.38, ln: -0.14, pr: [0.35, 0.8, 0.25], pl: [0.6, -0.45, -0.3], g: -0.11 },
+  { p: 1, e: 'in', h: [0.3, -0.15, 0.27], a: [0.55, -0.08, -0.83], tw: 0.1, ln: 0.3, pr: [-0.3, 0.55, -0.75], pl: [-0.2, -0.6, -0.75], g: -0.11 },
+  { p: 1.5, e: 'out', h: [0.29, -0.15, 0.29], a: [0.52, -0.08, -0.85], tw: 0.1, ln: 0.32, pr: [-0.3, 0.55, -0.75], pl: [-0.2, -0.6, -0.75], g: -0.11 },
+];
+for (const k in MAUL_SWINGS) MAUL_SWINGS[k] = [{ p: 0, ...MAUL_GUARD }, ...MAUL_SWINGS[k], { p: 2, e: 'io', ...MAUL_GUARD }];
+// A maul held one way for as long as a move asks (eased in and out of it, whatever the clip's doing): sky, held up to the
+// heavens in both hands for the light to come out of it; level, levelled at the foe for a beam down it; charge, carried
+// before him as he runs at them, head up; present, stood upright before his face, as a paladin's salute, for a prayer.
+const MAUL_HELD = {
+  sky: { h: [0.08, -0.12, -0.28], a: [0.12, -0.08, 0.99], tw: -0.1, ln: -0.08, pr: [0.1, 0.9, -0.1], pl: [0.1, -0.9, -0.2], g: -0.13 },
+  level: { h: [0.3, -0.14, 0.24], a: [0.98, -0.12, 0.12], tw: 0, ln: 0.12, pr: [-0.5, 0.6, -0.6], pl: [-0.3, -0.6, -0.75], g: -0.15 },
+  charge: { h: [0.26, -0.12, 0.32], a: [0.9, -0.1, 0.42], tw: -0.12, ln: 0.18, pr: [-0.6, 0.5, -0.6], pl: [-0.3, -0.6, -0.75], g: -0.15 },
+  present: { h: [0.24, -0.17, 0.22], a: [0.25, -0.05, 0.97], tw: -0.05, ln: 0.02, pr: [-0.5, 0.6, -0.6], pl: [-0.3, -0.6, -0.75], g: -0.12 },
+};
+// A maul's held way (MAUL_HELD) over where it is, k of the way.
+function maulMix(o, H, k) {
+  for (let j = 0; j < 3; j++) { o.h[j] += (H.h[j] - o.h[j]) * k; o.pr[j] += (H.pr[j] - o.pr[j]) * k; o.pl[j] += (H.pl[j] - o.pl[j]) * k; }
+  o.tw += (H.tw - o.tw) * k; o.ln += (H.ln - o.ln) * k; o.g += (H.g - o.g) * k;
+  const b = norm(H.a), d = clamp(o.a[0] * b[0] + o.a[1] * b[1] + o.a[2] * b[2], -0.9999, 1), w = Math.acos(d), sw = Math.sin(w);
+  const ka = sw < 1e-4 ? 1 - k : Math.sin((1 - k) * w) / sw, kb = sw < 1e-4 ? k : Math.sin(k * w) / sw;
+  for (let j = 0; j < 3; j++) o.a[j] = o.a[j] * ka + b[j] * kb;
+}
+// Where a maul is p into a swing (null: the guard), into o.
+function maulKey(o, keys, p) {
+  const K = keys || [{ p: 0, ...MAUL_GUARD }, { p: 2, ...MAUL_GUARD }];
+  let i = 1;
+  while (i < K.length - 1 && K[i].p < p) i++;
+  const A = K[i - 1], B = K[i], t = clamp((p - A.p) / Math.max(1e-4, B.p - A.p), 0, 1);
+  const k = B.e === 'in' ? t * t : B.e === 'out' ? 1 - (1 - t) * (1 - t) : ease(t);
+  for (let j = 0; j < 3; j++) { o.h[j] = A.h[j] + (B.h[j] - A.h[j]) * k; o.pr[j] = A.pr[j] + (B.pr[j] - A.pr[j]) * k; o.pl[j] = A.pl[j] + (B.pl[j] - A.pl[j]) * k; }
+  o.tw = A.tw + (B.tw - A.tw) * k; o.ln = A.ln + (B.ln - A.ln) * k; o.g = A.g + (B.g - A.g) * k;
+  // (The haft round the arc between them, not straight across it: a swing's head travels.)
+  const a = norm(A.a), b = norm(B.a), d = clamp(a[0] * b[0] + a[1] * b[1] + a[2] * b[2], -0.9999, 1), w = Math.acos(d), sw = Math.sin(w);
+  const ka = sw < 1e-4 ? 1 - k : Math.sin((1 - k) * w) / sw, kb = sw < 1e-4 ? k : Math.sin(k * w) / sw;
+  for (let j = 0; j < 3; j++) o.a[j] = a[j] * ka + b[j] * kb;
+  return o;
+}
 
 // What a class's ordinary blows are called, for the words (class_skill).
 const BLOW_MOVE = { lancer: 'lance_thrust', archer: 'aimed_shot', rogue: 'flurry', ninja: 'ninja_flurry', dragoon: 'spear_combo', boomerang: 'throw', paladin: null, bard: null };
@@ -164,8 +275,9 @@ const CARRY = {
 // kept (in a 1.8 m body's metres), and the most its bell is below the board's middle (for the board's narrower foot), and
 // below the board's top (for the taper above it), in metres of board.
 const LANCE_BACK = { way: norm([-0.26, 0.96, -0.1]), inside: 0.015, butt: 0.45, low: 0.2, taper: 0.35 };
-// How far each joint of a finger turns in, knuckle to tip, to shut a half-open hand on a haft.
-const FIST = [0.75, 0.95, 0.6];
+// The whole body's lean from the ground up, the player's own (src/sim/playerbody.js LEAN): by how fast the hero gains or
+// loses pace, and by how fast he turns at the pace he's going (rad).
+const HERO_LEAN = { gain: 0.016, fwd: 0.15, back: 0.1, turn: 0.0045, bank: 0.15 };
 // What a lancer puts his lance on his back for: what wants both hands, or the whole body.
 const AWAY_GESTURES = new Set(['dance', 'sit', 'kneel', 'bow', 'hug', 'defeat', 'cry', 'warm', 'sing', 'clap', 'cheer', 'fold', 'flex', 'scared', 'review']);
 // How ready each class is to run on ahead of you on the road (HeroWorld.heel): the light-footed most, plate and the healer least.
@@ -216,6 +328,23 @@ export class Hero extends Knight {
       const at = [0.08, pose.wt[j * 3 + 1] - 0.22 * rig.height / 1.8, -0.2 - (this.backP?.kind === 'tower' ? 0.04 : 0)];
       const d = [at[0] - pose.wt[j * 3], at[1] - pose.wt[j * 3 + 1], at[2] - pose.wt[j * 3 + 2]];
       this.backT = new Float32Array(3); quatRotate(this.backT, 0, inv, 0, d, 0);
+      // What swings the shield out from its top strap as he moves (poseBack): his hips and his thighs, each where it lies
+      // from the shield's face at rest. Nearer it than that, they push its foot out (the cloak under it rides with the
+      // chest as the shield does: tools/heroes/backpin.py), so neither cuts through it.
+      this.backRefs = null; this.backSwing = 0;
+      if (this.backP) {
+        const half = this.backP.half || [0.2, 0.42, 0.07];
+        this.backTop = (this.backP.reach ?? half[1]) * HERO_SHIELD;
+        const yv = [0, 0, 0], zv = [0, 0, 0];
+        quatRotate(yv, 0, B, 0, [0, 1, 0], 0); quatRotate(zv, 0, B, 0, [0, 0, 1], 0);
+        const ix = rig.index, w0 = pose.wt;
+        this.backRefs = [['pelvis', 'pelvis', 0], ['thigh_l', 'calf_l', 0], ['thigh_r', 'calf_r', 0], ['thigh_l', 'calf_l', 0.45], ['thigh_r', 'calf_r', 0.45]]
+          .filter(([a, b]) => ix.has(a) && ix.has(b))
+          .map(([a, b, t]) => {
+            const A = ix.get(a), C = ix.get(b), r = [0, 1, 2].map((k) => w0[A * 3 + k] + (w0[C * 3 + k] - w0[A * 3 + k]) * t - at[k]);
+            return { a: A, b: C, t, depth: r[0] * zv[0] + r[1] * zv[1] + r[2] * zv[2] };
+          });
+      }
     }
     this.flight = null;     // a boomerang or a hammer on its way
     // Each finger's joints, knuckle to tip, for shutting a hand on what it holds (shutHand). A hero's hand at rest is the
@@ -223,7 +352,12 @@ export class Hero extends Knight {
     // another hand), so its fingers are kept as they stand in the rig, and turned in from there.
     for (const j of this.fingerJoints) for (let k = 0; k < 4; k++) this.fist[j * 4 + k] = rig.restR[j * 4 + k];
     this.shutNow = { l: 0, r: 0 };
-    this.fingerChains = Object.fromEntries(['l', 'r'].map((sd) => [sd, ['index', 'middle', 'ring', 'pinky'].map((f) => [1, 2, 3].map((n) => rig.index.get(`${f}_0${n}_${sd}`)).filter((x) => x !== undefined)).filter((c) => c.length === 3)]));
+    // The hands' own work, done last (poseHands): every finger and the thumb by the shape the hand is after (herohands.js).
+    // Each chain is its three joints and the tip past them (the tip moves with it, so the last joint's line is true).
+    const chainOf = (f, sd) => [1, 2, 3, 4].map((n) => rig.index.get(n < 4 ? `${f}_0${n}_${sd}` : `${f}_04_leaf_${sd}`));
+    this.handBits = Object.fromEntries(['l', 'r'].map((sd) => [sd, { f: ['index', 'middle', 'ring', 'pinky'].map((f) => chainOf(f, sd)), t: chainOf('thumb', sd) }]));
+    for (const sd of ['l', 'r']) for (const ch of [...this.handBits[sd].f, this.handBits[sd].t]) if (ch[3] === undefined) ch.pop();
+    this.hands = { l: handState(), r: handState() };
     // The joints of each arm, for the hands' own work (afterPose): shoulder, elbow, wrist, and the fingers that go with the wrist.
     const ji = (n) => rig.index.get(n);
     const under = (top) => { const out = []; for (let j = 0; j < rig.count; j++) { let k = rig.parent[j]; while (k >= 0 && k !== top) k = rig.parent[k]; if (k === top) out.push(j); } return out; };
@@ -715,7 +849,14 @@ export class Hero extends Knight {
   // An ordinary blow, landing at its marks in the clip on whatever's in reach in front. A lance or a spear thrusts down a
   // line and takes all of it (with a flash of the lance, as Velscour's lancers and dragoons do); a rogue's knife bites
   // deeper in a back.
-  blow(sim, m, b = pick(this.blows)) {
+  blow(sim, m, b) {
+    // (A great mace's blows go in their order, the overhead, the cleave and the rising blow, each from where the last one
+    // left it; a pause and he starts again from the top. Anyone else's come as they come.)
+    if (!b) {
+      if (this.style === 'two_hand') { if (sim.time - (this.blowAt ?? -1e9) > 2.5) this.maulAt = 0; b = this.blows[(this.maulAt || 0) % this.blows.length]; this.maulAt = (this.maulAt || 0) + 1; }
+      else b = pick(this.blows);
+    }
+    this.blowAt = sim.time;
     // (A lancer with something inside his point puts the board into it: he doesn't thrust a lance through what's at his chest.)
     if (this.style === 'lance' && b.thrust && m && Math.hypot(m.x - this.x, m.z - this.z) - radiusOf(m) < 1.7) b = this.blows[1];
     const speed = 1 + (this.buff?.dmg ? 0.1 : 0);
@@ -733,7 +874,7 @@ export class Hero extends Knight {
         // (A blade in each hand: the arc each one cuts, in the class's colour. A kick leaves none.)
         if (!/kick/i.test(b.clip)) cutArc(this, sim, this.combo);
       }
-    }, { lunge: 2.2, aimed: thrust || b.sweep, stab: thrust, from: b.from, end: b.end, soft: thrust ? 0.75 : b.soft, blow: true, bash: this.style === 'lance' && b.clip === 'L_ShieldJab' });
+    }, { lunge: 2.2, aimed: thrust || b.sweep, stab: thrust, from: b.from, end: b.end, soft: thrust ? 0.75 : b.soft, blow: true, bash: this.style === 'lance' && b.clip === 'L_ShieldJab', maul: this.style === 'two_hand' ? b.maul : null });
     this.shotCd = rand(0.25, 0.7);
   }
 
@@ -796,7 +937,7 @@ export class Hero extends Knight {
     // (from: begun part-way in, past a clip's slow start. hold: [where, seconds], the pose kept there that long: an arm held
     // up for as long as what it called down is still coming.)
     if (o.from) this.actT = o.from * this.bank.clips[clip].dur;
-    this.swing = { clip: this.bank.clips[clip], hits, fn, done: 0, end: o.end ?? 0.92, lunge: o.lunge || 0, still: o.still, root: o.root, after: o.after, tick: o.tick, cut: o.cut, aimed: o.aimed, stab: o.stab, hold: o.hold ? [o.hold[0], o.hold[1]] : null, from: o.from || 0, loop: !!o.loop, blow: !!o.blow, bash: !!o.bash };
+    this.swing = { clip: this.bank.clips[clip], hits, fn, done: 0, end: o.end ?? 0.92, lunge: o.lunge || 0, still: o.still, root: o.root, after: o.after, tick: o.tick, cut: o.cut, aimed: o.aimed, stab: o.stab, hold: o.hold ? [o.hold[0], o.hold[1]] : null, from: o.from || 0, loop: !!o.loop, blow: !!o.blow, bash: !!o.bash, maul: (o.maul && MAUL_SWINGS[o.maul]) || null, maulHeld: (o.maul && MAUL_HELD[o.maul]) || null };
   }
 
   runSwing(dt, sim) {
@@ -924,6 +1065,14 @@ export class Hero extends Knight {
     return true;
   }
 
+  // A shield-bearer's board stays up before him through whatever his other hand is doing (a blow, a cast, a throw), the
+  // whole arm held in the guard (src/sim/knight.js holdW). Not through what the board does itself (a bash, a dash behind
+  // it, a block), its throw, or a gesture with his arms put away: the clips' own shield arm swung it out flat beside him,
+  // or up over his head like a tray.
+  keepBoard(clip) {
+    return this.style === 'sword_board' && !BOARD_CLIPS.has(clip.name) && !this.free[1] && !this.tossing && !this.surf && !this.gesture && !this.dead && this.stow < 0.5;
+  }
+
   // ---- specials ----
 
   skill(sim, key, m) {
@@ -936,12 +1085,15 @@ export class Hero extends Knight {
     switch (key) {
       case 'blessed_hammers':
         // Three blessed hammers spiral out round him and keep turning as he fights on: Velscour's paladin's main attack.
-        this.startSwing('Spell_Simple_Shoot', 1.0, [0.4], () => {
+        // (A great mace is presented before him in both hands; a mace and board, the mace raised to the sky and the board
+        // kept up; anything else, the open hand.)
+        this.startSwing(this.style === 'two_hand' ? 'Sword_Block' : this.style === 'sword_board' ? 'LP_cheer' : 'Spell_Simple_Shoot', this.style === 'two_hand' ? 1.4 : 1.0, [this.style === 'sword_board' ? 0.02 : 0.4], () => {
           const rk = rank(this);
           this.hammersUp = true;
           w.zones.push({ kind: 'blessed', owner: this, t: 0, life: 3.2 + 0.5 * rk, n: 3 + Math.floor(rk / 2), a0: Math.random() * 6.28, hitT: new Map(), end: () => { this.hammersUp = false; } });
           if (this.fxOk()) { sim.casting.burst(FX.RING, ELEM.LIGHT, this.x, this.y + 0.06, this.z, 0.3, 1.8, 0.3, { light: 10, lightR: 5 }); sim.event(EV.HERO_FX, 4, this.x, this.y + 1.3, this.z, 7, 0.5); }
-        }, { mask: 'upper' });
+        }, this.style === 'sword_board' ? { mask: 'upper', end: 0.05, hold: [0.03, 0.45], aimed: () => [0, 1, 0.02] }
+          : { mask: 'upper', maul: this.style === 'two_hand' ? 'present' : null, end: this.style === 'two_hand' ? 0.6 : undefined });
         break;
       case 'charge':
         this.lanceRush(sim, m, { dmg: 18 });
@@ -1495,7 +1647,19 @@ export class Hero extends Knight {
       for (let i = 0; i < 12; i++) propM[i] *= HERO_SHIELD;
       out.set(propM, this.shieldStyle ? off + 16 : bo);
       if (this.shieldStyle) zero(bo);
-    } else if (this.backP && !(this.dead && this.deadT > 1.5)) { fromHand(bo, J.spine3, this.backQ, this.backT); for (let i = 0; i < 12; i++) out[bo + i] *= HERO_SHIELD; }
+    } else if (this.backP && !(this.dead && this.deadT > 1.5)) {
+      fromHand(bo, J.spine3, this.backQ, this.backT); for (let i = 0; i < 12; i++) out[bo + i] *= HERO_SHIELD;
+      // Swung out from its top strap (poseBack): about its own width, its foot out from him.
+      if (this.backSwing > 1e-3) {
+        const sx = Math.hypot(out[bo], out[bo + 1], out[bo + 2]), sy = Math.hypot(out[bo + 4], out[bo + 5], out[bo + 6]), top = this.backTop / sy;
+        quatAxisAngle(BK_Q, 0, out[bo] / sx, out[bo + 1] / sx, out[bo + 2] / sx, this.backSwing);
+        for (let k = 0; k < 3; k++) BK_O[k] = out[bo + 12 + k] + out[bo + 4 + k] * top;
+        for (const c of [0, 4, 8]) { BK_V[0] = out[bo + c]; BK_V[1] = out[bo + c + 1]; BK_V[2] = out[bo + c + 2]; quatRotate(BK_V, 0, BK_Q, 0, BK_V, 0); out[bo + c] = BK_V[0]; out[bo + c + 1] = BK_V[1]; out[bo + c + 2] = BK_V[2]; }
+        for (let k = 0; k < 3; k++) BK_V[k] = out[bo + 12 + k] - BK_O[k];
+        quatRotate(BK_V, 0, BK_Q, 0, BK_V, 0);
+        for (let k = 0; k < 3; k++) out[bo + 12 + k] = BK_O[k] + BK_V[k];
+      }
+    }
     else zero(bo);
     // A lancer's board in his hold: upright before him, square to what he faces, on the forearm that lies across behind it
     // (poseLance), hung from it so its top's at his chin and he sees over it. Turned to his left, out of the way, as the
@@ -1595,6 +1759,7 @@ export class Hero extends Knight {
       this.stepOffY = damp(this.stepOffY, 0, 11, dt);
     }
     if (!this.dead && this.rideW > 0.01) this.poseRide(dt, sim);
+    if (!this.dead) this.poseLean(dt);
     if (!this.dead) {
       // (Some clips end a blow folded face down, or wind it up with the off arm straight out: a fighter does neither.)
       // (A lancer's kept so through his whole hold and as a run ends, so nothing jumps when the run's clip lets go.)
@@ -1614,7 +1779,7 @@ export class Hero extends Knight {
       if (runK > 0.01 && !(this.luteW > 0.01)) {
         for (const sd of ['l', 'r']) {
           if (this.tossing?.side === sd || (sd === 'r' && (this.point || this.gripAt))) continue;
-          if (runK - this.shutNow[sd] > 0.01) this.shutHand(sd, runK - this.shutNow[sd]);
+          if (runK - this.shutNow[sd] > 0.01) this.shutHand(sd, runK - this.shutNow[sd], 'fist');
         }
       }
       if (this.luteP && this.luteW > 0.01) this.poseLute();
@@ -1623,9 +1788,47 @@ export class Hero extends Knight {
       if (this.spread > 0.01) this.poseSpread();
       if (this.tossing) this.poseToss();
       if (this.point) this.posePoint();
-      if (this.gripAt) this.reachTo('r', this.gripAt[0], this.gripAt[1], this.gripAt[2], [-Math.cos(this.yaw) * 0.4, -1, Math.sin(this.yaw) * 0.4], 1);
+      if (this.gripAt) { this.reachTo('r', this.gripAt[0], this.gripAt[1], this.gripAt[2], [-Math.cos(this.yaw) * 0.4, -1, Math.sin(this.yaw) * 0.4], 1); this.shutHand('r', 1, 'grip'); }
     }
+    this.poseHands(dt, sim);
     if (this.bodyFlip || this.bodyRoll) this.tumble();
+    if (this.backRefs) this.poseBack(dt);
+  }
+
+  // The shield on the back, swung out from its top strap as far as his hips or thighs press back toward it (each against
+  // where it lay at rest, over its distance below the strap), or as the cloak under it would come through its inner face
+  // (Rig.backProbes: the few of its vertices that would, skinned as the GPU skins them): out at once, back down slower,
+  // so it swings and settles.
+  poseBack(dt) {
+    let want = 0;
+    if (!this.dead && !this.surf && !this.bodyFlip && !this.bodyRoll) {
+      const { wq, wt } = this.pose, j = this.J.spine3;
+      quatMul(BK_Q, 0, wq, j * 4, this.backQ, 0);
+      quatRotate(BK_O, 0, wq, j * 4, this.backT, 0);
+      BK_O[0] += wt[j * 3]; BK_O[1] += wt[j * 3 + 1]; BK_O[2] += wt[j * 3 + 2];
+      quatRotate(BK_Y, 0, BK_Q, 0, UP3, 0); quatRotate(BK_Z, 0, BK_Q, 0, FWD3, 0);
+      for (const r of this.backRefs) {
+        const a = r.a * 3, b = r.b * 3;
+        const x = wt[a] + (wt[b] - wt[a]) * r.t - BK_O[0], y = wt[a + 1] + (wt[b + 1] - wt[a + 1]) * r.t - BK_O[1], z = wt[a + 2] + (wt[b + 2] - wt[a + 2]) * r.t - BK_O[2];
+        const depth = x * BK_Z[0] + y * BK_Z[1] + z * BK_Z[2], along = x * BK_Y[0] + y * BK_Y[1] + z * BK_Y[2];
+        want = Math.max(want, (r.depth - depth) / Math.max(0.15, this.backTop - along));
+      }
+      const P = this.rig.backProbes;
+      if (P && this.backP) {
+        quatRotate(BK_X, 0, BK_Q, 0, RIGHT3, 0);
+        for (let i = 0; i < P.face.length; i++) {
+          skinProbe(BK_V, P, i, wq, wt, this.rig);
+          const x = BK_V[0] - BK_O[0], y = BK_V[1] - BK_O[1], z = BK_V[2] - BK_O[2];
+          const depth = x * BK_Z[0] + y * BK_Z[1] + z * BK_Z[2], along = x * BK_Y[0] + y * BK_Y[1] + z * BK_Y[2], across = x * BK_X[0] + y * BK_X[1] + z * BK_X[2];
+          // (Only while it's under the shield: beside it, or below its point, the cloak hangs where it will.)
+          const b = Math.floor((along - P.y0) / P.dy);
+          if (b < 0 || b >= P.half.length || Math.abs(across) > P.half[b]) continue;
+          want = Math.max(want, Math.min(BACK_PROBE_MAX, (P.face[i] + PROBE_KEEP - depth) / Math.max(0.15, this.backTop - along)));
+        }
+      }
+      want = Math.min(0.55, want);
+    }
+    this.backSwing = Math.max(want, damp(this.backSwing, want, 7, dt));
   }
 
   // ---- on the board ----
@@ -1701,7 +1904,7 @@ export class Hero extends Knight {
       const tx = wt[U] + (T[0] * f * out + F[0] * fw) * u, ty = wt[U + 1] + up * u, tz = wt[U + 2] + (T[2] * f * out + F[2] * fw) * u;
       // (The elbow down, a little out along the board and back toward the heels: an arm held out to balance, not a wing.)
       this.reachTo(side, tx, ty, tz, [T[0] * f * 0.45 - F[0] * 0.35, -1, T[2] * f * 0.45 - F[2] * 0.35], aw);
-      this.shutHand(side, 0.35 * aw);
+      this.shutHand(side, 0.5 * aw, 'open');
     }
   }
 
@@ -1719,7 +1922,16 @@ export class Hero extends Knight {
     // The weapon arm's part of it: between blows, and in a blow whose weapon is aimed for it (a thrust, a sweep, a run, a
     // bash that wants the lance out of its way). A blow that's all in its clip (a throw off the right arm, the butt struck
     // down, a maul's swing) has the arm to itself.
-    const armOn = on && (!sw || (!maul && (!!sw.aimed || !!sw.stab || !!this.charge || !!sw.bash)));
+    const armOn = on && (!sw || (maul ? !!(sw.maul || sw.maulHeld) : (!!sw.aimed || !!sw.stab || !!this.charge || !!sw.bash)));
+    // (A maul's guard, or where its swing is: both hands on the haft all the way round. MAUL_SWINGS.)
+    if (maul) {
+      const mk = this.maulK || (this.maulK = { h: [0, 0, 0], a: [0, 0, 0], pr: [0, 0, 0], pl: [0, 0, 0], tw: 0, ln: 0, g: 0 });
+      const at = sw?.maul && sw.hits.length ? sw.hits[0] : 1, f = sw?.maul ? this.actT / sw.clip.dur : 0;
+      maulKey(mk, sw?.maul, f < at ? f / at : 1 + (f - at) / Math.max(0.05, sw.end - at));
+      if (sw?.maulHeld) this.maulHeldK = sw.maulHeld;
+      this.maulHeldW = damp(this.maulHeldW || 0, sw?.maulHeld ? 1 : 0, sw?.maulHeld ? 9 : 6, dt);
+      if (this.maulHeldW > 0.001 && this.maulHeldK) maulMix(mk, this.maulHeldK, ease(this.maulHeldW));
+    }
     this.armW = damp(this.armW, armOn ? 1 : 0, 14, dt);
     // (A lancer just out of a fight has his lance still in his hand. Standing, its butt is on the ground by his right foot
     // and his hand's on the shaft at his chest, as a guard stands with a spear; walking, it's sloped on his right shoulder,
@@ -1738,7 +1950,7 @@ export class Hero extends Knight {
     // The other hand's part: a board up before a lancer (but for the board's own moves, and one that's out of his hand); a
     // hand on the shaft for a dragoon; on the haft for a maul, between blows and through its own.
     const boardOn = on && lance && (!BOARD_CLIPS.has(act) || !!sw?.bash) && !this.free[1];
-    this.boardW = damp(this.boardW, boardOn || (spear && armOn) || (maul && on && (!sw || sw.blow)) ? 1 : 0, 14, dt);
+    this.boardW = damp(this.boardW, boardOn || (spear && armOn) || (maul && on && (!sw || sw.blow || !!sw.maul || !!sw.maulHeld)) ? 1 : 0, 14, dt);
     const rush = !!this.charge && !busy;
     this.rushW = damp(this.rushW, rush ? 1 : 0, rush ? 16 : 4.5, dt);
     // The arm: what a thrust asks (runSwing), the point driven out over the last strides of a run and held out as he stops.
@@ -1760,8 +1972,9 @@ export class Hero extends Knight {
     // (His own hold's aim is made anew each tick; one a move has set is the move's.)
     if ((armOn || this.lanceCarry > 0.01 || (lance && this.lanceW > 0.01 && !busy)) && (!this.aim || this.aim === this.heldAim)) {
       const L = lance ? ease(this.lanceW) * (armOn || this.lanceCarry > 0.01 ? 1 : 0) + (armOn || this.lanceCarry > 0.01 ? 0 : 1) : 1;
-      const level = maul ? 1.0 : ((spear ? 0.2 : 0.07) - (spear ? 0.26 : 0.13) * Math.max(0, this.jab)) * (1 - this.rushW) - 0.03 + (spear ? 0.75 : 0.95) * ease(this.lanceUp) * (1 - this.rushW);
-      const co = Math.cos(level), A = [Math.sin(this.yaw) * co, Math.sin(level), Math.cos(this.yaw) * co];
+      const level = ((spear ? 0.2 : 0.07) - (spear ? 0.26 : 0.13) * Math.max(0, this.jab)) * (1 - this.rushW) - 0.03 + (spear ? 0.75 : 0.95) * ease(this.lanceUp) * (1 - this.rushW);
+      const co = Math.cos(level), ys = Math.sin(this.yaw), yc = Math.cos(this.yaw), ma = maul ? this.maulK.a : null;
+      const A = maul ? [ys * ma[0] - yc * ma[1], ma[2], yc * ma[0] + ys * ma[1]] : [ys * co, Math.sin(level), yc * co];
       if (L < 0.999) {
         const C = this.carryAim();
         for (let i = 0; i < 3; i++) A[i] = A[i] * L + C[i] * (1 - L);
@@ -1826,7 +2039,12 @@ export class Hero extends Knight {
     const sweep = this.aim && !maul ? clamp(wrapAngle(Math.atan2(this.aim[0], this.aim[2]) - this.yaw), -1.3, 1.3) * hold : 0;
     // The shoulders: the left one forward (behind the board, or down the spear); further round as the weapon's drawn back; the
     // right one through as it goes in; the left one out with the board in a bash.
-    const tw = maul ? -0.18 * this.armW * hold
+    const mk = maul ? this.maulK : null;
+    // (A maul's shoulders are turned to where its swing has them, whatever the clip under it has done with them: from the
+    // line of his shoulders as it stands, round to his left for more.)
+    let th = 0;
+    if (maul) { const L = this.arms.l.u * 3, R = this.arms.r.u * 3, vx = wt[L] - wt[R], vz = wt[L + 2] - wt[R + 2]; th = Math.atan2(-(vx * s + vz * c), vx * c - vz * s); }
+    const tw = maul ? (mk.tw - th) * this.armW * hold
       : spear ? ((-0.5 - 0.22 * back) * (1 - out) - 0.08 * out + sweep * 0.55) * this.armW * (1 - 0.3 * r) * hold
         : ((((-0.36 - 0.3 * back) * (1 - out) + 0.3 * out) * (0.35 + 0.65 * b) * (1 - 0.3 * r) + sweep * 0.5) * this.armW - 0.34 * pu) * hold;
     this.twistTorso(tw);
@@ -1835,7 +2053,7 @@ export class Hero extends Knight {
     quatAxisAngle(ikQ, 0, 0, 1, 0, -tw * 0.8);
     this.rigid(this.headBits, ikQ, wt[hj], wt[hj + 1], wt[hj + 2]);
     // The weight: a little forward on guard, back on the draw, into the thrust or the board; well forward in a run.
-    const lean = (((0.07 - 0.2 * back + (spear ? 0.26 : 0.2) * out) * (1 - r) + (0.2 + 0.1 * out) * r) * this.armW + 0.2 * pu) * hold * (maul ? 0.6 : 1), sj = this.upperBody[0] * 3;
+    const lean = maul ? mk.ln * this.armW * hold : (((0.07 - 0.2 * back + (spear ? 0.26 : 0.2) * out) * (1 - r) + (0.2 + 0.1 * out) * r) * this.armW + 0.2 * pu) * hold, sj = this.upperBody[0] * 3;
     quatAxisAngle(ikQ, 0, c, 0, -s, lean);
     this.rigid(this.upperBody, ikQ, wt[sj], wt[sj + 1], wt[sj + 2]);
     // (His eyes on them over the board as he draws back, not on the ground.)
@@ -1844,7 +2062,7 @@ export class Hero extends Knight {
     // (A lance: gripped behind its vamplate at his side, high enough that its butt lies back under the forearm against his
     // ribs. A spear's is the hand at its butt end: lower and further back, for the other hand's before it. A maul's is low
     // before his right hip, its head up.)
-    const [G, B, O, R] = maul ? [[0.2, -0.04, 0.44], [0.2, -0.04, 0.44], [0.2, -0.04, 0.44], [0.2, -0.04, 0.44]]
+    const [G, B, O, R] = maul ? [mk.h, mk.h, mk.h, mk.h]
       : spear ? [[-0.06, 0.1, 0.4], [-0.42, 0.17, 0.35], [0.3, 0.03, 0.3], [-0.02, 0.09, 0.4]] : [[0.13, 0.12, 0.29], [-0.25, 0.16, 0.27], [0.52, 0.04, 0.2], [0.15, 0.12, 0.26]];
     // (At ease: his hand on the shaft at his chest, the lance stood on the ground beside him; or, walking, low before his
     // chest, the lance on his shoulder. The first is by where he stands, so its butt stays on the ground as he breathes.)
@@ -1859,9 +2077,27 @@ export class Hero extends Knight {
     for (let i = 0; i < 3; i++) { const g = G[i] + (R[i] - G[i]) * r, at = (g + (B[i] - g) * back + (O[i] - g) * out) * u; p[i] = lance ? C[i] + (at - C[i]) * hold : at; }
     // (In a run the fist keeps one height off the ground, so the point doesn't nod with his stride.)
     const fy = wt[UR + 1] - p[2], fistY = lance ? fy + (this.y + 1.03 * u - fy) * r : fy;
-    this.reachTo('r', wt[UR] + s * p[0] - c * p[1], fistY, wt[UR + 2] + c * p[0] + s * p[1], [-s * 0.8 - c * 0.45, -0.5, -c * 0.8 + s * 0.45], w * arm);
-    if (spear || maul) {
-      // The other hand on the shaft, a forearm's length before the first (a hand's, up a maul's haft), from under it: where
+    const bw = (v) => [s * v[0] - c * v[1], v[2], c * v[0] + s * v[1]];
+    const rt = [wt[UR] + s * p[0] - c * p[1], fistY, wt[UR + 2] + c * p[0] + s * p[1]];
+    this.reachTo('r', rt[0], rt[1], rt[2], maul ? (this.aim ? this.gripPole('r', rt, this.aim, bw(mk.pr)) : bw(mk.pr)) : [-s * 0.8 - c * 0.45, -0.5, -c * 0.8 + s * 0.45], w * arm);
+    // (A maul's fist round the haft, so it's through the fist the way it lies and not across the back of the hand; and the
+    // haft where the fist has it, should the wrist go no further.)
+    if (maul && this.aim) this.fistOn('r', this.swordQ, this.aim, w * arm, this.aim === this.heldAim);
+    if (maul && b > 0.01) {
+      // Both fists on the haft: the left below the right, toward the butt, its own grip (offQ) on the haft's line.
+      const hr = this.J.handR, hl = this.J.handL, on = hold * ease(b);
+      // (The haft's way: his hold's, or, in a clip of its own, wherever the right fist has it.)
+      let a = this.aim;
+      if (!a) { quatMul(ikQ, 0, wq, hr * 4, this.swordQ, 0); ikV2[0] = 0; ikV2[1] = 1; ikV2[2] = 0; quatRotate(ikV2, 0, ikQ, 0, ikV2, 0); a = norm([ikV2[0], ikV2[1], ikV2[2]]); }
+      quatRotate(ikV, 0, wq, hr * 4, this.swordT, 0);
+      const d = mk.g * u, gx = wt[hr * 3] + ikV[0] + a[0] * d, gy = wt[hr * 3 + 1] + ikV[1] + a[1] * d, gz = wt[hr * 3 + 2] + ikV[2] + a[2] * d;
+      const pl = bw(mk.pl);
+      const [lt, lp] = this.fistPlan('l', [gx, gy, gz], a, this.offQ, this.offT, pl);
+      this.reachTo('l', lt[0], lt[1], lt[2], lp, on);
+      this.fistOn('l', this.offQ, a, on);
+      this.shutHand('l', on);
+    } else if (spear) {
+      // The other hand on the shaft, a forearm's length before the first, from under it: where
       // the shaft is, from the grip in the right fist (src/sim/knight.js swordT) along where it's pointed, or, in a blow of the
       // clip's own, along where the fist has it.
       const hr = this.J.handR;
@@ -1873,20 +2109,18 @@ export class Hero extends Knight {
         quatRotate(ikV, 0, wq, hr * 4, this.swordT, 0);
         // (A spear's lead hand never lets go: it slides. Up the shaft as the rear fist draws back, so it stays before his
         // chest where a hand can be; back down it as the thrust goes out past its reach.)
-        let d = (maul ? 0.3 : 0.5) * u;
-        if (spear) {
+        let d = 0.5 * u;
+        {
           const SL = this.arms.l.u * 3, sp0 = this.J.spine3 * 3, most = this.armLen('l') * 0.96;
           const fore = (dd) => (wt[hr * 3] + ikV[0] + ax * dd - wt[sp0]) * s + (wt[hr * 3 + 2] + ikV[2] + az * dd - wt[sp0 + 2]) * c;
           const far = (dd) => Math.hypot(wt[hr * 3] + ikV[0] + ax * dd - wt[SL], wt[hr * 3 + 1] + ikV[1] + ay * dd - wt[SL + 1], wt[hr * 3 + 2] + ikV[2] + az * dd - wt[SL + 2]);
           for (let n = 0; n < 12 && d < 0.95 * u && fore(d) < 0.3 * u && far(d + 0.04 * u) <= most; n++) d += 0.04 * u;
           for (let n = 0; n < 12 && d > 0.16 * u && far(d) > most; n++) d -= 0.04 * u;
         }
-        const gx = wt[hr * 3] + ikV[0] + ax * d, gy = wt[hr * 3 + 1] + ikV[1] + ay * d - (maul ? 0 : 0.045 * u), gz = wt[hr * 3 + 2] + ikV[2] + az * d;
-        // (Only where a left hand could be: a maul wound up behind his head is in one hand till it comes over.)
-        const sp = this.J.spine3 * 3, before = (gx - wt[sp]) * s + (gz - wt[sp + 2]) * c;
+        const gx = wt[hr * 3] + ikV[0] + ax * d, gy = wt[hr * 3 + 1] + ikV[1] + ay * d - 0.045 * u, gz = wt[hr * 3 + 2] + ikV[2] + az * d;
         // (The wrist a palm's length short of the shaft, the way the arm comes to it, so it's the palm that's on it.)
         const UL = this.arms.l.u * 3, lx = gx - wt[UL], ly = gy - wt[UL + 1], lz = gz - wt[UL + 2], ll = Math.hypot(lx, ly, lz) || 1, pk = 0.075 * u / ll;
-        const on = hold * ease(b) * (spear ? 1 : ease((before - 0.02) / 0.2));
+        const on = hold * ease(b);
         this.reachTo('l', gx - lx * pk, gy - ly * pk, gz - lz * pk, [c * 0.5 - s * 0.3, -0.8, -s * 0.5 - c * 0.3], on);
         this.shutHand('l', on);
       }
@@ -1901,21 +2135,140 @@ export class Hero extends Knight {
     this.shutHand('r', w);
   }
 
-  // A hand shut on what it holds: each finger's joints turned in toward the palm, knuckle first, after the pose is made.
-  // (The clips' fingers are one half-open hand, whatever's in it.) k: how far, 0 to 1.
-  shutHand(side, k) {
+  // The lean of the whole body from the ground up, as the player's own (src/sim/playerbody.js LEAN): forward as the hero
+  // gains pace and back as he checks, and banked into a turn by how fast he's turning at the pace he's going. Not on the
+  // board (poseRide has its own), in the air, or through a blow or a skill's clip (those place the body themselves).
+  poseLean(dt) {
+    const s = Math.sin(this.yaw), c = Math.cos(this.yaw);
+    const fwd = (this.vx || 0) * s + (this.vz || 0) * c;
+    const was = this.leanWas ?? fwd, wasYaw = this.leanYaw ?? this.yaw;
+    this.leanWas = fwd; this.leanYaw = this.yaw;
+    const gain = dt > 0 ? clamp((fwd - was) / dt, -40, 40) : 0;
+    this.leanGain = damp(this.leanGain || 0, gain, 5, dt);
+    const free = !this.action && !this.swing && !this.jump && !this.surf && !(this.rideW > 0.01) && !this.charge;
+    const on = free && this.speed > 0.3 ? 1 : 0;
+    this.leanFwd = damp(this.leanFwd || 0, on * clamp(this.leanGain * HERO_LEAN.gain, -HERO_LEAN.back, HERO_LEAN.fwd), 7, dt);
+    const turning = dt > 0 ? wrapAngle(this.yaw - wasYaw) / dt : 0;
+    this.leanBank = damp(this.leanBank || 0, on * clamp(turning * this.speed * HERO_LEAN.turn, -HERO_LEAN.bank, HERO_LEAN.bank), 6, dt);
+    const a = this.leanFwd, b = this.leanBank;
+    if (Math.abs(a) < 1e-4 && Math.abs(b) < 1e-4) return;
+    // (Forward about his left; into the turn about his front: a turn to his left leans him left.)
+    quatAxisAngle(ikQ, 0, c, 0, -s, a);
+    quatAxisAngle(ikQ2, 0, s, 0, c, -b);
+    quatMul(ikQ, 0, ikQ2, 0, ikQ, 0);
+    const all = this.allJoints || (this.allJoints = Array.from({ length: this.rig.count }, (_, j) => j));
+    this.rigid(all, ikQ, this.x, this.y, this.z);
+  }
+
+  // A hand shut on what it holds (a haft: 'grip'), or made into another of herohands.js's shapes, by k (0 to 1). Asked for
+  // here, done last (poseHands), once the arms have put the hand where it's going; what's asked last has the last word.
+  shutHand(side, k, shape = 'grip') {
     if (k < 0.01) return;
     this.shutNow[side] += k;     // (how far each is shut this pose: afterPose's fist on the run shuts only what's left)
-    const { wq, wt } = this.pose, hand = this.arms[side].h;
-    quatRotate(ikV2, 0, wq, hand * 4, this.bank.grip[side].palm, 0);
-    const n = [ikV2[0], ikV2[1], ikV2[2]];
-    for (const chain of this.fingerChains[side]) {
-      for (let i = 0; i < 3; i++) {
-        const j = chain[i], a = (i < 2 ? j : chain[1]) * 3, b = (i < 2 ? chain[i + 1] : j) * 3;
-        const ax = norm(cross(norm([wt[b] - wt[a], wt[b + 1] - wt[a + 1], wt[b + 2] - wt[a + 2]]), n));
-        quatAxisAngle(ikQ, 0, ax[0], ax[1], ax[2], FIST[i] * k);
-        this.rigid(chain.slice(i), ikQ, wt[j * 3], wt[j * 3 + 1], wt[j * 3 + 2]);
+    const H = this.hands[side];
+    H.reqS[H.reqN] = shape; H.reqK[H.reqN] = Math.min(1, k); H.reqN++;
+  }
+
+  // Every finger and the thumb, last of all. Each hand starts relaxed (slack, dead); takes what the clip that's playing
+  // wants of it (CLIP_HANDS: an open hand to wave, a fist to cheer, a finger to point); in a fight an empty hand is half
+  // shut, ready; out of one, a hand that moves opens as it goes, as a hand does in talk; then whatever the pose asked for
+  // (shutHand: a grip on what it holds, a fist on the run, the bowstring's hook, a chord on the lute's neck).
+  poseHands(dt, sim) {
+    const { wt } = this.pose, act = this.action, want = act && !this.dead ? CLIP_HANDS[act.name] : null;
+    const pj = this.J.pelvis * 3, fight = this.dead ? 0 : smoothstep(0.3, 0.8, this.combat || 0);
+    for (let si = 0; si < 2; si++) {
+      const side = si ? 'r' : 'l', H = this.hands[side], h = this.arms[side].h * 3;
+      // (How fast the hand goes against the hips: an open hand's open the more for it.)
+      const rx = wt[h] - wt[pj], ry = wt[h + 1] - wt[pj + 1], rz = wt[h + 2] - wt[pj + 2];
+      if (H.had && dt > 0) H.speed = damp(H.speed, Math.min(6, Math.hypot(rx - H.prev[0], ry - H.prev[1], rz - H.prev[2]) / dt), 8, dt);
+      H.prev[0] = rx; H.prev[1] = ry; H.prev[2] = rz; H.had = true;
+      setShape(H.want, this.dead ? 'limp' : 'relax');
+      if (!this.dead) {
+        const clip = want ? want[si] : null;
+        if (clip) mixShape(H.want, clip, 1);
+        else {
+          mixShape(H.want, 'fist', 0.55 * fight);
+          mixShape(H.want, 'open', 0.55 * smoothstep(0.7, 2.4, H.speed) * (1 - fight));
+        }
+        for (let i = 0; i < H.reqN; i++) mixShape(H.want, H.reqS[i], H.reqK[i]);
       }
+      follow(H, dt);
+      // (A hand shut on something is still; an empty one's fingers drift a little, each on its own.)
+      let held = 0;
+      for (let i = 0; i < H.reqN; i++) if (H.reqS[i] === 'grip') held = Math.max(held, H.reqK[i]);
+      this.shapeHand(side, H.cur, (1 - held) * (this.dead ? 0 : 1), sim.time);
+      H.reqN = 0;
+    }
+  }
+
+  // The hand made into a shape (herohands.js numbers), turned from the hand as modelled (flat and open: Knight.animate
+  // leaves a hero's fingers so): each finger out from the middle one and in toward the palm, knuckle to tip; the thumb
+  // round under the palm, in toward the fingers, and bent at its two joints.
+  shapeHand(side, c, life, time) {
+    const { wq, wt } = this.pose, h = this.arms[side].h, B = this.handBits[side], seed = this.slot * 3.1 + (side === 'r' ? 5 : 0);
+    quatRotate(HN, 0, wq, h * 4, this.bank.grip[side].palm, 0);              // the palm's normal, out of the palm
+    const m0 = B.f[1][0] * 3;
+    sub3(HF, wt, m0, wt, h * 3); nrm3(HF);                                    // the hand's length, wrist to the middle knuckle
+    for (let f = 0; f < 4; f++) {
+      const ch = B.f[f], j0 = ch[0] * 3;
+      // Spread: about the palm's normal, away from the middle finger (the index toward the thumb, the others toward the
+      // little finger's side).
+      const sp = c[12 + f];
+      if (f !== 1 && Math.abs(sp) > 1e-3) {
+        sub3(HS, wt, j0, wt, m0);                                              // this knuckle from the middle one
+        sub3(HD, wt, ch[1] * 3, wt, j0);
+        crs3(HT, HN, HD);
+        const sg = dot3(HT, HS) >= 0 ? 1 : -1;
+        quatAxisAngle(ikQ, 0, HN[0] * sg, HN[1] * sg, HN[2] * sg, sp);
+        this.rigid(ch, ikQ, wt[j0], wt[j0 + 1], wt[j0 + 2]);
+      }
+      for (let i = 0; i < 3; i++) {
+        const j = ch[i], a = ch[i] * 3, b = (ch[i + 1] ?? ch[i]) * 3;
+        if (a === b) break;
+        sub3(HD, wt, b, wt, a); nrm3(HD);
+        crs3(HT, HD, HN); nrm3(HT);
+        const ang = c[f * 3 + i] + (i === 0 ? drift(f, time, seed, life) : 0);
+        quatAxisAngle(ikQ, 0, HT[0], HT[1], HT[2], ang);
+        this.rigidFrom(ch, i, ikQ, wt[j * 3], wt[j * 3 + 1], wt[j * 3 + 2]);
+      }
+    }
+    // The thumb.
+    const T = B.t, t0 = T[0] * 3, tip = T[T.length - 1] * 3;
+    if (T.length < 3) return;
+    sub3(HS, wt, tip, wt, t0);
+    // Round under the palm: about the hand's length, the way that takes it to the palm's side.
+    crs3(HT, HF, HS);
+    let sg = dot3(HT, HN) >= 0 ? 1 : -1;
+    quatAxisAngle(ikQ, 0, HF[0] * sg, HF[1] * sg, HF[2] * sg, c[16]);
+    this.rigid(T, ikQ, wt[t0], wt[t0 + 1], wt[t0 + 2]);
+    quatRotate(HP, 0, ikQ, 0, HN, 0);                                          // the thumb's own pad, turned with it
+    // In toward the fingers: about the palm's normal, the way that takes its tip toward the fingertips.
+    sub3(HS, wt, tip, wt, t0);
+    crs3(HT, HN, HS);
+    sg = dot3(HT, HF) >= 0 ? 1 : -1;
+    quatAxisAngle(ikQ, 0, HN[0] * sg, HN[1] * sg, HN[2] * sg, c[17]);
+    this.rigid(T, ikQ, wt[t0], wt[t0 + 1], wt[t0 + 2]);
+    quatRotate(HP, 0, ikQ, 0, HP, 0);
+    // Bent at its two joints, toward its pad.
+    for (let i = 1; i < 3; i++) {
+      const j = T[i], a = T[i] * 3, b = (T[i + 1] ?? T[i]) * 3;
+      if (a === b) break;
+      sub3(HD, wt, b, wt, a); nrm3(HD);
+      crs3(HT, HD, HP); nrm3(HT);
+      quatAxisAngle(ikQ, 0, HT[0], HT[1], HT[2], c[17 + i]);
+      this.rigidFrom(T, i, ikQ, wt[j * 3], wt[j * 3 + 1], wt[j * 3 + 2]);
+    }
+  }
+
+  // rigid() for the joints of a chain from its i-th on.
+  rigidFrom(chain, i, q, px, py, pz) {
+    const { wq, wt } = this.pose;
+    for (let k = i; k < chain.length; k++) {
+      const j = chain[k];
+      ikV[0] = wt[j * 3] - px; ikV[1] = wt[j * 3 + 1] - py; ikV[2] = wt[j * 3 + 2] - pz;
+      quatRotate(ikV, 0, q, 0, ikV, 0);
+      wt[j * 3] = px + ikV[0]; wt[j * 3 + 1] = py + ikV[1]; wt[j * 3 + 2] = pz + ikV[2];
+      quatMul(wq, j * 4, q, 0, wq, j * 4);
     }
   }
 
@@ -1959,6 +2312,7 @@ export class Hero extends Knight {
     if (p.lean) { const sj = this.upperBody[0] * 3; quatAxisAngle(ikQ, 0, c, 0, -s, p.lean * w); this.rigid(this.upperBody, ikQ, wt[sj], wt[sj + 1], wt[sj + 2]); }
     const U = this.arms[p.side].u * 3, L = this.armLen(p.side) * 0.94, d = p.d;
     this.reachTo(p.side, wt[U] + d[0] * L, wt[U + 1] + d[1] * L, wt[U + 2] + d[2] * L, [c * sd * 0.4, -1, -s * sd * 0.4], w);
+    this.shutHand(p.side, w, 'point');
   }
 
   // A throw with no clip in it: the arm back behind the head and whipped forward, the shoulders turning with it. Either
@@ -1978,6 +2332,8 @@ export class Hero extends Knight {
     this.twistTorso(tw * sd + off * ease(env));
     const s = Math.sin(ya), c = Math.cos(ya), ox = c * sd, oz = -s * sd, U = this.arms[q.side].u * 3;
     this.reachTo(q.side, wt[U] + (ox * p[0] + s * p[2]) * k2, wt[U + 1] + p[1] * k2, wt[U + 2] + (oz * p[0] + c * p[2]) * k2, [ox * 0.8, -0.6, oz * 0.8], w);
+    // (Shut on it till it leaves the hand at the top of the whip; then the hand's left open after it.)
+    this.shutHand(q.side, Math.max(env, 0.3), u < 0.5 ? 'grip' : 'open');
   }
 
   // Both arms held out wide, a blade's length from each shoulder: a body that's turning with something in each fist.
@@ -2015,6 +2371,7 @@ export class Hero extends Knight {
     this.reachTo('l', wt[U] + d[0] * L, wt[U + 1] + d[1] * L, wt[U + 2] + d[2] * L, [c * 0.3, -1, -s * 0.3], w);
     const back = 0.14 + 0.5 * this.pull;
     this.reachTo('r', wt[H] - d[0] * back - c * 0.03, wt[H + 1] - d[1] * back + 0.02, wt[H + 2] - d[2] * back + s * 0.03, [-c * 0.8 - s * 0.5, 0.2, s * 0.8 - c * 0.5], w);
+    this.shutHand('r', w, 'hook');
   }
 
   // Joints moved as one piece: turned by q about a point.
@@ -2040,6 +2397,104 @@ export class Hero extends Knight {
   // One arm's hand put at a point: shoulder where it is, the elbow out toward `pole`, upper arm and forearm turned to
   // reach, and the hand and its fingers carried with the forearm. w: how far from where the clip had it (0) to there (1).
   reachTo(side, tx, ty, tz, pole, w = 1) { this.reachLimb(this.arms[side], tx, ty, tz, pole, w); }
+
+  // The circle an elbow can be on with the wrist at `t` (the shoulder to t, as far as the arm goes): its centre, radius,
+  // and two ways across it, e1 toward `pole` and e2 round from it.
+  elbowRing(side, t, pole) {
+    const { wt } = this.pose, A = this.arms[side], U = A.u * 3, F = A.f * 3, H = A.h * 3;
+    const L1 = Math.hypot(wt[F] - wt[U], wt[F + 1] - wt[U + 1], wt[F + 2] - wt[U + 2]), L2 = Math.hypot(wt[H] - wt[F], wt[H + 1] - wt[F + 1], wt[H + 2] - wt[F + 2]);
+    let ux = t[0] - wt[U], uy = t[1] - wt[U + 1], uz = t[2] - wt[U + 2];
+    const dl = Math.hypot(ux, uy, uz) || 1e-6, D = Math.min(dl, (L1 + L2) * 0.995);
+    ux /= dl; uy /= dl; uz /= dl;
+    const m = (L1 * L1 - L2 * L2 + D * D) / (2 * D), r = Math.sqrt(Math.max(0, L1 * L1 - m * m));
+    const pd = pole[0] * ux + pole[1] * uy + pole[2] * uz, e1 = norm([pole[0] - ux * pd, pole[1] - uy * pd, pole[2] - uz * pd]);
+    return { C: [wt[U] + ux * m, wt[U + 1] + uy * m, wt[U + 2] + uz * m], T: [wt[U] + ux * D, wt[U + 1] + uy * D, wt[U + 2] + uz * D], r, e1, e2: [uy * e1[2] - uz * e1[1], uz * e1[0] - ux * e1[2], ux * e1[1] - uy * e1[0]] };
+  }
+
+  // Where an elbow goes for a fist on a haft (a, toward its head) with the wrist at `t`: where it was meant to point
+  // (`pole`), unless the forearm would then meet the haft so far off how a fist meets it (a little under a right angle,
+  // GRIP_COS) that the wrist bends more than GRIP_EASE to make it up; then round its circle, as little as does. (A cost,
+  // looked over the circle, not the two places exactly right: the elbow stays where it was meant to be while it can, and
+  // doesn't jump from one side of the arm to the other between frames.)
+  gripPole(side, t, a, pole) {
+    const R = this.elbowRing(side, t, pole), want = Math.acos(GRIP_COS);
+    const cost = (f) => {
+      const cf = Math.cos(f), sf = Math.sin(f);
+      const dx = R.T[0] - (R.C[0] + R.r * (R.e1[0] * cf + R.e2[0] * sf)), dy = R.T[1] - (R.C[1] + R.r * (R.e1[1] * cf + R.e2[1] * sf)), dz = R.T[2] - (R.C[2] + R.r * (R.e1[2] * cf + R.e2[2] * sf));
+      const an = Math.acos(clamp((dx * a[0] + dy * a[1] + dz * a[2]) / (Math.hypot(dx, dy, dz) || 1), -1, 1)), over = Math.max(0, Math.abs(an - want) - GRIP_EASE);
+      return over * over * 4 + f * f * 0.35;
+    };
+    let best = 0, bc = cost(0);
+    for (let i = 1; i < 32; i++) { const f = -Math.PI + i * Math.PI / 16, k = cost(f); if (k < bc) { bc = k; best = f; } }
+    // (Then a little either side of the best of those.)
+    for (let h = Math.PI / 32; h > 0.005; h /= 2) { const k1 = cost(best - h), k2 = cost(best + h); if (k1 < bc) { bc = k1; best -= h; } else if (k2 < bc) { bc = k2; best += h; } }
+    const cf = Math.cos(best), sf = Math.sin(best);
+    return [R.e1[0] * cf + R.e2[0] * sf, R.e1[1] * cf + R.e2[1] * sf, R.e1[2] * cf + R.e2[2] * sf];
+  }
+
+  // How a fist lies round a haft (a, toward its head) with its forearm along d: its grip (gq's y) on the haft, its fingers as
+  // near down the forearm as that leaves them. The hand's world turn.
+  fistQuat(side, gq, a, d) {
+    ikV2[0] = 0; ikV2[1] = 1; ikV2[2] = 0; quatRotate(ikV2, 0, gq, 0, ikV2, 0);
+    const Lx = norm([ikV2[0], ikV2[1], ikV2[2]]), Ly = norm(orth(this.bank.grip[side].fingers, Lx)), Lz = cross(Lx, Ly);
+    const Wx = norm(a), Wy = norm(orth(d, Wx)), Wz = cross(Wx, Wy);
+    const col = (j) => [Wx[0] * Lx[j] + Wy[0] * Ly[j] + Wz[0] * Lz[j], Wx[1] * Lx[j] + Wy[1] * Ly[j] + Wz[1] * Lz[j], Wx[2] * Lx[j] + Wy[2] * Ly[j] + Wz[2] * Lz[j]];
+    return matToQuat(col(0), col(1), col(2));
+  }
+
+  // Where a wrist goes, and its elbow, for the fist (gt: the grip's place in the hand) to close on a haft at P: worked out
+  // before the arm's moved, round the loop of wrist, elbow, forearm and the fist's turn a few times.
+  fistPlan(side, P, a, gq, gt, pole) {
+    const { wt } = this.pose, U = this.arms[side].u * 3;
+    const o = [0, 0, 0];
+    let W = [P[0], P[1], P[2]], pp = pole;
+    { const sx = P[0] - wt[U], sy = P[1] - wt[U + 1], sz = P[2] - wt[U + 2], l = Math.hypot(sx, sy, sz) || 1, k = Math.hypot(gt[0], gt[1], gt[2]) / l; W = [P[0] - sx * k, P[1] - sy * k, P[2] - sz * k]; }
+    for (let it = 0; it < 4; it++) {
+      pp = this.gripPole(side, W, a, pole);
+      const R = this.elbowRing(side, W, pp), E = [R.C[0] + R.r * R.e1[0], R.C[1] + R.r * R.e1[1], R.C[2] + R.r * R.e1[2]];
+      const Q = this.fistQuat(side, gq, a, norm([R.T[0] - E[0], R.T[1] - E[1], R.T[2] - E[2]]));
+      quatRotate(o, 0, Q, 0, gt, 0);
+      W = [P[0] - o[0], P[1] - o[1], P[2] - o[2]];
+    }
+    return [W, pp];
+  }
+
+
+  // A fist round a haft lying along `a` (toward its head): the hand turned so its grip (gq: its y the haft's way out past
+  // the thumb) is on the haft and its fingers as near down the forearm as that leaves them, a fist's own shape and not one
+  // bent back on itself; then half the hand's roll on the forearm taken by the forearm, as an arm turns a fist (the two
+  // bones of it), so the wrist doesn't wring. bend: the haft may give, toward where the forearm lays it, past GRIP_BEND of
+  // a bent wrist (a: changed where it lies). w: how far.
+  fistOn(side, gq, a, w = 1, bend = false) {
+    if (w < 0.001) return;
+    const { wq, wt } = this.pose, A = this.arms[side], F = A.f, H = A.h, rig = this.rig;
+    const d = norm([wt[H * 3] - wt[F * 3], wt[H * 3 + 1] - wt[F * 3 + 1], wt[H * 3 + 2] - wt[F * 3 + 2]]);
+    if (bend) {
+      const an = Math.acos(clamp(dot3(norm(a), d), -1, 1)), want = Math.acos(GRIP_COS);
+      if (Math.abs(an - want) > GRIP_BEND) {
+        const to = want + Math.sign(an - want) * GRIP_BEND, pd = dot3(a, d), pp = norm([a[0] - d[0] * pd, a[1] - d[1] * pd, a[2] - d[2] * pd]);
+        for (let i = 0; i < 3; i++) a[i] += (d[i] * Math.cos(to) + pp[i] * Math.sin(to) - a[i]) * w;
+        const n = Math.hypot(a[0], a[1], a[2]) || 1; a[0] /= n; a[1] /= n; a[2] /= n;
+      }
+    }
+    const Q = this.fistQuat(side, gq, a, d);
+    quatNlerp(ikQ3, 0, wq, H * 4, Q, 0, w);
+    // (The fingers come with the hand.)
+    ikQ[0] = -wq[H * 4]; ikQ[1] = -wq[H * 4 + 1]; ikQ[2] = -wq[H * 4 + 2]; ikQ[3] = wq[H * 4 + 3];
+    quatMul(ikQ2, 0, ikQ3, 0, ikQ, 0);
+    this.rigid(A.fingers, ikQ2, wt[H * 3], wt[H * 3 + 1], wt[H * 3 + 2]);
+    wq[H * 4] = ikQ3[0]; wq[H * 4 + 1] = ikQ3[1]; wq[H * 4 + 2] = ikQ3[2]; wq[H * 4 + 3] = ikQ3[3];
+    // (The hand's turn on the forearm against how it's set on it at rest, about the forearm's own line; half of it the forearm's.)
+    ikQ[0] = -wq[F * 4]; ikQ[1] = -wq[F * 4 + 1]; ikQ[2] = -wq[F * 4 + 2]; ikQ[3] = wq[F * 4 + 3];
+    quatMul(ikQ2, 0, ikQ, 0, ikQ3, 0);
+    const R = rig.restR, H4 = H * 4;
+    ikQ[0] = -R[H4]; ikQ[1] = -R[H4 + 1]; ikQ[2] = -R[H4 + 2]; ikQ[3] = R[H4 + 3];
+    quatMul(ikQ2, 0, ikQ2, 0, ikQ, 0);
+    const b = norm([rig.restT[H * 3], rig.restT[H * 3 + 1], rig.restT[H * 3 + 2]]);
+    const tau = wrapAngle(2 * Math.atan2(ikQ2[0] * b[0] + ikQ2[1] * b[1] + ikQ2[2] * b[2], ikQ2[3]));
+    if (Math.abs(tau) > 1e-3) { quatAxisAngle(ikQ, 0, d[0], d[1], d[2], tau * 0.5); quatMul(wq, F * 4, ikQ, 0, wq, F * 4); }
+  }
+
 
   // The same for any limb of three joints (A: u, f, h, and the fingers, or toes, that go with h): a leg's hip, knee and ankle.
   reachLimb(A, tx, ty, tz, pole, w = 1) {
@@ -2141,6 +2596,9 @@ export class Hero extends Knight {
       pr = [pr[0] + (top[0] - pr[0]) * wheel + rx * wheelOut * 0.42 * u, pr[1] + (top[1] - pr[1]) * wheel, pr[2] + (top[2] - pr[2]) * wheel + rz * wheelOut * 0.42 * u];
     }
     put('r', pr, [-c * 0.9 - s * 0.5, -0.45, s * 0.9 - c * 0.5]);
+    // (Fingers on the strings at the neck; the pick between the thumb and the bent index; open, thrown wide, at the top of a wheel.)
+    this.shutHand('l', w, 'chord');
+    this.shutHand('r', w * (1 - wheelOut * 0.6), 'pick');
     this.luteLive = true;
   }
 
@@ -2228,7 +2686,18 @@ function hipFrame(pose, J, outQ, outT) {
 }
 const propQ = new Float32Array(4), propT = new Float32Array(3), propM = new Float32Array(16), flowDir = new Float32Array(2), surfPos = new Float32Array(3), surfLook = new Float32Array(3);
 const ikQ = new Float32Array(4), ikQ2 = new Float32Array(4), ikQ3 = new Float32Array(4), ikV = new Float32Array(3), ikV2 = new Float32Array(3);
+// (poseHands' own: the palm's normal, the hand's length, the thumb's pad, and three to work with.)
+const HN = new Float32Array(3), HF = new Float32Array(3), HP = new Float32Array(3), HS = new Float32Array(3), HD = new Float32Array(3), HT = new Float32Array(3);
+const sub3 = (o, a, i, b, j) => { o[0] = a[i] - b[j]; o[1] = a[i + 1] - b[j + 1]; o[2] = a[i + 2] - b[j + 2]; return o; };
+const nrm3 = (o) => { const l = Math.hypot(o[0], o[1], o[2]) || 1; o[0] /= l; o[1] /= l; o[2] /= l; return o; };
+const crs3 = (o, a, b) => { const x = a[1] * b[2] - a[2] * b[1], y = a[2] * b[0] - a[0] * b[2], z = a[0] * b[1] - a[1] * b[0]; o[0] = x; o[1] = y; o[2] = z; return o; };
+const dot3 = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 const rideQ = new Float32Array(4), IDQ = new Float32Array([0, 0, 0, 1]);
+// (How far a wrist on a haft bends from a fist's own shape before the haft gives: fistOn.)
+const GRIP_BEND = 0.6;
+// (A fist's grip on a haft against its forearm: the cosine of the angle between, as the hands' own grip has it; and how far
+// off that a wrist bends before its elbow goes round for it: gripPole.)
+const GRIP_COS = 0.31, GRIP_EASE = 0.25;
 const ease = (k) => { k = clamp(k, 0, 1); return k * k * (3 - 2 * k); };
 // Up onto the board, age seconds into the ride: a small hop to its height (BOARD_HOP), then its height.
 const boardLift = (age = 1) => BOARD_RIDE_Y * ease((age ?? 1) / (BOARD_HOP * 0.6)) + (age < BOARD_HOP ? BOARD_HOP_UP * Math.sin(Math.PI * age / BOARD_HOP) : 0);
@@ -2874,7 +3343,7 @@ export class HeroWorld {
           sim.casting.burst(FX.RING, ELEM.LIGHT, who.x, who.y + 0.05, who.z, 0.3, 1.3, 0.7);
           if (who === p) h.say(sim, 'player_heal');
           else if (who !== h) h.say(sim, 'hunt_heal', who.slot);
-        }, { still: true, mask: 'upper' });
+        }, { still: true, mask: 'upper', maul: h.style === 'two_hand' ? 'present' : null });
         return;
       }
       if (s.song && (h.foe || (s.travel && h.task && h.task.going)) && (!s.heal || h.foe)) {

@@ -328,14 +328,18 @@ function inHand(h, side, secs, draw) {
   const z = zone(w0(h), h, secs + 0.5, (c, q) => draw(c, h.handPos(side), Math.min(1, q.t / secs)));
   return () => { z.done = true; };
 }
-// Blows one after another, each its own short clip: steps [clip, rate, where it lands, where it's cut, where it's begun],
+// (A great mace, in both hands: its blows are its own, src/sim/hero.js MAUL_SWINGS, MAUL_HELD.)
+const big = (h) => h.style === 'two_hand';
+// Where a great mace's head is.
+const maulHead = (h) => { const p = h.handPos('r'), a = h.aim || [Math.sin(h.yaw), 0, Math.cos(h.yaw)], r = (h.mainP?.reach ?? 1) * 0.95; return [p[0] + a[0] * r, p[1] + a[1] * r, p[2] + a[2] * r]; };
+// Blows one after another, each its own short clip: steps [clip, rate, where it lands, where it's cut, where it's begun, a maul's],
 // fn(i) as each lands. o: lunge, aimed, mask, done (after the last).
 function chain(h, sim, steps, fn, o = {}) {
   const go = (i) => {
     if (h.dead) return;
     if (i >= steps.length) { o.done?.(); return; }
-    const [clip, rate, at, end, from] = steps[i];
-    h.startSwing(clip, rate, [at], () => fn(i), { lunge: o.lunge ?? 1.2, end: end ?? 0.8, from, aimed: o.aimed, stab: o.stab, mask: o.mask, fade: 0.06, after: () => go(i + 1) });
+    const [clip, rate, at, end, from, maul] = steps[i];
+    h.startSwing(clip, rate, [at], () => fn(i), { lunge: o.lunge ?? 1.2, end: end ?? 0.8, from, aimed: o.aimed, stab: o.stab, mask: o.mask, fade: 0.06, after: () => go(i + 1), maul: big(h) ? maul : null });
   };
   go(0);
 }
@@ -499,7 +503,7 @@ function dash(h, sim, dir, len, o = {}) {
   const lance = h.style === 'lance' || (o.clip !== 'Roll' && !['rogue', 'ninja'].includes(h.person.cls));
   const clip = lance ? 'Sprint_Loop' : h.bank.clips[o.clip || 'Sword_Dash'] ? o.clip || 'Sword_Dash' : 'Sword_Regular_A', T = len / v;
   h.yaw = h.faceYaw = dir;
-  h.startSwing(clip, lance ? 1.7 : h.bank.clips[clip].dur / (T + 0.3) * (o.hold || 0.5), [], () => {}, { root: true, loop: lance, cut: () => { h.aim = null; } });
+  h.startSwing(clip, lance ? 1.7 : h.bank.clips[clip].dur / (T + 0.3) * (o.hold || 0.5), [], () => {}, { root: true, loop: lance, cut: () => { h.aim = null; }, maul: big(h) ? 'charge' : null });
   h.charge = { dir, left: len, v, hitSet: new Set(), quick: true, dmg: o.dmg ?? 12, kind: o.kind, o: o.o, onHit: o.onHit, each: o.each, noShove: o.noShove, draw: o.draw, aside: o.aside, done: () => { h.aim = null; o.done?.(); if (o.skid !== undefined) arrive(h, sim, o.skid); } };
   if (o.aim && h.style !== 'lance' && h.style !== 'spear') h.aim = [Math.sin(dir), 0.02, Math.cos(dir)];
   h.iframesT = T + 0.08;
@@ -817,7 +821,11 @@ function pillar(h, sim, x, z, r, dmg, elem = LIGHT, o = {}) {
 // Five blows as fast as the arm will go, feet planted, no two alike and the last from over his head: a thin crescent of
 // light where each went, as it lands.
 CAST.zeal = (h, sim, m, { c, P }) => {
-  const A = ['Sword_Regular_A', 1.5, 0.55, 0.8], B = ['Sword_Regular_B', 1.5, 0.48, 0.78], C = ['Sword_Regular_C', 2.4, 0.33, 0.5];
+  // (A mace and board: down from over his head and down across from his shoulder by turns, the board kept up before him.)
+  const board = h.style === 'sword_board';
+  const A = board ? ['L_Chop', 1.9, 0.5, 0.72] : ['Sword_Regular_A', 1.5, 0.55, 0.8], B = board ? ['LP_Overhand_cleaver_downward_ch', 2.2, 0.27, 0.42] : ['Sword_Regular_B', 1.5, 0.48, 0.78], C = ['Sword_Regular_C', 2.4, 0.33, 0.5];
+  // (A great mace's: cleaving and rising by turns, as fast as the weight of it will come round, and the last from over his head.)
+  const MB = ['Sword_Regular_B', 1.0, 0.47, 0.85, 0, 'cleave'], MA = ['Sword_Regular_A', 0.85, 0.52, 0.85, 0, 'rise'], M = big(h);
   let i0 = 0;
   const step = (i) => {
     const last = i === 4;
@@ -825,12 +833,24 @@ CAST.zeal = (h, sim, m, { c, P }) => {
     if (h.fxOk()) crescent(c, h, last ? 2.1 : 1.7, LIGHT, { up: last ? 1.2 : [0.6, -0.4, 0.2, -0.6][i], life: last ? 0.16 : 0.1 });
     i0 = i;
   };
-  chain(h, sim, [A, B, C, B], step, { lunge: 0.8, mask: 'upper', done: () => chain(h, sim, [['Sword_Attack', 1.25, 0.24, 0.42]], () => step(4), { lunge: 1.4 }) });
+  chain(h, sim, M ? [MB, MA, MB, MA] : [A, B, C, B], step, { lunge: 0.8, mask: 'upper', done: () => chain(h, sim, [M ? ['Sword_Attack', 1.15, 0.28, 0.5, 0, 'smash'] : board ? ['L_Chop', 1.4, 0.5, 0.75] : ['Sword_Attack', 1.25, 0.24, 0.42]], () => step(4), { lunge: 1.4 }) });
 };
 // A hammer of light made in the raised fist, flung end over end, and coming home to the hand: what it strikes first, it stops on.
 CAST.hammer_throw = (h, sim, m, { w, P, rk }) => {
-  const big = 1.5 + 0.08 * rk;
-  const stop = inHand(h, 'r', 0.3, (c, p, k) => hammer3(c, p[0], p[1] + 0.2 * k, p[2], h.yaw, 0, big * k, LIGHT, 1.3, 6 * k));
+  const size = 1.5 + 0.08 * rk;
+  // (A great mace's: the hammer made on its head and flung off it at the top of a rising blow.)
+  if (big(h)) {
+    const z = zone(w, h, 1.2, (c, q) => { const p = maulHead(h), k = Math.min(1, q.t / 0.3); hammer3(c, p[0], p[1], p[2], h.yaw, q.t * 6, size * k, LIGHT, 1.3, 6 * k); });
+    h.startSwing('Sword_Regular_A', 0.75, [0.52], () => {
+      z.done = true;
+      if (!E.fightable(m)) return;
+      const p = maulHead(h);
+      w.shots.push({ kind: 'hammer', owner: h, x: p[0], y: p[1], z: p[2], tx: m.x, tz: m.z, ty: m.y + 1.1, v: 13, out: true, t: 0, hitSet: new Set(), dmg: 18 * P });
+      sim.event(EV.WHOOSH, p[0], p[1], p[2]);
+    }, { maul: 'rise', soft: 0.55, end: 0.9, cut: () => { z.done = true; } });
+    return;
+  }
+  const stop = inHand(h, 'r', 0.3, (c, p, k) => hammer3(c, p[0], p[1] + 0.2 * k, p[2], h.yaw, 0, size * k, LIGHT, 1.3, 6 * k));
   throwIt(h, 1.0, () => {
     stop();
     if (!E.fightable(m)) return;
@@ -842,7 +862,7 @@ CAST.hammer_throw = (h, sim, m, { w, P, rk }) => {
 // The board (or the maul) in its face, and the light comes down on whatever it struck: a pillar on each, and a ring round its feet.
 CAST.smite = (h, sim, m, { c, P }) => {
   const board = h.style === 'sword_board';
-  h.startSwing(board ? 'L_ShieldJab' : 'Sword_Attack', board ? 1.2 : 1.0, [board ? 0.55 : 0.24], () => {
+  h.startSwing(board ? 'L_ShieldJab' : 'Sword_Attack', board ? 1.2 : 1.0, [board ? 0.55 : big(h) ? 0.28 : 0.24], () => {
     const hit = h.strikeAround(sim, 1.9, 0.7, 9 * P, 0, 3, { kind: 'bash', poise: 90, stun: 1.1, shove: 6 });
     if (!h.fxOk()) return;
     hit.forEach((k, i) => {
@@ -851,7 +871,7 @@ CAST.smite = (h, sim, m, { c, P }) => {
     });
     const f = hit[0] ? [hit[0].x, hit[0].y + 1.2, hit[0].z] : h.ahead(0.9);
     hfx(sim, HFX.CHIME, f[0], f[1], f[2], 0, 0.5);
-  }, { lunge: 1.6, end: board ? 0.85 : 0.45 });
+  }, { lunge: 1.6, end: board ? 0.85 : big(h) ? 0.5 : 0.45, maul: big(h) ? 'smash' : null, soft: big(h) ? 0.6 : undefined });
 };
 // The mace brought down into the ground at his feet, and the ground is hallowed where it struck: it burns what stands on it
 // (the dead twice over) and mends his own side.
@@ -861,7 +881,7 @@ CAST.consecration = (h, sim, m, { w, c }) => {
     w.zones.push({ kind: 'consecrate', owner: h, x: h.x, z: h.z, y, t: 0, life: 7, r: 2.8, tick: 0 });
     if (h.fxOk()) { boom(c, LIGHT, f[0], y + 0.3, f[2], 1.6, 10); c.burst(FX.RING, LIGHT, h.x, y + 0.05, h.z, 0.4, 2.8, 0.45); hfx(sim, HFX.THUD, f[0], y, f[2], 0.5); hfx(sim, HFX.CHIME, h.x, y + 1, h.z, -5, 0.6); }
     sim.event(EV.GROUND, h.x, y, h.z);
-  }, { still: true, hold: [0.32, 0.22], end: 0.5 });
+  }, { still: true, hold: [0.32, 0.22], end: 0.5, maul: big(h) ? 'ground' : null, soft: big(h) ? 0.6 : undefined });
 };
 CAST.blessed_shield = (h, sim, m, X) => throwBoard(h, sim, m, X, { dmg: 15, bounce: 2 + X.rk, elem: LIGHT });
 // Both arms thrown up, and the light breaks outward from him: what's near is thrown back reeling, and his own side is mended.
@@ -881,7 +901,7 @@ CAST.holy_nova = (h, sim, m, { w, c, P, rk }) => {
       hfx(sim, HFX.CHIME, h.x, h.y + 1.2, h.z, 0, 0.7); hfx(sim, HFX.CHIME, h.x, h.y + 1.2, h.z, 7, 0.6);
     }
     sim.event(EV.GROUND, h.x, h.y, h.z);
-  }, { still: true, from: 0.085, end: 0.14, hold: [0.125, 0.3] });
+  }, { still: true, from: 0.085, end: 0.14, hold: [0.125, 0.3], maul: big(h) ? 'sky' : null });
 };
 // Behind the board (or the maul) in a blaze, through whatever's in the way; and stopped hard at the end of it, turned on them.
 CAST.crusaders_charge = (h, sim, m, { c, yaw }) => {
@@ -911,7 +931,7 @@ CAST.fist_of_heavens = (h, sim, m, { w, c, P, rk }) => {
         hfx(sim, HFX.CHIME, k.x, k.y + 1.2, k.z, 12 + i * 2, 0.55);
       }
     }));
-  }, { still: true, mask: 'upper', end: 0.05, hold: [0.03, marks.length * 0.09 + 0.1], aimed: SKY });
+  }, { still: true, mask: 'upper', end: 0.05, hold: [0.03, marks.length * 0.09 + 0.1], aimed: big(h) ? null : SKY, maul: big(h) ? 'sky' : null });
 };
 // A ward of light on whoever of his side is lowest: it takes the next blows for them, and mends a little. A shell of light
 // about them and three boards of it turning; it flashes where a blow lands on it.
@@ -931,7 +951,7 @@ CAST.divine_shield = (h, sim, m, { w, c, rk }) => {
       cc.fx(FX.SHOCK, LIGHT, who.x, who.y + tall * 0.55, who.z, 1.25, 0, 1, 0, 0, (0.2 + 0.6 * flash) * k);
       for (let i = 0; i < 3; i++) { const a = z.t * 2.2 + i * 2.094; cc.fx(FX.KITE, LIGHT, who.x + Math.sin(a) * 1.05, who.y + tall * 0.55, who.z + Math.cos(a) * 1.05, 0.5, Math.sin(a), 0, Math.cos(a), 0, 0.7 * k, 0, 0, 0.3, i); }
     }, (z, dt) => { const now = who.ward ?? 0; if (now < hp0 - 0.5) flash = 1; hp0 = now; flash = Math.max(0, flash - dt * 5); });
-  }, { still: true, mask: 'upper', end: 0.05, hold: [0.03, 0.35], aimed: SKY });
+  }, { still: true, mask: 'upper', end: 0.05, hold: [0.03, 0.35], aimed: big(h) ? null : SKY, maul: big(h) ? 'sky' : null });
 };
 // The mace held up for as long as it lasts, and pillars of light where the foe and its fellows stand: a ring on the ground
 // first, then the pillar, white at its heart.
@@ -950,7 +970,7 @@ CAST.heavens_fury = (h, sim, m, { w, c, P, rk }) => {
         if (h.fxOk()) { const y = sim.world.height(x, z); c.burst(FX.BEAM, LIGHT, x, y + 7, z, 0.22, 0.03, 0.14, { ax: 0, ay: -1, az: 0, len: 7, extra: 0.1, light: 10, lightR: 5 }); hfx(sim, HFX.CHIME, x, y + 1, z, pick([0, 4, 7, 12]), 0.4); }
       });
     }
-  }, { still: true, mask: 'upper', end: 0.05, hold: [0.03, 1.9], aimed: SKY });
+  }, { still: true, mask: 'upper', end: 0.05, hold: [0.03, 1.9], aimed: big(h) ? null : SKY, maul: big(h) ? 'sky' : null });
 };
 // The mace levelled at the foe, the light gathering on its head; and then a beam of it, held on the foe as it moves, wide
 // at the mace and a point at its far end, beating as it burns down the whole line.
@@ -959,8 +979,8 @@ CAST.judgment_beam = (h, sim, m, { w, c, P, yaw }) => {
   let dir = yaw, tick = 0;
   const reach = h.mainP?.reach ?? 0.9, T0 = 0.32, T = 1.25, len = 11;
   const tip = () => { const p = h.handPos('r'), a = h.aim || [Math.sin(dir), 0, Math.cos(dir)]; return [p[0] + a[0] * reach, p[1] + a[1] * reach, p[2] + a[2] * reach]; };
-  h.startSwing('Sword_Block', 1.2, [0.99], () => {}, { still: true, hold: [0.25, T0 + T + 0.1], end: 0.6 });
-  h.pointAt([Math.sin(dir), 0.04, Math.cos(dir)], T0 + T + 0.15, { lean: 0.14 });
+  h.startSwing('Sword_Block', 1.2, [0.99], () => {}, { still: true, hold: [0.25, T0 + T + 0.1], end: 0.6, maul: big(h) ? 'level' : null });
+  if (!big(h)) h.pointAt([Math.sin(dir), 0.04, Math.cos(dir)], T0 + T + 0.15, { lean: 0.14 });
   let far = len;
   gather(c, h, LIGHT, 2.2, T0);
   zone(w, h, T0 + T, (cc, z) => {
@@ -1016,7 +1036,7 @@ CAST.solar_hammer = (h, sim, m, { w, c, P, rk }) => {
     else cc.fx(FX.DISC, LIGHT, x, y + 0.04, z, r, 0, 1, 0, 0, 0.6 * fade, 8 * fade, r * 2);
   }, (q) => { if (q.t >= T + 0.06) strike(); });
   // (His own blow, from over his head, timed to it: the mace is down as the hammer is.)
-  h.startSwing('Sword_Attack', 0.84, [0.24], strike, { still: true, hold: [0.3, 0.2], end: 0.45 });
+  h.startSwing('Sword_Attack', 0.84, [big(h) ? 0.28 : 0.24], strike, { still: true, hold: [0.3, 0.2], end: big(h) ? 0.5 : 0.45, maul: big(h) ? 'smash' : null, soft: big(h) ? 0.6 : undefined });
 };
 // The mace held to the sky for as long as it lasts, and hammers out of it three at a time, all over where the foe and its
 // fellows stand: a ring on the ground where each will land, and then the hammer.
@@ -1049,7 +1069,7 @@ CAST.hammer_storm = (h, sim, m, { w, c, P, rk }) => {
         if (h.fxOk()) { boom(c, LIGHT, d.x, y + 0.2, d.z, 1.5, 9); c.burst(FX.RING, LIGHT, d.x, y + 0.05, d.z, 0.2, 1.3, 0.3); if (Math.random() < 0.5) hfx(sim, HFX.THUD, d.x, y, d.z, 0.3); }
       }
     });
-  }, { still: true, end: 0.05, hold: [0.03, dur + 0.2], aimed: SKY });
+  }, { still: true, end: 0.05, hold: [0.03, dur + 0.2], aimed: big(h) ? null : SKY, maul: big(h) ? 'sky' : null });
 };
 
 // ---- lancer: the lance's light, the boards that turn round him, and the run ---------------------------------------------
