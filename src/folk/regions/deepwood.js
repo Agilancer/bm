@@ -81,6 +81,10 @@ export const RULES = {
   red_on_the_shore: { steps: [{ kill: 'lair:crown_dragon', n: 1 }, { back: true, say: 'The red one on the south shore is dead.' }], gold: 53, xp: 528, item: 'skull' },
   storm_over_the_horn: { needs: 'red_on_the_shore', steps: [{ enter: 'elder' }, { boss: 'thyrraxis' }, { back: true, say: 'There is a storm god on an island over nothing. It is dead.' }], gold: 2400, xp: 42000, item: 'staff', rarity: 4 },
   the_hollow_star: { needs: 'storm_over_the_horn', steps: [{ boss: 'kaldurra' }, { boss: 'morvekh' }, { boss: 'nihvaroth' }, { back: true, say: 'The Hollow Star went into its own Maw. The door is dark.' }], gold: 5200, xp: 96000, item: 'skull', rarity: 4 },
+
+  // ---- the Herald the Elder Dragon Gods sent this way (src/core/wilds.js WORLD_BOSSES, docs/ELDER-DRAGONS.md "On the land"): it
+  // rises at its ground (src/core/boss-grounds.js) once you've taken this, and the other Tessariels come in to it ----
+  a_tooth_of_the_star: { needs: 'the_shoulder', steps: [{ wboss: 'herald_hollow', ground: 'bg_herald_hollow' }, { back: true, say: 'Umbraxes is down. The snow shines round where it lay.' }], gold: 100, xp: 1000, item: 'staff' },
 };
 // The level each wants (src/ui/autobrain.js PLAN; the quest log suggests the same). Each hub steps up and each errand on is a
 // level above the work it waits for: Mossgate 8 to 9, the hermit 10 to 11, the Stair 12 to 13, the climb to the Crown 14,
@@ -89,7 +93,7 @@ export const RULES = {
 export const LEVELS = [
   ['coming_down', 8], ['the_resting_company', 8], ['snares_on_the_runs', 9], ['salt_for_the_hermit', 10],
   ['bait_skeps', 10], ['telling_the_bees', 10], ['candle_ends', 11], ['the_last_of_the_wax', 11],
-  ['the_shoulder', 12], ['the_night_book', 12], ['the_broken_vigil', 13], ['crown_of_teeth', 14],
+  ['the_shoulder', 12], ['the_night_book', 12], ['the_broken_vigil', 13], ['crown_of_teeth', 14], ['a_tooth_of_the_star', 13],
   ['the_pillars', 14], ['the_sitters', 14], ['ink_for_the_crown', 15],
   ['red_on_the_shore', 24], ['storm_over_the_horn', 100], ['the_hollow_star', 102],
 ];

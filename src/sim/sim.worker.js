@@ -794,6 +794,8 @@ async function boot(msg) {
     if (m.type === 'heroMods') { const h = sim.heroes[m.slot]; if (h) sim.heroWorld?.setMods(h, m.mods); }
     // (Your own level: the other Tessariels out in the world keep pace with it.)
     if (m.type === 'playerLevel') sim.heroWorld?.keepPace(m.level);
+    // (The world bosses a quest of yours waits on, and where: src/sim/worldboss.js setWant.)
+    if (m.type === 'wantBoss') sim.wilds?.boss?.setWant(m.list);
     if (m.type === 'warrensDebug') sim.warrens?.debug?.(m);
     // (Every boss that's ever died, from the render thread's quests: the castle's gates that open on a death. src/sim/dungeon.js open.)
     if (m.type === 'bossesDown') { if (sim.warrens) sim.warrens.ever = new Set(m.keys); }

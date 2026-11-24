@@ -6,7 +6,7 @@ import { POSTED } from '../../src/folk/people.js';
 import { TRADES } from '../../src/folk/shops.js';
 import { CAMPS, DENS } from '../../src/core/camps-data.js';
 import { SITES } from '../../src/core/lands.js';
-import { FACTIONS } from '../../src/core/wilds.js';
+import { FACTIONS, WORLD_BOSSES, groundOf } from '../../src/core/wilds.js';
 import { DELVES, BOSSES } from '../../src/core/dungeon.js';
 import { questLevel, lairLevelOf } from '../../src/ui/autobrain.js';
 import { walk, whereIs } from './geo.mjs';
@@ -33,6 +33,7 @@ const delveKey = (k) => (typeof k === 'string' && (DELVES.some((d) => d.key === 
 export function kindOf(st) {
   if (st.boss || delveKey(st.enter) || delveKey(st.kill) || (st.visit || []).some(delveKey) || (st.bring && delveKey(st.at))) return 'delve';
   if (st.clear) return 'clear';
+  if (st.wboss) return 'kill';
   if (st.gather) return 'gather';
   if (st.kill || st.warden) return 'kill';
   if (st.bring) return 'bring';
@@ -89,6 +90,8 @@ export function violations(region = null) {
         if ((st.kill || st.gather) && lv != null && q.level < lv - 2) bad(q.hub, q.id, 'level', `wanted at level ${q.level}, and "${k}" is level ${lv}`);
       }
       if (st.boss && !BOSSES.some((b) => b.key === st.boss)) bad(q.hub, q.id, 'boss', `no boss "${st.boss}"`);
+      if (st.wboss && !WORLD_BOSSES.some((b) => b.key === st.wboss)) bad(q.hub, q.id, 'boss', `no world boss "${st.wboss}"`);
+      if (st.wboss && !groundOf(st.ground)) bad(q.hub, q.id, 'boss', `no ground "${st.ground}" for ${st.wboss} to rise at (src/core/boss-grounds.js)`);
     }
     // (What it needs first is given at the same hub, or is the errand that brought you.)
     for (const n of [].concat(R.needs || [])) { const p = T.find((k) => k.id === n); if (p && p.hub !== q.hub && p.to !== q.hub && !inside(q.hub)) bad(q.hub, q.id, 'needs', `needs ${n}, which is ${p.hub}'s and doesn't end here: nobody at ${q.hub} would know it's done`); }

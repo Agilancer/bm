@@ -458,6 +458,16 @@
     "c_worker_f_3": {"base": "worker_f", "dye": [11, 6, 1, 5, 4]},
     "c_young_1_1": {"base": "young_1", "dye": [5, 9, 1, 10, 1]},
     "c_young_1_2": {"base": "young_1", "dye": [9, 3, 1, 8, 5]},
-    "c_young_1_3": {"base": "young_1", "dye": [3, 12, 1, 4, 4]}
+    "c_young_1_3": {"base": "young_1", "dye": [3, 12, 1, 4, 4]},
+    "rd_carter": {"base": "worker", "dye": [2, 7, 2, 7, 2]},
+    "rd_pedlar": {"base": "worker_f", "dye": [14, 4, 2, 8, 6]},
+    "rd_pilgrim": {"base": "old_man", "dye": [5, 3, 1, 6, 6]},
+    "rd_drover": {"base": "dude", "dye": [9, 6, 2, 7, 3]},
+    "rd_lettie": {"base": "young_3", "dye": [12, 8, 2, 9, 5]},
+    "rd_tinker": {"base": "wes", "dye": [1, 10, 2, 6, 4]},
+    "rd_harrow": {"base": "elder", "dye": [4, 2, 1, 5, 7]},
+    "rd_ysolde": {"base": "young_4", "dye": [8, 13, 2, 8, 2]},
+    "rd_cobb": {"base": "worker_2", "dye": [6, 1, 2, 4, 1]},
+    "rd_pell": {"base": "wife_jolly", "dye": [10, 5, 2, 9, 3]}
   }
 }

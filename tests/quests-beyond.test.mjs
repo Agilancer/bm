@@ -18,6 +18,7 @@ import { BOSSES, BOSS_KEYS, DELVES } from '../src/core/dungeon.js';
 import { GROUPS, LAIRS } from '../src/core/tripo-monsters.js';
 import { SITES, routeDist, siteAt, waterAt } from '../src/core/lands.js';
 import { MATS } from '../src/items/items.js';
+import { WORLD_BOSSES, groundOf } from '../src/core/wilds.js';
 
 import { churchAt } from '../src/core/church.js';
 
@@ -82,6 +83,12 @@ test('everyone, every place, lair, monster and boss a quest names is there', () 
       if (st.gather) { assert.ok(st.n >= 1 && st.what, `${id}: gather wants n and what`); assert.equal(gatherSpots(id, st).length, st.n, `${id}: ${st.n} to gather`); }
       for (const g of st.foe || []) assert.ok(GROUPS[g], `${id}: no such monsters ${g}`);
       if (st.boss) assert.ok(BOSS_KEYS.includes(st.boss), `${id}: no such boss ${st.boss}`);
+      // (A world boss, a Herald of the Elder Dragon Gods: one of the land's, with a ground of its own to rise at, near enough the giver.)
+      if (st.wboss) {
+        const B = WORLD_BOSSES.find((b) => b.key === st.wboss), g = groundOf(st.ground), w = POSTED.find((p) => p.id === q.giver);
+        assert.ok(B && g, `${id}: no world boss ${st.wboss} at ${st.ground}`);
+        if (w?.post) assert.ok(Math.hypot(g.x - w.post[0], g.z - w.post[1]) < 650, `${id}: ${st.ground} is far from ${q.giver}`);
+      }
       if (st.talk) { assert.ok(WHO.has(st.talk), `${id}: nobody called ${st.talk}`); assert.ok(q.others?.[st.talk]?.length, `${id}: ${st.talk} has nothing to say`); }
       if (st.bring) assert.ok(MATS[st.bring], `${id}: no such thing as ${st.bring}`);
       if (st.talk || st.back) assert.ok(st.say, `${id}: a step with nothing to say`);
@@ -164,6 +171,13 @@ test('each can be taken, walked through as the game reports it, and handed in', 
       } else if (st.boss) {
         Q.boss('nobody'); assert.equal(Q.state(id).step, k);
         Q.boss(st.boss);
+      } else if (st.wboss) {
+        // (Wanted, where it's to rise, while the step's on; another world boss doesn't count.)
+        assert.deepEqual(Q.wantedBosses().map((w) => [w.key, w.at]), [[st.wboss, st.ground]], id);
+        assert.ok(Q.wantedBosses()[0].lvl >= 9, `${id}: no level for its Herald`);
+        Q.boss('gorehorn'); assert.equal(Q.state(id).step, k);
+        Q.boss(st.wboss);
+        assert.deepEqual(Q.wantedBosses(), [], id);
       } else if (st.talk) {
         assert.equal(Q.mark(st.talk, {}, 0), 'ready', `${id}: no ? over ${st.talk}`);
         if (st.end) { Q.finish(id); assert.ok(Q.done(id)); continue; }   // (said, and paid there: src/ui/folk.js stepTalk)
@@ -205,6 +219,7 @@ test('the trail has somewhere to lead for every step out in the land', () => {
   for (const d of DELVES.map((q) => q.key)) assert.ok(!areaAt(d, delvePortal(d).x, 0, delvePortal(d).z), `${d}'s portal is inside it`);
   for (const id of IDS) for (const st of LAND_RULES[id].steps) {
     for (const k of [st.enter, st.kill, st.at, st.gather, st.clear && `outpost:${st.clear}`, ...(st.visit || [])].filter((x) => x && !['catacombs', 'waste', 'woods', 'bellcrypt', 'millhaven', 'fen'].includes(x))) assert.ok(placeSpot(k), `${id}: nowhere to lead to for ${k}`);
+    if (st.wboss) assert.ok(groundOf(st.ground), `${id}: nowhere to lead to for ${st.ground}`);
   }
 });
 

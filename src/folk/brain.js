@@ -54,7 +54,9 @@ export class Folk {
     this.child = isChild(p);
     this.posted = p.post || null;   // [x, z, y?]: stood out in the land, not one of the town's (people.js POSTED)
     this.crowd = !!p.crowd;          // one of Phobos's street crowd (people.js CROWD): roam, below
-    this.parked = this.crowd;        // (the crowd's, while you're not in the city: not drawn, not posed, not moved)
+    this.road = !!p.road;            // one of the folk on the roads (src/folk/road-folk.js): onRoad, below
+    this.parked = this.crowd || this.road;   // (the crowd's, while you're not in the city, and the road's, off it: not drawn, not posed or moved)
+    this.trip = null;                // the road's: what they're set down on it for (Life.roadJob)
     this.rig = null; this.pose = null;
     this.x = 0; this.y = 0; this.z = 0; this.yaw = 0; this.level = 0;
     this.posture = 'stand';
@@ -138,7 +140,7 @@ export class Life {
     this.games = new Map();      // play place -> the game under way
     this.inn = town.house('inn');
     this.stage = this.findStage(this.inn);
-    for (const me of this.folk) me.home = me.posted || me.crowd ? null : town.house(me.p.home);
+    for (const me of this.folk) me.home = me.posted || me.crowd || me.road ? null : town.house(me.p.home);
     this.crowd = this.folk.filter((me) => me.crowd);
     this.crowd.forEach((me, k) => { me.crowdK = k; });
     this.crowdCap = this.crowd.length;   // (fewer on a phone: the worker's boot sets it)
@@ -270,6 +272,8 @@ export class Life {
       // (One of Phobos's crowd left far behind (or one who lives in a district, when you've gone far from it: AREA_REACH), or the player gone out of the city: what they were at is dropped, and roam
       // starts again, setting them down near the player or parking them.)
       if (me.crowd && !me.parked && !me.abed && (!this.inCity || (me.p.area ? farFrom(me.p.area, this.player) : Math.hypot(me.x - this.player[0], me.z - this.player[2]) > RECALL))) { me.task?.return(); me.task = null; me.taskDone = true; }
+      // (One of the road's folk left far behind you, or you gone from them by a portal or a seal: parked, wherever they were.)
+      if (me.trip && Math.hypot(me.x - this.player[0], me.z - this.player[2]) > ROAD_LEAVE) { this.roadLeft(me); me.task?.return(); me.task = null; me.taskDone = true; }
       // (A script that won't wind down when its hour's up is stopped.)
       if (!me.task || me.taskKey !== me.key && (me.taskDone || this.clock - me.keyAt > 45)) this.start(me);
       const r = me.task.next();
@@ -347,7 +351,7 @@ export class Life {
       me.cur = b; me.key = b.key;
       // Start where they live, then let the script put them where it would have got them to.
       // (Or, posted out in the land, at their post.)
-      [me.x, me.z] = me.posted || (me.crowd ? [me.x || CITY.x, me.z || CITY.z] : me.home.inside); me.level = 0; me.y = this.ground.heightFor(me.x, me.z, 0.5);
+      [me.x, me.z] = me.posted || (me.crowd ? [me.x || CITY.x, me.z || CITY.z] : me.road ? [me.x, me.z] : me.home.inside); me.level = 0; me.y = this.ground.heightFor(me.x, me.z, 0.5);
       me.snap = true;
       this.start(me);
       for (let k = 0; k < 4 && me.snap; k++) me.task.next();
@@ -357,7 +361,7 @@ export class Life {
 
   // Anything hunting in reach of town sends them running indoors.
   fright(me) {
-    if (me.posted || me.crowd) return;
+    if (me.posted || me.crowd || me.road) return;
     let near = false;
     for (const [dx, dz] of this.dangers) if (Math.hypot(dx - me.x, dz - me.z) < 22) { near = true; break; }
     if (near && !me.alarm && me.house < 0) { me.alarm = true; me.calm = 0; me.task?.return(); me.taskDone = true; me.task = null; this.start(me); }
@@ -456,6 +460,67 @@ export class Life {
   }
 
   // Who's near them, ahead, for stepping round.
+  // ---- the folk on the roads (onRoad, below; src/ui/roadfolk.js sends these) ----
+  // { op: 'walk', id, n, pts: [[x, z], ...], rest (s) } some of them set down at the road's first point, to walk it;
+  // { op: 'fix', id, n, x, z } some of them at a spot on the road with something at them;
+  // { op: 'state', id, state: 'scared' | 'saved' | 'fled' | 'hurt', dir (a yaw away from it, fled), away (the road on, saved) };
+  // { op: 'foe', id, x, z } what's at them now; { op: 'end', id } (no id: all of them) done with, parked once out of sight.
+  // Who was set down is told back (an event, road: { id, who: [folk index, ...] }), and when the last of them is parked (roadDone).
+  roadJob(m) {
+    if (m.op === 'walk' || m.op === 'fix') {
+      const free = this.folk.filter((me) => me.road && !me.trip && me.pose && me.parked);
+      const who = [];
+      for (let k = Math.min(m.n | 0, free.length); k > 0; k--) who.push(free.splice(Math.floor(Math.random() * free.length), 1)[0]);
+      const T = { id: m.id, kind: m.op, pts: m.pts, state: 'scared', hit: 0, over: false, away: null, dir: null, foe: null, n: who.length };
+      const P = m.pts, a = P && P.length > 1 ? Math.atan2(P[1][0] - P[0][0], P[1][1] - P[0][1]) : 0;
+      // (Together at the slowest one's pace: so many metres a second, each body's stride its own.)
+      const gait = (me) => me.stride?.[me.walkClip] || 1.2, slow = Math.min(...who.map((me) => gait(me) * (me.p.speed || 1)));
+      who.forEach((me, k) => {
+        me.speed = slow / gait(me);
+        me.trip = T; me.parked = false; me.tripK = 1; me.hitSeen = 0;
+        me.tripSide = (k - (who.length - 1) / 2) * 1.4;
+        me.restLeft = m.rest ? m.rest * (0.85 + me.rng() * 0.3) : 0;
+        if (m.op === 'walk') {
+          // (Side by side, the second a stride behind the first.)
+          const [x, z] = besideRoad(P, 0, me.tripSide), back = (k % 2) * 1.1;
+          me.x = x - Math.sin(a) * back; me.z = z - Math.cos(a) * back; me.yaw = a;
+        } else {
+          // (Huddled round the spot, facing out.)
+          const t = (k / Math.max(1, who.length)) * 6.283 + me.rng() * 0.8, r = 0.9 + me.rng() * 0.7;
+          me.tripAt = [m.x + Math.sin(t) * r, m.z + Math.cos(t) * r];
+          [me.x, me.z] = me.tripAt; me.yaw = t;
+        }
+        me.y = this.ground.landHeight(me.x, me.z); me.level = 0;
+        me.posture = 'stand'; me.hold = 0; me.talking = false; me.face = null; me.look = null; me.moving = 0;
+        if (me.pose) { me.pose.restTo = me.pose.rest = 0; me.play('idle', { fade: 0 }); }
+        me.posedAt = -1;
+        me.task?.return(); me.task = null; me.taskDone = true;
+      });
+      this.emit({ type: 'road', id: m.id, who: who.map((me) => me.i) });
+      if (!who.length) this.emit({ type: 'roadDone', id: m.id });
+      return who;
+    }
+    for (const me of this.folk) {
+      const T = me.trip;
+      if (!T || (m.id !== undefined && T.id !== m.id)) continue;
+      if (m.op === 'end') T.over = true;
+      else if (m.op === 'foe') T.foe = [m.x, m.z];
+      else if (m.op === 'state') {
+        if (m.state === 'hurt') { if (!T.hitAt || this.clock - T.hitAt > 0.4) { T.hit++; T.hitAt = this.clock; } } else T.state = m.state;
+        if (m.dir !== undefined) T.dir = m.dir;
+        if (m.away) T.away = m.away;
+      }
+    }
+    return null;
+  }
+
+  // One of the road's folk off it: parked; and when the last of their trip is, the main thread told.
+  roadLeft(me) {
+    const T = me.trip;
+    me.trip = null; me.parked = true; me.moving = 0; me.face = null; me.hold = 0; me.talking = false; me.speed = me.p.speed || 1;
+    if (T && --T.n <= 0) this.emit({ type: 'roadDone', id: T.id });
+  }
+
   ahead(me, fx, fz) {
     let best = null, bd = 1.1;
     for (const o of this.folk) {
@@ -492,7 +557,7 @@ export class Life {
   assignBeds() {
     const byHouse = new Map();
     for (const me of this.folk) {
-      if (me.posted || me.crowd) continue;
+      if (me.posted || me.crowd || me.road) continue;
       if (!byHouse.has(me.home)) byHouse.set(me.home, []);
       byHouse.get(me.home).push(me);
     }
@@ -936,6 +1001,7 @@ function* live(me, b) {
       case 'tithe': yield* tithe(me, key); break;
       case 'posted': yield* posted(me, key); break;
       case 'roam': yield* roam(me, key); break;
+      case 'road': yield* onRoad(me, key); break;
       default: yield* atHome(me, key);
     }
   } finally {
@@ -962,6 +1028,8 @@ function* posted(me, key) {
 // on a lane round you, SET_NEAR to SET_FAR off (out of sight for choice: far ahead, or near behind); and those far off mostly turn your way down their
 // street. So the streets you're in stay full with a score of people. Out of the city they're parked: not drawn, posed or moved (src/folk/folk.worker.js write).
 const RECALL = 60, SET_NEAR = 22, SET_FAR = 48, HEAR = 36;
+// (The road's folk: parked once you're this far from them, seen or not. src/folk/road-folk.js)
+const ROAD_LEAVE = 300;
 // Each of them lives in a district of their own (src/folk/people.js CROWD area, PHOBOS.districts): they walk its streets, and
 // are about while you're within AREA_REACH of its edge; away from it, parked. (Those with no district go about with you.)
 const AREA_REACH = 120;
@@ -1003,6 +1071,84 @@ function* roam(me, key) {
     if (r < still) yield* loiter(me, key);
     else if (r < still + talky) { if (o0) yield* chatWith(me, o0, key); else yield* loiter(me, key); }
     else yield* amble(me, key);
+  }
+}
+
+// ---- the folk on the roads (src/folk/road-folk.js) ----
+//
+// Parked (not drawn, posed or moved) till the main thread (src/ui/roadfolk.js) sets some of them down on a road through
+// Life.roadJob: a trip, shared by the two or three on it. A walk: along the road's points (the main thread's, by the road
+// graph), side by side, after a rest by the roadside first for some. A fix: huddled at a spot on the road with something at
+// them (src/sim/wilds.js rescue), cowering and flinching at its blows; then thankful and on their way, or running for it.
+// Done (or left far behind: Life.update), they're parked again once nobody can see them go.
+function* onRoad(me, key) {
+  const life = me.life;
+  while (me.alive(key)) {
+    const T = me.trip;
+    if (!T) { me.parked = true; me.moving = 0; yield; continue; }
+    me.parked = false;
+    if (!T.over) {
+      if (T.kind === 'walk') yield* roadWalk(me, T, key);
+      else yield* roadFix(me, T, key);
+      if (!me.alive(key) || me.trip !== T) continue;
+      T.over = true;
+    }
+    // (At the end of it: stood about where they are till they're out of sight, or a good way off.)
+    if (me.seen && Math.hypot(me.x - life.player[0], me.z - life.player[2]) < 150) { yield* idle(me, 2, key); continue; }
+    life.roadLeft(me);
+  }
+}
+
+// Where on the road's way k they walk: so far to its right (side) of its middle.
+const besideRoad = (P, k, side) => {
+  const a = P[Math.max(0, k - 1)], b = P[Math.min(P.length - 1, Math.max(k, 1))], dx = b[0] - a[0], dz = b[1] - a[1], d = Math.hypot(dx, dz) || 1;
+  return [P[k][0] + (dz / d) * side, P[k][1] - (dx / d) * side];
+};
+
+function* roadWalk(me, T, key) {
+  // (Resting by the road first, for a while: stood about doing what they do.)
+  while (me.restLeft > 0 && me.alive(key) && me.trip === T && !T.over) { const s = Math.min(me.restLeft, 6); me.restLeft -= s; yield* idle(me, s, key); }
+  const P = T.pts;
+  for (let k = me.tripK; k < P.length && me.alive(key) && me.trip === T && !T.over; k++) {
+    me.tripK = k;
+    const [x, z] = besideRoad(P, k, me.tripSide);
+    yield* walkLine(me, x, z, key);
+    if (me.parked) return;
+  }
+}
+
+const COWER = ['afraid', 'scared', 'scared_2', 'frightened'];
+function* roadFix(me, T, key) {
+  const life = me.life, [hx, hz] = me.tripAt;
+  if (Math.hypot(me.x - hx, me.z - hz) > 0.5) yield* walkLine(me, hx, hz, key);
+  while (me.alive(key) && me.trip === T && !T.over) {
+    if (T.state === 'scared') {
+      // Facing what's at them, cowering; a flinch for each blow that lands on them.
+      if (T.hit !== me.hitSeen) { me.hitSeen = T.hit; yield* doClip(me, 'hit', key, 0.55); continue; }
+      // (Till a blow lands, or it turns.)
+      me.play(COWER[Math.floor(me.rng() * COWER.length)], { fade: 0.35, restart: true });
+      for (let u = 0, d = 1.5 + me.rng() * 1.5; u < d && me.alive(key) && me.trip === T && T.state === 'scared' && T.hit === me.hitSeen; u += me.dt) {
+        if (T.foe) me.face = Math.atan2(T.foe[0] - me.x, T.foe[1] - me.z);
+        yield;
+      }
+    } else if (T.state === 'saved') {
+      // Round to you, a cheer or a bow, a word (the main thread's bark), a moment stood; then on their way, by the road.
+      const [px, , pz] = life.player;
+      me.face = Math.atan2(px - me.x, pz - me.z);
+      yield* wait(me, 0.4 + me.rng() * 0.6, key);
+      yield* doClip(me, me.rng() < 0.5 ? 'cheer' : 'bow', key);
+      yield* idle(me, 4 + me.rng() * 4, key);
+      me.face = null;
+      const P = T.away || [];
+      for (let k = 1; k < P.length && me.alive(key) && me.trip === T; k++) { const [x, z] = besideRoad(P, k, me.tripSide); yield* walkLine(me, x, z, key); }
+      return;
+    } else if (T.state === 'fled') {
+      // Broke and ran: away from what was on them, as hard as each of them can go, and out of sight.
+      me.face = null; me.speed = me.p.speed || 1;
+      const a = (T.dir ?? me.rng() * 6.28) + (me.rng() - 0.5) * 0.9;
+      yield* walkLine(me, me.x + Math.sin(a) * 55, me.z + Math.cos(a) * 55, key, life.clips.clips.flee ? 'flee' : 'run');
+      return;
+    } else return;
   }
 }
 
@@ -1195,8 +1341,8 @@ function* amble(me, key) {
 
 // Straight to (tx, tz) over open street, at their own pace, round whoever's in the way. (No walking grid out here: the lanes
 // are clear of the houses, and what stands in the street is stepped round.)
-function* walkLine(me, tx, tz, key) {
-  const life = me.life, G = life.ground, gait = me.walkClip, v0 = me.stride[gait] || 1.2;
+function* walkLine(me, tx, tz, key, gait = me.walkClip) {
+  const life = me.life, G = life.ground, v0 = me.stride[gait] || 1.2;
   me.act = ACT.WALK;
   let wait_ = 0;
   try {

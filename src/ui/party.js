@@ -597,6 +597,16 @@ export class PartyUI {
 
   hideBoss() { this.boss = null; this.bossEl.style.display = 'none'; }
 
+  // A world boss out on the land (src/ui/wilds.js BOSS_FIGHT): its name and what it is over the one bar. Null takes it down
+  // (and only a world boss's: a delve's own bar is the delve's to take down).
+  showWorldBoss(name, slot, title) {
+    if (name == null) { if (this.boss?.world) this.hideBoss(); return; }
+    this.boss = { key: 'world', world: true, ids: [slot], w: [], bars: [] };
+    this.bossEl.innerHTML = `<div class="bn">${esc(name)}</div>` + (title ? `<div class="bs">${esc(title)}</div>` : '') + '<div class="bb"><i></i></div>';
+    this.boss.bars = [...this.bossEl.querySelectorAll('.bb i')];
+    this.bossEl.style.display = 'block';
+  }
+
   // EV.DELVE from the sim.
   onDelve(code, a, b, c) {
     // (Which delve, for its coming in, going out, clearing and wipe: the sim says. src/sim/dungeon.js)
@@ -625,7 +635,7 @@ export class PartyUI {
   // The sim's word on the fight, a few times a second (src/sim/dungeon.js post).
   onWarrens(m) {
     this.warrens = { ...m, at: performance.now() };
-    if (!m.fight && this.boss) this.hideBoss();
+    if (!m.fight && this.boss && !this.boss.world) this.hideBoss();
   }
 
   // ---- kept in the save ----------------------------------------------------------------------------------------------

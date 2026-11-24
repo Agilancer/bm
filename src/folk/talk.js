@@ -108,7 +108,8 @@ export class Talk {
   // ---- scenes ----
 
   free(me, scene = false) {
-    if (!me || !me.pose || me.talking || me.inScene || me.alarm || BUSY.has(me.act) || me.posture === 'lie' || me.posture === 'floor') return false;
+    // (Not anyone parked, off the land: Phobos's crowd out of the city, the road's folk off the road.)
+    if (!me || !me.pose || me.parked || me.talking || me.inScene || me.alarm || BUSY.has(me.act) || me.posture === 'lie' || me.posture === 'floor') return false;
     if (scene && me.act === ACT.PLAY && !me.child) return false;
     return true;
   }

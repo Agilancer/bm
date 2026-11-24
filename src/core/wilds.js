@@ -128,7 +128,25 @@ const ROWS = {
   w_colossus_bone: ['skeleton_knight_giant', 6.2, 'THE COLOSSUS OF BONE', 'Wraith', { stat: { hp: 1500, damage: 40, speed: 2.4, reach: 5, loot: 0 } }],
   w_colossus_rot: ['plague_giant_armored', 6.4, 'THE COLOSSUS OF ROT', 'Corrupted', { stat: { hp: 1500, damage: 40, speed: 2.4, reach: 5, loot: 0 } }],
   w_colossus_ember: ['dragon_red', 6.6, 'THE COLOSSUS OF EMBER', 'Infernal', { stat: { hp: 1700, damage: 42, loot: 0 } }],
+  // The world bosses (WORLD_BOSSES below): old bodies made huge, in colours of their own. What they do besides their blows
+  // is the fight's own deck (src/sim/worldboss.js), so none has tricks here; their life is scaled by the fight.
+  // The Heralds of the four Elder Dragon Gods (docs/ELDER-DRAGONS.md): each the god's own kind of dragon, a little over
+  // half a god's size, gone out into the world as its god stirs.
+  wb_herald_gale: ['dragon_green', 9.0, 'VEYRASZ, HERALD OF THE GALE', 'Stormhide', { stat: { hp: 5200, damage: 44, speed: 3.2, reach: 5.6, loot: 0 } }],
+  wb_herald_hearth: ['dragon_red', 9.0, 'OSKARRAN, HERALD OF THE HEARTH', 'Infernal', { stat: { hp: 5400, damage: 46, speed: 3, reach: 5.6, loot: 0 } }],
+  wb_herald_cold: ['dragon_undead', 9.0, 'SELVHRA, HERALD OF THE COLD', 'Rimefrost', { stat: { hp: 5200, damage: 44, speed: 3, reach: 5.6, loot: 0 } }],
+  wb_herald_hollow: ['dragon_black', 9.4, 'UMBRAXES, HERALD OF THE HOLLOW STAR', 'Abyssal', { stat: { hp: 5800, damage: 48, speed: 3.1, reach: 5.8, loot: 0 } }],
+  // And the land's own, each the greatest of its kind there is.
+  wb_gorehorn: ['goatman_gold_bad', 7.2, 'GOREHORN THE MOUNTAIN-BREAKER', 'Greygold', { stat: { hp: 4600, damage: 42, speed: 3.6, reach: 4.6, loot: 0 } }],
+  wb_mother_pox: ['plague_giant_armored', 8.0, 'OLD MOTHER POX', 'Blighted', { stat: { hp: 5000, damage: 42, speed: 2.6, reach: 5.2, loot: 0 } }],
+  wb_ossuary_king: ['skeleton_knight_giant', 8.4, 'THE OSSUARY KING', 'Gravegilt', { stat: { hp: 5000, damage: 44, speed: 2.6, reach: 5.4, loot: 0 } }],
+  wb_silk_queen: ['flesh_spider_demon', 5.0, 'VETHRA, THE SILK THAT SWALLOWS', 'Nightshade', { stat: { hp: 4400, damage: 40, speed: 4, reach: 4.4, loot: 0 } }],
+  wb_moon_eater: ['werewolf_brown', 6.2, 'THE MOON-EATER', 'Albino', { stat: { hp: 4200, damage: 42, speed: 5, reach: 4, loot: 0 } }],
+  wb_sleepless: ['night_demon_black', 7.0, 'THE SLEEPLESS ONE', 'Gloam', { stat: { hp: 4400, damage: 40, speed: 3.4, reach: 4.8, loot: 0 } }],
+  wb_storm_mother: ['harpy_queen', 5.6, 'THE STORM MOTHER', 'Cobalt', { stat: { hp: 4000, damage: 40, speed: 3.6, reach: 4, loot: 0 } }],
+  wb_wyrm_below: ['worm_2', 10.0, 'THE WYRM BELOW', 'Dunehide', { stat: { hp: 5200, damage: 44, speed: 2.4, reach: 6.5, loot: 0 } }],
 };
+import { BOSS_GROUNDS } from './boss-grounds.js';
 export const WILD_VARIANTS = Object.fromEntries(Object.entries(ROWS).map(([id, [src, height, name, pal, more]]) => [id, { src, height, name, pal, wild: true, ...(more || {}) }]));
 
 // ---- who holds what ----------------------------------------------------------------------------------------------------
@@ -229,6 +247,11 @@ export const MEETINGS = [
   { key: 'ritual', w: 2, name: 'A RITUAL' },            // casters raising something: stop them before it's up
   { key: 'duel', w: 1, name: 'A DUEL OF SORCERERS' },   // two casters, one of whom will win
   { key: 'drake', w: 1, name: 'A SHADOW OVERHEAD' },    // a drake comes down on you
+  // On the roads (docs/ROAD-LIFE.md): the country's own lying in wait either side of it, folk on the road with something
+  // at them, and some of the other Tessariels already in a fight there.
+  { key: 'ambush', w: 6, name: 'AMBUSH', road: true },              // they were waiting: out of the ditches both sides of you
+  { key: 'rescue', w: 4, name: 'TRAVELLERS UNDER ATTACK', road: true },   // folk on the road ahead, and the country's own on them
+  { key: 'heroes', w: 5, name: 'TESSARIELS IN A FIGHT', road: true },     // two to four of the others, at grips with a pack
 ];
 export const MEET = {
   every: [38, 75],  // seconds between meetings, once the last is done with
@@ -246,7 +269,124 @@ export const RAID = { near: 230, first: [50, 140], every: [540, 900], out: 95, h
 
 // What the living land can call anyone to (src/ui/wilds.js calls): auto-play answers each (src/ui/autobrain.js WILD_SAY,
 // and `node tools/autoplay/check.mjs` fails while it doesn't).
-export const WILD_CALLS = ['raid', 'tear', 'find', 'bounty'];
+export const WILD_CALLS = ['raid', 'tear', 'find', 'bounty', 'boss', 'rescue'];
+
+// ---- on the roads --------------------------------------------------------------------------------------------------------
+// The road's own meetings (MEETINGS ambush, rescue, heroes: src/sim/wilds.js startMeet). ambush: how far either side of the
+// way they rise, and how far ahead along it. rescue: the travellers' life (as so many blows of the monsters on them) and
+// how near the player must come before the monsters on them turn; folk: how many of them stand there (src/ui/roadfolk.js).
+export const ROAD = {
+  ambush: { side: [13, 19], ahead: [6, 16] },
+  rescue: { life: 14, folk: [2, 3] },
+  heroes: { n: [2, 4] },
+  // How often the road's own come round against the rest (the weights above), when you're on a road.
+  roadShare: 1,
+};
+
+// ---- world bosses --------------------------------------------------------------------------------------------------------
+// The greatest things in the land, met two ways (src/sim/worldboss.js): come on in a clearing with some of the other
+// Tessariels already at it, or risen at one of the boss grounds (src/core/boss-grounds.js) and called across the land, with
+// the other Tessariels coming in from the seals to fight it with you. Each is an old body made huge (WILD_VARIANTS wb_*),
+// with a deck of called moves (BOSS_MOVES), adds at so much of its life, a turn for the worse at a third, and a temper at
+// the end of its time. The four Heralds are the Elder Dragon Gods' (docs/ELDER-DRAGONS.md): their fall is told to the
+// quests (boss:<key>), and the gods' story runs on them (src/folk/regions/*.js).
+// key, id (its body), god (the Herald's), countries (where it rises), elem (its light), adds (who it calls in), deck (its
+// moves at the start), more (added at 70%), last (added at 35%), lvl (the least it's ever met at), title (under its name).
+export const WORLD_BOSSES = [
+  { key: 'herald_gale', id: 'wb_herald_gale', god: 'thyrraxis', countries: ['downs', 'rimeholt', 'darkwood'], elem: STORM, lvl: 9, adds: ['w_storm_harpy', 'w_cliff_harpy', 'harpy_warrior'],
+    deck: ['cleave', 'gale', 'tailsweep'], more: ['squall', 'soak'], last: ['skyfall'], title: 'The wind before the storm god wakes' },
+  { key: 'herald_hearth', id: 'wb_herald_hearth', god: 'kaldurra', countries: ['rustwood', 'ashen', 'downs'], elem: FIRE, lvl: 10, adds: ['w_cinder_whelp', 'w_ember_fiend', 'dragonling_black'],
+    deck: ['cleave', 'flamewave', 'tailsweep'], more: ['meteors', 'soak'], last: ['magma'], title: 'The heat under the world, come up' },
+  { key: 'herald_cold', id: 'wb_herald_cold', god: 'morvekh', countries: ['rimeholt', 'barrow', 'gallows', 'fen'], elem: FROST, lvl: 11, adds: ['w_barrow_thrall', 'w_bone_sentinel', 'dragonling_undead'],
+    deck: ['cleave', 'rimerings', 'tailsweep'], more: ['grasp', 'spread'], last: ['deepfreeze'], title: 'The cold that remembers' },
+  { key: 'herald_hollow', id: 'wb_herald_hollow', god: 'nihvaroth', countries: ['deepwood', 'marches', 'gallows', 'phobos', 'barrow'], elem: VOID, lvl: 13, adds: ['w_dream_eater', 'w_pale_stalker', 'dragonling_black'],
+    deck: ['cleave', 'voidorbs', 'tailsweep'], more: ['devour', 'spread'], last: ['starfall'], title: 'A tooth of the Hollow Star' },
+  { key: 'gorehorn', id: 'wb_gorehorn', countries: ['downs', 'rimeholt', 'rustwood', 'darkwood'], elem: STONE, lvl: 7, adds: ['w_hill_ram', 'goatman_bw', 'goatman_white'],
+    deck: ['cleave', 'stomp', 'charge'], more: ['quake', 'soak'], last: ['avalanche'], title: 'The ram of all rams' },
+  { key: 'mother_pox', id: 'wb_mother_pox', countries: ['fen', 'gallows', 'ashen', 'marches'], elem: POISON, lvl: 9, adds: ['w_plague_taken', 'w_pox_knight', 'w_mire_spitter'],
+    deck: ['cleave', 'blight', 'stomp'], more: ['spread', 'boulders'], last: ['plaguetide'], title: 'Who keeps the sick' },
+  { key: 'ossuary_king', id: 'wb_ossuary_king', countries: ['barrow', 'gallows', 'darkwood', 'phobos'], elem: BONE, lvl: 10, adds: ['w_barrow_thrall', 'w_grave_urchin', 'w_bone_sentinel'],
+    deck: ['cleave', 'fissures', 'bonemarch'], more: ['soak', 'quake'], last: ['gravecall'], title: 'King of all the howes' },
+  { key: 'silk_queen', id: 'wb_silk_queen', countries: ['darkwood', 'deepwood', 'fen', 'rustwood'], elem: POISON, lvl: 8, adds: ['w_spiderling', 'w_wood_weaver', 'spider_black'],
+    deck: ['cleave', 'spitfan', 'webs'], more: ['spread', 'venompool'], last: ['broodburst'], title: 'Mother of every web' },
+  { key: 'moon_eater', id: 'wb_moon_eater', countries: ['darkwood', 'barrow', 'rimeholt', 'deepwood'], elem: DRAIN, lvl: 8, adds: ['w_dire_wolfkin', 'w_white_howler'],
+    deck: ['cleave', 'howl', 'charge'], more: ['spread', 'pounce'], last: ['bloodmoon'], title: 'It howled once, and the moon went red' },
+  { key: 'sleepless', id: 'wb_sleepless', countries: ['gallows', 'marches', 'deepwood', 'barrow'], elem: ARCANE, lvl: 11, adds: ['w_dream_eater', 'w_effigy', 'w_pale_stalker'],
+    deck: ['cleave', 'seekers', 'threads'], more: ['soak', 'spread'], last: ['nightmare'], title: 'What sits on the chest of the world' },
+  { key: 'storm_mother', id: 'wb_storm_mother', countries: ['downs', 'rimeholt', 'fen'], elem: STORM, lvl: 9, adds: ['w_storm_harpy', 'w_cliff_harpy'],
+    deck: ['cleave', 'bladenova', 'boltwall'], more: ['squall', 'spread'], last: ['skyfall'], title: 'Every harpy is her daughter' },
+  { key: 'wyrm_below', id: 'wb_wyrm_below', countries: ['ashen', 'rustwood', 'fen', 'marches'], elem: STONE, lvl: 12, adds: ['w_sand_worm', 'w_bog_worm'],
+    deck: ['cleave', 'quake', 'spitrain'], more: ['soak', 'fissures'], last: ['swallow'], title: 'The ground it moves through' },
+];
+export const BOSS_KEYS = WORLD_BOSSES.map((b) => b.key);
+// A world boss's name as a quest's words have it ("Veyrasz, Herald of the Gale"), and one of their grounds by its key (a
+// quest's wboss step names both: src/folk/quests.js).
+export const worldBossName = (key) => {
+  const B = WORLD_BOSSES.find((b) => b.key === key), n = B && WILD_VARIANTS[B.id]?.name;
+  return n ? n.toLowerCase().replace(/(^|[\s-])([a-z])/g, (m, a, c) => a + c.toUpperCase()).replace(/ Of /g, ' of ').replace(/ The /g, ' the ') : key;
+};
+export const groundOf = (key) => BOSS_GROUNDS.find((g) => g.key === key) || null;
+export const HERALDS = WORLD_BOSSES.filter((b) => b.god).map((b) => b.key);
+// The moves, by name: what's called along the emergency ticker as each comes (the first part what's happening, the second
+// what to do: src/ui/ticker.js callParts), and how long its warning is. Their workings: src/sim/worldboss.js MOVES_WB.
+export const BOSS_MOVES = {
+  cleave: { call: 'A great blow before it! Not in front of it' },
+  tailsweep: { call: 'Its tail comes round! Not behind it' },
+  gale: { call: 'Its wings beat a gale! Get out of the lines of wind' },
+  squall: { call: 'A squall line sweeps the ground! Find the gap in it' },
+  skyfall: { call: 'The sky falls in bolts! Keep moving' },
+  flamewave: { call: 'A wave of fire rolls out! Jump it' },
+  meteors: { call: 'Fire from the sky! Out of the circles' },
+  magma: { call: 'The ground opens on magma! Stand close in under it' },
+  rimerings: { call: 'Rings of rime go out! Step in behind each' },
+  grasp: { call: 'It reaches for the furthest of you! Come in to the others' },
+  deepfreeze: { call: 'Deep cold! Stand in the light, or freeze' },
+  voidorbs: { call: 'Orbs of nothing seek you! Keep them off' },
+  devour: { call: 'It breathes in the world! Get far from it' },
+  starfall: { call: 'Stars fall out of the dark! Out of the circles' },
+  stomp: { call: 'It stamps! Step in behind the rings' },
+  charge: { call: 'It lowers its head! Off the line of its charge' },
+  quake: { call: 'It shakes the ground! Jump the wave' },
+  avalanche: { call: 'Stone comes down the hills! Keep moving' },
+  blight: { call: 'A blight spreads round it! Out of the green' },
+  boulders: { call: 'It throws rock! Out from under it' },
+  plaguetide: { call: 'A tide of plague! Stand together under the light' },
+  fissures: { call: 'The ground splits! Off the lines' },
+  bonemarch: { call: 'Bones march out across the ground! Step aside of them' },
+  gravecall: { call: 'It calls its dead up! Kill them before they reach it' },
+  spitfan: { call: 'Venom sprays! Get to its side' },
+  webs: { call: 'Webs on the ground! Keep off them' },
+  venompool: { call: 'Venom pools! Out of the pools' },
+  broodburst: { call: 'Her brood hatches! Kill the young first' },
+  howl: { call: 'It howls! Jump the wave' },
+  pounce: { call: 'It leaps on the furthest of you! Stay together' },
+  bloodmoon: { call: 'The moon goes red! It hits harder: keep moving' },
+  seekers: { call: 'Seekers come for you! Keep moving' },
+  threads: { call: 'Threads round you! Out before they pull' },
+  nightmare: { call: 'It wakes the nightmare! Stand together under the light' },
+  bladenova: { call: 'Blades fly out all round! Get close in or far off' },
+  boltwall: { call: 'A wall of bolts! Find the gap' },
+  spitrain: { call: 'Acid rains down! Out of the circles' },
+  swallow: { call: 'It goes under! Off the ground that heaves' },
+  soak: { call: 'A great blow marked on one of you! Everyone stand in it with them' },
+  spread: { call: 'Marked, every one of you! Spread out' },
+  adds: { call: 'It calls its own! Kill them, or they heal it' },
+  enrage: { call: 'IT IS ENRAGED! Burn it down now' },
+  turn: { call: 'It is wounded and wild! Watch for more' },
+};
+export const BOSS_MOVE_KEYS = Object.keys(BOSS_MOVES);
+// How it runs. every: seconds between called world bosses, once you're out in the land; wait: how long one waits at its
+// ground to be fought; reach: how far off a called one may rise; clearing: the chance a meeting on the way is one with
+// the other Tessariels already at a boss instead (and seconds since the last before it may be); help: how many come.
+// hp: its life, as so many of a level's lair-boss's; enrage: seconds into the fight it loses its temper.
+export const BOSS = {
+  first: [420, 720], every: [900, 1500], wait: 540, reach: [300, 1100], see: 200, leave: 240,
+  clearing: 0.16, clearingGap: 600, help: [3, 5], clearHelp: [3, 4], hp: 1, enrage: 300, start: 0.82,
+  // A Herald a quest waits on (src/sim/worldboss.js setWant): risen this many seconds after it's asked, once you're within
+  // wantNear metres of its ground; waits so long at it (or till you're wantNear + 400 off); and is up again so long after
+  // it's gone back.
+  wantFirst: 25, wantWait: 1200, wantAgain: 150, wantNear: 1600,
+};
 
 // What the sim tells the page (EV.WILD's first number), and what goes with it.
 export const WILD = {
@@ -265,6 +405,13 @@ export const WILD = {
   RAID_COUNT: 13,   // (killed, of)
   RAID_DONE: 14,    // (town, x, y, z, level, 1 held with you, 2 held without you, 0 left)
   HELP: 15,         // (how many of the other Tessariels have come to a tear)
+  RESCUE: 16,       // (the travellers' life left, 0-100; x, z): told as it falls
+  BOSS_RISE: 17,    // (boss's place in WORLD_BOSSES, x, z, seconds it waits or 0, called 1 / come on in a clearing 0, level)
+  BOSS_FIGHT: 18,   // (boss, its slot, phase 1-3, how many of the others are at it)
+  BOSS_CALL: 19,    // (boss, the move's place in BOSS_MOVE_KEYS)
+  BOSS_DOWN: 20,    // (boss, x, y, z, level, 1 with your hand in it / 0 without)
+  BOSS_GONE: 21,    // (boss, 0 it went back into the ground unfought / 1 you left it / 2 it beat you all)
+  HEROES: 22,       // (how many of the others are in the fight on the road)
 };
 
 // How each kind of outpost's own ground is dressed (src/core/lair-dress.js lairKind), under what's built there.

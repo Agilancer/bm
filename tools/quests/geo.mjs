@@ -7,6 +7,7 @@ import { BEYOND } from '../../src/folk/lines/beyond.js';
 import { SITES, KNOLL } from '../../src/core/lands.js';
 import { PHOBOS } from '../../src/core/phobos-data.js';
 import { DELVES, BOSSES } from '../../src/core/dungeon.js';
+import { groundOf } from '../../src/core/wilds.js';
 
 const TOWN = { x: 10, z: 0 };
 // The few named areas that aren't a place's key (src/folk/quests.js AREAS; src/ui/autobrain.js area()).
@@ -63,6 +64,7 @@ export function stepSpots(id, st) {
   if (st.talk) { const w = whereIs(st.talk); return w ? [{ x: w.x, z: w.z, what: `talk:${st.talk}`, down: w.down }] : []; }
   if (st.back) return giver ? [{ x: giver.x, z: giver.z, what: 'back', down: giver.down }] : [];
   if (st.boss) { const b = BOSSES.find((q) => q.key === st.boss), p = b && portalOf(b.delve); return p ? [{ ...p, what: `boss:${st.boss}`, delve: b.delve }] : []; }
+  if (st.wboss) { const g = groundOf(st.ground); return g ? [{ x: g.x, z: g.z, what: `wboss:${st.wboss}` }] : []; }
   if (st.visit) return st.visit.map(spot).filter(Boolean);
   if (st.clear) { const p = placeSpot(`outpost:${st.clear}`); return p ? [{ x: p.x, z: p.z, what: `clear:${st.clear}` }] : []; }
   const k = st.enter || st.kill || st.gather || st.at;

@@ -524,6 +524,30 @@ export class WorldMap {
     }
   }
 
+  // A world boss risen or being fought (src/ui/wilds.js, by main.js): { x, z, name } or null. A red crown on both maps, with a
+  // ring going out from it; off the edge, a red arrow at the rim pointing the way to it.
+  setBoss(b) { this.boss = b || null; }
+  drawBoss(g, toScreen, W, Hh, dpr, text) {
+    const b = this.boss;
+    if (!b) return;
+    const [sx, sy] = toScreen(b.x, b.z), m = 12 * dpr;
+    if (sx < m || sy < m || sx > W - m || sy > Hh - m) {
+      const ex = Math.min(W - m, Math.max(m, sx)), ey = Math.min(Hh - m, Math.max(m, sy));
+      this.arrow(g, ex, ey, Math.atan2(sx - ex, -(sy - ey)), 7 * dpr, '#ff4a2a');
+      return;
+    }
+    const f = ((performance.now() / 1000) % 1.4) / 1.4, r = 6 * dpr;
+    g.strokeStyle = `rgba(255, 74, 42, ${(0.9 * (1 - f)).toFixed(3)})`; g.lineWidth = 2 * dpr;
+    g.beginPath(); g.arc(sx, sy, r + 13 * dpr * f, 0, 6.2832); g.stroke();
+    // (The crown: three points on a band.)
+    g.fillStyle = '#ff4a2a'; g.strokeStyle = '#1a0500'; g.lineWidth = 1.4 * dpr;
+    g.beginPath();
+    g.moveTo(sx - r, sy + r * 0.6); g.lineTo(sx - r, sy - r * 0.55); g.lineTo(sx - r * 0.5, sy - r * 0.05); g.lineTo(sx, sy - r);
+    g.lineTo(sx + r * 0.5, sy - r * 0.05); g.lineTo(sx + r, sy - r * 0.55); g.lineTo(sx + r, sy + r * 0.6); g.closePath();
+    g.fill(); g.stroke();
+    if (text && b.name) text(b.name, sx, sy + 15 * dpr, 13, false, '#ff8a6a');
+  }
+
   arrow(g, sx, sy, angle, size, colour = '#f1d68a') {
     g.save();
     g.translate(sx, sy); g.rotate(angle);
@@ -635,6 +659,7 @@ export class WorldMap {
       return [R + (dx * co - dz * s) * k, R + (dx * s + dz * co) * k];
     }, reach * 1.45, px, pz, dpr);      // (as far as the corners reach)
     g.restore();
+    if (!place) this.drawBoss(g, (x, z) => { const dx = -(x - px), dz = -(z - pz); return [R + (dx * co - dz * s) * k, R + (dx * s + dz * co) * k]; }, W, W, dpr);
     this.arrow(g, R, R, 0, 7 * dpr);
     // The rim, and north on it.
     g.strokeStyle = 'rgba(201, 163, 92, 0.85)'; g.lineWidth = 2 * dpr;
@@ -720,6 +745,7 @@ export class WorldMap {
     if (!snap) return;
     const px = snap[H.PX], pz = snap[H.PZ];
     this.marks(g, snap, toScreen, place ? 80 : Math.min(400, Math.max(120, this.span)), px, pz, dpr, view);
+    if (!place) this.drawBoss(g, toScreen, W, Hh, dpr, text);
     if (this.pin) this.drawPin(g, toScreen, k, dpr, W, Hh, text);
     // You: the arrow, or at the map's rim a small one pointing the way back to you.
     // (Facing yaw goes along (sin, cos) in x and z, which is (-sin, -cos) on the paper.)

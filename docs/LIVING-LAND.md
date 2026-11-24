@@ -14,7 +14,8 @@ land", says what it is; this is the state of the work, how to check it, and what
 | Standing battles | 12 | `BATTLES` | two lairs each, `battleLairs` |
 | Tear spots (42% open at a time, turning over every 13 minutes) | 221 | `TEAR_SPOTS`, `TEARS_KINDS`, `TEAR` | `src/sim/wilds.js` |
 | Things to find, each with a cache | 247 | `FINDS` | glint and pay-out in `src/sim/wilds.js`, `src/ui/wilds.js` |
-| Kinds of meeting on the way | 7 | `MEETINGS`, `MEET` | `src/sim/wilds.js` |
+| Kinds of meeting on the way | 10 (three of them the road's own: ambush, travellers under attack, Tessariels in a fight; docs/ROAD-LIFE.md) | `MEETINGS`, `MEET`, `ROAD` | `src/sim/wilds.js` |
+| World bosses (four of them the Elder Dragon Gods' Heralds), and the grounds they rise at | 12, 38 grounds | `WORLD_BOSSES`, `BOSS`, `BOSS_MOVES`; `src/core/boss-grounds.js` (`node tools/wilds/boss-grounds.mjs`) | `src/sim/worldboss.js` |
 | Towns that are raided, and held by the other Tessariels | 5 | `RAID_TOWNS`, `RAID` | `lookRaid` in `src/sim/wilds.js`, `answer` in `src/sim/hero.js` |
 | Bounty boards | 6 | `BOARDS` in `src/ui/wilds.js` | `bountyTick` there |
 

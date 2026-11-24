@@ -48,6 +48,7 @@ import { Inventory } from './ui/inventory.js';
 import { SpellBar } from './ui/spellbar.js';
 import { WorldMap } from './ui/map.js';
 import { WildsUI } from './ui/wilds.js';
+import { RoadFolk } from './ui/roadfolk.js';
 import { WILD } from './core/wilds.js';
 import { OUTPOSTS } from './core/wilds-data.js';
 import { GATHER_SHOWN } from './folk/quests.js';
@@ -654,11 +655,21 @@ async function boot(plan, poolSize) {
   };
   arm();
   // The living land: what's happening out there, told and paid for (src/ui/wilds.js; the sim's side is src/sim/wilds.js).
+  // The folk on the roads, and travellers in a fix on one (src/ui/roadfolk.js): bodies on the town's thread.
+  game.roadFolk = new RoadFolk({ town, snap: () => game.currentSnap?.(), paused: () => state.paused || !!game.idle, yaw: () => input.yaw,
+    busy: () => !!(game.wilds?.state?.fight || game.wilds?.bossOn) });
   game.wilds = new WildsUI({ touch: input.touch, xp: (n) => game.addXp(n), drop: (x, y, z, kind) => game.drops?.fromKill(x, y, z, kind), log: (t) => game.chatLog?.system(t),
     pos: () => { const s = game.currentSnap?.(); return s ? [s[H.PX], s[H.PZ]] : null; },
     // (A sting of the music's for what's begun and what's won; a word over a posted villager's head: src/ui/folk.js event.)
     stinger: (k) => game.music?.stinger(k),
-    folkSay: (id, text) => { const t = game.townUI, i = t?.people.findIndex((q) => q.id === id) ?? -1; if (i >= 0) t.event({ type: 'say', i, text, dur: 6 }); } });
+    folkSay: (id, text) => { const t = game.townUI, i = t?.people.findIndex((q) => q.id === id) ?? -1; if (i >= 0) t.event({ type: 'say', i, text, dur: 6 }); },
+    // (The road's own: travellers in a fix, src/ui/roadfolk.js; and a world boss's calls, bar, map mark and fall,
+    // src/sim/worldboss.js: the emergency ticker, the boss bar, a red crown on the maps, and any quest waiting on it.)
+    rescue: (kind, x, z, left) => game.roadFolk?.rescue(kind, x, z, left),
+    call: (t) => game.party?.ticker?.push(t),
+    bossBar: (name, slot, title) => game.party?.showWorldBoss(name, slot, title),
+    bossMark: (B, x, z, called, name) => worldMap.setBoss(B ? { x, z, name, called } : null),
+    bossDown: (key) => game.townUI?.quests.boss(key) });
   hud.wildName = (model) => renderer.tripo?.wildName(model);
   addPart('wilds', { save: () => game.wilds.save(), load: (d) => game.wilds.load(d) });
   const inventory = new Inventory(pack, swordList, BASE, input.touch, {
@@ -1926,6 +1937,13 @@ class GameView {
     const fl = this.townUI?.quests.flags;
     this.renderer.bossFlags = fl;
     if (fl && (fl !== this.flagsSent || fl.size !== this.flagsN)) { this.flagsSent = fl; this.flagsN = fl.size; this.sim?.postMessage({ type: 'bossesDown', keys: [...fl].flatMap((f) => (f.startsWith('boss:') ? [f.slice(5)] : /^(key|latch):/.test(f) ? [f] : [])) }); }
+    // (The world bosses a quest of yours is waiting on, and where each rises for it, told to the sim when that changes:
+    // src/sim/worldboss.js setWant.)
+    if (this.townUI && (this.wantT = (this.wantT || 0) - dt) <= 0) {
+      this.wantT = 2;
+      const list = this.townUI.quests.wantedBosses(), w = JSON.stringify(list);
+      if (w !== this.wantSent) { this.wantSent = w; this.sim?.postMessage({ type: 'wantBoss', list }); }
+    }
     // (A lookout of the castle's or the city's, stood on for the first time: its name, and what the sight's worth.
     // src/core/castle-finds.js.)
     if (fl && (this.vistaT = (this.vistaT || 0) - dt) <= 0) {

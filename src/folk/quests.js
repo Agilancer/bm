@@ -11,6 +11,9 @@
 //   start  take on a quest from each of a list of people, in any order (Lisandra's: src/folk/lines/lisandra.js)
 //   visit  get to every one of a list of places, in any order
 //   boss   put down one of the party dungeons' bosses, by its key (src/core/dungeon.js BOSSES); one already dead counts
+//   wboss  put down one of the land's world bosses (src/core/wilds.js WORLD_BOSSES, by its key), which rises for it at the
+//          ground named by ground (src/core/boss-grounds.js) soon after it's asked (src/sim/worldboss.js setWant); one put
+//          down before the step was come to doesn't count, as they rise again
 //   clear  empty one of the land's outposts, its chief and every one of its own (an outpost's key in src/core/wilds-data.js
 //          OUTPOSTS; the dens pinned for the camps, src/core/camps-data.js DENS, are the ones to name); one emptied in the
 //          last few minutes counts
@@ -36,7 +39,7 @@ import { BY_ID, first } from './people.js';
 import { GIVERS } from './lines/lisandra.js';
 import * as DELVE from '../core/dungeon.js';
 import { LAIRS } from '../core/tripo-monsters.js';
-import { LAND_RULES } from './land-quests.js';
+import { LAND_LEVELS, LAND_RULES } from './land-quests.js';
 import { PHOBOS_RULES } from './phobos-quests.js';
 import { FIRST_VISIT_RULES } from './first-visit.js';
 import { CITY, cityIn } from '../core/east.js';
@@ -393,8 +396,16 @@ export class QuestBook {
     // (And the key it kept, if it kept one: src/core/castle-keys.js.)
     const gives = DELVE.BOSSES?.find((b) => b.key === key)?.gives;
     if (gives) this.flags.add(gives);
-    for (const id of this.active()) if (this.step(id)?.boss === key) this.advance(id);
+    for (const id of this.active()) if (this.step(id)?.boss === key || this.step(id)?.wboss === key) this.advance(id);
     this.on.change();
+  }
+
+  // The world bosses a quest of yours is waiting on now (its wboss step), and where each is to rise: [{ key, at }], for the
+  // sim (src/main.js tells src/sim/worldboss.js setWant).
+  // (Each at the quest's own level, LAND_LEVELS, so it's the fight the quest was levelled for, whatever the land's is there.)
+  wantedBosses() {
+    const lvl = (id) => LAND_LEVELS.find(([q]) => q === id)?.[1] || 0;
+    return this.active().filter((id) => this.step(id)?.wboss).map((id) => ({ key: this.step(id).wboss, at: this.step(id).ground, lvl: lvl(id) }));
   }
 
   // One of the land's outposts has been emptied (EV.WILD CLEARED, through src/main.js), by its key: told to any quest
