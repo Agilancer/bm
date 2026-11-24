@@ -13,7 +13,7 @@
 // goes off, a patch that burns while you stand in it, a ring to jump, shots to step between; most of it by the named moves
 // of src/sim/moves.js. The hired party (src/sim/hero.js companion) reads the same marks and the same calls: out of the
 // shapes, at the dragon's sides, behind a pillar.
-import { ADDS, BOSSES, DELVE, DELVES, HOLES, PARTY, PERCH, PILLARS, TURN_WARN, WARN, caveClear, caveFloorY, caveRoom, delveByKey, delveOf, roomOf, roomSpot, toWorld } from '../core/dungeon.js';
+import { ADDS, BOSSES, DELVE, DELVES, HOLES, LATCHES, PARTY, PERCH, PILLARS, TURN_WARN, WARN, caveClear, caveFloorY, caveRoom, delveByKey, delveOf, roomOf, roomSpot, toWorld } from '../core/dungeon.js';
 import { FIGHTS } from './delve-fights.js';
 import { markOut } from '../core/perils.js';
 import { MOVES, tipBody } from './moves.js';
@@ -29,6 +29,7 @@ const rnd = (a, b) => a + Math.random() * (b - a);
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const BOSS_ROOM_PAD = 8;       // a boss notices you this far inside its room's edge
 const RESET_AFTER = 900;       // seconds out of the Warrens before its dead stand again
+const LESSON_GAP = 30;         // seconds before a boss's opening lesson is said again (begin)
 // Skrit's fire pots' pools: what standing in one costs a second, and how long it burns (the moves' own are 29 and 6). The
 // healer mends some 22 a second: at 29 for 6 a player who stood in one lived through every fight, at 40 for 8 they fell in
 // 22 to 47 s, and at 50 for 12 to the first pots, in 13.
@@ -148,6 +149,8 @@ export class Warrens {
       // (Not a ward gone into only from another: its portal is that one's, src/core/delve-castle.js within.)
       const d = DELVES.find((q) => !q.within && (near(q.portal.x, q.portal.z, q.portal.r) || (way = (q.ways || []).find((w) => near(w.x, w.z, q.portal.r)))));
       if (!d) return;
+      // (A dungeon's own door out on the land, locked till its key's had: src/core/castle-keys.js; a delve's shutBy.)
+      if (d.shutBy && !this.ever.has(d.shutBy)) { this.portalCd = 3; this.warn(WARN[d.shutWord], 12); return; }
       const r = this.ready();
       this.portalCd = 3;
       if (!r.ok && d.party !== false) { sim.event(EV.DELVE, DELVE.NEED, r.n, r.tanks, r.heals); return; }
@@ -163,7 +166,11 @@ export class Warrens {
     if (link) {
       const o = delveByKey(link.to), back = o.links[link.n], [bx, bz] = toWorld(back.x, back.z, o);
       this.portalCd = 3; this.leftAt[d.key] = sim.time;
+      // (A way barred from its far side: come through it from this one and it's unbarred for good. src/core/dungeon.js LATCHES.)
+      if (link.opens && !this.ever.has(link.opens)) { this.ever.add(link.opens); sim.event(EV.DELVE, DELVE.LATCH, LATCHES.indexOf(link.opens)); }
       this.carry(bx + Math.sin(back.yaw) * 4, bz + Math.cos(back.yaw) * 4, back.yaw);
+      // (A door between two rooms of the one delve: nothing's entered.)
+      if (o === d) return;
       this.delve = o;
       sim.event(EV.DELVE, DELVE.ENTER, this.downIn(o), DELVES.indexOf(o));
       return;
@@ -230,6 +237,9 @@ export class Warrens {
   // Scenery that comes and goes (src/core/sites.js Kit.group), turned the other way from how it was built, or back: a
   // standing stone broken, its rubble lying. Sent with the party's post; put back when the fight's lost or the delve stands again.
   flip(key, on = true) { if (on) this.flipped.add(key); else this.flipped.delete(key); }
+  // The boss's bars over again, for what's come into his fight since it began (a second bar under his: Rothgar's banner,
+  // src/sim/redoubt-fights.js), or one fewer once it's gone. No words with it, as at the fight's start.
+  bars(a, b) { if (this.fight) this.sim.event(EV.DELVE, DELVE.BARS, BOSSES.indexOf(this.fight.boss), a ?? -1, b ?? -1); }
 
   // Whether a gate between delves will let you through: one shut till a boss has died (shut: its key) opens once it has, now
   // or ever. And a ward's gate back down to the one it opens from is always open (only its far side is shut).
@@ -418,10 +428,12 @@ export class Warrens {
     for (const m of live) { m.notice(sim); m.hp = m.maxHp; }
     const [c0, c1] = live.map((m) => m.id);
     sim.event(EV.DELVE, DELVE.BOSS, BOSSES.indexOf(b), c0 ?? -1, c1 ?? -1);
-    if (b.key === 'twins') this.warn(3);
-    if (b.key === 'venomaw') this.warn(7);
+    // (A boss's opening lesson once, not again when the fight starts over a breath later: you backed out of the room and
+    // came straight back in, and the lesson stood on the screen twice.)
+    if (b.key === 'twins') this.warn(3, LESSON_GAP);
+    if (b.key === 'venomaw') this.warn(7, LESSON_GAP);
     const spec = this.fight.spec;
-    if (spec?.open) this.warn(WARN[spec.open]);
+    if (spec?.open) this.warn(WARN[spec.open], LESSON_GAP);
     spec?.begin?.(this, this.fight, live);
   }
 
@@ -533,6 +545,8 @@ export class Warrens {
     const d = this.delve, room = roomOf(f.boss.room), [rx, , rz] = roomSpot(room.id);
     let from = [];
     if (a.from === 'doors') from = d.tunnels.filter((t) => t.dead && (!t.door || t.door === room.id) && Math.hypot(t.pts[0][0] - room.x, t.pts[0][1] - room.z) < room.r * 1.5 + 12).map((t) => toWorld(t.pts[t.pts.length - 1][0], t.pts[t.pts.length - 1][1], d));
+    // (Or spots of the fight's own, kept on it by its step: the Redoubt's cages and harness stands, src/sim/redoubt-fights.js.)
+    if (typeof a.from === 'string' && Array.isArray(f[a.from])) from = f[a.from];
     if (a.from === 'edge' || !from.length) for (let i = 0; i < (a.places || 3); i++) { const ang = Math.random() * 6.28; from.push([rx + Math.sin(ang) * room.r * 0.7, rz + Math.cos(ang) * room.r * 0.7]); }
     if (a.from === 'boss') from = [[m.x, m.z]];
     if (a.warn) this.warn(WARN[a.warn]);
@@ -1047,6 +1061,13 @@ export class Warrens {
           const dd = nav.walkDist(qx, qz, x, z, sim.time);
           if (dd < bd) { bd = dd; best = [qx, qz]; }
         }
+        // (A room behind a lock, no walk to it from the way in: where its own door sets you down. src/core/delve-highward.js.)
+        if (!best) for (const l of d.links || []) {
+          const back = l.to === d.key ? d.links[l.n] : null;
+          if (!back) continue;
+          const [qx, qz] = toWorld(back.x + Math.sin(back.yaw) * 4, back.z + Math.cos(back.yaw) * 4, d);
+          if (Math.abs(qx - rx) < (r.hx ?? r.r) && Math.abs(qz - rz) < (r.hz ?? r.r)) best = [qx, qz];
+        }
         if (best) { [x, z] = best; yaw = Math.atan2(rx - x, rz - z); }
         for (const q of mine.slice(0, mine.indexOf(b))) this.down.add(q.key);
       }
@@ -1055,6 +1076,8 @@ export class Warrens {
     }
     if (m.cmd === 'hurt' && b) for (const k of this.bossBodies(b.key)) if (!k.dead) k.hp = k.maxHp * (m.frac ?? 0.05);
     if (m.cmd === 'reset') this.resetAll(m.delve ? d : null);
+    // (calm: the delve's packs put to sleep and counted cleared, for pictures of its rooms.)
+    if (m.cmd === 'calm' && sim.tripo) for (const l of sim.tripo.lairs) if (l.dungeon && l.delve === d.key && !l.bossLair) { if (l.state === 'awake') sim.tripo.sleep(l); l.state = 'cleared'; }
   }
 
   // The fight as the page needs it, a few times a second (auto-play reads it, and the boss's frame).

@@ -28,12 +28,25 @@ test('the land\'s corners are typed arrays of just their length, and can be let 
   // cold fires, src/core/roadside.js; a phone's, below, hasn't.)
   // (A PC's ceiling raised to 1.8 million, 2026-11-19, for the castle the owner asked for ("make this shit look amazing"):
   // its stairs walled, its spires' decks, his V on every battlement. A phone's, below, is where memory bites, and it's not.)
-  assert.ok(verts > 150000 && verts < 1800000,   // (a million and a half with Phobos blocked out: src/core/phobos-build.js. It wants a build of its own, like the delves', before it's detailed.)
+  // (And to 1.9 million, 2026-11-22, for the camps the quests are given at, src/core/camps.js: 85,000 more, tents and all.)
+  assert.ok(verts > 150000 && verts < 1900000,   // (a million and a half with Phobos blocked out: src/core/phobos-build.js. It wants a build of its own, like the delves', before it's detailed.)
     `${verts} corners: the land's, and none of the delves'`);
   const phone = buildSites(true, true);
   let pv = 0;
   for (const p of phone.parts.values()) { assert.ok(typed(p) && whole(p)); pv += p.pos.length / 3; }
-  assert.ok(pv > 150000 && pv < 950000, `${pv} corners on a phone`);   // (as above: Phobos's block-out is 350,000 of them even with flat-lidded houses, and a phone holds them all; and its sewers' eight stairs down)
+  // (975,000 since the camps, 2026-11-22: a phone has each camp's fire, one shelter, its cart and its landmark, 21,000
+  // corners among the twenty-nine of them and the dens pinned by them: about 0.7 MB.)
+  // (980,000 since the quest loop's camps were finished, 2026-11-23: Marchfoot's fold, Isla's mother's cairn on the Crown and
+  // the dens pinned by the Fells' camps, 2,500 corners, under a tenth of a megabyte.)
+  // (985,000 since the Gallowswood's lairs were dressed as their words say, 2026-11-23: the gibbets' irons and the forked-pole
+  // roost, 6,000 corners, about 0.2 MB.)
+  // (987,000 since three lairs were stood by the roads of the longest errands with nothing on them, 2026-11-23: the March
+  // Road's demons, the Throne Road's werebat and the Frost Road's kobolds, src/core/tripo-monsters.js roadside: their camps'
+  // dress, 2,100 corners, under a tenth of a megabyte. No lane of their own: that was 5,000 more.)
+  // (989,000 since the footpaths by Lisandra's cave were taken up, 2026-11-23, tools/roads/lay.mjs: none of their own, but the
+  // ways after them in the list moved up, and src/core/roadside.js throws each way's dice by its place in it, so the roads'
+  // fences and signposts came out a little otherwise all over: 3,100 corners, about 0.1 MB, the dice's and no one's.)
+  assert.ok(pv > 150000 && pv < 989000, `${pv} corners on a phone`);   // (as above: Phobos's block-out is 350,000 of them even with flat-lidded houses, and a phone holds them all; and its sewers' eight stairs down)
   assert.equal(phone.colliders.length, full.colliders.length, 'a phone is stopped by what a PC is');
   dropSiteGeometry();
   assert.equal(buildSites().parts.size, 0);

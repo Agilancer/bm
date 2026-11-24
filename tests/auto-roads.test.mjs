@@ -8,10 +8,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { Brain, planWay, stairsOf } from '../src/ui/autobrain.js';
+import { inEast } from '../src/sim/east-nav.js';
 import { allWays, nearestRoad, roadGraph } from '../src/core/roads.js';
 import { SITES } from '../src/core/lands.js';
 import { SEALS, portalStair } from '../src/core/sites.js';
 import { DELVES } from '../src/core/dungeon.js';
+import { LAIRS } from '../src/core/tripo-monsters.js';
+import { SILL_DOOR } from '../src/folk/first-visit.js';
 import { World } from '../src/sim/world.js';
 import { navFor } from '../src/sim/nav.worker.js';
 
@@ -33,7 +36,10 @@ function score(a, way) {
   let on = 0, all = 0, run = 0, worst = 0, px = a.x, pz = a.z;
   for (const q of way) {
     const L = Math.hypot(q.x - px, q.z - pz), n = Math.ceil(L / 2);
-    for (let k = 0; k < n; k++) {
+    // (Within City State Phobos and Castle Velscour the way's walked out by the east's own map of its streets, stairs and
+    // bridges, from the road before the Drawbridge Gate: src/sim/east-nav.js, tests/east-paths.test.mjs. Not a stretch off-road.)
+    const inside = inEast(px, pz) && inEast(q.x, q.z);
+    for (let k = 0; k < n && !inside; k++) {
       const x = px + (q.x - px) * (k + 0.5) / n, z = pz + (q.z - pz) * (k + 0.5) / n;
       all += L / n;
       if (offRoad(x, z) < 3) { on += L / n; run = 0; } else worst = Math.max(worst, run += L / n);
@@ -62,7 +68,8 @@ for (const lvl of [1, 12, 30]) {
       on += s.on * s.all; all += s.all;
       // (Off a road only to get to one, or from one to where it's going: the Sorrowhorn's crown is a kilometre from any road.)
       const far = nearestRoad(x, z, 3000).d;
-      assert.ok(s.worst < Math.max(160, far + 60), `${name}: ${s.worst.toFixed(0)} m at a stretch off a road (it's ${far.toFixed(0)} m from one)`);
+      // (At level 1 it keeps clear of every den pinned by the far camps: 230 m there, where it cuts round one to a place it has no business at yet.)
+      assert.ok(s.worst < Math.max(lvl === 1 ? 230 : 160, far + 60), `${name}: ${s.worst.toFixed(0)} m at a stretch off a road (it's ${far.toFixed(0)} m from one)`);
     }
     assert.ok(on / all > 0.95, `${(100 * on / all).toFixed(1)}% of the way on a road`);
   });
@@ -190,4 +197,25 @@ test('a way is worked out in a few milliseconds, even at level 1 with every seal
   }
   t.sort((p, q) => p - q);
   assert.ok(t[15] < 25, `half of them took more than ${t[15].toFixed(1)} ms`);
+});
+
+// Inside the east's box but this side of the city (the plain under the Sill: the Gibbet Field, the carrion), it crosses onto
+// the east's map where the road comes into the box, not at the Drawbridge Gate. It used to go to the gate whenever one end
+// was in the box: from Wenna down the road past the Gibbet Field to the gate and back up to it, and from there home by the
+// gate again, to and fro along the road under the castle.
+test('to and from the plain under the Sill: not by the Drawbridge Gate, and no further than the road there and back', () => {
+  const sill = { x: SILL_DOOR.x, z: SILL_DOOR.z };
+  for (const key of ['sill_gibbets', 'sill_carrion']) {
+    const l = LAIRS.find((q) => q.key === key), at = { x: l.x, z: l.z };
+    for (const [a, b] of [[sill, at], [at, sill]]) {
+      const way = planWay(a, b);
+      assert.ok(!way.some((q) => q.gate), `${key}: by the gate`);
+      let L = 0, x = a.x, z = a.z;
+      for (const q of way) { L += Math.hypot(q.x - x, q.z - z); x = q.x; z = q.z; }
+      assert.ok(L < Math.hypot(b.x - a.x, b.z - a.z) * 1.7, `${key}: ${L.toFixed(0)} m of way for ${Math.hypot(b.x - a.x, b.z - a.z).toFixed(0)} m`);
+    }
+  }
+  // (Into the city itself, the east's map still takes it in by the gate road: the way hands over inside the box.)
+  const city = planWay(sill, { x: 9600, z: 0 });
+  assert.ok(inEast(city.at(-2).x, city.at(-2).z), 'handed over to the east map outside its box');
 });

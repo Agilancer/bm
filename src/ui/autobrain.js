@@ -37,13 +37,14 @@ import { SEALS, portalStair } from '../core/sites.js';
 import { inTown, townDist } from '../core/town.js';
 import { CHURCH_GUARD, churchAt, inChurch } from '../core/church.js';
 import { floorAt } from '../core/interior.js';
-import { GROUP_KEYS, GROUPS, LAIRS, TRIPO_KIND } from '../core/tripo-monsters.js';
-import { WILD_CALLS } from '../core/wilds.js';
+import { GROUP_KEYS, GROUPS, LAIRS, TRIPO_KIND, LAIR_LEVEL } from '../core/tripo-monsters.js';
+import { WILD_CALLS, WORLD_BOSSES, groundOf, worldBossName } from '../core/wilds.js';
 import { CAMPS } from '../sim/slimes.js';
 import { REACH, SPELLS } from '../sim/spells.js';
 import { AMBUSH_AT } from '../sim/opening.js';
 import { NODES, UTILITY, blocked, pointsAt, spent, startFree, startRanks } from '../sim/skills.js';
-import { RULES, isNight, placeSpot } from '../folk/quests.js';
+import { RULES, gatherSpots, isNight, outpostOf, placeSpot } from '../folk/quests.js';
+import { LAND_LEVELS } from '../folk/land-quests.js';
 import { QUESTS } from '../folk/lines/quests.js';
 import { CROWD, PEOPLE, POSTED } from '../folk/people.js';
 import { PHOBOS } from '../core/phobos-data.js';
@@ -60,6 +61,8 @@ import { LET_OUT, ONE_MORE, PACK_MAKER } from './folk.js';
 import { MAX_EXTRA, slotPrice } from '../items/pack.js';
 import { CHANNEL } from '../items/beacon.js';
 import { PHOBOS_LEVELS } from '../folk/phobos-quests.js';
+import { DOOR_STEP, FIRST_VISIT, FIRST_VISIT_LEVELS, SILL_DOOR } from '../folk/first-visit.js';
+import { EAST_DOOR, inEast } from '../sim/east-nav.js';
 
 // The beacon stone (src/ui/beacon.js): used when the work's in Bellmourn and further off than BEACON_FAR, with nothing
 // within BEACON_CLEAR to break it off; while it's at work, it stands still for it unless something's within BEACON_HOLD.
@@ -68,6 +71,8 @@ const BEACON_FAR = 300, BEACON_CLEAR = 20, BEACON_HOLD = 14;
 const TAU = Math.PI * 2;
 const wrap = (a) => { a %= TAU; return a > Math.PI ? a - TAU : a < -Math.PI ? a + TAU : a; };
 const dist = (ax, az, bx, bz) => Math.hypot(bx - ax, bz - az);
+// A quest place's name, to say where it's off to: a site's, or a district of Phobos's ('ph:<district>'), or its key.
+const placeName = (k) => SITES[k]?.name || (k?.startsWith?.('ph:') && PHOBOS.districts.find((d) => d.key === k.slice(3))?.name) || (k?.startsWith?.('outpost:') && outpostOf(k.slice(8))?.name) || k;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 // The point `far` metres on along a path from (x, z): where a walker's eyes are while their feet are on the next step.
 function ahead(x, z, pts, far) {
@@ -122,32 +127,29 @@ const WILD_SAY = {
   tear: (c) => (c.fight ? `Fighting what comes through ${c.name.toLowerCase()}.` : `${c.name.charAt(0)}${c.name.slice(1).toLowerCase()} is open near here: walking into it.`),
   find: (c) => `Something's been left over there (${c.name.toLowerCase()}): a look.`,
   bounty: (c) => `The bounty: to ${c.name.replace(/^an? /, 'the ')}, for its chief.`,
+  boss: (c) => (c.fight ? `A world boss, ${c.name}: in the fight with the other Tessariels.` : `${c.name.charAt(0).toUpperCase()}${c.name.slice(1)} has risen ${Math.round(c.d / 10) * 10} m off: going to it with the others.`),
+  rescue: () => 'Travellers on the road, with something at them: getting it off them.',
 };
-const WILD_UNDER = { raid: 3, tear: 1, find: 99, bounty: 0 };
+const WILD_UNDER = { raid: 3, tear: 1, find: 99, bounty: 0, boss: 2, rescue: 4 };
+// A world boss called from far off (src/sim/worldboss.js) takes it off its quests at most once in so many seconds, and only
+// whole; one it's in already, or right by (BOSS_NEAR metres), always. Travellers in a fix on the road it's on, always.
+const BOSS_GAP = 1200, BOSS_NEAR = 260;
 // (The land's outposts and standing battles carry their own, from their faction's: src/core/wilds.js.)
 const lairLevel = (l) => l.lvl ?? LAIR_LEVEL[l.key];
 // How near a lair it can go by without being seen: as far as one of them wanders from it (src/sim/tripo.js roam), and their
 // sight (24 m, a stalker's 34, a dragon's 48), and ten metres more.
 const lairPass = (l) => l.r * 0.6 + 2 + ((l.wake || 110) >= 200 || (l.boss || []).some((b) => /dragon|wyrm/.test(b)) ? 48 : 34) + 10;
-const LAIR_LEVEL = {
-  werewolf: 6, nest: 4, goblin_camp: 2, kobold_den: 2, lost_children: 1, goat_ring: 6, mill_dolls: 5, falls_drake: 8, sallow_drowned: 5,
-  fen_worm: 16, fen_harpies: 8, fen_dragon: 24, cutter_raiders: 6, fungal_brood: 7, abbey_road_goats: 7, vigil_guard: 16, obelisk_guard: 16,
-  bone_field: 18, ash_dragon: 24, ash_worm: 16, crown_dragon: 24, stair_demons: 12, hollow_dolls: 8, barrow_lords: 10, barrow_wyrm: 20,
-  maiden_coven: 9, fell_harpies: 9, gallows_plague: 14, grawl_bats: 10, grove_demons: 12,
-  // (The roadsides, the small towns' troubles and the far countries: each by what stands there.)
-  dark_goblins_nw: 5, dark_spiders_ne: 4, dark_goats_e: 6, dark_children_s: 4, dark_wolf_w: 7, hill_kobolds: 3, hill_goblins: 4, frost_kobolds: 3,
-  frost_spiders: 5, frost_wolf: 8, fenway_goblins: 3, fenway_spiders: 5, vigil_kobolds: 3, vigil_goats: 6, vigil_children: 7, track_children: 5,
-  cairn_keepers: 6, downs_raiders: 5, abbey_rd_goblins: 5, gallows_rd_goblins: 4, cliff_harpies: 7, downs_goats: 7, thorn_goats: 8, thorn_ram: 10,
-  thorn_stragglers: 9, fenway_children: 6, fenway_drowned: 8, mile_drowned: 9, fen_east_harpies: 10, fen_children: 9, abbey_rd_raiders: 8,
-  quarry_kobolds: 9, rust_bat: 11, abbey_webs: 11, rust_spiders: 13, rust_kobolds: 10, rust_warband: 12, pilgrim_dolls: 6, pilgrim_spiders: 7,
-  deep_spiders: 9, deep_worm: 14, horn_whelps: 12, horn_demons: 14, cinder_refugees: 9, cinder_scouts: 11, charmill_possessed: 12, khel_ghouls: 12,
-  vigil_patrol_1: 13, vigil_patrol_2: 14, vigil_patrol_3: 15, keep_necros: 16, waste_lancers: 15, waste_plague: 13, waste_golem: 16, waste_necros: 15,
-  track_possessed: 7, wayhouse_dead: 9, moor_golem: 12, moor_whelps: 13, moor_knight: 14, rime_goats: 10, fells_goats: 11, fells_wolves: 12,
-  mouth_demons: 13, tor_roost: 13, tor_demons: 14, toll_ambush: 11, gallows_bat: 10, gallows_demons: 13, gibbet_possessed: 12, gallows_giant: 14,
-};
+// (LAIR_LEVEL: src/core/tripo-monsters.js, the one table the game toughens a lair by and auto-play judges it by.)
+// (For the quests' own rules, tools/quests/rules.mjs: the level it wants for a lair, by its key.)
+export const lairLevelOf = (key) => { const l = LAIRS.find((q) => q.key === key); return l ? lairLevel(l) ?? null : null; };
 // What it'll stand and fight, by kind (FOE_NAMES in src/main.js) and its level. A kind added since it was taught (KNOWN_KINDS), it
 // judges by its life against its own level; coverage() below names it, so it can be taught properly.
 const KNOWN_KINDS = new Set([0, 1, 2, 3, 4, 5, 6, 9, 10]);
+// The lairs made low for a new player, the Sill's under Phobos (xpScale, src/core/tripo-monsters.js): what's in one is of that
+// lair's level, not its kind's, and it's fought at that level (inLowLair). The Redoubt's two gate-wards, his knights at level
+// four, were run from at five, as a knight of his is anywhere else till fifteen. The critics, docs/FIRST-VISIT.md.
+const LOW_LAIRS = LAIRS.filter((l) => l.xpScale && l.lvl);
+const inLowLair = (f, lvl) => f.kind >= TRIPO_KIND && LOW_LAIRS.some((l) => l.lvl <= lvl && Math.hypot(f.x - l.x, f.z - l.z) < l.r + 40);
 function fightableAt(kind, lvl, maxHp = 0, slime = false) {
   if (slime || kind === 5) return true;                // the jellies (their own list), the risen
   if (kind === 9) return lvl >= 6;                     // the werewolf
@@ -166,23 +168,22 @@ function fightableAt(kind, lvl, maxHp = 0, slime = false) {
 
 // The quests, in the order it takes them on, and the level it wants for each.
 const PLAN = [
-  ['lisandra_work', 1], ['bed_and_bell', 1], ['letter', 1], ['pines', 1], ['iron_from_dead', 2], ['dead_cant_wait', 3], ['shroud_and_thread', 3], ['bones_for_carver', 3],
-  ['long_way_round', 4], ['toll_of_bell', 5], ['millhaven_jelly', 5], ['barrow_lights', 8], ['sallowmere', 8], ['four_watches', 9],
-  ['crown_of_teeth', 11], ['black_road', 13],
+  ['lisandra_work', 1], ['bed_and_bell', 1], FIRST_VISIT_LEVELS[0], ['letter', 1], ['pines', 1], ['iron_from_dead', 2], ['dead_cant_wait', 3], ['shroud_and_thread', 3], ['bones_for_carver', 3],
+  ['toll_of_bell', 5],
   // The land's (src/folk/land-quests.js): out to the small towns, what besets them, and down the party dungeons.
-  ['deeper_dead', 4], ['waxed_thread', 4], ['word_to_thornwick', 6], ['millhaven_man', 6], ['hare_and_harrow', 6], ['man_at_the_cross', 6],
-  ['cairnfield', 6], ['tracks_west', 7], ['ask_the_burner', 7], ['girl_from_khel', 7], ['warrens_mouth', 7], ['barley_thieves', 7], ['tunnel_king', 8],
-  ['hedge_breakers', 8], ['owed_to_frostwatch', 9], ['sunken_mile', 9], ['moor_wayhouse', 9], ['ossery_quarry', 9], ['mother_of_the_warren', 9],
-  ['up_from_the_gallowswood', 9], ['ash_on_the_wind', 9], ['black_ram', 10], ['old_toll', 11], ['red_scouts', 11], ['salt_for_the_hanged', 12],
-  ['charcoal_for_khel', 12], ['charred_mill', 12], ['mouth_guard', 13], ['ravens_tor', 13], ['vigil_patrols', 14], ['arch_before_the_gate', 14],
-  ['into_the_deeps', 14], ['the_howling', 14], ['gate_of_blackvigil', 14], ['broodmother', 15], ['red_cloth', 15], ['first_lord', 15], ['the_sleeper',
-  16], ['lords_of_the_keep', 17], ['the_castellan', 18],  // The four delves made after those, each at its own level and a little over for its last boss.
-  ['under_the_mile', 10], ['what_sank_the_mile', 11], ['the_ring_below', 12], ['what_it_fruits_from', 13], ['the_winter_company', 14], ['last_night_of_the_run', 15],
-  ['sung_open', 17], ['king_under_the_moor', 18],
-  // The Elder Dragon Gods: a party of the hundredth winter.
-  ['storm_over_the_horn', 100], ['the_hollow_star', 102],
+  // (Thornwick's, the Old Toll's and the Cross's are Thornwick and the Gallowswood's now: src/folk/regions/gallows.js LEVELS.)
+  // (Frostwatch's and the Howling Deeps' are the Rimeholt Fells' now: src/folk/regions/fells.js LEVELS.)
+  // The four delves made after those, each at its own level and a little over for its last boss.
+  // (The Hollow Playhouse's two are the Gallowswood's: src/folk/regions/gallows.js LEVELS.)
+  // (The Kingsbarrow's two are the Barrow Moor's now: src/folk/regions/moor.js LEVELS.)
+  // The regions' (src/folk/regions/, docs/QUEST-LOOP.md).
+  ...LAND_LEVELS,
+  // (The Elder Dragon Gods', a party of the hundredth winter, are the Deepwood's: src/folk/regions/deepwood.js LEVELS.)
   // City State Phobos's first (src/folk/phobos-quests.js): you come to it at about twenty.
   ...PHOBOS_LEVELS,
+  // The first visit there, long before (src/folk/first-visit.js): through Lisandra's door (above, straight after Bram's
+  // errand), home at five or six.
+  ...FIRST_VISIT_LEVELS.slice(1),
 ];
 // (Taken on in the order of the levels they want.)
 PLAN.sort((a, b) => a[1] - b[1]);
@@ -192,6 +193,8 @@ const guessLevel = (id) => Math.max(1, Math.min(20, Math.round((RULES[id].xp || 
 const PLAN_ALL = PLAN.filter(([id]) => RULES[id]).concat(Object.keys(RULES).filter((id) => !(id in LEVEL_OF)).map((id) => [id, guessLevel(id)]));
 // The level it wants for a quest: the quest log (src/ui/questlog.js) suggests the same to a player.
 export const questLevel = (id) => LEVEL_OF[id] ?? guessLevel(id);
+// How long a quest dropped from the quest log is left be before it goes back to its giver for it (ms, by the wall clock).
+export const DROP_REST = 15 * 60 * 1000;
 
 // Where each place in a quest's steps is, for walking to: a point, and how near counts.
 const area = (k) => {
@@ -222,7 +225,7 @@ const HUNTS = {
 // Where to hunt for a kill step: its own grounds; a lair's glade; nowhere for a dungeon's (it goes down it instead).
 // (A room down a delve, 'room:<id>', is that delve's: roomDelve.)
 const roomDelve = (k) => (typeof k === 'string' && k.startsWith('room:') ? DELVES.find((d) => d.rooms.some((r) => r.id === k.slice(5)))?.key ?? null : null);
-const huntsFor = (k) => HUNTS[k] || (k.startsWith('lair:') && area(k) ? [[area(k).x, area(k).z]] : DELVE_KEYS.includes(k) || roomDelve(k) ? [] : null);
+const huntsFor = (k) => HUNTS[k] || ((k.startsWith('lair:') || k.startsWith('outpost:')) && area(k) ? [[area(k).x, area(k).z]] : DELVE_KEYS.includes(k) || roomDelve(k) ? [] : null);
 
 // The menu's grinding grounds (src/ui/autoplay.js GRINDS).
 export const GRINDS = {
@@ -401,16 +404,113 @@ const BUILD = [
 ];
 // Whether the build can be bought as written: it's played through from level 1 to 50, and what's still unbought at the end
 // (a spell that's gone, a branch whose other was taken, a tier it never has the points for) is named.
-function buildGaps() {
+export function buildGaps(build = BUILD, name = 'its build') {
   const out = [], ranks = startRanks(), free = startFree();
-  for (const id of BUILD) if (!NODES[id]) out.push(`its build wants "${id}", which isn't a node in the six trees`);
-  const want = BUILD.filter((id) => NODES[id]);
+  for (const id of build) if (!NODES[id]) out.push(`${name} wants "${id}", which isn't a node in the six trees`);
+  const want = build.filter((id) => NODES[id]);
   let at = 0;
   for (let lvl = 1; lvl <= 50; lvl++) {
     while (at < want.length && pointsAt(lvl) - spent(ranks, free) > 0 && !blocked(ranks, free, lvl, want[at])) { ranks[want[at]] = (ranks[want[at]] || 0) + 1; at++; }
   }
-  if (at < want.length) out.push(`its build stops at "${want[at]}" (${blocked(ranks, free, 50, want[at]) || 'out of points'}), with ${want.length - at} left unbought`);
+  if (at < want.length) out.push(`${name} stops at "${want[at]}" (${blocked(ranks, free, 50, want[at]) || 'out of points'}), with ${want.length - at} left unbought`);
   return out;
+}
+
+// ---------------------------------------------------------------- Full Auto
+
+// Settings, Auto combat style (src/ui/settings-spec.js autoStyle). Cinematic is all of the above: a build that gives it a
+// little of everything, a bar that turns every spell it knows through its hands, and its biggest kept for the moment worth
+// watching. Full Auto fights to win: the build below, the bar of what pays (FULL_PICK), and the rotation of fullShoot().
+//
+// The build: Fire for its burst (Firebolt to rank 5 and Searing Core, so a full gather is quick; Cinder Brand, leaping;
+// Meteor with its shower), Mend to stay standing, and Lightning as far as a Thunderclap for when they're on it and a
+// Thunderbolt by level 11, out of the sky, for the black knight's raised shield (BOSS_LEVEL), then the masteries.
+// Fire's damage per mana is the best of the six (a gathered Firebolt is 95 for 10), and its cooldowns fall in a ladder
+// (Brand 4 s, Thunderbolt 5, Ring 10, Meteor 10) that has something ready nearly every second cast.
+export const FULL_BUILD = [
+  'firebolt', 'mend', 'comet', 'fork', 'spark', 'spark', 'thunderclap', 'spark', 'spark', 'firebolt', 'firebolt:searing', 'thunder',
+  'firenova', 'firebolt', 'firebolt', 'firebolt:searing', 'firebolt:searing', 'bomb', 'bomb', 'bomb:wildbrand', 'bomb', 'bomb:wildbrand',
+  'meteor', 'meteor', 'meteor:shower', 'meteor', 'meteor:shower', 'meteor', 'thunder', 'thunder:twice', 'thunder', 'thunder', '@fire',
+  '@fire', '@fire', '@fire', '@fire', 'bomb', 'comet', 'comet', 'comet:heavycore', 'firenova', 'firenova', 'firenova:kindled',
+  '@lightning', '@lightning', '@lightning', '@lightning', '@lightning', 'thunderclap', 'thunderclap', 'mend', 'mend', 'renew', 'fork', 'fork',
+];
+// Build focus (the auto-play menu, and Settings: autoFocus): a school of the player's choosing, each a build for that
+// school's hardest blows, with Mend first to stay standing. Best: Full Auto's FULL_BUILD, Cinematic's BUILD. Each keeps
+// something by level 11 that comes from above or out of the ground, as a raised shield can't turn (the black knight,
+// BOSS_LEVEL): Ice a Blizzard, Arcane a Rune, Lightning its Thunderbolt, Fire a Wall of Fire; Earth borrows Lightning's.
+export const FOCUS = {
+  fire: [
+    'firebolt', 'mend', 'comet', 'firebolt', 'firebolt:searing', 'firebeam', 'firenova', 'firebolt', 'wallfire', 'firebolt:searing',
+    'firebolt:searing', 'bomb', 'firebolt', 'bomb', 'bomb:wildbrand', 'bomb', 'bomb:wildbrand', 'wyrm', 'meteor', 'meteor', 'meteor:shower',
+    'meteor', 'meteor:shower', 'meteor', 'phoenix', '@fire', '@fire', '@fire', '@fire', '@fire', 'bomb', 'comet', 'comet', 'comet:heavycore',
+    'firenova', 'firenova', 'firenova:kindled', 'inferno', 'inferno', 'phoenix', 'phoenix', 'phoenix:rebirth', 'wallfire', 'wallfire',
+    'firenova', 'firenova', 'comet', 'comet', 'wyrm', 'wyrm', 'wyrm:twin', 'inferno', 'inferno', 'mend', 'mend', 'renew', 'inferno:conflagration', 'phoenix',
+  ],
+  ice: [
+    'frost', 'mend', 'coldcone', 'frost', 'rime', 'frost:piercing', 'nova', 'frost', 'prism', 'nova', 'nova:brittle', 'blizzard', 'shatter',
+    'orb', 'shatter', 'shatter', 'orb', 'orb', 'zero', 'zero', 'shatter', 'shatter:chainshatter', 'zero', 'orb', 'orb:wintersheart', 'zero',
+    'zero', 'zero:killingfrost', '@ice', '@ice', '@ice', '@ice', '@ice', 'blizzard', 'blizzard', 'blizzard:hail', 'prism', 'prism',
+    'prism:refraction', 'prism:refraction', 'nova', 'nova', 'blizzard', 'blizzard', 'frost', 'rime', 'rime', 'rime:splintering', 'rime:splintering',
+    'coldcone', 'coldcone', 'coldcone:flash', 'mend', 'mend', 'renew', 'nova', 'prism', 'rime', 'coldcone',
+  ],
+  earth: [
+    'stone', 'mend', 'lance', 'fork', 'spark', 'spark', 'thunderclap', 'spark', 'spark', 'thunder', 'stone', 'stone:heavyhand', 'boulder',
+    'spikes', 'boulder', 'boulder', 'vine', 'stone', 'stone:heavyhand', 'stoneskin', 'monolith', 'monolith', 'monolith:toppling', 'monolith',
+    'monolith', 'quake', 'quake', 'quake', '@earth', '@earth', '@earth', '@earth', '@earth', 'boulder', 'boulder:momentum', 'boulder:momentum',
+    'spikes', 'spikes', 'spikes:aftershock', 'spikes', 'quake', 'quake:chasm', 'stone', 'stone:heavyhand', 'lance', 'lance', 'lance:impale',
+    'lance:impale', 'vine', 'vine', 'thunder', 'thunder:twice', 'mend', 'mend', 'renew', 'lance', 'vine',
+  ],
+  arcane: [
+    'arcaneblast', 'mend', 'arcaneblast', 'blink', 'arcaneblast:focused', 'rune', 'crescent', 'arcaneblast', 'rune', 'crescent', 'rune:binding',
+    'stasis', 'well', 'stasis', 'crescent', 'crescent:orbit', 'stasis', 'well', 'starfall', 'starfall', 'starfall:greatstar', 'starfall',
+    'starfall', 'stasis', 'stasis:echo', '@arcane', '@arcane', '@arcane', '@arcane', '@arcane', 'well', 'well', 'well:crush', 'well:crush',
+    'rune', 'rune', 'arcaneblast', 'crescent', 'crescent:orbit', 'blades', 'blades', 'blades:fling', 'blades', 'blades', 'mend', 'mend',
+    'renew', 'blink', 'blink:quickstep', 'missiles', 'missiles', 'missiles:arcing', 'disintegrate', 'rune', 'well', 'missiles',
+  ],
+  lightning: [
+    'spark', 'mend', 'fork', 'spark', 'spark:heavy', 'spark', 'thunderclap', 'fork', 'fork:branching', 'spark', 'spark:heavy', 'thunder',
+    'thunder', 'thunder:twice', 'thunderclap', 'thunder', 'staticfield', 'thunder', 'tempest', 'tempest', 'tempest:eye', 'tempest', 'tempest',
+    '@lightning', '@lightning', '@lightning', '@lightning', '@lightning', 'spark:heavy', 'fork', 'fork', 'thunderclap', 'thunderclap',
+    'thunderclap:shockwave', 'staticfield', 'staticfield', 'staticfield:rod', 'staticfield:rod', 'chain', 'lightning', 'lightning', 'lightning',
+    'lightning:thunderhead', 'lightning:thunderhead', 'seed', 'seed', 'seed:livewire', 'mend', 'mend', 'renew', 'staticfield', 'lightning', 'seed', 'seed',
+  ],
+};
+// The menu's words for each focus.
+export const FOCI = [
+  ['best', 'Best', 'Whatever hits hardest: Fire\'s burst, with Lightning\'s Thunderbolt.'],
+  ['fire', 'Fire', 'Firebolt, Cinder Brand and Meteor: burst, and the ground left burning.'],
+  ['ice', 'Ice', 'Frost Nova, Frozen Orb and Deadwinter: stop them, then break them.'],
+  ['earth', 'Earth', 'Boulder, Monolith and Earthquake: the heaviest single blows.'],
+  ['arcane', 'Arcane', 'Runes, Stasis and Starfall: hold them still, then rain on them.'],
+  ['lightning', 'Lightning', 'Thunderbolt, Static Field and Thunderstorm: strikes that leap.'],
+];
+// What goes on its bar, in this order, of what it knows: the nine of 1 to 9 hold only what's worth a cast (so a short bar
+// early on, not one padded out), and 0, - and + its Mend and whatever of the Utility school keeps it in the fight.
+const FULL_PICK = ['firebolt', 'meteor', 'thunder', 'bomb', 'firenova', 'comet', 'thunderclap', 'monolith', 'starfall', 'tempest', 'orb', 'phoenix', 'wyrm',
+  'lightning', 'boulder', 'spikes', 'rime', 'lance', 'nova', 'spark', 'stone', 'frost'];
+const FULL_UTIL = ['mend', 'renew', 'aegis', 'empower', 'turn'];
+// How long a cast holds its hands, start to finish (tools/fp_spells/hands.py: the attack clip runs 0.95 s, the raise 1 s),
+// and a gather on top: the only thing between one spell and the next. There's no global cooldown.
+const HANDS = { attack: 0.95, raise: 1 };
+const BITE_TICK = 0.18;   // a held spell's bite (src/sim/casting.js TICK)
+// Mana it wins back a second in a fight, about: the fight's regeneration and the staff's hits (src/sim/spells.js).
+const EARN = 6;
+// What a cast should do, all told, on the fight as it stands: its blow, times what it'll catch, a frozen mark taking half again.
+export function castWorth(sp, c) {
+  const key = sp.key;
+  let hit = (sp.dmg || 0) + (sp.ringDmg || 0) + (sp.dps || 0) * Math.min(sp.duration || sp.moat || 3, 4);
+  if (sp.shards) hit *= sp.shards;
+  if (sp.count) hit *= sp.count * 0.35;
+  if (sp.shower) hit *= 1 + 0.45 * sp.shower;
+  if (sp.twice) hit *= 1 + sp.twice;
+  if (sp.beamDmg) hit += sp.beamDmg * Math.min(sp.beams || 0, Math.max(0, (c.inLine || 1) - 1) + 1);
+  if (sp.channel) hit = (sp.dmg || 0) / BITE_TICK;   // (a second of it)
+  const area = sp.radius || sp.ring || sp.zoneR || 0;
+  const many = SELF.has(key) ? c.close : sp.jumps ? Math.min(1 + sp.jumps, c.n) : sp.pierce || sp.beams ? Math.max(1, c.inLine) : area >= 2.5 ? Math.max(1, c.around) : 1;
+  if (!many) return 0;
+  // (Past what the mark has left, a blow on it alone is wasted.)
+  const first = Math.min(hit, Math.max(c.left, 1) * 1.15);
+  return (first + (many - 1) * hit * 0.8) * (c.frozen ? 1.5 : 1);
 }
 
 // ---------------------------------------------------------------- what it knows, against what the game has
@@ -419,7 +519,7 @@ function buildGaps() {
 // can't do, somewhere it can't find, a foe or a lair it has no measure of, a spell it casts that's gone, a shop it doesn't use.
 // Warned in the console when it starts, and the failing list of tools/autoplay/check.mjs. When something's added to the game,
 // it's taught here (and the check run), so auto-play keeps playing the whole of it. foeNames: FOE_NAMES from src/main.js.
-const STEP_KEYS = new Set(['talk', 'say', 'back', 'bring', 'n', 'enter', 'night', 'visit', 'kill', 'of', 'warden', 'start', 'foe', 'boss', 'end', 'at']);
+const STEP_KEYS = new Set(['talk', 'say', 'back', 'bring', 'n', 'enter', 'night', 'visit', 'kill', 'of', 'warden', 'start', 'foe', 'boss', 'wboss', 'ground', 'end', 'at', 'clear', 'gather', 'what', 'spots']);
 // The Test Dungeon's counters (src/core/testhall.js STATIONS), and what auto-play does with each: nothing. In there it fights
 // whatever's been summoned, and what that is, what it's wearing and who's with it are for whoever's testing to choose
 // (hallRun below). A new counter is named here, with what it's for, or coverage() says so.
@@ -439,8 +539,10 @@ export function coverage(foeNames = null) {
     if (!QUESTS[id]?.giver || !people.has(QUESTS[id].giver)) out.push(`quest ${id}: its giver isn't anyone it can find`);
     for (const st of R.steps) {
       for (const k of Object.keys(st)) if (!STEP_KEYS.has(k)) out.push(`quest ${id}: a step with "${k}", which it doesn't know how to do`);
-      for (const a of [st.enter, st.kill, ...(st.visit || [])].filter((q) => typeof q === 'string')) if (!area(a)) out.push(`quest ${id}: nowhere to walk to for "${a}" (area())`);
+      for (const a of [st.enter, st.kill, st.gather, st.clear && `outpost:${st.clear}`, ...(st.visit || [])].filter((q) => typeof q === 'string')) if (!area(a)) out.push(`quest ${id}: nowhere to walk to for "${a}" (area())`);
+      if (st.gather && gatherSpots(id, st).length < st.n) out.push(`quest ${id}: ${st.n} to gather at "${st.gather}", and fewer than that lying there (gatherSpots)`);
       if (st.boss && !BOSSES.some((b) => b.key === st.boss)) out.push(`quest ${id}: a boss, "${st.boss}", that no dungeon has`);
+      if (st.wboss && !(WORLD_BOSSES.some((b) => b.key === st.wboss) && groundOf(st.ground))) out.push(`quest ${id}: a world boss, "${st.wboss}" at "${st.ground}", that the land hasn't got (WORLD_BOSSES, BOSS_GROUNDS)`);
       if (st.kill && st.kill !== 'catacombs' && !huntsFor(st.kill)) out.push(`quest ${id}: no hunting grounds for "${st.kill}" (HUNTS): it hunts round its middle`);
       if (st.bring && !FARMS.has(st.bring)) out.push(`quest ${id}: wants ${st.bring}, which it doesn't know where to farm`);
       if (st.talk && !people.has(st.talk)) out.push(`quest ${id}: a word with "${st.talk}", who isn't anyone it can find`);
@@ -455,6 +557,9 @@ export function coverage(foeNames = null) {
   for (const k of Object.keys(USE)) if (!(k in SP)) out.push(`spell ${k}: a use for it in USE, and it's gone from SPELLS`);
   for (const sp of SPELLS) if (!NODES[sp.key]) out.push(`spell ${sp.key}: in no tree, so it can never be learned`);
   out.push(...buildGaps());
+  out.push(...buildGaps(FULL_BUILD, 'its Full Auto build'));
+  for (const [k, b] of Object.entries(FOCUS)) out.push(...buildGaps(b, `its ${k} build`));
+  for (const k of [...FULL_PICK, ...FULL_UTIL]) if (!(k in SP)) out.push(`spell ${k}: on Full Auto's bar list, and gone from SPELLS`);
   for (const sp of SPELLS) if (!CORE_ALL.includes(sp.key) && !SLOT_A.includes(sp.key) && !SLOT_B.includes(sp.key) && !UTIL_TURN.includes(sp.key) && !OFF_BAR.has(sp.key)) out.push(`spell ${sp.key}: in none of its bar's turning lists (SLOT_A for a crowd, SLOT_B for one mark, UTIL_TURN for 0, - and +), so it's only ever a stopgap on its bar`);
   for (const k of [...CORE_ALL, ...SLOT_A, ...SLOT_B, ...UTIL_TURN]) if (!(k in SP)) out.push(`spell ${k}: on its bar's lists, and gone from SPELLS`);
   // (0, - and + take the Utility school's alone: UTIL_TURN is that school's, and SLOT_A and SLOT_B, for 1 to 9, have none of it.)
@@ -489,8 +594,9 @@ class Nav {
     return new Promise((resolve) => {
       if (!this.ready) { resolve(null); return; }
       const id = ++this.id;
-      // (An answer that never comes, the thread fallen over, is no answer: nothing waits on it for ever.)
-      const late = setTimeout(() => { if (this.calls.delete(id)) resolve(null); }, 4000);
+      // (An answer that never comes, the thread fallen over, is no answer: nothing waits on it for ever. The east's first ask
+      // fetches its map, a slow phone's long walk works for a while: more time for those.)
+      const late = setTimeout(() => { if (this.calls.delete(id)) resolve(null); }, type === 'east' ? 15000 : 4000);
       this.calls.set(id, (r) => { clearTimeout(late); resolve(r); });
       this.w.postMessage({ type, id, ...o });
     });
@@ -575,6 +681,32 @@ function bends(pts, tol) {
 // the town).
 export function planWay(m, end, o = {}) {
   const { seals = [], avoid = [], grid = () => false, below = false } = o;
+  // In City State Phobos and Castle Velscour (src/sim/east-nav.js), or bound there: the east's own map walks it, streets,
+  // stairs, bridges and all, from the road before the Drawbridge Gate. (The roads stop at the gate; the delves' terraces
+  // and steps are on the map.)
+  // (The road before the gate is in the east's box itself: it's the meeting of the two maps, on neither side of it, or a way to
+  // it went to it by way of it for ever.)
+  const ea = inEast(m.x, m.z) && !below && !m.gate, eb = inEast(end.x, end.z) && !end.below && !end.gate;
+  // (A delve's steps there are still gone up square on and down, as everywhere: east.bin is the way between them.)
+  if (ea || eb) {
+    const A = ea ? stairsOf(m.x, m.z) : null, B = eb ? stairsOf(end.x, end.z) : null;
+    if (A && A === B) return [end];
+    const pre = A ? downStairs(A).filter((q, k, all) => k === all.length - 1 || (q.x - m.x) * A.fx + (q.z - m.z) * A.fz > 0.3) : [], post = B ? upStairs(B) : [];
+    const door = { x: EAST_DOOR[0], z: EAST_DOOR[1], r: 6, gate: true };
+    if (ea && eb) return pre.concat(post, [end]);
+    // (From one map to the other where the road crosses into the east's box, not at the gate: everything inside the box is
+    // the east map's, the road in included. Through the gate every time, the Gibbet Field and the carrion under the Sill,
+    // inside the box but this side of the city, were gone to by the gate and back up the road, 300 m past them and back, and
+    // Wenna on the Sill the same way home: to and fro along the road for good.)
+    if (eb) {
+      const way = planWay(m, door, o), k = way.findIndex((q) => !q.seal && inEast(q.x, q.z));
+      return (k >= 0 ? way.slice(0, k + 1) : way).concat(post, [end]);
+    }
+    const way = planWay(door, end, { ...o, below: false });
+    let k = -1;
+    for (let i = 0; i < way.length - 1; i++) if (inEast(way[i].x, way[i].z)) k = i; else break;
+    return pre.concat(k >= 0 ? way.slice(k) : [door].concat(way));
+  }
   // On a delve's terrace or bound for one: by its steps.
   const A = stairsOf(m.x, m.z), B = stairsOf(end.x, end.z);
   if (A && A === B) return [end];
@@ -809,7 +941,7 @@ export class Brain {
       const kind = snap[o + C.KIND] | 0, x = snap[o + C.X], y = snap[o + C.Y], z = snap[o + C.Z];
       const d = dist(m.x, m.z, x, z);
       if (d > 70 || Math.abs(y - m.y) > 8) continue;
-      out.push({ id: i, kind, x, y, z, d, hp: snap[o + C.HP], maxHp: snap[o + C.MAX_HP], hostile: snap[o + C.HOSTILE] > 0.5, h: kind >= TRIPO_KIND ? 1.1 : i < 2 ? 1.3 : 0.95, glint: snap[o + C.GLINT], after: snap[o + C.AFTER] });
+      out.push({ id: i, kind, x, y, z, d, hp: snap[o + C.HP], maxHp: snap[o + C.MAX_HP], hostile: snap[o + C.HOSTILE] > 0.5, model: snap[o + C.MODEL] | 0, h: kind >= TRIPO_KIND ? 1.1 : i < 2 ? 1.3 : 0.95, glint: snap[o + C.GLINT], after: snap[o + C.AFTER] });
     }
     for (let i = 0; i < MAX_SLIMES; i++) {
       const o = SLIMES_START + i * SLIME_FLOATS;
@@ -907,8 +1039,32 @@ export class Brain {
       if (x === CATHEDRAL_GUARD.x && z === CATHEDRAL_GUARD.z && !this.blackKnight(this.snap)) continue;
       if (m.lvl < lvl) out.push([x, z, r]);
     }
-    for (const l of LAIRS) if (m.lvl < (lairLevel(l) || 10)) out.push([l.x, l.z, passing ? lairPass(l) : (l.wake || 110) + 15]);
+    const qg = this.questGround(m);
+    for (const l of LAIRS) if (m.lvl < (lairLevel(l) || 10) && !(qg && dist(l.x, l.z, qg.x, qg.z) < 30)) out.push([l.x, l.z, passing ? lairPass(l) : (l.wake || 110) + 15]);
     return out;
+  }
+
+  // The ground the quest it's working on has sent it to fight on (a lair's, a den's, the things to gather round one), once
+  // it's of the level the quest is wanted at: { x, z, r }, or null. What stands there is fought (combat) and its ground
+  // isn't kept clear of (avoid), whatever the lair's own level.
+  questGround(m) {
+    const j = this.job, id = j?.quest;
+    if (!id || !j.why?.startsWith('q:') || (j.kind !== 'hunt' && j.kind !== 'go') || m.lvl < questLevel(id)) return null;
+    const st = this.o.townUI?.quests?.step?.(id), k = st && (st.clear ? `outpost:${st.clear}` : st.gather || st.kill);
+    if (typeof k !== 'string' || !(k.startsWith('lair:') || k.startsWith('outpost:'))) return null;
+    const a = area(k);
+    return a ? { x: a.x, z: a.z, r: 95 } : null;
+  }
+
+  // A world boss being fought that it's gone to (wildJob's boss, or a quest's wboss step), as { x, z, r }: the boss and its
+  // adds there are for fighting, whatever their bodies. Judged by its body's kind (a dragon's wants level 24) the boss was a
+  // thing to run from: in a live run it stood off "running from something too strong" for four minutes, the party with it,
+  // while the Herald's bar didn't move. Or null.
+  bossGround(m) {
+    const W = this.o.game?.wilds?.bossOn, j = this.job;
+    if (!W?.fight || !j || dist(m.x, m.z, W.x, W.z) > 120) return null;
+    const mine = j.why?.startsWith('wild:boss:') || (!!j.quest && !!this.o.townUI?.quests?.step?.(j.quest)?.wboss);
+    return mine ? { x: W.x, z: W.z, r: 50 } : null;
   }
 
   // Inside ground it's keeping clear of (a knight's post, a lair it isn't ready for).
@@ -954,6 +1110,9 @@ export class Brain {
         this.o.note?.(`Auto-play: beaten back. ${this.job.say ? 'It will come back to that stronger.' : ''}`);
       }
       this.goal = null; this.macro = null; this.sub = null; this.job = null; this.patrol = null;
+      // (And no lair on the way from where it was: it walked back kilometres to one. viaLair.)
+      if (this.via) this.giveUp(this.via.job.why, 900);
+      this.via = null;
     }
     this.lastPos = [m.x, m.z]; this.lastHpf = m.hpf;
     this.o.log?.tick(dt, m, this.o.pack, this.o.townUI.quests, !!this.fighting);
@@ -985,7 +1144,7 @@ export class Brain {
     if ((this.gearT -= dt) <= 0 && !this.fighting) {
       this.gearT = 4;
       this.dress();
-      if (this.allow('aiSkills')) this.learn();
+      if (this.allow('aiSkills')) { if (!this.unspecT || this.t - this.unspecT > 60) this.restyle(); this.learn(); }
       if (this.allow('aiBar')) this.bar();
       this.o.party?.(this);
     }
@@ -1073,6 +1232,12 @@ export class Brain {
 
   // Whether Settings leave this to it (src/title.js AI_PARTS: aiGear, aiGems, aiSkills, ...). Anything not set is allowed.
   allow(k) { return this.o.settings?.[k] !== 'off'; }
+  // Settings, Auto combat style: Full Auto fights to win, Cinematic (as it came) to be watched.
+  get full() { return this.o.settings?.autoStyle === 'full'; }
+  // Settings (and the auto-play menu), Build focus: a school, or 'best'.
+  get focus() { const f = this.o.settings?.autoFocus; return FOCUS[f] ? f : 'best'; }
+  // The build it spends its points on: the focus's, or the style's own best.
+  buildList() { return FOCUS[this.focus] || (this.full ? FULL_BUILD : BUILD); }
 
   // ---- spells and the staff
 
@@ -1082,7 +1247,7 @@ export class Brain {
     if (!S || S.points <= 0) return;
     const seen = {};
     let id = null, saving = false;
-    for (const q of BUILD) {
+    for (const q of this.buildList()) {
       if (!NODES[q]) continue;
       seen[q] = (seen[q] || 0) + 1;
       if (S.rank(q) >= seen[q] + (S.free.has(q) ? 1 : 0)) continue;     // (bought already)
@@ -1096,6 +1261,55 @@ export class Brain {
     if (S.spend(id)) { this.o.log?.learned?.(id, S.rank(id), this.o.pack.level); this.say(first ? `Learning ${SPELLS[NODES[id].spell].name}.` : 'A point spent in the book.'); if (first) this.o.event?.('spell', { name: SPELLS[NODES[id].spell].name }); }
   }
 
+  // Full Auto or a focus, chosen with points already spent on something else (by hand, or another build): it unlearns the
+  // lot, paying the book's fee as a player would, and spends them again on the build it's been given. Once a choosing;
+  // never without the gold (it asks again in a minute); never for a point or two astray. (Cinematic on Best keeps what's
+  // there and builds on it, as it always has.)
+  restyle() {
+    const style = `${this.full ? 'full' : 'cinematic'}:${this.focus}`;
+    if (this.specFor === style) return;
+    this.specFor = style;
+    const S = this.o.spellbar.skills;
+    if ((!this.full && this.focus === 'best') || !S) return;
+    const want = {};
+    for (const q of this.buildList()) if (NODES[q]) want[q] = (want[q] || 0) + 1;
+    let astray = 0;
+    for (const id of Object.keys(S.ranks || {})) astray += Math.max(0, S.rank(id) - (S.free.has(id) ? 1 : 0) - (want[id] || 0));
+    if (astray < 3) return;
+    const fee = S.respecCost;
+    if (!this.o.pack.pay(fee * 10)) { this.specFor = null; this.unspecT = this.t; this.o.note?.(`Auto-play: not the ${fee} gold to unlearn its points for the new build yet. It builds on what it has meanwhile.`); return; }
+    S.unlearn();
+    const name = FOCI.find(([k]) => k === this.focus)?.[1];
+    this.say(this.focus === 'best' ? 'Unlearning it all, for a build that hits harder.' : `Unlearning it all, to begin again in ${name}.`);
+    this.o.note?.(`Auto-play: every point unlearned (${fee} gold), to spend them on its ${this.focus === 'best' ? 'own' : name} build.`);
+  }
+
+  // What its bar is filled from, in order, for Full Auto: Best's own list (FULL_PICK); a focus, its school's spells from its
+  // build, the highest tier first (what it's built for), then the rest of FULL_PICK for whatever else it knows.
+  pickList() {
+    const b = FOCUS[this.focus];
+    if (!b) return FULL_PICK;
+    const mine = [...new Set(b.filter((q) => NODES[q]?.kind === 'spell'))].filter((k) => SP[k] !== undefined && !UTILITY.has(SP[k]) && !SPELLS[SP[k]].channel && !OFF_BAR.has(k) && k !== 'blink')
+      .sort((x, y) => NODES[y].tier - NODES[x].tier);
+    return [...mine, ...FULL_PICK.filter((k) => !mine.includes(k))];
+  }
+
+  // Full Auto's bar: what pays, in its pick list's order, and nothing it won't cast. What's left of the nine stays empty.
+  fullBar() {
+    const sb = this.o.spellbar, ALL = sb.loadout.length, MAIN = Math.min(ALL, sb.main ?? ALL), ROOM = ALL - MAIN;
+    const party = this.snap ? this.party(this.snap).filter((h) => !h.dead) : [];
+    const healer = party.some((h) => h.role === 'heal');
+    const ok = (k) => SP[k] !== undefined && sb.known.has(SP[k]) && !SPELLS[SP[k]].noBar;
+    const util = FULL_UTIL.filter((k) => ok(k) && !(k === 'mend' && healer)).map((k) => SP[k]);
+    const nine = this.pickList().filter(ok).map((k) => SP[k]).filter((i) => !(ROOM > 0 && UTILITY.has(i))).slice(0, MAIN);
+    // (No Utility slots, as an older bar: Mend goes in the nine.)
+    if (ROOM === 0 && util.length && nine.length < MAIN) nine.push(util[0]);
+    const three = ROOM > 0 ? util.slice(0, ROOM) : [];
+    for (let k = 0; k < MAIN; k++) { const i = nine[k] ?? -1; if (sb.loadout[k] !== i) sb.assign(k, i); }
+    for (let k = 0; k < ROOM; k++) { const i = three[k] ?? -1; if (sb.loadout[MAIN + k] !== i) sb.assign(MAIN + k, i); }
+    this.stormOnBar = STORM.some((k) => sb.loadout.includes(SP[k]));
+  }
+
   // Its bar, set in the book as a player sets theirs from what it's learned: the nine of 1 to 9 between them cover a fight,
   // and the three of 0, - and + (the Utility school's alone: src/ui/spellbar.js) keep it standing. The nine: what it leans on
   // (Firebolt to open and from range; the first it knows of a Frost Nova or a Thunderclap, for when they're on it; the first
@@ -1105,6 +1319,7 @@ export class Brain {
   // every four minutes among what it knows, so that in time every spell has been in its hands (and in the log). With a
   // healer at its back, Mend's place goes to another, and with a tank holding them still, the nine lean to the crowd.
   bar() {
+    if (this.full) { this.fullBar(); return; }
     const sb = this.o.spellbar, known = [...sb.known].sort((a, b) => a - b);
     const party = this.snap ? this.party(this.snap).filter((h) => !h.dead) : [];
     const healer = party.some((h) => h.role === 'heal'), tank = party.some((h) => h.role === 'tank');
@@ -1189,6 +1404,7 @@ export class Brain {
   // spell's cooling. c: the fight as it stands (USE). Nothing leaves its hands without a clean line to its mark (c.aimed).
   shoot(snap, m, c) {
     if (this.auto.cast || this.slotHeld || snap[H.CAST_HELD] > 0.5 || snap[H.SWINGING] > 0.5) return;
+    if (this.full) { this.fullShoot(snap, m, c); return; }
     const mana = this.purse(m.mana), bar = this.o.spellbar.loadout;
     const has = (k) => SP[k] !== undefined && bar.includes(SP[k]);
     // What's kept back for trouble: a Mend when it's been hurt, a Nova when it's alone among several.
@@ -1254,6 +1470,75 @@ export class Brain {
       if (key === 'well') this.pulledT = this.t;
       if ((HEAVY.has(key) || SKY.includes(key)) && (c.opener || c.finisher)) this.o.event?.(c.finisher ? 'finisher' : 'opener', { spell: best.name, who: this.foeName(c.T) });
       // (A flask is lobbed: its eyes go up by the arc it needs, and stay up till it's left the hand. motor().)
+      if (key === 'plague') { this.lift = 0.5 * Math.asin(Math.min(1, 12 * c.d / (17 * 17))); this.liftT = this.t + 0.7; this.pitch += this.lift; }
+    }
+  }
+
+  // Full Auto's rotation: the most damage for the time its hands are busy, from a mana pool that has to last. Each moment it
+  // looks over what's ready on its bar and what each would do to the fight as it stands (castWorth), over the time it
+  // holds the hands (HANDS, and a gather), and casts the best of it at once: no waiting for the moment's show.
+  //   - Trouble first, as Cinematic: a Mend when it's low, a Nova or a Thunderclap when they're on it (USE scores 7.5+).
+  //   - A spell with a cooldown is worth a fifth more while it's ready: held back, its clock isn't turning.
+  //   - What has no cooldown (a Firebolt) fills between, and only from mana that isn't owed to a cooldown about to come
+  //     ready: it never spends the mana the next Meteor needs.
+  //   - A Firebolt is always gathered full: same mana, its whole bite (a short gather throws a fifth of it).
+  //   - A channel pours at most a second: they're dear now.
+  //   - Short of all that, the staff, which fights for nothing and wins back mana with every hit.
+  fullShoot(snap, m, c) {
+    const mana = this.purse(m.mana), sb = this.o.spellbar, bar = sb.loadout;
+    const has = (k) => SP[k] !== undefined && bar.includes(SP[k]);
+    const staff = () => {
+      if (!c.aimed || this.staffCool > 0 || c.d > IN) return;
+      if (m.hpf < 0.45 && has('mend') && mana < 31 && mana >= 24) return;
+      if (this.t - this.tapAt < 0.4 && snap[H.SPELL_RIG] < 0.5) return;
+      this.o.shared.input[INPUT.ATTACK] += 1;
+      this.staffCool = 0.55 + Math.random() * 0.2;
+      this.staffAt = this.t;
+      this.o.log?.cast('staff');
+    };
+    if (this.castCool > 0) { staff(); return; }
+    // (Owed: a Mend's worth when it's hurt, and the mana of a cooldown spell coming ready in the next two seconds and a half.)
+    const owed = has('mend') && m.hpf < 0.6 ? 25 : 0, mf = mana / m.maxMana;
+    let soon = 0;
+    const defs = bar.map((i) => (i >= 0 ? sb.def?.(i) || SPELLS[i] : null));
+    bar.forEach((i, k) => { const sp = defs[k]; if (sp?.cd && !UTILITY.has(i) && snap[H.COOL + i] > 0 && snap[H.COOL + i] < 2.5) soon = Math.max(soon, sp.mana); });
+    let best = null, bs = 0, urgent = false;
+    bar.forEach((i, k) => {
+      const sp = defs[k], U = sp && USE[sp.key];
+      if (!U || snap[H.COOL + i] > 0) return;
+      const hold = sp.channel ? 1 : 0;
+      const cost = sp.mana + (sp.channel ? (sp.drain || 10) * hold : 0);
+      if (mana < cost) return;
+      if (!SELF.has(sp.key) && !c.aimed) return;
+      const use = U(c, this) || 0;
+      if (!use) return;
+      // (Trouble: it goes now, whatever it's worth in damage.)
+      if (use >= 7.5) { if (!urgent || use > bs) { best = sp; bs = use; urgent = true; } return; }
+      if (urgent) return;
+      const worth = castWorth(sp, c);
+      if (!worth) return;
+      if (c.shield && BOLTS.has(sp.key)) return;
+      // (What it can spend: a cooldown spell, all but the Mend's; a filler, only what no cooldown's about to want.)
+      if (mana - cost < owed + (sp.cd ? 0 : soon)) return;
+      // (Its time: the hands, and the time it takes to win its mana back, which is nothing with the pool full and more as
+      // it empties: so a full pool spends for speed, Comet over a long-gathered Firebolt, and a low one for what each mana
+      // buys, the Firebolt.)
+      const time = HANDS[sp.rig] + (sp.gather || 0) + hold + cost / (EARN / Math.max(0.12, 1 - mf));
+      let s = worth / time * (sp.cd ? 1.2 : 1);
+      // (Dry is slow: a filler wants a fifth of the pool kept, and the staff earns it back.)
+      if (!sp.cd && mana - cost < m.maxMana * 0.2) s *= 0.3;
+      if (s > bs) { bs = s; best = sp; }
+    });
+    // (Not worth its hands: a shot of the staff does about this much a second, and brings mana back besides.)
+    if (!best || (!urgent && bs < 15)) { staff(); return; }
+    const key = best.key;
+    if (GROUND.has(key)) this.pitch = Math.atan2(c.T.y - (m.y + 1.62), Math.max(1, c.d));
+    const hold = best.gather ? best.gather + 0.3 : best.channel ? Math.max(0.45, Math.min(1, (mana - best.mana - owed) / (best.drain || 10) - 0.1)) : 0.16;
+    if (this.cast(SP[key], hold)) {
+      this.castCool = 0.15;
+      if (key === 'blades') this.bladesT = this.t;
+      if (key === 'nova' || key === 'zero') this.frozenT = this.t;
+      if (key === 'well') this.pulledT = this.t;
       if (key === 'plague') { this.lift = 0.5 * Math.asin(Math.min(1, 12 * c.d / (17 * 17))); this.liftT = this.t + 0.7; this.pitch += this.lift; }
     }
   }
@@ -1464,13 +1749,17 @@ export class Brain {
     // the knights of Velscour or the Gravehart, which it goes after at its own level or not at all.)
     const lvl = m.lvl + (this.partyStrong(m) ? 2 : 0);
     // (Down the Warrens with a party: everything there is for fighting. src/ui/autowarrens.js.)
-    const fightable = inDungeon(m.x, m.z) ? () => true : (k, l, hp, sl) => fightableAt(k, k === 0 || k === 3 ? m.lvl : l, hp, sl);
+    // (And what the quest in hand has sent it to, a lair or a den and whatever stands there, its chief too, is for fighting
+    // at the level the quest is wanted at: it used to run to a den it was told to empty, call its chief too big, run away
+    // and come back. questGround.)
+    const qg = this.questGround(m) || this.bossGround(m);
+    const fightable = inDungeon(m.x, m.z) ? () => true : (k, l, hp, sl, f = null) => fightableAt(k, k === 0 || k === 3 ? m.lvl : l, hp, sl) || (!!qg && !!f && k >= TRIPO_KIND && dist(f.x, f.z, qg.x, qg.z) < qg.r);
     this.kiteCool -= 0.12; this.dodgeCool -= 0.12; this.reactT -= 0.12; this.rideCool -= 0.12;
     const noRide = () => { this.ride = null; this.rideHold = false; };
     // What it can't beat yet, coming for it: away over open ground, toward the town.
     const boss = this.job?.kind === 'boss';
     if (boss && this.blackKnight(snap) && dist(m.x, m.z, BLACK_POST[0], BLACK_POST[1]) < 60 && !foes.some((f) => f.id !== 0 && f.d < 8 && fightable(f.kind, lvl, f.maxHp, f.slime))) return false;
-    const scary = foes.filter((f) => !fightable(f.kind, lvl, f.maxHp, f.slime) && f.kind !== 1 && f.hostile && f.d < 26 && !(boss && f.id === 0));
+    const scary = foes.filter((f) => !fightable(f.kind, lvl, f.maxHp, f.slime, f) && !inLowLair(f, m.lvl) && f.kind !== 1 && f.hostile && f.d < 26 && !(boss && f.id === 0));
     if (scary.length) {
       const f = scary.reduce((a, b) => (a.d < b.d ? a : b));
       const [ex, ez] = this.escape(m, scary, true);
@@ -1487,7 +1776,7 @@ export class Brain {
     // (And what's on one of its party, near by: their fight is its fight.)
     const company = this.party(snap).filter((h) => !h.dead);
     const ours = new Set(company.map((h) => h.idx));
-    const live = foes.filter((f) => fightable(f.kind, lvl, f.maxHp, f.slime) && !this.skipping(`foe:${f.id}`) && (f.hostile ? f.d < reach || (ours.has(f.after) && f.d < 30) : hunting && f.d < MAX_SIGHT && !inTown(f.x, f.z, 4) && !this.kept(m, f.x, f.z)));
+    const live = foes.filter((f) => (fightable(f.kind, lvl, f.maxHp, f.slime, f) || inLowLair(f, m.lvl)) && !this.skipping(`foe:${f.id}`) && (f.hostile ? f.d < reach || (ours.has(f.after) && f.d < 30) : hunting && f.d < MAX_SIGHT && !inTown(f.x, f.z, 4) && !this.kept(m, f.x, f.z)));
     if (!live.length) { this.target = null; this.kite = null; noRide(); return false; }
     // (A fight begun: the first throw of it is its opener.)
     if (this.t - (this.foughtT ?? -99) > 3) this.fightSince = this.t;
@@ -1822,7 +2111,18 @@ export class Brain {
   foeName(f) {
     if (f.slime) return 'a jelly';
     if (f.kind === 5) return f.maxHp > 150 ? 'a champion of the dead' : 'one of the risen';
-    if (f.kind >= TRIPO_KIND) return `a ${GROUPS[GROUP_KEYS[f.kind - TRIPO_KIND]]?.name.toLowerCase() || 'monster'}`;
+    if (f.kind >= TRIPO_KIND) {
+      // (By its own name if it has one, a boss's; else by what the delve or the lair it's in calls its kind: the Redoubt's
+      // toll-clerks, the Sill's hanged debtors. src/core/delve-redoubt.js names, src/core/tripo-monsters.js LAIRS.)
+      const T = this.o.renderer?.tripo, wild = f.model && T?.wildName?.(f.model), own = f.model && T?.ownName?.(f.model);
+      // (A name of its own, "The Mire King", keeps its "the": it was "a the mire king".)
+      if (wild) return /^the /i.test(wild) ? wild.toLowerCase() : `a ${wild.toLowerCase()}`;
+      if (own) return own.toLowerCase().replace(/(^|[\s-])\w/g, (c) => c.toUpperCase());
+      const key = GROUP_KEYS[f.kind - TRIPO_KIND], lair = LAIRS.find((l) => l.names && dist(f.x, f.z, l.x, l.z) < l.r + 30);
+      // (A lair's names go by the kind's own name, "The Possessed"; a delve's by its key. And "the" off: "a the possessed".)
+      const called = delveOf(f.x, f.z)?.names?.[key] || lair?.names[key] || lair?.names[GROUPS[key]?.name];
+      return `a ${(called || GROUPS[key]?.name || 'monster').toLowerCase().replace(/^the /, '')}`;
+    }
     return ['a knight of Velscour', 'a knight', 'a great crab', 'the Gravehart', 'the Bone Hydra', 'one of the risen', 'an ogre', '', '', 'the werewolf', 'the Abyssal Mouth'][f.kind] || 'something';
   }
 
@@ -1834,10 +2134,14 @@ export class Brain {
     // (On the way somewhere: only what's close by.)
     const hunting = this.job?.kind === 'hunt';
     let best = null, bd = hunting ? 22 : 10;
+    // (On the way somewhere, not what's behind it: a turn about for a drop five metres back looked like a bot's twitch,
+    // 8 to 23 in ten minutes on the runs. Ahead of it, or right by it, as before.)
+    const J = !hunting && this.job, w = J && (J.kind === 'talk' ? this.o.townUI.whereOf(J.who) : Number.isFinite(J.x) ? J : null);
     for (const d of g.drops.list) {
       if (Math.abs(d.y - m.y) > 3 || this.skipping(d) || this.kept(m, d.x, d.z)) continue;
       if (!d.auto && !d.coins && (!this.allow('aiLoot') || !this.roomFor(d.item))) continue;
       const k = dist(m.x, m.z, d.x, d.z);
+      if (w && k > 5 && (d.x - m.x) * (w.x - m.x) + (d.z - m.z) * (w.z - m.z) < 0) continue;
       if (k < bd) { bd = k; best = d; }
     }
     if (best) {
@@ -1968,10 +2272,56 @@ export class Brain {
 
   plan(m) {
     const prev = this.jobKey;
-    const chosen = this.choose(m), job = this.homeBy(chosen, m) || chosen;
+    const chosen = this.choose(m);
+    let job = this.homeBy(chosen, m) || chosen;
+    // (By a lair on the way: see viaLair.)
+    job = this.viaLair(m, job) || job;
     const key = job ? `${job.kind}:${job.why}:${job.who ?? ''}:${job.x ?? ''}` : '';
     if (key !== prev || !this.job) { this.job = job; this.jobKey = key; this.patrol = null; this.jobT = this.t; }
     else if (job && this.job) { delete this.job.quest; delete this.job.offer; Object.assign(this.job, job); }
+  }
+
+  // A walk somewhere out in the land goes by a lair it's up to: one within 200 m of where it stands before any walk of
+  // 250 m, and one within 150 m of the line on any walk of 600 m. Its pack wakes as it comes and is fought, and the walk
+  // goes on. (Measured on the runs, 60% of the time was walking and a tenth fighting, with walks of a kilometre and more
+  // and nothing met: the Fells' 1491 m to Hew Garrick, the Downs' 1197 m.) Each lair the once in fifteen minutes, and two
+  // and a half minutes at most on the way to it.
+  viaLair(m, j) {
+    if (this.mode !== 'quests' || m.town || !j || j.kind === 'hunt' || j.kind === 'boss' || inDungeon(m.x, m.z) || m.hpf < 0.5) {
+      // (Given up when it's dropped, whatever for: hurt below half, it turned away and back again as it mended.)
+      if (this.via) this.giveUp(this.via.job.why, 900);
+      this.via = null; return null;
+    }
+    const V = this.via;
+    if (V) {
+      if (this.t < V.until && !this.skipping(V.job.why) && dist(m.x, m.z, V.x, V.z) > 22) return V.job;
+      this.giveUp(V.job.why, 900); this.via = null;
+      return null;
+    }
+    let tx, tz;
+    if (j.kind === 'talk') { const w = this.o.townUI.whereOf(j.who); if (!w) return null; tx = w.x; tz = w.z; }
+    else if (Number.isFinite(j.x)) { tx = j.x; tz = j.z; } else return null;
+    if (inDungeon(tx, tz)) return null;
+    const d = dist(m.x, m.z, tx, tz);
+    if (d < 250) return null;
+    const ux = (tx - m.x) / d, uz = (tz - m.z) / d, avoid = this.avoid(m), owed = this.owedGround();
+    let best = null, bt = Infinity;
+    for (const l of LAIRS) {
+      const lv = lairLevel(l), why = `via:${l.x},${l.z}`;
+      if (!(lv > 0 && m.lvl >= lv && lv >= m.lvl - 5) || inDungeon(l.x, l.z) || this.skipping(why) || this.skipping(`spot:${l.x},${l.z}`)) continue;
+      const rx = l.x - m.x, rz = l.z - m.z, along = rx * ux + rz * uz, off = Math.abs(rx * uz - rz * ux), here = Math.hypot(rx, rz);
+      // (Near where it stands, or along the way and not past the end of it; and never a lair it's already in.)
+      // (Further off the line on the long errands, a kilometre from camp to camp on a road. And only a quest's own lair is
+      // kept off, not the ground a hundred and fifty metres round it: round a camp that was every lair there was, and on
+      // the runs it never once went by one.)
+      const ok = here > 40 && ((here < 200 && along > -60) || (d >= 600 && off < (d >= 900 ? 250 : 150) && along > 0 && along < d - 100));
+      if (!ok || avoid.some(([x, z, r]) => dist(l.x, l.z, x, z) < r * 0.6) || owed.some(([x, z]) => dist(l.x, l.z, x, z) < 40)) continue;
+      if (along < bt) { bt = along; best = l; }
+    }
+    if (!best) return null;
+    const job = { kind: 'go', why: `via:${best.x},${best.z}`, x: best.x, z: best.z, r: 12, say: 'By a lair on the way: whatever lives there.' };
+    this.via = { x: best.x, z: best.z, until: this.t + 150, job };
+    return job;
   }
 
   // What it's working on, for the quest log (src/ui/folk.js): the quest its job is for (quest: one taken on; offer: one it's
@@ -1997,7 +2347,24 @@ export class Brain {
     const room = this.freeCells();
     // (Only while there's someone open to buy it: at night the town's counters are shut, and it keeps at its work.)
     const buyer = junk.length > 0 && PEOPLE.some((p, i) => TRADES[p.trade]?.buys && this.o.townUI.isOpen(i));
-    const wantsTown = ((room < 10 || junk.length >= 6) && buyer) || (m.hpf < 0.45 && !this.known(SP.mend));
+    // (Out on the first visit to Phobos, home to sell only once the pack's all but full: home's a beacon stone and a seal back
+    // away, and a run that went home with the Redoubt in hand stopped to take the square's offers. src/folk/first-visit.js.)
+    const visiting = this.firstVisit(m);
+    // (A camp's sutler nearer than the town, src/folk/shops.js sutler: the pack's emptied there, where the work is.)
+    // (A pack that's all but full of what it keeps isn't a reason to walk off with one thing to sell: room < 10 with a
+    // single piece of junk had it back at the sutler after every fight.)
+    const wantsSell = junk.length > 0 && (visiting ? room < 3 : (room < 4 || (room < 10 && junk.length >= 3) || junk.length >= 6));
+    // (Not out of the middle of a quest's work, unless the pack's all but full: in the Fells it walked 340 m back from the
+    // salt to Fellfoot's sutler and 340 m out again. The sale waits till it's by the camp anyway, for the hand-in.)
+    const midWork = wantsSell && room >= 4 && this.mode === 'quests' && !m.town && !!this.nearWork(m, 500);
+    // (And questing with room still in the pack, no further than 250 m for it, nor to the town from over 700 m: on the
+    // Downs it took work 550 m east, walked 500 m west to a sutler, and 1080 m back east. It sells as it passes.)
+    // (Room enough for a shield, six cells: with four or five it couldn't pick one up, and wouldn't go to sell.)
+    const roomy = room >= 6 && this.mode === 'quests' && !m.town;
+    const sellReach = midWork ? 120 : !wantsSell ? 70 : roomy ? 250 : Math.max(120, townDist(m.x, m.z) * 0.8);
+    const sutler = junk.length > 0 && !m.town ? this.sutler(m, sellReach, junk) : -1;
+    if (sutler >= 0 && (wantsSell || junk.length >= 3) && !inDungeon(m.x, m.z)) return { kind: 'talk', why: 'sell', who: sutler, say: `Selling to ${townUI.people[sutler].name}.` };
+    const wantsTown = (wantsSell && buyer && !midWork && !(roomy && townDist(m.x, m.z) > 700)) || (m.hpf < 0.45 && !this.known(SP.mend));
     const questing = this.mode === 'quests';
     // Once it's at the black knight, it sees him through (unless he's done it in, and it's falling back to mend).
     if (questing && this.job?.kind === 'boss' && this.blackKnight(this.snap) && m.hpf > 0.4) return this.job;
@@ -2005,13 +2372,39 @@ export class Brain {
     // (But a word with someone who stands down a delve, the sewer-keepers, the princess, the Librarian's household, first:
     // delveTalk. And a quest that wants a ward gone into from this one goes on through its gate: warrensJob, delveWay.)
     if (inDungeon(m.x, m.z)) return this.mode === 'dungeons' ? this.dungeonJob(m) || warrensJob(this, m) : (questing && this.delveTalk(m)) || warrensJob(this, m, this.delveWants(m));
-    const hire = hireJob(this, m);
+    // (Not out on the first visit to Phobos: the only one hiring is in Bellmourn, and the Redoubt's gone into alone.)
+    // (Not while there's a quest's work within reach of where it stands: it used to leave a camp half done to walk home
+    // and hire, or to go down the Warrens. nearWork.)
+    const busy = questing && !m.town && !!this.nearWork(m, 500);
+    const hire = visiting || busy ? null : hireJob(this, m);
     if (hire) return hire;
     // (With a quest still to do, only the dungeon a quest in hand wants: delveOwed. Round them for their own sake after.)
-    const delve = questing && warrensJob(this, m, this.delveWants(m), this.delveOwed());
-    if (delve && !wantsTown) return delve;
+    // (Nor while a quest's ready to hand in close by: at the Frozen Scrape it walked 800 m back to the Deeps with Arne's
+    // hand-in owed, and the long way round to come back for it.)
+    const owedNear = questing && !m.town && this.handInNear(m, 450);
+    // (Nor while a camp near by still has work in hand it's up to: it walked three kilometres back from the Woodcutters'
+    // to the Sporehold between a word and a hand-in, and four from the Marches. hubBusy.)
+    const hubHeld = questing && !m.town && this.hubBusy(m);
+    const delve = questing && !busy && !owedNear && !hubHeld && warrensJob(this, m, this.delveWants(m), this.delveOwed());
+    // (But travellers under attack on the road ahead, or a world boss being fought close by, before a walk to a delve: over
+    // in a minute or two either way. A live run rode off to the Redoubt with the travellers sixty metres ahead.)
+    if (delve && !wantsTown) { const w = this.wildJob(m); return w && /^wild:(rescue|boss):/.test(w.why) && this.jobDist(w, m) < 200 ? w : delve; }
+    // Out at Phobos on the first visit (src/folk/first-visit.js): Wenna's work, all of it, before anything a country away,
+    // and her offers taken as they come (she's there on the Sill, by the door home). And back home through the door, the
+    // word with Lisandra before the town's own errands and offers.
+    if (visiting) {
+      for (const id of FIRST_VISIT) {
+        const s = Q.state(id);
+        if (!s || s.stage === 'done' || this.skipping(`q:${id}`)) continue;
+        const job = this.questJob(id, m, LEVEL_OF[id]);
+        if (job) return job;
+      }
+      const offer = this.offerJob(m, FIRST_VISIT);
+      if (offer) return offer;
+    }
     // In the town, its errands: the quest talk first (only when it's on the quests), then the shops.
-    const errand = this.errand(m, m.town || wantsTown || townDist(m.x, m.z) < 60, questing);
+    // (Home to sell on the first visit: selling, not the town's offers. Wenna's work comes first.)
+    const errand = this.errand(m, m.town || wantsTown || townDist(m.x, m.z) < 60, questing && !visiting);
     if (errand) return errand;
     if (wantsTown && !m.town && !this.skipping('town')) return { kind: 'go', why: 'town', x: 2, z: 3, r: 6, say: room < 10 ? 'Back to Bellmourn: the pack is full.' : 'Back to Bellmourn to sell.' };
     // What the land's calling it to, close by and now: a raid, a tear, something left lying.
@@ -2026,13 +2419,25 @@ export class Brain {
         const st = Q.step(id);
         if (!st || this.skipping(`q:${id}`) || !(st.night || st.warden)) continue;
         const job = this.questJob(id, m, lvl);
-        if (job) return job;
+        // (Only what it can get to before morning, and near: it was pulled back a country for a night step at dusk, and 1.4 km
+        // back across the fen from the next hub with nothing on the way.)
+        if (job && this.jobDist(job, m) < this.nightReach(id, job)) return job;
       }
+    }
+    // Lisandra's door east, once Bram's errand's done: before the rest of her round of the town, a letter or anything else in
+    // hand. It's to come in the game's first quarter hour (src/folk/first-visit.js), and the trail's on her (follow 'door').
+    if (questing && Q.needsMet(FIRST_VISIT[0]) && !Q.state(FIRST_VISIT[0]) && RULES[FIRST_VISIT[0]]) {
+      const door = this.offerJob(m, [FIRST_VISIT[0]]);
+      if (door) return door;
     }
     // What's ready to hand in, or a word that moves a quest on: before more work.
     // (The nearest of them first: out in a small town, the word with the innkeeper across the green before the long way
     // home to hand something in.)
-    let near1 = null, nd1 = Infinity;
+    // (Work to be had from anyone a few strides off, out of the town: taken as it comes to a camp, from everyone there,
+    // so the camp's whole round is in hand before it sets out. It used to take only what the one it was sent to had, and
+    // came back for the other's when everything else in the land was done.)
+    if (questing && !visiting && !m.town) { const by = this.offerJob(m, null, 120); if (by) return by; }
+    let near1 = null, nd1 = Infinity, low1 = null, lowLvl = 0, lowD = Infinity, mid1 = null, midD = Infinity;
     for (const [id, lvl] of PLAN_ALL) {
       const s = Q.state(id), st = Q.step(id);
       if (!s || s.stage === 'done' || this.skipping(`q:${id}`)) continue;
@@ -2042,20 +2447,39 @@ export class Brain {
       if (!job) continue;
       const d = this.jobDist(job, m);
       if (d < nd1) { nd1 = d; near1 = job; }
+      // (The first of them in the plan's order, the lowest level's, and the nearest of that level: for when none is near.)
+      if (!low1 || (lvl === lowLvl && d < lowD)) { low1 = job; lowLvl = lvl; lowD = d; }
+      // (And a word that's the end of an errand already under way, its fight on the road done: the nearest such.)
+      if (st?.talk && s.step > 0 && d < midD) { mid1 = job; midD = d; }
     }
-    if (near1 && nd1 < 500) return near1;
+    // (A hand-in close by waits while another quest's work is as close: a camp's work is done in one round, the lair, the
+    // den past it and the things lying round the den, and then all of it told. Each used to be its own walk out and back.)
+    if (near1 && nd1 < 500) return this.nearWork(m, 450) || near1;
+    // (None near: the lowest level's, not the nearest as the crow flies. With an errand in hand for each road out of
+    // Bellmourn, the nearest took it from one spoke's end across the town to the next and back.)
+    // (But an errand half done is finished first, when its end is within a kilometre: with the goat on the Gallows Road
+    // down and Thornwick 700 m on, it turned round for a lower word three kilometres behind.)
+    if (mid1 && midD < 1000) return mid1;
+    if (near1 && low1) near1 = low1;
     // (A hand-in a country away waits while there's a quest's work close by: the hunt over the hedge before the road home.)
     if (near1) {
+      let work = null;
       for (const [id, lvl] of PLAN_ALL) {
         const s = Q.state(id);
         if (!s || s.stage === 'done' || this.skipping(`q:${id}`)) continue;
         const job = this.questJob(id, m, lvl);
-        if (job && job !== near1 && job.quest !== near1.quest && this.jobDist(job, m) < 500) return job;
+        if (!job || job === near1 || job.quest === near1.quest) continue;
+        if (this.jobDist(job, m) < 500) return job;
+        // (And far work it's of a level for, the lowest first, before a far word: the rest of the ring round Bellmourn
+        // before the errand on from any one camp of it. A word that leads on is for when the work in hand is done.)
+        // (Not across the map, though: past 1.2 km it's the hand-in first, and the work from there.)
+        if (!work && (job.kind === 'hunt' || job.kind === 'go') && this.jobDist(job, m) < 1200) work = job;
       }
-      return near1;
+      return work || near1;
     }
-    // The black knight on the cathedral's steps, once it's strong enough for him.
-    if (this.blackKnight(this.snap) && m.own >= BOSS_LEVEL + (this.bump['boss:black'] || 0) && !this.skipping('boss:black') && !(isNight(m.hour) && m.own < BOSS_LEVEL + 4)) {
+    // The black knight on the cathedral's steps, once it's strong enough for him. (But not out of a camp's work in hand: in
+    // the Fells it left the Beacon's work at level 12 for a walk of 2.3 km to him. He keeps till that's done.)
+    if (this.blackKnight(this.snap) && !busy && !owedNear && !hubHeld && m.own >= BOSS_LEVEL + (this.bump['boss:black'] || 0) && !this.skipping('boss:black') && !(isNight(m.hour) && m.own < BOSS_LEVEL + 4)) {
       return { kind: 'boss', why: 'boss:black', say: 'To the cathedral steps: the black knight.' };
     }
     // The quests, in order; but one whose work is close by (within half a kilometre) before one that's a country away.
@@ -2068,6 +2492,12 @@ export class Brain {
       if (this.jobDist(job, m) < 500) return job;
       first ||= job;
     }
+    // (Out in the land with work in hand at this hub that's a level off yet, or a step that waits on the dark coming
+    // within a few hours: the lairs round about meanwhile, not the long road somewhere else. It left a camp for the woods
+    // round Bellmourn three kilometres back, or for the next country, a few hundred xp short; and a night step at a road's
+    // end was never come back for.)
+    const hold = questing && (!first || this.jobDist(first, m) > 1200) && this.holdHere(m);
+    if (hold) return hold;
     if (first) return first;
     // Quests not yet taken: to their givers.
     const offer = this.offerJob(m);
@@ -2082,7 +2512,104 @@ export class Brain {
     // (A bounty it's up to, before the woods again.)
     const bounty = this.wildJob(m, true);
     if (bounty) return bounty;
+    // (Out in the countries: the lairs near where it stands, before the long road back to the town's woods.)
+    const local = townDist(m.x, m.z) > 600 && this.localGrind(m, 'level');
+    if (local) return local;
     return this.grindJob(m, m.lvl >= 6 && Q.state('dead_cant_wait') ? 'catacombs' : 'woods', 'level');
+  }
+
+  // The level a quest's work is taken up at: a level short of its own, as a quest is set up to two over its lair or den
+  // and there's a party along (at Marchfoot at 16 it walked four minutes round empty lairs for a quest of 17); its own and
+  // more once it's been driven off from it (bump).
+  need(id, lvl) { const b = this.bump[`q:${id}`]; return b ? lvl + b : lvl - 1; }
+
+  // A quest in hand from a giver within 900 m, of a level it's up to, whose next step isn't down a dungeon (and that it
+  // hasn't given up on): that camp's work comes before a dungeon's.
+  hubBusy(m) {
+    const Q = this.o.townUI.quests, townUI = this.o.townUI;
+    for (const [id, lvl] of PLAN_ALL) {
+      const s = Q.state(id), st = Q.step(id);
+      if (!s || s.stage === 'done' || !st || this.skipping(`q:${id}`) || m.lvl < this.need(id, lvl)) continue;
+      if ((st.night && !isNight(m.hour)) || st.boss || DELVE_KEYS.includes(st.enter) || DELVE_KEYS.includes(st.kill) || roomDelve(st.kill) || roomDelve(st.enter) || (st.bring && DELVE_KEYS.includes(st.at))) continue;
+      const giver = this.personIndex(QUESTS[id]?.giver);
+      const w = giver >= 0 && townUI.whereOf?.(giver);
+      // (Only a quest that has a job to give: one it can't work, the way barred or the thing missing, would hold the black
+      // knight and the delves off for good.)
+      if (w && dist(m.x, m.z, w.x, w.z) < 900 && this.questJob(id, m, lvl)) return true;
+    }
+    return false;
+  }
+
+  // A quest in hand ready to hand in (or a word due) to someone within reach metres.
+  handInNear(m, reach) {
+    const Q = this.o.townUI.quests, townUI = this.o.townUI;
+    for (const [id] of PLAN_ALL) {
+      const s = Q.state(id), st = Q.step(id);
+      if (!s || s.stage === 'done' || !st || !(st.back || st.talk)) continue;
+      const who = this.personIndex(st.talk || QUESTS[id]?.giver);
+      const w = who >= 0 && townUI.whereOf?.(who);
+      if (w && dist(m.x, m.z, w.x, w.z) < reach) return true;
+    }
+    return false;
+  }
+
+  // Why it should stay where it is a while: a quest in hand whose giver's within 900 m and whose next step is at most a
+  // level and a half off; or a night step within its reach, however far off the dark is (it's only called when the
+  // other work is over 1200 m away, or there's none: it left a night step at a road's end at noon and never came back).
+  // Then the lairs round about: localGrind.
+  holdHere(m) {
+    // (Only Bellmourn's own ring is too near the town to hold at: at Cairnwatch, 1.2 km out, a level short of the camp's
+    // other two quests, it walked 960 m off to another camp's offer and would have had to walk back.)
+    if (townDist(m.x, m.z) < 600 || inDungeon(m.x, m.z)) return null;
+    const Q = this.o.townUI.quests, townUI = this.o.townUI;
+    for (const [id, lvl] of PLAN_ALL) {
+      const s = Q.state(id), st = Q.step(id);
+      if (!s || s.stage === 'done' || !st || this.skipping(`q:${id}`)) continue;
+      const giver = this.personIndex(QUESTS[id]?.giver);
+      const w = giver >= 0 && townUI.whereOf?.(giver);
+      if (!w || dist(m.x, m.z, w.x, w.z) > 900) continue;
+      const need = this.need(id, lvl);
+      const short = m.lvl < need && need - m.lvl <= 1.5;
+      // (The dark's step measured from where it stands or from its giver, whichever's nearer, and the hunting done round
+      // the step itself, so that come night it's in reach: at the Lee, 887 m from the Queue's dummies, it never went back.)
+      const a = st.night && area(st.enter || st.kill);
+      const dark = a && Math.min(dist(m.x, m.z, a.x, a.z), dist(w.x, w.z, a.x, a.z)) < this.nightReach(id, a);
+      if (!short && !dark) continue;
+      const g = this.localGrind(m, `hold:${id}`, dark ? a : w);
+      if (g) return { ...g, say: dark ? `Waiting on the dark for ${QUESTS[id]?.title || id}: hunting near by meanwhile.` : `${QUESTS[id]?.title || id} wants a little more: hunting near by meanwhile.` };
+    }
+    return null;
+  }
+
+  // The lairs and outposts near it (within 900 m of `at`, or of where it stands) of a level it can fight and that are
+  // worth its while (no more than five under it): up to four of them, nearest first. Never one a quest not yet done
+  // fights or gathers at (it emptied a circle, chief and all, before the quest for it could be had).
+  localGrind(m, why, at = m) {
+    const avoid = this.avoid(m), owed = this.owedGround();
+    const ok = LAIRS.filter((l) => {
+      const lv = lairLevel(l);
+      return lv > 0 && m.lvl >= lv && lv >= m.lvl - 5 && dist(l.x, l.z, at.x, at.z) < 900 && !inDungeon(l.x, l.z) && !avoid.some(([x, z, r]) => dist(l.x, l.z, x, z) < r * 0.6) && !owed.some(([x, z]) => dist(l.x, l.z, x, z) < 150) && !this.skipping(`spot:${l.x},${l.z}`);
+    }).map((l) => [l.x, l.z]).sort((a, b) => dist(m.x, m.z, a[0], a[1]) - dist(m.x, m.z, b[0], b[1])).slice(0, 4);
+    return ok.length ? { kind: 'hunt', why, spots: ok, local: true, say: 'Hunting the lairs near by.' } : null;
+  }
+
+  // Where quests not yet done fight, clear, gather or go in: every step of them, as [x, z]. Kept for a minute.
+  owedGround() {
+    const Q = this.o.townUI?.quests, now = performance.now();
+    if (!Q) return [];
+    if (this.groundAt && now - this.groundAt < 60000) return this.ground;
+    const out = [];
+    for (const id of Object.keys(RULES)) {
+      if (Q.done(id)) continue;
+      for (const st of RULES[id].steps || []) {
+        for (const k of [st.enter, st.kill, st.gather, st.clear && `outpost:${st.clear}`]) {
+          const a = typeof k === 'string' && area(k);
+          if (a && Number.isFinite(a.x)) out.push([a.x, a.z]);
+        }
+      }
+    }
+    this.groundAt = now; this.ground = out;
+    return out;
   }
 
   // What the living land's calling it to, if it's up to it (src/ui/wilds.js calls): a town that's raided, an open tear in
@@ -2098,6 +2625,15 @@ export class Brain {
       if (c.why !== 'bounty' && this.avoid(m).some(([x, z, r]) => dist(c.x, c.z, x, z) < r)) continue;
       const say = WILD_SAY[c.why](c);
       if (c.why === 'find') return { kind: 'go', why, x: c.x, z: c.z, r: 2.4, say };
+      if (c.why === 'boss') {
+        const near = c.fight ? c.d < 120 : c.d < BOSS_NEAR, mine = this.bossKey === `${c.key}:${Math.round(c.x)}`;
+        // (One a quest of its own is waiting on: always. src/folk/quests.js wantedBosses.)
+        const wanted = this.o.townUI?.quests?.wantedBosses?.().some((w) => w.key === c.key);
+        if (!near && !mine && !wanted && (this.t - (this.bossAt ?? -1e9) < BOSS_GAP || m.hpf < 0.6 || this.firstVisit(m))) continue;
+        if (c.fight && m.hpf < 0.2) { this.giveUp(why, 300); continue; }
+        if (!mine) { this.bossKey = `${c.key}:${Math.round(c.x)}`; this.bossAt = this.t; }
+        return c.fight || c.d < 40 ? { kind: 'hunt', why, spots: [[c.x, c.z]], say } : { kind: 'go', why, x: c.x, z: c.z, r: 24, say };
+      }
       if (c.why === 'tear') {
         if (c.fight) { if (m.hpf < 0.3) { this.giveUp(why, 600); continue; } return { kind: 'hunt', why, spots: [[c.x, c.z]], say }; }
         if (m.hpf < 0.7) continue;
@@ -2106,6 +2642,37 @@ export class Brain {
       return { kind: 'hunt', why, spots: [[c.x, c.z]], say };
     }
     return null;
+  }
+
+  // A quest in hand whose work (a hunt, a den, things to gather, a place to see: not a word with someone) is within `reach`
+  // metres of where it stands, and of a level it has: the nearest such job, or null.
+  nearWork(m, reach) {
+    const Q = this.o.townUI.quests;
+    let best = null, bd = reach;
+    for (const [id, lvl] of PLAN_ALL) {
+      const s = Q.state(id), st = Q.step(id);
+      if (!s || s.stage !== 'active' || !st || st.talk || st.back || st.bring || st.start || this.skipping(`q:${id}`)) continue;
+      const job = this.questJob(id, m, lvl);
+      if (!job || (job.kind !== 'hunt' && job.kind !== 'go')) continue;
+      const d = this.jobDist(job, m);
+      if (d < bd) { bd = d; best = job; }
+    }
+    return best;
+  }
+
+  // The nearest of those out in the land who'll buy what it carries (a camp's sutler), within `within` metres: their
+  // place in the town's list, or -1.
+  sutler(m, within, junk = null) {
+    const T = this.o.townUI;
+    let best = -1, bd = within;
+    for (let i = PEOPLE.length; i < T.people.length; i++) {
+      if (!TRADES[T.people[i].trade]?.buys || this.skipping(`sell:${i}`) || this.skipping(`p:${i}`)) continue;
+      // (Only someone who'd give something for what it has: see the sale's give-up in talkTo.)
+      if (junk && !junk.some((e) => offerFor(T.people[i].trade, e.item) > 0)) continue;
+      const w = T.whereOf(i), d = w ? dist(m.x, m.z, w.x, w.z) : Infinity;
+      if (d < bd) { bd = d; best = i; }
+    }
+    return best;
   }
 
   freeCells() {
@@ -2128,7 +2695,7 @@ export class Brain {
       const s = Q.state(id), st = Q.step(id);
       if (!s || s.stage === 'done' || !st) continue;
       const q = QUESTS[id], who = st.talk ? this.personIndex(st.talk) : st.back ? this.personIndex(q.giver) : -1;
-      if (!down(who) || (st.talk && m.lvl < lvl + (this.bump[`q:${id}`] || 0))) continue;
+      if (!down(who) || (st.talk && m.lvl < this.need(id, lvl))) continue;
       const j = this.talkJob(who, 'quest', `${q.title}: to ${townUI.people[who].name}.`);
       if (j) return { ...j, quest: id };
     }
@@ -2136,14 +2703,14 @@ export class Brain {
     return o && down(o.who) ? o : null;
   }
   // Whether a gate between delves shut till a boss has died is open: it has died, now or ever (src/sim/dungeon.js open).
-  gateOpen = (key) => this.o.townUI.quests.flags.has(`boss:${key}`) || !!this.o.game.party?.warrens?.down?.includes(key);
+  gateOpen = (key) => this.o.townUI.quests.flags.has(key.includes(':') ? key : `boss:${key}`) || !!this.o.game.party?.warrens?.down?.includes(key);
 
   // The party dungeons the quests it has in hand send it down, and is of a level for: to go in, to kill there, or for a boss.
   delveWants(m) {
     const Q = this.o.townUI.quests, out = [];
     for (const [id, lvl] of PLAN_ALL) {
       const st = Q.step(id);
-      if (!st || m.lvl < lvl + (this.bump[`q:${id}`] || 0)) continue;
+      if (!st || m.lvl < this.need(id, lvl)) continue;
       const farm = st.bring && DELVE_KEYS.includes(st.at) && (this.o.pack.mats[st.bring] || 0) < st.n;
       // (And rooms down one to walk or kill in, 'room:<id>': its way through goes through every room. roomDelve.)
       const seen = Q.state(id)?.seen || [], room = roomDelve(st.kill) || roomDelve(st.enter) || (st.visit || []).filter((v) => !seen.includes(v)).map(roomDelve).find(Boolean);
@@ -2173,6 +2740,14 @@ export class Brain {
   }
 
   // How far off a job's work is: whoever it's a word with, the place it goes to, the nearest of its hunting spots.
+  // How far off a night step may be to set out for: 700 m, or a little past where it lies from whoever gave it (some night
+  // work is the best part of a kilometre from its giver: the Phobos watch's rounds). Not more: it was pulled back 1.4 km
+  // across the fen from the next hub for a night step it had left behind.
+  nightReach(id, a) {
+    const giver = this.personIndex(QUESTS[id]?.giver);
+    const w = giver >= 0 && this.o.townUI?.whereOf?.(giver);
+    return Math.max(700, w && Number.isFinite(a?.x) && Number.isFinite(a?.z) ? dist(w.x, w.z, a.x, a.z) + 150 : 0);
+  }
   jobDist(job, m) {
     if (job.kind === 'talk') { const w = this.o.townUI.whereOf(job.who); return w ? dist(m.x, m.z, w.x, w.z) : 1e9; }
     if (job.spots?.length) return Math.min(...job.spots.map(([x, z]) => dist(m.x, m.z, x, z)));
@@ -2196,7 +2771,7 @@ export class Brain {
     if (!st) return null;
     if (st.talk) {
       const who = this.personIndex(st.talk);
-      if (who >= PEOPLE.length && m.lvl < lvl + (this.bump[`q:${id}`] || 0)) return null;
+      if (who >= PEOPLE.length && m.lvl < this.need(id, lvl)) return null;
       return this.talkJob(who, 'quest', `${title}: a word with ${this.o.townUI.people[who]?.name}.`);
     }
     if (st.back) return this.talkJob(giver, 'quest', `${title}: back to ${this.o.townUI.people[giver]?.name}.`);
@@ -2204,9 +2779,13 @@ export class Brain {
       // Work from each of a list of people: the nearest it can reach that it hasn't had any from.
       const seen = s.seen || [], W = this.o.townUI;
       let best = null, bd = Infinity;
+      // (Bram first while his errand's not taken: it's what opens Lisandra's door east, and that's to come in the game's
+      // first quarter hour. src/folk/first-visit.js; src/ui/trail.js does the same.)
+      const bramFirst = !this.o.townUI.quests.state('bed_and_bell');
       for (const p of st.start) {
         const i = this.personIndex(p), w = i >= 0 && !seen.includes(p) && !this.skipping(`p:${i}`) && this.reachable(i) ? W.whereOf(i) : null;
-        if (w && dist(m.x, m.z, w.x, w.z) < bd) { bd = dist(m.x, m.z, w.x, w.z); best = i; }
+        const d = w && (bramFirst && p === 'bram' ? 0 : dist(m.x, m.z, w.x, w.z));
+        if (w && d < bd) { bd = d; best = i; }
       }
       return best === null ? null : this.talkJob(best, 'offer', `${title}: to ${W.people[best].name} for work (${seen.length} of ${st.start.length}).`);
     }
@@ -2220,26 +2799,52 @@ export class Brain {
       // (Out of the catacombs, bone and a little iron come off the woods' dead as it grinds for levels anyway.)
       return null;
     }
-    if (m.lvl < lvl + (this.bump[`q:${id}`] || 0)) return null;
+    if (m.lvl < this.need(id, lvl)) return null;
+    // A world boss to put down (a wboss step): to the ground it rises at for the quest; its fight there is wildJob's, once
+    // it's up (src/sim/worldboss.js setWant raises it soon after the step's come to).
+    if (st.wboss) {
+      const g = groundOf(st.ground);
+      if (!g) return null;
+      const there = dist(m.x, m.z, g.x, g.z) < 60;
+      return { kind: there ? 'hunt' : 'go', why: `q:${id}`, x: g.x, z: g.z, r: 30, spots: [[g.x, g.z]], say: `${title}: to where ${worldBossName(st.wboss)} rises${there ? ', and waiting for it' : ''}.` };
+    }
     // Down a party dungeon (to go in, to kill there, a boss of it, a room of it to walk): the delve's own work, with a party (delveWants).
     if (st.boss || DELVE_KEYS.includes(st.enter) || DELVE_KEYS.includes(st.kill) || roomDelve(st.kill) || roomDelve(st.enter) || (st.visit || []).some((v) => roomDelve(v) && !(s.seen || []).includes(v))) return null;
     if (st.enter) {
       if (st.night && !isNight(m.hour) && !(m.hour >= 19.5)) return null;
+      // (A lair or a den to come to by night: not at dusk. It got there early, stood in its monsters' sight and fought
+      // them under "by night" with the step not yet to be had.)
+      if (st.night && !isNight(m.hour) && (st.enter.startsWith('outpost:') || st.enter.startsWith('lair:'))) return null;
       const a = area(st.enter);
       if (!a) return null;
-      return { kind: 'go', why: `q:${id}`, x: a.x, z: a.z, r: a.r, below: a.below, say: `${title}: to ${st.enter === 'catacombs' ? 'the catacombs' : st.enter === 'bellcrypt' ? 'the Bell Crypt' : SITES[st.enter]?.name || st.enter}${st.night ? ', by night' : ''}.` };
+      // (Nor a night step from a country away, whichever part of choose asks: it set off at dusk, lost the job at dawn,
+      // turned round, and did the same the next night.)
+      if (st.night && dist(m.x, m.z, a.x, a.z) > this.nightReach(id, a)) return null;
+      return { kind: 'go', why: `q:${id}`, x: a.x, z: a.z, r: a.r, below: a.below, say: `${title}: to ${st.enter === 'catacombs' ? 'the catacombs' : st.enter === 'bellcrypt' ? 'the Bell Crypt' : placeName(st.enter)}${st.night ? ', by night' : ''}.` };
     }
     if (st.visit) {
       const seen = s.seen || [];
       const left = st.visit.filter((v) => !seen.includes(v)).map((v) => ({ v, a: area(v) })).filter((q) => q.a).sort((a, b) => dist(m.x, m.z, a.a.x, a.a.z) - dist(m.x, m.z, b.a.x, b.a.z));
       if (!left.length) return null;
       const { v, a } = left[0];
-      return { kind: 'go', why: `q:${id}`, x: a.x, z: a.z, r: Math.min(a.r, 25), say: `${title}: to ${SITES[v].name} (${seen.length} of ${st.visit.length}).` };
+      return { kind: 'go', why: `q:${id}`, x: a.x, z: a.z, r: Math.min(a.r, 25), say: `${title}: to ${placeName(v)} (${seen.length} of ${st.visit.length}).` };
+    }
+    // An outpost to empty: to it, and everything in it put down, its chief with them.
+    if (st.clear) {
+      const a = area(`outpost:${st.clear}`);
+      return a ? { kind: 'hunt', why: `q:${id}`, spots: [[a.x, a.z]], say: `${title}: to empty ${placeName(`outpost:${st.clear}`)}.` } : null;
+    }
+    // Things to gather: to the nearest still lying there (walked up to, it's picked up: src/folk/quests.js where).
+    if (st.gather) {
+      const got = s.got || [], left = gatherSpots(id, st).map((p, i) => ({ p, i })).filter(({ i }) => !got.includes(i) && !this.skipping(`g:${id}:${i}`));
+      if (!left.length) return null;
+      left.sort((a, b) => dist(m.x, m.z, a.p[0], a.p[1]) - dist(m.x, m.z, b.p[0], b.p[1]));
+      return { kind: 'go', why: `q:${id}`, x: left[0].p[0], z: left[0].p[1], r: 1.4, mark: `g:${id}:${left[0].i}`, say: `${title}: ${st.what || 'what was asked for'}, ${s.n || 0} of ${st.n}.` };
     }
     if (st.kill) {
       if (st.kill === 'catacombs') return this.grindJob(m, 'catacombs', `q:${id}`, `${title}: the dead below (${s.n} of ${st.n}).`);
       const a = area(st.kill);
-      return { kind: 'hunt', why: `q:${id}`, spots: huntsFor(st.kill) || (a ? [[a.x, a.z]] : HUNTS.woods), below: !!a?.below, say: `${title}: ${st.n - s.n} more to put down.` };
+      return { kind: 'hunt', why: `q:${id}`, spots: st.spots || huntsFor(st.kill) || (a ? [[a.x, a.z]] : HUNTS.woods), below: !!a?.below, say: `${title}: ${st.n - s.n} more to put down.` };
     }
     if (st.warden) {
       if (!isNight(m.hour)) return null;
@@ -2277,21 +2882,38 @@ export class Brain {
     return !(w.busy === 12 || w.busy === 13) && (w.level | 0) <= 0 && w.y < 2.2;
   }
 
-  offerJob(m) {
+  // Out on the first visit to Phobos (src/folk/first-visit.js): Lisandra's door taken (from the moment it's taken: the
+  // city's own givers stand about the Sill too, and Wenna's first) and the way home not yet, and either within a mile and
+  // a half of the Sill or with any of its quests in hand: home by the beacon stone to sell, back out to the Sill after, not
+  // off on Bellmourn's own (a run went home with the Redoubt in hand, took the pines and a party, and came back two levels up).
+  firstVisit(m) {
+    const Q = this.o.townUI.quests, last = FIRST_VISIT[FIRST_VISIT.length - 1];
+    return !!Q.state(FIRST_VISIT[0]) && !Q.done(last) && (dist(m.x, m.z, SILL_DOOR.x, SILL_DOOR.z) < 1500 || FIRST_VISIT.some((id) => Q.state(id)?.stage === 'active'));
+  }
+
+  offerJob(m, only = null, reach = Infinity) {
     const { townUI } = this.o, Q = townUI.quests;
     let best = null, bd = Infinity;
     for (const [id, lvl] of PLAN_ALL) {
-      if (Q.state(id) || (RULES[id].needs && !Q.done(RULES[id].needs))) continue;
+      if ((only && !only.includes(id)) || Q.state(id) || !Q.needsMet(id)) continue;
+      // (One you've just dropped from the quest log is left be a while: it isn't to be taken straight back up.)
+      if (Q.droppedLately?.(id, DROP_REST)) continue;
       const giver = this.personIndex(QUESTS[id].giver);
       if (giver < 0 || this.skipping(`p:${giver}`) || (!this.reachable(giver) && !this.crowdSpot(giver))) continue;
       // (Far-off work can wait till it's nearly ready for it.)
       if (m.lvl + 3 < lvl) continue;
       const w = townUI.whereOf(giver) || this.crowdSpot(giver);
-      if (!w) continue;
-      const d = dist(m.x, m.z, w.x, w.z);
+      if (!w || dist(m.x, m.z, w.x, w.z) > reach) continue;
+      // (Lisandra's door east, once Bram's errand's done: first, before anyone nearer, as the trail leads a player there.
+      // src/folk/first-visit.js: the first visit's to be in the game's first quarter of an hour. And so, before the rest of
+      // the town's offers, her own work and then Bram's errand, which is what opens the door: a run took every other offer
+      // in the square first, and came to the door at a quarter past.)
+      const d = id === FIRST_VISIT[0] ? 0 : id === 'lisandra_work' ? 0.5 : id === 'bed_and_bell' ? 1 : dist(m.x, m.z, w.x, w.z);
       // (Someone out past the town, like the Bellwright: only on the way.)
       // (Or once it's of a level for their work: then it goes out to them, however far.)
-      if (giver >= PEOPLE.length && d > 300 && m.lvl < lvl) continue;
+      // (Within 900 m, a level short is near enough to go and take it: at the Lee at 16 it walked six kilometres back west
+      // rather than to the Queue, 484 m off, for a quest of 17.)
+      if (giver >= PEOPLE.length && d > 300 && (d > 900 ? m.lvl < lvl : m.lvl + 1 < lvl)) continue;
       if (d < bd) { bd = d; best = this.talkJob(giver, 'offer', `To ${townUI.people[giver].name}: there's work.`); if (best) best.offer = id; }
     }
     return best;
@@ -2342,7 +2964,13 @@ export class Brain {
     // A night at the Tolling Bell: when a quest waits on tomorrow, or it's late and it's tired.
     const h = m.hour;
     const making = Object.keys(RULES).some((id) => Q.state(id)?.stage === 'making' && this.o.town.day >= 0 && this.o.town.day < Q.state(id).ready);
-    const nightWork = quests && PLAN_ALL.some(([id, lvl]) => { const st = Q.step(id); return st && (st.night || st.warden || (st.kill === 'barrows')) && m.lvl >= lvl; });
+    // (Only night work it could get to, the night block's 700 m: it sat up at the Bell for the barrows 1.4 km off.)
+    const nightWork = quests && PLAN_ALL.some(([id, lvl]) => {
+      const st = Q.step(id);
+      if (!st || m.lvl < this.need(id, lvl) || !(st.night || st.warden || st.kill === 'barrows')) return false;
+      const a = !st.warden && area(st.enter || st.kill);
+      return !a || dist(m.x, m.z, a.x, a.z) < this.nightReach(id, a);
+    });
     if (this.allow('aiSleep') && h >= 18.3 && h < 23.5 && (making || (m.hpf < 0.5)) && !nightWork && pack.purse() >= 4) {
       const i = PEOPLE.findIndex((p) => p.trade === 'inn');
       if (i >= 0 && !this.skipping(`p:${i}`) && this.reachable(i)) return { kind: 'talk', why: 'bed', who: i, say: `A bed at the Tolling Bell${making ? ': a quest waits on the morning' : ''}.` };
@@ -2617,7 +3245,7 @@ export class Brain {
         // while and does something else. (It used to go round and round the Bell Crypt and the Reliquary for as long
         // as it was watched, with twenty more to put down for the Sexton and nobody there; and to stand at the
         // millpond ten minutes, five jellies down of the miller's eight, till the pond filled.)
-        if (j.dries || j.why.startsWith('q:')) {
+        if (j.dries || j.local || j.why.startsWith('q:')) {
           const R = this.dryRun && this.dryRun.why === j.why && (this.foughtT ?? -99) < this.dryRun.t ? this.dryRun : (this.dryRun = { why: j.why, t: this.t, seen: new Set() });
           R.seen.add(`${px},${pz}`);
           // (And most of a minute of looking at the least: a hunt with one spot has seen it all at the first look, and
@@ -2625,6 +3253,9 @@ export class Brain {
           if (this.t - R.t > DRY_LOOK && spots.every(([x, z]) => R.seen.has(`${x},${z}`))) {
             this.dryRun = null; this.lastSpots = [];
             if (j.dries) { this.giveUp('dry:catacombs', DRY_FOR); this.o.note?.('Auto-play: nobody left in the catacombs. Other work, till they rise again.'); }
+            // (The lairs round about, each let be till it's had time to fill: it stood among two lairs on the Crown that
+            // never fill again with it inside twice their wake, ten minutes. localGrind.)
+            else if (j.local) { for (const [x, z] of spots) this.giveUp(`spot:${x},${z}`, HUNT_DRY_FOR); this.o.note?.('Auto-play: these lairs are empty for now. Further off meanwhile.'); }
             else { this.giveUp(j.why, HUNT_DRY_FOR); this.o.note?.('Auto-play: nothing left to hunt here for now. Other work meanwhile.'); }
             this.job = null; this.jobKey = '';
           }
@@ -2684,6 +3315,9 @@ export class Brain {
   converse(dt, m) {
     const { townUI, pack } = this.o, T = this.talk;
     if (!T) { if ((this.loneT = (this.loneT || 0) + dt) > 4) { this.loneT = 0; townUI.close(true); } return; }
+    // (Talking with them is no stall: approach gives someone up 75 s after it last got nearer, and a long talk, Wenna's door
+    // and her three offers one after another, ran past that. She was given up for four minutes with two quests to hand in.)
+    if (this.job?.who === T.who) this.job.since = this.t;
     T.t -= dt;
     if (T.t > 0) return;
     // A line it hasn't seen before is left up to be read (by whoever's watching: Settings' Talk in auto-play), then answered;
@@ -2702,13 +3336,16 @@ export class Brain {
     const at = (f) => opts.findIndex((o) => o.cls !== 'dim' && f(o));
     const id = townUI.people[T.who]?.id;
     // On through what's being said.
-    let k = at((o) => ['Go on.', '...', 'To bed.'].includes(label(o)));
+    // (And through Lisandra's door, once a quest's opened it: src/ui/folk.js lisDoor.)
+    let k = at((o) => ['Go on.', '...', 'To bed.', DOOR_STEP].includes(label(o)));
     // Yes to an offer.
     if (k < 0) k = at((o) => Object.values(QUESTS).some((q) => q.accept === label(o)));
     // The quest talk it came for, or anything else this person has for it.
     if (k < 0) {
-      const want = this.wanted(id);
-      k = at((o) => want.has(label(o)) || o.cls === 'offer');
+      const want = this.wanted(id), Q = townUI.quests;
+      // (Not an offer of something you've lately dropped from the quest log: wanted() leaves those out, and so does this.)
+      const rested = new Set(Object.keys(RULES).filter((qid) => Q.droppedLately?.(qid, DROP_REST)).map((qid) => QUESTS[qid].title));
+      k = at((o) => want.has(label(o)) || (o.cls === 'offer' && !rested.has(label(o))));
     }
     if (k >= 0) { townUI.choose(k); return; }
     // Wes Harrow letting the pack out: asked, then a pocket at a time while it's still worth the coin (wantsRoom).
@@ -2757,7 +3394,9 @@ export class Brain {
         return;
       }
       townUI.close(true);
-      if (T.why === 'sell') this.giveUp(`sell:${T.who}`, 60);
+      // (Nothing sold: they don't buy what it carries. Not back to them for a good while: in the Fells it went back to
+      // Fellfoot's sutler every minute, a 300 m walk each way, and turned round 120 m out on an errand to.)
+      if (T.why === 'sell') this.giveUp(`sell:${T.who}`, T.sold ? 60 : 600);
       return;
     }
     townUI.close(true);
@@ -2771,7 +3410,7 @@ export class Brain {
     const { townUI, pack } = this.o, Q = townUI.quests, out = new Set();
     for (const qid of Object.keys(RULES)) {
       const s = Q.state(qid), st = Q.step(qid), q = QUESTS[qid];
-      if (!s) { if (q.giver === id) out.add(q.title); continue; }
+      if (!s) { if (q.giver === id && !Q.droppedLately?.(qid, DROP_REST)) out.add(q.title); continue; }
       if (s.stage === 'done') continue;
       if (st?.talk === id) out.add(st.say);
       if (q.giver !== id) continue;
@@ -2931,6 +3570,8 @@ export class Brain {
         this.preAsk = true;
         this.nav.ask('path', { from: [W.x, W.z], to: [N.x, N.z], avoid: this.avoid(m, true).concat(this.lockedDoors()), touch: N === g ? g.touch : null, polite: true }).then((pts) => { this.preAsk = false; ask.pts = pts; });
       }
+    } else if (inEast(m.x, m.z) && inEast(W.x, W.z) && !m.below && this.eastWalk(dt, m, W, g, d)) {
+      // (In City State Phobos and Castle Velscour: by the east's own map, eastWalk below.)
     } else {
       // Across country: a stretch at a time, by a short path round whatever stands in the way (a wall, a light well, a stand of
       // pines), worked out on the nav thread; till it comes, straight on, stepping round what the probe finds.
@@ -2970,6 +3611,82 @@ export class Brain {
       if (pts?.length) this.lookOn(m, pts, run);
       this.board(dt, m, sx, sz, W.stair ? 0 : d, (q) => this.alongWay(m, q));
     }
+  }
+
+  // In City State Phobos and Castle Velscour, to W: by the east's own walking map (src/sim/east-nav.js), over its streets,
+  // up its stairs and along its decks and bridges, one over another, as the nav thread walks it out a few tens of metres at a
+  // time; its doors opened on the way (phDoor). False till the first way's in (it goes on across country meanwhile). With
+  // no way there three times running, it's lost: whatever it was after is left.
+  eastWalk(dt, m, W, g, d) {
+    const E = this.eastWay, P0 = E?.leg === W ? E.pts : null;
+    // (No nearer for half a minute of walking: lost, as across country. Nearer down its way, with one: a tower's stair winds
+    // round and round under the deck it's going to, no nearer as the crow flies for a long while.)
+    let L = dist(m.x, m.z, W.x, W.z);
+    if (P0?.length) { let x = m.x, y = m.y, z = m.z; L = 0; for (const p of P0) { L += dist(x, z, p[0], p[1]) + Math.abs((p[4] ?? y) - y); x = p[0]; z = p[1]; y = p[4] ?? y; } L += dist(x, z, W.x, W.z); }
+    const pr = this.progress;
+    if (pr?.leg === W && pr.fresh) { pr.fresh = false; pr.best = Math.max(pr.best, L); }
+    if (!pr || pr.leg !== W || L < pr.best - 6) this.progress = { leg: W, best: L, walked: 0 };
+    else if ((pr.walked += dt) > 30) { this.progress = null; this.eastWay = null; this.lost(); return true; }
+    // (How much of the way it has is walked out: the points before the first of the long way's.)
+    let left = 0;
+    if (P0) { let x = m.x, z = m.z; for (const p of P0) { if (p[2] === 2) break; left += dist(x, z, p[0], p[1]); x = p[0]; z = p[1]; } }
+    if (!E?.pending && (!P0 || this.t - E.t > 7 || (left < 14 && P0.some((p) => p[2] === 2)) || dist(W.x, W.z, E.to[0], E.to[1]) > 2.5)) {
+      const last = W === this.macro.at(-1), r = Math.max(0.5, (last ? g.near : W.r ?? 3.5) - 0.3);
+      const ask = this.eastWay = { leg: W, t: this.t, to: [W.x, W.z], pts: P0, pending: true };
+      this.nav.ask('east', { from: [m.x, m.y, m.z], to: [W.x, W.z, W.y ?? null], r }).then((pts) => {
+        if (this.eastWay !== ask) return;
+        ask.pending = false; ask.t = this.t;
+        // (A fresh way, walked out further than the last was, is longer than the line it was guessed by: nearer from there.)
+        if (pts?.length) { ask.pts = pts; this.eastMiss = 0; if (this.progress?.leg === W) this.progress.fresh = true; } else { ask.pts = null; this.eastMiss = (this.eastMiss || 0) + 1; }
+      });
+    }
+    const P = this.eastWay?.leg === W ? this.eastWay.pts : null;
+    if (!P) {
+      if ((this.eastMiss || 0) >= 3) { this.eastMiss = 0; this.eastWay = null; this.say('No way there from here.'); this.lost(); return true; }
+      return false;
+    }
+    // On to the next point once it's at it (at its height: a bridge over the street isn't the street), or has gone by it; a point
+    // of the long way's, not walked out yet, once it's near.
+    while (P.length > 1) {
+      // (At its height: within a hand of it, or a metre once it's all but stood on it. Within two metres, as it was, a stair's
+      // foot was ticked off from the ground before its first tread, and it turned up the flight from under it: in under the
+      // stair, and there for good. tools/paths/trips.mjs.)
+      const q = P[0], k = dist(m.x, m.z, q[0], q[1]), dy = Math.abs((q[4] ?? m.y) - m.y), level = dy < (k < 0.2 ? 0.6 : 0.3);
+      const gone = (m.x - q[0]) * (P[1][0] - q[0]) + (m.z - q[1]) * (P[1][1] - q[1]) > 0;
+      if ((level && (k < 0.5 || (gone && k < 0.8))) || (q[2] === 2 && k < 3)) P.shift(); else break;
+    }
+    const [tx, tz] = P[0], k = dist(m.x, m.z, tx, tz);
+    if (P.length === 1 && k < 0.35) { this.halt(); return true; }
+    if (this.phDoor(dt, m, P)) return true;
+    // (A run down a long straight; a walk round a bend, on a stair, at a door.)
+    let run = g.run && d > 8 && !W.walk;
+    if (run && k < 4 && P.length > 1 && Math.abs(wrap(Math.atan2(P[1][0] - tx, P[1][1] - tz) - Math.atan2(tx - m.x, tz - m.z))) > 0.6) run = false;
+    if (run && Math.abs((P[0][4] ?? m.y) - m.y) > 1.5 && k < 6) run = false;
+    this.face = null;
+    this.steer(tx - m.x, tz - m.z, run);
+    this.lookOn(m, P, run);
+    return true;
+  }
+
+  // A shut Phobos door on its way (src/items/phobos-doors.js): one its next few points go through. Opened, as E opens it, and a
+  // moment given it to swing. True while it's busy with one.
+  phDoor(dt, m, P) {
+    const D = this.o.game.phDoors;
+    if (!D) return false;
+    if (this.phDoorWait > 0) { this.phDoorWait -= dt; this.halt(); return true; }
+    const seg = [[m.x, m.z]].concat(P.slice(0, 3).map((p) => [p[0], p[1]]));
+    for (const dr of D.doorsNear(m.x, m.z, 3.2)) {
+      if (D.open.has(dr.id) || Math.abs(dr.fy - m.y) > 1.8 || dist(m.x, m.z, dr.cx, dr.cz) > 3) continue;
+      let on = false;
+      for (let i = 0; i + 1 < seg.length && !on; i++) if (segNear(seg[i][0], seg[i][1], seg[i + 1][0], seg[i + 1][1], dr.cx, dr.cz) < 0.9) on = true;
+      if (!on) continue;
+      D.toggle(dr);
+      this.say('Opening a door.');
+      this.phDoorWait = 0.55;
+      this.halt();
+      return true;
+    }
+    return false;
   }
 
   // The point k metres on down its way from where it stands: to the next point it's walking to, and on past it. (For the
@@ -3289,10 +4006,11 @@ export class Brain {
     if (moved > 1.2) { S.n = Math.max(0, S.n - 1); return; }
     S.n++;
     const door = g.nearDoor;
-    if (door && !door.open && !g.locked(door)) { g.doors.toggle(door); return; }
+    // (One of Phobos's: by its own doors, src/items/phobos-doors.js.)
+    if (door?.ph) { if (!g.phDoors.open.has(door.id)) { g.phDoors.toggle(door); return; } } else if (door && !door.open && !g.locked(door)) { g.doors.toggle(door); return; }
     if (S.n === 1 || S.n === 4) { this.o.shared.input[INPUT.JUMP] += 1; return; }
     if (S.n === 2 || S.n === 5) { S.act = 2; S.actT = 0.8; S.side = Math.random() < 0.5 ? -1 : 1; return; }
-    if (S.n === 3 || S.n === 6) { S.act = 3; S.actT = 0.6; this.sub = null; this.subFor = null; this.loc = null; return; }
+    if (S.n === 3 || S.n === 6) { S.act = 3; S.actT = 0.6; this.sub = null; this.subFor = null; this.loc = null; this.eastWay = null; return; }
     if (S.n >= 8) { S.n = 0; this.lost(); }
   }
 
@@ -3309,8 +4027,10 @@ export class Brain {
     this.lostAt = { x: S.x, z: S.z, t: this.t };
     if (j?.kind === 'talk') this.giveUp(`p:${j.who}`, 120);
     else if (j?.kind === 'hunt' && this.patrol) this.giveUp(`s:${this.patrol[0]},${this.patrol[1]}`, 240);
+    // (One thing to gather that can't be got to: that one left a while, not the whole quest.)
+    else if (j?.mark) this.giveUp(j.mark, 600);
     else if (j) this.giveUp(j.why, 90);
-    this.job = null; this.goal = null; this.macro = null; this.sub = null; this.subFor = null; this.patrol = null;
+    this.job = null; this.goal = null; this.macro = null; this.sub = null; this.subFor = null; this.patrol = null; this.eastWay = null;
   }
 
   // The doors it can't open yet (the Sexton's, before his quest), as circles for its paths to keep out of.

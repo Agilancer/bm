@@ -9,7 +9,7 @@ import { FIELD_CREATURES } from '../src/core/field-creatures.js';
 import { TREE_FLOATS, TRIMMED, forestAmount, forestTrees } from '../src/core/forest.js';
 import { PATHS, ROADS, portalFloor, terrainHeight } from '../src/core/terrain.js';
 import { PORTAL, PORTAL_PAD } from '../src/core/dungeon.js';
-import { buildSites } from '../src/core/sites.js';
+import { buildSites, floorRects } from '../src/core/sites.js';
 
 const segDist = (x, z, [ax, az], [bx, bz]) => {
   const dx = bx - ax, dz = bz - az, t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz)));
@@ -75,7 +75,7 @@ test('the Warrens\' portal can be walked onto up the hill and from either end', 
   const cols = K.colliders.filter((q) => Math.hypot(q.x - PORTAL.x, q.z - PORTAL.z) < 24);
   const height = (x, z) => {
     let best = null;
-    for (const f of plat.rects) {
+    for (const f of floorRects(plat)) {
       const dx = x - f.x, dz = z - f.z;
       if (Math.abs(dx * f.c - dz * f.s) <= f.hu && Math.abs(dx * f.s + dz * f.c) <= f.hw && (best === null || f.y > best)) best = f.y;
     }

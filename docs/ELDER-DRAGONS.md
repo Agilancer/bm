@@ -174,6 +174,31 @@ her vent, Morvekh goes off the spire's top.) As each star goes out in the last D
 
 A fall comes down on the hand you're on, during the Swallow; else on the Lip's south half. Enrage at 11 minutes.
 
+## On the land
+
+The gods are a level-100 delve, but the story of them starts at level 12 (docs/ROAD-LIFE.md). As they stir, each sends a
+Herald out into the world: a dragon of its own kind, nine metres, in its colours, a world boss of the land's
+(src/core/wilds.js WORLD_BOSSES, `god`). Four quests, one at the far end of each of four roads, make one rise at a ground
+near the giver (the `wboss` step, src/folk/quests.js; src/sim/worldboss.js setWant), and the other Tessariels come in to
+fight it with you.
+
+| Herald | God | Quest | Giver | Ground |
+|---|---|---|---|---|
+| Veyrasz, Herald of the Gale | Thyrraxis | The Empty Sky (12) | Sib Kestrel, Kestrel Hide | bg_downs_1, 495 m north-east |
+| Umbraxes, Herald of the Hollow Star | Nihvaroth | A Tooth of the Hollow Star (13) | Isla Crag, the Broken Stair | bg_herald_hollow, 380 m east |
+| Oskarran, Herald of the Hearth | Kaldurra | The Heat Under the World (15) | Vesna Kell, the Hollow Watch | bg_herald_hearth, 341 m north-east |
+| Selvhra, Herald of the Cold | Morvekh | The Cold That Remembers (17) | Dain Scree, Climbers' Rest | bg_rimeholt_0, 601 m west |
+
+Each Herald's moves are its god's, small: Veyrasz's turning lines of wind (Thyrraxis's gale), Oskarran's ground that opens
+round it (the Cinderwell's floor), Selvhra's rings of rime and the cold everywhere but in the light (the Rimespire's), and
+Umbraxes breathing in the world (the Maw's pull). Its giver tells you how to stand to them.
+
+What the givers learn, put together: the heralds go before something; the door in the Crown has four seals, and what is
+behind each turns over when its herald dies (sleep or wake, nobody says); the Crown is a mouth, its pillars teeth, the door
+the throat; and the black one was going up to it. Yrsa, on the Crown, has a topic for them ("The heralds") that grows a line
+with each one put down. The road folk tell omens of all four. A Herald also rises now and then on its own, like any world
+boss, in its own countries.
+
 ## What the party does
 
 Every rule above is also an order the fight gives (src/sim/elder-fights.js `order`): where to be, or not a step. The

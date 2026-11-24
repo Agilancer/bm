@@ -103,10 +103,10 @@ test('a kill is told by a name you could say', () => {
 });
 
 test('each part of the show can be turned off in the settings, and is on to begin with', () => {
-  const title = read('../src/title.js');
+  const title = read('../src/title.js'), spec = read('../src/ui/settings-spec.js');
   for (const [k, v] of [['autocam', 'director'], ['autoread', 'on'], ['autotell', 'on']]) {
     assert.ok(title.includes(`${k}: '${v}'`), `${k} doesn't start ${v}`);
-    assert.ok(title.includes(`data-k="${k}"`), `Settings has no ${k}`);
+    assert.ok(spec.includes(`k: '${k}'`), `Settings has no ${k}`);
   }
   const auto = read('../src/ui/autoplay.js'), brain = read('../src/ui/autobrain.js'), cam = read('../src/ui/autocam.js'), show = read('../src/ui/autoshow.js');
   assert.ok(brain.includes("this.o.settings?.autoread !== 'off'"));
@@ -116,7 +116,7 @@ test('each part of the show can be turned off in the settings, and is on to begi
 test("auto-play never runs the world's clock faster: he goes at the pace anyone does", () => {
   assert.equal(CTRL.HASTE, undefined, 'the clock can still be hurried');
   const title = read('../src/title.js');
-  assert.ok(!title.includes('autohaste') && !title.includes('Long walks in auto-play'), 'Settings still offers a hurried walk');
+  assert.ok(![title, read('../src/ui/settings-spec.js')].some((t) => t.includes('autohaste') || t.includes('Long walks in auto-play')), 'Settings still offers a hurried walk');
   for (const f of ['../src/sim/sim.worker.js', '../src/ui/autoplay.js', '../src/ui/autobrain.js', '../src/ui/autocam.js', '../src/ui/autoshow.js']) {
     assert.ok(!['CTRL.HASTE', '.hurry', 'haste('].some((w) => read(f).includes(w)), `${f} still hurries the walk`);
   }
@@ -124,8 +124,8 @@ test("auto-play never runs the world's clock faster: he goes at the pace anyone 
 
 test('the view is only lent to auto-play: your own is as it was after, and V chooses first person or behind him while it plays', async () => {
   const view = read('../src/ui/view.js'), auto = read('../src/ui/autoplay.js');
-  assert.ok(view.includes('this.third && allowed') && auto.includes('vs.auto = this.on ? this.cam.view : null') && auto.includes('viewSwitch.auto = null'));
-  assert.ok(read('../src/title.js').includes('<option value="first">'), 'first person is a choice in Settings');
+  assert.ok(view.includes('this.third && allowed') && auto.includes("vs.auto = this.on ? (this.critter.on ? 'third' : this.cam.view) : null") && auto.includes('viewSwitch.auto = null'));
+  assert.ok(read('../src/ui/settings-spec.js').includes("['first', 'First person"), 'first person is a choice in Settings');
   // The switch itself, with no page: a stub for the two elements it makes and finds. (dataset: the eye on the bar keeps
   // which picture it's showing there, so it's only drawn again when that changes.)
   const el = () => ({ style: {}, dataset: {}, classList: { toggle() {} }, addEventListener() {}, appendChild() {} });
@@ -168,7 +168,7 @@ test('the view is only lent to auto-play: your own is as it was after, and V cho
 
 test('bold is a choice in the menu, kept, and makes the head dare more', () => {
   const auto = read('../src/ui/autoplay.js'), brain = read('../src/ui/autobrain.js');
-  assert.ok(auto.includes("localStorage.setItem('bm-auto-bold'") && auto.includes('data-t='));
+  assert.ok(auto.includes("localStorage.setItem('bm-auto-bold'") && auto.includes("seg('t', [['careful', 'Careful'], ['bold', 'Bold']]"));
   assert.ok(brain.includes('lvl: p.level + (this.bold ? BOLD_LEVELS : 0), own: p.level'));
   // (His own level, not the dared one, is what the log keeps and what the black knight is gone at by.)
   assert.ok(brain.includes('m.own >= BOSS_LEVEL') && brain.includes('this.o.log?.fell(m, m.own'));

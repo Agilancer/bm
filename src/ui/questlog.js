@@ -7,16 +7,19 @@
 // catacombs (the map shows the church's own chart if you're in it), and who when it's someone, who walks about (the map
 // follows them: src/ui/folk.js gives it where they are).
 import { churchAt } from '../core/church.js';
-import { SITES } from '../core/lands.js';
+import { COUNTRIES, SITES, countryAt } from '../core/lands.js';
+import { PHOBOS_RULES } from '../folk/phobos-quests.js';
 import { OPENING } from '../core/opening.js';
 import { BOSSES, DELVES, PORTAL } from '../core/dungeon.js';
-import { RULES, placeSpot } from '../folk/quests.js';
+import { groundOf, worldBossName } from '../core/wilds.js';
+import { RULES, gatherSpots, outpostOf, placeSpot } from '../folk/quests.js';
 import { QUESTS } from '../folk/lines/quests.js';
 import { CROWD, PEOPLE, POSTED } from '../folk/people.js';
 import { BEYOND } from '../folk/lines/beyond.js';
 import { LISANDRA } from '../folk/lines/lisandra.js';
 import { CAMPS } from '../sim/slimes.js';
 import { questLevel } from './autobrain.js';
+import { MATS } from '../items/items.js';
 
 export { questLevel };
 
@@ -66,6 +69,8 @@ export function areaSpot(k) {
   const rd = k.startsWith('room:') ? DELVES.find((q) => q.rooms.some((r) => r.id === k.slice(5))) : null;
   if (rd) { const n = rd.rooms.find((r) => r.id === k.slice(5)).name; return { x: rd.portal.x, z: rd.portal.z, name: `${n[0].toUpperCase()}${n.slice(1)}, in ${rd.name}` }; }
   if (k === 'waste') return { x: -4250, z: -200, r: 700, name: 'The Ashen Waste, along the Vigil Road' };
+  // One of the land's outposts ('outpost:<key>', src/core/wilds-data.js): by its own name.
+  if (k.startsWith('outpost:')) { const o = outpostOf(k.slice(8)); return o ? { x: o.x, z: o.z, r: o.r + 12, name: o.name.replace(/^(an?|the) /, (m) => m[0].toUpperCase() + m.slice(1)) } : null; }
   // A lair (src/core/tripo-monsters.js LAIRS): its glade, named by the nearest place.
   const at = placeSpot(k);
   if (!at) return null;
@@ -104,9 +109,17 @@ export function placeOf(id, ctx) {
     return left.length ? { spots: left.map((p) => personSpot(p, person)), where: left.map(nameOf).join(', ') } : null;
   }
   // Something to bring: from the catacombs, then to the giver once you've all of it.
-  if (st.bring) return (mats[st.bring] || 0) >= (st.n || 1) ? giver() : one(areaSpot('catacombs'));
+  if (st.bring) return (mats[st.bring] || 0) >= (st.n || 1) ? giver() : one(areaSpot(st.at || 'catacombs'));
+  if (st.clear) return one(areaSpot(`outpost:${st.clear}`));
+  // Things to gather: each still lying there, under the place's name.
+  if (st.gather) {
+    const got = s.got || [], at = areaSpot(st.gather), left = gatherSpots(id, st).map(([x, z], i) => ({ x, z, name: at?.name || 'Out in the wilds', i })).filter((m) => !got.includes(m.i));
+    return left.length ? { spots: left, where: at?.name || 'Out in the wilds' } : null;
+  }
   if (st.warden) return one(areaSpot('bellcrypt'));
   if (st.boss) return one(bossSpot(st.boss));
+  // (A world boss, at the ground it rises at for the quest.)
+  if (st.wboss) { const g = groundOf(st.ground); return g ? one({ x: g.x, z: g.z, r: g.r, name: worldBossName(st.wboss) }) : null; }
   // (The way down to the dead, the first time: the Sexton's Door, which Silas's key opens.)
   if (st.enter === 'catacombs') return one({ x: SEXTON_DOOR[0], z: SEXTON_DOOR[1], name: "The Sexton's Door, the way down" });
   if (st.enter) return one(areaSpot(st.enter));
@@ -146,6 +159,107 @@ export function rewardOf(id) {
 
 // Who gave it: "Silas Crane, the undertaker".
 export const giverOf = (id) => describe(QUESTS[id].giver);
+
+// ---- how the log sorts and shows them ------------------------------------------------------------------------------------
+
+// The part of the world a quest belongs to, for the log's headings (as the old games sort theirs by zone): Bellmourn for the
+// town's own and Lisandra's; City State Phobos for the city's; out in the land, the country its giver keeps to (or, for one
+// who isn't posted anywhere, the country of the quest's first place).
+export const ZONES = ['Bellmourn', ...Object.values(COUNTRIES).map((c) => c.name), 'City State Phobos', 'Out in the land'];
+const zoneAt = (x, z) => COUNTRIES[countryAt(x, z)]?.name || 'Out in the land';
+export function zoneOf(id) {
+  const q = QUESTS[id], p = WHO[q.giver];
+  if (PHOBOS_RULES[id] || p?.area) return 'City State Phobos';
+  const at = p?.post || p?.at;
+  if (Array.isArray(at)) return zoneAt(at[0], at[1]);
+  if (BEYOND.includes(p)) {
+    const st = RULES[id].steps.find((s) => s.enter || s.kill || s.visit), k = st && (st.enter || st.kill || st.visit[0]), sp = k && areaSpot(k);
+    return sp && Number.isFinite(sp.x) ? zoneAt(sp.x, sp.z) : 'Out in the land';
+  }
+  return 'Bellmourn';
+}
+export const zoneRank = (z) => { const i = ZONES.indexOf(z); return i < 0 ? ZONES.length : i; };
+
+// A quest's level against yours, coloured as the old games did: far over you red, over orange, about right yellow, under
+// green, long past grey.
+export function levelTone(want, lvl) {
+  const d = want - lvl;
+  return d >= 5 ? 'red' : d >= 3 ? 'orange' : d >= -2 ? 'yellow' : d >= -8 ? 'green' : 'grey';
+}
+
+// What it asks of you, as the log lists it: the steps done (struck through), then the one under way, with how far along it
+// is where that can be counted. [{ text, done, have, need, ready }]. mats: the satchel; day: today.
+export function objectivesOf(id, Q, mats = {}, day = 0) {
+  const s = Q.state(id);
+  if (!s || s.stage === 'done') return [];
+  const out = stepsOf(id, Q).map((t) => ({ ...t }));
+  const cur = out[out.length - 1];
+  if (s.stage === 'making') { cur.ready = day >= s.ready; return out; }
+  const st = RULES[id].steps[s.step];
+  if (!st) return out;
+  if (st.kill || st.gather) { cur.have = s.n || 0; cur.need = st.n; }
+  else if (st.visit || st.start) { cur.have = (s.seen || []).length; cur.need = (st.visit || st.start).length; }
+  else if (st.bring) { cur.need = st.n || 1; cur.have = Math.min(mats[st.bring] || 0, cur.need); cur.ready = cur.have >= cur.need; }
+  else if (st.back) cur.ready = true;
+  // (The count is shown on its own, as a bar: not in the words as well.)
+  if (cur.need > 1) cur.text = cur.text.replace(/\s*\(\d+ of \d+\)\s*$/, '');
+  return out;
+}
+
+// Where a quest stands, for its row and the tracker: 'ready' (to hand in, or what's being made is ready to collect), 'wait'
+// (made overnight, ready tomorrow), or ''.
+export function standOf(id, Q, mats = {}, day = 0) {
+  const s = Q.state(id);
+  if (!s || s.stage === 'done') return '';
+  if (s.stage === 'making') return day >= s.ready ? 'ready' : 'wait';
+  const st = RULES[id].steps[s.step];
+  return st?.back || (st?.bring && (mats[st.bring] || 0) >= (st.n || 1)) ? 'ready' : '';
+}
+
+// The line under its name in the list and the tracker: how far along it is, or who to go back to.
+export function shortOf(id, Q, mats = {}, day = 0) {
+  const s = Q.state(id);
+  if (!s || s.stage === 'done') return '';
+  const stand = standOf(id, Q, mats, day), giver = nameOf(QUESTS[id].giver);
+  if (stand === 'wait') return `Ready tomorrow, from ${giver}`;
+  if (stand === 'ready') return s.stage === 'making' ? `Ready: collect it from ${giver}` : `Hand it in to ${giver}`;
+  const o = objectivesOf(id, Q, mats, day).at(-1);
+  const st = RULES[id].steps[s.step];
+  if (st?.talk) return `Speak to ${nameOf(st.talk)}`;
+  return o?.need ? `${o.have} / ${o.need}` : '';
+}
+
+// The tracker's few words for what's being counted, as the big games keep them ("Goat Men slain 0/3", "Grave Iron 2/8"):
+// never the step's whole sentence, which a narrow tracker would cut. '' only for a step with nothing counted.
+export function tallyOf(id, Q) {
+  const st = Q.step(id);
+  if (st?.bring) return MATS[st.bring]?.plural || 'Gathered';
+  if (st?.kill) {
+    if (st.foe?.length === 1) return `${st.foe[0]} slain`;
+    if (st.of === 9) return 'Jellies slain';
+    // (The dead of Bellmourn's own ground: the catacombs under the cathedral, and the woods round it.)
+    if (st.kill === 'catacombs') return 'Dead in the catacombs';
+    if (st.kill === 'woods') return 'Dead in the woods';
+    return 'Foes slain';
+  }
+  if (st?.gather) return st.what ? `${st.what.charAt(0).toUpperCase()}${st.what.slice(1)}` : 'Gathered';
+  if (st?.clear) return 'Cleared';
+  if (st?.visit) return 'Places seen';
+  if (st?.start) return 'People seen';
+  return '';
+}
+
+// What it pays, as the log shows it: a picture (a kit icon) and the words for each. [{ ic, text, gold, xp }]
+export function rewardsOf(id) {
+  const R = RULES[id], out = [], cap = (t) => `${t.charAt(0).toUpperCase()}${t.slice(1)}`;
+  // (pic: a picture of one like it, from the pack's own (assets/game/items/icons/); tall: a staff, laid across its square.)
+  const item = { skull: ['slot_skull', R.rarity === 0 ? 'A plain skull' : 'A carved skull', 'skull_01'], staff: ['slot_main', 'A forged staff', 'driftwood_staff', true], robe: ['slot_chest', 'A new robe', 'ash_coat_chest'], scroll: ['book', 'A spell scroll'] }[R.item];
+  if (item) out.push({ ic: item[0], text: R.named || item[1], pic: item[2], tall: item[3] });
+  if (R.charm) out.push({ ic: 'slot_neck', text: cap(R.charmName || 'a charm') });
+  if (R.gold) out.push({ ic: 'gold', text: `${R.gold} gold`, gold: true });
+  if (R.xp) out.push({ xp: true, text: `${R.xp.toLocaleString('en-GB')} experience` });
+  return out;
+}
 
 // ---- what to do, when nothing's asked of you ---------------------------------------------------------------------------------
 

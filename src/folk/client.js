@@ -34,6 +34,8 @@ export class TownClient {
       return;
     }
     if (m.type === 'error') { console.error('town:', m.message); return; }
+    // (A bed in Phobos someone's lain down in: onto the list the blankets have, src/gfx/blankets.js.)
+    if (m.type === 'bed') { if (this.beds) this.beds[m.i] = m.bed; return; }
     if (m.type === 'route') { this.routes.get(m.id)?.(m.pts); this.routes.delete(m.id); return; }
     if (m.type === 'events') { for (const e of m.list) for (const fn of this.listeners) fn(e); return; }
     if (m.type === 'slot') {
@@ -92,6 +94,8 @@ export class TownClient {
   }
 
   talkTo(i) { this.worker.postMessage({ type: 'talk', i }); }
+  // The folk on the roads: src/ui/roadfolk.js, src/folk/brain.js Life.roadJob.
+  road(m) { this.worker.postMessage({ type: 'road', ...m }); }
   // The town run on by that many seconds at once, unheard (bm.townRun, for looking at what someone's doing an hour into their work).
   runOn(seconds) { this.worker.postMessage({ type: 'runOn', seconds }); }
   // A way on foot across the town from (ax, az) to (bx, bz), round the houses: a list of [x, z], or null.

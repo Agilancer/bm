@@ -20,11 +20,14 @@ const SEWERS = ['westdrains', 'sloughmains', 'charnelruns', 'highconduits'];
 // (And Castle Velscour's wards after them, src/core/delve-castle.js: the Lower Ward and the Middle Ward so far.)
 const CASTLE = ['lowerward', 'middleward'];
 // (The castle's dungeons, after its wards: three bosses each, as the later delves.)
-const DUNGEONS = ['ironbarracks'];
+const DUNGEONS = ['ironbarracks', 'redoubt'];
 const json = (p) => JSON.parse(readFileSync(new URL(p, import.meta.url), 'utf8'));
 
 test('there are eight delves, the first three where they were, the later four each with three bosses, and the Elder Gods with four', () => {
-  assert.deepEqual(DELVES.map((d) => d.key), ['warrens', 'blackvigil', 'deeps', ...LATER, ...SEWERS, ...CASTLE, ...DUNGEONS]);
+  // (And the castle's later delves after these, each set with a test of its own: tests/castle-a.test.mjs and the rest.)
+  assert.deepEqual(DELVES.map((d) => d.key).slice(0, 15), ['warrens', 'blackvigil', 'deeps', ...LATER, ...SEWERS, ...CASTLE, 'ironbarracks']);
+  // (The Redoubt under the Sill, the first visit's, came after the castle's: last, so no boss before it changes its number.)
+  assert.equal(DELVES[DELVES.length - 1].key, 'redoubt');
   for (const k of [...SEWERS, ...CASTLE]) {
     const d = delveByKey(k), mine = BOSSES.filter((b) => b.delve === k);
     assert.ok((d.sewer || d.castle) && d.party === false && mine.length === 1 && mine[0].key === d.last, k);
@@ -40,7 +43,8 @@ test('there are eight delves, the first three where they were, the later four ea
     assert.equal(mine[mine.length - 1].key, d.last, `${k}: its last boss is its last`);
     // (The Elder Gods' is dragons and their whelps, and nothing else.)
     assert.ok(d.names && Object.keys(d.names).length >= (k === 'elder' ? 2 : 3), `${k}: its own names for what lives in it`);
-    assert.ok(d.level >= 9 && d.pay.xp > 0 && d.words.enter && d.words.clear && d.words.wipe, k);
+    // (The Redoubt under the Sill is the first visit's, at five: src/folk/first-visit.js.)
+    assert.ok(d.level >= (k === 'redoubt' ? 4 : 9) && d.pay.xp > 0 && d.words.enter && d.words.clear && d.words.wipe, k);
   }
 });
 
@@ -52,7 +56,7 @@ test('a boss that waits waits on bosses of its own delve that come before it, an
     assert.ok(b.shut && WARN[b.shut] !== undefined, `${b.key}: nothing said in its empty room`);
   }
   // (The Vaults has none: its three are met in the order they lie.)
-  assert.deepEqual(BOSSES.filter((b) => b.needs).map((b) => b.key), ['heart', 'leadingman', 'dollmaker', 'wyrm', 'kaldurra', 'morvekh', 'nihvaroth', 'ironmarshal']);
+  assert.deepEqual(BOSSES.filter((b) => b.needs && [...LATER, ...DUNGEONS].includes(b.delve)).map((b) => b.key), ['heart', 'leadingman', 'dollmaker', 'wyrm', 'kaldurra', 'morvekh', 'nihvaroth', 'ironmarshal', 'rothgar']);
 });
 
 test('every later boss has a body, a fight, calls that exist, and one thing of its own to do about', () => {
@@ -76,7 +80,7 @@ test('every later boss has a body, a fight, calls that exist, and one thing of i
 
 test('every warning a later delve names is used by its fights or its bosses, and every one used is named', () => {
   // (The Elder Gods' four are in a file of their own, and their own words are warnings of their own: `<god>_say_<when>_<n>`.)
-  const src = ['delve-fights.js', 'elder-fights.js', 'voidland.js', 'castle-fights.js'].map((f) => readFileSync(new URL(`../src/sim/${f}`, import.meta.url), 'utf8')).join('\n');
+  const src = ['delve-fights.js', 'elder-fights.js', 'voidland.js', 'castle-fights.js', 'redoubt-fights.js'].map((f) => readFileSync(new URL(`../src/sim/${f}`, import.meta.url), 'utf8')).join('\n');
   for (const k of [...LATER, ...DUNGEONS]) {
     const d = delveByKey(k);
     for (const w of Object.keys(d.warnings)) {

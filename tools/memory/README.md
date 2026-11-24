@@ -25,8 +25,9 @@ Env: `PORT` (8861), `PHONE` (`pixel`, `iphone`, `small`, `tablet`; none is a des
 the page's storage before it starts: `{"bm-threads-consent":"all"}` with `NOAUTO=1` gets past the threads' question),
 `WHY=1`, `NOINIT=1` (no `init.js` in the page: its counting costs time of its own, a stack taken at every view and bind
 group made, so time the game without it), `GPUDUMP=1` (each `mem` also gives the GPU process's own account, its allocators two deep), `DEBUG_PORT`
-(9351; another for a second run at once, though two at once share the GPU process and swell its figures: run them one
-after the other for numbers). The Chrome it starts plays sound before any tap (`--autoplay-policy=no-user-gesture-required`),
+(unset, Chrome picks a free one and the run says which; each run reaches only its own Chrome, `tools/chrome-port.mjs`.
+It was 9351 for every run, and two at once met there, the second taking the first's page. Two runs at once still share
+the GPU process and swell its figures: run them one after the other for numbers). The Chrome it starts plays sound before any tap (`--autoplay-policy=no-user-gesture-required`),
 which an iPhone never does. `FLAGS` adds Chrome flags: `FLAGS="--enable-unsafe-swiftshader" Q="&soft=1"` runs the game on
 Chrome's software GPU, slowly, the one GPU on a PC that reads a phone's packed pictures (`src/gfx/astc.js`; `&astc=0` to
 see it without them). The textures' count by format and size is in `window.__gpu.texBy`.

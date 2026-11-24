@@ -1,0 +1,2387 @@
+{
+ "side": 1024,
+ "pictures": {
+  "1018199-49eba39e": {
+   "file": "1018199-49eba39e.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "734461b911c21560b511f2620b38444aa12dfe56",
+   "in": [
+    "monsters/necromancer/necromancer.glb#0"
+   ]
+  },
+  "1072285-030b2732": {
+   "file": "1072285-030b2732.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "009fdb435059a00512d4bd7534728cab47bcc4ce",
+   "in": [
+    "monsters/gravehart/gravehart.glb#2"
+   ]
+  },
+  "1099523-3fc66a8b": {
+   "file": "1099523-3fc66a8b.jpg",
+   "size": [
+    4096,
+    4096
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "aa6bdf5b2876b8938494de98b4063e4f77ce1cb3",
+   "in": [
+    "armor/silver_knight.glb#0",
+    "game/silver_knight.glb#0"
+   ]
+  },
+  "1129053-9886206c": {
+   "file": "1129053-9886206c.jpg",
+   "size": [
+    2048,
+    1024
+   ],
+   "copy": [
+    1024,
+    512
+   ],
+   "sha1": "f1a09af14f43869006dd8d4f5826e298c1107191",
+   "in": [
+    "fp/gauntlets_t_white.glb#1"
+   ]
+  },
+  "1222024-ae00a5bc": {
+   "file": "1222024-ae00a5bc.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "9ed1efd539194fbd5da97ef0242c4a89b3e67104",
+   "in": [
+    "monsters/gravehart/gravehart.glb#1"
+   ]
+  },
+  "122694-c28f103a": {
+   "file": "122694-c28f103a.webp",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "e3d2ab21daa1c0c0e9d1c39750e0d7fea83065d5",
+   "in": [
+    "game/items/doors.glb#2"
+   ]
+  },
+  "1231973-7cce36c0": {
+   "file": "1231973-7cce36c0.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "5e7be4aca9a79bcfd752453826f29e6fbc77a3cd",
+   "in": [
+    "monsters/crab_monster/crab_monster.glb#2"
+   ]
+  },
+  "129490-ac914585": {
+   "file": "129490-ac914585.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "a0233a567bf80236521add9a61298f84be0ed054",
+   "in": [
+    "fp/spell_raise.glb#2"
+   ]
+  },
+  "130594-16a92048": {
+   "file": "130594-16a92048.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "f51bd689b9a1b229d6461a3db7e826e47409b1a2",
+   "in": [
+    "monsters/zombie/evil_wizard.glb#0"
+   ]
+  },
+  "1307520-d50e842f": {
+   "file": "1307520-d50e842f.jpg",
+   "size": [
+    4096,
+    4096
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "e0519ab6660323adcdef51bd97941aeae5b88439",
+   "in": [
+    "monsters/tripo/necromancer_lord_2.glb#0"
+   ]
+  },
+  "1316462-b890fa3c": {
+   "file": "1316462-b890fa3c.png",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "62b38eaaba3df9fb1db0b8a608633375cefca416",
+   "in": [
+    "fp/arms_staff.glb#0"
+   ]
+  },
+  "1353066-c7178751": {
+   "file": "1353066-c7178751.jpg",
+   "size": [
+    3072,
+    3072
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "7f44ea00b0831cc5f756e7745540054444663f7c",
+   "in": [
+    "monsters/bone_hydra/bone_hydra.glb#1"
+   ]
+  },
+  "1357346-b3d5791d": {
+   "file": "1357346-b3d5791d.jpg",
+   "size": [
+    4096,
+    4096
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "04349f5d84824753ef0ac3711266fe9eca4de055",
+   "in": [
+    "fp/left_shield_arm.glb#1",
+    "game/items/shield_arm.glb#1"
+   ]
+  },
+  "137580-2e9e259e": {
+   "file": "137580-2e9e259e.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "69170caef5e82ee1716be0526f60026ec68c75e3",
+   "in": [
+    "fp/spell_attack.glb#2"
+   ]
+  },
+  "1380864-5f6c949b": {
+   "file": "1380864-5f6c949b.png",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "a3c4b895e49c9a3ed8a2ac31c03af9fc928f9ecf",
+   "in": [
+    "monsters/crab_monster/crab_monster.glb#0"
+   ]
+  },
+  "1412589-bc00bcc5": {
+   "file": "1412589-bc00bcc5.jpg",
+   "size": [
+    4096,
+    4096
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "7aa3f08a420cf09aa0aa61c1b575c4b880d0cbbb",
+   "in": [
+    "monsters/tripo/velscour_knight_6.glb#0"
+   ]
+  },
+  "1419968-9c09338a": {
+   "file": "1419968-9c09338a.png",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "97f29a0033da2f2587b06c5af052474efea1f5d6",
+   "in": [
+    "monsters/new_creatures/abyssal_mouth.glb#0"
+   ]
+  },
+  "1451063-01cec93c": {
+   "file": "1451063-01cec93c.jpg",
+   "size": [
+    4096,
+    4096
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "577ad06eae89d2a87edf4d085bad89c400b0d1be",
+   "in": [
+    "monsters/tripo/velscour_knight_3.glb#0"
+   ]
+  },
+  "1454264-620b7e8c": {
+   "file": "1454264-620b7e8c.jpg",
+   "size": [
+    4096,
+    4096
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "cd1b1b8f78c7b077db4c9bd125ca6cd275829cde",
+   "in": [
+    "monsters/tripo/velscour_lancer_3.glb#0"
+   ]
+  },
+  "1513719-236f3df4": {
+   "file": "1513719-236f3df4.jpg",
+   "size": [
+    4096,
+    4096
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "bcf3977583bc6eb0c072e41a5cb76902cde871c3",
+   "in": [
+    "monsters/tripo/velscour_knight_5.glb#0"
+   ]
+  },
+  "1513869-f2ebd4a5": {
+   "file": "1513869-f2ebd4a5.jpg",
+   "size": [
+    4096,
+    4096
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "98cab238c066166c64787780ea7b7e7ac169b5b8",
+   "in": [
+    "monsters/tripo/necromancer_lord.glb#0"
+   ]
+  },
+  "1529546-3ff134f8": {
+   "file": "1529546-3ff134f8.jpg",
+   "size": [
+    4096,
+    4096
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "217f9d7b7bab2e5421fbd2340bf2b8d67b4877c6",
+   "in": [
+    "monsters/tripo/necromancer_3.glb#0"
+   ]
+  },
+  "153198-d4551e60": {
+   "file": "153198-d4551e60.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "e34013b87703cfb128833585bd09396eabb380ac",
+   "in": [
+    "fp/spell_attack.glb#5",
+    "fp/spell_raise.glb#5"
+   ]
+  },
+  "1545355-07b1e18d": {
+   "file": "1545355-07b1e18d.jpg",
+   "size": [
+    4096,
+    4096
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "953546bef67d182a7db17ab5e291441a97151791",
+   "in": [
+    "monsters/tripo/velscour_lancer_2.glb#0"
+   ]
+  },
+  "1555118-c561e9fa": {
+   "file": "1555118-c561e9fa.jpg",
+   "size": [
+    4096,
+    4096
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "d0ab262ee9bdcd524d66b7bcbdef3ed0aa304595",
+   "in": [
+    "monsters/tripo/velscour_knight_1.glb#0"
+   ]
+  },
+  "1563343-aa20ea54": {
+   "file": "1563343-aa20ea54.jpg",
+   "size": [
+    4096,
+    4096
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "a8d756059ced36a92d2e3d42ff0e95478f4e2833",
+   "in": [
+    "monsters/tripo/velscour_knight_2.glb#0"
+   ]
+  },
+  "1568240-0678cd4f": {
+   "file": "1568240-0678cd4f.jpg",
+   "size": [
+    4096,
+    4096
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "a71850667fd3c8c26dd87a8e09c3b0c03387cc23",
+   "in": [
+    "monsters/tripo/velscour_knight_4.glb#0"
+   ]
+  },
+  "1588538-84ee7c7c": {
+   "file": "1588538-84ee7c7c.jpg",
+   "size": [
+    4096,
+    4096
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "a6b35dc53d573328544a767311d7c94485ea38cd",
+   "in": [
+    "monsters/tripo/velscour_lancer.glb#0"
+   ]
+  },
+  "159011-054c4aa1": {
+   "file": "159011-054c4aa1.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "d3a51ee540d94a3e7732fe2fc199486401aee773",
+   "in": [
+    "monsters/zombie/zombie_necromancer.glb#0"
+   ]
+  },
+  "1619691-91fd7a41": {
+   "file": "1619691-91fd7a41.jpg",
+   "size": [
+    3072,
+    1024
+   ],
+   "copy": [
+    1024,
+    341
+   ],
+   "sha1": "37a2cff1923286cde5afe1cebf38b96019c703db",
+   "in": [
+    "fp/gauntlets_t_pale.glb#1"
+   ]
+  },
+  "1702011-036a5539": {
+   "file": "1702011-036a5539.jpg",
+   "size": [
+    4096,
+    4096
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "f325b3fe3a050c2a2fdd9cb2f3694920e0eb6246",
+   "in": [
+    "monsters/tripo/possessed_knight_2.glb#0"
+   ]
+  },
+  "1705091-67713b04": {
+   "file": "1705091-67713b04.jpg",
+   "size": [
+    4096,
+    4096
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "274b43a0ae8e93818373836c6ec60da857ee3864",
+   "in": [
+    "monsters/tripo/possessed_knight_1.glb#0"
+   ]
+  },
+  "1742343-c22fbe08": {
+   "file": "1742343-c22fbe08.jpg",
+   "size": [
+    4096,
+    4096
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "1f76485488245da5ef6cc8f9e36d81c72944d363",
+   "in": [
+    "monsters/tripo/possessed_knight_3.glb#0"
+   ]
+  },
+  "174776-f1a059a0": {
+   "file": "174776-f1a059a0.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "beb8b48bb833e27d41118010553c778a54b2d17d",
+   "in": [
+    "monsters/zombie/necromancer.glb#0"
+   ]
+  },
+  "182732-307a9fd5": {
+   "file": "182732-307a9fd5.webp",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "a0f4ade83ce7da69bcbf676c939102eff90b9c27",
+   "in": [
+    "game/items/portal-dungeon.glb#2"
+   ]
+  },
+  "1885048-d4b61bdf": {
+   "file": "1885048-d4b61bdf.png",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "1cbddb956a4299df244ac2e580317c9fa565e76d",
+   "in": [
+    "monsters/necromancer/necromancer.glb#2"
+   ]
+  },
+  "1901564-fd148a70": {
+   "file": "1901564-fd148a70.png",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "7ec4020b100eb987a40ae0f5660fbb0c498321bb",
+   "in": [
+    "monsters/new_creatures/werewolf_brown.glb#0"
+   ]
+  },
+  "194582-47531e00": {
+   "file": "194582-47531e00.webp",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "6eee49c76f35a9f452fe93d6c0f413ed0e492709",
+   "in": [
+    "game/items/chest.glb#2"
+   ]
+  },
+  "1946628-5bcb3104": {
+   "file": "1946628-5bcb3104.jpg",
+   "size": [
+    4096,
+    4096
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "aa4f7a4dc7180036704c75a95b0421d86adfc00a",
+   "in": [
+    "fp/left_shield_arm.glb#0",
+    "game/items/shield_arm.glb#0"
+   ]
+  },
+  "194988-8fdc4db2": {
+   "file": "194988-8fdc4db2.webp",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "7b9958f042aa947e03ed3c53ab8b4163ef1eb574",
+   "in": [
+    "game/items/portal-ground.glb#2"
+   ]
+  },
+  "1956760-e46d61b2": {
+   "file": "1956760-e46d61b2.png",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "3f0acd0a5ecf3f845e33f34bf7c7652b7a6a14b8",
+   "in": [
+    "monsters/gravehart/gravehart.glb#0"
+   ]
+  },
+  "199524-7dd40bd3": {
+   "file": "199524-7dd40bd3.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "e53f68ac940ee7d9850978e925bac8141d80e58a",
+   "in": [
+    "monsters/zombie/zombie_1.glb#0"
+   ]
+  },
+  "219426-ca609a99": {
+   "file": "219426-ca609a99.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "427c1cbc2c97e73988865a9011b50c56ddb9f6f7",
+   "in": [
+    "monsters/zombie/zombie_4.glb#0"
+   ]
+  },
+  "221825-d23da72c": {
+   "file": "221825-d23da72c.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "e4d27e454d141821cef1d2d9d83add9db9a5239a",
+   "in": [
+    "monsters/zombie/zombie_3.glb#0"
+   ]
+  },
+  "225491-4a54c9c4": {
+   "file": "225491-4a54c9c4.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "e95bba808f1b8157edcb067a1f2a6efc1af055ec",
+   "in": [
+    "fp/arms_1h.glb#1"
+   ]
+  },
+  "229181-a4af30cd": {
+   "file": "229181-a4af30cd.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "835aa86ecf790637fb78c1deffde9c7d4ee3d311",
+   "in": [
+    "fp/arms_2h.glb#1"
+   ]
+  },
+  "230419-084b419c": {
+   "file": "230419-084b419c.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "bd3168bdf6aca4983686ccc915561ef21d0df8f9",
+   "in": [
+    "monsters/zombie/zombie_ogre.glb#0"
+   ]
+  },
+  "246278-8f50ce0c": {
+   "file": "246278-8f50ce0c.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "b9dd3a14de26b9416c893a5e11623b7fec98ae12",
+   "in": [
+    "monsters/zombie/zombie_6.glb#0"
+   ]
+  },
+  "247564-41d8b6bc": {
+   "file": "247564-41d8b6bc.webp",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "1ff8f41d9f4017e9765a25c849bc00eb337614fb",
+   "in": [
+    "game/items/portal-ground.glb#1"
+   ]
+  },
+  "2494802-53fd392d": {
+   "file": "2494802-53fd392d.png",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "cbf7ee09d0bb99ca6992ffd4934c8d6523d70638",
+   "in": [
+    "monsters/new_creatures/flesh_spider_demon.glb#2"
+   ]
+  },
+  "249671-61d2e323": {
+   "file": "249671-61d2e323.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "acac45f154309ecc61b4e30f52e8356cb14745a6",
+   "in": [
+    "monsters/tripo/dragon_black.glb#2"
+   ]
+  },
+  "251696-315cb219": {
+   "file": "251696-315cb219.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "005be71bfefa2cd901b99f18368c7a6d46e75f63",
+   "in": [
+    "monsters/zombie/zombie_2.glb#0"
+   ]
+  },
+  "262209-d0b7aca3": {
+   "file": "262209-d0b7aca3.jpg",
+   "size": [
+    1280,
+    1280
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "354f760087274d2f94fb262a09761462cd78385e",
+   "in": [
+    "game/items/crimson_sword.glb#1"
+   ]
+  },
+  "271058-6b3152fa": {
+   "file": "271058-6b3152fa.webp",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "4e4998f053d8295fac9040636927de6d9edf4cac",
+   "in": [
+    "game/items/chest.glb#1"
+   ]
+  },
+  "274052-87959ad4": {
+   "file": "274052-87959ad4.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "cbd617c3640e1fa0a69f6f4406faaf451041881d",
+   "in": [
+    "monsters/zombie/zombie_5.glb#0"
+   ]
+  },
+  "283276-9e4589d5": {
+   "file": "283276-9e4589d5.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "514dfcb44dfb9be12e3480971db67a4fb3189d7c",
+   "in": [
+    "armor/velscour_knight.glb#1",
+    "game/velscour_knight.glb#1"
+   ]
+  },
+  "287397-c27723a3": {
+   "file": "287397-c27723a3.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "aaa62f977c2009136b7f0080817088e23d55c483",
+   "in": [
+    "monsters/tripo/dragon_red.glb#2"
+   ]
+  },
+  "3026748-4511b8f0": {
+   "file": "3026748-4511b8f0.png",
+   "size": [
+    4096,
+    4096
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "728c5861ce439f6eaef34d19756c6e737d6a258a",
+   "in": [
+    "fp/left_shield_arm.glb#2",
+    "game/items/shield_arm.glb#2"
+   ]
+  },
+  "308177-62e45cd8": {
+   "file": "308177-62e45cd8.jpg",
+   "size": [
+    2048,
+    1024
+   ],
+   "copy": [
+    1024,
+    512
+   ],
+   "sha1": "39d941a639b9529eb0e718b333f6c3f94ae8dc4d",
+   "in": [
+    "fp/gauntlets_t_purple.glb#2"
+   ]
+  },
+  "312965-3add0adc": {
+   "file": "312965-3add0adc.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "fa3ecf254c403e508788c2149ef3080784bed550",
+   "in": [
+    "monsters/new_creatures/werewolf_brown.glb#1"
+   ]
+  },
+  "318053-97635ff1": {
+   "file": "318053-97635ff1.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "828f575042b33a2c9935e12d17d40df3bbdf6ede",
+   "in": [
+    "monsters/zombie/evil_wizard.glb#2"
+   ]
+  },
+  "320384-6925c6b4": {
+   "file": "320384-6925c6b4.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "d4816ae23d94509149f2201e2abe9689ad7bbe0f",
+   "in": [
+    "monsters/tripo/dragon_green.glb#2"
+   ]
+  },
+  "323917-56f1427f": {
+   "file": "323917-56f1427f.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "792de49a0b9322b8694bbf8a8bcffcb0e4c7f85a",
+   "in": [
+    "monsters/zombie/evil_wizard.glb#1"
+   ]
+  },
+  "328489-fb2dd432": {
+   "file": "328489-fb2dd432.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "0129bd9e72a4d2befac2602ecf2e1978342435d3",
+   "in": [
+    "fp/arms_2h.glb#0"
+   ]
+  },
+  "330934-dd374bee": {
+   "file": "330934-dd374bee.jpg",
+   "size": [
+    1280,
+    1280
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "3c893581ce1a7aaf9697bcefe886fdab38e8c778",
+   "in": [
+    "game/items/swept_rapier.glb#1"
+   ]
+  },
+  "333816-4c93f1a4": {
+   "file": "333816-4c93f1a4.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "31d489c32f65c78e8f011494a1bd5d09fd88c794",
+   "in": [
+    "fp/arms_1h.glb#0"
+   ]
+  },
+  "336021-6f00449e": {
+   "file": "336021-6f00449e.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "ce2631a1117564e76124f2ab73d7921975ba2ad6",
+   "in": [
+    "fp/arms_staff.glb#2"
+   ]
+  },
+  "336472-fe735176": {
+   "file": "336472-fe735176.jpg",
+   "size": [
+    1280,
+    1280
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "fa0b9e134cd6c8fb46b8dc22752bbde454f2af0a",
+   "in": [
+    "game/items/bronze_broadsword.glb#1"
+   ]
+  },
+  "344393-94d5dac5": {
+   "file": "344393-94d5dac5.jpg",
+   "size": [
+    2048,
+    1024
+   ],
+   "copy": [
+    1024,
+    512
+   ],
+   "sha1": "aef039d08e7afe7c6f16ab2d1eb82b210db6de69",
+   "in": [
+    "fp/gauntlets_knight.glb#2"
+   ]
+  },
+  "345947-8c7f80c4": {
+   "file": "345947-8c7f80c4.jpg",
+   "size": [
+    2048,
+    1024
+   ],
+   "copy": [
+    1024,
+    512
+   ],
+   "sha1": "c666498d9e92beae06ae7597a0c229f2d0612210",
+   "in": [
+    "fp/gauntlets_t_silver.glb#2"
+   ]
+  },
+  "352567-8bafd459": {
+   "file": "352567-8bafd459.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "36e5362709101f58115e5d3432fd39c028189a87",
+   "in": [
+    "monsters/tripo/dragon_undead.glb#2"
+   ]
+  },
+  "354578-5e4af3b3": {
+   "file": "354578-5e4af3b3.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "636919a23302d0c7ba4d8e5960807d69e668bcc0",
+   "in": [
+    "game/knights/paladin_fifthwatch.glb#1"
+   ]
+  },
+  "355235-84eb4a97": {
+   "file": "355235-84eb4a97.jpg",
+   "size": [
+    1280,
+    1280
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "449ec867987cb97dcf21164d6330b7ff742d494c",
+   "in": [
+    "game/items/wheel_greatsword.glb#1"
+   ]
+  },
+  "356236-28cd5e9a": {
+   "file": "356236-28cd5e9a.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "2ac6cbf191279f8d209365357f67a97531f05d8f",
+   "in": [
+    "monsters/new_creatures/abyssal_mouth.glb#1"
+   ]
+  },
+  "357473-d923cf79": {
+   "file": "357473-d923cf79.png",
+   "size": [
+    1280,
+    1280
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "94d5e15e372e73daf45dfc98fc64cb47aa87fe1c",
+   "in": [
+    "game/items/swept_rapier.glb#2"
+   ]
+  },
+  "357830-b712e0a0": {
+   "file": "357830-b712e0a0.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "43b5b3942c458dc26a20f0757bfcf6d41375d2ee",
+   "in": [
+    "monsters/zombie/zombie_necromancer.glb#2"
+   ]
+  },
+  "365767-4b9c9206": {
+   "file": "365767-4b9c9206.jpg",
+   "size": [
+    2048,
+    1024
+   ],
+   "copy": [
+    1024,
+    512
+   ],
+   "sha1": "abc7e82d59cea0383b6a28871674ff4ad4eb8445",
+   "in": [
+    "fp/gauntlets_knight.glb#0"
+   ]
+  },
+  "366445-5ab713d8": {
+   "file": "366445-5ab713d8.jpg",
+   "size": [
+    1280,
+    1280
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "76d19384adb47fc1bba0f00b3dff9a6df2d72faa",
+   "in": [
+    "game/items/fluked_greatsword.glb#1"
+   ]
+  },
+  "367917-06ad52d0": {
+   "file": "367917-06ad52d0.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "9f3114864b194ca7e02b67d726c11d7e5bb92f15",
+   "in": [
+    "monsters/zombie/necromancer.glb#2"
+   ]
+  },
+  "371756-72137c06": {
+   "file": "371756-72137c06.webp",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "3b2cf5c4972092f6208ab140755c52d6c8dd719c",
+   "in": [
+    "game/items/portal-dungeon.glb#1"
+   ]
+  },
+  "377387-36f768e8": {
+   "file": "377387-36f768e8.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "368e4046203e41c41cbd51828348f6ac5ded3dbe",
+   "in": [
+    "monsters/zombie/necromancer.glb#1"
+   ]
+  },
+  "377752-b0835512": {
+   "file": "377752-b0835512.jpg",
+   "size": [
+    1536,
+    1536
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "7ca86be7a4e87c227edac89a0bc27e45c7af52af",
+   "in": [
+    "game/items/thornvine_sword.glb#1"
+   ]
+  },
+  "382181-bed068fe": {
+   "file": "382181-bed068fe.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "6ac34ff596ccb780f749a5236945792e3427700f",
+   "in": [
+    "monsters/zombie/zombie_1.glb#1"
+   ]
+  },
+  "382254-cd697476": {
+   "file": "382254-cd697476.jpg",
+   "size": [
+    1280,
+    1280
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "092087d07161f72e53ce6b7a977e00b746289945",
+   "in": [
+    "game/items/greenwood_staff.glb#1"
+   ]
+  },
+  "382544-beda6077": {
+   "file": "382544-beda6077.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "793acb2ea1dd8220670ca4bba16429189bd01735",
+   "in": [
+    "armor/silver_knight.glb#1",
+    "game/silver_knight.glb#1"
+   ]
+  },
+  "383273-d152e65d": {
+   "file": "383273-d152e65d.jpg",
+   "size": [
+    1280,
+    1280
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "9b88d0994fd1f9d6a735a37a585a66eeb70e7bbc",
+   "in": [
+    "game/items/wheel_greatsword.glb#0"
+   ]
+  },
+  "385809-77588482": {
+   "file": "385809-77588482.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "92d3442a08762a0a61cdca4f412e72b06916d35f",
+   "in": [
+    "monsters/zombie/zombie_necromancer.glb#1"
+   ]
+  },
+  "390836-8c8e1ecf": {
+   "file": "390836-8c8e1ecf.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "893e77a7226cf41e979ef7302a7be65516d56f0b",
+   "in": [
+    "monsters/zombie/zombie_3.glb#2"
+   ]
+  },
+  "3936404-8a0bd51d": {
+   "file": "3936404-8a0bd51d.png",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "4d6caf5971dc70dbe83760ada553187b8df96948",
+   "in": [
+    "monsters/new_creatures/werewolf_brown.glb#2"
+   ]
+  },
+  "4032931-b8414541": {
+   "file": "4032931-b8414541.png",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "83480c3cba12297188c7cb5b6cb0ed1e0f6fa8cd",
+   "in": [
+    "monsters/new_creatures/abyssal_mouth.glb#2"
+   ]
+  },
+  "404520-31948851": {
+   "file": "404520-31948851.jpg",
+   "size": [
+    1280,
+    1280
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "4f5a54dad4d302a13a4401ac16f37b6c11f4096d",
+   "in": [
+    "game/items/bronze_broadsword.glb#0"
+   ]
+  },
+  "404638-70a38c31": {
+   "file": "404638-70a38c31.jpg",
+   "size": [
+    2048,
+    1024
+   ],
+   "copy": [
+    1024,
+    512
+   ],
+   "sha1": "ab59a68247316017a692ce3df53ed6a772343d45",
+   "in": [
+    "fp/gauntlets_t_white.glb#2"
+   ]
+  },
+  "413989-c36e5bf6": {
+   "file": "413989-c36e5bf6.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "0316a819877f6e537d22f7db46d513f773f79528",
+   "in": [
+    "armor/velscour_knight.glb#2",
+    "game/velscour_knight.glb#2"
+   ]
+  },
+  "419800-c11baee8": {
+   "file": "419800-c11baee8.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "cea80e599a757a0f805eeb1133dea7af7983403e",
+   "in": [
+    "monsters/zombie/zombie_4.glb#1"
+   ]
+  },
+  "420001-39bc144a": {
+   "file": "420001-39bc144a.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "c75a8f53973ff9fb9b4b20444e2c12b658819509",
+   "in": [
+    "game/items/skull_arm.glb#0"
+   ]
+  },
+  "429391-150c283e": {
+   "file": "429391-150c283e.jpg",
+   "size": [
+    1280,
+    1280
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "ca21ccbb9250096e1160d83f7882bcba5a0efc02",
+   "in": [
+    "game/items/swept_rapier.glb#0"
+   ]
+  },
+  "430664-48fb307d": {
+   "file": "430664-48fb307d.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "5b6d9449990ccbb8e3e2ecd83811d54d946175e6",
+   "in": [
+    "fp/spell_attack.glb#0"
+   ]
+  },
+  "436524-0df122d5": {
+   "file": "436524-0df122d5.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "7dc209df1b8f2e5365e915572b3d9ed5cb986e8c",
+   "in": [
+    "monsters/zombie/zombie_4.glb#2"
+   ]
+  },
+  "439689-db1e60e1": {
+   "file": "439689-db1e60e1.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "ab8e5bf26b463b630ce1d09200c34c934c078577",
+   "in": [
+    "monsters/zombie/zombie_ogre.glb#1"
+   ]
+  },
+  "442844-d8e77d98": {
+   "file": "442844-d8e77d98.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "ca8d9e298df7a70edc039011eee979cd0f6156c6",
+   "in": [
+    "monsters/zombie/zombie_ogre.glb#2"
+   ]
+  },
+  "444340-782c9451": {
+   "file": "444340-782c9451.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "c8c6b7986de006bd36db040c04290e8bd5516afa",
+   "in": [
+    "monsters/zombie/zombie_1.glb#2"
+   ]
+  },
+  "447735-40645cd0": {
+   "file": "447735-40645cd0.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "a2cb1cda5c9c3abcd361ef4eb5bd87a4e644afb3",
+   "in": [
+    "fp/spell_attack.glb#3",
+    "fp/spell_raise.glb#3"
+   ]
+  },
+  "449011-3c8bf28d": {
+   "file": "449011-3c8bf28d.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "eee5d680e6c0d2b6eb68ea9ad444bd91dad633a6",
+   "in": [
+    "fp/spell_raise.glb#0"
+   ]
+  },
+  "449444-fbeed736": {
+   "file": "449444-fbeed736.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "b9440bf14501486039d73109ec1472b7080675cf",
+   "in": [
+    "monsters/zombie/zombie_2.glb#1"
+   ]
+  },
+  "450313-d64a3d29": {
+   "file": "450313-d64a3d29.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "a1248f66621cd22b910b3e08eee8a5076476e361",
+   "in": [
+    "game/knights/paladin_fifthwatch.glb#2"
+   ]
+  },
+  "457155-3aa9ab68": {
+   "file": "457155-3aa9ab68.jpg",
+   "size": [
+    2048,
+    1024
+   ],
+   "copy": [
+    1024,
+    512
+   ],
+   "sha1": "e7c7a830d7c35378f2f014d4a7f496a1598dcfa9",
+   "in": [
+    "fp/gauntlets_t_purple.glb#0"
+   ]
+  },
+  "4582448-5beb9ace": {
+   "file": "4582448-5beb9ace.png",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "0bd344e0cd1df9200fc1d4b209cf65db9b7c9a8d",
+   "in": [
+    "monsters/new_creatures/flesh_spider_demon.glb#1"
+   ]
+  },
+  "459806-617a827a": {
+   "file": "459806-617a827a.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "8241354eab8bd5fffc0c6ba672dab19d74e0d775",
+   "in": [
+    "monsters/zombie/zombie_3.glb#1"
+   ]
+  },
+  "463251-3b5ee53e": {
+   "file": "463251-3b5ee53e.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "752d85e3fa463a66bff364a8d7708a48ad4b24af",
+   "in": [
+    "monsters/zombie/zombie_6.glb#1"
+   ]
+  },
+  "465214-79dc3cf4": {
+   "file": "465214-79dc3cf4.jpg",
+   "size": [
+    1280,
+    1280
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "65ba374af76cbc69dbe8ed89c7863826d7b3d051",
+   "in": [
+    "game/items/crimson_sword.glb#0"
+   ]
+  },
+  "467693-dea8006f": {
+   "file": "467693-dea8006f.jpg",
+   "size": [
+    2048,
+    1024
+   ],
+   "copy": [
+    1024,
+    512
+   ],
+   "sha1": "a3c788fa44a458f3bbcf0b4ffbf76fcbe4926bf2",
+   "in": [
+    "fp/gauntlets_t_silver.glb#0"
+   ]
+  },
+  "467908-a3e73007": {
+   "file": "467908-a3e73007.png",
+   "size": [
+    1280,
+    1280
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "a7a32fd4ad9a59b52c4be36f51c0062b077b79b4",
+   "in": [
+    "game/items/greenwood_staff.glb#2"
+   ]
+  },
+  "479738-112b7ecd": {
+   "file": "479738-112b7ecd.jpg",
+   "size": [
+    1280,
+    1280
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "a1a7c2f94dfc9393022d1e212ff15be4a3e25cca",
+   "in": [
+    "game/items/greenwood_staff.glb#0"
+   ]
+  },
+  "489271-dec27f56": {
+   "file": "489271-dec27f56.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "595e3408ccd5d9fb06669bf692ad3d5d404d2668",
+   "in": [
+    "monsters/zombie/zombie_5.glb#1"
+   ]
+  },
+  "493479-197517a8": {
+   "file": "493479-197517a8.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "dc14b8a87048698b8df8b3196b438bf5c88b468e",
+   "in": [
+    "armor/silver_knight.glb#2",
+    "game/silver_knight.glb#2"
+   ]
+  },
+  "501633-98cd0a5a": {
+   "file": "501633-98cd0a5a.jpg",
+   "size": [
+    1280,
+    1280
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "a593e1a9031eef45792f71b209a9d0b985dd6e16",
+   "in": [
+    "game/items/fluked_greatsword.glb#0"
+   ]
+  },
+  "501868-44a02d60": {
+   "file": "501868-44a02d60.png",
+   "size": [
+    1280,
+    1280
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "d33d396c5668d66c646b055aa2abc4e7e784ec89",
+   "in": [
+    "game/items/wheel_greatsword.glb#2"
+   ]
+  },
+  "517290-96717734": {
+   "file": "517290-96717734.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "076de7220e0ab78a2ef22b7089825662b7045d8c",
+   "in": [
+    "monsters/zombie/zombie_6.glb#2"
+   ]
+  },
+  "518821-842766d3": {
+   "file": "518821-842766d3.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "e1e7bf169198d058018320683a21406e9f43c5b1",
+   "in": [
+    "monsters/new_creatures/flesh_spider_demon.glb#0"
+   ]
+  },
+  "526402-d67b60df": {
+   "file": "526402-d67b60df.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "41c19b79eaa14d7e3290e915c2eec4e864714952",
+   "in": [
+    "game/knights/knight.glb#0"
+   ]
+  },
+  "527907-54eb0f96": {
+   "file": "527907-54eb0f96.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "c837efc3803bb1a02c4b45072be0aa35154c8689",
+   "in": [
+    "monsters/zombie/zombie_5.glb#2"
+   ]
+  },
+  "528186-b5a833a3": {
+   "file": "528186-b5a833a3.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "add9205c477f88e04554861b9fa866d0bb1b36bc",
+   "in": [
+    "fp/arms_staff.glb#1"
+   ]
+  },
+  "545545-7054a546": {
+   "file": "545545-7054a546.jpg",
+   "size": [
+    2048,
+    1024
+   ],
+   "copy": [
+    1024,
+    512
+   ],
+   "sha1": "dac1ac72a297c7a33d5b5bb67c0b6685f1404ae1",
+   "in": [
+    "fp/gauntlets_t_white.glb#0"
+   ]
+  },
+  "561551-2f41454b": {
+   "file": "561551-2f41454b.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "69e43c771da08e793f54329d7073a8e4ef1dd333",
+   "in": [
+    "game/player/wizard.glb#1"
+   ]
+  },
+  "567841-3c7534c3": {
+   "file": "567841-3c7534c3.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "30d3572092a2677be8c02e198f11b313e5b2452e",
+   "in": [
+    "monsters/zombie/zombie_2.glb#2"
+   ]
+  },
+  "572789-ae30e1af": {
+   "file": "572789-ae30e1af.jpg",
+   "size": [
+    1536,
+    1536
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "819181c2ee2e8e8e033c17f45a4b0a04f737f31b",
+   "in": [
+    "game/items/skullhorn_staff.glb#1"
+   ]
+  },
+  "574531-ba2a4c47": {
+   "file": "574531-ba2a4c47.png",
+   "size": [
+    1280,
+    1280
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "b9f532706febfef26338e847eaa849729adf3f44",
+   "in": [
+    "game/items/bronze_broadsword.glb#2"
+   ]
+  },
+  "609404-40c89761": {
+   "file": "609404-40c89761.webp",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "03120d97e22385de5407a38a7ba7c31b7fc10982",
+   "in": [
+    "game/items/doors.glb#0"
+   ]
+  },
+  "624840-79c4d39e": {
+   "file": "624840-79c4d39e.jpg",
+   "size": [
+    1536,
+    1536
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "af426c64705ab2e331f39e852e4e2f3f61ee8f6d",
+   "in": [
+    "game/items/skullhorn_staff.glb#0"
+   ]
+  },
+  "627912-3d235c9e": {
+   "file": "627912-3d235c9e.webp",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "675b643194e28f9dbadd4b07e760fa54ac17ef97",
+   "in": [
+    "game/items/doors.glb#1"
+   ]
+  },
+  "641012-37854c43": {
+   "file": "641012-37854c43.jpg",
+   "size": [
+    3072,
+    1024
+   ],
+   "copy": [
+    1024,
+    341
+   ],
+   "sha1": "8109af7c1524f094719d8f77d1f1af209c37c961",
+   "in": [
+    "fp/gauntlets_t_pale.glb#2"
+   ]
+  },
+  "644732-ff12674b": {
+   "file": "644732-ff12674b.png",
+   "size": [
+    1280,
+    1280
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "15c38da41dbf69c14e83939f1ccacad9dff7e779",
+   "in": [
+    "game/items/crimson_sword.glb#2"
+   ]
+  },
+  "663012-854866a1": {
+   "file": "663012-854866a1.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "4017c18c038842a6b9d4c53d4b73fe3add2262d9",
+   "in": [
+    "game/knights/t_silver.glb#0"
+   ]
+  },
+  "680812-bfbad338": {
+   "file": "680812-bfbad338.jpg",
+   "size": [
+    1536,
+    1536
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "1e1cb603c56820e94f43d024fb59ba87b006f25b",
+   "in": [
+    "game/items/thornvine_sword.glb#0"
+   ]
+  },
+  "683607-f299cfcd": {
+   "file": "683607-f299cfcd.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "e6c7d72542f3ac11724c7558d86a5aa17418761e",
+   "in": [
+    "game/knights/t_white.glb#0"
+   ]
+  },
+  "698019-7e3c84db": {
+   "file": "698019-7e3c84db.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "e12bd7c8121014e80cff2f234e856da49f9f4327",
+   "in": [
+    "game/knights/paladin_fifthwatch.glb#0"
+   ]
+  },
+  "725634-188a6b2b": {
+   "file": "725634-188a6b2b.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "a86e40af4a1a4c785f93db17c27c7074ce19198f",
+   "in": [
+    "monsters/tripo/dragon_black.glb#0"
+   ]
+  },
+  "734028-f6816727": {
+   "file": "734028-f6816727.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "e7af27ed5c3c33eb4c4ed4d0944463e648bc7192",
+   "in": [
+    "game/player/wizard.glb#0"
+   ]
+  },
+  "741240-aca47652": {
+   "file": "741240-aca47652.png",
+   "size": [
+    1536,
+    1536
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "40cfc69ac5b949a32fde36e7a683393390c7ac33",
+   "in": [
+    "game/items/skullhorn_staff.glb#2"
+   ]
+  },
+  "747639-ede68096": {
+   "file": "747639-ede68096.jpg",
+   "size": [
+    2048,
+    1024
+   ],
+   "copy": [
+    1024,
+    512
+   ],
+   "sha1": "5f13c64da8aaf05f913cb36069680f87dc8f97aa",
+   "in": [
+    "fp/gauntlets_knight.glb#1"
+   ]
+  },
+  "768478-62f8610f": {
+   "file": "768478-62f8610f.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "2c5412c3a6c245e384c23506bab295569c1f9961",
+   "in": [
+    "game/knights/t_purple.glb#0"
+   ]
+  },
+  "77274-4dcb6d6b": {
+   "file": "77274-4dcb6d6b.webp",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "5ff4f24bc2c6c513641dda109c82f33a5a71ad56",
+   "in": [
+    "game/items/chest.glb#0"
+   ]
+  },
+  "784476-e75cf673": {
+   "file": "784476-e75cf673.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "35d56084f07d0ff5093183e5c8a3a2ad0b17231f",
+   "in": [
+    "monsters/necromancer/necromancer.glb#1"
+   ]
+  },
+  "787804-fe851d29": {
+   "file": "787804-fe851d29.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "826e248558abc7b6b96c8f7d58ed7451c3a33654",
+   "in": [
+    "monsters/tripo/dragon_red.glb#0"
+   ]
+  },
+  "815540-433688ec": {
+   "file": "815540-433688ec.png",
+   "size": [
+    1280,
+    1280
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "893da88899cb82930c7b83725bbeeda02af63bad",
+   "in": [
+    "game/items/fluked_greatsword.glb#2"
+   ]
+  },
+  "829297-7f019c9f": {
+   "file": "829297-7f019c9f.png",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "78597a2f3cbfa4fcb6bca31f679b4a98b9e81ce2",
+   "in": [
+    "fp/arms_1h.glb#2"
+   ]
+  },
+  "843633-3107447f": {
+   "file": "843633-3107447f.jpg",
+   "size": [
+    3072,
+    1024
+   ],
+   "copy": [
+    1024,
+    341
+   ],
+   "sha1": "658603930dfd1c1be5cf198349e49740cc42a2ee",
+   "in": [
+    "fp/gauntlets_t_pale.glb#0"
+   ]
+  },
+  "85982-3bb30ef8": {
+   "file": "85982-3bb30ef8.webp",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "090484c934ea2d364e5d6a4f0c585336f13864a7",
+   "in": [
+    "game/items/portal-ground.glb#0"
+   ]
+  },
+  "862216-1d05a6d5": {
+   "file": "862216-1d05a6d5.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "19bc5684d9a17304e3847f41b831b8e825bb1315",
+   "in": [
+    "monsters/tripo/dragon_undead.glb#0"
+   ]
+  },
+  "874054-8568cc83": {
+   "file": "874054-8568cc83.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "8c23787b6276858c548d8bbabf441ea9de03b879",
+   "in": [
+    "monsters/tripo/dragon_green.glb#0"
+   ]
+  },
+  "881971-5b852bd7": {
+   "file": "881971-5b852bd7.png",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "bb43ff41477d6d371e78bb561347931cfc54ff24",
+   "in": [
+    "fp/arms_2h.glb#2"
+   ]
+  },
+  "900887-4ff5b6bb": {
+   "file": "900887-4ff5b6bb.jpg",
+   "size": [
+    2048,
+    1024
+   ],
+   "copy": [
+    1024,
+    512
+   ],
+   "sha1": "0a00e3ad594c0f42b3f2b6cf3d6ce0f0f61a6e25",
+   "in": [
+    "fp/gauntlets_t_silver.glb#1"
+   ]
+  },
+  "93500-dae7d98d": {
+   "file": "93500-dae7d98d.webp",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "f301a411295798b7f20aeddc40d4b5231e106100",
+   "in": [
+    "game/items/portal-dungeon.glb#0"
+   ]
+  },
+  "936519-1ff6cd7b": {
+   "file": "936519-1ff6cd7b.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "88b0b75397228a38ee46ed358f3b35420ac2b619",
+   "in": [
+    "monsters/crab_monster/crab_monster.glb#1"
+   ]
+  },
+  "949156-1a654003": {
+   "file": "949156-1a654003.jpg",
+   "size": [
+    2048,
+    1024
+   ],
+   "copy": [
+    1024,
+    512
+   ],
+   "sha1": "139f9a80d084181f1755e721271457a8461db783",
+   "in": [
+    "fp/gauntlets_t_purple.glb#1"
+   ]
+  },
+  "949921-2744b0f7": {
+   "file": "949921-2744b0f7.jpg",
+   "size": [
+    2048,
+    2048
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "0ae92882e98e933f633279bf90a3e2ee8e808ff3",
+   "in": [
+    "game/knights/t_pale.glb#0"
+   ]
+  },
+  "951561-bac85170": {
+   "file": "951561-bac85170.jpg",
+   "size": [
+    4096,
+    4096
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "b443058ea1a54e2a3e0763c6ab6bee11e06dc2e5",
+   "in": [
+    "armor/velscour_knight.glb#0",
+    "game/velscour_knight.glb#0"
+   ]
+  },
+  "988201-4c3260ab": {
+   "file": "988201-4c3260ab.png",
+   "size": [
+    1536,
+    1536
+   ],
+   "copy": [
+    1024,
+    1024
+   ],
+   "sha1": "16e5c3d4691e46620abaa75393e29b84c5947e60",
+   "in": [
+    "game/items/thornvine_sword.glb#2"
+   ]
+  }
+ },
+ "left": {}
+}

@@ -9,6 +9,9 @@
 import { WILD_VARIANTS, battleLairs, outpostLair } from './wilds.js';
 import { BATTLES, OUTPOSTS } from './wilds-data.js';
 import { HAUNTS } from './east.js';
+import { VARIANTS_H } from './delve-highward.js';
+import { VARIANTS_A } from './delve-castle-a.js';
+import { VARIANTS_B } from './delve-castle-b.js';
 
 export const TRIPO_BASE = 'assets/monsters/tripo/';
 export const TRIPO_SLOTS = 12;
@@ -141,9 +144,17 @@ export const VARIANTS = {
   ib_runner: { src: 'kobold_armored_1', alt: 'kobold_1', height: 1.3, name: 'POWDER-RUNNER' },
   ib_marshal: { src: 'velscour_knight_5', alt: 'velscour_knight_1', height: 4.0, name: 'THE IRON MARSHAL' },
   ib_standard: { src: 'mannequin_2', alt: 'mannequin_1', height: 3.0, name: 'THE IRON STANDARD' },
+  // The Redoubt under the Sill's (src/core/delve-redoubt.js): the Pen-Warden in his pens, the Master of Harness, the Red Hand
+  // and his banner. The first you meet in his country, so not so tall as the castle's.
+  rd_penwarden: { src: 'plague_giant_1', alt: 'plague_giant_2', height: 3.2, name: 'THE PEN-WARDEN' },
+  rd_carrow: { src: 'velscour_lancer_3', alt: 'velscour_knight_2', height: 2.7, name: 'SIR OSWIN CARROW' },
+  rd_rothgar: { src: 'possessed_knight_3', alt: 'velscour_knight_4', height: 3.5, name: 'KNIGHT-COMMANDER ROTHGAR' },
+  rd_banner: { src: 'mannequin_3', alt: 'mannequin_1', height: 3.0, name: "THE RED HAND'S BANNER" },
 };
 // And the land's new kinds (src/core/wilds.js): a palette, a size, a name and tricks of their own on the old bodies.
 Object.assign(VARIANTS, WILD_VARIANTS);
+// And Castle Velscour's later delves' (src/core/delve-highward.js, delve-castle-a.js, delve-castle-b.js).
+Object.assign(VARIANTS, VARIANTS_H, VARIANTS_A, VARIANTS_B);
 export function withVariants(roster) {
   for (const [id, v] of Object.entries(VARIANTS)) {
     const src = roster[v.src] ? v.src : v.alt;
@@ -195,9 +206,10 @@ export const LAIRS = [
   { key: 'fen_worm', x: 309, z: -2951, r: 4, boss: ['worm_1'], n: 0, pal: ['Base', 'Blighted'], wake: 140 },
   { key: 'fen_harpies', x: -560, z: -3830, r: 9, pick: ['harpy_undead_1', 'harpy_undead_2'], n: 3, pal: ['Base', 'Blighted', 'Ashen'] },
   { key: 'fen_dragon', x: -980, z: -4080, r: 4, boss: ['dragon_green'], n: 0, pal: ['Base'], wake: 200 },
-  // The Rustwood.
-  { key: 'cutter_raiders', x: 4640, z: -1360, r: 8, pick: RED_GOBLINS, n: 5, pal: ['Base', 'Base', 'Infernal'] },
-  { key: 'fungal_brood', x: 2900, z: -4300, r: 8, boss: ['flesh_spider_demon'], pick: SPIDERS.concat(KOBOLDS), n: 4, pal: ['Base', 'Blighted', 'Corrupted'] },
+  // The Rustwood (the cutters' raiders up the hill south of their camp, the ring's brood down its west cheek: moved off where
+  // people stand, src/folk/regions/rustwood.js).
+  { key: 'cutter_raiders', x: 4620, z: -1150, r: 8, pick: RED_GOBLINS, n: 5, pal: ['Base', 'Base', 'Infernal'] },
+  { key: 'fungal_brood', x: 2750, z: -4180, r: 8, boss: ['flesh_spider_demon'], pick: SPIDERS.concat(KOBOLDS), n: 4, pal: ['Base', 'Blighted', 'Corrupted'] },
   { key: 'abbey_road_goats', x: 3300, z: -2000, r: 6, pick: GOATS.concat(['goatman_gold_good']), n: 3, pal: ['Base', 'Infernal'] },
   // The Ashen Waste: Velscour's own.
   { key: 'vigil_guard', x: -4620, z: 40, r: 9, boss: ['velscour_lancer'], pick: ['velscour_knight_1', 'velscour_knight_2'], n: 3, pal: ['Base'] },
@@ -206,20 +218,26 @@ export const LAIRS = [
   { key: 'ash_dragon', x: -4260, z: -420, r: 4, boss: ['dragon_black'], n: 0, pal: ['Base'], wake: 200 },
   { key: 'ash_worm', x: -3980, z: -1250, r: 4, boss: ['worm_2'], n: 0, pal: ['Base', 'Ashen'], wake: 140 },
   // The Sorrowhorn.
-  { key: 'crown_dragon', x: -2560, z: -2960, r: 4, boss: ['dragon_red'], n: 0, pal: ['Base'], wake: 220 },
-  { key: 'stair_demons', x: -1600, z: -1840, r: 7, pick: DEMONS, n: 2, pal: ['Base', 'Abyssal'] },
+  { key: 'crown_dragon', x: -2560, z: -2960, r: 4, boss: ['dragon_red'], n: 0, pal: ['Base'], wake: 100 },
+  // (The three that sit on the Crown's north shelf by the broken pillar: Yrsa's, src/folk/regions/deepwood.js the_sitters.)
+  { key: 'crown_sitters', lvl: 14, x: -2600, z: -3120, r: 6, pick: DEMONS, n: 3, pal: ['Gloam', 'Base'] },
+  // (Beside the Pilgrims' Road below the Broken Stair, where the errand up from the hermit goes by them: 78 m from the
+  // stair's middle, nobody could be posted there. docs/QUEST-LOOP.md.)
+  { key: 'stair_demons', x: -1510, z: -1745, r: 7, pick: DEMONS, n: 2, pal: ['Base', 'Abyssal'] },
   // The Deepwood.
-  { key: 'hollow_dolls', x: -1330, z: -1460, r: 6, pick: MANNEQUINS.concat(POSSESSED), n: 4, pal: ['Base', 'Ashen'] },
+  // (Below the Hermit's Hollow, between the Pilgrims' Road and his lane, where the errand up from Mossgate goes by
+  // them: 50 m from the hollow's middle, the hermit couldn't stand in it.)
+  { key: 'hollow_dolls', x: -1300, z: -1315, r: 6, pick: MANNEQUINS.concat(POSSESSED), n: 4, pal: ['Base', 'Ashen'] },
   // The Barrow Moor.
   { key: 'barrow_lords', x: -2900, z: 3260, r: 9, boss: ['necromancer_lord', 'necromancer_lord_2'], pick: NECROS.concat(CHILDREN), n: 4, pal: ['Base', 'Ashen', 'Corrupted'] },
   { key: 'barrow_wyrm', x: -2740, z: 3600, r: 5, boss: ['dragon_undead'], pick: ['dragonling_undead'], n: 1, pal: ['Base'], wake: 200 },
-  { key: 'maiden_coven', x: -1960, z: 4340, r: 7, pick: NECROS, n: 3, pal: ['Base', 'Abyssal', 'Infernal'] },
+  { key: 'maiden_coven', x: -2010, z: 4295, r: 7, pick: NECROS, n: 3, pal: ['Base', 'Abyssal', 'Infernal'] },
   // The Rimeholt Fells.
   { key: 'fell_harpies', x: 920, z: 4120, r: 9, boss: ['harpy_queen'], pick: ['harpy_warrior'], n: 3, pal: ['Base', 'Bone-white', 'Abyssal'] },
   // The Gallowswood.
-  { key: 'gallows_plague', x: 4020, z: 3080, r: 9, boss: ['plague_giant_armored'], pick: ['plague_knight_black', 'plague_knight_red', 'plague_giant_1', 'plague_giant_2'], n: 3, pal: ['Base', 'Blighted', 'Bloodsoaked'] },
-  { key: 'grawl_bats', x: 4740, z: 1680, r: 6, boss: ['werebat'], pick: ['dragonling_black'], n: 1, pal: ['Base', 'Bloodsoaked'] },
-  { key: 'grove_demons', x: 3140, z: 4440, r: 8, pick: DEMONS.concat(MANNEQUINS), n: 4, pal: ['Base', 'Abyssal', 'Corrupted'] },
+  { key: 'gallows_plague', x: 4020, z: 3080, r: 9, boss: ['plague_giant_armored'], pick: ['plague_knight_black', 'plague_knight_red'], n: 3, pal: ['Base', 'Blighted', 'Bloodsoaked'] },
+  { key: 'grawl_bats', x: 4652, z: 1741, r: 6, boss: ['werebat'], pick: ['dragonling_black'], n: 1, pal: ['Base', 'Bloodsoaked'] },
+  { key: 'grove_demons', x: 3140, z: 4440, r: 8, boss: MANNEQUINS, pick: DEMONS.concat(MANNEQUINS), n: 3, pal: ['Base', 'Abyssal', 'Corrupted'] },
   // The Marches (src/core/marches.js): Velscour's garrisons, each keep's in a colour of its own (the owner: palette swaps, a
   // different one at each); his necromancers at the tower lights; the Old Marshal, the Toll-Giant, what waits at the Span, and the
   // carrion birds on the plain under the Sill. (lvl: what auto-play takes them for, src/ui/autobrain.js lairLevel.)
@@ -230,7 +248,36 @@ export const LAIRS = [
   { key: 'marshal_host', lvl: 20, x: 6100, z: 2092, r: 12, boss: ['ma_brannoch'], pick: VKNIGHTS.concat(VLANCERS), n: 5, pal: ['Bloodsoaked'], wake: 160 },
   { key: 'notch_giant', lvl: 22, x: 7482, z: 28, r: 6, boss: ['ma_tollgiant'], pick: ['plague_knight_black', 'plague_knight_red'], n: 2, pal: ['Base', 'Blighted'], wake: 160 },
   { key: 'span_ambush', lvl: 22, x: 8404, z: 138, r: 12, pick: VKNIGHTS.concat(NECROS), n: 5, pal: ['Bloodsoaked', 'Ashen'] },
-  { key: 'sill_carrion', lvl: 20, x: 9050, z: -160, r: 9, pick: ['harpy_undead_1', 'harpy_undead_2'], n: 3, pal: ['Base', 'Ashen'] },
+  // (Round the Marches' three camps, off the roads, for their quests: src/folk/regions/east.js. Marchfoot's: the wolves
+  // that come down after the fold's smell, in the gorse south; the spiders in the gully north-east, where the toll-clerk
+  // threw his book; Greywarden's lancers on the slope north, watching the fire (lancers only: the keep's own guard is
+  // knights). The Long Queue's: a draper's dummies up the rise east; Gatewatch's three in the gorse on the hill south-
+  // east, well off the way over to Widow's Lee. The Lee's: the harpies on the slope south-east, under the Notch.)
+  { key: 'march_wolf', lvl: 16, x: 6330, z: -1260, r: 5, boss: ['werewolf_brown'], pick: ['werewolf_brown'], n: 2, pal: ['Ashen'] },
+  { key: 'march_webs', lvl: 16, x: 6584, z: -1697, r: 7, boss: ['flesh_spider_demon'], pick: SPIDERS, n: 3, pal: ['Base', 'Ashen'] },
+  { key: 'march_riders', lvl: 17, x: 6380, z: -1820, r: 9, boss: ['velscour_lancer_3'], pick: ['velscour_lancer', 'velscour_lancer_2'], n: 3, pal: ['Bloodsoaked'] },
+  { key: 'queue_dummies', lvl: 18, x: 6950, z: 450, r: 7, pick: MANNEQUINS, n: 4, pal: ['Base', 'Ashen'] },
+  { key: 'queue_watchers', lvl: 18, x: 7110, z: 570, r: 6, pick: VKNIGHTS, n: 3, pal: ['Infernal'] },
+  { key: 'lee_roost', lvl: 19, x: 7470, z: 260, r: 8, boss: ['harpy_queen'], pick: ['harpy_warrior'], n: 3, pal: ['Base', 'Ashen'] },
+  // (On the way from the Lantern to Widow's Lee, the Lantern's errand: 1.6 km up the March Road and along the Throne Road with
+  // nothing on it, two minutes' riding. Demons in the scrub east of the March Road halfway up, and a werebat's roost south of
+  // the Throne Road short of the Lee: wild, nobody's, off the roads (tools/monsters/place-lairs.mjs), at the errand's level.
+  // tools/quests/errands.mjs. roadside: the road's their way, no lane of their own, tools/roads/lay.mjs.)
+  { key: 'march_rd_demons', roadside: true, lvl: 17, x: 6853, z: -524, r: 7, pick: DEMONS, n: 3, pal: ['Base', 'Abyssal'], tricks: true },
+  { key: 'throne_rd_bat', roadside: true, lvl: 17, x: 6975, z: -16, r: 6, boss: ['werebat'], pick: ['dragonling_black'], n: 2, pal: ['Base', 'Bloodsoaked'] },
+  // (The carrion birds and the gibbets on the plain under the Sill are the first you meet there: Lisandra's door sets you down
+  // on the Sill at about level three, src/folk/first-visit.js. So they're low, whichever way you came.)
+  // (xpScale: a kill's share of what its kind is worth, src/main.js gainXp: the birds and the hanged are the city's own kinds, made
+  // low for a new player, and paid as such.)
+  { key: 'sill_carrion', lvl: 4, x: 9050, z: -160, r: 9, pick: ['harpy_undead_1', 'harpy_undead_2'], n: 5, pal: ['Base', 'Ashen'], xpScale: 0.4, names: { Harpies: 'CARRION BIRD' } },
+  // His gate-wards, posted outside the Redoubt under the Sill (src/core/delve-redoubt.js), at the foot of its steps.
+  // (tough: a step over the delve's own packs, { hp: 0.9, damage: 0.45 }. By the land's level 4 they hit two and a half times
+  // as hard as any knight inside, and took a level-5 player alone down to a sliver of life.)
+  // (Out on the open ground before the gate square, the city behind them: at its foot they drew the fight back into the rock
+  // cheeks, and the camera with it. The critics.)
+  { key: 'redoubt_gate', lvl: 4, x: 9061, z: 262, r: 4, pick: VKNIGHTS, n: 2, pal: ['Oxblood'], dress: 'gate', xpScale: 0.25, tough: { hp: 1, damage: 0.6 }, names: { "Velscour's Knights": 'REDOUBT KNIGHT' } },
+  // His debtors, hanged on the plain in sight of the gate and walking again: gibbets, and what was left in them.
+  { key: 'sill_gibbets', lvl: 3, x: 9160, z: 236, r: 10, pick: POSSESSED, n: 8, pal: ['Ashen', 'Bone-white'], dress: 'gibbets', xpScale: 0.5, names: { 'The Possessed': 'HANGED DEBTOR' } },
   // City State Phobos (src/core/east.js HAUNTS): where the dead, the Loyal and the other horrors keep inside the wall. The
   // street crowd keeps away from these (src/folk/people.js CROWD). His own in blood red, as everywhere in his area.
   { ...HAUNT('phobos_boneyards'), lvl: 24, boss: ['skeleton_knight_giant', 'bone_golem'], pick: CHILDREN.concat(['plague_knight_black']), n: 5, pal: ['Bone-white', 'Ashen'] },
@@ -239,6 +286,15 @@ export const LAIRS = [
   { ...HAUNT('phobos_approach'), lvl: 28, boss: VLORDS, pick: VKNIGHTS.concat(VLANCERS), n: 6, pal: ['Bloodsoaked'] },
   { ...HAUNT('phobos_wharf'), lvl: 25, boss: ['worm_2'], pick: SPIDERS, n: 3, pal: ['Blighted', 'Abyssal'] },
   { ...HAUNT('phobos_mages'), lvl: 27, boss: ['necromancer_lord_2'], pick: NECROS, n: 3, pal: ['Abyssal', 'Bloodsoaked'] },
+  // Castle Velscour's own ground (docs/PHOBOS-CASTLE.md): what's out in its wards and on its back road, not only down its
+  // delves. The scullions' yard north of the Kitchens, the garrison at drill between the Barracks hall and the Armoury, the
+  // pale harpies that roost in the piers under the Crown Court, his lancers on the Sally road and what watches the Ash
+  // Terrace at the world's edge. His own in blood red.
+  { key: 'castle_kitchens', lvl: 60, x: 10832, z: -188, r: 8, pick: POSSESSED, n: 4, pal: ['Ashen'] },
+  { key: 'castle_drill', lvl: 62, x: 10836, z: 186, r: 9, boss: VLANCERS, pick: VKNIGHTS, n: 5, pal: ['Bloodred'] },
+  { key: 'castle_undercourt', lvl: 78, x: 10986, z: 34, r: 10, boss: ['harpy_queen'], pick: ['harpy_undead_1', 'harpy_undead_2'], n: 4, pal: ['Skullwhite', 'Bone-white'] },
+  { key: 'castle_sally', lvl: 92, x: 11486, z: 38, r: 10, boss: VLORDS, pick: VLANCERS.concat(VKNIGHTS), n: 5, pal: ['Bloodred'] },
+  { key: 'castle_terrace', lvl: 100, x: 11586, z: 24, r: 9, boss: ['night_demon_red'], pick: ['night_demon_red', 'night_demon_black'], n: 3, pal: ['Bloodred', 'Sable'] },
   // ---- The land filled in: something living at or near every place that isn't a safe town, and beside every road every
   // few hundred metres to a kilometre, off to one side where a traveller sees it (never on the road). Each country has its
   // own; they're fewer and weaker near Bellmourn, more and worse far out, and the far ones have their kinds' tricks.
@@ -255,11 +311,11 @@ export const LAIRS = [
   { key: 'hill_goblins', x: 1047, z: -6, r: 5, pick: GOBLINS, n: 3, pal: ['Base', 'Blighted'] },
   { key: 'frost_kobolds', x: 75, z: 491, r: 5, pick: KOBOLDS, n: 3, pal: ['Base', 'Abyssal'] },
   { key: 'frost_spiders', x: 38, z: 1109, r: 6, pick: SPIDERS, n: 3, pal: ['Base', 'Bone-white'] },
-  { key: 'frost_wolf', x: 301, z: 1860, r: 3, boss: ['werewolf_brown'], n: 0, pal: ['Bone-white'] },
+  { key: 'frost_wolf', x: 301, z: 1860, r: 3, boss: ['werewolf_brown'], pick: ['werewolf_brown'], n: 1, pal: ['Bone-white'] },
   { key: 'fenway_goblins', x: 70, z: -480, r: 5, pick: GOBLINS, n: 3, pal: ['Base'] },
-  { key: 'fenway_spiders', x: -78, z: -1109, r: 6, pick: SPIDERS, n: 2, pal: ['Blighted'] },
+  { key: 'fenway_spiders', x: -78, z: -1109, r: 6, pick: SPIDERS, n: 3, pal: ['Blighted'] },
   { key: 'vigil_kobolds', x: -550, z: -159, r: 5, pick: KOBOLDS, n: 3, pal: ['Base', 'Infernal'] },
-  { key: 'vigil_goats', x: -1169, z: -5, r: 5, pick: ['goatman_bw', 'goatman_black'], n: 2, pal: ['Base'] },
+  { key: 'vigil_goats', x: -1169, z: -5, r: 5, pick: ['goatman_bw', 'goatman_black'], n: 3, pal: ['Base'] },
   { key: 'vigil_children', x: -1713, z: -174, r: 6, pick: CHILDREN, n: 3, pal: ['Ashen'] },
   { key: 'track_children', x: -448, z: 1355, r: 6, pick: CHILDREN, n: 4, pal: ['Base', 'Ashen'] },
   // The Green Downs: raiders by the roads, the keepers at the Cairnfield, harpies under the cliff; and round Thornwick, goat men
@@ -270,25 +326,29 @@ export const LAIRS = [
   { key: 'gallows_rd_goblins', x: 1264, z: 478, r: 4, pick: GOBLINS, n: 2, pal: ['Base', 'Ashen'] },
   { key: 'cliff_harpies', x: 2563, z: 424, r: 8, pick: ['harpy_warrior'], n: 3, pal: ['Base', 'Bone-white'] },
   { key: 'downs_goats', x: 1784, z: 1321, r: 5, pick: ['goatman_white', 'goatman_bw'], n: 2, pal: ['Base'] },
-  { key: 'thorn_goats', x: 2183, z: 1514, r: 7, pick: GOATS, n: 3, pal: ['Base'] },
+  { key: 'thorn_goats', x: 2183, z: 1514, r: 7, pick: GOATS.filter((g) => g !== 'goatman_black'), n: 3, pal: ['Base'] },
   { key: 'thorn_ram', x: 2067, z: 2064, r: 6, boss: ['goatman_black'], pick: ['goatman_bw', 'goatman_gold_bad'], n: 2, pal: ['Base', 'Abyssal'], tricks: true },
-  { key: 'thorn_stragglers', x: 2655, z: 2103, r: 7, pick: ['plague_knight_black', 'plague_knight_red', 'possessed_man_1', 'possessed_woman_1'], n: 4, pal: ['Base', 'Blighted'] },
+  { key: 'thorn_stragglers', x: 2655, z: 2103, r: 7, boss: ['plague_knight_black', 'plague_knight_red'], pick: ['possessed_man_1', 'possessed_woman_1'], n: 3, pal: ['Base', 'Blighted'] },
   // The Weeping Fen: the drowned, along the Fen Way and on the Sunken Mile.
   { key: 'fenway_children', x: 17, z: -1807, r: 6, pick: CHILDREN, n: 3, pal: ['Blighted'] },
   { key: 'fenway_drowned', x: -190, z: -2450, r: 6, pick: POSSESSED, n: 3, pal: ['Blighted', 'Abyssal'] },
   { key: 'mile_drowned', x: -420, z: -2610, r: 8, pick: POSSESSED.concat(CHILDREN), n: 5, pal: ['Blighted', 'Abyssal'] },
   { key: 'fen_east_harpies', x: 720, z: -3120, r: 8, pick: ['harpy_undead_1', 'harpy_undead_2'], n: 3, pal: ['Base', 'Blighted'] },
   { key: 'fen_children', x: -700, z: -3560, r: 7, pick: CHILDREN, n: 4, pal: ['Blighted', 'Bone-white'] },
-  // The Rustwood: red goblins (a warband of seven under a champion), kobolds in the quarry, spiders, a werebat.
+  // The Rustwood: red goblins (a warband of seven under a champion), kobolds behind the quarry's face, spiders, a werebat.
   { key: 'abbey_rd_raiders', x: 2347, z: -1169, r: 7, pick: RED_GOBLINS, n: 4, pal: ['Base', 'Infernal'] },
-  { key: 'quarry_kobolds', x: 2924, z: -1600, r: 7, boss: ['kobold_armored_3'], pick: KOBOLDS, n: 4, pal: ['Base', 'Infernal'] },
-  { key: 'rust_bat', x: 3687, z: -2120, r: 4, boss: ['werebat'], n: 0, pal: ['Base'] },
+  { key: 'quarry_kobolds', x: 3085, z: -1740, r: 7, boss: ['kobold_armored_3'], pick: KOBOLDS, n: 4, pal: ['Base', 'Infernal'] },
+  { key: 'rust_bat', x: 3687, z: -2120, r: 5, boss: ['werebat'], pick: ['dragonling_black'], n: 2, pal: ['Base'] },
   { key: 'abbey_webs', x: 3637, z: -3083, r: 6, pick: SPIDERS, n: 3, pal: ['Base', 'Bloodsoaked'] },
   { key: 'rust_spiders', x: 4300, z: -2008, r: 7, boss: ['flesh_spider_demon'], pick: SPIDERS, n: 2, pal: ['Corrupted'], tricks: true },
   { key: 'rust_kobolds', x: 4064, z: -1179, r: 6, pick: KOBOLDS, n: 4, pal: ['Infernal', 'Abyssal'] },
   { key: 'rust_warband', x: 3302, z: -3516, r: 9, boss: ['goblin_red_armored_2'], pick: RED_GOBLINS, n: 6, pal: ['Base', 'Infernal', 'Bloodsoaked'], tricks: true },
+  // (Goat men beside the lane north from the abbey to Emberwatch, off the lane, for the errand north; and what
+  // keeps the Shroudwood, further in past its nest, north of Last Hearth: src/folk/regions/rustwood.js.)
+  { key: 'stile_goats', x: 3744, z: -3334, r: 6, pick: GOATS, n: 3, pal: ['Base', 'Infernal'] },
+  { key: 'shroud_matron', x: 5259, z: -1831, r: 7, boss: ['flesh_spider_demon'], pick: SPIDERS, n: 3, pal: ['Corrupted', 'Bloodsoaked'], tricks: true },
   // The Deepwood and the Sorrowhorn's foot.
-  { key: 'pilgrim_dolls', x: -1083, z: -516, r: 5, pick: MANNEQUINS, n: 2, pal: ['Base'] },
+  { key: 'pilgrim_dolls', x: -1083, z: -516, r: 5, pick: MANNEQUINS, n: 3, pal: ['Base'] },
   { key: 'pilgrim_spiders', x: -1123, z: -856, r: 6, pick: SPIDERS, n: 3, pal: ['Base', 'Corrupted'] },
   { key: 'deep_spiders', x: -1877, z: -1343, r: 7, pick: SPIDERS.concat(POSSESSED), n: 4, pal: ['Base', 'Ashen'] },
   { key: 'deep_worm', x: -1751, z: -913, r: 4, boss: ['worm_1'], n: 0, pal: ['Blighted', 'Corrupted'], wake: 140 },
@@ -311,9 +371,13 @@ export const LAIRS = [
   { key: 'waste_necros', x: -4057, z: -2304, r: 7, boss: ['necromancer_lord', 'necromancer_lord_2'], pick: NECROS, n: 3, pal: ['Base', 'Infernal'], tricks: true },
   // The Barrow Moor.
   { key: 'track_possessed', x: -1080, z: 1900, r: 6, pick: POSSESSED, n: 3, pal: ['Ashen'] },
-  { key: 'wayhouse_dead', x: -1820, z: 2330, r: 7, boss: ['necromancer_f1', 'necromancer_3'], pick: CHILDREN, n: 3, pal: ['Base', 'Ashen'] },
+  { key: 'wayhouse_dead', x: -1880, z: 2310, r: 7, boss: ['necromancer_f1', 'necromancer_3'], pick: CHILDREN, n: 3, pal: ['Base', 'Ashen'] },
   { key: 'moor_golem', x: -2162, z: 2893, r: 7, boss: ['bone_golem'], pick: CHILDREN, n: 2, pal: ['Bone-white', 'Ashen'] },
   { key: 'moor_whelps', x: -2450, z: 3712, r: 7, pick: ['dragonling_undead'], n: 3, pal: ['Base', 'Ashen'] },
+  // (Carrion birds on what's left of a beast, 56 m off the Barrow Track on its last stretch to the Diggers' Camp, 670 m on
+  // from the Rick: the fight on the way for Alis Penn's word to Master Dree, src/folk/regions/moor.js board_owing; clear of
+  // the barrow and the wolfkin fighting by the track further up. lvl: or the land would make it 17.)
+  { key: 'moor_carrion', lvl: 11, x: -2578, z: 3106, r: 7, pick: ['harpy_undead_1', 'harpy_undead_2'], n: 3, pal: ['Base', 'Ashen'] },
   { key: 'moor_knight', x: -1475, z: 3359, r: 7, boss: ['skeleton_knight_giant'], pick: NECROS, n: 1, pal: ['Base', 'Corrupted'], tricks: true },
   // The Rimeholt Fells: white goat men, wolves that stand up, the things at the Howling Mouth, the queen on Ravens' Tor.
   { key: 'rime_goats', x: 382, z: 2771, r: 6, pick: ['goatman_white'], n: 3, pal: ['Base', 'Bone-white'] },
@@ -322,12 +386,20 @@ export const LAIRS = [
   { key: 'mouth_demons', x: 1025, z: 3867, r: 6, pick: ['night_demon_blue', 'night_demon_black'], n: 2, pal: ['Base', 'Abyssal'], tricks: true },
   { key: 'tor_roost', x: 1493, z: 4516, r: 8, boss: ['harpy_queen'], pick: ['harpy_warrior'], n: 2, pal: ['Base', 'Abyssal'], tricks: true },
   { key: 'tor_demons', x: 1640, z: 4700, r: 6, pick: DEMONS, n: 2, pal: ['Base', 'Bone-white'], tricks: true },
+  // (Kobolds in the rocks above the Frost Road, half way up from the Rime Ring to Frostwatch: Bram Kettle's purse carried up
+  // to Hew Garrick, 900 m, met nothing of its level. tools/quests/errands.mjs.)
+  { key: 'frost_rd_kobolds', roadside: true, lvl: 11, x: 643, z: 3345, r: 6, pick: KOBOLDS, n: 4, pal: ['Bone-white', 'Abyssal'] },
   // The Gallowswood.
-  { key: 'toll_ambush', x: 3314, z: 2500, r: 7, pick: POSSESSED.concat(MANNEQUINS), n: 5, pal: ['Base', 'Blighted', 'Bloodsoaked'] },
-  { key: 'gallows_bat', x: 2967, z: 2384, r: 4, boss: ['werebat'], n: 0, pal: ['Base', 'Bloodsoaked'] },
+  { key: 'toll_ambush', x: 3360, z: 2420, r: 7, boss: MANNEQUINS, pick: POSSESSED.concat(MANNEQUINS), n: 4, pal: ['Base', 'Blighted', 'Bloodsoaked'] },
+  { key: 'gallows_bat', x: 2967, z: 2384, r: 4, boss: ['werebat'], pick: ['harpy_warrior'], n: 1, dress: 'roost', pal: ['Base', 'Bloodsoaked'] },
   { key: 'gallows_demons', x: 3680, z: 2960, r: 6, pick: DEMONS, n: 2, pal: ['Base', 'Corrupted'], tricks: true },
-  { key: 'gibbet_possessed', x: 4393, z: 2504, r: 7, pick: POSSESSED, n: 4, pal: ['Blighted', 'Ashen'] },
+  { key: 'gibbet_possessed', x: 4393, z: 2504, r: 7, pick: POSSESSED, n: 4, pal: ['Blighted', 'Ashen'], dress: 'gibbets' },
   { key: 'gallows_giant', x: 3707, z: 3796, r: 8, boss: ['plague_giant_1', 'plague_giant_2'], pick: ['plague_knight_black', 'plague_knight_red'], n: 2, pal: ['Base', 'Blighted'], tricks: true },
+  // Where the wood's lanes come out on the Marshal's Road, by Roadsend (src/folk/regions/gallows.js): Thornwick's wool carters,
+  // stopped by the road; what lies on Wilf Carder's wool on the rise north; and a plague giant halfway up the road to the Long Queue.
+  { key: 'carters_halt', x: 5245, z: 1693, r: 7, pick: POSSESSED, n: 4, pal: ['Blighted', 'Ashen'] },
+  { key: 'roadsend_demons', x: 5577, z: 1423, r: 7, pick: DEMONS, n: 3, pal: ['Base', 'Abyssal'], tricks: true },
+  { key: 'marshal_rd_plague', x: 6303, z: 1076, r: 8, boss: ['plague_giant_1'], pick: ['plague_knight_black', 'plague_knight_red'], n: 2, pal: ['Base', 'Blighted'], tricks: true },
 ];
 
 // The outposts out in the land and the standing battles (src/core/wilds.js, laid by tools/wilds/place.mjs): lairs like any
@@ -340,7 +412,27 @@ for (const b of BATTLES) LAIRS.push(...battleLairs(b));
 // (src/items/levels.js), so each level of the land gives its monsters as much more life and a twentieth more bite. Without
 // it the far countries fell over as fast as the woods by the town. (A delve's packs have their own `tough`, far past this.)
 export const landLevel = (x, z) => Math.max(1, Math.min(24, Math.round(Math.hypot(x, z) / 230)));
-export const lairLevel = (l) => l.lvl ?? landLevel(l.x, l.z);
+// The hand-placed lairs' levels, by key: what each is fought at, and what auto-play takes it for (src/ui/autobrain.js). The
+// quests are levelled to these (src/folk/regions/*.js LEVELS); a lair without one here or its own lvl goes by the land's.
+// (They used to be auto-play's alone, and the game made the Rustwood's cutters' raiders, taken for level 6, of level 21.)
+export const LAIR_LEVEL = {
+  werewolf: 6, nest: 4, goblin_camp: 2, kobold_den: 2, lost_children: 1, goat_ring: 6, mill_dolls: 5, falls_drake: 8, sallow_drowned: 9,
+  fen_worm: 16, fen_harpies: 8, fen_dragon: 24, cutter_raiders: 15, fungal_brood: 13, abbey_road_goats: 7, vigil_guard: 16, obelisk_guard: 16,
+  bone_field: 18, ash_dragon: 24, ash_worm: 16, crown_dragon: 24, stair_demons: 12, hollow_dolls: 10, barrow_lords: 10, barrow_wyrm: 20,
+  maiden_coven: 14, fell_harpies: 9, gallows_plague: 14, grawl_bats: 15, grove_demons: 12,
+  // (The roadsides, the small towns' troubles and the far countries: each by what stands there.)
+  dark_goblins_nw: 5, dark_spiders_ne: 4, dark_goats_e: 6, dark_children_s: 4, dark_wolf_w: 7, hill_kobolds: 3, hill_goblins: 4, frost_kobolds: 3,
+  frost_spiders: 5, frost_wolf: 8, fenway_goblins: 3, fenway_spiders: 5, vigil_kobolds: 3, vigil_goats: 6, vigil_children: 7, track_children: 5,
+  cairn_keepers: 6, downs_raiders: 5, abbey_rd_goblins: 5, gallows_rd_goblins: 4, cliff_harpies: 7, downs_goats: 7, thorn_goats: 8, thorn_ram: 10,
+  thorn_stragglers: 9, fenway_children: 6, fenway_drowned: 8, mile_drowned: 9, fen_east_harpies: 10, fen_children: 9, abbey_rd_raiders: 8,
+  quarry_kobolds: 9, rust_bat: 11, abbey_webs: 11, rust_spiders: 15, rust_kobolds: 10, rust_warband: 12, stile_goats: 12, shroud_matron: 17, pilgrim_dolls: 6, pilgrim_spiders: 7,
+  deep_spiders: 9, deep_worm: 14, horn_whelps: 12, horn_demons: 14, cinder_refugees: 9, cinder_scouts: 11, charmill_possessed: 12, khel_ghouls: 12,
+  vigil_patrol_1: 13, vigil_patrol_2: 14, vigil_patrol_3: 15, keep_necros: 16, waste_lancers: 15, waste_plague: 13, waste_golem: 16, waste_necros: 15,
+  track_possessed: 7, wayhouse_dead: 9, moor_golem: 12, moor_whelps: 13, moor_carrion: 11, moor_knight: 14, rime_goats: 10, fells_goats: 11, fells_wolves: 12,
+  mouth_demons: 13, tor_roost: 13, tor_demons: 14, toll_ambush: 11, gallows_bat: 10, gallows_demons: 13, gibbet_possessed: 12, gallows_giant: 14,
+  carters_halt: 16, roadsend_demons: 17, marshal_rd_plague: 17,
+};
+export const lairLevel = (l) => l.lvl ?? LAIR_LEVEL[l.key] ?? landLevel(l.x, l.z);
 export const levelTough = (lvl) => { const n = Math.max(1, lvl) - 1; return { hp: 1 + n * 0.07, damage: 1 + n * 0.05 }; };
 
 // A lair as it can be stood up from this roster: its lists thinned to the models there are (a boss list left empty is no

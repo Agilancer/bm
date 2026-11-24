@@ -71,6 +71,10 @@ function skinProbe(out, P, i, wq, wt, rig) {
 }
 const VIEW = 170;                // past this from the player a hero isn't drawn, and only thinks
 const RESPAWN = [150, 300];      // seconds before something a hero killed stands again, MMO-style
+// The others met on the roads (HeroWorld.stepPassers): seconds before the first and between them; how many out on the
+// road near you at once; how near a road you must be; not within this of the town; and how they're met: coming toward
+// you, overtaking you, or stopped by the road (the rest).
+const PASS = { first: [25, 50], every: [55, 95], out: 5, onRoad: 40, town: 260, toward: 0.5, overtake: 0.25 };
 const rand = (a, b) => a + Math.random() * (b - a);
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 // Gestures the whole body makes: never begun on the move, and stopped if the hero sets off.
@@ -1015,11 +1019,17 @@ export class Hero extends Knight {
   // burning or bleeding: no flinch, no sound), quiet (no sound).
   hit(sim, m, dmg, kind = 'gash', poise = 25, knock = 0, o = {}) {
     if (!fightable(m)) return false;
-    // (Someone else already at it: kept, so the kill can be a rescue or a theft.)
-    if (m.heroFoe && m.heroFoe !== this && sim.time - (m.heroFoeT ?? -1e9) < 4) { m.otherFoe = m.heroFoe; m.otherFoeT = sim.time; }
-    m.heroFoe = this; m.heroFoeT = sim.time;
-    // (Your tank holds what he hits; a twin's ward takes its share of anyone's blow.)
-    if (this.hired && this.role === 'tank') { m.tauntBy = this; m.tauntT = sim.time + 5; }
+    // (noAggro: a blow that hurts and leaves it after whoever it was after: the paladin's Blessed Shield. Felt as from
+    // that one, so the dead don't turn round to look for him either.)
+    let by = this;
+    if (o.noAggro) { const f = foeOf(m, sim); by = f && f !== sim.player && f !== this ? f : null; }
+    else {
+      // (Someone else already at it: kept, so the kill can be a rescue or a theft.)
+      if (m.heroFoe && m.heroFoe !== this && sim.time - (m.heroFoeT ?? -1e9) < 4) { m.otherFoe = m.heroFoe; m.otherFoeT = sim.time; }
+      m.heroFoe = this; m.heroFoeT = sim.time;
+      // (Your tank holds what he hits; a twin's ward takes its share of anyone's blow.)
+      if (this.hired && this.role === 'tank') { m.tauntBy = this; m.tauntT = sim.time + 5; }
+    }
     dmg *= m.shrug ?? 1;
     if (m instanceof Knight) {
       // Velscour's guards hold: a party can hold one off and slip by, not cut it down for the player to find gone.
@@ -1035,8 +1045,8 @@ export class Hero extends Knight {
     if (this.mods?.thirst && !this.dead) this.hp = Math.min(this.maxHp, this.hp + Math.min(dmg, Math.max(0, was)) * this.mods.thirst);
     struck(m, sim, this.x, this.z, poise);
     if (m instanceof Zombie) m.seenHp = m.hp;
-    if (!o.dot) m.onHit?.(sim, kind, this.x, this.z, poise, this);
-    if (o.stun) w.stun(m, o.stun, this);
+    if (!o.dot) m.onHit?.(sim, kind, this.x, this.z, poise, by);
+    if (o.stun) w.stun(m, o.stun, by);
     else if (knock && m instanceof Zombie && !m.crawling) m.reel?.(sim, 0.4, this);
     if (o.shove && radiusOf(m) <= 1 && !(m instanceof Gravehart)) {
       const dx = m.x - (o.fromX ?? this.x), dz = m.z - (o.fromZ ?? this.z), L = Math.hypot(dx, dz) || 1;
@@ -3248,7 +3258,8 @@ export class HeroWorld {
         if (!(onUs || onPlayer || hunted || (d < 7 && m.aggro))) continue;
         // Nobody walks alone into what takes four.
         const mob = MOBS[mobKind(m)];
-        if (hunted && !onUs && mob && mob.danger > (h.party ? h.party.members.size + 1 : 1) + h.person.level / 12) continue;
+        // (Called to the land's fight, src/sim/wilds.js answer: whatever's there, however big. A world boss most of all.)
+        if (hunted && !onUs && !h.task.wild && mob && mob.danger > (h.party ? h.party.members.size + 1 : 1) + h.person.level / 12) continue;
         const score = d - (onUs ? 8 : 0) - (onPlayer ? 4 : 0);
         if (score < bd) { bd = score; best = m; }
         if (onPlayer && sim.time - h.helpT > 40) { h.helpT = sim.time; h.say(sim, 'player_help'); }
@@ -3262,6 +3273,12 @@ export class HeroWorld {
     }
     // Paladins and bards look after people, in a fight or out of it.
     this.care(h);
+    // Called to a world boss (answer): where its fight wants them first, into the mark to share it or the light, as the
+    // party does (src/sim/worldboss.js order).
+    if (h.task?.wild && !h.swing && !h.jump) {
+      const told = sim.wilds?.boss?.order?.(h);
+      if (told?.to && Math.hypot(told.to[0] - h.x, told.to[1] - h.z) > 0.7) { h.goal = { x: told.to[0], z: told.to[1], speed: 8, stop: 0.3 }; h.dodgeT = 0.25; return; }
+    }
     if (h.foe && !h.swing && !h.jump && (h.rethinkT = (h.rethinkT || 0) - dt) <= 0) { h.rethinkT = 0.8 + (h.slot % 4) * 0.1; this.rethink(h); }
     if (h.foe) {
       // Too hurt and on their own: back to the town's ground, where nothing follows.
@@ -3663,11 +3680,12 @@ export class HeroWorld {
   // The living land's call (src/sim/wilds.js): up to n of the Tessariels who've nothing on (in town, on errands, resting,
   // on the way home, or out hunting somewhere you aren't; not hired, not in a party, not in the player's sight) are stood at `from` (a town's seal, which is
   // how they travel; or out of sight beyond a tear) and go at whatever's at (x, z) as they would a hunting ground.
-  answer(x, z, n, from, name = 'the fight') {
+  answer(x, z, n, from, name = 'the fight', near = 70) {
     const sim = this.sim;
     const place = { id: 'wild', name, kind: 'hunt', spot: [x, z], r: 20, mobs: Object.assign(['goblin'], { includes: () => true }) };
     const free = (h) => h.active && !h.dead && !h.hired && !h.broker && !h.surf && !h.below && !h.hidden && !h.foe && h.party !== this.company
-      && (['town', 'errands', 'rest', 'social', 'return', 'perform'].includes(h.task?.kind) || (h.task?.kind === 'hunt' && !h.task.wild)) && Math.hypot(h.x - sim.player.x, h.z - sim.player.z) > 70;
+      && (['town', 'errands', 'rest', 'social', 'return', 'perform'].includes(h.task?.kind) || (h.task?.kind === 'hunt' && !h.task.wild) || (h.task?.kind === 'journey' && !h.task.road))
+      && Math.hypot(h.x - sim.player.x, h.z - sim.player.z) > near;
     // (Alone, or a whole party of them together: nobody's taken out of the middle of one.)
     const idle = [], seen = new Set();
     for (const h of [...this.heroes].sort((a, b) => b.person.level - a.person.level)) {
@@ -3686,6 +3704,90 @@ export class HeroWorld {
       h.hp = h.maxHp;
     });
     return idle;
+  }
+
+  // How many could answer a call now (as answer, above, would take them): true if n or more.
+  free(n) {
+    const p = this.sim.player;
+    let k = 0;
+    for (const h of this.heroes) {
+      if (!h.active || h.dead || h.hired || h.broker || h.surf || h.below || h.hidden || h.foe || h.party === this.company || h.walkWith) continue;
+      if (!(['town', 'errands', 'rest', 'social', 'return', 'perform'].includes(h.task?.kind) || (h.task?.kind === 'hunt' && !h.task.wild))) continue;
+      if (Math.hypot(h.x - p.x, h.z - p.z) > 70 && ++k >= n) return true;
+    }
+    return false;
+  }
+
+  // A fight won with them: a cheer from each, a moment after.
+  cheer(list) {
+    for (const [i, h] of (list || []).entries()) this.later(1 + i * 0.7 + Math.random(), () => { if (!h.dead && !h.foe) { h.gesture_(Math.random() < 0.5 ? 'cheer' : 'flex', 3); if (Math.random() < 0.6) h.say(this.sim, 'hunt_victory'); } });
+  }
+
+  // ---- out on the roads with you (src/sim/wilds.js calls this once a second) ----
+  // The other Tessariels are seen about the land far more than they'd be by their own days, which keep most of them in
+  // the town: while you're out on a road, every so often one of them, or two or three together, is set down on it out of
+  // your sight and goes about their own business along it, and you meet them on the way. Coming down the road at you and
+  // on past; or overtaking you at a jog, off somewhere in a hurry; or stopped by the roadside, resting, looking about. Each
+  // walks on to a place a way off and then home, as anyone on a journey. Out of your sight they're only thinking, as ever.
+  // (Taken from the town's idle, never out of a party, a hire or a fight. Only so many out at once: PASS.out.)
+  stepPassers(wilds) {
+    const sim = this.sim, p = sim.player;
+    if (!wilds.wild || p.dead || inDungeon(p.x, p.z)) return;
+    if (this.passT === undefined) this.passT = sim.time + rand(...PASS.first);
+    this.passers = (this.passers || []).filter((h) => h.task?.road && !h.dead && h.active);
+    if (sim.time < this.passT) return;
+    this.passT = sim.time + 4;
+    if (townDist(p.x, p.z) < PASS.town || wilds.meet || wilds.tear || wilds.raid || wilds.boss?.busy) return;
+    if (this.passers.filter((h) => h.near < VIEW + 60).length >= PASS.out) return;
+    const sp = Math.hypot(p.vx || 0, p.vz || 0), head = sp > 1.2 ? Math.atan2(p.vx, p.vz) : p.yaw;
+    if (nearestRoad(p.x, p.z, PASS.onRoad).i < 0) return;
+    // Who: of those idle in the town, one, two or three.
+    const idle = this.heroes.filter((h) => h.active && !h.dead && !h.hired && !h.broker && !h.surf && !h.below && !h.hidden && !h.foe && !h.party && !h.walkWith
+      && ['town', 'errands', 'rest', 'social', 'return', 'perform'].includes(h.task?.kind) && Math.hypot(h.x - p.x, h.z - p.z) > VIEW + 40 && !h.sitting && !h.away);
+    if (!idle.length) return;
+    const want = Math.min(idle.length, Math.random() < 0.45 ? 1 : Math.random() < 0.6 ? 2 : 3);
+    const band = [];
+    for (let i = 0; i < want; i++) band.push(idle.splice(Math.floor(Math.random() * idle.length), 1)[0]);
+    const r = Math.random(), how = r < PASS.toward ? 'toward' : r < PASS.toward + PASS.overtake ? 'overtake' : 'resting';
+    // Where: on the road ahead of you (behind, for those overtaking), where it can't be seen from you for choice, and no
+    // further than they're drawn.
+    const fx = Math.sin(head), fz = Math.cos(head), sign = how === 'overtake' ? -1 : 1;
+    let spot = null;
+    for (const d of how === 'overtake' ? [95, 110, 125] : how === 'resting' ? [115, 135, 150] : [150, 160, 135, 165]) {
+      const q = nearestRoad(p.x + fx * d * sign, p.z + fz * d * sign, 45);
+      if (q.i < 0) continue;
+      const qd = Math.hypot(q.x - p.x, q.z - p.z);
+      if (qd < 80 || qd > VIEW - 4) continue;
+      spot = [q.x, q.z];
+      if (!sim.world.sees(p.x, p.y + 1.6, p.z, q.x, sim.world.height(q.x, q.z) + 1.2, q.z)) break;
+    }
+    if (!spot) return;
+    // Where they're off to: down the road past you (or on ahead, for those overtaking), a few hundred metres, by the roads.
+    const end = how === 'toward' ? nearestRoad(p.x - fx * 320, p.z - fz * 320, 120) : nearestRoad(p.x + fx * 420, p.z + fz * 420, 120);
+    if (end.i < 0) return;
+    const path = this.byRoad(spot[0], spot[1], end.x, end.z);
+    if (path.length < 3) return;
+    const place = { id: 'road', name: 'the road', kind: 'journey', spot: [end.x, end.z], r: 8, arrive: [end.x, end.z] };
+    const pace = how === 'overtake' ? rand(3.2, 3.8) : rand(1.6, 2.1);
+    const a = Math.atan2(path[1][0] - spot[0], path[1][1] - spot[1]), sx = Math.cos(a), sz = -Math.sin(a);
+    band.forEach((h, i) => {
+      // (Side by side across the road, the second a stride behind the first.)
+      const off = (i - (band.length - 1) / 2) * 1.5, back = (i % 2) * 1.1;
+      h.x = h.lastX = spot[0] + sx * off - Math.sin(a) * back; h.z = h.lastZ = spot[1] + sz * off - Math.cos(a) * back;
+      h.y = this.sim.world.height(h.x, h.z); h.yaw = h.faceYaw = a;
+      h.goal = null; h.sitting = false; h.talkUntil = 0; h.hp = h.maxHp; h.gesture = null;
+      h.task = { kind: 'journey', place, t: 0, pace, path: path.map(([x, z]) => [x + sx * off, z + sz * off]), leg: 1, road: how };
+      // (Stopped by the road: there already, a while of it, sat or stood about, then on.)
+      if (how === 'resting') {
+        Object.assign(h.task, { there: true, stay: rand(50, 110), at: [h.x, h.z] });
+        h.hold = rand(6, 20);
+        if (Math.random() < 0.6) { h.sitting = true; h.play('Sitting_Idle_Loop', 1, 'full', 0.4); }
+      }
+      this.passers.push(h);
+    });
+    if (band.length > 1 && Math.random() < 0.7) this.later(rand(2, 6), () => band[1].say(sim, 'travel_chatter', band[0].slot, -1));
+    this.passT = sim.time + rand(...PASS.every);
+    wilds.note(`passers: ${band.length} ${how} at ${spot[0].toFixed(0)}, ${spot[1].toFixed(0)}`);
   }
 
   // And home again when it's done: walking while you can see them, and by the seal (stood back at the well) once you can't.
@@ -3996,7 +4098,7 @@ export class HeroWorld {
       if (h.hired || h.broker) continue;
       h.baseLevel ??= h.person.level;
       const want = Math.max(h.baseLevel, Math.min(200, level + ((h.slot * 5) % 7) - 3));
-      if (want !== h.person.level) { const up = want > h.person.level; this.setLevel(h, want); if (up && h.active && !h.dead && Math.random() < 0.25) h.say(this.sim, 'level_up'); }
+      if (want !== h.person.level) { const up = want > h.person.level; this.setLevel(h, want); if (up && h.active && !h.dead && Math.random() < 0.25) h.say(this.sim, 'level_up', -1, -1, -1, want); }
     }
   }
 
@@ -4128,7 +4230,8 @@ export class HeroWorld {
     // cones, the burning.
     // What the fight itself wants of them (src/sim/dungeon.js order): not a step taken while the music's stopped; or
     // somewhere to be, once they're out of whatever's marked (the high rock, a pod to tread flat, the far side of a pillar).
-    const told = W?.inside ? W.order(h) : null;
+    // (Out in the land, a world boss's: into the mark to share it, into the light. src/sim/worldboss.js order.)
+    const told = W?.inside ? W.order(h) : sim.wilds?.boss?.order?.(h) || null;
     if (told?.still) { h.goal = null; h.hold = Math.max(h.hold, 0.25); h.dodgeT = 0; if (h.role === 'heal') this.mend(h, true); return; }
     // (urgent: it matters more than what's under them: the rock above the tide is through the tide.)
     const out = told?.to && told.urgent ? null : sim.perils.danger(h.x, h.z);

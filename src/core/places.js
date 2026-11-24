@@ -527,6 +527,12 @@ export function thornwick(K) {
     const t = i ? R : -R;
     for (const off of [-3.6, 3.6]) { const p = st(t, off); K.drum('bark', p.x, cy - 0.4, p.z, 0.3, 5, 7); K.lantern(st(t + (i ? -2.2 : 2.2), off * 1.25).x, st(t + (i ? -2.2 : 2.2), off * 1.25).z, 2.8, g.yaw + (off > 0 ? 0 : Math.PI)); }
     const a = st(t, -3.6), b = st(t, 3.6); K.beam('bark', [a.x, cy + 4.3, a.z], [b.x, cy + 4.3, b.z], 0.34);
+    // (A fire basket on each post's head, kept in all night: the one lit thing on Thornwick's skyline, seen from the road
+    // before the roofs are. The world once-over, 2026-11-20.)
+    for (const q of [a, b]) {
+      K.drum('iron', q.x, cy + 4.6, q.z, 0.22, 0.4, 6, { r2: 0.42, open: true, collide: false }); K.cone('flame', q.x, cy + 4.85, q.z, 0.36, 1.25, 5);
+      (K.lamps ||= []).push({ p: [q.x, cy + 5.6, q.z], c: [1, 0.58, 0.26], r: 14, i: 26, flicker: 0.4 });
+    }
     // (The gate's leaves, stood open against the palisade inside.)
     for (const off of [-3.9, 3.9]) { const q = st(t + (i ? -1.6 : 1.6), off * 1.02); K.box('wood', q.x, cy - 0.1, q.z, 1.5, 2.9, 0.09, g.yaw + Math.PI / 2 + (off > 0 ? 0.12 : -0.12)); }
     const sp = st(t + (i ? 9 : -9), 4.2); K.signpost(sp.x, sp.z, i ? [0.84, -2.3] : [-2.36, 0.8]);
@@ -640,6 +646,12 @@ export function cinderford(K) {
     const l = F(4.6, 0.6); K.ladder(l[0], l[1], p.x + 2.45, cy + 3.8, p.z + 0.4);
     const b = st(35.5, -9.5); K.heap('rubble', b.x, b.z, 2.3, 1.7, 8); K.drum('iron', b.x, cy + 1.7, b.z, 0.5, 0.7, 8, { r2: 0.95, open: true, collide: false });
     for (let i = 0; i < 4; i++) { const a = i * 0.8; K.beam('bark', [b.x + Math.cos(a) * 0.6, cy + 2.0, b.z + Math.sin(a) * 0.6], [b.x - Math.cos(a) * 0.5, cy + 3.0, b.z - Math.sin(a) * 0.5], 0.13); }
+    // (And the watch's own fire, on a pole at the tower's corner, over the stockade and the clamps' smoke: what you steer
+    // for coming in out of the Waste. The beacon stays laid and unlit. The world once-over, 2026-11-20.)
+    { const q = K.frame(p.x, p.z, 0.2)(2.9, -2.9);
+      K.drum('bark', q[0], cy - 0.3, q[1], 0.16, 9.6, 6, { r2: 0.12, collide: false });
+      K.drum('iron', q[0], cy + 9.2, q[1], 0.24, 0.45, 6, { r2: 0.5, open: true, collide: false }); K.cone('flame', q[0], cy + 9.5, q[1], 0.42, 1.5, 5);
+      (K.lamps ||= []).push({ p: [q[0], cy + 10.4, q[1]], c: [1, 0.55, 0.24], r: 18, i: 30, flicker: 0.4 }); }
     K.spots.cinderford_watch = [-2129, cy, -201.5, 1.571]; }
   // The clamps: three heaps of turf over slow fires, a red eye at each one's vent; cordwood stacked to feed them, the black
   // sacks, the burners' hut of boards.
@@ -760,7 +772,7 @@ export function lesser(K) {
       rects.push([x, z, 1.15, 0.52, -a, ty]);
     }
     K.deck(rects);
-    for (const [dx, dz, r, hh] of [[-13, 9, 3.2, 3.6], [9, 10.5, 4, 5], [12.5, -6, 3.4, 4.2], [-4, -13.5, 2.6, 2.4], [15, 3, 2.2, 2.6], [-15, -7, 1.8, 1.8]]) K.rock(FR, s.x + dx, s.z + dz, r, hh, { turn: dx });
+    for (const [dx, dz, r, hh] of [[-13, 9, 3.2, 3.6], [9, 10.5, 4, 5], [12.5, -6, 3.2, 4.2], [-4, -13.5, 2.6, 2.4], [15, 3, 2.2, 2.6], [-15, -7, 1.8, 1.8]]) K.rock(FR, s.x + dx, s.z + dz, r, hh, { turn: dx });
     // (The cell: a slab roof on two stones in the lee of the second lift, a dead fire, a bowl.)
     { const cx = s.x - 4.6, cz = s.z + 3.4; for (const sd of [-1, 1]) K.box(FR, cx + sd * 1.1, top, cz + sd * 0.5, 0.25, 1.5, 0.9, 0.6, { collide: false }); K.box(FR, cx, top + 1.5, cz, 1.7, 0.25, 1.3, 0.6, { collide: false });
       K.drum('rubble', cx - 1.2, top, cz + 2.3, 0.4, 0.16, 7, { collide: false, lid: 'dark:rubble' }); K.drum('wood', cx + 1.2, top, cz + 1.9, 0.16, 0.1, 6, { collide: false, lid: 'water' }); }

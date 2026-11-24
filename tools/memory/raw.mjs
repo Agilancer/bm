@@ -2,13 +2,16 @@
 // each thread downloads, which is hundreds of MB that a player's browser never holds). Spoken to over the debugger's socket
 // only: the page target for emulation and evaluation; worker threads are attached only when a step asks (ATTACH=1).
 //   node raw.mjs steps.json
-// Env: PORT (8861)  PHONE=pixel|iphone|small|tablet|'' (desk)  Q='&light=1'  NOAUTO=1  TIMEOUT (s, 600)  W,H  DEBUG_PORT
+// Env: PORT (8861)  PHONE=pixel|iphone|small|tablet|'' (desk)  Q='&light=1'  NOAUTO=1  TIMEOUT (s, 600)  W,H
 //      ATTACH=1 (watch worker threads' heaps; a little memory of its own)  CHROME (path)  FLAGS  OUT
-// steps: [{eval}|{wait}|{shot}|{log}|{mem}|{regions}|{dump}|{threads}|{gc}|{top}|{x}|{touch:[type,x,y,id]}|{tap:[x,y]}|{key}]
+//      DEBUG_PORT (unset: a free one of Chrome's choosing, said at the start; set: refused if taken; tools/chrome-port.mjs)
+// steps: [{eval}|{wait}|{shot}|{log}|{mem}|{peak}|{regions}|{dump}|{threads}|{gc}|{top}|{x}|{touch:[type,x,y,id]}|{tap:[x,y]}|{key}
+//         |{sample}|{snap}]  ({peak} and {sample}: what a thread makes, and the process's height uncollected; see below)
 import { spawn, execSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { portFlag, chromeSocket, openSocket } from '../chrome-port.mjs';
 
 const here = path.dirname(process.argv[1]);
 const steps = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
@@ -23,7 +26,6 @@ const PHONES = {
 };
 const ph = PHONES[process.env.PHONE || ''];
 const W = ph ? ph.w : +(process.env.W || 1280), H = ph ? ph.h : +(process.env.H || 720);
-const DEBUG_PORT = +(process.env.DEBUG_PORT || 9351);
 const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'bm-raw-'));
 const tag = path.basename(profile);
 const MB = (x) => Math.round(x / 1048576);
@@ -32,14 +34,17 @@ const chromePath = process.env.CHROME || ['C:/Program Files/Google/Chrome/Applic
 
 const INIT = fs.readFileSync(path.join(here, 'init.js'), 'utf8');
 
-const chrome = spawn(chromePath, [`--user-data-dir=${profile}`, `--remote-debugging-port=${DEBUG_PORT}`, '--enable-unsafe-webgpu', '--ignore-gpu-blocklist', '--no-first-run', '--no-default-browser-check',
+const debugFlag = await portFlag().catch((e) => { console.log(e.message); process.exit(1); });
+const chrome = spawn(chromePath, [`--user-data-dir=${profile}`, debugFlag, '--enable-unsafe-webgpu', '--ignore-gpu-blocklist', '--no-first-run', '--no-default-browser-check',
   '--window-position=-3000,0', `--window-size=${Math.max(W + 40, 500)},${H + 160}`, '--autoplay-policy=no-user-gesture-required', '--disable-features=CalculateNativeWinOcclusion',
   ...(process.env.FLAGS ? process.env.FLAGS.split(' ') : []), 'about:blank'], { stdio: 'ignore' });
-let ver = null;
-for (let i = 0; i < 60 && !ver; i++) { await sleep(250); ver = await fetch(`http://127.0.0.1:${DEBUG_PORT}/json/version`).then((r) => r.json()).catch(() => null); }
-if (!ver) { console.log('chrome did not start'); process.exit(1); }
-const ws = new WebSocket(ver.webSocketDebuggerUrl);
-await new Promise((r) => { ws.onopen = r; });
+let chromeGone = false;
+chrome.on('exit', () => { chromeGone = true; });
+// (This Chrome's own socket, from its profile: never another run's Chrome, whatever port it's on.)
+const dbg = await chromeSocket(profile, { seconds: 15, alive: () => !chromeGone });
+if (!dbg) { console.log('chrome did not start'); try { chrome.kill(); } catch { /* */ } process.exit(1); }
+console.log(`debugger on port ${dbg.port}`);
+const ws = await openSocket(dbg.url).catch((e) => { console.log(e.message); try { chrome.kill(); } catch { /* */ } process.exit(1); });
 let snapChunks = null, lastLayers = null;
 let id = 0; const waits = new Map(), threads = new Map(), traced = []; let traceDone = null;
 const send = (method, params = {}, sessionId, timeout = 60000) => new Promise((res, rej) => {
@@ -168,6 +173,8 @@ for (const s of steps) {
     if (s.shot) { const r = await send('Page.captureScreenshot', { format: 'png' }, S); fs.writeFileSync(path.join(out, `${s.shot}.png`), Buffer.from(r.data, 'base64')); console.log('shot', s.shot); }
     if (s.gc) { for (const sid of threads.keys()) await send('HeapProfiler.collectGarbage', {}, sid, 15000).catch(() => {}); await sleep(2500); }
     if (s.mem) await mem(s.mem);
+    // {"peak": "label"}: the page's and the GPU process's biggest since the last "peak" (or the start), and begin again.
+    if (s.peak) { console.log(`== ${s.peak}: page process peak ${peak} MB, GPU process peak ${peakGpu} MB`); peak = 0; peakGpu = 0; }
     if (s.threads) await threadMem(s.threads);
     if (s.regions) console.log(`== ${s.regions}: ${ps('regions.ps1').replace(/\r/g, '')}`);
     if (s.dump) await dump(s.dump);
@@ -211,6 +218,28 @@ for (const s of steps) {
       for (const [b, l] of rows.slice(0, 12)) named.push(`${MB(b)} MB ${Math.round(l.width)}x${Math.round(l.height)} ${await nodeName(l)}${await why(l)}`);
       console.log(`== ${s.layers}: ${L.length} painted layers of ${(lastLayers || []).length}, ${MB(total)} MB at x${dpr}: ${named.join(' | ')}`);
       await send('LayerTree.disable', {}, S).catch(() => {});
+    }
+    // {"sample": "sim.worker", "ms": 15000, "most": 25}: what the thread whose script's name has that in it ('page' for the page)
+    // makes over that long, collected since or not, by the function that made it: the garbage a frame makes, and where.
+    if (s.sample) {
+      const sid = s.sample === 'page' ? S : [...threads].find(([, t]) => t.name.includes(s.sample))?.[0];
+      if (!sid) console.log('no thread', s.sample);
+      else {
+        await send('HeapProfiler.enable', {}, sid);
+        await send('HeapProfiler.startSampling', { samplingInterval: 16384, includeObjectsCollectedByMajorGC: true, includeObjectsCollectedByMinorGC: true }, sid);
+        await sleep(s.ms || 15000);
+        const { profile } = await send('HeapProfiler.stopSampling', {}, sid, 60000);
+        const by = new Map(); let all = 0;
+        const walk = (n, up) => {
+          const f = n.callFrame, at = `${f.functionName || '(anon)'} ${(f.url || '').replace(/^.*\/(src|tools)\//, '$1/')}:${f.lineNumber + 1}`;
+          if (n.selfSize) { all += n.selfSize; const r = by.get(at) || { b: 0, up }; r.b += n.selfSize; by.set(at, r); }
+          for (const c of n.children || []) walk(c, at);
+        };
+        walk(profile.head, '');
+        const secs = (s.ms || 15000) / 1000, M2 = (x) => (x / 1048576).toFixed(2);
+        console.log(`== made by ${s.sample} over ${secs} s: ${M2(all)} MB (${M2(all / secs)} MB a second)\n` + [...by].sort((a, b) => b[1].b - a[1].b).slice(0, s.most || 25)
+          .map(([k, r]) => `${M2(r.b / secs).padStart(6)} MB/s  ${k}   <- ${r.up}`).join('\n'));
+      }
     }
     // {"snap": "sim"}: a heap snapshot of the thread whose script's name has that in it ('page' for the page), to OUT/<name>.heapsnapshot.
     if (s.snap) {

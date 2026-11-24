@@ -7,14 +7,13 @@ files) and writes it back over assets/game/tex at the same size, so nothing more
 
 - grass_1..3: the pale strands that net across the grass (grass_2 above all) toned down, highlights more than shadows,
   and the relief in their detail maps eased, since it's the light on those strands that drew the net;
-- the masonry (stone, rubble, block, course, ashlar, flags): its broad light and dark, anything bigger than a quarter of
-  a repeat, half divided out, so no blotch marks the period of the tile; the stones and their joints are kept. The shader
-  gives the stones their own tones back, in the world's space (src/gfx/materials.js STATIC);
-- the timbered fronts (wall_07..wall_20, door_wall): the pale plaster between the timbers evened out, the dark rim and
-  the stains that every bay of a front had in the same place lifted (only ever lightened, so the cream stays), but not
-  the splashed dirt at the foot of each panel over the timber below it; the timber, the glass and the stone infill left
-  exactly as painted. The shader gives each bay its own tone and the dirt
-  along its timbers and at the foot of the wall.
+- the castles' masonry (block, course, ashlar, flags): its broad light and dark, anything bigger than a quarter of a
+  repeat, half divided out, so no blotch marks the period of the tile; the stones and their joints are kept. The shader
+  gives the stones their own tones back, in the world's space (src/gfx/materials.js STATIC).
+
+Never the houses' paintings: the timbered fronts (wall_07..wall_20, door_wall) and the stone and rubble the stone houses
+are built of stay as they were painted (the owner, November 2026: the houses as they were). front() is kept only to show
+what was tried; nothing calls it.
 
 Needs numpy and Pillow; git for the originals. --sheet writes a before-and-after of each, three repeats wide.
 """
@@ -32,7 +31,7 @@ TEX = os.path.join(ROOT, "assets", "game", "tex")
 BASE_REF = "ac25d11"
 
 GRASS = ["grass_1", "grass_2", "grass_3"]
-MASONRY = ["stone", "rubble", "block", "course", "ashlar", "flags"]
+MASONRY = ["block", "course", "ashlar", "flags"]
 FRONTS = [f"wall_{i:02d}" for i in range(7, 21)] + ["door_wall"]
 
 
@@ -174,7 +173,7 @@ def main():
     a = ap.parse_args()
     only = set(a.only.split(",")) if a.only else None
     done = []
-    for names, fn in ((GRASS, grass), (MASONRY, masonry), (FRONTS, front)):
+    for names, fn in ((GRASS, grass), (MASONRY, masonry)):
         for n in names:
             if only and n not in only:
                 continue

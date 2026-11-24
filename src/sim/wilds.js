@@ -14,12 +14,13 @@
 //
 // Everything stood up here is a temp lair of TripoWorld's (src/sim/tripo.js): the twelve slots are all there are, so
 // nothing is rolled while they're busy.
-import { EV } from '../core/layout.js';
+import { EV, INPUT } from '../core/layout.js';
 import { OPENING } from '../core/opening.js';
 import { townDist } from '../core/town.js';
 import { SITES, countryAt, routeDist, siteAt, waterAt } from '../core/lands.js';
 import { SEALS } from '../core/sites.js';
-import { COUNTRY_FACTIONS, FACTIONS, FACTION_KEYS, MEET, MEETINGS, RAID, RAID_TOWNS, TEAR, TEARS_KINDS, WILD, atWar } from '../core/wilds.js';
+import { COUNTRY_FACTIONS, FACTIONS, FACTION_KEYS, MEET, MEETINGS, RAID, RAID_TOWNS, ROAD, TEAR, TEARS_KINDS, WILD, atWar } from '../core/wilds.js';
+import { WorldBosses } from './worldboss.js';
 import { FINDS, OUTPOSTS, TEAR_SPOTS } from '../core/wilds-data.js';
 import { ELEM, FX } from './spells.js';
 import { TripoEmpty, TripoMonster } from './tripo.js';
@@ -30,6 +31,10 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const hash = (n) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
 const CASTER = /caller|warlock|witch|seer|mancer|sorcerer|zealot|nurse|shaman|lord|magister|hierophant/;
 const HOLY = Object.values(SITES).filter((s) => s.portal || s.light);
+// The road's own meetings (src/core/wilds.js ROAD).
+const ROAD_KEYS = new Set(['ambush', 'rescue', 'heroes']);
+// The way from the player to (x, z).
+const a0 = (p, x, z) => Math.atan2(x - p.x, z - p.z);
 // How hard the land is at (x, z): easy by Bellmourn, hard at the rim.
 export const wildLevel = (x, z) => clamp(Math.round(3 + Math.hypot(x, z) / 270), 4, 22);
 
@@ -37,6 +42,7 @@ export class Wilds {
   constructor(sim) {
     this.sim = sim;
     this.byKey = new Map();
+    this.boss = new WorldBosses(sim, this);
     this.reset();
   }
 
@@ -51,6 +57,7 @@ export class Wilds {
     this.raid = null; this.raidAt = new Map(); this.raidSeen = new Map();
     this.glints = [];
     this.log = [];
+    this.boss?.reset();
   }
 
   note(s) { this.log.push(`${this.sim.time.toFixed(0)} ${s}`); if (this.log.length > 60) this.log.shift(); }
@@ -66,11 +73,13 @@ export class Wilds {
     this.draw();
     if (dt <= 0) return;
     if ((this.half -= dt) <= 0) { this.half = 0.5; this.rivals(); }
+    this.boss.step(dt);
     if ((this.clock -= dt) > 0) { if (this.tear) this.stepTear(dt); if (this.meet && !this.raid) this.stepMeet(dt); return; }
     this.clock = 1;
+    this.sim.heroWorld?.stepPassers?.(this);
     this.lookOutposts(); this.lookFinds(); this.lookTears();
     this.sim.heroWorld?.stepWildHome?.();
-    if (this.raid) this.stepRaid(1); else if (this.tear) this.stepTear(dt); else if (this.meet) this.stepMeet(dt); else if (!this.lookRaid()) this.lookMeet();
+    if (this.raid) this.stepRaid(1); else if (this.tear) this.stepTear(dt); else if (this.meet) this.stepMeet(dt); else if (this.boss.busy) return; else if (!this.lookRaid()) this.lookMeet();
   }
 
   monsters() { return this.sim.tripo.slots().filter((k) => k instanceof TripoMonster && !k.dead); }
@@ -80,6 +89,8 @@ export class Wilds {
     const list = this.monsters().filter((m) => m.lair?.side && !m.buried);
     const p = this.sim.player;
     for (const m of list) {
+      // (On travellers on the road: at them, till they're down or run. src/sim/wilds.js startMeet rescue.)
+      if (m.victim) { m.rival = m.victim.dead ? null : m.victim; if (!m.victim.dead) continue; m.victim = null; }
       // (Left far behind, a fight stands down: nobody's there to see it, and while its bodies say they're hunting their
       // lair never sleeps and they keep their slots from whatever you walk up to next. src/sim/tripo.js step.)
       if (Math.hypot(m.x - p.x, m.z - p.z) > 190) { if (m.rival) m.aggro = false; m.rival = null; continue; }
@@ -338,11 +349,18 @@ export class Wilds {
     if (sim.tripo.lairs.some((l) => !l.temp && !l.dungeon && l.state !== 'cleared' && Math.hypot(l.x - p.x, l.z - p.z) < (l.wake || 110) + 30)) { this.nextMeet = sim.time + 5; return; }
     if (this.near >= 0 && Math.hypot(p.x - TEAR_SPOTS[this.near][0], p.z - TEAR_SPOTS[this.near][1]) < 90) return;
     const rd = routeDist(p.x, p.z), onRoad = !!rd.road && !rd.road.trail && rd.d < 14;
+    // (Now and then, instead, a clearing with some of the other Tessariels already at one of the land's greatest:
+    // src/sim/worldboss.js.)
+    if (this.boss?.clearing()) return;
+    // (The road's own, when you're on one: src/core/wilds.js ROAD.)
     const pool = MEETINGS.filter((m) => !m.road || onRoad);
-    let roll = Math.random() * pool.reduce((s, m) => s + m.w, 0), kind = pool[0];
-    for (const m of pool) { roll -= m.w; if (roll <= 0) { kind = m; break; } }
-    const spot = this.spotAhead(kind.key === 'warband');
+    let roll = Math.random() * pool.reduce((s, m) => s + m.w * (m.road && ROAD_KEYS.has(m.key) ? ROAD.roadShare : 1), 0), kind = pool[0];
+    for (const m of pool) { roll -= m.w * (m.road && ROAD_KEYS.has(m.key) ? ROAD.roadShare : 1); if (roll <= 0) { kind = m; break; } }
+    // (An ambush isn't ahead of you: it's where you are. Travellers and the others' fights are on the road ahead.)
+    const spot = kind.key === 'ambush' ? [p.x, p.z] : this.spotAhead(kind.key === 'warband' || kind.key === 'rescue' || kind.key === 'heroes');
     if (!spot) { this.nextMeet = sim.time + 4; return; }
+    // (The others' fight wants some of them free to be in it.)
+    if (kind.key === 'heroes' && !sim.heroWorld?.free?.(2)) { this.nextMeet = sim.time + 4; return; }
     this.startMeet(kind.key, spot[0], spot[1]);
   }
 
@@ -396,6 +414,56 @@ export class Wilds {
       const who = c === 'rimeholt' ? ['w_frost_drake'] : c === 'fen' ? ['w_marsh_drake'] : c === 'ashen' || c === 'rustwood' ? ['w_ash_drake'] : c === 'barrow' || c === 'gallows' ? ['w_bone_drake'] : null;
       M.lairs.push(this.stand(who ? { tag: key, x, z, r: 3, boss: who, n: 0, side: 'wyrm', tricks: true, tough, set: (m) => { m.opts.sight = 110; m.opts.leash = 300; m.aggro = true; } }
         : { tag: key, x, z, r: 5, pick: ['w_cinder_whelp'], n: 3, side: 'wyrm', tricks: lvl > 7, tough, set: (m) => { m.opts.sight = 110; m.opts.leash = 300; m.aggro = true; } }));
+    } else if (key === 'ambush') {
+      // Out of the ditches both sides of you, a little ahead: those who live round here and lie in wait on its roads. Stood
+      // square off your way (so out of the eye's frame as it looks down the road), and at you at once.
+      const lurkers = list.filter((k) => ['goblin', 'kobold', 'dead', 'plague', 'herd', 'pack', 'night', 'velscour', 'cult', 'brood'].includes(FACTIONS[k].side));
+      const F = FACTIONS[M.a = force?.a || (lurkers.length ? pick(lurkers) : fa)];
+      const sp = Math.hypot(p.vx || 0, p.vz || 0), head = sp > 1.5 ? Math.atan2(p.vx, p.vz) : p.yaw;
+      const fx = Math.sin(head), fz = Math.cos(head), up = rnd(...ROAD.ambush.ahead);
+      const at = (side) => {
+        // (Of a few ways out to that side, the one on sound ground.)
+        for (let k = 0; k < 6; k++) {
+          const off = rnd(...ROAD.ambush.side) + k * 2, sx = x + fx * (up - k * 2) + fz * off * side, sz = z + fz * (up - k * 2) - fx * off * side;
+          if (waterAt(sx, sz) === null && !sim.world.inside(sx, sz, 1.2)) return [sx, sz];
+        }
+        return null;
+      };
+      const jump = (m) => { m.opts.sight = 60; m.opts.leash = 160; m.aggro = true; m.idleT = 0; };
+      const hard = { hp: tough.hp * 1.1, damage: tough.damage };
+      const L = at(1), R = at(-1), n = lvl > 12 ? 3 : 2;
+      if (L) M.lairs.push(this.stand(base(F, { x: L[0], z: L[1], r: 3, n, boss: F.elite, tricks: F.lvl >= 9, tough: hard, set: jump })));
+      if (R) M.lairs.push(this.stand(base(F, { x: R[0], z: R[1], r: 3, n: n + (L ? 0 : 2), tricks: F.lvl >= 9, tough: hard, set: jump })));
+      if (!M.lairs.length) return this.startMeet('pack', x + fx * 60, z + fz * 60, { a: M.a });
+      M.x = x + fx * up; M.z = z + fz * up;
+      sim.event(EV.ROAR, M.x, sim.world.height(M.x, M.z) + 2, M.z, 1.3);
+    } else if (key === 'rescue') {
+      // Folk on the road, and the country's own at them. The travellers are stood by the page (src/ui/roadfolk.js), hiding
+      // their heads; here they're a mark the monsters are on (m.victim: rivals above, foeOf in src/sim/foes.js), with so many
+      // blows in them before they break and run. Come close, or hurt one, and they turn on you instead.
+      const takers = list.filter((k) => !FACTIONS[k].v && ['goblin', 'kobold', 'dead', 'plague', 'herd', 'pack', 'night', 'brood', 'cult', 'flock'].includes(FACTIONS[k].side));
+      const F = FACTIONS[M.a = force?.a || (takers.length ? pick(takers) : 'moss')];
+      // (Never below the line from all of their life to none in ROAD.rescue.secs from now: time to get there.)
+      const t0 = sim.time;
+      const W = M.folk = { x, z, y: sim.world.height(x, z), hp: 1, maxHp: 1, dead: false, dormant: false, wayfarer: true, vx: 0, vz: 0, hidden: false,
+        damage(s, amount) { if (this.dead) return false; this.hp = Math.max(this.hp - amount, this.maxHp * (1 - (sim.time - t0) / ROAD.rescue.secs)); if (this.hp <= 0) { this.hp = 0; this.dead = true; } return true; } };
+      const set = (m) => {
+        m.opts.sight = 30; m.opts.leash = 120; m.victim = W; m.rival = W; m.aggro = true; m.idleT = 0;
+        // (Its blow as it lands on them: so many of them in the travellers before they run.)
+        if (W.maxHp === 1) { W.maxHp = W.hp = m.opts.damage * ROAD.rescue.life; }
+      };
+      const a = Math.random() * 6.28;
+      M.lairs.push(this.stand(base(F, { x: x + Math.sin(a) * 5, z: z + Math.cos(a) * 5, r: 3, n: lvl > 10 ? 3 : 2, boss: F.elite, tricks: false, set })));
+      M.shownLife = 100;
+    } else if (key === 'heroes') {
+      // Some of the other Tessariels at grips with a pack on the road: called in from where you can't see them (src/sim/hero.js
+      // answer), set down in the thick of it, the pack tougher than a pack (it's fighting four).
+      const F = FACTIONS[M.a = force?.a || fa];
+      const hard = { hp: tough.hp * 1.8, damage: tough.damage * 0.9 };
+      M.lairs.push(this.stand(base(F, { r: 5, n: lvl > 10 ? 4 : 3, boss: F.chief, tricks: F.lvl >= 9, tough: hard, set: (m) => { m.opts.sight = 30; m.opts.leash = 120; m.aggro = true; m.idleT = 0; } })));
+      const want = Math.round(rnd(ROAD.heroes.n[0], ROAD.heroes.n[1] + 0.99));
+      M.help = sim.heroWorld?.answer?.(x, z, want, [x + Math.sin(a0(p, x, z)) * 6, z + Math.cos(a0(p, x, z)) * 6], 'the road', 60) || [];
+      if (M.help.length) sim.event(EV.WILD, WILD.HEROES, M.help.length);
     } else {
       M.lairs.push(this.stand(base(A, { n: lvl > 10 ? 4 : 3 })));
     }
@@ -427,16 +495,28 @@ export class Wilds {
         sim.event(EV.WILD, WILD.MEET, MEETINGS.findIndex((m) => m.key === 'ritual'), FACTION_KEYS.indexOf(M.a), -2, 0, M.x, M.z);
       }
     }
+    // Travellers on the road: how they're holding, told as it falls; and once they're down, they run for it (the page takes
+    // them off the road), and what was on them is on you.
+    if (M.folk) {
+      const W = M.folk, left = Math.round(W.hp / W.maxHp * 10) * 10;
+      if (left !== M.shownLife) { M.shownLife = left; sim.event(EV.WILD, WILD.RESCUE, left, W.x, W.z); }
+      if (W.dead && !M.fled) { M.fled = true; this.note('the travellers ran'); for (const m of mine) { m.victim = null; m.rival = null; } }
+    }
     const far = Math.hypot(p.x - M.x, p.z - M.z);
     const done = M.lairs.every((l) => this.over(l));
     // (A skirmish or a duel is done when one side's left and you've dealt with it, or left it be: when nothing of it's alive.)
     if (done) {
       this.meet = null; this.nextMeet = sim.time + rnd(...MEET.every);
       const won = M.hit && far < 140;
-      sim.event(EV.WILD, WILD.MEET_DONE, MEETINGS.findIndex((m) => m.key === M.key), M.x, sim.world.height(M.x, M.z), M.z, M.lvl, won ? (M.key === 'ritual' && !M.risen ? 2 : 1) : 0);
+      // (The travellers saved: 3. Saved, but by somebody else, the others or a fight of the monsters' own: 0, as any other.
+      // Run off before you got there: 4, the fight still yours.)
+      const how = !won ? 0 : M.folk ? (M.folk.dead ? 4 : 3) : M.key === 'ritual' && !M.risen ? 2 : 1;
+      sim.event(EV.WILD, WILD.MEET_DONE, MEETINGS.findIndex((m) => m.key === M.key), M.x, sim.world.height(M.x, M.z), M.z, M.lvl, how);
+      if (M.help?.length) this.sim.heroWorld?.later?.(rnd(6, 12), () => this.sim.heroWorld?.sendBack?.(M.help));
       this.note(`meeting over (${M.key}, ${won ? 'won' : 'not yours'})`);
     } else if (far > MEET.gone || sim.time - M.t0 > 600) {
       for (const l of M.lairs) this.drop(l);
+      if (M.help?.length) this.sim.heroWorld?.sendBack?.(M.help);
       this.meet = null; this.nextMeet = sim.time + rnd(...MEET.every) * 0.5;
       sim.event(EV.WILD, WILD.MEET_DONE, MEETINGS.findIndex((m) => m.key === M.key), M.x, 0, M.z, M.lvl, -1);
       this.note(`meeting left behind (${M.key})`);
@@ -444,7 +524,9 @@ export class Wilds {
   }
 
   // For looking at it (bm.wild in the console, src/main.js): 1, a meeting of kind b ahead of you now; 2, to the nearest open
-  // tear; 3, to outpost b; 4, to battle b's ground; 5, the next meeting as soon as there's room; 6, to raid town b, with a raid on it now.
+  // tear; 3, to outpost b; 4, to battle b's ground; 5, the next meeting as soon as there's room; 6, to raid town b, with a raid on it now;
+  // 7, world boss b called at the nearest boss ground; 8, the others at world boss b in the nearest clearing; 9, the world boss
+  // being fought does move b of BOSS_MOVE_KEYS next (src/sim/worldboss.js).
   debug(a, b) {
     const sim = this.sim, p = sim.player, to = (x, z) => { p.x = x; p.z = z; p.y = sim.world.height(x, z); };
     if ((a | 0) === 1) {
@@ -458,6 +540,8 @@ export class Wilds {
     } else if ((a | 0) === 3) { const o = OUTPOSTS[(b | 0) % OUTPOSTS.length]; to(o.x + Math.sin(o.yaw) * (o.r + 26), o.z + Math.cos(o.yaw) * (o.r + 26)); }
     else if ((a | 0) === 4) { const l = sim.tripo.lairs.filter((q) => q.battle)[(b | 0) * 2]; if (l) to(l.x + 30, l.z); }
     else if ((a | 0) === 5) this.nextMeet = 0;
+    else if ((a | 0) === 9) this.boss.debug(9, b);
+    else if ((a | 0) === 7 || (a | 0) === 8) { if (this.meet) { for (const l of this.meet.lairs) this.drop(l); this.meet = null; } this.boss.debug(a | 0, b); }
     else if ((a | 0) === 6) { const n = (b | 0) % RAID_TOWNS.length, s = SITES[RAID_TOWNS[n]]; to(s.x, s.z + s.r * 0.3); if (this.meet) { for (const l of this.meet.lairs) this.drop(l); this.meet = null; } this.lookRaid(n); }
   }
 
@@ -469,6 +553,16 @@ export class Wilds {
     for (const [x, y, z, i] of this.glints) {
       const a = time * 1.6 + i;
       c.fx(FX.FLARE, ELEM.LIGHT, x + Math.cos(a) * 0.25, y + Math.sin(time * 2.3 + i) * 0.18, z + Math.sin(a) * 0.25, 0.09, 0, 1, 0, 0, 0.9, 1.5, 3, 0, i * 0.37);
+    }
+    // What a quest wants gathered (src/folk/quests.js marks, through INPUT.QMARKS): a taller light than a find's, two motes
+    // turning about each other, seen from further off.
+    const inp = sim.input, nq = inp ? Math.min(8, inp[INPUT.QMARK_N] | 0) : 0, pl = sim.player;
+    for (let k = 0; k < nq; k++) {
+      const x = inp[INPUT.QMARKS + k * 2], z = inp[INPUT.QMARKS + k * 2 + 1];
+      if (Math.hypot(x - pl.x, z - pl.z) > 110) continue;
+      const y = sim.world.height(x, z) + 0.9, a = time * 2.1 + k * 1.7;
+      c.fx(FX.FLARE, ELEM.LIGHT, x + Math.cos(a) * 0.3, y + Math.sin(time * 2.6 + k) * 0.2, z + Math.sin(a) * 0.3, 0.15, 0, 1, 0, 0, 0.9, 1.5, 3, 0, k * 0.61);
+      c.fx(FX.FLARE, ELEM.LIGHT, x - Math.cos(a) * 0.3, y + 0.7 + Math.cos(time * 2.2 + k) * 0.2, z - Math.sin(a) * 0.3, 0.11, 0, 1, 0, 0, 0.9, 1.5, 3, 0, k * 0.61 + 0.5);
     }
     // A tear: a wound of light over a ring of signs, a column (its size is its height, its length its width) you can see from a long way off; wilder while it's fought.
     const T = this.tear, i = T ? T.i : this.near;

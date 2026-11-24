@@ -5,6 +5,9 @@
 // HOUSES), bed: which of its beds, side: 0/1 where two share. job: the shape of their day (src/folk/brain.js DAYS). work: where.
 // walk: their gait (a clip). idles: what they do standing about. trade: what they sell (src/folk/shops.js).
 
+import { REGION_PEOPLE } from './regions/index.js';
+import { ROAD } from './road-folk.js';
+
 export const PEOPLE = [
   // The Tolling Bell
   { id: 'bram', name: 'Bram Kettle', title: 'Innkeeper', body: 'bram', sex: 'm', age: 50, home: 'inn', bed: 0, side: 0, job: 'innkeep', work: 'inn_bar', trade: 'inn', walk: 'walk', idles: ['fold_arms', 'idle', 'wait'] },
@@ -101,6 +104,22 @@ export const POSTED = [
   posted({ id: 'ph_ondine', delve: 'middleward', late: true, name: 'Ondine', title: 'once a sister of his Sanctuaries', body: 'ph_ondine', sex: 'f', age: 58, post: [11229.5, -5858, -60], face: -2.4, idles: ['fold_arms', 'idle', 'wait'] }),
   posted({ id: 'ph_jory', delve: 'middleward', late: true, name: 'Jory Tallis', title: 'once quartermaster of the Armoury', body: 'ph_jory', sex: 'm', age: 66, post: [11218.5, -5863.6, -60], face: 1.29, speed: 0.8, idles: ['fold_arms', 'scratch', 'idle'] }),
   posted({ id: 'ph_pip', delve: 'middleward', late: true, name: 'Pip Carrow', title: 'horn-blower of the Galleries', body: 'ph_pip', sex: 'm', age: 12, post: [11227.5, -5865.5, -60], face: -0.79, idles: ['look_around', 'idle', 'wait'] }),
+  // Pell's Holdout, down the Deep Stacks behind the Librarian's bookcase (src/core/delve-highward.js): the people he's hidden
+  // for forty years, and the roof-runners in the Gargoyles' Roost up in the High Ward. Loyal to Tessariel, the Holdout's, and
+  // nothing of it shows or is said (the V and T rule); the roof-runners are loyal to their own pockets. Late, as the
+  // household is. Their words: src/folk/lines/phobos-more-castle.js.
+  posted({ id: 'ho_vane', delve: 'deepstacks', late: true, name: 'Hesper Vane', title: "once a knight of his garrison, the Holdout's door", body: 'veteran', sex: 'f', age: 41, post: [12499.8, -5779.4, -72], face: 1.3, idles: ['fold_arms', 'idle', 'look_around'] }),
+  posted({ id: 'ho_coyle', delve: 'deepstacks', late: true, name: 'Mother Coyle', title: "the Holdout's cook", body: 'taverncook', sex: 'f', age: 63, post: [12490.4, -5766.6, -72], face: 2.8, idles: ['idle', 'scratch', 'fold_arms'] }),
+  posted({ id: 'ho_thole', delve: 'deepstacks', late: true, name: 'Garrick Thole', title: 'an armourer who walked out of the Forge', body: 'armourer', sex: 'm', age: 52, post: [12498, -5782, -72], face: -0.9, idles: ['fold_arms', 'idle', 'scratch'] }),
+  posted({ id: 'ho_marrow', delve: 'deepstacks', late: true, name: 'Ivo Marrow', title: 'a copyist', body: 'bookbinder', sex: 'm', age: 34, post: [12493.6, -5768.1, -72], face: 3.0, idles: ['idle', 'look_around', 'scratch'] }),
+  posted({ id: 'ho_nettle', delve: 'deepstacks', late: true, name: 'Old Nettle', title: 'buys and sells what the castle loses', body: 'pawnbroker', sex: 'f', age: 77, post: [12475.3, -5779.6, -72], face: 1.57, speed: 0.7, idles: ['idle', 'fold_arms', 'wait'] }),
+  posted({ id: 'ho_bet', delve: 'deepstacks', late: true, name: 'Little Bet', title: 'born down here', body: 'girl_1', sex: 'f', age: 9, post: [12486, -5810.4, -72], face: 0, idles: ['look_around', 'idle', 'wait'] }),
+  posted({ id: 'ho_dace', delve: 'deepstacks', late: true, name: 'Old Dace', title: 'a ferryman, once', body: 'ferryman', sex: 'm', age: 70, post: [12497.4, -5767.6, -72], face: -2.2, speed: 0.7, idles: ['idle', 'scratch', 'wait'] }),
+  posted({ id: 'ho_ilse', delve: 'deepstacks', late: true, name: 'Ilse Brand', title: 'out of the Rookeries', body: 'washerwoman', sex: 'f', age: 36, post: [12483.4, -5781.6, -72], face: 0.3, idles: ['idle', 'look_around', 'fold_arms'] }),
+  posted({ id: 'ho_quill', delve: 'deepstacks', late: true, name: 'Master Ferris Quill', title: "once tutor to his court's children", body: 'tutor', sex: 'm', age: 55, post: [12477.6, -5771.4, -72], face: 1.9, idles: ['fold_arms', 'idle', 'look_around'] }),
+  posted({ id: 'ho_corry', delve: 'deepstacks', late: true, name: 'Corry', title: 'not at his lessons', body: 'boy_2', sex: 'm', age: 11, post: [12485.6, -5775.6, -72], face: 1.0, idles: ['look_around', 'scratch', 'idle'] }),
+  posted({ id: 'ho_wren', delve: 'highward', late: true, name: 'Sable Wren', title: 'a roof-runner', body: 'cutpurse', sex: 'f', age: 27, post: [12031.6, -5830.6, -60], face: 1.2, idles: ['look_around', 'fold_arms', 'idle'] }),
+  posted({ id: 'ho_rook', delve: 'highward', late: true, name: 'Dunmore Rook', title: "keeps the roof-runners' ledger", body: 'graverobber', sex: 'm', age: 58, post: [12025, -5823.4, -60], face: 2.0, speed: 0.8, idles: ['scratch', 'idle', 'fold_arms'] }),
   // The castle's own (the owner, 2026-11-19: "creatures that might inhabit Velscour's keep/castle"), his servants in his
   // wards, late as the household is: the steward in the West Range, the torturer in the Oubliettes, the ghoul scullion in
   // the Kitchens; the bone butler in the Great Hall, the imp page in the Gallery, the archive's blind ghost in the Stacks,
@@ -114,6 +133,10 @@ export const POSTED = [
   posted({ id: 'cs_hellguard', delve: 'middleward', late: true, name: 'Vargoth', title: 'a hellguard of the Keep', body: 'hellguard', sex: 'm', age: 500, post: [11162, -5736, -60], face: 1.57, walk: 'walk_proud', idles: ['fold_arms', 'idle', 'look_around'] }),
   posted({ id: 'cs_priestess', delve: 'middleward', late: true, name: 'Mother Severine', title: 'a priestess of the Keep', body: 'keeppriestess', sex: 'f', age: 41, post: [11198, -5766, -60], face: -1.57, walk: 'walk_proud', idles: ['idle_ual', 'fold_arms_ual', 'look_around'] }),
   posted({ id: 'ph_ash', hub: 'ash', name: 'Edda Grail', title: 'Warden of the Ashwardens', body: 'ph_ash', sex: 'f', age: 52, post: [10059.7, -551.4], face: -3.11, idles: ['fold_arms_ual', 'idle_ual', 'look_around'] }),
+  // On the Sill, by its seal, where Lisandra's door sets you down on your first visit to Phobos's country (src/folk/first-visit.js):
+  // Wenna Coyle, who keeps the lamps on the way down to the city, and was Lisandra's apprentice once. Late, as the castle's
+  // people are: her body's loaded once you're on your way there. Her words: src/folk/lines/first-visit.js.
+  posted({ id: 'fv_wenna', firstVisit: true, late: true, name: 'Wenna Coyle', title: "keeper of the Sill's lamps", body: 'fv_wenna', sex: 'f', age: 61, post: [8946.5, 7.5], face: -1.75, speed: 0.8, idles: ['fold_arms_ual', 'idle_ual', 'look_around'] }),
 ];
 // City State Phobos's street crowd: ruffians, riff-raff and adventurer folk, on the town's own thread with no house, bed or
 // day (job 'roam': src/folk/brain.js). They're only up while you're inside the city's wall, and then they're about the
@@ -286,8 +309,13 @@ const swapsOf = (p, n) => {
   return out;
 };
 CROWD.push(...CROWD.filter((p) => MESHY.has(p.body)).flatMap((p, n) => swapsOf(p, n)));
-// Everyone with a body on the town's thread: the town's people, then the posted, then Phobos's crowd (the folk buffer's order).
-export const FOLK = PEOPLE.concat(POSTED, CROWD);
+// Everyone with a body on the town's thread: the town's people, then the posted, the road's, then Phobos's crowd (the folk buffer's order).
+// And those posted at the camps and the land's other hubs, region by region (src/folk/regions/, docs/QUEST-LOOP.md).
+for (const p of REGION_PEOPLE) POSTED.push(posted(p));
+// (And between the posted and the crowd, the folk you pass on the roads, parked till they're set down on one:
+// src/folk/road-folk.js. The crowd's kept last.)
+export { ROAD };
+export const FOLK = PEOPLE.concat(POSTED, ROAD, CROWD);
 
 export const BY_ID = Object.fromEntries(FOLK.map((p) => [p.id, p]));
 export const first = (p) => (p.id === 'homunculus' ? 'Homunculus' : p.id === 'aldric' ? 'Ser Aldric' : p.id === 'dusty' ? 'Dusty' : p.name.split(' ').slice(0, p.name.startsWith('Ser ') ? 2 : 1).join(' '));

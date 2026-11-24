@@ -14,8 +14,9 @@ import { clamp, smoothstep } from '../core/math.js';
 import { OPENING } from '../core/opening.js';
 import { overLand as roadsOverLand } from '../core/roads.js';
 import { inTown } from '../core/town.js';
-import { RULES, areaAt, placeSpot } from '../folk/quests.js';
+import { RULES, areaAt, gatherSpots, placeSpot } from '../folk/quests.js';
 import { BOSSES } from '../core/dungeon.js';
+import { groundOf } from '../core/wilds.js';
 import { CAMPS } from '../sim/slimes.js';
 import { QUESTS } from '../folk/lines/quests.js';
 
@@ -81,6 +82,8 @@ export class QuestTrail {
     };
     // (Before any work: Lisandra, waiting where the road comes into town, if she's there; else Bram at the inn.)
     if (id === 'start') return (T.lisI !== undefined && T.whereOf(T.lisI) && person('lisandra')) || person('bram');
+    // (Bram's errand done: Lisandra, for her door east. src/folk/quests.js followed.)
+    if (id === 'door') return person('lisandra');
     const s = Q.state(id), q = QUESTS[id];
     if (!s || s.stage === 'done') return null;
     if (s.stage === 'making') return person(q.giver);
@@ -90,7 +93,9 @@ export class QuestTrail {
     // Work to take on from each of a list of people: the nearest you've still to see (one with work to give you first).
     if (st.start) {
       const left = st.start.filter((p) => !(s.seen || []).includes(p)).map((p) => [p, person(p)]).filter(([, at]) => at);
-      const by = (a, b) => (Q.offers(b[0]).length > 0) - (Q.offers(a[0]).length > 0) || Math.hypot(a[1].x - px, a[1].z - pz) - Math.hypot(b[1].x - px, b[1].z - pz);
+      // (Bram first while his errand's not taken: it opens Lisandra's door east, src/folk/first-visit.js. Then whoever has work.)
+      const bram = (p) => (p === 'bram' && !Q.state('bed_and_bell') ? 1 : 0);
+      const by = (a, b) => bram(b[0]) - bram(a[0]) || (Q.offers(b[0]).length > 0) - (Q.offers(a[0]).length > 0) || Math.hypot(a[1].x - px, a[1].z - pz) - Math.hypot(b[1].x - px, b[1].z - pz);
       return left.sort(by)[0]?.[1] ?? null;
     }
     const below = (to) => {
@@ -115,6 +120,7 @@ export class QuestTrail {
     };
     if (st.bring) return place(st.at, true);
     if (st.boss) { const b = BOSSES.find((q) => q.key === st.boss); return b ? place(b.delve || 'warrens', true) : null; }
+    if (st.wboss) { const g = groundOf(st.ground); return g ? { x: g.x, z: g.z, near: g.r } : null; }
     if (st.warden) return below(CRYPT);
     if (st.enter) return place(st.enter, false);
     if (st.kill) {
@@ -122,10 +128,19 @@ export class QuestTrail {
       // (Already among them: nothing to lead you to.)
       return at && !at.way && Math.hypot(at.x - px, at.z - pz) < at.near * 1.5 ? null : at;
     }
+    // (An outpost to empty: to its gate. Already among them, nothing to lead you to.)
+    if (st.clear) { const at = placeSpot(`outpost:${st.clear}`); return at && Math.hypot(at.x - px, at.z - pz) < at.near * 1.5 ? null : at; }
+    // (Things to gather: to the nearest of them still lying there.)
+    if (st.gather) {
+      const got = s.got || [], left = gatherSpots(id, st).filter((_, i) => !got.includes(i));
+      left.sort((a, b) => Math.hypot(a[0] - px, a[1] - pz) - Math.hypot(b[0] - px, b[1] - pz));
+      return left.length ? { x: left[0][0], z: left[0][1], near: 1.5 } : null;
+    }
     if (st.visit) {
-      const left = st.visit.filter((k) => !(s.seen || []).includes(k) && SITES[k]);
-      left.sort((a, b) => Math.hypot(SITES[a].x - px, SITES[a].z - pz) - Math.hypot(SITES[b].x - px, SITES[b].z - pz));
-      return left.length ? site(left[0]) : null;
+      // (Any place a visit can name: a site, a lair's glade, an outpost's ground, a district.)
+      const left = st.visit.filter((k) => !(s.seen || []).includes(k)).map((k) => (SITES[k] ? site(k) : placeSpot(k))).filter(Boolean);
+      left.sort((a, b) => Math.hypot(a.x - px, a.z - pz) - Math.hypot(b.x - px, b.z - pz));
+      return left.length ? left[0] : null;
     }
     return null;
   }

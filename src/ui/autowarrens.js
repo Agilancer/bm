@@ -49,8 +49,13 @@ export const WAYS = {
     'cl_erange', 'cl_mstair', 'cl_mgate', 'cl_mstair', 'cl_erange', 'cl_yard'],
   // The Iron Barracks (src/core/delve-barracks.js): down the Muster Stair, the Kennels and the Practice Yard off the Muster
   // Hall, the War Room, the Cells and the Stores off it, and the Iron Marshal in his hall last.
+  // The Redoubt under the Sill (src/core/delve-redoubt.js): the Toll Hall, the Pens and the Harness off it, the court, its
+  // Forge and Chapel, and up the Watch Stair to the Red Hand last.
+  redoubt: ['rd_gate', 'rd_toll', 'rd_pens', 'rd_toll', 'rd_harness', 'rd_toll', 'rd_court', 'rd_forge', 'rd_court', 'rd_chapel', 'rd_court', 'rd_stair', 'rd_hall'],
   ironbarracks: ['ib_stair', 'ib_muster', 'ib_kennels', 'ib_muster', 'ib_yard', 'ib_muster', 'ib_war', 'ib_cells', 'ib_war', 'ib_stores', 'ib_war', 'ib_iron'],
 };
+// (A later delve carries its own: auto: { way: [...] }, written with it. src/core/delve-castle-a.js and the rest.)
+for (const d of DELVES) if (d.auto?.way) WAYS[d.key] = d.auto.way;
 export const WAY = WAYS.warrens;
 // The level it wants before it goes down each the first time (its own, from the delve: the Warrens 7, the Deeps 10,
 // Blackvigil 14), raised two each time that dungeon beats it three times over.
@@ -85,7 +90,13 @@ export const KNOWN = new Set([
   // (The Iron Barracks: plain packs; the Kennelmaster's scent is an order (to the trough), the Quartermaster's runners and
   // the Marshal's standard are orders (to them), the rest marks, rings and adds, as any.)
   'ib_stairguard', 'ib_rank_w', 'ib_rank_e', 'ib_drill', 'ib_officers', 'ib_defaulters', 'kennelmaster', 'quartermaster', 'ironmarshal',
+  // (The Redoubt under the Sill: plain packs; the Pen-Warden's debtors and Carrow's harness are adds, Rothgar's banner an
+  // order (to it), the rest marks, rings and lines, as any.)
+  'rd_gateguard', 'rd_tollmen', 'rd_clerks', 'rd_lancers', 'rd_bellows', 'rd_priests', 'rd_stairguard', 'rd_round', 'rd_gaolers', 'penwarden', 'carrow', 'rothgar',
 ]);
+// (And every pack and boss of a delve that carries its own way: fought as any are, their calls marks, shots, rings, adds
+// and orders.)
+for (const d of DELVES) if (d.auto?.way) { for (const p of d.packs) KNOWN.add(p.key); for (const b of d.bosses) KNOWN.add(b.key); }
 export function warrensCoverage() {
   const out = [];
   for (const d of DELVES) {
@@ -114,11 +125,18 @@ const dist = (ax, az, bx, bz) => Math.hypot(ax - bx, az - bz);
 // within; else out by the way in. null if the gate it wants is shut (open: the bosses that have ever died, 'boss:<key>').
 export function delveWay(here, d, open = () => true) {
   if (!d || here?.key === d.key) return null;
-  if (!here) return [d.portal.x, d.portal.z];
-  const links = here.links || [];
-  const l = links.find((q) => q.to === d.key) || (d.within && links.find((q) => q.to === d.within)) || (here.within && links.find((q) => q.to === here.within));
-  if (l) return !l.shut || open(l.shut) ? toWorld(l.x, l.z, here) : null;
-  return toWorld(here.exitIn.x, here.exitIn.z, here);
+  // (Out on the land: to its door, or to the door of the ward it's gone into from; nowhere, if that door's locked.)
+  if (!here) return d.shutBy && !open(d.shutBy) ? null : [d.portal.x, d.portal.z];
+  // The gates between delves, as far as they go: the first of the way through them to it, every one of them open.
+  const from = new Map([[here.key, null]]), q = [here];
+  while (q.length && !from.has(d.key)) {
+    const c = q.shift();
+    for (const l of c.links || []) { if (from.has(l.to) || (l.shut && !open(l.shut))) continue; from.set(l.to, c === here ? l : from.get(c.key)); const o = delveByKey(l.to); if (o) q.push(o); }
+  }
+  const l = from.get(d.key);
+  if (l) return toWorld(l.x, l.z, here);
+  // (No way through from here: a ward gone into only from another can't be reached; anything else, out and round.)
+  return d.within ? null : toWorld(here.exitIn.x, here.exitIn.z, here);
 }
 // (A flow field for each dungeon, made when it first walks there.)
 const navs = new Map();
@@ -202,12 +220,14 @@ export function warrensJob(b, m, want = null, owed = null) {
   const other = here && want?.length && !want.includes(here.key) ? want.map(delveByKey).find((q) => q && WAYS[q.key] && m.lvl >= q.level && delveWay(here, q, b.gateOpen)) : null;
   if (other) return { kind: 'warrens', why: whyOf(other.key), delve: other.key, say: `On to ${other.name}.` };
   if (here) return { kind: 'warrens', why: whyOf(here.key), delve: here.key, say: `Down ${here.name}.` };
-  if (!P.fit()) return null;
-  const fit = (d) => WAYS[d.key] && m.lvl >= d.level + (b.bump[whyOf(d.key)] || 0) && !b.skipping(whyOf(d.key));
+  // (A party fit to go: a tank and a healer among them. Not for one gone into alone or not, party: false, like the Redoubt under the
+  // Sill on the first visit: it used to go home to Bellmourn to hire one first, and they wait at the door.)
+  const ready = P.fit();
+  const fit = (d) => (ready || d.party === false) && WAYS[d.key] && m.lvl >= d.level + (b.bump[whyOf(d.key)] || 0) && !b.skipping(whyOf(d.key));
   const byLevel = DELVES.filter(fit).sort((a, c) => a.level - c.level);
   // (owed: the ones a quest not yet done has work down. Those wait for their quest: src/ui/autobrain.js delveOwed.)
   const d = byLevel.find((q) => want?.includes(q.key)) || (want?.length ? null : byLevel.find((q) => !owed?.has(q.key)));
-  return d ? { kind: 'warrens', why: whyOf(d.key), delve: d.key, say: `To ${d.name}, with the party.` } : null;
+  return d ? { kind: 'warrens', why: whyOf(d.key), delve: d.key, say: !ready ? `To ${d.name}, alone.` : `To ${d.name}, with the party.` } : null;
 }
 
 // Room by room: the next one along the way it hasn't been through, waiting for the party before a boss's door, and out by the
@@ -236,6 +256,18 @@ export function doWarrens(b, m, foes) {
       return;
     }
     b.say(`To ${d.name}, with the party.`);
+    // (A portal set back between rock, as the Redoubt's is in its cliff (approach): out in front of it first, then lined up
+    // and straight in. Coming along the cliff's foot it walked into the rock beside the gatehouse and stood there.)
+    const A = d.approach;
+    if (A && far < 60) {
+      const fx = Math.sin(d.portal.yaw), fz = Math.cos(d.portal.yaw), ox = m.x - d.portal.x, oz = m.z - d.portal.z;
+      const out = ox * fx + oz * fz, lat = ox * fz - oz * fx;
+      if (Math.abs(lat) > 2.2) {
+        const side = out < A.out - 2 ? Math.max(-A.side, Math.min(A.side, lat)) : 0;
+        b.goTo(d.portal.x + fx * A.out + fz * side, d.portal.z + fz * A.out - fx * side, 1.2, true);
+        return;
+      }
+    }
     b.goTo(d.portal.x, d.portal.z, 0.6, true);
     return;
   }
@@ -251,7 +283,30 @@ export function doWarrens(b, m, foes) {
   }
   // (After a wipe it's at the way in again: on from where it got to, past what's cleared.)
   if (dist(m.x, m.z, ...toWorld(D.entry.x, D.entry.z, D)) < 6 && b.room > 1 && b.t - (b.roomT || 0) > 20) b.room = 1;
+  // (Past the end of its way with the last of the place still standing, behind a lock it has no key to: out by the way in.)
+  if (b.room >= way.length) {
+    const [x, z] = toWorld(D.exitIn.x, D.exitIn.z, D);
+    b.say(`${D.name}: as far as its doors let me. Out.`);
+    b.warrensDone = D.key;
+    b.goTo(x, z, 0.5, true);
+    return;
+  }
   const id = way[Math.min(b.room, way.length - 1)], r = roomOf(id), [rx, , rz] = roomSpot(id);
+  // A room that isn't walked to from here: by a door between two rooms of the delve's own (src/core/delve-highward.js: the
+  // Reliquary, the Throne Antechambers), if it's open; if it's locked, the room's left out.
+  if ((D.links || []).some((l) => l.to === D.key) && !Number.isFinite(caveNav(rx, rz).walkDist(m.x, m.z, rx, rz, b.t))) {
+    const nav = caveNav(rx, rz);
+    const door = D.links.find((l) => {
+      if (l.to !== D.key) return false;
+      const back = D.links[l.n], [lx, lz] = toWorld(l.x, l.z, D), [ax, az] = toWorld(back.x + Math.sin(back.yaw) * 4, back.z + Math.cos(back.yaw) * 4, D);
+      return Number.isFinite(caveNav(lx, lz).walkDist(m.x, m.z, lx + Math.sin(l.yaw) * 2, lz + Math.cos(l.yaw) * 2, b.t)) && Number.isFinite(nav.walkDist(ax, az, rx, rz, b.t));
+    });
+    if (!door || (door.shut && !b.gateOpen(door.shut))) { b.say(`${r.name} is locked: on.`); b.room++; b.roomT = b.t; return; }
+    const [lx, lz] = toWorld(door.x, door.z, D);
+    b.say(`Through the door to ${r.name}.`);
+    b.goTo(lx, lz, 0.4, true);
+    return;
+  }
   // (A room that's long and not round: by its half length.)
   const R = r.r || Math.max(r.hx || 0, r.hz || 0, r.w || 0, r.h || 0) || 10;
   const boss = BOSSES.find((q) => q.room === id);
@@ -289,6 +344,21 @@ export function caveStep(b, m, g) {
 
 // ---- the fights inside ---------------------------------------------------------------------------------------------------
 
+// A world boss's mark to share or its pool of light (src/sim/worldboss.js: soak, out in the land), down near it and not yet
+// landed: to be stood in, at once, unless it's in one already. As an order: { to, urgent }, or null.
+export function soakNear(b, m) {
+  const G = b.o.game.perils;
+  if (!G?.marks?.length || performance.now() - G.at > 1500) return null;
+  let best = null, bd = 30;
+  for (const h of G.marks) {
+    if (!h.soak || h.live) continue;
+    const d = dist(m.x, m.z, h.x, h.z);
+    if (d < h.r - 1.2) return null;
+    if (d < bd) { bd = d; best = h; }
+  }
+  return best ? { to: [best.x, best.z], urgent: true } : null;
+}
+
 // Where to stand and whom to hit, by the boss's calls. Returns { to: [x, z] | null, run, target: foe | null, why }.
 export function tactics(b, m, foes) {
   const P = b.o.game.party, W = P?.warrens;
@@ -298,7 +368,8 @@ export function tactics(b, m, foes) {
   // What the fight itself wants of it just now (src/sim/dungeon.js order): not a step taken (the Dollmaker's music has
   // stopped; a pyre's on it and it's clear of everyone); or somewhere to be at once, whatever's under it (the high rock
   // above the tide, the far side of a pillar, his spotlight, the grave's circle).
-  const told = f?.order || null;
+  // (Out in the land, a world boss's marks to be stood in: the only such there are out of a delve. src/sim/worldboss.js order.)
+  const told = f?.order || (!inDungeon(m.x, m.z) ? soakNear(b, m) : null);
   // (Held to a place, or sent somewhere at once, and burning where it is: a step out of the fire first, as a player would.
   // Not if where it's sent is in the same fire.)
   if (told?.still || (told?.to && told.urgent)) {

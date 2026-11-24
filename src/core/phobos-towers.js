@@ -17,7 +17,7 @@ import { terrainHeight } from './terrain.js';
 import { hash2 } from './terrain-noise.js';
 import { CITY, CITY_WALL } from './east.js';
 import { PHOBOS } from './phobos-data.js';
-import { DOOR, cellOf, doorLeaf, fire, houseDoor, moatLevel, onFloor, phobosHouses, spiral, streetNear, tower, walk } from './phobos-build.js';
+import { DOOR, castleWallTowers, cellOf, doorLeaf, fire, houseDoor, moatLevel, onFloor, phobosHouses, spiral, streetNear, tower, walk } from './phobos-build.js';
 import { Kit } from './sites.js';
 
 const TAU = Math.PI * 2, Y = (x, z) => terrainHeight(x, z);
@@ -181,6 +181,9 @@ export function cityTowers() {
     const f = h.front || 1, yaw = h.yaw || 0;
     out.push(settle({ key: `spire${i}`, kind: 'study', layer: h.wall, x: h.x, z: h.z, r: h.r, h: h.h, roof: 'p2_verdigris_roof', o: { steep: 2.2 }, face: Math.atan2(f * Math.cos(yaw), f * Math.sin(yaw)), spire: true }));
   });
+  // And Castle Velscour's own wall towers (src/core/phobos-build.js castleWallTowers), last, so every door's and chest's
+  // number before them stays what it was.
+  for (const t of castleWallTowers()) if (!t.plain) out.push(settle({ ...t, castle: true }));
   let n = 0;
   for (const t of out) if (t.kind !== 'wall') t.door = 20000 + n++;
   TOWERS = out;
@@ -396,7 +399,10 @@ export function towerFar(K, t) {
     walk(K, discRects(x, z, p.apI, p.lo, null, 0));
     if (t.spiral) {
       spiral(K, null, x, z, 6, p.lo, p.hi, t.spiral.from, 1, { turn: t.spiral.turn, hw: 2.4 });
-      const a = t.spiral.to; walk(K, [[x + Math.cos(a) * p.apI / 2, z + Math.sin(a) * p.apI / 2, p.apI / 2 + 0.4, WAY + 0.4, -a, p.hi]]);
+      // (From the stair's middle line out, not from the drum's middle: laid over the whole stair it covered the outer
+      // half of the last three treads, and the top one left showing was 1.5 m under it, a step no one takes up or down:
+      // tools/paths/map.mjs. The treads' inner halves are the way up onto it.)
+      const a = t.spiral.to, g0 = 6, g1 = p.apI + 0.4; walk(K, [[x + Math.cos(a) * (g0 + g1) / 2, z + Math.sin(a) * (g0 + g1) / 2, (g1 - g0) / 2, WAY + 0.4, -a, p.hi]]);
     }
     towerFires(K, t, p);
     return top;

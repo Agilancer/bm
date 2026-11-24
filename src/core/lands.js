@@ -14,6 +14,7 @@ import { OUTPOSTS } from './wilds-data.js';
 import { WAYS } from './roads-data.js';
 import { CHASM, EAST_FROM, WORLD_EAST, eastHeight, eastSteep } from './east.js';
 import { PHOBOS } from './phobos-data.js';
+import { CAMPS } from './camps-data.js';
 
 // How far the land goes: this far north, south and west of the well, and WORLD_EAST east of it, where the Marches run out to
 // the City State of Phobos (src/core/east.js). LAND: the same as a box.
@@ -49,6 +50,10 @@ export const MOUNT = { x: -2600, z: -3000, R: 1750, peak: 980, crown: 170, lake:
 
 // The Green Downs' cliff: the land steps up 30 m east of this line, and Brightwater comes over it.
 export const CLIFF = { x: 2640, z0: -900, z1: 700, top: 30 };
+// And the one way up it that isn't the long way round: a ramp cut back into the scarp south of Bell Knoll, where the trail to
+// the stones on the clifftop crosses it. Between z0 and z1 the 30 m is taken over 140 m, not twelve (about twelve degrees).
+export const RAMP = { z0: -700, z1: -590, half: 70 };
+export const rampAt = (z) => sstep(RAMP.z0 - 25, RAMP.z0, z) * (1 - sstep(RAMP.z1, RAMP.z1 + 25, z));
 export const POOL = { x: 2612, z: -120, r: 30 };
 export const KNOLL = { x: 2440, z: -540, r: 80, h: 22 };
 // The barrows' mounds: [x, z, radius, height, which way the door faces] (their doors: src/core/sites.js).
@@ -158,7 +163,13 @@ export const SITES = {
   span: { x: 8400, z: 120, r: 50, name: 'The Broken Span' },
   sill: { x: 8950, z: 0, r: 45, name: 'The Sill', portal: true },
 };
+// And the camps (src/core/camps-data.js): each a place like any other, levelled, cleared of trees, named on the map and
+// linked by a way of its own (tools/roads/lay.mjs), with `camp: true`. Plain folk's, all of them.
+for (const c of CAMPS) SITES[c.key] = { x: c.x, z: c.z, r: c.r, name: c.name, pad: c.pad, camp: true };
 export const SITE_KEYS = Object.keys(SITES);
+// (The places whose levelled ground reaches inside the town's own land, the first 1.15 km, where nothing else out here is
+// done to the ground: the nearest camps. landHeight levels them there too.)
+const NEAR_PADS = SITE_KEYS.filter((k) => SITES[k].pad && Math.hypot(SITES[k].x, SITES[k].z) < 1150 + SITES[k].pad + 30);
 // The knolls under the Lantern and the Needle: [x, z, radius, height]. And where no tree stands so a thing can be seen: them,
 // and the toll gate on the Throne Road. [x, z, radius]
 const TOWER_KNOLLS = [[6800, -1000, 110, 20], [7050, 1200, 120, 26]];
@@ -322,7 +333,18 @@ export function mountainHeight(x, z) {
 const PADS = {};
 export function landHeight(x, z, level, raw = false) {
   const r = Math.hypot(x, z);
-  if (r < 1150) return level;
+  if (r < 1150) {
+    // (The town's own land, left as it lies: but for the ground of a camp that stands in it, levelled to its middle.)
+    if (raw || !NEAR_PADS.length) return level;
+    let h = level;
+    for (const k of NEAR_PADS) {
+      const s = SITES[k], d = Math.hypot(x - s.x, z - s.z);
+      if (d > s.pad + 30) continue;
+      const y = PADS[k] ?? (PADS[k] = rawHeight(s.x, s.z));
+      h += (y - h) * (1 - sstep(s.pad, s.pad + 30, d));
+    }
+    return h;
+  }
   const out = sstep(1150, 1700, r);
   const w = countryWeights(x, z);
   let hills = 0, wet = 0, dry = 0;
@@ -338,7 +360,8 @@ export function landHeight(x, z, level, raw = false) {
   if (m > 0) h = Math.max(h, m + h * 0.15);
   // The Downs' cliff, with the falls' notch, and Bell Knoll.
   if (x > CLIFF.x - 30 && z > CLIFF.z0 - 200 && z < CLIFF.z1 + 200) {
-    const e = sstep(CLIFF.x - 6, CLIFF.x + 6, x + (fbm(z * 0.03, 3, 2) - 0.5) * 18) * (1 - sstep(CLIFF.z1, CLIFF.z1 + 200, z)) * (1 - sstep(CLIFF.z0, CLIFF.z0 - 200, z));
+    const rp = rampAt(z), hw = 6 + (RAMP.half - 6) * rp;
+    const e = sstep(CLIFF.x - hw, CLIFF.x + hw, x + (fbm(z * 0.03, 3, 2) - 0.5) * 18 * (1 - rp)) * (1 - sstep(CLIFF.z1, CLIFF.z1 + 200, z)) * (1 - sstep(CLIFF.z0, CLIFF.z0 - 200, z));
     h += CLIFF.top * e;
   }
   const kd = Math.hypot(x - KNOLL.x, z - KNOLL.z);
@@ -414,7 +437,7 @@ export function landTrees(x, z) {
   if (rd.road && rd.d < rd.road.w + 7) return 0;
   if (siteAt(x, z, 15)) return 0;
   for (const wt of WATERS) if ((x - wt.x) ** 2 + (z - wt.z) ** 2 < (wt.r + 10) ** 2) return 0;
-  if (Math.abs(x - CLIFF.x) < 14 && z > CLIFF.z0 && z < CLIFF.z1) return 0;
+  if (Math.abs(x - CLIFF.x) < 14 && z > CLIFF.z0 && z < CLIFF.z1 && rampAt(z) < 0.5) return 0;
   if (x > 7000 && eastSteep(x, z)) return 0;   // (nor on the east's cliffs)
   if (x > 6400 && x < 7700) for (const [bx, bz, br] of BARE) if ((x - bx) ** 2 + (z - bz) ** 2 < br * br) return 0;
   const w = countryWeights(x, z);
@@ -430,6 +453,8 @@ export function treeCode(x, z) {
   if (Math.hypot(x, z) < 1300) return 0;
   const md = Math.hypot(x - MOUNT.x, z - MOUNT.z);
   if (md < MOUNT.R * 0.75) return 2;
+  // (Every tree on Blackvigil's hill is dead: his keep had the greenest pine in the country on top of it. The once-over.)
+  if (Math.hypot(x + 5000, z - 200) < 330) return 3;
   const k = countryAt(x, z);
   const c = COUNTRIES[k].code;
   // (Dead wood only in stands; most of a dead country's trees are still green, just grim.)
@@ -450,7 +475,7 @@ export function groundCover(x, z, h, slope) {
   snow = Math.max(snow, sstep(480, 640, h + (fbm(x * 0.01, z * 0.01, 2) - 0.5) * 80));
   rock = Math.max(sstep(0.55, 0.9, slope), md < MOUNT.R ? sstep(0.6, 0.85, 1 - md / MOUNT.R) * 0.6 : 0);
   if (md < MOUNT.crown + 50) rock = Math.max(rock, sstep(MOUNT.lake + 20, MOUNT.crown - 20, md));
-  if (Math.abs(x - CLIFF.x) < 12 && z > CLIFF.z0 && z < CLIFF.z1) rock = 1;
+  if (Math.abs(x - CLIFF.x) < 12 && z > CLIFF.z0 && z < CLIFF.z1 && rampAt(z) < 0.5) rock = 1;
   return [Math.min(1, snow), Math.min(1, rock)];
 }
 

@@ -25,6 +25,7 @@ for (const d of DELVES) {
   if (delveAt(d.portal.x, d.portal.z)) fail(`${d.key}: its portal on the land is inside a delve's box`);
   const nav = new CaveNav(d);
   const [ex, ez] = toWorld(d.entry.x, d.entry.z, d);
+  const inner = (d.links || []).filter((l) => l.to === d.key).map((l) => { const b = d.links[l.n]; return toWorld(b.x + Math.sin(b.yaw) * 4, b.z + Math.cos(b.yaw) * 4, d); });
   for (const r of d.rooms) {
     if (ids.has(r.id)) fail(`${r.id}: two rooms of that name`);
     ids.add(r.id);
@@ -32,7 +33,8 @@ for (const d of DELVES) {
     const [x, z] = toWorld(r.x + (r.hole ? r.hole + 6 : 0), r.z, d);
     if (delveAt(x, z) !== d.key) fail(`${r.id}: not in its own delve's box`);
     if (caveRoom(x, z) < 2) fail(`${r.id}: its middle is ${caveRoom(x, z).toFixed(1)} m from the rock`);
-    const w = nav.walkDist(ex, ez, x, z, 0);
+    // (Or from where a door between two of its own rooms sets you down: a room behind a lock, src/core/delve-highward.js.)
+    const w = Math.min(nav.walkDist(ex, ez, x, z, 0), ...inner.map(([ix, iz]) => nav.walkDist(ix, iz, x, z, 0)));
     // (An islet of the Elder Gods' void is reached by a leap, not a walk: src/sim/voidland.js.)
     if (!Number.isFinite(w) && !r.leap) fail(`${r.id}: can't be walked to from the way in`);
     if (r.leap && !(d.leaps || []).some((l) => [l.from, l.to].some((q) => Math.hypot(q[0] - r.x, q[1] - r.z) < r.r))) fail(`${r.id}: an islet no gust stone reaches`);
@@ -44,7 +46,7 @@ for (const d of DELVES) {
   for (const [n, q] of Object.entries({ entry: d.entry, exitIn: d.exitIn, exitOut: d.exitOut })) {
     const [x, z] = toWorld(q.x, q.z, d);
     if (caveRoom(x, z) < 1.2) fail(`${d.key} ${n} is in or against the rock (${caveRoom(x, z).toFixed(2)})`);
-    if (!Number.isFinite(nav.walkDist(ex, ez, x, z, 0))) fail(`${d.key} ${n} can't be walked to`);
+    if (![[ex, ez], ...inner].some(([ix, iz]) => Number.isFinite(nav.walkDist(ix, iz, x, z, 0)))) fail(`${d.key} ${n} can't be walked to`);
   }
   if (!BOSSES.find((b) => b.key === d.last && b.delve === d.key)) fail(`${d.key}: its last boss ${d.last} isn't one of its bosses`);
   for (const p of d.props) {

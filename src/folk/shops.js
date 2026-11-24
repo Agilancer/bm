@@ -72,6 +72,10 @@ export const TRADES = {
   skulls: { label: 'Show me your skulls.', stock: 'skulls', buys: ['skull'], buysMats: { bone: 3 }, share: 0.35, crafts: ['skull'], unlock: 'bones_for_carver' },
   bread: { label: 'Some bread.', goods: ['roll', 'loaf'] },
   healing: { label: "I'm hurt.", goods: ['dressing'] },
+  // A camp's sutler, out in the land (src/core/camps-data.js; whoever stands at a camp's board): buys anything, for a
+  // little less than the town's own craftsmen give and a little more than its tinker, and has a roll and a dressing to
+  // sell. So what you've picked up is sold where you're working, not carried a country home.
+  sutler: { label: 'What will you give me for all this?', goods: ['roll', 'dressing'], buys: 'any', share: 0.3 },
 };
 
 const hashOf = (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return h >>> 0; };

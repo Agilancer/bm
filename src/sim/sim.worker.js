@@ -43,7 +43,7 @@ import { TripoEmpty, TripoWorld } from './tripo.js';
 import { Warrens } from './dungeon.js';
 import { Perils } from './perils.js';
 import { foeOf } from './foes.js';
-import { delveAt, delveOf, inDungeon } from '../core/dungeon.js';
+import { caveRoofY, caveRoom, delveAt, delveOf, inDungeon } from '../core/dungeon.js';
 import { inHall } from '../core/testhall.js';
 import { TestHall } from './testhall.js';
 import { TRIPO_BASE, TRIPO_SLOTS, withVariants } from '../core/tripo-monsters.js';
@@ -214,7 +214,13 @@ class Sim {
     const drop = playing ? -0.25 : (p.surfLow || 0) * 0.75 + (p.landKick || 0) * 0.5 + (p.dead ? Math.min(p.deadT * 0.5, 0.7) : 0);
     const ex = p.x, ey = p.y + 1.62 - drop, ez = p.z, w = this.world;
     // (The step to the side first: against a wall on your right there's no room for it.)
-    const reach = THIRD.side + THIRD.skin, hitSide = w.rayBoxes(ex, ey, ez, rx, 0, rz, reach);
+    const reach = THIRD.side + THIRD.skin, delve = inDungeon(p.x, p.z) && delveOf(p.x, p.z).style !== 'void';
+    let hitSide = w.rayBoxes(ex, ey, ez, rx, 0, rz, reach);
+    // (Down a delve its rock isn't in the boxes: the camera's kept inside the rooms by their own shape, walls and roof.
+    // src/core/dungeon.js caveRoom, caveRoofY. Else in a boss's fight against a wall it looked out through the rock. Not over the
+    // void, whose edges are open sky.)
+    const rock = (x, y, z) => caveRoom(x, z) < THIRD.skin || y > caveRoofY(x, z) - THIRD.skin;
+    if (delve) for (let s = 0.1; s <= reach; s += 0.1) if (rock(ex + rx * s, ey, ez + rz * s)) { hitSide = hitSide >= 0 ? Math.min(hitSide, s) : s; break; }
     const side = hitSide >= 0 ? Math.max(0, hitSide - THIRD.skin) / THIRD.side : 1;
     const px = ex + rx * THIRD.side * side, py = ey + THIRD.up, pz = ez + rz * THIRD.side * side;
     // (As far back as the wheel can take it (src/ui/view.js), and the drawing thread keeps to what it's asked for. Not under a
@@ -223,6 +229,7 @@ class Sim {
     const roofed = house || p.y < -6 || inChurch(p.x, p.y + 1, p.z) || inDungeon(p.x, p.z) || inHall(p.x, p.z);
     const most = roofed ? THIRD.dist : THIRD.far;
     let dist = c.trace(this, px, py, pz, -fx, -fy, -fz, most + THIRD.skin) - THIRD.skin;
+    if (delve) for (let s = 0.2; s < dist + THIRD.skin; s += 0.2) if (rock(px - fx * s, py - fy * s, pz - fz * s)) { dist = s - 0.2 - THIRD.skin * 0.5; break; }
     // (Under a roof the camera keeps low too; and in the bell tower's well and the Bellwright's room: src/core/belltower.js.)
     if (fy < 0 && house && -fy * dist > THIRD.indoors) dist = THIRD.indoors / -fy;
     snap[H.TP_DIST] = Math.max(THIRD.near, Math.min(most, dist));
@@ -787,6 +794,8 @@ async function boot(msg) {
     if (m.type === 'heroMods') { const h = sim.heroes[m.slot]; if (h) sim.heroWorld?.setMods(h, m.mods); }
     // (Your own level: the other Tessariels out in the world keep pace with it.)
     if (m.type === 'playerLevel') sim.heroWorld?.keepPace(m.level);
+    // (The world bosses a quest of yours waits on, and where: src/sim/worldboss.js setWant.)
+    if (m.type === 'wantBoss') sim.wilds?.boss?.setWant(m.list);
     if (m.type === 'warrensDebug') sim.warrens?.debug?.(m);
     // (Every boss that's ever died, from the render thread's quests: the castle's gates that open on a death. src/sim/dungeon.js open.)
     if (m.type === 'bossesDown') { if (sim.warrens) sim.warrens.ever = new Set(m.keys); }

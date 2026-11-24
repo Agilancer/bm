@@ -11,7 +11,8 @@
 import fs from 'node:fs';
 
 globalThis.__bmNoWays = true;   // (lands.js leaves out the ways laid last time: this lays them again from nothing)
-const { terrainHeight, PATHS, ROADS } = await import('../../src/core/terrain.js');
+const { terrainHeight, CAVE_PATH, PATHS, ROADS } = await import('../../src/core/terrain.js');
+const { CAVE_MOUTH, WAY, WAY_FOOT } = await import('../../src/core/opening.js');
 const { SITES, ROUTES, WATERS, MOUNT, countryAt, siteAt } = await import('../../src/core/lands.js');
 const { buildSites, portalStair } = await import('../../src/core/sites.js');
 const { LAIRS } = await import('../../src/core/tripo-monsters.js');
@@ -20,6 +21,7 @@ const { DELVES } = await import('../../src/core/dungeon.js');
 const { CHURCH_FOOTPRINT, CHURCH_WING } = await import('../../src/core/church.js');
 const { HUNT_GROUNDS } = await import('../../src/core/hunts.js');
 const { TUMBLER_CAMPS } = await import('../../src/sim/tumblers.js');
+const { CAMPS, campAt } = await import('../../src/core/camps-data.js');
 
 const quiet = process.argv.includes('--quiet');
 const log = (...a) => { if (!quiet) console.log(...a); };
@@ -62,6 +64,15 @@ for (const c of solid) {
   const m = c === CHURCH_FOOTPRINT || c === CHURCH_WING ? 5 : 2.6, r = Math.hypot(c.hx, c.hz) + m;
   each(c.x, c.z, r, (k, x, z) => { if (boxHit(c, x, z, m)) block(k); });
 }
+// Lisandra's cave and her way down from it are the game's first steps: the one way on is down her flights to the road, so no
+// footpath climbs the hill beside them or sets out from the cave's mouth over the hill the other way (the owner: a player
+// fresh out of the cave was shown flights of steps going off away from where they're meant to go). Shut round the mouth and
+// along her flights; her way isn't an old road to join, either (OLD below).
+disc(CAVE_MOUTH[0], CAVE_MOUTH[1], 30, block);
+for (let n = 0; n < WAY_FOOT; n++) {
+  const [ax, az] = WAY[n], [bx, bz] = WAY[n + 1], L = Math.hypot(bx - ax, bz - az), steps = Math.max(1, Math.ceil(L / 3));
+  for (let s = 0; s <= steps; s++) disc(ax + (bx - ax) * s / steps, az + (bz - az) * s / steps, 16, block);
+}
 // Bellmourn's own streets are its own: nothing new runs through the town (its ways out are on the road map below).
 const TOWN_BOX = { x0: -84, x1: 112, z0: -78, z1: 84 };
 each((TOWN_BOX.x0 + TOWN_BOX.x1) / 2, (TOWN_BOX.z0 + TOWN_BOX.z1) / 2, 120, (k, x, z) => { if (x > TOWN_BOX.x0 && x < TOWN_BOX.x1 && z > TOWN_BOX.z0 && z < TOWN_BOX.z1) block(k); });
@@ -70,7 +81,9 @@ each((TOWN_BOX.x0 + TOWN_BOX.x1) / 2, (TOWN_BOX.z0 + TOWN_BOX.z1) / 2, 120, (k, 
 // for the squares and the smoothing. Dearer round them, and through a standing battle.
 for (const l of LAIRS) {
   if (Math.hypot(l.x, l.z) >= 330 && !siteAt(l.x, l.z, 40)) disc(l.x, l.z, (l.r || 6) + 16, block);
-  disc(l.x, l.z, (l.r || 6) + 30, (k) => { C[k] *= 4; });
+  // (Dear out to as far as its monsters would see a traveller go by, src/ui/autobrain.js lairPass, and a square more: a
+  // way that runs nearer is one auto-play leaves for the open country until it's of a level for what lives there.)
+  disc(l.x, l.z, Math.max((l.r || 6) + 30, (l.r || 6) * 0.6 + 56), (k) => { C[k] *= 4; });
 }
 for (const b of BATTLES) for (let t = 0; t <= 1; t += 0.25) disc(b.x + (b.x2 - b.x) * t, b.z + (b.z2 - b.z) * t, 26, (k) => { C[k] *= 5; });
 for (const [x, z] of TEAR_SPOTS) { disc(x, z, 26, (k) => { C[k] *= 2.5; }); disc(x, z, 16, block); }
@@ -80,7 +93,7 @@ const OUT = new Uint8Array(N * N);
 for (const o of OUTPOSTS) disc(o.x, o.z, o.r + 9, (k) => { OUT[k] = 1; });
 
 // The old roads, cheap to walk along: every square within a road's half-width of one.
-const OLD = [...ROUTES.map((r) => ({ pts: r.pts, w: r.w })), ...PATHS.map((p) => ({ pts: p.pts, w: p.w })), ...ROADS.map((r) => ({ pts: r.line, w: r.w }))];
+const OLD = [...ROUTES.map((r) => ({ pts: r.pts, w: r.w })), ...PATHS.filter((p) => p !== CAVE_PATH).map((p) => ({ pts: p.pts, w: p.w })), ...ROADS.map((r) => ({ pts: r.line, w: r.w }))];
 const markLine = (pts, w, v = 1) => {
   for (let n = 0; n + 1 < pts.length; n++) {
     const [ax, az] = pts[n], [bx, bz] = pts[n + 1], L = Math.hypot(bx - ax, bz - az), steps = Math.max(1, Math.ceil(L / 3));
@@ -218,10 +231,21 @@ function offRoad(sq, open) {
 
 // ---------------------------------------------------------------- what's joined to what
 const shortName = (n) => n.replace(/^The /, '').replace(/^the /, '');
+const NEAR = 1300;
 const TOWNS = new Set(['hamlet', 'farm', 'thornwick', 'cinderford', 'frostwatch', 'sallow', 'abbey', 'khel', 'keep', 'crossroads', 'belltower']);
 const nodes = [];
 const node = (x, z, o) => { nodes.push({ x, z, ...o }); return nodes.length - 1; };
-for (const [k, s] of Object.entries(SITES)) node(s.x, s.z, { key: k, name: shortName(s.name), kind: TOWNS.has(k) ? 'town' : 'site', r: s.r });
+// (A camp in the woods round Bellmourn, src/core/camps-data.js, is one of the woods' own: footpaths to it, and no lane
+// driven over the town's hills to the next place or to the Warrens' door.)
+// (And a camp's way comes to its front, between its two lanterns, whose square is kept open as a portal's is: its middle
+// is its fire and its yard, and a way driven at that was cut short at the first tent and left in pieces round it.)
+for (const [k, s] of Object.entries(SITES)) {
+  const kind = TOWNS.has(k) ? 'town' : s.camp && Math.hypot(s.x, s.z) < NEAR ? 'near' : 'site';
+  if (!s.camp) { node(s.x, s.z, { key: k, name: shortName(s.name), kind, r: s.r }); continue; }
+  const [x, z] = campAt(CAMPS.find((c) => c.key === k), 0, 19).map(Math.round);
+  if (Math.abs(x) < EDGE && Math.abs(z) < EDGE) C[ci(z) * N + ci(x)] = 1;
+  node(x, z, { key: k, name: shortName(s.name), kind, r: 0, own: true });
+}
 // (A delve's portal stands on its terrace: its way ends out in front of the foot of its steps, whose square is kept open.)
 for (const d of DELVES) {
   if (!d.portal || d.within || Math.abs(d.portal.x) >= HALF || Math.abs(d.portal.z) >= HALF || nodes.some((n) => Math.hypot(n.x - d.portal.x, n.z - d.portal.z) < 120)) continue;
@@ -231,19 +255,20 @@ for (const d of DELVES) {
 }
 for (const b of BATTLES) node((b.x + b.x2) / 2 + 40, (b.z + b.z2) / 2 + 40, { key: b.key, name: 'the battlefield', kind: 'battle', r: 0 });
 // The woods round Bellmourn: the hunting grounds, the lairs and camps there, so the woods are walked between.
-const NEAR = 1300;
 for (const g of HUNT_GROUNDS) node(g.x, g.z, { key: g.key, name: 'the hunting ground', kind: 'near', r: g.r });
 for (const l of LAIRS) if (!l.wild && Math.hypot(l.x, l.z) < NEAR && !nodes.some((n) => Math.hypot(n.x - l.x, n.z - l.z) < 60)) node(l.x, l.z, { key: l.key, name: 'the lair', kind: 'near', r: l.r });
 for (const c of TUMBLER_CAMPS) if (c.r && !nodes.some((n) => Math.hypot(n.x - c.x, n.z - c.z) < 80)) node(c.x, c.z, { key: 'camp', name: 'the camp', kind: c.x * c.x + c.z * c.z < NEAR * NEAR ? 'near' : 'site', r: c.r * 0.5 });
-// And each far lair that isn't a wild one, on a lane: the land's named fights.
-for (const l of LAIRS) if (!l.wild && Math.hypot(l.x, l.z) >= NEAR && !nodes.some((n) => Math.hypot(n.x - l.x, n.z - l.z) < 220)) node(l.x, l.z, { key: l.key, name: 'the lair', kind: 'lair', r: l.r });
+// And each far lair that isn't a wild one, on a lane: the land's named fights. (Not one stood beside a road for those going by
+// to meet, `roadside`: the road's its way, and a lane of its own was 5,000 corners more on a phone. tools/quests/errands.mjs.)
+for (const l of LAIRS) if (!l.wild && !l.roadside && Math.hypot(l.x, l.z) >= NEAR && !nodes.some((n) => Math.hypot(n.x - l.x, n.z - l.z) < 220)) node(l.x, l.z, { key: l.key, name: 'the lair', kind: 'lair', r: l.r });
 
 // Rings of crossings in the woods round Bellmourn, and a loose lattice of them over all the land: where the footpaths meet,
 // so there's a way through every stretch of country, not only out to its places.
 const okAt = (x, z) => { const k = ci(z) * N + ci(x); return C[k] !== Infinity && !OUT[k]; };
 for (const [r, n] of [[430, 12], [820, 18]]) for (let q = 0; q < n; q++) {
   const a = (q + 0.5) / n * Math.PI * 2, x = Math.round(Math.cos(a) * r), z = Math.round(Math.sin(a) * r);
-  if (okAt(x, z) && !nodes.some((m) => Math.hypot(m.x - x, m.z - z) < 140)) node(x, z, { key: 'woods', name: 'the woods', kind: 'near', r: 0 });
+  // (None on the hill over Lisandra's cave: one stood there drew footpaths up beside her flights and over from her door.)
+  if (okAt(x, z) && Math.hypot(x - CAVE_MOUTH[0], z - CAVE_MOUTH[1]) > 120 && !nodes.some((m) => Math.hypot(m.x - x, m.z - z) < 140)) node(x, z, { key: 'woods', name: 'the woods', kind: 'near', r: 0 });
 }
 const LATTICE = 1150;
 for (let row = 0; ; row++) {
@@ -314,6 +339,8 @@ function lay(sq, cls, name, open) {
   for (const line of offRoad(sq, open)) {
     let L = 0; for (let i = 0; i + 1 < line.length; i++) L += Math.hypot(line[i + 1][0] - line[i][0], line[i + 1][1] - line[i][1]);
     if (L < 30) continue;
+    // (Nor one that forks off the road where her way comes down onto it: she leads you on along the road from there.)
+    if ([line[0], line.at(-1)].some(([x, z]) => Math.hypot(x - WAY.at(-1)[0], z - WAY.at(-1)[1]) < 40)) continue;
     ways.push({ name, cls, w: WIDTH[cls], pts: line });
     markLine(line, WIDTH[cls]);
   }
@@ -380,6 +407,42 @@ for (const t of [...outposts, ...finds]) {
   foot++;
 }
 log(`${foot} footpaths to outposts and finds`);
+
+// And a footpath from each hub to every lair and den its quests send you to (docs/QUEST-LOOP.md): the work is within 650 m
+// of whoever gives it, and by the ways it was twice that, out to a road and back up another, or straight over a scarp.
+// Walked from the lair's edge to the hub's front, along what's laid already where that serves.
+{
+  const { RULES } = await import('../../src/folk/quests.js');
+  const { QUESTS } = await import('../../src/folk/lines/quests.js');
+  const { whereIs } = await import('../quests/geo.mjs');
+  const freeNear = (x, z, r0, r1, open) => { let s = -1, bd = 1e9; each(x, z, r1, (k, px, pz) => { const d = Math.hypot(px - x, pz - z); if (d >= r0 && costAt(k, open) !== Infinity && d < bd) { bd = d; s = k; } }); return s; };
+  const seen = new Set();
+  let quest = 0;
+  for (const [id, R] of Object.entries(RULES)) {
+    const g = QUESTS[id] && whereIs(QUESTS[id].giver);
+    if (!g || g.down || Math.abs(g.x) > EDGE || Math.abs(g.z) > EDGE || g.where === 'bellmourn') continue;
+    const camp = CAMPS.find((c) => c.key === g.where), from = camp ? campAt(camp, 0, 19) : [g.x, g.z];
+    for (const st of R.steps) for (const k of [st.kill, st.gather, st.enter, st.clear && `outpost:${st.clear}`, ...(st.visit || [])]) {
+      if (typeof k !== 'string' || !(k.startsWith('lair:') || k.startsWith('outpost:'))) continue;
+      const t = k.startsWith('lair:') ? LAIRS.find((l) => l.key === k.slice(5)) : OUTPOSTS.find((o) => o.key === k.slice(8));
+      const key = `${g.where}>${k}`;
+      if (!t || seen.has(key) || Math.hypot(t.x - from[0], t.z - from[1]) > 720) continue;
+      // (A den whose own trail sets out from this hub has its way already: tools/wilds/place.mjs.)
+      if (t.trail && Math.hypot(t.trail[0][0] - g.x, t.trail[0][1] - g.z) < 60) { seen.add(key); continue; }
+      seen.add(key);
+      const open = new Set();
+      disc(t.x, t.z, (t.r || 6) + 18, (c) => open.add(c));
+      const a = freeNear(t.x, t.z, (t.r || 6) + 26, (t.r || 6) + 50, open)   // (short of its ground: a path's bed banked up to a den's edge on a slope stood a man's height off the land)
+        , b = freeNear(from[0], from[1], 0, 24, null);
+      if (a < 0 || b < 0) continue;
+      const sq = walk(a, b, open, 200000);
+      if (!sq) continue;
+      lay(sq, 'path', `the path from ${shortName(SITES[g.where]?.name || g.where)} to ${t.name ? t.name.replace(/^(a|an|the) /i, 'the ') : 'the lair'}`, open);
+      quest++;
+    }
+  }
+  log(`${quest} footpaths from the hubs to their quests' lairs and dens`);
+}
 
 // ---------------------------------------------------------------- nothing built on a way
 // (The grid's squares are 8 m: a way smoothed between them can still graze the corner of a wall, and a way's end runs on into

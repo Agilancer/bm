@@ -20,7 +20,7 @@ test('every new kind is made from a model there is, in a palette there is, with 
   for (const [id, v] of Object.entries(WILD_VARIANTS)) {
     assert.ok(base[v.src], `${id}: no model ${v.src}`);
     assert.ok(palettes[v.pal], `${id}: no palette ${v.pal}`);
-    assert.ok(v.height > 0.4 && v.height < 7, `${id}: ${v.height} m`);
+    assert.ok(v.height > 0.4 && v.height < (id.startsWith('wb_') ? 11 : 7), `${id}: ${v.height} m`);   // (the world bosses, wb_*, are huge)
     assert.ok(!names.has(v.name), `${id}: ${v.name} is somebody else's name`); names.add(v.name);
     for (const t of v.tricks || []) assert.ok(MOVES[t.move], `${id}: no move ${t.move}`);
     assert.equal(VARIANTS[id], v);

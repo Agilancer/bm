@@ -58,7 +58,7 @@ export const SKILLS = {
 export const MORE_SKILLS = {
   paladin: [
     { key: 'zeal', name: 'Zeal', cd: 6, range: [0, 1.9], lvl: 2 },
-    { key: 'blessed_shield', name: 'Blessed Shield', cd: 9, range: [3, 14], lvl: 3, line: true, w: 1.4 },
+    { key: 'blessed_shield', name: 'Blessed Shield', cd: 9, range: [3, 14], lvl: 3, line: true, aoe: true, w: 1.4 },
     { key: 'holy_nova', name: 'Holy Nova', cd: 12, range: [0, 3.2], lvl: 4, aoe: true, crowd: 2 },
     { key: 'crusaders_charge', name: "Crusader's Charge", cd: 10, range: [4, 10], lvl: 5, line: true, gap: true, move: true },
     { key: 'fist_of_heavens', name: 'Fist of the Heavens', cd: 11, range: [2, 14], lvl: 6, aoe: true },
@@ -72,7 +72,7 @@ export const MORE_SKILLS = {
     { key: 'lance_barrage', name: 'Lance Barrage', cd: 6, range: [0, 2.8], lvl: 2 },
     { key: 'tower_shields', name: 'Tower Shields', cd: 18, range: [0, 7], lvl: 3, w: 2.2, need: (h) => !h.orbiting },
     { key: 'sweeping_cleave', name: 'Sweeping Cleave', cd: 8, range: [0, 2.6], lvl: 4, aoe: true },
-    { key: 'shield_throw', name: 'Shield Throw', cd: 10, range: [3, 13], lvl: 5, line: true, w: 1.3 },
+    { key: 'shield_throw', name: 'Shield Throw', cd: 10, range: [3, 13], lvl: 5, line: true, aoe: true, w: 1.5 },
     { key: 'sunspear', name: 'Sunspear', cd: 9, range: [4, 16], lvl: 6, line: true },
     { key: 'bulwark_nova', name: 'Bulwark Nova', cd: 14, range: [0, 3.5], lvl: 7, aoe: true, crowd: 2 },
     { key: 'lance_of_light', name: 'Lance of Light', cd: 12, range: [2, 11], lvl: 8, line: true },
@@ -171,10 +171,12 @@ export const movesOf = (cls, level) => (MORE_SKILLS[cls] || []).filter((s) => s.
 
 // ---- finding things --------------------------------------------------------------------------------------------------
 
-function nearest(w, x, z, r, skip, from) {
+// (zone: { x, z, r }, only what stands on that ground.)
+function nearest(w, x, z, r, skip, from, zone) {
   let best = null, bd = r;
   for (const m of w.targets) {
     if (!E.fightable(m) || skip?.has(m)) continue;
+    if (zone && Math.hypot(m.x - zone.x, m.z - zone.z) > zone.r + E.radiusOf(m)) continue;
     const d = Math.hypot(m.x - x, m.z - z) - E.radiusOf(m);
     if (d < bd && (!from || w.sim.world.sees(from[0], from[1], from[2], m.x, m.y + 1.1, m.z))) { bd = d; best = m; }
   }
@@ -448,8 +450,10 @@ export function stepShotX(w, s, dt) {
     if (s.back) continue;
     if (s.bounce > 0) {
       s.bounce--;
-      const nx = nearest(w, m.x, m.z, s.hop || 7, s.hitSet, [s.x, s.y, s.z]);
-      if (nx) { Object.assign(s, toward(s.x, s.y, s.z, nx, s.hopV || v)); s.foe = nx; s.life = Math.max(s.life, s.t + 1.2); if (s.hopPause) s.pause = s.hopPause; continue; }
+      const nx = nearest(w, m.x, m.z, s.hop || 7, s.hitSet, [s.x, s.y, s.z], s.zone);
+      // (zone: it keeps to that ground, every foe on it in turn. A long round like that mustn't be called home by the
+      // half of its life that's gone, so each hop puts the turn for home after the next.)
+      if (nx) { Object.assign(s, toward(s.x, s.y, s.z, nx, s.hopV || v)); s.foe = nx; s.life = Math.max(s.life, s.zone && s.ret ? 2 * (s.t + 1.2) : s.t + 1.2); if (s.hopPause) s.pause = s.hopPause; continue; }
       if (s.ret) { s.back = true; s.hitSet.clear(); s.onTurn?.(s); continue; }
       return stop(m);
     }
@@ -765,8 +769,8 @@ function boardFlight(s, upright, big = 1) {
   return new Float32Array([X[0] * big, X[1] * big, X[2] * big, 0, Y[0] * big, Y[1] * big, Y[2] * big, 0, Z[0] * big, Z[1] * big, Z[2] * big, 0, s.x, s.y, s.z, 1]);
 }
 // The board thrown, off the arm that carries it. The paladin's goes from foe to foe: it strikes, hangs there a moment
-// turning, and goes for the next within eight metres slower than it left him, the line from each to the next left in the
-// air a moment. The lancer's (o.through) goes straight through the whole line of them, standing and turning, and comes
+// turning, and goes for the next (o.hop metres, on o.zone's ground) slower than it left him, the line from each to the
+// next left in the air a moment. The lancer's (o.through) goes straight through the whole line of them, standing and turning, and comes
 // straight back through them again. Then it's home on the arm, which braces to take it. The hero's own board if he
 // carries one; a board of light if he doesn't.
 function throwBoard(h, sim, m, X, o) {
@@ -777,8 +781,10 @@ function throwBoard(h, sim, m, X, o) {
   h.toss(side, 0.5, () => {
     if (!E.fightable(m)) return;
     const hp = h.handPos(side), v = 17;
-    const legs = o.through ? { pierce: true, hang: true, life: Math.min(1.6, 2 * (dist(h, m) + 4) / (v * 0.72)), backV: 1 } : { bounce: o.bounce, hop: 8, hopV: 8, hopPause: 0.14, backV: 0.85, life: 4 };
-    shot(w, h, { x: hp[0], y: hp[1] + 0.1, z: hp[2], ...toward(hp[0], hp[1] + 0.1, hp[2], m, v), v, dmg: o.dmg * P, hk: 'bash', poise: 60, o: { stun: 0.5, elem: o.elem }, r: 0.75, ret: true, hand: real ? 1 : 0, elem: o.elem, skim: true, ...legs,
+    // (o.zone: metres round the first it strikes; it goes to every foe on that ground before it's home.)
+    const legs = o.through ? { pierce: true, hang: true, life: Math.min(1.6, 2 * (dist(h, m) + 4) / (v * 0.72)), backV: 1 }
+      : { bounce: o.bounce, hop: o.hop ?? 8, hopV: o.hopV ?? 8, hopPause: o.hopPause ?? 0.14, backV: 0.85, life: 4, zone: o.zone ? { x: m.x, z: m.z, r: o.zone } : null };
+    shot(w, h, { x: hp[0], y: hp[1] + 0.1, z: hp[2], ...toward(hp[0], hp[1] + 0.1, hp[2], m, v), v, dmg: o.dmg * P, hk: 'bash', poise: 60, o: { stun: 0.5, elem: o.elem, noAggro: !!o.noAggro }, r: 0.75, ret: true, hand: real ? 1 : 0, elem: o.elem, skim: true, ...legs,
       onHit: (k, s) => {
         n++;
         if (h.fxOk()) {
@@ -883,7 +889,9 @@ CAST.consecration = (h, sim, m, { w, c }) => {
     sim.event(EV.GROUND, h.x, y, h.z);
   }, { still: true, hold: [0.32, 0.22], end: 0.5, maul: big(h) ? 'ground' : null, soft: big(h) ? 0.6 : undefined });
 };
-CAST.blessed_shield = (h, sim, m, X) => throwBoard(h, sim, m, X, { dmg: 15, bounce: 2 + X.rk, elem: LIGHT });
+// Blessed Shield: his board goes round every foe on that ground, one after another, and draws none of them onto him: what
+// it strikes stays on whoever it was after (o.noAggro, Hero.hit). Fourteen metres round the first, a hop of up to nine.
+CAST.blessed_shield = (h, sim, m, X) => throwBoard(h, sim, m, X, { dmg: 13, bounce: 40, zone: 14, hop: 9, hopV: 17, hopPause: 0.08, elem: LIGHT, noAggro: true });
 // Both arms thrown up, and the light breaks outward from him: what's near is thrown back reeling, and his own side is mended.
 CAST.holy_nova = (h, sim, m, { w, c, P, rk }) => {
   const r = 4 + 0.3 * rk;
@@ -1119,7 +1127,56 @@ CAST.sweeping_cleave = (h, sim, m, { c, P }) => {
     if (h.fxOk()) crescent(c, h, 2.6, STORM, { life: 0.18, light: 8 });
   }, { lunge: 1.5, aimed: SWEEP, end: 0.5, soft: 0.5 });
 };
-CAST.shield_throw = (h, sim, m, X) => throwBoard(h, sim, m, X, { dmg: 13, through: true, elem: STORM, upright: true, onHit: (k) => taunt(sim, h, k, 4) });
+// Shield Throw: his board through the line of them and back, and everything it strikes is his (a taunt). Where it strikes
+// it breaks into other boards of light, every time, each flung at another foe near; where one of those strikes, it breaks
+// again three times in five, and so on down the chain. No foe is struck twice by the chain, so it ends when they do.
+CAST.shield_throw = (h, sim, m, X) => {
+  const chain = { hit: new Set(), aimed: new Set(), first: new Set(), burst: new Set(), n: 0 };
+  throwBoard(h, sim, m, X, { dmg: 13, through: true, elem: STORM, upright: true, onHit: (k) => { taunt(sim, h, k, 6); chain.hit.add(k); shieldBurst(h, sim, X, k, 1, chain); } });
+};
+export const CHAIN_FIRST = 1, CHAIN_ON = 0.6, CHAIN_SPLIT = 2, CHAIN_REACH = 8, CHAIN_MOST = 30;
+// One board breaking where it struck k: `gen` 1 for his own, 2 for the first of the light, and on. Each of the new ones
+// flies at a foe within eight metres the chain hasn't struck yet, strikes it, taunts it to him, and breaks in its turn.
+function shieldBurst(h, sim, X, k, gen, chain) {
+  // (His own board breaks on every one it strikes, on the way out; the chain's on each it strikes, once.)
+  const once = gen === 1 ? chain.first : chain.burst;
+  if (once.has(k) || chain.n >= CHAIN_MOST || gen > 12) return;
+  once.add(k);
+  if (Math.random() >= (gen === 1 ? CHAIN_FIRST : CHAIN_ON)) return;
+  const { w, c, P } = X, y = k.y + 1.1;
+  // (Those nearest it the chain hasn't struck, and none another board is already on its way to.)
+  const skip = new Set([...chain.hit, ...chain.aimed]), to = [];
+  for (let i = 0; i < CHAIN_SPLIT; i++) { const t = nearest(w, k.x, k.z, CHAIN_REACH, skip, [k.x, y, k.z]); if (!t) break; skip.add(t); chain.aimed.add(t); to.push(t); }
+  if (!to.length) return;
+  if (h.fxOk()) {
+    // (Small and quick: a dozen of these can go off in one crowd, and big ones turned it to a white sheet.)
+    c.burst(FX.FLARE, STORM, k.x, y, k.z, 0.2, 0.75, 0.14, { light: gen === 1 ? 7 : 4, lightR: 4 });
+    c.burst(FX.RING, STORM, k.x, k.y + 0.05, k.z, 0.2, 1.1, 0.25);
+    hfx(sim, HFX.SPARKS, k.x, y, k.z, 26, 0.6);
+  }
+  sim.event(EV.WHOOSH, k.x, y, k.z);
+  for (const t of to) {
+    chain.n++;
+    const kind = SHIELD_ORDER[(chain.n + gen) % 4], v = 15, spin = rand(0, TAU);
+    shot(w, h, { x: k.x, y, z: k.z, ...toward(k.x, y, k.z, t, v), v, dmg: 8 * P * (gen === 1 ? 1 : 0.85), hk: 'bash', poise: 40, o: { stun: 0.3, elem: STORM }, r: 0.6,
+      elem: STORM, skim: true, foe: t, only: true, homing: 7, life: 1.6, wait: 0.05, hitSet: chain.hit,
+      onHit: (k2) => {
+        taunt(sim, h, k2, 6);
+        if (h.fxOk()) {
+          const dx = k2.x - k.x, dy = k2.y - k.y, dz = k2.z - k.z, L = Math.hypot(dx, dy, dz) || 1;
+          c.burst(FX.BEAM, STORM, k.x, y, k.z, 0.1, 0.02, 0.35, { ax: dx / L, ay: dy / L, az: dz / L, len: L, alpha: 0.5, extra: 0.02 });
+        }
+        shieldBurst(h, sim, X, k2, gen + 1, chain);
+      },
+      draw: (cc, s) => {
+        const a = spin + s.t * 18, vv = Math.hypot(s.vx, s.vy, s.vz) || 1;
+        shield3(cc, kind, gen % 2 ? STORM : LIGHT, s.x, s.y, s.z, 0.36, Math.sin(a), Math.cos(a), 1);
+        if (!(s.wait > 0)) cc.fx(FX.TRAIL, STORM, s.x, s.y, s.z, 0.16, -s.vx / vv, -s.vy / vv, -s.vz / vv, 1.1, 0.55);
+      },
+      end: (s) => { chain.aimed.delete(t); if (h.fxOk()) c.burst(FX.FLARE, STORM, s.x, s.y, s.z, 0.15, 0.5, 0.15); },
+    });
+  }
+}
 // The light gathered on the lance's own point; and a spear of that light thrown off it: through everything on its line,
 // and what it goes through reels.
 CAST.sunspear = (h, sim, m, { w, c, P }) => {

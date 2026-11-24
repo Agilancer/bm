@@ -17,6 +17,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:ital,wght@0,600;1,600&family=Cinzel:wght@500;700;900&family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet" crossorigin="anonymous">
 <link rel="stylesheet" href="src/title.css">
+<link rel="stylesheet" href="src/ui/menus.css">
 <style>
   :root { --gold: #c9a35c; --gold-dim: #8c7344; --bone: #e9dfc9; --ink: #0b0907; --blood: #8e1a12; --blood-hi: #d23a22; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -94,14 +95,14 @@
   .mapKey span.me, .mapKey span.foe, .mapKey span.kin { display: inline-block; width: 9px; height: 9px; border-radius: 50%; border: 1px solid #000; vertical-align: -1px; }
   .mapKey .me { background: #f1d68a; } .mapKey .foe { background: #d8402c; } .mapKey .kin { background: #e9dfc9; }
   .mapKey b { color: var(--gold); }
-  #pause { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column; background: rgba(0,0,0,.55); z-index: 15; }
+  /* (#pause, the pause screen: src/ui/menus.css) */
 
   /* Touch controls: src/ui/hud.css, with the numbers of src/ui/thumbs.js. */
   #rotate { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: #0b0907; z-index: 30; font-size: 18px; text-align: center; padding: 30px; color: var(--gold); }
   @media (orientation: portrait) { body.touch.playing #rotate { display: flex; } }
   /* Upright, what's over the world is put away as well as covered (src/main.js turned): a phone keeps a picture of every piece
      drawn over the world, and of each again at its new size as it turns, covered or not. */
-  body.upright :is(#hud, #touch, #opening, #opening-name-panel, #ticker, #folkSay, #folkMarks, #folkNotes, #heroLayer, #heroChat, #partyFrames, #bossFrame, #raidWarn, #hallStatus, #autoBtn, #autoStatus, #vskull, #vskullTag, #mapMini, #mapRing, #bMap, #softCursor) { visibility: hidden !important; }
+  body.upright :is(#hud, #touch, #opening, #opening-name-panel, #ticker, #folkSay, #folkMarks, #folkNotes, #heroLayer, #heroChat, #partyFrames, #bossFrame, #raidWarn, #hallStatus, #autoBtn, #autoStatus, #vskull, #vskullTag, #mapMini, #mapRing, #bMap, #softCursor, #dmgNums, #foeBars) { visibility: hidden !important; }
 
   /* The pack */
   #inv { --cell: min(calc((100vh - 96px) / var(--rows, 8)), calc((100vw - 300px) / 12), 52px); position: fixed; inset: 0; z-index: 12; display: none; flex-direction: column; align-items: center; justify-content: flex-start; gap: 8px; background: rgba(6,5,3,.5); padding: 6px; touch-action: none; }
@@ -453,8 +454,8 @@ body.touch #spellbook,body.touch .card{backdrop-filter:none!important;-webkit-ba
 <div id="hud">
   <div id="cross"></div>
   <div id="clock"></div>
-  <div id="levelBox" title="Your level, ringed by how far it is to the next"><span id="levelNum"><em>Level </em>1</span><div id="xpBar"><i></i></div></div>
-  <div id="vitals"><div class="meter" id="hp"><i></i><b id="hpNum"></b></div><div id="mana"><i></i></div><div id="stam"><i></i></div></div>
+  <div id="levelBox" title="Your level, ringed by how far it is to the next"><span id="levelNum"><em>Level </em>1</span></div>
+  <div id="vitals"><div class="meter" id="hp"><i></i><b id="hpNum"></b></div><div id="mana"><i></i></div><div id="stam"><i></i></div><div id="xpBar" title="Experience to the next level"><i></i></div></div>
   <div id="spells"></div>
   <div id="foe">
     <div class="name" id="foeName">KNIGHT OF VELSCOUR</div>
@@ -523,15 +524,25 @@ body.touch #spellbook,body.touch .card{backdrop-filter:none!important;-webkit-ba
 <div id="invTip2"></div>
 
 <div id="rotate" data-ic="rotate" data-lb="Turn your phone sideways to play"></div>
-<div id="pause"><div class="p-title">Paused</div><nav class="t-menu">
-  <button class="t-btn" data-p="resume"><span>Resume</span></button>
-  <button class="t-btn" data-p="save"><span>Save Game</span></button>
-  <button class="t-btn" data-p="load"><span>Load Game</span></button>
-  <button class="t-btn" data-p="settings"><span>Settings</span></button>
-  <button class="t-btn" data-p="arrange"><span>Move Buttons</span></button>
-  <button class="t-btn" data-p="howto"><span>How to Play</span></button>
-  <button class="t-btn" data-p="menu"><span>Main Menu</span></button>
-</nav></div>
+<!-- The pause screen: the menu down the left, and who you are, where and what you're about on the right (src/ui/pausecard.js).
+     Styled in src/ui/menus.css. -->
+<div id="pause"><div class="pz-shade"></div>
+  <aside class="pz-rail" aria-label="Paused">
+    <div class="pz-logo"><img src="assets/title/bellmourn.webp" alt="Bellmourn" draggable="false"></div>
+    <div class="pz-label" aria-hidden="true"></div>
+    <nav class="pz-menu">
+      <button class="pz-btn" data-p="resume"><i class="m-ic" data-ic="resume"></i><span>Resume</span><em class="m-key">Esc</em></button>
+      <button class="pz-btn" data-p="save"><i class="m-ic" data-ic="save"></i><span>Save Game</span></button>
+      <button class="pz-btn" data-p="load"><i class="m-ic" data-ic="load"></i><span>Load Game</span></button>
+      <button class="pz-btn" data-p="settings"><i class="m-ic" data-ic="settings"></i><span>Settings</span></button>
+      <button class="pz-btn" data-p="arrange"><i class="m-ic" data-ic="sort"></i><span>Move Buttons</span></button>
+      <button class="pz-btn" data-p="howto"><i class="m-ic" data-ic="howto"></i><span>How to Play</span></button>
+      <button class="pz-btn quit" data-p="menu"><i class="m-ic" data-ic="home"></i><span>Main Menu</span></button>
+    </nav>
+  </aside>
+  <section class="pz-side"><div class="pz-card"></div></section>
+</div>
+<div id="qTrack"></div>
 
 <div id="title"></div>
 

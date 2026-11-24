@@ -46,6 +46,8 @@ export const DAYS = {
   posted: [[0, 'posted']],
   // About Phobos's streets near you, all day and all night (src/folk/people.js CROWD).
   roam: [[0, 'roam']],
+  // On the roads when they're set down on one, and parked when they're not (src/folk/road-folk.js).
+  road: [[0, 'road']],
   child: [[0, 'sleep'], [7, 'home'], [7.3, 'eat'], [7.9, 'play'], [9, 'lesson'], [11, 'play'], [12, 'eat'], [12.8, 'play'], [15, 'help'], [16.2, 'play'], [17.6, 'home'], [18, 'eat'], [18.6, 'play'], [19.7, 'home'], [20.2, 'sleep']],
 };
 

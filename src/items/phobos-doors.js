@@ -109,6 +109,15 @@ export class PhobosDoors {
     this.post({ type: 'phDoor', id: d.id, open });
   }
 
+  // The doors whose doorways are within r of (x, z) (auto-play's, opening one on its way: src/ui/autobrain.js phDoor).
+  doorsNear(x, z, r) {
+    const out = [];
+    for (let i = Math.floor((x - r) / GRID); i <= Math.floor((x + r) / GRID); i++) for (let j = Math.floor((z - r) / GRID); j <= Math.floor((z + r) / GRID); j++) {
+      for (const d of this.grid.get(`${i}_${j}`) || []) if (Math.hypot(d.cx - x, d.cz - z) <= r) out.push(d);
+    }
+    return out;
+  }
+
   // What goes in a save: which are open, by number.
   save() { return [...this.open]; }
 

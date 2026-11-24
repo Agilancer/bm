@@ -1,7 +1,9 @@
 // Boot: the permission gate, threads, GPU, assets, and the render thread's loop.
 import { setOpeningTerrain } from './core/terrain.js';
-import { GROUPS, GROUP_KEYS, TRIPO_KIND } from './core/tripo-monsters.js';
-import { BOSSES as DELVE_BOSSES, DELVE as DELVE_CODE, delveOf, inDungeon as inDelve } from './core/dungeon.js';
+import { GROUPS, GROUP_KEYS, LAIRS, TRIPO_KIND, landLevel } from './core/tripo-monsters.js';
+import { BOSSES as DELVE_BOSSES, DELVE as DELVE_CODE, LATCHES as DELVE_LATCHES, delveOf, inDungeon as inDelve } from './core/dungeon.js';
+import { KEYS as CASTLE_KEYS, latchWord } from './core/castle-keys.js';
+import { castleVistas, vistaAt } from './core/castle-finds.js';
 import { OPENING, OPENING_REVISION } from './core/opening.js';
 import { OpeningHUD } from './ui/opening.js';
 import { ChatLog } from './ui/chatlog.js';
@@ -9,7 +11,7 @@ import { QuestTrail } from './ui/trail.js';
 import { Audio } from './audio.js';
 import { Music } from './music.js';
 import { inTown } from './core/town.js';
-import { C, C_BLEEDS, C_SIZE, CHARS_START, CTRL, EV, EV_CAPACITY, EV_FLOATS, H, INPUT, MAX_CHARS, SNAP_FLOATS, STATE_NAMES, TACTICS, TOTAL_BYTES, WEAPONS, mapShared } from './core/layout.js';
+import { C, C_BLEEDS, C_SIZE, CHARS_START, CTRL, EV, EV_CAPACITY, EV_FLOATS, H, INPUT, MAX_CHARS, MAX_SLIMES, SLIME_FLOATS, SLIMES_START, SNAP_FLOATS, STATE_NAMES, TACTICS, TOTAL_BYTES, WEAPONS, mapShared } from './core/layout.js';
 import { clamp, damp, lerp, smoothstep, wrapAngle } from './core/math.js';
 import { FileWatch, getFile, watchFiles } from './core/files.js';
 import { initGPU, isMobileDevice, lighten } from './gfx/gpu.js';
@@ -26,7 +28,7 @@ import { MAX_LEVEL, levelPerks, stepXp, xpFor, XP_OF } from './items/levels.js';
 import { OUTSIDE, readyQuests, summon } from './ui/phobos-ready.js';
 import { GemFx } from './gfx/gemfx.js';
 import { Pack } from './items/pack.js';
-import { addPart, capture, restore, saves } from './saves.js';
+import { addPart, capture, restore, saves, setCard } from './saves.js';
 import { Chests } from './items/chests.js';
 import { Doors } from './items/doors.js';
 import { PhobosDoors } from './items/phobos-doors.js';
@@ -46,6 +48,11 @@ import { Inventory } from './ui/inventory.js';
 import { SpellBar } from './ui/spellbar.js';
 import { WorldMap } from './ui/map.js';
 import { WildsUI } from './ui/wilds.js';
+import { RoadFolk } from './ui/roadfolk.js';
+import { WILD } from './core/wilds.js';
+import { OUTPOSTS } from './core/wilds-data.js';
+import { GATHER_SHOWN } from './folk/quests.js';
+const WILD_CLEARED = WILD.CLEARED;
 import { SpellSound } from './spellsound.js';
 import { HERO_SLOTS, makeCast, withBrokers } from './core/heroes.js';
 import { HeroTalk } from './ui/heroes.js';
@@ -54,8 +61,11 @@ import { HeroPlayUI } from './ui/heroplay.js';
 import { PartyBook } from './ui/partybook.js';
 import { fits, partyDrops, useKit } from './items/partygear.js';
 import { TownClient } from './folk/client.js';
+import { DOOR_DUE } from './folk/first-visit.js';
 import { FolkBodies } from './gfx/folk.js';
 import { TownUI } from './ui/folk.js';
+import { followedFor, pauseCard, whereWords } from './ui/pausecard.js';
+import { Tracker } from './ui/tracker.js';
 import { BOSS_CHEST, LAST_CHEST, hands, matName, RARITIES } from './items/items.js';
 import { Lands } from './ui/lands.js';
 import { AutoPlay } from './ui/autoplay.js';
@@ -65,10 +75,14 @@ import { DmgNums } from './ui/dmgnums.js';
 import { Arrange } from './ui/arrange.js';
 import { groundAt, setHomes } from './ui/places.js';
 import { HallUI } from './ui/testhall.js';
-import { HALL, SPAWN, hallAt } from './core/testhall.js';
+import { HALL, SPAWN, hallAt, inHall } from './core/testhall.js';
+import { CritterField, lineClear, meshHeight, REACH as CRITTER_REACH, PICK_ROOM } from './core/critters.js';
+import { CritterLook } from './gfx/critters.js';
+import { CritterWords } from './ui/critterwords.js';
 import { beginRun, deathWords, noteEvent, noteRun, trailSentence } from './core/lastrun.js';
 import { HUB_SMOKE } from './core/phobos-hubs.js';
-import { Beacon } from './ui/beacon.js';
+import { Beacon, HOME as BEACON_HOME } from './ui/beacon.js';
+import { afterHush, hushed } from './ui/hush.js';
 
 const BASE = new URL('..', import.meta.url).href;
 const $ = (id) => document.getElementById(id);
@@ -91,6 +105,9 @@ window.bmTitle = title;
 // ---- job pool ----------------------------------------------------------------------------------------------
 
 // (From 11 on, the Tripo monsters' groups: src/core/tripo-monsters.js.)
+// How far off a death still pays you its experience: your spells, your party and your dead all fight well inside it.
+const KILL_REACH = 90;
+const XP_LAIRS = LAIRS.filter((l) => l.xpScale);
 const FOE_NAMES = ['KNIGHT OF VELSCOUR', 'KNIGHT OF TESSARIEL', 'GREAT CRAB', 'GRAVEHART', 'BONE HYDRA', 'THE RISEN', 'OGRE', '', '', 'WEREWOLF', 'ABYSSAL MOUTH',
   ...GROUP_KEYS.map((g) => GROUPS[g].name)];
 
@@ -142,10 +159,12 @@ class Pool {
     if (this.leaving[i] && !this.working[i] && !this.decoding[i]) { this.workers[i].terminate(); this.leaving[i] = false; }
   }
 
-  run(type, args, transfer) {
+  // (pin: the one thread this work always goes to, waiting for it if it's busy: a kind of work that needs a great deal
+  // loaded to do it, Phobos's near cells, is then loaded on one thread and not on each in turn.)
+  run(type, args, transfer, pin) {
     const id = this.next++;
     return new Promise((resolve, reject) => {
-      const job = { id, type, args, transfer, resolve, reject, light: type === 'decode' };
+      const job = { id, type, args, transfer, resolve, reject, light: type === 'decode', pin };
       if (job.light) {
         let to = 0;
         for (let i = 1; i < this.size; i++) if (this.decoding[i] < this.decoding[to]) to = i;
@@ -159,8 +178,10 @@ class Pool {
   hand() {
     for (let i = 0; i < this.size && this.line.length; i++) {
       if (this.working[i]) continue;
+      const k = this.line.findIndex((j) => j.pin === undefined || j.pin % this.size === i);
+      if (k < 0) continue;
       this.working[i] = true;
-      this.send(i, this.line.shift());
+      this.send(i, this.line.splice(k, 1)[0]);
     }
   }
 
@@ -548,6 +569,14 @@ async function boot(plan, poolSize) {
   // What of the land you've seen.
   addPart('map', { save: () => worldMap.save(), load: (d) => worldMap.load(d) });
   game.gemFx = new GemFx(renderer);
+  // The gilded critters crawling about the hillsides (src/core/critters.js; drawn by src/gfx/critters.js). A click on one, or
+  // a tap, catches it for what it's worth: input.onPick, game.pickCritter. (Sat on the ground as it's drawn, its own grid.)
+  game.critters = new CritterField({ ground: (x, z) => meshHeight(x, z, renderer.terrainCell || 2) });
+  game.critterLook = new CritterLook(renderer);
+  game.critterWords = new CritterWords({ renderer });
+  // (A tap on the quest tracker first: on a phone the stick's layer lies over it, so its taps come this way. src/ui/tracker.js)
+  input.onPick = (sx, sy, how) => game.tracker?.tapAt(sx, sy) || game.pickCritter(sx, sy, how);
+  input.onHover = (sx, sy) => game.hoverCritter(sx, sy);
   const GEM_COLOR = (g) => ({ ruby: '#d8362c', topaz: '#e2a63a', emerald: '#3fb56a', sapphire: '#3f7fe0', amethyst: '#a45ad6', diamond: '#cfe6ee' }[g.kind]);
   // (bm.wear('crimson_regalia') dresses the whole body in one set, to look at it; bm.wear() goes back to what's worn.)
   let forcedSkin = null;
@@ -596,10 +625,21 @@ async function boot(plan, poolSize) {
   // A kill's worth of experience, and whatever that buys. The sim only says something died.
   // (kind: what it leaves, drops.js; what: 1 + what it was. A Tripo monster's worth goes by its life too, so the tough ones
   // out in the countries pay for the time they take: src/core/tripo-monsters.js GROUPS.)
-  game.gainXp = (kind, what = 0) => {
+  // (x, z: where it died. Only a death near you is yours: the sim says when anything dies anywhere, and a knight of his
+  // put down by Bellmourn's guard while you were in Phobos, nine kilometres off, paid you six hundred.)
+  // (A delve's worth to one over its level: a fifth less a level, to a quarter, for its kills and its clear alike. The
+  // Playhouse at 18 was 6,000 xp, three levels, and the Gallowswood's last camps done five over. cleared, below.)
+  const overDelve = (d) => (d?.level ? Math.max(0.25, 1 - 0.2 * Math.max(0, (pack.level || 1) - d.level)) : 1);
+  game.gainXp = (kind, what = 0, x = null, z = null) => {
+    const s = game.currentSnap();
+    if (s && x !== null && Math.hypot(x - s[H.PX], z - s[H.PZ]) > KILL_REACH) return;
     renderer.skullEyes?.feel('glee', 3);
     const g = what - 1 >= TRIPO_KIND ? GROUPS[GROUP_KEYS[what - 1 - TRIPO_KIND]] : null;
-    game.addXp(Math.max(XP_OF[kind | 0] ?? 10, g ? Math.round(g.hp * 0.35) : 0));
+    // (Down a delve made for a new player, a kill's worth is that delve's share of it, xpScale: the Redoubt under the Sill's
+    // knights are the castle's, worth a castle knight's, and it's met at five. src/core/delve-redoubt.js.)
+    // (The same of a lair made low for a new player: the Sill's, src/core/tripo-monsters.js LAIRS.)
+    const d = s && delveOf(s[H.PX], s[H.PZ]), l = x !== null && XP_LAIRS.find((q) => Math.hypot(x - q.x, z - q.z) < q.r + 40);
+    game.addXp(Math.max(1, Math.round(Math.max(XP_OF[kind | 0] ?? 10, g ? Math.round(g.hp * 0.35) : 0) * (d?.xpScale ?? (l ? l.xpScale : 1)) * overDelve(d))));
   };
   // So much experience, for whatever earned it (a kill above; a tear sealed, an outpost cleared: src/ui/wilds.js).
   game.addXp = (amount) => {
@@ -615,11 +655,21 @@ async function boot(plan, poolSize) {
   };
   arm();
   // The living land: what's happening out there, told and paid for (src/ui/wilds.js; the sim's side is src/sim/wilds.js).
+  // The folk on the roads, and travellers in a fix on one (src/ui/roadfolk.js): bodies on the town's thread.
+  game.roadFolk = new RoadFolk({ town, snap: () => game.currentSnap?.(), paused: () => state.paused || !!game.idle, yaw: () => input.yaw,
+    busy: () => !!(game.wilds?.state?.fight || game.wilds?.bossOn) });
   game.wilds = new WildsUI({ touch: input.touch, xp: (n) => game.addXp(n), drop: (x, y, z, kind) => game.drops?.fromKill(x, y, z, kind), log: (t) => game.chatLog?.system(t),
     pos: () => { const s = game.currentSnap?.(); return s ? [s[H.PX], s[H.PZ]] : null; },
     // (A sting of the music's for what's begun and what's won; a word over a posted villager's head: src/ui/folk.js event.)
     stinger: (k) => game.music?.stinger(k),
-    folkSay: (id, text) => { const t = game.townUI, i = t?.people.findIndex((q) => q.id === id) ?? -1; if (i >= 0) t.event({ type: 'say', i, text, dur: 6 }); } });
+    folkSay: (id, text) => { const t = game.townUI, i = t?.people.findIndex((q) => q.id === id) ?? -1; if (i >= 0) t.event({ type: 'say', i, text, dur: 6 }); },
+    // (The road's own: travellers in a fix, src/ui/roadfolk.js; and a world boss's calls, bar, map mark and fall,
+    // src/sim/worldboss.js: the emergency ticker, the boss bar, a red crown on the maps, and any quest waiting on it.)
+    rescue: (kind, x, z, left) => game.roadFolk?.rescue(kind, x, z, left),
+    call: (t) => game.party?.ticker?.push(t),
+    bossBar: (name, slot, title) => game.party?.showWorldBoss(name, slot, title),
+    bossMark: (B, x, z, called, name) => worldMap.setBoss(B ? { x, z, name, called } : null),
+    bossDown: (key) => game.townUI?.quests.boss(key) });
   hud.wildName = (model) => renderer.tripo?.wildName(model);
   addPart('wilds', { save: () => game.wilds.save(), load: (d) => game.wilds.load(d) });
   const inventory = new Inventory(pack, swordList, BASE, input.touch, {
@@ -656,7 +706,9 @@ async function boot(plan, poolSize) {
       closed: () => { input.menu = false; resume(); },
       click: () => title.chime?.(),
       // (Each delve pays its own: src/core/dungeon.js DELVES' pay. The Warrens 1,500 xp and 250 gold, the Deeps and the keep more.)
-      cleared: (d) => { const pay = d?.pay || { xp: 1500, gold: 250 }; giveXp?.(pay.xp); pack.gold += pay.gold; hud.tip(`The Free Company pays out ${pay.gold} gold for ${d?.short || 'the Warrens'}, and the tale is worth more.`, 5); autosave(); },
+      // (Less of the tale the further over its level you go down: overDelve. The Sporehold's 3,000 at level 14 was three
+      // levels at once, and the next country's work was done five over.)
+      cleared: (d) => { const pay = d?.pay || { xp: 1500, gold: 250 }; giveXp?.(Math.round(pay.xp * overDelve(d))); pack.gold += pay.gold; hud.tip(`The Free Company pays out ${pay.gold} gold for ${d?.short || 'the Warrens'}, and the tale is worth more.`, 5); autosave(); },
     });
     addPart('party', { save: () => game.party.save(), load: (d) => game.party.load(d) });
     // Their gear: on their bodies and in their hands (src/gfx/herolook.js), dropped for them by the dead and in the bosses'
@@ -718,9 +770,37 @@ async function boot(plan, poolSize) {
       // The quest log: what auto-play is working on (src/ui/autoplay.js), and the big map framed on where a quest is.
       auto: () => game.autoplay?.current(),
       map: (p) => { if (!worldMap.open) toggleMap(); worldMap.showPlace(p); },
+      // (Whether the land's laid round you: Lisandra's door holds its fade till it is. renderer.landReady)
+      landReady: () => { const s = game.currentSnap(); return !s || renderer.landReady(s[H.PX], s[H.PZ]); },
+      // Lisandra's door of candles (src/ui/folk.js lisDoor): you and your party set down at `to` (out of any delve), or, with
+      // nowhere given, home by Bellmourn's seal. Through it to the Sill, and the Sill's seal knows you: you can travel back.
+      door: (to, morning = false) => {
+        const at = to || BEACON_HOME;
+        lands.o.cmd(28, at.yaw, at.x, at.z);
+        // (morning: the door east, out of the dark or the evening, opens on the next morning: the first sight of his city is a
+        // lit one. As a night's sleep turns the day. src/ui/folk.js lisDoor.)
+        if (morning && (renderer.hour < 6.5 || renderer.hour > 16.5)) { if (renderer.hour > 6.1) { town.day++; town.lastHour = -1; } renderer.setHour(7.5); }
+        if (to && Math.hypot(to.x - 8931, to.z - 19) < 40 && !lands.awake.has('sill')) { lands.awake.add('sill'); lands.showPortals(); }
+      },
+      // (Abandoning a quest: asked first, in the title's "are you sure" box.)
+      confirm: (o) => title.confirm(o),
     },
   });
   game.townUI = townUI;
+  // What a quest wants gathered, handed to the sim to put a light over (src/sim/wilds.js draw; INPUT.QMARKS): the nearest
+  // few of them, looked at twice a second, which is as often as the quest book looks at where you are.
+  setInterval(() => {
+    const snap = game.currentSnap?.(), marks = townUI.quests.marks();
+    if (snap && marks.length > GATHER_SHOWN) marks.sort((a, b) => Math.hypot(a.x - snap[H.PX], a.z - snap[H.PZ]) - Math.hypot(b.x - snap[H.PX], b.z - snap[H.PZ]));
+    const n = Math.min(GATHER_SHOWN, marks.length);
+    for (let i = 0; i < n; i++) { shared.input[INPUT.QMARKS + i * 2] = marks[i].x; shared.input[INPUT.QMARKS + i * 2 + 1] = marks[i].z; }
+    shared.input[INPUT.QMARK_N] = n;
+  }, 500);
+  // The quests you track, under the map (src/ui/tracker.js): one clicked opens the quest log on it.
+  const tracker = new Tracker({ el: $('qTrack'), quests: townUI.quests, pack, day: () => town.day,
+    open: (id) => { if (townUI.book || !townUI.act.canMenu()) return false; townUI.openBook('active', id); return true; } });
+  tracker.setOn(settings.tracker !== 'off');
+  game.tracker = tracker;
   game.music = music;
   // The gold trail on the ground to the quest you follow (or, in the opening, down the road after Lisandra).
   game.questTrail = new QuestTrail({ renderer, townUI, town });
@@ -814,6 +894,11 @@ async function boot(plan, poolSize) {
   game.beacon = new Beacon({ pack, shared, input, hud, renderer, audio, cmd: (...a) => lands.o.cmd(...a), party: () => game.party,
     firstHero: () => renderer.firstHero, gameState: () => game.gameState(), snap: () => game.currentSnap(), testing: () => testMode, saved: () => autosave() });
   window.bm = game.api(shared, simWorker, buffer, pool);
+  // (For tests: bm.critters is the field, its list each of them; bm.pickCritter(x, y) clicks the screen there.)
+  window.bm.critters = game.critters;
+  // (The talk panel and its quest book, and the seals: for playing a quest line through from the console.)
+  window.bm.townUI = townUI; window.bm.lands = lands;
+  window.bm.pickCritter = (x, y, how = 'cursor') => game.pickCritter(x, y, how);
   // How long the start took, part by part (tools/load_time.mjs).
   window.bm.loadLaps = [['the simulation ready', Math.round(simMs)], ...renderer.loadLaps];
   gpuNote = () => `Before it went, the GPU took ${Math.round(renderer.stats.busyMs || 0)} ms a frame (${Math.round(renderer.worstMs)} ms at worst), with ${renderer.inFlight} frames waiting; the picture was ${renderer.W}x${renderer.H}.`;
@@ -901,6 +986,30 @@ async function boot(plan, poolSize) {
   // The game keeps itself as it's played: that's Continue.
   const autosave = async () => { const data = await snapshot(); if (data) saves.writeAuto(data); };
   keepForReset = autosave;
+  // A save's card in the Save and Load windows (src/saves.js setCard): who, their level, where, the quest followed, the time played,
+  // and a small picture of the game as it was. The picture is taken as the game is paused, and every minute and a half of play.
+  let thumb = null, thumbT = 0;
+  const grabThumb = () => new Promise((res) => {
+    if (!input.enabled || title.up) { res(null); return; }
+    const prev = game.onFrame, to = setTimeout(() => res(null), 1500);
+    game.onFrame = () => {
+      game.onFrame = prev;
+      prev?.();
+      clearTimeout(to);
+      try {
+        const src = renderer.canvas, w = 192, h = 108, c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        const k = Math.max(w / src.width, h / src.height), cw = w / k, ch = h / k;
+        c.getContext('2d').drawImage(src, (src.width - cw) / 2, (src.height - ch) / 2, cw, ch, 0, 0, w, h);
+        thumb = c.toDataURL('image/jpeg', 0.62);
+      } catch (e) { console.warn('save picture', e); }
+      res(thumb);
+    };
+  });
+  setCard(() => {
+    const s = game.currentSnap();
+    return { name: townUI.name || '', level: pack.level || 1, where: s ? whereWords(s[H.PX], s[H.PY], s[H.PZ]) : '', quest: followedFor(townUI.quests)?.title || '', played: Math.round(played), thumb };
+  });
   game.onTaken = autosave;
   if (openingHUD) game.drawOpening = (snap, cam) => openingHUD.feel(snap, cam);
   game.onTick = (dt) => {
@@ -931,8 +1040,19 @@ async function boot(plan, poolSize) {
       const night = town.day * 2 + (renderer.hour < 12 ? 0 : 1);
       if (townUI.quests.wantsWarden(renderer.hour) && townUI.wardenAsked !== night) { townUI.wardenAsked = night; simWorker.postMessage({ type: 'warden' }); }
     }
+    tracker.update(dt);
     if (!input.enabled || state.paused) return;
     played += dt; playT += dt; runT += dt; noteT += dt;
+    // Lisandra's door east, due at twelve minutes played whatever Bram's errand has come to: the first visit to Phobos is to
+    // come in the game's first quarter hour (src/folk/first-visit.js DOOR_DUE). Once her own work's taken, so she's met.
+    const Q = townUI.quests;
+    if (played > DOOR_DUE && Q.q.lisandra_work && !Q.q.the_door_east && !Q.done('bed_and_bell') && !Q.flags.has('door_due')) {
+      Q.flags.add('door_due');
+      if (Q.follow !== 'off') Q.follow = 'door';
+      townUI.note('Lisandra has a door to show you. She waits where the Long Road comes into town.', 'quest');
+      Q.on.change();
+    }
+    if ((thumbT += dt) > 90) { thumbT = 0; grabThumb(); }
     if (playT > AUTOSAVE_EVERY) { playT = 0; autosave(); }
     // The run's note (src/core/lastrun.js): how long it's been played and where you stand, for the start after a death.
     if (noteT > 8) {
@@ -984,7 +1104,7 @@ async function boot(plan, poolSize) {
       if (d) startFrom(d);
     }
   };
-  const slotOptions = () => ({ canSave: canSave(), snapshot, restore: (d) => (input.enabled ? loadInGame(d) : startFrom(d)) });
+  const slotOptions = () => ({ canSave: canSave(), inGame: input.enabled, snapshot, restore: (d) => (input.enabled ? loadInGame(d) : startFrom(d)) });
   const loadInGame = async (d) => { if (await loadInto(d)) resume(); };
   // (With the mouse free, Tab's or auto-play's, there's no lock to take again: straight back.)
   const resume = () => { if (input.touch || AUTO || input.loose) input.onPauseChange(false); else input.lock(); };
@@ -1077,6 +1197,19 @@ async function boot(plan, poolSize) {
       else if (a === 'menu') toTitle();
     };
   }
+  // The card beside the pause menu (src/ui/pausecard.js): who you are, where, and the quest you follow, with the way to the log.
+  const pauseCardEl = $('pause').querySelector('.pz-card');
+  const drawPauseCard = () => {
+    const s = game.currentSnap();
+    pauseCardEl.innerHTML = pauseCard({ name: townUI.name, level: pack.level, xp: pack.xp, where: s ? whereWords(s[H.PX], s[H.PY], s[H.PZ]) : '', played, gold: pack.gold, copper: pack.copper,
+      day: town.day, hour: renderer.hour, quest: followedFor(townUI.quests), Q: townUI.quests, mats: pack.mats, today: town.day });
+  };
+  pauseCardEl.addEventListener('click', (e) => {
+    if (!e.target.closest('[data-p="quests"]')) return;
+    title.chime();
+    input.onPauseChange(false);
+    if (townUI.act.canMenu()) townUI.openBook('active');
+  });
   const applySetting = (k, v) => {
     if (k === 'look') input.sens = v;
     else if (k === 'ambience' && input.enabled) audio.setAmbience(v);
@@ -1091,12 +1224,14 @@ async function boot(plan, poolSize) {
       awayChanged();
     } else if (k === 'keep') {
       useStore(v === 'yes');
-    } else if (k === 'gfx') {
-      title.confirm({ title: 'Restart?', text: 'The graphics setting takes hold when the game restarts. Where you are is kept for Continue.', yes: 'Restart Now', no: 'Later' })
-        .then(async (yes) => { if (yes) { await autosave(); title.reload(); } });
+    } else if (k === 'tracker') {
+      tracker.setOn(v !== 'off');
     }
+    // (Graphics and Other Tessariels wait on a restart: the settings window says so, with Restart now, title.onRestart.)
   };
   title.onSetting = applySetting;
+  // Restarting for a setting: where you are is kept for Continue first.
+  title.onRestart = async () => { await autosave(); title.reload(); };
   applySetting('look', settings.look);
   applySetting('res', settings.res);
   applySetting('ticker', settings.ticker);
@@ -1107,6 +1242,8 @@ async function boot(plan, poolSize) {
     state.paused = paused;
     document.body.classList.toggle('paused', paused);
     $('pause').style.display = paused ? 'flex' : 'none';
+    // (The save made as it paused has the picture from before: given this one, once it's taken.)
+    if (paused) { drawPauseCard(); grabThumb().then((t) => { const a = t && saves.auto(); if (a?.card && a.card.thumb !== t && state.paused) { a.card.thumb = t; saves.writeAuto(a); } }); }
     // (Back in play, no button keeps the focus that Tab walked it to on the pause screen: Enter would press it.)
     if (!paused && document.activeElement?.closest?.('button, #pause')) document.activeElement.blur();
     shared.input[INPUT.PAUSE] = paused ? 1 : 0;
@@ -1161,8 +1298,10 @@ async function boot(plan, poolSize) {
   // Auto-play, the Auto button under the skull or P: the game plays itself (src/ui/autoplay.js, src/ui/autobrain.js).
   game.autoplay = new AutoPlay({
     base: BASE, opening: OPENING_ENABLED, game, shared, input, hud, audio, pack, inventory, townUI, lands, renderer, town,
-    spellbar: () => game.spellbar, paused: () => state.paused, pause: (on) => input.onPauseChange(on), foeNames: FOE_NAMES, settings,
+    spellbar: () => game.spellbar, paused: () => state.paused, pause: (on) => input.onPauseChange(on), foeNames: FOE_NAMES, settings, saveSettings,
   });
+  // (For tests: bm.autoplay.begin('quests') starts it, as its menu does: tools/firstvisit/play.mjs.)
+  if (window.bm) window.bm.autoplay = game.autoplay;
   // First sight of Phobos, from the Sill: auto-play stops and the camera goes to look (src/ui/firstsight.js).
   game.firstSight = new FirstSight({ game, input, settings, renderer, tip: (t, s) => hud.tip(t, s), autoOn: () => !!game.autoplay?.on, paused: () => state.paused });
   if (window.bm) window.bm.firstSight = (t = 0) => { const s = game.currentSnap(); if (s) { game.firstSight.begin(s); game.firstSight.t = t; } };   // (from t seconds in)
@@ -1228,7 +1367,8 @@ async function boot(plan, poolSize) {
   });
   // A phone stood upright. The manifest asks for landscape and the lock's asked for too (above, and src/title.js), but an
   // iPhone grants a page neither, so it can still be turned. Upright, the world holds still and nothing's drawn (index.html
-  // #rotate covers it); the picture keeps its sideways shape (Renderer.resize), so turning it back makes nothing again.
+  // #rotate covers it), and what it's drawn into is let go for the while (Renderer.rest): turned back, the next frame makes
+  // it again at the screen's size.
   const turned = () => {
     const up = input.touch && window.innerHeight > window.innerWidth;
     if (up === !!game.upright) return;
@@ -1236,6 +1376,9 @@ async function boot(plan, poolSize) {
     // (And what's over the world goes too, not only covered: a phone keeps a picture of each piece, at the old size and the
     // new as it turns, under the cover as much as over the world. index.html body.upright.)
     document.body.classList.toggle('upright', up);
+    if (up) renderer.rest();
+    // (Under the title only a few frames are drawn, and then none: turned back, a few again, or the village behind it is gone.)
+    else game.idleFrames = 0;
     noteEvent(up ? 'turned upright' : 'turned back sideways');
     if (!input.enabled) return;     // (under the title, the world's held still already)
     if (up) input.releaseControls();
@@ -1275,10 +1418,13 @@ async function boot(plan, poolSize) {
     toggleMap();
   });
   // Tab: the mouse let go, to click what's on the screen (the corner map, the skull, Auto, the spell bar and the rest), the
-  // keys still walking you and the game going on. Tab again and the mouse looks about again. A browser's Tab walks its focus
-  // off the page, which takes the pointer lock with it, and that was the pause: now only Esc pauses (input.loose).
-  const freeTip = 'The mouse is free: click the map, the skull, Auto or a spell. Tab again to look about.';
-  const mouseFree = (on) => {
+  // keys still walking you and the game going on. Tab again, a click on the world itself (not on a button, the map or a
+  // critter), or Esc, and the mouse looks about again; Esc once looking is the pause. A browser's Tab walks its focus off the
+  // page, which takes the pointer lock with it, and that was the pause: now only Esc pauses (input.loose).
+  const freeTip = 'The mouse is free: click the map, the skull, Auto or a spell. Click the world, Tab or Esc to look about.';
+  const lookTip = 'Click to look about again. Esc for the menu.';
+  // viaEsc: a browser won't lock the pointer off the Esc key, so a refusal there leaves the mouse looking, waiting on a click.
+  const mouseFree = (on, viaEsc = false) => {
     if (input.touch || AUTO || on === input.cursor) return;
     input.cursor = on;
     if (on) {
@@ -1289,10 +1435,12 @@ async function boot(plan, poolSize) {
     else {
       if ($('tip').textContent === freeTip) hud.tip(freeTip, 0);     // (its word goes with it, not anyone else's)
       // (A browser that won't take the mouse back this once: it stays free, and Tab tries again.)
-      input.lock(() => { input.cursor = true; hud.tip('The browser kept the mouse free that time. Tab again to look about.', 3.5); });
+      input.lock(viaEsc ? () => hud.tip(lookTip, 3)
+        : () => { input.cursor = true; hud.tip('The browser kept the mouse free that time. Tab again to look about.', 3.5); });
     }
   };
-  input.onLooseClick = () => { if (!input.menu && !state.paused) hud.tip(freeTip, 3); };
+  // A click on the world itself with Tab's free mouse (src/input.js): the mouse looks about again, and the click is that alone.
+  input.onLooseClick = () => { if (!input.menu && !state.paused) mouseFree(false); };
   // (For tests: bm.mouseFree() says whether Tab's free mouse is on; bm.mouseFree(true or false) sets it as Tab would.)
   if (window.bm) window.bm.mouseFree = (on) => { if (on !== undefined) mouseFree(!!on); return input.cursor; };
   // A panel or a window that Esc shuts is up (its own keys see to it), or a name's being written.
@@ -1307,10 +1455,11 @@ async function boot(plan, poolSize) {
     if (e.code === 'Tab' && !state.paused) {
       e.preventDefault();
       if (!panelUp()) mouseFree(!input.cursor);
-    } else if (e.code === 'Escape' && input.cursor && !input.free && !panelUp()) {
-      // With the mouse free there's no lock for the browser to let go of: Esc is the pause, and Esc again is back.
-      e.preventDefault();
-      input.onPauseChange(!state.paused);
+    } else if (e.code === 'Escape' && !input.free && !state.paused && !panelUp()) {
+      // With Tab's mouse free, Esc gives it back to the looking (no pause). Back looking but with no lock to let go of (the
+      // browser wouldn't take it off Esc): Esc is the pause. (Held by the game, the browser's own Esc lets go, and that pauses.)
+      if (input.cursor) { e.preventDefault(); mouseFree(false, true); }
+      else if (document.pointerLockElement !== input.canvas) { e.preventDefault(); input.onPauseChange(true); }
     }
   }, true);
   window.addEventListener('keydown', (e) => {
@@ -1345,7 +1494,7 @@ async function boot(plan, poolSize) {
   game.run();
   $('controls').innerHTML = input.touch
     ? 'Left thumb moves. Right thumb looks, on or off the buttons. The big button fires your <b>staff</b>; round it are <b>dodge</b>, <b>jump</b> and, with a shield on and no skull, <b>guard</b>. The six <b>spells</b> stand in a ring round those: tap one to cast it, hold to keep casting. Along the top: the <b>menu</b>, your <b>pack</b>, your <b>spellbook</b> and your <b>quest log</b>; tap the map in the corner to open the big one. <b>Auto</b>, beside the map, lets the game play itself.'
-    : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump, hold it to ride your shield &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>1</kbd>-<kbd>6</kbd> cast, hold to keep casting &nbsp; <kbd>F</kbd> cast the last again &nbsp; <kbd>Wheel</kbd> choose &nbsp; <kbd>B</kbd> spellbook: learn spells and set your bar &nbsp; <kbd>Alt</kbd> cursor, to click a spell &nbsp; <kbd>Tab</kbd> free the mouse to click the map, the skull or Auto, Tab again to look &nbsp; <kbd>Left click</kbd> fire your staff &nbsp; <kbd>Right click</kbd> shield up with a shove, hold to keep it up (not with a skull in hand) &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>M</kbd> map &nbsp; <kbd>E</kbd> take, open, shut or talk &nbsp; <kbd>J</kbd> quest log: what each quest is, where on the map, what auto-play is on &nbsp; <kbd>P</kbd> auto-play: the game plays itself';
+    : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump, hold it to ride your shield &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>1</kbd>-<kbd>6</kbd> cast, hold to keep casting &nbsp; <kbd>F</kbd> cast the last again &nbsp; <kbd>Wheel</kbd> choose &nbsp; <kbd>B</kbd> spellbook: learn spells and set your bar &nbsp; <kbd>Alt</kbd> cursor, to click a spell &nbsp; <kbd>Tab</kbd> free the mouse to click the map, the skull or Auto; click the world, Tab or Esc to look again &nbsp; <kbd>Left click</kbd> fire your staff &nbsp; <kbd>Right click</kbd> shield up with a shove, hold to keep it up (not with a skull in hand) &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>M</kbd> map &nbsp; <kbd>E</kbd> take, open, shut or talk &nbsp; <kbd>J</kbd> quest log: what each quest is, where on the map, what auto-play is on &nbsp; <kbd>P</kbd> auto-play: the game plays itself';
   // Loaded: the title's menu comes up (once Bellmourn's logo is in).
   game.idle = !AUTO;
   watchFiles(null);
@@ -1376,10 +1525,9 @@ class Hud {
     this.foeHp = $('foeHp').firstElementChild;
     this.foeArm = $('foeArmor').firstElementChild;
     this.stamEl = $('stam').firstElementChild;
-    this.shown = {};
   }
 
-  reset() { this.msgShown = 0; $('msg').style.opacity = 0; $('msg').innerHTML = ''; this.shown = {}; }
+  reset() { this.msgShown = 0; $('msg').style.opacity = 0; $('msg').innerHTML = ''; }
 
   setDebug(on) { this.debug = on; $('debug').style.display = on ? 'block' : 'none'; }
 
@@ -1393,14 +1541,8 @@ class Hud {
     el.style.transform = `scaleX(${v.toFixed(3)})`;
   }
 
-  // Each lesson once, at the moment it means something.
-  once(id, text, secs = 4.5) {
-    if (this.shown[id]) return;
-    this.shown[id] = true;
-    this.tip(text, secs);
-  }
-
   tip(text, secs) {
+    if (hushed()) { afterHush(() => this.tip(text, secs)); return; }
     $('tip').textContent = text;
     $('tip').style.opacity = 1;
     clearTimeout(this.tipTimer);
@@ -1529,7 +1671,8 @@ class GameView {
     this.busySum = 0; this.busyN = 0; this.timed = []; this.benched = false;
     renderer.onBusy = (ms) => {
       this.busySum += ms; this.busyN++;
-      if (this.idle && !this.benched) this.timeFrame(ms);
+      // (Not a frame that finishes after the phone's stood upright: what it's drawn into is let go then, Renderer.rest.)
+      if (this.idle && !this.benched && !this.upright) this.timeFrame(ms);
     };
   }
 
@@ -1647,6 +1790,131 @@ class GameView {
     if (this.onTaken) this.onTaken();
   }
 
+  // The gilded critters: about you while you're out on the land (not in the opening, a delve, the Test Dungeon, or under the
+  // ground), still while the game is, and drawn either way.
+  updateCritters(dt, snap) {
+    const f = this.critters, look = this.critterLook;
+    if (!f || !look) return;
+    const px = snap[H.PX], py = snap[H.PY], pz = snap[H.PZ], o = snap[H.OPENING], cell = this.renderer.terrainCell || 2;
+    const out = !(o > 0 && o < OPENING.ESCORT) && !inDelve(px, pz) && !inHall(px, pz) && py > meshHeight(px, pz, cell) - 2.5;
+    const still = !!this.shared.input[INPUT.PAUSE] || !!this.idle;
+    // (A Prismatic Wisp come near you: its own chord, low.)
+    f.onRipe ||= (c) => { const s = this.currentSnap(); if (c.K.one && s && Math.hypot(c.x - s[H.PX], c.z - s[H.PZ]) < 34) this.audio.chime?.('prism', -7, 0.7); };
+    if (!still) f.step(dt, out ? { x: px, z: pz, fx: this.cam.fx, fz: this.cam.fz } : null);
+    // The crosshair over one a click would catch: a gold grab mark, and it lights up. (Fifteen times a second.)
+    if ((this.critterAimT = (this.critterAimT || 0) - dt) <= 0) {
+      this.critterAimT = 1 / 15;
+      const aiming = out && !still && !this.input.loose && !this.input.soft && !this.input.touch && document.pointerLockElement === this.input.canvas;
+      const u = aiming ? this.critterUnder(-1, -1, 'aim') : null, grab = !!(u && u.reach);
+      document.getElementById('cross')?.classList.toggle('grab', grab);
+      if (!this.input.loose) look.hover = grab ? u.c : null;
+    }
+    look.step(still ? 0 : dt, f, this.overrideCam || this.cam, out, cell, px, pz);
+    // The first one near enough to see well: what they are, once.
+    if (out && !still && !this.critterTold && this.input.enabled && !this.input.menu) {
+      const c = f.list.find((q) => q.alive && q.born > 0.9 && Math.hypot(q.x - px, q.z - pz) < 16);
+      if (c) {
+        this.critterTold = true;
+        let told = false;
+        try { told = localStorage.getItem('bm.critterTold') === '1'; localStorage.setItem('bm.critterTold', '1'); } catch { /* no storage */ }
+        if (!told) this.hud.tip(`Gilded critters! A red arrow marks a ripe one: ${this.input.touch ? 'tap' : 'click'} it when its arrow turns gold, before it gets away. Ripe ones pay well; a Golden Scarab pays gold.`, 7);
+      }
+    }
+  }
+
+  // The gilded critter at (sx, sy) on the screen that a click there (how: 'aim', the crosshair; 'cursor', the free mouse;
+  // 'soft', Alt's; 'tap', a thumb looking about; 'stick', a thumb on the stick's side) would be on, if any, as { c, reach }
+  // (reach: near enough you to be caught). Not one you can't see (behind a trunk, a boulder or the brow of the hill), and
+  // with the crosshair never in a fight: a foe within 25 m, or on the screen within 40 pixels of it, and the click's a shot.
+  critterUnder(sx, sy, how) {
+    const f = this.critters, m = this.renderer.frameData, s = this.currentSnap();
+    if (!f || !f.list.length || !m || !s || this.input.menu || this.shared.input[INPUT.PAUSE]) return null;
+    const W = innerWidth, Ht = innerHeight, py = m[37];
+    const screen = (x, y, z) => {
+      const cx = m[0] * x + m[4] * y + m[8] * z + m[12], cy = m[1] * x + m[5] * y + m[9] * z + m[13], cw = m[3] * x + m[7] * y + m[11] * z + m[15];
+      if (cw < 0.1) return null;
+      return [(cx / cw * 0.5 + 0.5) * W, (0.5 - cy / cw * 0.5) * Ht, (py * Ht * 0.5) / cw];
+    };
+    if (how === 'aim') {
+      const r = document.getElementById('cross')?.getBoundingClientRect();
+      sx = r && r.width ? r.left + r.width / 2 : W / 2; sy = r && r.width ? r.top + r.height / 2 : Ht / 2;
+      if (this.foeNear(s, screen, sx, sy)) return null;
+    }
+    const eye = [m[144], m[145], m[146]], cell = this.renderer.terrainCell || 2, ground = (x, z) => meshHeight(x, z, cell);
+    const seen = (c) => { const q = c.middle(); return lineClear(eye[0], eye[1], eye[2], q[0], q[1] + 0.04, q[2], ground); };
+    // (The crosshair: its body, or 10 pixels round it if that's more. A pointer, a little round it; a thumb, more round a ripe
+    // one than one not.)
+    // (PICK_ROOM: made a good deal bigger, so a far one, tiny on the screen, isn't a fiddle to hit.)
+    const P = PICK_ROOM, two = P[how];
+    const room = Array.isArray(two) ? (q) => (q.ripe ? two[0] : two[1]) : two || P.cursor;
+    const c = f.pick(screen, sx, sy, room, seen, how === 'aim' ? P.aimBody : P.body);
+    return c ? { c, reach: Math.hypot(c.x - s[H.PX], c.z - s[H.PZ]) <= CRITTER_REACH } : null;
+  }
+
+  // A foe near you (within 25 m), or on the screen near (sx, sy). screen(x, y, z): where a point is on it.
+  foeNear(s, screen, sx, sy) {
+    const px = s[H.PX], pz = s[H.PZ];
+    const near = (x, y, z) => { if (Math.hypot(x - px, z - pz) < 25) return true; const q = screen(x, y, z); return !!q && Math.hypot(q[0] - sx, q[1] - sy) < 40; };
+    for (let i = 0; i < s[H.NCHARS]; i++) {
+      const o = CHARS_START + i * C_SIZE;
+      if (s[o + C.ACTIVE] < 0.5 || s[o + C.STATE] === 10 || !s[o + C.HOSTILE] || !(s[o + C.HP] > 0)) continue;
+      if (near(s[o + C.X], s[o + C.Y] + 1, s[o + C.Z])) return true;
+    }
+    for (let i = 0; i < MAX_SLIMES; i++) {
+      const o = SLIMES_START + i * SLIME_FLOATS;
+      if (s[o] >= 0.5 && near(s[o + 1], s[o + 2] + 0.4, s[o + 3])) return true;
+    }
+    return false;
+  }
+
+  // The free mouse over the screen at (sx, sy): a gilded critter under it in reach lights up and the pointer's a hand; one
+  // out of reach, the pointer says not yet.
+  hoverCritter(sx, sy) {
+    const u = this.input.loose ? this.critterUnder(sx, sy, 'cursor') : null;
+    if (this.critterLook) this.critterLook.hover = u && u.reach ? u.c : null;
+    if (this.input.canvas) this.input.canvas.style.cursor = u ? (u.reach ? 'pointer' : 'not-allowed') : '';
+  }
+
+  // A click or a tap on the screen at (sx, sy), how as critterUnder: if a gilded critter's there, it's caught, and what it was
+  // worth is yours. True if one was (or one too far off was, and there's a word for it).
+  pickCritter(sx, sy, how) {
+    const u = this.critterUnder(sx, sy, how);
+    if (!u) return false;
+    const c = u.c;
+    if (!u.reach) {
+      // (Too far off: the crosshair's click is a shot as ever, and a thumb on the stick's side moves you; the mouse's or a
+      // look-about thumb's, a word.)
+      if (how === 'aim' || how === 'stick') return false;
+      // (Said once in eight seconds at most.)
+      const now = performance.now();
+      if (!(now - (this.critterFarT || -1e9) < 8000)) {
+        this.critterFarT = now;
+        this.hud.tip(c.ripe ? `Too far off to catch. Get nearer: its arrow turns gold when it's in reach.` : `Too far off to catch. Get nearer.`, 2);
+      }
+      return true;
+    }
+    const m = c.middle(), got = this.critters.take(c, landLevel(c.x, c.z));
+    if (!got) return false;
+    this.critterLook.caught(c);
+    if (this.critterLook.hover === c) this.critterLook.hover = null;
+    // A run of ripe catches, each within four seconds of the one before: each one's bell a semitone higher, up to eight. (One
+    // not ripe rings low and soft, and is no part of a run.)
+    const now = performance.now() / 1000, ch = (this.critterChain ||= { n: -1, t: -9 });
+    if (c.ripe) { ch.n = now - ch.t < 4 ? Math.min(8, ch.n + 1) : 0; ch.t = now; }
+    this.audio.chime?.(c.key, c.ripe ? ch.n : 0, c.ripe ? 1 : got.none ? 0.25 : 0.45);
+    // (Not ripe, and caught so many of late it's worth nothing: a word, no more.)
+    if (got.none) { this.critterWords.add(m[0], m[1] + 0.25, m[2], 'tired', '#9a9a9a', 0.6); return true; }
+    const pack = this.pack;
+    if (got.gold) { pack.gold += got.gold; this.audio.play('coin', null, 0, 0, c.ripe ? 0.9 : 0.5, 1, false); }
+    else this.addXp(got.xp);
+    const color = got.gold ? '#ffd040' : c.K.color;
+    this.critterWords.add(m[0], m[1] + 0.25, m[2], `+${got.gold || got.xp} ${got.gold ? 'gold' : 'XP'}`, color, c.ripe ? 1 : 0.7);
+    // Its motes fly to where it went: the level's medal for experience, the pack for gold.
+    this.critterWords.fly(m[0], m[1], m[2], got.gold ? 'bPack' : 'levelBox', color, c.ripe ? 8 : 3);
+    if (c.ripe) this.chatLog?.system(`Caught a ${c.K.name}: ${got.gold || got.xp} ${got.gold ? 'gold' : 'experience'}${got.tired ? ', half: you have caught a great many of late' : ''}.`);
+    return true;
+  }
+
   updateDrops(dt, snap) {
     this.drops.low = snap[H.HP] / (snap[H.MAX_HP] || 1) < 0.35;
     this.drops.dry = snap[H.MANA] / (snap[H.MAX_MANA] || 1) < 0.3;
@@ -1668,7 +1936,27 @@ class GameView {
     // (Which bosses have ever died, told to the sim when it changes: Castle Velscour's gates that a death opens. src/sim/dungeon.js open.)
     const fl = this.townUI?.quests.flags;
     this.renderer.bossFlags = fl;
-    if (fl && (fl !== this.flagsSent || fl.size !== this.flagsN)) { this.flagsSent = fl; this.flagsN = fl.size; this.sim?.postMessage({ type: 'bossesDown', keys: [...fl].filter((f) => f.startsWith('boss:')).map((f) => f.slice(5)) }); }
+    if (fl && (fl !== this.flagsSent || fl.size !== this.flagsN)) { this.flagsSent = fl; this.flagsN = fl.size; this.sim?.postMessage({ type: 'bossesDown', keys: [...fl].flatMap((f) => (f.startsWith('boss:') ? [f.slice(5)] : /^(key|latch):/.test(f) ? [f] : [])) }); }
+    // (The world bosses a quest of yours is waiting on, and where each rises for it, told to the sim when that changes:
+    // src/sim/worldboss.js setWant.)
+    if (this.townUI && (this.wantT = (this.wantT || 0) - dt) <= 0) {
+      this.wantT = 2;
+      const list = this.townUI.quests.wantedBosses(), w = JSON.stringify(list);
+      if (w !== this.wantSent) { this.wantSent = w; this.sim?.postMessage({ type: 'wantBoss', list }); }
+    }
+    // (A lookout of the castle's or the city's, stood on for the first time: its name, and what the sight's worth.
+    // src/core/castle-finds.js.)
+    if (fl && (this.vistaT = (this.vistaT || 0) - dt) <= 0) {
+      this.vistaT = 0.5;
+      const v = vistaAt(snap[H.PX], snap[H.PY], snap[H.PZ]);
+      if (v && this.townUI.quests.flag(`vista:${v.id}`)) {
+        const n = castleVistas().filter((q) => fl.has(`vista:${q.id}`)).length;
+        // (Down a delve it's a place found, not a view.)
+        const what = v.delve ? 'Found' : 'Lookout found';
+        this.hud.tip(`${what}: ${v.name}. (${n} of ${castleVistas().length})`, 7); this.chatLog?.system(`${what}: ${v.name}.`);
+        this.addXp?.(v.xp); this.music?.stinger?.('triumph');
+      }
+    }
     const rope = this.bells.update(dt, snap[H.PX], snap[H.PY], snap[H.PZ], this.input.yaw);
     // Someone to talk to, if there's nothing to take or open first.
     const free = this.input.enabled && !this.input.menu && !d && !this.nearChest;
@@ -1763,6 +2051,7 @@ class GameView {
       this.beacon?.frame(dt, snap);
       this.updateTrail(dt, snap);
       this.updateDrops(dt, snap);
+      this.updateCritters(dt, snap);
       this.autoplay?.frame(dt, snap);
       this.firstSight?.frame(dt, snap);
       const c = this.overrideCam || this.cam;
@@ -1793,6 +2082,7 @@ class GameView {
       this.hud.update(dt, snap, hs);
       this.foeBars?.update(snap, !this.idle && !this.input.menu && this.input.enabled);
       this.dmgNums?.update(dt, !this.idle && !this.input.menu);
+      this.critterWords?.update(dt, !this.idle && !this.input.menu);
       this.clock.set(r.hour);
       // (Down a delve there's no sun to tell the hour by, and nothing of the land's to track: the clock is put away.)
       const deep = inDelve(snap[H.PX], snap[H.PZ]);
@@ -1989,6 +2279,15 @@ class GameView {
     if (this.smokeT > 0.09) {
       this.smokeT = 0;
       for (const s of r.village.smoke) r.emit(4, 1, s.p[0], s.p[1], s.p[2], 0.1, 1, 0.08, 0.22, 0.45, 0.8, 0.09, 0.17, 7, 12);
+      // (And every other town's and farm's chimneys out on the land, within a kilometre: a few of them a tick, in turn, in
+      // fuller wisps than Bellmourn's, to be seen from the road. src/core/sites.js Kit.house. The world once-over.)
+      const ls = this.landSmokes || (this.landSmokes = buildSites().smokes || []), c0 = this.cam;
+      if (c0 && ls.length) for (let k = 0, n = 0; k < 6 && n < ls.length; n++) {
+        const s = ls[(this.smokeAt = ((this.smokeAt || 0) + 1) % ls.length)];
+        const dx = s[0] - c0.x, dz = s[2] - c0.z;
+        if (dx * dx + dz * dz > 1e6 || (Math.abs(s[0]) < 140 && Math.abs(s[2]) < 140)) continue;
+        r.emit(4, 1, s[0], s[1], s[2], 0.12, 1, 0.08, 0.25, 0.5, 0.9, 0.22, 0.5, 9, 14); k++;
+      }
       // (City State Phobos's hub yards: the Ashwardens' pyre, the Pennyless' cookfire, steam off the dye works' madder vat;
       // only near enough to see: src/core/phobos-hubs.js HUB_SMOKE.)
       const cm = this.cam;
@@ -2060,6 +2359,13 @@ class GameView {
   }
 
   // What one of the other Tessariels' moves does that only this thread can (HFX in src/sim/heroskills.js): at (x, y, z).
+  // A boss's key, the first time it's had (src/core/castle-keys.js; the quests keep it: src/folk/quests.js boss).
+  castleKey(k) {
+    const q = this.townUI?.quests;
+    if (!k || !q || q.flags.has(k) || !CASTLE_KEYS[k]) return;
+    this.hud.tip(CASTLE_KEYS[k].got, 9); this.chatLog?.system(CASTLE_KEYS[k].got);
+  }
+
   heroFx(code, x, y, z, a, b, c) {
     const r = this.renderer, au = this.audio;
     switch (code) {
@@ -2091,10 +2397,14 @@ class GameView {
       case EV.HERO: this.heroTalk?.onEvent(a, b, c, d, e, f); break;
       case EV.HERO_FX: this.heroFx(a | 0, b, c, d, e, f, g); break;
       // (A boss down is told to the quests too: src/folk/quests.js QuestBook.boss.)
-      case EV.WILD: this.wilds?.on(a, b, c, d, e, f, g); break;
+      // (An outpost emptied is told to the quests too: src/folk/quests.js QuestBook.cleared.)
+      case EV.WILD: if ((a | 0) === WILD_CLEARED) this.townUI?.quests.cleared(OUTPOSTS[b | 0]?.key); this.wilds?.on(a, b, c, d, e, f, g); break;
       case EV.DELVE:
         if ((a | 0) === DELVE_CODE.ENTER) this.wantEntry = true;
-        this.party?.onDelve(a, b, c, d); if ((a | 0) === DELVE_CODE.BOSS_DOWN) { this.townUI?.quests.boss(DELVE_BOSSES[b | 0]?.key); this.music?.stinger('triumph'); } break;
+        this.party?.onDelve(a, b, c, d); if ((a | 0) === DELVE_CODE.BOSS_DOWN) { this.castleKey(DELVE_BOSSES[b | 0]?.gives); this.townUI?.quests.boss(DELVE_BOSSES[b | 0]?.key); this.music?.stinger('triumph'); }
+        // (A way unbarred from its far side, for good: src/core/castle-keys.js.)
+        if ((a | 0) === DELVE_CODE.LATCH && DELVE_LATCHES[b | 0]) { this.townUI?.quests.flag(DELVE_LATCHES[b | 0]); this.hud.tip(latchWord(DELVE_LATCHES[b | 0].slice(6)), 6); this.chatLog?.system(latchWord(DELVE_LATCHES[b | 0].slice(6))); }
+        break;
       case EV.HERO_LEVEL: case EV.HERO_DUEL: break;
       case EV.SPELL_CAST:
         this.heroTalk?.onSpell(b);
@@ -2102,7 +2412,6 @@ class GameView {
         if (!this.spellSound) this.spellSound = new SpellSound(au);
         this.spellSound.gather(a);
         if (this.town) this.town.cast++;   // (The town's never seen real magic: src/folk/talk.js.)
-        this.hud.once('cast', this.input.touch ? 'Tap a spell to cast it, and hold to keep casting. Your spellbook is in the top row.' : '1 to 9 cast what is in each slot, and 0, − and + the Utility spells in the last three: hold to keep casting. B is your spellbook. Alt gives you a cursor to click them with.', 5);
         break;
       case EV.SPELL_LOOSE:
         if (!this.spellSound) this.spellSound = new SpellSound(au);
@@ -2157,7 +2466,6 @@ class GameView {
           au.play('blocked', a, b, c, 0.7, 1.2);
           r.emit(2, 42, a, b, c, d, e, f, 0.9, 1.4, 6.5, 0.0018, 0.005, 0.2, 0.6);
         }
-        this.hud.once('gash', g < 2 ? 'The plate is cut. Strike that same cut again to go through. Your X turns red over it.' : 'A cut. Strike it again to go through.');
         r.emit(6, 8, a, b, c, d, e, f, 0.6, 0.3, 1.1, 0.004, 0.01, 0.5, 1.3);
                 this.hud.crossHit();
         break;
@@ -2170,7 +2478,6 @@ class GameView {
         r.emit(0, 80, a, b, c, d, e, f, 0.1, 5.5, 9, 0.002, 0.01, 1, 2);
         r.emit(1, 22, a, b, c, d, e, f, 0.9, 0.4, 2.5, 0.03, 0.08, 0.4, 0.9);
         if (!r.chars[g]?.flesh) r.emit(2, 30, a, b, c, d, e, f, 1.0, 1, 4.5, 0.002, 0.004, 0.2, 0.5);        this.hud.crossHit();
-        if (g < 2) this.hud.once('puncture', 'Through the wound. Now it bleeds.', 3);
         break;
       }
       case EV.BLOCK:
@@ -2232,11 +2539,10 @@ class GameView {
         break;
       case EV.GLINT:
         r.emit(2, 3, a, b, c, 0, 1, 0, 2, 0.1, 0.5, 0.004, 0.008, 0.1, 0.2);
-        if (!this.deepWas) this.hud.once('glint', this.input.touch ? 'A blade flashes before it falls. Dodge, or swing into it to parry.' : 'A blade flashes before it falls. Q to dodge, or swing into it to parry.');
         break;
       case EV.JUMP: au.play(`jump_${this.underfoot}`, null, 0, 0, 0.32, 1, false); break;
       case EV.DODGE: au.play(`run_${this.underfoot}`, null, 0, 0, 0.5, 1.15, false); break;
-      case EV.HYDRA_NOTICE: this.hud.once('hydra', 'Three heads have turned your way. It has given you one warning.', 5); break;
+      case EV.HYDRA_NOTICE: break;
       case EV.FIRE: {
         // One head's breath, this instant. A hiss under it, not on every puff, and a roar of flame as a gout begins.
         if (performance.now() - (this.breathAt || 0) > 700) au.play('torchStrike', a, b, c, 1.4, 0.65);
@@ -2272,12 +2578,12 @@ class GameView {
         au.play('armorLand', a, b, c, 0.5 + d * 0.9, 0.5);
         r.emit(3, Math.ceil(30 * d), a, b + 0.05, c, 0, 1, 0, 1.3, 0.4, 2.2, 0.08, 0.2, 0.5, 1.2);
         break;
-      case EV.BEAST_NOTICE: if (!this.deepWas) this.hud.once('gravehart', 'Something in the trees has noticed you. Leave its ground and it may let you go.', 5); break;
+      case EV.BEAST_NOTICE: break;
       case EV.ROAR:
         // A stag's roar, far too big: a groan under a rasp, carrying a long way.
         au.gore(a, b, c, 1.6 * d, 1.7, 130); au.gore(a, b, c, 1.2 * d, 1.4, 240); au.gore(a, b, c, 0.5 * d, 1.1, 620);
         break;
-      case EV.LOOT: this.loot(a, b, c, d); this.gainXp?.(d, e); this.heroTalk?.onPlayerKill(e ? e - 1 : d); this.townUI?.kill(a, b, c, d | 0, e > TRIPO_KIND ? GROUP_KEYS[e - 1 - TRIPO_KIND] || null : null); this.autoplay?.kill(e ? FOE_NAMES[e - 1] || 'FOE' : d === 9 ? 'JELLY OR SMALL TUMBLER' : d === 6 ? 'BIG TUMBLER' : d === 8 ? 'CHAMPION' : d >= 20 ? 'HOARD' : 'FOE'); break;
+      case EV.LOOT: this.loot(a, b, c, d); this.gainXp?.(d, e, a, c); this.heroTalk?.onPlayerKill(e ? e - 1 : d); this.townUI?.kill(a, b, c, d | 0, e > TRIPO_KIND ? GROUP_KEYS[e - 1 - TRIPO_KIND] || null : null); this.autoplay?.kill(e ? FOE_NAMES[e - 1] || 'FOE' : d === 9 ? 'JELLY OR SMALL TUMBLER' : d === 6 ? 'BIG TUMBLER' : d === 8 ? 'CHAMPION' : d >= 20 ? 'HOARD' : 'FOE'); break;
       case EV.CHAMPION: this.renderer.emit(2, 4, a, b, c, 0, 1, 0, 1.6, 0.25, 0.6, 0.01, 0.03, 0.25, 0.5); break;
       case EV.EMPTY_HANDS: this.hud.tip(`Nothing in your hands. ${this.input.touch ? 'Open your pack' : 'Press I'} to take up a staff.`, 3); break;
       case EV.GROAN:

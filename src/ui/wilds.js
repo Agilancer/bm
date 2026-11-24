@@ -4,7 +4,7 @@
 // What you've found and the caches you've opened are kept in the save, so neither pays twice.
 import { SITES } from '../core/lands.js';
 import { inDungeon } from '../core/dungeon.js';
-import { FACTIONS, FACTION_KEYS, MEETINGS, RAID_TOWNS, TEARS_KINDS, TEAR, WILD } from '../core/wilds.js';
+import { BOSS, BOSS_MOVES, BOSS_MOVE_KEYS, FACTIONS, FACTION_KEYS, MEETINGS, RAID_TOWNS, TEARS_KINDS, TEAR, WILD, WILD_VARIANTS, WORLD_BOSSES } from '../core/wilds.js';
 import { FIND_KINDS, FINDS, OUTPOSTS } from '../core/wilds-data.js';
 
 const SIDES = { goblin: 'goblins', kobold: 'kobolds', dead: 'the dead', brood: 'spiders', herd: 'goat men', pack: 'wolfkin', flock: 'harpies', wyrm: 'drakes',
@@ -16,6 +16,8 @@ const level = (x, z) => Math.max(4, Math.min(22, Math.round(3 + Math.hypot(x, z)
 const BOARDS = RAID_TOWNS.map((k) => ({ name: SITES[k].name, x: SITES[k].x, z: SITES[k].z, r: SITES[k].r })).concat([{ name: 'Bellmourn', x: 15, z: 0, r: 75 }]);
 const WAYS = ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west'];
 // (+x is east, +z is south: src/core/lands.js.)
+// (A bounty's line in the tracker is shown within this far of its outpost: they're given out 250 m to 2.2 km off.)
+const BOUNTY_SHOWN = 2500;
 const wayTo = (dx, dz) => WAYS[Math.round(Math.atan2(dx, -dz) / (Math.PI / 4) + 8) % 8];
 // What the people posted in a town say over their heads when it's raided (POSTED in src/folk/people.js, by id): as it
 // begins, at the second band, and when it's held. They keep their posts through it; these are all they do. Nobody's
@@ -36,6 +38,17 @@ const RAID_WORDS = {
   },
 };
 const clock = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+// A world boss's name as said in a line: the part before its first comma, in ordinary letters ("Veyrasz", "the Moon-Eater").
+const bossName = (B) => { const n = WILD_NAMES[B.id] || B.key; return n.split(',')[0].toLowerCase().replace(/(^|[\s-])([a-z])/g, (m, a, b) => a + b.toUpperCase()).replace(/^The /, 'the ').replace(/ Of /g, ' of ').replace(/ The /g, ' the '); };
+// (Their names: src/core/wilds.js WILD_VARIANTS, by the boss's body.)
+const WILD_NAMES = Object.fromEntries(Object.entries(WILD_VARIANTS).map(([id, v]) => [id, v.name]));
+// What the Heralds' fall says of their gods (docs/ELDER-DRAGONS.md).
+const HERALD_FALL = {
+  thyrraxis: 'The wind drops all at once. Somewhere past the door in the Crown of Teeth, the storm god turns in its sleep.',
+  kaldurra: 'The ground goes cold under your feet. Somewhere past the door in the Crown of Teeth, the hearth god turns in its sleep.',
+  morvekh: 'The frost on everything runs to water. Somewhere past the door in the Crown of Teeth, the cold god turns in its sleep.',
+  nihvaroth: 'For a moment there are no stars at all. Somewhere past the door in the Crown of Teeth, the Hollow Star turns in its sleep.',
+};
 
 export class WildsUI {
   // o: xp(amount), drop(x, y, z, kind), sound(), log(text) (the chat log, if there is one)
@@ -55,6 +68,8 @@ export class WildsUI {
     this.tearNear = null;
     this.tearAt = null;     // { kind, x, z, fight }: the open tear in sight, for whoever asks (calls)
     this.raidOn = null;     // { n }: the town being raided
+    this.bossOn = null;     // { i, x, z, until (ms), called, fight, lvl }: a world boss risen, or being fought (src/sim/worldboss.js)
+    this.rescueOn = null;   // { x, z, life }: travellers on the road with something at them
     setInterval(() => this.tick(), 250);
   }
 
@@ -77,13 +92,20 @@ export class WildsUI {
   }
 
   // What the land is calling anyone at p ([x, z]) to, most pressing first (WILD_CALLS in src/core/wilds.js): a town being
-  // raided, an open tear in sight (fight: it's begun), a small thing to find close by, the bounty in hand. Each with where
-  // it is, how hard (lvl) and what it's called. Auto-play asks (src/ui/autobrain.js wildJob).
+  // raided, an open tear in sight (fight: it's begun), travellers on the road with something at them, a world boss risen or
+  // being fought, a small thing to find close by, the bounty in hand. Each with where it is, how hard (lvl) and what it's
+  // called. Auto-play asks (src/ui/autobrain.js wildJob), and takes the first it's up to.
   calls(p) {
     const out = [];
     if (this.raidOn) { const T = SITES[RAID_TOWNS[this.raidOn.n]]; out.push({ why: 'raid', x: T.x, z: T.z, lvl: level(T.x, T.z), name: T.name }); }
     const t = this.tearAt;
     if (t) out.push({ why: 'tear', x: t.x, z: t.z, lvl: level(t.x, t.z), fight: t.fight, name: TEARS_KINDS[t.kind].name });
+    const R = this.rescueOn;
+    if (R && R.life > 0) out.push({ why: 'rescue', x: R.x, z: R.z, lvl: R.lvl, name: 'the travellers' });
+    // (A world boss, risen or being fought: where, how hard, and whether the fight's begun. Before a find: a totem by the
+    // way is no reason to leave the others at it.)
+    const W = this.bossOn;
+    if (W && (W.fight || performance.now() < W.until)) out.push({ why: 'boss', x: W.x, z: W.z, lvl: W.lvl, fight: !!W.fight, name: bossName(WORLD_BOSSES[W.i]), key: WORLD_BOSSES[W.i].key, d: Math.hypot(W.x - p[0], W.z - p[1]) });
     let best = -1, bd = 60;
     for (let i = 0; i < FINDS.length; i++) { if (this.taken.has(i)) continue; const d = Math.hypot(FINDS[i][0] - p[0], FINDS[i][1] - p[1]); if (d < bd) { bd = d; best = i; } }
     if (best >= 0) out.push({ why: 'find', x: FINDS[best][0], z: FINDS[best][1], lvl: 0, name: FOUND[FIND_KINDS[FINDS[best][2]]] || 'something' });
@@ -110,11 +132,34 @@ export class WildsUI {
     const O = OUTPOSTS.find((o) => o.key === this.bounty.key);
     if (!O) { this.bounty = null; return null; }
     const d = Math.hypot(O.x - p[0], O.z - p[1]);
+    // (Kept in hand, but not shown from a country away: a line of "9600 m to the west" over everything else on the Sill, under
+    // a new quest's toast, read as where that quest was. The critics, docs/FIRST-VISIT.md.)
+    if (d > BOUNTY_SHOWN) return null;
     return { title: `BOUNTY · ${O.name.replace(/^(an?|the) /, '').toUpperCase()}`, sub: d < O.r + 40 ? 'Here. Kill its chief and all its own' : `${Math.round(d / 10) * 10} m to the ${wayTo(O.x - p[0], O.z - p[1])}` };
   }
 
   tick() {
     let s = this.state;
+    // (A world boss called and waiting: where it is, and how long it'll wait.)
+    const W = this.bossOn;
+    // (A fight you've gone off from is let go here too. The sim lets it go 25 s after you're past BOSS.leave of it (or 8 s
+    // after a fall: src/sim/worldboss.js stepFight), and its word of that can be lost in a burst of events (the ring holds
+    // 512: a fall at it, and the long load home). A live run held a fight on for eight minutes after one, and auto-play walked
+    // three and a half kilometres back to nothing.)
+    if (W?.fight) {
+      const p = this.o.pos?.(), far = !!p && Math.hypot(W.x - p[0], W.z - p[1]) > BOSS.leave;
+      W.lostAt = far ? W.lostAt ?? performance.now() : null;
+      if (W.lostAt && performance.now() - W.lostAt > 40000) { this.bossOn = null; this.o.bossBar?.(null); this.o.bossMark?.(null); }
+    }
+    if (!s && W && !W.fight && W.called) {
+      const p = this.o.pos?.();
+      if (p && performance.now() < W.until) {
+        const B = WORLD_BOSSES[W.i], d = Math.hypot(W.x - p[0], W.z - p[1]);
+        s = { title: `WORLD BOSS · ${(WILD_NAMES[B.id] || '').split(',')[0]}`, sub: d < 60 ? 'Here' : `${Math.round(d / 10) * 10} m to the ${wayTo(W.x - p[0], W.z - p[1])}`, until: W.until, secs: W.secs };
+        this.track.classList.add('on');
+        this.track.children[0].textContent = s.title;
+      } else if (p) this.bossOn = null;
+    }
     if (!s) {
       // (Nothing on: the bounty in hand, if there is one. Not down a delve: it's the land's.)
       s = this.bountyTick();
@@ -211,17 +256,30 @@ export class WildsUI {
         if ((c | 0) === -2) { this.say('THE RITUAL IS DONE', 'You were too slow. What they called has come.', 4); this.show({ title: M.name, sub: 'Kill what they raised', fight: true }); break; }
         const sub = M.key === 'skirmish' ? `${who} against ${SIDES[B?.side] || 'something'}: let them thin each other, or wade in`
           : M.key === 'warband' ? `${who} are marching up the road at you`
-            : M.key === 'bounty' ? `One of ${who}'s chiefs is out with only a few of its own`
+            : M.key === 'bounty' ? `One of ${who}${who.endsWith('s') ? "'" : "'s"} chiefs is out with only a few of its own`
               : M.key === 'ritual' ? 'Stop them before it is finished'
                 : M.key === 'duel' ? 'Two sorcerers are settling something. The winner will be tired'
-                  : M.key === 'drake' ? 'Something with wings has seen you' : `${who}, out looking for something to kill`;
+                  : M.key === 'drake' ? 'Something with wings has seen you'
+                    : M.key === 'ambush' ? `${who} were lying in wait, both sides of the road`
+                      : M.key === 'rescue' ? `Folk on the road ahead, and ${who} on them: get there before they break`
+                        : M.key === 'heroes' ? `Some of the other Tessariels are at grips with ${who} on the road ahead` : `${who}, out looking for something to kill`;
+        if (M.key === 'rescue') { this.rescueOn = { x: e, z: f, life: 100, lvl: 0 }; o.rescue?.('start', e, f); }
         this.say(M.name, sub.charAt(0).toUpperCase() + sub.slice(1) + '.', 4.5);
-        this.show({ title: M.name, sub: M.key === 'ritual' ? 'Stop the ritual' : sub.charAt(0).toUpperCase() + sub.slice(1), fight: true, secs: d, until: d ? performance.now() + d * 1000 : 0 });
+        this.show({ title: M.name, sub: M.key === 'ritual' ? 'Stop the ritual' : M.key === 'rescue' ? 'Save them' : sub.charAt(0).toUpperCase() + sub.slice(1), fight: true, rescue: M.key === 'rescue', secs: d, until: d ? performance.now() + d * 1000 : 0 });
+        if (M.key === 'ambush') o.stinger?.('fell');
         break;
       }
       case WILD.MEET_DONE: {
         const M = MEETINGS[a | 0], lvl = e | 0, won = f | 0;
-        if (won > 0) {
+        if (M?.key === 'rescue') { o.rescue?.(won === 3 ? 'saved' : won === -1 ? 'gone' : 'over', b, d); this.rescueOn = null; }
+        if (won === 3 || won === 4) {
+          // The travellers: saved (paid in thanks and what they carry), or run off, and the fight still yours.
+          this.counts.meetings++;
+          const xp = Math.round((50 + lvl * 10) * (won === 3 ? 2.2 : 1));
+          o.xp(xp); o.drop(b, c, d, won === 3 ? 8 : 6);
+          if (won === 3) { this.counts.rescues = (this.counts.rescues || 0) + 1; o.drop(b, c, d, 6); }
+          this.say(won === 3 ? 'THE TRAVELLERS ARE SAFE' : 'TOO LATE FOR THEM', won === 3 ? `They'll tell it on the road. ${xp} experience, and what they could spare.` : `They ran for it. ${xp} experience.`, 4.5);
+        } else if (won > 0) {
           this.counts.meetings++;
           const xp = Math.round((50 + lvl * 10) * (won === 2 ? 1.5 : 1) * (M?.key === 'bounty' || M?.key === 'drake' ? 1.6 : 1));
           o.xp(xp);
@@ -229,6 +287,61 @@ export class WildsUI {
           this.say(won === 2 ? 'RITUAL BROKEN' : M?.key === 'bounty' ? 'A NAMED ONE IS DEAD' : 'DONE WITH', `${xp} experience.`, 3.5);
         }
         this.show(this.tearNear ? { title: this.tearNear.name, sub: 'Walk into it' } : null);
+        break;
+      }
+      case WILD.RESCUE: {
+        const left = a | 0;
+        if (this.rescueOn) this.rescueOn.life = left;
+        o.rescue?.(left > 0 ? 'hurt' : 'fled', b, c, left);
+        if (this.state?.fight && this.state.rescue) { this.state.sub = left > 0 ? `Save them · they're holding, ${left}%` : 'They broke and ran. Deal with what was on them'; this.tick(); }
+        if (left <= 0) this.say('THEY RUN FOR IT', 'The travellers broke and ran. What was on them is on you now.', 3.5);
+        break;
+      }
+      case WILD.HEROES: break;
+      case WILD.BOSS_RISE: {
+        const B = WORLD_BOSSES[a | 0], wait = d | 0, called = (e | 0) === 1, lvl = f | 0;
+        if (!B) break;
+        const p = this.o.pos?.(), dist = p ? Math.hypot(b - p[0], c - p[1]) : 0, way = p ? wayTo(b - p[0], c - p[1]) : '';
+        const name = (WILD_NAMES[B.id] || B.key).split(',')[0];
+        this.bossOn = { i: a | 0, x: b, z: c, until: performance.now() + (wait || 300) * 1000, secs: wait || 300, called, fight: false, lvl };
+        o.stinger?.('fell');
+        if (called) {
+          this.say(`WORLD BOSS: ${WILD_NAMES[B.id] || name}`, `${B.title}. It has risen ${Math.round(dist / 10) * 10} m to the ${way}, and the other Tessariels are going to it. It will wait ${Math.round(wait / 60)} minutes.`, 7);
+          o.call?.(`${name} has risen ${Math.round(dist / 10) * 10} metres to the ${way}! The other Tessariels are going`);
+        } else this.say(`WORLD BOSS: ${WILD_NAMES[B.id] || name}`, `In a clearing ${Math.round(dist / 10) * 10} m to the ${way}: some of the other Tessariels already have it at bay. Join them.`, 6);
+        o.bossMark?.(B, b, c, called, name);
+        break;
+      }
+      case WILD.BOSS_FIGHT: {
+        const B = WORLD_BOSSES[a | 0];
+        if (!B) break;
+        if (this.bossOn) this.bossOn.fight = true;
+        if ((b | 0) >= 0) o.bossBar?.(WILD_NAMES[B.id] || B.key, b | 0, B.title);
+        break;
+      }
+      case WILD.BOSS_CALL: { const key = BOSS_MOVE_KEYS[b | 0]; if (key && BOSS_MOVES[key]) o.call?.(BOSS_MOVES[key].call); break; }
+      case WILD.BOSS_DOWN: {
+        const B = WORLD_BOSSES[a | 0], lvl = e | 0, yours = (f | 0) === 1;
+        this.bossOn = null; o.bossBar?.(null); o.bossMark?.(null);
+        if (!B) break;
+        o.stinger?.('triumph');
+        if (yours) {
+          this.counts.bosses = (this.counts.bosses || 0) + 1;
+          const xp = Math.round(900 + lvl * 160);
+          o.xp(xp);
+          for (const k of [21, 21, 20, 8]) o.drop(b, c, d, k);
+          this.say(`${(WILD_NAMES[B.id] || B.key).split(',')[0]} IS DEAD`, B.god ? `${HERALD_FALL[B.god]} ${xp} experience.` : `The land's greatest, and you were in it. ${xp} experience, and what it guarded.`, 8);
+        } else this.say(`${(WILD_NAMES[B.id] || B.key).split(',')[0]} IS DEAD`, B.god ? HERALD_FALL[B.god] : 'The other Tessariels brought it down without you.', 6);
+        o.bossDown?.(B.key, yours);
+        this.show(null);
+        break;
+      }
+      case WILD.BOSS_GONE: {
+        const B = WORLD_BOSSES[a | 0];
+        this.bossOn = null; o.bossBar?.(null); o.bossMark?.(null);
+        if (!B) break;
+        const n = (WILD_NAMES[B.id] || B.key).split(',')[0];
+        this.say(n, (b | 0) === 0 ? 'Nobody came to it in time, and it has gone back where it came from.' : (b | 0) === 2 ? 'It beat you all, and has gone back where it came from, whole.' : 'You left it, and it has gone back where it came from.', 4.5);
         break;
       }
       case WILD.HELP: this.say('ANOTHER TESSARIEL', (a | 0) > 1 ? 'Two more saw the light, and have come to the tear.' : 'Somebody else saw the light, and has come to the tear.', 3.5); break;

@@ -18,7 +18,7 @@ export class ChatLog {
     this.lines = [];
     const css = document.createElement('style');
     css.textContent = `
-      #heroChat { position: fixed; left: 14px; bottom: 132px; width: min(440px, 58vw); pointer-events: none; z-index: 5; font: 13px/1.38 Georgia, serif;
+      #heroChat { position: fixed; left: 14px; bottom: 132px; width: min(440px, 58vw); pointer-events: none; z-index: 5; font: 13px/1.38 BmNum, Georgia, serif;
         padding: 6px 10px 6px 8px; border-radius: 6px; background: linear-gradient(90deg, rgba(8,6,4,.5), rgba(8,6,4,.32) 70%, rgba(8,6,4,0)); }
       #heroChat:empty { display: none; }
       #heroChat div { color: #efe6d2; text-shadow: 0 0 3px #000, 0 1px 2px #000; margin-top: 2px; transition: opacity 1.2s; }

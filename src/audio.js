@@ -510,6 +510,39 @@ export class Audio {
     air.onended = () => { air.disconnect(); mouth.disconnect(); gain.disconnect(); pan.disconnect(); };
   }
 
+  // A gilded critter caught (src/main.js pickCritter): a little bell of its own, made here. step: how many were caught one
+  // after another before it, each a semitone higher. (A wisp's is bright, a moth's softer and lower, a scarab's a struck
+  // coin's ring, a prismatic wisp's a chord.)
+  chime(kind, step = 0, gain = 1) {
+    if (!this.ready || this.ctx.state !== 'running') return;
+    const ctx = this.ctx, now = ctx.currentTime, up = 2 ** (step / 12);
+    const notes = { wisp: [784], moth: [587], scarab: [1047], prism: [659, 831, 988] }[kind] || [784];
+    const out = ctx.createGain(), send = ctx.createGain();
+    out.gain.value = 0.11 * gain; send.gain.value = 0.35;
+    out.connect(this.master); out.connect(send); send.connect(this.reverb);
+    notes.forEach((f0, i) => {
+      const t0 = now + i * 0.045;
+      for (const [mul, g, d] of [[1, 1, 0.9], [2.76, 0.3, 0.45], [5.4, 0.08, 0.25]]) {
+        const o = ctx.createOscillator(), e = ctx.createGain();
+        o.type = 'sine'; o.frequency.value = f0 * up * mul;
+        e.gain.setValueAtTime(0.0001, t0); e.gain.exponentialRampToValueAtTime(g, t0 + 0.006); e.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+        o.connect(e); e.connect(out); o.start(t0); o.stop(t0 + d + 0.05);
+        o.onended = () => { o.disconnect(); e.disconnect(); };
+      }
+    });
+    // Under the bell, a soft low pop for weight: a breath of low noise and a 220 Hz thump, 60 ms.
+    const pop = ctx.createGain(), lp = ctx.createBiquadFilter(), n = ctx.createBufferSource(), o = ctx.createOscillator(), og = ctx.createGain();
+    lp.type = 'lowpass'; lp.frequency.value = 700;
+    n.buffer = this.noise; n.connect(lp); lp.connect(pop);
+    o.type = 'sine'; o.frequency.setValueAtTime(220, now); o.frequency.exponentialRampToValueAtTime(140, now + 0.06); o.connect(og); og.connect(pop);
+    og.gain.value = 0.8;
+    pop.gain.setValueAtTime(0.0001, now); pop.gain.exponentialRampToValueAtTime(0.5, now + 0.004); pop.gain.exponentialRampToValueAtTime(0.0001, now + 0.06);
+    pop.connect(out);
+    n.start(now, Math.random() * 0.5); n.stop(now + 0.08); o.start(now); o.stop(now + 0.08);
+    o.onended = () => { n.disconnect(); lp.disconnect(); o.disconnect(); og.disconnect(); pop.disconnect(); };
+    setTimeout(() => { out.disconnect(); send.disconnect(); }, 1500);
+  }
+
   // A burst of filtered noise: the wet sound of a wound opening, or a spurt on each heartbeat.
   gore(x, y, z, gain = 1, dur = 0.28, freq = 900) {
     if (!this.ready || this.ctx.state !== 'running') return;

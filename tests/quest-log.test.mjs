@@ -21,7 +21,7 @@ test('every quest says what it is, who gave it and what it pays', () => {
   assert.equal(describe('jory'), 'Jory Pell, the night watchman');
   assert.equal(describe('aldric'), 'Ser Aldric Halloway, the captain of the Watch');
   assert.equal(rewardOf('dead_cant_wait'), '60 gold, 200 experience');
-  assert.equal(rewardOf('four_watches'), 'the Wingbell, 900 experience');
+  assert.equal(rewardOf('what_answers'), 'the Wingbell, 360 experience');
 });
 
 test('every step of every quest has a place on the map, and its steps so far', () => {
@@ -37,9 +37,10 @@ test('every step of every quest has a place on the map, and its steps so far', (
       const done = stepsOf(id, Q);
       assert.equal(done.length, k + 1, id);
       assert.deepEqual(done.map((d) => d.done), [...Array(k).fill(true), false], id);
-      // (Something to bring: from the catacombs till the satchel holds it, then to the giver.)
+      // (Something to bring: from the catacombs, or from where the quest says it's found, till the satchel holds it; then
+      // to the giver.)
       if (steps[k].bring) {
-        assert.ok(p.spots[0].below, `${id}: not from below`);
+        if (!steps[k].at) assert.ok(p.spots[0].below, `${id}: not from below`);
         const full = placeOf(id, { Q, person, mats: { [steps[k].bring]: steps[k].n } });
         assert.equal(full.spots[0].who, QUESTS[id].giver, id);
       }
@@ -60,10 +61,10 @@ test("the places: the Sexton's Door the first time down, the dead below, a list 
   assert.match(placeOf('dead_cant_wait', { Q, person }).where, /Sexton's Door/);
   Q.advance('dead_cant_wait');
   assert.equal(placeOf('dead_cant_wait', { Q, person }).spots[0].below, true);
-  Q.begin('four_watches');
-  assert.equal(placeOf('four_watches', { Q, person }).spots.length, 3);
-  Q.state('four_watches').seen = ['abbey'];
-  assert.equal(placeOf('four_watches', { Q, person }).spots.length, 2);
+  Q.begin('from_the_platform');
+  assert.equal(placeOf('from_the_platform', { Q, person }).spots.length, 3);
+  Q.state('from_the_platform').seen = ['cairnfield'];
+  assert.equal(placeOf('from_the_platform', { Q, person }).spots.length, 2);
   // Someone who can't be found just now: named, with nowhere on the map.
   Q.begin('letter');
   const p = placeOf('letter', { Q, person: () => null });
@@ -89,7 +90,7 @@ test('the hint: only while nothing is taken on, and it follows the game along', 
   for (const g of who) assert.ok(Q.offers(g).length, g);
   assert.ok(who.includes('silas') && who.includes('cedric'));
   assert.ok(who.indexOf('cedric') < who.indexOf('aldric'), 'what suits level 1 comes first');
-  // (Ser Aldric's nearest work is word to Thornwick, which wants 6; the west road wants 13.)
+  // (Ser Aldric's nearest work is the palmer's tally, down the west road to Palmers' Rest, which wants 6; the west road's end wants 13.)
   assert.match(h.items.find((i) => i.spot.who === 'aldric').text, /level 6/);
   assert.ok(who.indexOf('silas') < who.indexOf('aldric'), 'work beyond you, the nearest to your level first');
   // Someone with work who can't be found (Lisandra, before she's walked you down) isn't sent to.

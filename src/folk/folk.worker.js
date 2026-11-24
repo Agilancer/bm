@@ -22,6 +22,7 @@ import { LINES as LC } from './lines/town_c.js';
 import { LINES as LLAND } from './lines/land.js';
 import { LINES as LPHOBOS } from './lines/phobos.js';
 import { LINES as LHUBS } from './lines/phobos-hubs.js';
+import { LINES as LROAD } from './lines/road.js';
 import { SCENES, SMALLTALK } from './lines/scenes.js';
 import { F, F_PALETTE, FCTRL, FIN, FOLK_BYTES, FOLK_JOINTS, FOLK_MAX, FOLK_STRIDE, SH, SLOT_HEAD, freeSlot, mapFolk, publish } from './layout.js';
 import { carryFrame, carryPalette, carryPoint } from '../core/carry.js';
@@ -57,7 +58,7 @@ async function boot({ buffer, base, lean }) {
   const ground = new Ground(village, interior, BOUNDS);
   const town = new Town(village, interior, spots);
   life = new Life({ ground, town, clips, emit, people: FOLK });
-  talk = new Talk(life, { lines: { ...LA, ...LB, ...LC, ...LLAND, ...LPHOBOS, ...LHUBS }, scenes: SCENES, smalltalk: SMALLTALK }, emit);
+  talk = new Talk(life, { lines: { ...LA, ...LB, ...LC, ...LLAND, ...LPHOBOS, ...LHUBS, ...LROAD }, scenes: SCENES, smalltalk: SMALLTALK }, emit);
   // (Phobos's street crowd: fewer of them on a phone.)
   if (lean) life.crowdCap = Math.min(life.crowdCap, CROWD_LEAN);
   // Each body's skeleton out of its model (the mesh is the renderer's), one fetch a model. A few models at a time, and each
@@ -214,6 +215,15 @@ function write(cx, cy, cz) {
     const seen = map.inbox[FIN.SEEN + me.i] > 0.5, sighted = seen && !me.seen;
     me.seen = seen;
     const every = !seen ? gaps.hidden : d < gaps.near ? 0 : d < gaps.mid ? gaps.midGap : gaps.farGap;
+    // (A bed of Phobos's, the first time one of its crowd lies down in it (src/folk/brain.js layAbed): onto the list, and the
+    // main thread told, for its blanket.)
+    if (me.bed?.bed?.crowd && !bedIndex.has(me.bed.bed)) {
+      const b = me.bed.bed;
+      bedIndex.set(b, beds.length);
+      const o = { x: b.x, y: b.y, z: b.z, foot: b.foot, floor: 0, house: b.house, width: b.width, small: 0, len: b.len, pallet: b.pallet };
+      beds.push(o);
+      self.postMessage({ type: 'bed', i: beds.length - 1, bed: o });
+    }
     // (Tucked in once they're down in a bed: the same moment the blanket's drawn over them, below.)
     const tuck = me.posture === 'lie' && me.pose.rest > 0.5 && me.bed?.bed && bedIndex.has(me.bed.bed) ? 1 : 0;
     if (tuck !== me.pose.tuck) { me.pose.tuck = tuck; me.posedAt = -1; }
@@ -287,6 +297,16 @@ self.addEventListener('message', (e) => {
   // A way across the town on foot for the player, for the quest trail (src/ui/trail.js): the folk's own walking grid.
   if (m.type === 'route') { self.postMessage({ type: 'route', id: m.id, pts: life ? life.ground.find(0, m.ax, m.az, m.bx, m.bz, 60000, true) : null }); return; }
   if (!talk) return;
+  // The folk on the roads (src/ui/roadfolk.js): set down, told how it's going, done with (Life.roadJob). A word from each in a
+  // fix as it turns (their lines' barks: scared, saved, fled), one of them at a time.
+  if (m.type === 'road') {
+    life.roadJob(m);
+    if (m.op === 'state' && m.state !== 'hurt') {
+      const who = life.folk.filter((me) => me.trip?.id === m.id);
+      who.forEach((me, k) => { if (k === 0 || Math.random() < 0.35) setTimeout(() => talk.bark(me, m.state), 300 + k * 1400 + Math.random() * 500); });
+    } else if (m.op === 'fix') setTimeout(() => { const me = life.folk.find((q) => q.trip?.id === m.id); if (me) talk.bark(me, 'scared'); }, 900);
+    return;
+  }
   if (m.type === 'talk') talk.talkTo(m.i);
   else if (m.type === 'flags') talk.flags = new Set(m.flags);
   else if (m.type === 'name') talk.name = m.name;

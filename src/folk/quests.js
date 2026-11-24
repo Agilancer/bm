@@ -11,12 +11,24 @@
 //   start  take on a quest from each of a list of people, in any order (Lisandra's: src/folk/lines/lisandra.js)
 //   visit  get to every one of a list of places, in any order
 //   boss   put down one of the party dungeons' bosses, by its key (src/core/dungeon.js BOSSES); one already dead counts
+//   wboss  put down one of the land's world bosses (src/core/wilds.js WORLD_BOSSES, by its key), which rises for it at the
+//          ground named by ground (src/core/boss-grounds.js) soon after it's asked (src/sim/worldboss.js setWant); one put
+//          down before the step was come to doesn't count, as they rise again
+//   clear  empty one of the land's outposts, its chief and every one of its own (an outpost's key in src/core/wilds-data.js
+//          OUTPOSTS; the dens pinned for the camps, src/core/camps-data.js DENS, are the ones to name); one emptied in the
+//          last few minutes counts
+//   gather pick up n things lying about a place (walk up to each: it glints); what: what they are, for the count
 // A place (enter, kill, visit) is an area named below (AREAS), any of the land's places by its key (src/core/lands.js SITES),
 // a party dungeon by its key ('warrens', 'blackvigil', 'deeps': down inside it), or 'lair:<key>', the ground round one of the
 // monsters' lairs (src/core/tripo-monsters.js LAIRS). kill takes of: the one kind that counts (9 a jelly), or foe: the
 // monsters' groups that count (GROUPS' keys); at a lair only its own sort of monster counts.
+// And 'outpost:<key>', the ground round one of the land's outposts (kill, enter, visit, gather).
 // bring takes at: where what's wanted is found, for the trail (a place as above).
+// gather takes spots: [[dx, dz], ...] from the place's middle, where the things lie; else they're laid in a ring round it.
+// kill takes spots: [[x, z], ...] on the land, where auto-play hunts for it, when its place is wide (the fen's jellies).
 // wait: what's handed over is made overnight, and collected the next day.
+// door: taken on, the giver opens Lisandra's door of candles and you're through it ('sill': to the Sill, 'home': back to her;
+// src/ui/folk.js lisDoor).
 // item: a skull, staff or robe it pays, rare (src/ui/folk.js reward); rarity: exactly how fine, for a skull. named: the
 // item is one thing, the same for everyone (made from seed) and called this.
 import { churchAt, inChurch } from '../core/church.js';
@@ -27,10 +39,14 @@ import { BY_ID, first } from './people.js';
 import { GIVERS } from './lines/lisandra.js';
 import * as DELVE from '../core/dungeon.js';
 import { LAIRS } from '../core/tripo-monsters.js';
-import { LAND_RULES } from './land-quests.js';
+import { LAND_LEVELS, LAND_RULES } from './land-quests.js';
 import { PHOBOS_RULES } from './phobos-quests.js';
+import { FIRST_VISIT_RULES } from './first-visit.js';
 import { CITY, cityIn } from '../core/east.js';
 import { PHOBOS } from '../core/phobos-data.js';
+import { castleVistas } from '../core/castle-finds.js';
+import { OUTPOSTS } from '../core/wilds-data.js';
+import { hash2 } from '../core/terrain-noise.js';
 
 export const RULES = {
   // Lisandra's, at the edge of town once she's walked you down: go round everyone with work and start each of their quests.
@@ -45,17 +61,15 @@ export const RULES = {
   toll_of_bell: { steps: [{ enter: 'bellcrypt', night: true }, { warden: true }, { back: true, say: "The bell's warden is put down." }], item: 'scroll', xp: 400 },
   letter: { steps: [{ talk: 'elowen', say: 'A letter from Cedric Ashby. Into your hand.' }, { back: true, say: "Elowen's answer." }], xp: 120 },
   // Out past the town (src/folk/lines/beyond.js; the places are src/core/lands.js SITES). of: what must die (9 a jelly).
-  long_way_round: { steps: [{ enter: 'belltower' }, { talk: 'bellwright', say: 'Corran Thrale asks why the dead walk wide of your hill.' }, { back: true, say: 'The Bellwright says it is the bells.' }], gold: 90, xp: 400 },
-  millhaven_jelly: { steps: [{ kill: 'millhaven', n: 8, of: 9 }, { back: true, say: "Abel's millpond is clear." }], gold: 60, xp: 450 },
-  four_watches: { steps: [{ visit: ['abbey', 'chapel', 'shrine'] }, { back: true, say: 'All three seals woke.' }], charm: 'wingbell', charmName: 'the Wingbell', xp: 900 },
-  sallowmere: { steps: [{ kill: 'fen', n: 10, of: 9 }, { back: true, say: 'The east shore is clear.' }], gold: 90, xp: 600 },
-  black_road: { steps: [{ enter: 'keep' }, { back: true, say: 'I saw the keep at the end of the west road.' }], gold: 200, xp: 900 },
-  crown_of_teeth: { needs: 'toll_of_bell', steps: [{ enter: 'crown' }, { back: true, say: "I've been to the top of the Sorrowhorn." }], item: 'scroll', gold: 150, xp: 1200 },
-  barrow_lights: { steps: [{ enter: 'barrows', night: true }, { kill: 'barrows', n: 6, of: 9 }, { back: true, say: 'The lights were jellies. Full of bones.' }], gold: 140, xp: 700 },
+  // (The Black Road, a look at the keep, is the Hollow Watch's now, by the keep: src/folk/regions/waste.js.)
+  // (The climb to the Crown of Teeth is the Broken Stair's now, Isla Crag's at its foot: src/folk/regions/deepwood.js.)
   // The small towns, the land's monsters and the party dungeons (src/folk/land-quests.js; words in src/folk/lines/land.js).
   ...LAND_RULES,
   // City State Phobos's (src/folk/phobos-quests.js; words in src/folk/lines/phobos-hubs.js).
   ...PHOBOS_RULES,
+  // Your first visit there, through Lisandra's door, at about level three (src/folk/first-visit.js; words in
+  // src/folk/lines/first-visit.js).
+  ...FIRST_VISIT_RULES,
 };
 
 // The Bell Crypt: the octagon where the stair down lets out (tools/interior/build_interior.py, Stage I), in the world.
@@ -65,7 +79,9 @@ export const isNight = (h) => h >= 21 || h < 4.5;
 
 const AREAS = {
   catacombs: (x, y, z) => y < -6 && inChurch(x, y + 1, z),
-  woods: (x, y, z) => y > -3 && !inTown(x, z, 10) && !inChurch(x, y + 1, z),
+  // (Bellmourn's own country, the Darkwood: not anywhere out of town. A run's kills on the Sill above Phobos, nine kilometres
+  // east, put down Corran's twelve in the pines for him.)
+  woods: (x, y, z) => y > -3 && !inTown(x, z, 10) && !inChurch(x, y + 1, z) && countryAt(x, z) === 'darkwood',
   bellcrypt: inCrypt,
 };
 // Out past the town: within reach of a named place (src/core/lands.js SITES), its radius stretched by s.
@@ -85,6 +101,12 @@ for (const l of LAIRS) AREAS[`lair:${l.key}`] = (x, y, z) => Math.hypot(x - l.x,
 // City State Phobos: anywhere inside its wall ('phobos'), and each of its districts ('ph:<key>', src/core/phobos-data.js).
 AREAS.phobos = (x, y, z) => y > -30 && cityIn(x, z) < 1;
 for (const d of PHOBOS.districts) AREAS[`ph:${d.key}`] = (x, y, z) => y > -30 && Math.hypot(x - d.x, z - d.z) < d.r * 0.8;
+// A lookout of the castle's or the city's ('vista:<id>', src/core/castle-finds.js): stood on it.
+for (const v of castleVistas()) AREAS[`vista:${v.id}`] = (x, y, z) => Math.abs(y - v.y) < 4 && Math.hypot(x - v.x, z - v.z) < v.r;
+// The ground round one of the land's outposts ('outpost:<key>', src/core/wilds-data.js): as a lair's.
+const OUTPOST = Object.fromEntries(OUTPOSTS.map((o) => [o.key, o]));
+for (const o of OUTPOSTS) AREAS[`outpost:${o.key}`] = (x, y, z) => Math.hypot(x - o.x, z - o.z) < o.r + LAIR_REACH;
+export const outpostOf = (key) => OUTPOST[key] || null;
 export const areaAt = (k, x, y, z) => !!AREAS[k]?.(x, y, z);
 export const hasArea = (k) => !!AREAS[k];
 
@@ -100,8 +122,11 @@ export function delvePortal(key) {
 // Where a step's place is, to be led to: { x, z, near }, or null (the town's own, which src/ui/trail.js knows its ways to).
 export function placeSpot(k) {
   if (k.startsWith('lair:')) { const l = LAIRS.find((q) => q.key === k.slice(5)); return l ? { x: l.x, z: l.z, near: l.r + 12 } : null; }
+  if (k.startsWith('outpost:')) { const o = OUTPOST[k.slice(8)]; return o ? { x: o.x, z: o.z, near: o.r + 12, r: o.r } : null; }
   if (k === 'phobos') return { x: CITY.x - CITY.a + 40, z: 0, near: 30 };
   if (k.startsWith('ph:')) { const d = PHOBOS.districts.find((q) => q.key === k.slice(3)); return d ? { x: d.x, z: d.z, near: d.r * 0.5 } : null; }
+  // (A lookout, 'vista:<id>', src/core/castle-finds.js: where it is, how near counts, and how high it stands.)
+  if (k.startsWith('vista:')) { const v = castleVistas().find((q) => q.id === k.slice(6)); return v ? { x: v.x, z: v.z, near: v.r, y: v.y } : null; }
   const p = delvePortal(k);
   if (p) return { x: p.x, z: p.z, near: 3, delve: k };
   // A room down one ('room:<id>'): that delve's portal.
@@ -129,6 +154,33 @@ export function sayable(list, flags, met = null) {
   return out;
 }
 
+// How long an outpost stays emptied for a `clear` step taken after the fight (ms): about as long as it stays empty.
+export const CLEAR_KEPT = 420000;
+// How near you come to a thing to gather before it's picked up (m), and how many glint at once (src/core/layout.js QMARKS).
+export const GATHER_REACH = 3.2;
+export const GATHER_SHOWN = 8;
+// Where a gather step's things lie: [[x, z], ...], st.n of them. Its own spots (from the place's middle), else a ring
+// round the place just outside what's built there, each at an angle of its own (the same for everyone, from the quest's id).
+export function gatherSpots(id, st) {
+  const at = placeSpot(st.gather);
+  if (!at) return [];
+  if (st.spots) return st.spots.slice(0, st.n).map(([dx, dz]) => [at.x + dx, at.z + dz]);
+  let seed = 0;
+  for (const ch of id) seed = (seed * 31 + ch.charCodeAt(0)) % 9973;
+  // (Round a den or a lair, out past what its monsters see from their middle, 24 m and their wander: gathering is going
+  // round the outside, and a fight only if you go nearer or they come out. At a place, a little way in from its edge.)
+  const wild = st.gather.startsWith('outpost:') || st.gather.startsWith('lair:');
+  const r0 = wild ? (at.r ?? 8) + 30 : (at.r ?? Math.min(at.near, 30)) + 9, out = [];
+  for (let i = 0; i < st.n; i++) {
+    const a = (i + hash2(seed + i * 3, seed - i * 7) * 0.7) / st.n * Math.PI * 2, d = r0 + hash2(seed - i, i * 5 + 1) * (wild ? 15 : 12);
+    out.push([Math.round((at.x + Math.sin(a) * d) * 10) / 10, Math.round((at.z + Math.cos(a) * d) * 10) / 10]);
+  }
+  return out;
+}
+
+// How many quests the tracker under the map shows at once.
+export const WATCH_MAX = 5;
+
 export class QuestBook {
   // on: { change(), toast(text, kind), done(id) }
   constructor(on) {
@@ -137,18 +189,23 @@ export class QuestBook {
     this.told = {};         // quest -> person -> how many of their lines on it they've said
     this.flags = new Set(); // what the town knows (src/folk/talk.js): 'arrived', 'quest:<id>', 'quest:<id>:done'
     this.follow = null;     // the quest the trail leads you to (src/ui/trail.js): an id, 'off', or null for the newest
+    this.dropped = {};      // quest -> when it was last dropped from the quest log (drop)
+    this.watch = [];        // the quests the tracker under the map shows (src/ui/tracker.js), in the order they were tracked
   }
 
   state(id) { return this.q[id] || null; }
   step(id) { const s = this.q[id]; return s && s.stage === 'active' ? RULES[id].steps[s.step] : null; }
   active() { return Object.keys(this.q).filter((id) => this.q[id].stage !== 'done'); }
-  done(id) { return this.q[id]?.stage === 'done'; }
+  // (id: or a list of them, all done: a rule's needs may be two. src/folk/first-visit.js fv_the_redoubt.)
+  done(id) { return Array.isArray(id) ? id.every((k) => this.done(k)) : this.q[id]?.stage === 'done'; }
 
   // The quest you're following: the one picked in the quest log while it's under way, else the newest under way; before
   // anything's asked of you, 'start' (go and see Bram Kettle). Null when you've put the trail away.
   followed() {
     if (this.follow === 'off') return null;
     if (this.follow === 'start' && !this.started()) return 'start';
+    // (Bram's errand done: Lisandra, with her door east, till it's taken. src/folk/first-visit.js.)
+    if (this.follow === 'door' && this.needsMet('the_door_east') && !this.q.the_door_east && RULES.the_door_east) return 'door';
     const live = this.active();
     if (live.includes(this.follow)) return this.follow;
     if (live.length) return live[live.length - 1];
@@ -158,6 +215,17 @@ export class QuestBook {
   // Whether you've taken up your first work in town: Bram's bed, or Lisandra's round of the town.
   started() { return !!(this.q.bed_and_bell || this.q.lisandra_work); }
 
+  // Whether a quest is shown in the tracker under the map; and tracking one, or not (from the quest log). A quest taken is
+  // tracked while there's room (WATCH_MAX); nothing is ever untracked but by you, or by its being done or dropped.
+  watching(id) { return this.watch.includes(id); }
+  track(id, on = !this.watching(id)) {
+    const s = this.q[id];
+    if (on && (!s || s.stage === 'done' || this.watching(id) || this.watch.length >= WATCH_MAX)) return false;
+    if (on) this.watch.push(id); else this.watch = this.watch.filter((k) => k !== id);
+    this.on.change();
+    return true;
+  }
+
   // Picked in the quest log: follow it, or (picked again) put the trail away.
   pick(id) {
     this.follow = this.followed() === id ? 'off' : id;
@@ -166,7 +234,16 @@ export class QuestBook {
 
   // The quests this person has to give, now.
   offers(who) {
-    return Object.keys(RULES).filter((id) => QUESTS[id].giver === who && !this.q[id] && (!RULES[id].needs || this.done(RULES[id].needs)));
+    // (Out there on your first visit, long before you're fit for it, the city's own don't offer you their work: Fennick
+    // says as much. src/folk/first-visit.js.)
+    const visiting = !!this.q.the_door_east && !this.done('fv_home');
+    return Object.keys(RULES).filter((id) => QUESTS[id].giver === who && !this.q[id] && this.needsMet(id) && !(visiting && PHOBOS_RULES[id]));
+  }
+
+  // Whether what a quest needs first is done: or, for one with a `due` flag, that flag's set (src/folk/first-visit.js).
+  needsMet(id) {
+    const r = RULES[id];
+    return !r?.needs || this.done(r.needs) || (!!r.due && this.flags.has(r.due));
   }
 
   begin(id) {
@@ -174,6 +251,7 @@ export class QuestBook {
     const was = this.followed();
     this.q[id] = { stage: 'active', step: 0, n: 0 };
     if (!(was && this.step(was)?.start)) this.follow = id;
+    if (!this.watching(id) && this.watch.length < WATCH_MAX) this.watch.push(id);
     this.flags.add(`quest:${id}`);
     this.on.toast(`New quest: ${QUESTS[id].title}`, 'quest');
     this.on.begun?.(id);
@@ -217,7 +295,7 @@ export class QuestBook {
   // On to the next step (or to the end of the last).
   advance(id) {
     const s = this.q[id];
-    s.step++; s.n = 0;
+    s.step++; s.n = 0; delete s.got;
     if (s.step < RULES[id].steps.length) this.on.toast(this.journalLine(id), 'step');
     this.on.change();
   }
@@ -232,11 +310,47 @@ export class QuestBook {
 
   finish(id) {
     this.q[id] = { stage: 'done' };
+    // (Bram's first errand done: the trail goes to Lisandra next, for her door east, over the round of the town.)
+    if (id === 'bed_and_bell' && RULES.the_door_east && !this.q.the_door_east && this.follow !== 'off') this.follow = 'door';
+    this.watch = this.watch.filter((k) => k !== id);
     this.flags.add(`quest:${id}:done`);
     this.on.toast(`Quest done: ${QUESTS[id].title}`, 'done');
     this.on.done(id);
     this.on.change();
   }
+
+  // Whether a quest under way can be dropped from the quest log: any that's taken and not yet done.
+  canDrop(id) { const s = this.q[id]; return !!s && s.stage !== 'done'; }
+
+  // Dropped from the quest log: as if it had never been taken. Its giver has it to give again (offers, and the yellow ! over
+  // their head), what the town says of it being taken goes back to before (the 'quest:<id>' flag), and its count starts
+  // over. A list of people to take work from (Lisandra's round of the town) loses its tick for the giver, unless they've
+  // other work of theirs in hand. `dropped` keeps when it was dropped (auto-play leaves it a while: src/ui/autobrain.js).
+  // Returns what was handed over for it and is to be given back ({ mat, n }: made overnight and not yet collected), or
+  // null; false if there was nothing to drop.
+  drop(id, at = Date.now()) {
+    if (!this.canDrop(id)) return false;
+    const s = this.q[id], st = RULES[id].steps[s.step], giver = QUESTS[id].giver;
+    const back = s.stage === 'making' && st?.bring ? { mat: st.bring, n: st.n || 1 } : null;
+    delete this.q[id];
+    delete this.told[id];
+    this.flags.delete(`quest:${id}`);
+    if (this.follow === id) this.follow = null;
+    this.watch = this.watch.filter((k) => k !== id);
+    this.dropped[id] = at;
+    for (const k of this.active()) {
+      const ks = this.q[k], kst = this.step(k);
+      if (!kst?.start || !ks.seen?.includes(giver)) continue;
+      if (!Object.keys(RULES).some((q) => q !== k && QUESTS[q].giver === giver && this.q[q])) ks.seen = ks.seen.filter((p) => p !== giver);
+    }
+    this.on.toast(`Quest abandoned: ${QUESTS[id].title}`, 'drop');
+    this.on.dropped?.(id, back);
+    this.on.change();
+    return back;
+  }
+
+  // Dropped lately (within `ms` of `now`): auto-play leaves such a quest be for a while.
+  droppedLately(id, ms, now = Date.now()) { const t = this.dropped[id]; return t != null && now - t < ms; }
 
   // What the quest log says to do now.
   journalLine(id) {
@@ -249,7 +363,7 @@ export class QuestBook {
     // (The way in, for work that's down among the dead and given before Silas has handed over his key.)
     const hint = s.step === 0 ? sayable([text.hint], this.flags)[0] : null;
     const list = step.visit || step.start;
-    const count = step.kill ? ` (${s.n} of ${step.n})` : list ? ` (${(s.seen || []).length} of ${list.length})` : '';
+    const count = step.kill || step.gather ? ` (${s.n} of ${step.n})` : list ? ` (${(s.seen || []).length} of ${list.length})` : '';
     // Who's still to give you work, by name.
     const left = step.start ? step.start.filter((p) => !(s.seen || []).includes(p)).map((p) => first(BY_ID[p])) : [];
     return `${line}${count}${hint ? ` ${hint}` : ''}${left.length ? ` Still to see: ${left.join(', ')}.` : ''}`;
@@ -265,7 +379,8 @@ export class QuestBook {
       if (!st) continue;
       if (st.warden && kind === 8 && AREAS.catacombs(x, y, z)) { this.on.toast('The warden is down. Somewhere above, a rope goes slack.', 'step'); this.advance(id); continue; }
       if (!st.kill || !AREAS[st.kill](x, y, z) || kind === 2 || (st.of != null && kind !== st.of)) continue;
-      if (st.foe ? !st.foe.includes(group) : st.kill.startsWith('lair:') && !group) continue;
+      // (A den's ground is a lair's: only its own count, not a jelly that wanders in and dies there.)
+      if (st.foe ? !st.foe.includes(group) : (st.kill.startsWith('lair:') || st.kill.startsWith('outpost:')) && !group) continue;
       const s = this.q[id];
       s.n++;
       if (s.n >= st.n) this.advance(id);
@@ -278,9 +393,43 @@ export class QuestBook {
   boss(key) {
     if (!key) return;
     this.flags.add(`boss:${key}`);
-    for (const id of this.active()) if (this.step(id)?.boss === key) this.advance(id);
+    // (And the key it kept, if it kept one: src/core/castle-keys.js.)
+    const gives = DELVE.BOSSES?.find((b) => b.key === key)?.gives;
+    if (gives) this.flags.add(gives);
+    for (const id of this.active()) if (this.step(id)?.boss === key || this.step(id)?.wboss === key) this.advance(id);
     this.on.change();
   }
+
+  // The world bosses a quest of yours is waiting on now (its wboss step), and where each is to rise: [{ key, at }], for the
+  // sim (src/main.js tells src/sim/worldboss.js setWant).
+  // (Each at the quest's own level, LAND_LEVELS, so it's the fight the quest was levelled for, whatever the land's is there.)
+  wantedBosses() {
+    const lvl = (id) => LAND_LEVELS.find(([q]) => q === id)?.[1] || 0;
+    return this.active().filter((id) => this.step(id)?.wboss).map((id) => ({ key: this.step(id).wboss, at: this.step(id).ground, lvl: lvl(id) }));
+  }
+
+  // One of the land's outposts has been emptied (EV.WILD CLEARED, through src/main.js), by its key: told to any quest
+  // waiting on it, and kept a few minutes for one taken just after.
+  cleared(key, at = Date.now()) {
+    if (!key) return;
+    (this.clearedAt ||= {})[key] = at;
+    for (const id of this.active()) if (this.step(id)?.clear === key) this.advance(id);
+  }
+
+  // The things still to pick up for the gather steps under way: [{ id, i, x, z }], the quest followed first.
+  marks() {
+    const out = [], f = this.followed();
+    for (const id of this.active().sort((a, b) => (b === f) - (a === f))) {
+      const st = this.step(id);
+      if (!st?.gather) continue;
+      const got = this.q[id].got || [];
+      gatherSpots(id, st).forEach(([x, z], i) => { if (!got.includes(i)) out.push({ id, i, x, z }); });
+    }
+    return out;
+  }
+
+  // Something the castle remembers of you: a way unbarred ('latch:<id>'), a lookout found ('vista:<id>').
+  flag(k) { if (!k || this.flags.has(k)) return false; this.flags.add(k); this.on.change(); return true; }
 
   // Where the player is, every so often.
   where(x, y, z, hour) {
@@ -294,6 +443,19 @@ export class QuestBook {
       const st = this.step(id);
       // (A boss that was dead before this was asked.)
       if (st?.boss && this.flags.has(`boss:${st.boss}`)) { this.advance(id); continue; }
+      // (An outpost emptied just before this was asked.)
+      if (st?.clear) { const t = this.clearedAt?.[st.clear]; if (t != null && Date.now() - t < CLEAR_KEPT) this.advance(id); continue; }
+      // gather: walk up to each of the things lying about the place.
+      if (st?.gather) {
+        const s = this.q[id], got = (s.got = s.got || []);
+        const i = gatherSpots(id, st).findIndex(([gx, gz], k) => !got.includes(k) && Math.hypot(gx - x, gz - z) < GATHER_REACH);
+        if (i < 0) continue;
+        got.push(i); s.n = got.length;
+        if (s.n >= st.n) this.advance(id);
+        else { this.on.toast(`${QUESTS[id].title}: ${s.n} of ${st.n}`, 'count'); this.on.change(); }
+        this.on.picked?.(id, i);
+        continue;
+      }
       // visit: every one of a list of places, in any order.
       if (st?.visit) {
         const s = this.q[id], k = st.visit.find((v) => !(s.seen || []).includes(v) && AREAS[v](x, y, z));
@@ -323,12 +485,16 @@ export class QuestBook {
 
   // ---- saving ----
 
-  save() { return { q: structuredClone(this.q), told: structuredClone(this.told), flags: [...this.flags], follow: this.follow }; }
+  save() { return { q: structuredClone(this.q), told: structuredClone(this.told), flags: [...this.flags], follow: this.follow, dropped: { ...this.dropped }, watch: [...this.watch] }; }
   load(d) {
     this.q = structuredClone(d?.q || {});
     this.told = structuredClone(d?.told || {});
     this.flags = new Set(d?.flags || []);
     this.follow = d?.follow ?? null;
+    this.dropped = { ...(d?.dropped || {}) };
+    // (A save from before the tracker: the quest followed and the newest under way, as far as there's room.)
+    const live = this.active();
+    this.watch = Array.isArray(d?.watch) ? d.watch.filter((k) => live.includes(k)) : [...new Set([this.followed(), ...live.slice().reverse()])].filter((k) => live.includes(k)).slice(0, 3);
     this.on.change();
   }
 }

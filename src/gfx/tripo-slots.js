@@ -2,13 +2,16 @@
 // stood there: the snapshot says which model (C.MODEL) and which palette (C.PAL), and when that changes the slot is rebuilt.
 // Until its body is ready a slot is a placeholder that draws nothing. A model's mesh is made once and shared by every slot that
 // wears it; its colour map is baked once per palette (palettes.json, the bestiary's own sums). What no slot is wearing is let go.
-import { accessor, imageBytes, parseGLB } from '../core/glb.js';
+import { accessor, parseGLB } from '../core/glb.js';
 import { C, C_HERO, C_SIZE, CHARS_START } from '../core/layout.js';
 import { ARMS, TRIPO_BASE, armIds } from '../core/tripo-monsters.js';
 import { makeBuffer, mipCountFor } from './gpu.js';
+import { pictureOf } from './lean-pictures.js';
 
 const KEEP_MODELS = 10;
 const KEEP_SKINS = 12;
+// (And what they hold, which was kept for good: a new pair of monster and weapon each, about 18 MB in 40 minutes' questing.)
+const KEEP_PROPS = 16;
 const placeholder = () => ({ pending: true, seen: false, casts: false, inCascade: false, far: false });
 // How far down the shaft the fist closes, as a share of the weapon's length (the bestiary's GRIP).
 const GRIP = { staff: 0.42, sword: 0.1, dagger: 0.14, axe: 0.18, mace: 0.18, spear: 0.42, lance: 0.3, great_axe: 0.3, great_mace: 0.3, bow: 0.5, boomerang: 0.5 };
@@ -68,11 +71,16 @@ export class TripoSlots {
     this.ids = Object.keys(roster);
     // (What one of the land's new kinds is called, by C.MODEL: src/core/wilds.js. The life bar's name.)
     this.wildName = (model) => { const m = model > 0 ? roster[this.ids[model - 1]] : null; return m?.wild ? m.name : ''; };
+    // (And one with a name of its own, a boss or a kind made on an old body: src/core/tripo-monsters.js VARIANTS. Auto-play's.)
+    this.ownName = (model) => { const m = model > 0 ? roster[this.ids[model - 1]] : null; return m?.src ? m.name : ''; };
     this.palettes = Object.values(palettes);
     this.first = first; this.count = count;
-    this.models = new Map();   // id -> Promise of { base, nrm, mr, glb, albSrc }, newest last
+    this.models = new Map();   // id -> Promise of { base, nrm, mr, alb, hands }, newest last
     this.skins = new Map();    // 'id:pal' -> Promise of an albedo texture, newest last
     this.want = new Array(count).fill(0);
+    // (Each slot's changes counted: a monster made for an A that went to B and back to A is the first A's, whose mesh,
+    // skin or weapon may have been let go meanwhile, and is let go itself. Only the latest of the slot's is put in.)
+    this.gens = new Array(count).fill(0);
     this.arms = armIds(roster);
     this.props = new Map();    // 'model:weapon:side' -> Promise of a prop, its grip baked in
     this.weapons = fetch(`${base}assets/game/weapons/weapons.json`).then((res) => res.json());
@@ -98,12 +106,13 @@ export class TripoSlots {
       const key = `${model}:${pal}:${armR}:${armL}`;
       if (this.want[i] === key) continue;
       this.want[i] = key;
+      const gen = ++this.gens[i];
       this.free(r.chars[this.first + i]);
       r.chars[this.first + i] = placeholder();
       const pb = this.propBase + i * 2;
       r.props[pb] = { empty: true, owner: this.first + i }; r.props[pb + 1] = { empty: true, owner: this.first + i };
       this.instance(this.ids[model - 1], pal, armR, armL).then(([ch, right, left]) => {
-        if (this.want[i] !== key) { this.free(ch); return; }
+        if (this.gens[i] !== gen) { this.free(ch); return; }
         ch.propBase = pb; ch.propCount = 2;
         r.props[pb] = right ? { ...right, owner: this.first + i } : { empty: true, owner: this.first + i };
         r.props[pb + 1] = left ? { ...left, owner: this.first + i } : { empty: true, owner: this.first + i };
@@ -116,8 +125,9 @@ export class TripoSlots {
   model(id) {
     let m = this.models.get(id);
     if (m) { this.models.delete(id); this.models.set(id, m); return m; }
-    const r = this.r;
-    m = fetch(`${this.base}${TRIPO_BASE}${this.roster[id]?.src || id}.glb`).then((res) => {
+    const r = this.r, url = `${this.base}${TRIPO_BASE}${this.roster[id]?.src || id}.glb`;
+    r.leanPics?.ahead(url);   // (its phone pictures start coming down beside it)
+    m = fetch(url).then((res) => {
       if (!res.ok) throw new Error(`${id}: ${res.status}`);
       return res.arrayBuffer();
     }).then(async (buf) => {
@@ -128,17 +138,32 @@ export class TripoSlots {
       const pos = accessor(glb, a.POSITION).slice();
       for (let i = 0; i < pos.length; i++) pos[i] *= scale;
       const prim = { pos, nrm: accessor(glb, a.NORMAL), uv: accessor(glb, a.TEXCOORD_0), idx: accessor(glb, pr.indices), joints: accessor(glb, a.JOINTS_0), weights: accessor(glb, a.WEIGHTS_0) };
-      const base = r.makeSkinned([prim], glb.json.skins[0].joints.length);
-      r.addLod(base, prim, 0.14);
       const mat = glb.json.materials[pr.material ?? 0];
       const srcOf = (t) => glb.json.textures[t.index].source;
+      // (Not the file itself: its mesh and two of its maps go to the GPU, and a new palette's skin wants only its colour
+      // picture, a copy of which is all that's kept. The whole file, 3 MB on average and up to 8, was kept as long as the
+      // model was, which was ten models' worth of page memory. Read before anything is made, so a bad file leaves nothing.)
+      const alb = pictureOf(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture)), hands = handFrames(glb);
+      const nrmSrc = srcOf(mat.normalTexture), mrSrc = srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture);
+      const base = r.makeSkinned([prim], glb.json.skins[0].joints.length);
+      // (The shared mesh's own pose buffers are never drawn from: each monster gets its own, cloneSkinned in instance.
+      // Given back at once. They were let go of by no one, a model let go or failed included: 0.3 MB of the GPU's a model
+      // on average, up to 1.8.)
+      for (const b of [base.outBuf, base.palette, base.params]) b.destroy();
+      r.addLod(base, prim, 0.14);
       const ts = r.tier.texScale;
-      const [nrm, mr] = await Promise.all([
-        r.imageTexture(glb, srcOf(mat.normalTexture), 'rgba8unorm', ts),
-        r.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture), 'rgba8unorm', ts),
-      ]);
-      return { id, glb, base, nrm, mr, scale, hands: handFrames(glb), albSrc: srcOf(mat.pbrMetallicRoughness.baseColorTexture) };
+      const got = await Promise.allSettled([r.imageTexture(glb, nrmSrc, 'rgba8unorm', ts), r.imageTexture(glb, mrSrc, 'rgba8unorm', ts)]);
+      const bad = got.find((g) => g.status === 'rejected');
+      if (bad) {
+        // (What was made is given back: a model that failed is asked for again, model() below, and would leave it each time.)
+        for (const g of got) if (g.status === 'fulfilled') g.value.destroy();
+        for (const b of [base.srcBuf, base.IB, base.sideVB, base.lodIB !== base.IB ? base.lodIB : null]) b?.destroy();
+        throw bad.reason;
+      }
+      return { id, base, nrm: got[0].value, mr: got[1].value, scale, hands, alb };
     });
+    // (One that failed isn't kept: it would fail every monster of that kind until it aged out, an invisible slot each.)
+    m.catch(() => { if (this.models.get(id) === m) this.models.delete(id); });
     this.models.set(id, m);
     this.trim(this.models, KEEP_MODELS, (k) => this.inUse((key) => this.ids[key.split(':')[0] - 1] === k), (v) => {
       v.base.srcBuf.destroy(); v.base.IB.destroy(); v.base.sideVB.destroy(); v.nrm.destroy(); v.mr.destroy();
@@ -153,8 +178,11 @@ export class TripoSlots {
     if (s) { this.skins.delete(key); this.skins.set(key, s); return s; }
     const r = this.r, p = this.palettes[pal] || {};
     const plain = !p.hue && (p.sat ?? 1) === 1 && (p.val ?? 1) === 1 && !p.tamt;
-    s = plain ? r.imageTexture(m.glb, m.albSrc, 'rgba8unorm-srgb', r.tier.texScale) : (async () => {
-      const cv = await bakeOff(imageBytes(m.glb, m.albSrc), r.tier.texScale, p);
+    s = plain ? r.bitmapTexture(m.alb, 'rgba8unorm-srgb', r.tier.texScale) : (async () => {
+      // (From the phone's copy of the picture where there's one, the same size made, src/gfx/lean-pictures.js; from the
+      // picture itself if the copy fails.)
+      const src = await r.leanPics.forScale(m.alb, r.tier.texScale);
+      const cv = await bakeOff(src.blob, src.scale, p).catch((e) => (src.blob === m.alb ? Promise.reject(e) : bakeOff(m.alb, r.tier.texScale, p)));
       const fmt = 'rgba8unorm-srgb', mips = mipCountFor(cv.width, cv.height);
       const tex = r.device.createTexture({ size: [cv.width, cv.height], format: fmt, mipLevelCount: mips, usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT });
       r.device.queue.copyExternalImageToTexture({ source: cv }, { texture: tex, premultipliedAlpha: false }, [cv.width, cv.height]);
@@ -164,6 +192,8 @@ export class TripoSlots {
       r.device.queue.submit([enc.finish()]);
       return r.astc.pack(tex);   // (packed on a phone: src/gfx/astc.js)
     })();
+    // (Nor a skin that failed: its picture didn't decode, or its bake failed, before any texture was made.)
+    s.catch(() => { if (this.skins.get(key) === s) this.skins.delete(key); });
     this.skins.set(key, s);
     this.trim(this.skins, KEEP_SKINS, (k) => this.inUse((wk) => { const [mo, pa] = wk.split(':'); return `${this.ids[mo - 1]}:${pa}` === k; }), (t) => t.destroy());
     return s;
@@ -179,7 +209,7 @@ export class TripoSlots {
   prop(m, armIndex, left) {
     const id = this.arms[armIndex - 1], key = `${m.id}:${id}:${left ? 'L' : 'R'}`;
     let p = this.props.get(key);
-    if (p) return p;
+    if (p) { this.props.delete(key); this.props.set(key, p); return p; }
     const r = this.r, fr = m.hands[left ? 'Left' : 'Right'];
     if (!id || !fr) return Promise.resolve(null);
     p = this.weapons.then(async (W) => {
@@ -218,13 +248,21 @@ export class TripoSlots {
       const tex = await r.imageTexture(glb, glb.json.textures[mat.pbrMetallicRoughness.baseColorTexture.index].source, 'rgba8unorm-srgb', r.tier.texScale);
       const ubo = r.device.createBuffer({ size: 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
       const bg = r.device.createBindGroup({ layout: r.bglProp, entries: [{ binding: 0, resource: tex.createView() }, { binding: 1, resource: { buffer: ubo } }] });
-      return { VB: makeBuffer(r.device, v, GPUBufferUsage.VERTEX), IB: makeBuffer(r.device, indices, GPUBufferUsage.INDEX), count: indices.length, bg, ubo };
+      return { VB: makeBuffer(r.device, v, GPUBufferUsage.VERTEX), IB: makeBuffer(r.device, indices, GPUBufferUsage.INDEX), count: indices.length, bg, ubo, tex };
     }).catch((e) => { console.error('tripo arm', id, e); return null; });
     this.props.set(key, p);
+    this.trim(this.props, KEEP_PROPS, (k) => this.propInUse(k), (v) => { if (v) for (const o of [v.VB, v.IB, v.ubo, v.tex]) o.destroy(); });
     return p;
   }
 
   inUse(match) { return this.want.some((k) => k && match(k)); }
+  // (A prop's key, 'model id:weapon id:side', against what each slot wants: 'model:palette:right arm:left arm', by number.)
+  propInUse(k) {
+    return this.inUse((wk) => {
+      const [mo, , aR, aL] = wk.split(':'), who = this.ids[mo - 1];
+      return k === `${who}:${this.arms[aR - 1]}:R` || k === `${who}:${this.arms[aL - 1]}:L`;
+    });
+  }
 
   // Past the cap, the oldest that no slot wants goes.
   trim(map, keep, used, free) {

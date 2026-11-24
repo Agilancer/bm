@@ -10,6 +10,7 @@
 // as you do, and for every four levels you've gone past where you last had them along they come by a piece of middling
 // gear of their own (catchUp), so one you haven't asked for in twenty levels is still fit to stand beside you.
 import { art } from './skin.js';
+import { LESSON, hush } from './hush.js';
 import { CAPS, HG_STATS, SHIELD_PLACE, catchUp, fits, gearStats, kindsOf, score } from '../items/partygear.js';
 import { autoSpend, freshTree, treeMods } from '../core/partytree.js';
 import { makeRng } from '../items/items.js';
@@ -72,6 +73,7 @@ export class PartyUI {
       #bossFrame { position: fixed; left: 50%; top: 52px; transform: translateX(-50%); z-index: 6; width: min(560px, 82vw); display: none; pointer-events: none; font-family: Cinzel, Georgia, serif; text-align: center; }
       #bossFrame .bn { font-size: 17px; color: #f1d68a; letter-spacing: .08em; text-shadow: 0 0 4px #000, 0 1px 2px #000; }
       #bossFrame .bb { height: 12px; margin-top: 4px; background: rgba(0,0,0,.7); border: 1px solid rgba(140,115,68,.7); border-radius: 2px; overflow: hidden; }
+      #bossFrame .bs { font-size: 13px; margin-top: 7px; color: #e9a58f; letter-spacing: .1em; text-shadow: 0 0 4px #000, 0 1px 2px #000; }
       #bossFrame .bb i { display: block; height: 100%; background: linear-gradient(#d0402c, #7c1a10); transition: width .2s; }
       #raidWarn { position: fixed; left: 50%; top: 22%; transform: translateX(-50%); z-index: 7; width: min(760px, 92vw); text-align: center; pointer-events: none;
         font: 700 22px/1.3 Georgia, serif; color: #ffcf6a; text-shadow: 0 0 6px #000, 0 2px 3px #000, 0 0 14px rgba(120,30,0,.8); }
@@ -511,7 +513,16 @@ export class PartyUI {
       const cls = `pf${dead ? ' dead' : hp < 0.35 ? ' low' : ''}`;
       if (cls !== f.cls) { f.cls = cls; f.el.className = cls; }
     }
-    if (this.boss) {
+    // (A world boss's bar only while its body's in reach of the picture: from the town after a fall it isn't, and isn't dead.)
+    if (this.boss?.world) {
+      const on = snap[CHARS_START + this.boss.ids[0] * C_SIZE + C.ACTIVE] > 0.5, disp = on ? 'block' : 'none';
+      if (this.bossEl.style.display !== disp) this.bossEl.style.display = disp;
+    }
+    // (The land's tracker (#wildTrack, src/ui/wilds.js) is put below a boss's bar while there's one up: on a PC it sat across
+    // the world boss's title. src/ui/hud.css body.bossup.)
+    const up = !!this.boss && this.bossEl.style.display !== 'none';
+    if (up !== this.bossUp) { this.bossUp = up; document.body.classList.toggle('bossup', up); }
+    if (this.boss && (!this.boss.world || this.bossEl.style.display !== 'none')) {
       const bars = this.boss.ids.map((id) => { const co = CHARS_START + id * C_SIZE; return snap[co + C.ACTIVE] > 0.5 ? Math.max(0, snap[co + C.HP] / (snap[co + C.MAX_HP] || 1)) : 0; });
       for (let i = 0; i < bars.length; i++) {
         const w = Math.round(bars[i] * 1000) / 10;
@@ -529,6 +540,7 @@ export class PartyUI {
     const god = GOD_SAY.exec(text);
     if (god) { this.godSpeak(god[1], god[2], id); this.warned?.(text); return; }
     d.textContent = text;
+    if (text.length > LESSON) hush(secs);
     this.warnEl.appendChild(d);
     while (this.warnEl.children.length > 3) this.warnEl.firstChild.remove();
     setTimeout(() => { d.style.opacity = 0; setTimeout(() => d.remove(), 700); }, secs * 1000);
@@ -576,6 +588,8 @@ export class PartyUI {
     const text = WARNINGS[i] || '';
     if (!text) return;
     if (WARN_CALM.has(i) || GOD_SAY.test(text)) { this.warn(text, 5, i); return; }
+    // (A boss's opening lesson: read by itself. src/ui/hush.js.)
+    if (text.length > LESSON) hush(7);
     this.ticker.push(text);
     this.warned?.(text);
   }
@@ -584,12 +598,23 @@ export class PartyUI {
     const b = BOSSES[i];
     if (!b) return;
     this.boss = { key: b.key, ids: ids.filter((x) => x >= 0), w: [], bars: [] };
-    this.bossEl.innerHTML = `<div class="bn">${esc(b.name)}</div>` + this.boss.ids.map(() => '<div class="bb"><i></i></div>').join('');
+    // (A second bar under his with its own name, where the boss has one: Rothgar's banner. src/core/delve-redoubt.js)
+    this.bossEl.innerHTML = `<div class="bn">${esc(b.name)}</div>` + this.boss.ids.map((_, k) => (k && b.second ? `<div class="bs">${esc(b.second)}</div>` : '') + '<div class="bb"><i></i></div>').join('');
     this.boss.bars = [...this.bossEl.querySelectorAll('.bb i')];
     this.bossEl.style.display = 'block';
   }
 
   hideBoss() { this.boss = null; this.bossEl.style.display = 'none'; }
+
+  // A world boss out on the land (src/ui/wilds.js BOSS_FIGHT): its name and what it is over the one bar. Null takes it down
+  // (and only a world boss's: a delve's own bar is the delve's to take down).
+  showWorldBoss(name, slot, title) {
+    if (name == null) { if (this.boss?.world) this.hideBoss(); return; }
+    this.boss = { key: 'world', world: true, ids: [slot], w: [], bars: [] };
+    this.bossEl.innerHTML = `<div class="bn">${esc(name)}</div>` + (title ? `<div class="bs">${esc(title)}</div>` : '') + '<div class="bb"><i></i></div>';
+    this.boss.bars = [...this.bossEl.querySelectorAll('.bb i')];
+    this.bossEl.style.display = 'block';
+  }
 
   // EV.DELVE from the sim.
   onDelve(code, a, b, c) {
@@ -609,6 +634,7 @@ export class PartyUI {
       case DELVE.CLEAR: this.hideBoss(); this.warn(d.words.clear, 7); this.clearsBy[d.key] = (this.clearsBy[d.key] || 0) + 1; if (d.key === 'warrens') this.clears++; this.cleared?.(d); break;
       case DELVE.WARN: this.call(a | 0); break;
       case DELVE.BOSS: this.showBoss(a | 0, [b | 0, c | 0]); this.warn(`${BOSSES[a | 0]?.name || ''}!`, 3); break;
+      case DELVE.BARS: this.showBoss(a | 0, [b | 0, c | 0]); break;
       case DELVE.BOSS_DOWN: this.hideBoss(); this.warn(`${BOSSES[a | 0]?.name || 'The boss'} is dead!`, 5); this.bossDown?.(BOSSES[a | 0]?.key); break;
       case DELVE.WIPE: this.wipes = (this.wipes || 0) + 1; this.hideBoss(); this.ticker.clear(); this.warn(d.words.wipe, 5); break;
       default: break;
@@ -618,7 +644,7 @@ export class PartyUI {
   // The sim's word on the fight, a few times a second (src/sim/dungeon.js post).
   onWarrens(m) {
     this.warrens = { ...m, at: performance.now() };
-    if (!m.fight && this.boss) this.hideBoss();
+    if (!m.fight && this.boss && !this.boss.world) this.hideBoss();
   }
 
   // ---- kept in the save ----------------------------------------------------------------------------------------------
