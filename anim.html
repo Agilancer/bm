@@ -158,7 +158,7 @@ const LANES = {
       place(x, z) { m.position.set(x, 0, z); }, update(dt) { mixer.update(dt * k); }, gone() { scene.remove(m); } };
   },
   // You, now: src/sim/playerbody.js, as the game runs it.
-  async wizNew({ v = 0, armed = false, script, label }) {
+  async wizNew({ v = 0, armed = false, script, label, slung = true }) {
     const [g, wb, staff, skull, shield] = await Promise.all([gltf('assets/game/player/wizard.glb'), buf('assets/game/player/wizard.glb'),
       gltf('assets/game/items/amethyst_staff.glb'), gltf('assets/game/items/skull_01.glb'), gltf('assets/game/items/kite_tree.glb')]);
     const body = new PlayerBody(wb.slice(0)), d = driven(g), snap = new Float32Array(4096 + body.count * 8);
@@ -173,7 +173,7 @@ const LANES = {
         t += dt;
         if (script) now = { v: 0, ...SCRIPTS[script](t) };
         const yaw = YAW + (now.turn || 0), go = now.side ? yaw + Math.PI / 2 : yaw;
-        const s = { x, y: 0, z, yaw, pitch: 0, vx: Math.sin(go) * now.v, vz: Math.cos(go) * now.v, onGround: true, sprinting: now.v > 7 && !now.dodge, dodge: now.dodge || 0, dead: false, deadT: 0, guard: 0, surf: null, cast: null, stow: armed ? 0 : 1, staff: true, skull: true, shield: true };
+        const s = { x, y: 0, z, yaw, pitch: 0, vx: Math.sin(go) * now.v, vz: Math.cos(go) * now.v, onGround: true, sprinting: now.v > 7 && !now.dodge, dodge: now.dodge || 0, dead: false, deadT: 0, guard: 0, surf: null, cast: null, stow: armed ? 0 : 1, staff: true, skull: true, shield: slung };
         if (dt > 0) body.update(dt, s);
         const was = body.phase;
         body.write(snap, 0, true);
@@ -345,6 +345,7 @@ const SCENES = [
   { group: 'You', name: 'Sprint (8.6 m/s, Shift)', ds: 'The dash: its own gait now, leaned in, the staff trailed low.', lanes: [['wizOld', { v: 8.6 }], ['wizNew', { v: 8.6 }], ['wizNew', { v: 8.6, armed: true }]] },
   { group: 'You', name: 'Walk, jog, run, sprint', ds: 'The four gaits, each at its own pace.', lanes: [['wizNew', { v: 1.3, label: 'Walk' }], ['wizNew', { v: 3.1, label: 'Jog' }], ['wizNew', { v: 5.6, label: 'Run' }], ['wizNew', { v: 8.6, label: 'Sprint' }]] },
   { group: 'You', name: 'Setting off, a bend, a sidestep', ds: 'The lean as he gains and loses pace, the bank into a turn, and the dodge (Q) as a leap.', lanes: [['wizNew', { script: 'start_stop', armed: true, label: 'Run, sprint, stop' }], ['wizNew', { script: 'bend', label: 'Round a bend' }], ['wizNew', { script: 'dash', armed: true, label: 'Sidestep forward' }], ['wizNew', { script: 'dash_side', label: 'Sidestep left' }]] },
+  { group: 'You', name: 'His robe, no shield on his back', ds: 'The back of the tabard hangs and trails with gravity; the strap across his back stays straight.', lanes: [['wizNew', { v: 0, armed: true, slung: false, label: 'Standing' }], ['wizNew', { v: 1.3, armed: true, slung: false, label: 'Walk' }], ['wizNew', { v: 5.6, armed: true, slung: false, label: 'Run' }], ['wizNew', { script: 'start_stop', armed: true, slung: false, label: 'Run, sprint, stop' }]] },
   { group: 'You', name: 'Standing', ds: 'His weight shifts over planted feet, he breathes, his head looks about.', lanes: [['wizNew', { v: 0, armed: true, label: 'Standing, armed' }], ['wizNew', { v: 0, label: 'Standing, weapons away' }]] },
   { group: 'The other Tessariels', name: 'Run (5.6 m/s)', ds: 'The hero picked below: old beside new.', lanes: [['heroOld', { v: 5.6 }], ['heroNew', { v: 5.6 }]] },
   { group: 'The other Tessariels', name: 'Sprint (8.6 m/s)', ds: 'Keeping up with your sprint.', lanes: [['heroOld', { v: 8.6 }], ['heroNew', { v: 8.6 }]] },
@@ -378,7 +379,8 @@ async function show(i) {
   lanes = [];
   try {
     const made = [];
-    for (const [kind, opts] of SCENES[i].lanes) made.push(await LANES[kind]({ ...opts }));
+    // (?lane=2 shows only that one of the scene's lanes, close up.)
+    for (const [kind, opts] of SCENES[i].lanes.filter((_, k) => !q.has('lane') || k === +q.get('lane'))) made.push(await LANES[kind]({ ...opts }));
     if (mine !== building) { for (const l of made) l.gone(); return; }
     for (const l of made) {
       const tex = new THREE.CanvasTexture(cv); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8; tex.repeat.set(LANE * 0.9, 5);

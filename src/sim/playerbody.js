@@ -23,8 +23,15 @@
 import { C, C_PALETTE, C_PROPS } from '../core/layout.js';
 import { clamp, damp, lerp, quatAxisAngle, quatFromMat3, quatMul, quatNlerp, quatNormalize, quatRotate, quatYaw, smoothstep, wrapAngle } from '../core/math.js';
 import { ArmsRig } from './anim.js';
+import { Cloth } from './cloth.js';
 
 const TAU = Math.PI * 2;
+// The back of his robe hangs from chains of bones (tools/player/robe_rig.py) swung with gravity by src/sim/cloth.js: what
+// it keeps clear of, in metres from each bone's line (the thigh, knee and ankle, and the hand), and his joints' names.
+const ROBE = {
+  legs: [0.1, 0.085, 0.075], hand: 0.05,
+  bones: { hips: 'Pelvis', upLeg: (s) => `${s[0]}_Thigh`, leg: (s) => `${s[0]}_Calf`, foot: (s) => `${s[0]}_Foot`, toe: (s) => `${s[0]}_ToeBase`, foreArm: (s) => `${s[0]}_Forearm`, hand: (s) => `${s[0]}_Hand`, fingers: (s) => `${s[0]}_Mid2` },
+};
 // The gaits, slowest first, and the paces (m/s) over which each gives way to the next. Every loop is STEPS steps and
 // starts as the left foot lands, so they're in step at the same place in their loops.
 const GAITS = ['walk', 'jog', 'run', 'sprint'];
@@ -277,6 +284,7 @@ export class PlayerBody {
     this.props = new Float32Array(48);
     this.head = v3(); this.palmL = v3(); this.palmR = v3(); this.staffTip = v3();
     rig.poseModifier = (rot, tr) => this.build(rot, tr);
+    this.cloth = rig.extras.cloth ? new Cloth(rig, rig.extras.cloth, ROBE, 1) : null;
     this.reset();
   }
 
@@ -287,6 +295,7 @@ export class PlayerBody {
     this.yaw = 0; this.boardYaw = undefined; this.twistTo = 0; this.castShake = 0;
     this.jig = { p: [0, 0], v: [0, 0], was: null, vel: [0, 0] };
     for (const s of SIDES) { this.arms[s].now = null; this.arms[s].w = 0; }
+    this.cloth?.reset();
   }
 
   // Joints from..to (a branch, or all of them) stood in his space from their local turns and places.
@@ -761,10 +770,17 @@ export class PlayerBody {
     snap[off + C.KIND] = 0;
     snap[off + C.X] = s.x; snap[off + C.Y] = s.y; snap[off + C.Z] = s.z; snap[off + C.YAW] = s.yaw;
     snap[off + C.HP] = 1; snap[off + C.MAX_HP] = 1;
-    if (!shown) return;
+    if (!shown) { this.cloth?.reset(); return; }
     quatYaw(rig.rootQ, 0, this.yaw);
     rig.rootT[0] = s.x; rig.rootT[1] = s.y; rig.rootT[2] = s.z;
     rig.solve(rig.clips.walk, 0, 1, snap, off + C_PALETTE);
+    if (this.cloth) {
+      // (Put somewhere else at a stroke, a door or a portal: the robe starts again hanging, not flung across the gap.)
+      const c = this.clothAt ??= new Float32Array([s.x, s.y, s.z]);
+      if (Math.hypot(s.x - c[0], s.y - c[1], s.z - c[2]) > 1.5) this.cloth.reset();
+      c[0] = s.x; c[1] = s.y; c[2] = s.z;
+      this.cloth.step(this.dt || 0, snap, off + C_PALETTE, 0, s.y);
+    }
     this.hold(snap, off + C_PROPS);
   }
 
