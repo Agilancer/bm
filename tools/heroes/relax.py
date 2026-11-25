@@ -29,14 +29,15 @@ import backpin         # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(HERE))
 POSES = os.path.join(ROOT, "tools", "build", "h3", "pose", "census")
-SCENES = "stand,gesture:cheer,blow,blow2"
+SCENES = "stand,gesture:cheer,blow,blow2,run,clip:Crouch_Idle_Loop@0.5"
 TEAR = 2.0        # an edge drawn out this many times its length marks where to relax
 SHARD = 3.0       # past this it's a shard (what's counted)
-RINGS = 10        # rings of neighbours round a torn edge that are relaxed
+RINGS = 14        # rings of neighbours round a torn edge that are relaxed
 ITERS = (60, 160, 400)
 ANCHOR = 4.0
 NEAR = 0.03
-PIN_HOLD = 0.5    # backpin's hold past which a vertex under a back shield is left as it is
+PIN_HOLD = 0.8    # backpin's hold past which a vertex under a back shield is left as it is
+NO_PIN = {"rogue_m1", "rogue_m2", "rogue_m3", "rogue_m4", "ninja_m1", "ninja_m2", "ninja_m3"}   # their cloaks are not pinned under the shield (r3_revert.py): the pin tore them worse than main
 
 
 def poses(body_id):
@@ -50,7 +51,7 @@ def poses(body_id):
 
 
 def kind_of(scene):
-    return "stand" if scene == "stand" else "cheer" if "cheer" in scene else "fight"
+    return "stand" if scene == "stand" else "cheer" if "cheer" in scene else "move" if scene == "run" or scene.startswith("clip:") else "fight"
 
 
 def run_body(body_id, dry=False):
@@ -60,7 +61,7 @@ def run_body(body_id, dry=False):
     plates = [p for p in pieces if p["kind"] in ("plate", "flex")]
     # (The cloth backpin.py pins under a back shield stays pinned: what it holds firmly is held here too, and only the
     # cloth round it eased, so the shield still rides over the cloak.)
-    pinned = backpin.pin_strength(body_id)
+    pinned = None if body_id in NO_PIN else backpin.pin_strength(body_id)
     tree = cKDTree(np.concatenate([A["POSITION"][p["vstart"]:p["vstart"] + p["vcount"]] for p in plates])) if plates else None
     done = []
     for k, p in enumerate(pieces):
@@ -76,7 +77,7 @@ def run_body(body_id, dry=False):
 
         def score(J, W):
             B.J[sl] = J; B.W[sl] = W
-            out = {"stand": 0, "cheer": 0, "fight": 0}
+            out = {"stand": 0, "cheer": 0, "fight": 0, "move": 0}
             mark = np.zeros(vn, bool)
             for fr in frames:
                 X = B.skin(fr)[sl]
@@ -127,7 +128,8 @@ def run_body(body_id, dry=False):
             order = np.argsort(-full2, axis=1)[:, :4]
             w4 = np.take_along_axis(full2, order, 1); w4 /= np.maximum(w4.sum(1, keepdims=True), 1e-9)
             got, _ = score(order.astype(J0.dtype), w4.astype(np.float32))
-            better = all(got[x] <= base[x] for x in base) and sum(got.values()) < 0.9 * sum(base.values())
+            # (No kind of pose worse; or a quarter fewer in all with standing as good as it was, give or take a couple.)
+            better = (all(got[x] <= base[x] for x in base) and sum(got.values()) < 0.9 * sum(base.values())) or                      (sum(got.values()) < 0.75 * sum(base.values()) and got["stand"] <= base["stand"] + 2)
             if better and (best is None or sum(got.values()) < sum(best[0].values())):
                 best = (got, order, w4, iters)
         B.J[sl] = J0; B.W[sl] = W0

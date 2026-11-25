@@ -24,11 +24,11 @@ ROSTER = json.load(open(os.path.join(ROOT, "assets", "game", "heroes", "roster.j
 DIST = {"archer": 8, "bard": 6, "boomerang": 5.5, "lancer": 3.4}
 # strip, what it is, the bearings it's seen from (0: from before it), and the label under each picture.
 STRIPS = [
-    # (lead: the dust of the practice dead swept away from before the last body is let settle first.)
-    ("turn", {"foes": 0, "lead": 420}, [0, 45, 90, 180, 270, 315], "at ease"),
     ("run", {"clip": "Jog_Fwd_Loop", "at": 0.25, "foes": 0}, [270], "run"),
     ("cheer", {"clip": "LP_cheer", "at": 0.5, "foes": 0}, [20], "arms up"),
     ("crouch", {"clip": "Crouch_Idle_Loop", "at": 0.5, "foes": 0}, [50], "crouch"),
+    # (Walked round at ease after the run, the cheer and the crouch: the dust of the last body's practice dead has settled by then.)
+    ("turn", {"foes": 0, "lead": 900}, [0, 45, 90, 180, 270, 315], "at ease"),
     # (tail: the dust of the dead that was stood up for it is let settle, or it hangs before the next body's first picture.)
     ("arms", {"stance": True, "foes": 1, "lead": 150, "up": 1.55, "tail": 300}, [320, 80, 200], "armed"),
 ]
@@ -39,7 +39,8 @@ CELL = (430, 40, 850, 700)
 NECK_STRIPS = [
     ("nk", {"foes": 0, "lead": 40}, [0, 60, 120, 180, 240, 300], "at ease", 1.6),
     ("nklook", {"clip": "LP_look_around", "at": 0.3, "foes": 0}, [0, 90, 270], "head turned", 1.6),
-    ("nkup", {"clip": "LP_cheer", "at": 0.5, "foes": 0}, [35, 325], "arms up", 1.9),
+    # (From further off and higher, so the whole raised arm is in the picture, and once from the side for the armpit.)
+    ("nkup", {"clip": "LP_cheer", "at": 0.5, "foes": 0, "look": 0.92}, [35, 90, 325], "arms up", 2.9),
 ]
 NECK_CELL = (340, 0, 940, 720)
 
@@ -51,8 +52,10 @@ def plan_neck():
         for h in ROSTER[n:n + 16]:
             for name, o, turn, _, r in NECK_STRIPS:
                 H = h["height"]
+                o = dict(o); look = o.pop("look", 0.78)
+                # (The eye stands off by the body's height: a two-metre knight's shoulders filled the picture at an archer's distance.)
                 strips.append({"name": f"N_{h['id']}_{name}", "body": h["id"], "turn": turn, "frames": len(turn), "every": 2, "dist": 2.4, "cam": [0, 6, 2],
-                               "r": r, "up": round(H * 0.86, 3), "lookY": round(H * 0.78, 3), "fov": 26, "tail": 6, **o})
+                               "r": round(r * H / 1.7, 3), "up": round(H * (look + 0.08), 3), "lookY": round(H * look, 3), "fov": 26, "tail": 6, **o})
         path = os.path.join(BUILD, f"review_necks_{n // 16}.json")
         json.dump({"name": f"necks{n // 16}", "size": [1280, 720], "hour": 13, "at": [80, -28], "gfx": "high", "bodies": [h["id"] for h in ROSTER[n:n + 16]], "strips": strips}, open(path, "w"), indent=1)
         print(path, len(strips), "strips")
@@ -69,18 +72,18 @@ def necks(only):
             for k, deg in enumerate(turn):
                 f = os.path.join(SHOTS, f"mv_N_{i}_{name}_{k:02d}.png")
                 if os.path.exists(f):
-                    cells.append((Image.open(f).convert("RGB").crop(NECK_CELL).resize((300, 360)), f"{label} {deg}"))
+                    cells.append((Image.open(f).convert("RGB").crop(NECK_CELL).resize((400, 480)), f"{label} {deg}"))
         if not cells:
             continue
         w, hgt = cells[0][0].size
-        cols = 11
-        out = Image.new("RGB", (cols * w, hgt + 22), (16, 14, 12))
+        cols = 6
+        out = Image.new("RGB", (cols * w, 2 * hgt + 22), (16, 14, 12))
         d = ImageDraw.Draw(out)
         d.text((6, 5), f"{i}   {h['cls']} ({h['sex']})   palette: {h['palette']}   height {h['height']} m", fill=(230, 215, 170))
         for n, (im, label) in enumerate(cells):
-            x = n * w
-            out.paste(im, (x, 22))
-            d.text((x + 5, 26), label, fill=(255, 240, 160))
+            x, y = (n % cols) * w, 22 + (n // cols) * hgt
+            out.paste(im, (x, y))
+            d.text((x + 5, y + 4), label, fill=(255, 240, 160))
         path = os.path.join(SHOTS, f"neck_{i}.png")
         out.save(path)
         every.append(path)

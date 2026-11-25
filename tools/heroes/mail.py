@@ -340,9 +340,13 @@ def coif(B):
     s3, nk, hd = B.P("spine_03"), B.P("neck_01"), B.P("Head")
     up = unit(hd - nk)
     pts = B.pts_on(("spine_03", "neck_01", "Head"), kinds=("plate", "flex"))
-    stops = [(s3 + (nk - s3) * 0.45, 0.11, {B.j("spine_03"): 1.0}, False),
-             (s3 + (nk - s3) * 0.8, 0.09, {B.j("spine_03"): 0.5, B.j("neck_01"): 0.5}, False),
-             (nk + up * 0.03 * u, 0.068, {B.j("neck_01"): 1.0}, False),
+    # (An aventail: from the throat it spreads down and out over the collar bones, wider to the shoulders than fore and
+    # aft, and where a gorget or a collar is in its way it's held inside it as before. As a pipe the same width from the
+    # helm to the breastplate, an open collar's neck was a chimney with a helm on it: lancer_f1, dragoon_f1 and f2,
+    # boomerang_f3, the critics' second review, 2026-11-20.)
+    stops = [(s3 + (nk - s3) * 0.45, 0.145, {B.j("spine_03"): 1.0}, False),
+             (s3 + (nk - s3) * 0.8, 0.112, {B.j("spine_03"): 0.6, B.j("neck_01"): 0.4}, False),
+             (nk + up * 0.03 * u, 0.078, {B.j("neck_01"): 1.0}, False),
              (nk + (hd - nk) * 0.7, 0.07, {B.j("neck_01"): 0.4, B.j("Head"): 0.6}, False),
              (hd + up * 0.01 * u, 0.066, {B.j("Head"): 1.0}, True),
              (hd + up * 0.05 * u, 0.05, {B.j("Head"): 1.0}, True)]
@@ -366,6 +370,12 @@ def coif(B):
         prev_h = at
         sec, n = section(pts, c, up, 0.03 * u, 0.16 * u)
         r = np.full(SIDES, r0 * u)
+        if i < 2:
+            sa, sb = frame(up)
+            ang = np.arange(SIDES) / SIDES * 2 * np.pi - np.pi
+            side = np.abs((np.outer(np.cos(ang), sa) + np.outer(np.sin(ang), sb))[:, 0])     # (how far to a shoulder each sector looks)
+            # (Fore and aft it lies flat on the collar bones: as far out before as to the sides it was a bib.)
+            r = r * ((0.66 if i == 0 else 0.76) + (0.5 if i == 0 else 0.3) * side)
         have = ~np.isnan(sec)
         # (Well inside a helm: its shell is thin and close, and the dark of the coif must never come through it.)
         r[have] = np.minimum(r[have], np.maximum(sec[have] * (0.78 if deep else SHRINK) - INSET * u, r0 * u * 0.5))
@@ -373,7 +383,7 @@ def coif(B):
         # (Inside a helm, no wider anywhere than three quarters of its narrowest: a closed visor has few points to go by.)
         if deep and have.any():
             r = np.minimum(r, np.nanmin(sec) * 0.75)
-        rings.append({"c": c, "ax": up, "r": np.clip(r, 0.025 * u, 0.16 * u), "w": w, "deep": dk})
+        rings.append({"c": c, "ax": up, "r": np.clip(r, 0.025 * u, 0.19 * u), "w": w, "deep": dk})
     if os.environ.get("MAIL_DEBUG"):
         print("  coif deep sectors by ring:", [int(r["deep"].sum()) for r in rings], "rim (cm from neck_01):",
               " ".join("--" if np.isnan(x) else f"{x * 100:.0f}" for x in rim), "head at", f"{float((hd - nk) @ up) * 100:.0f}")

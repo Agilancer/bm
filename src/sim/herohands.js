@@ -40,9 +40,10 @@ export const SHAPES = {
   // On the bowstring (three under the nock, hooked at the middle joints), the little finger and the thumb tucked.
   hook: S([[0.35, 1.15, 0.75], [0.35, 1.2, 0.78], [0.4, 1.15, 0.72], [1.1, 1.2, 0.8]], [0.02, 0, -0.02, -0.06], [0.1, 0.5, 0.15, 0.12]),
   // On a lute's neck: fingers arched down onto the strings, the thumb behind the neck.
-  chord: S([[0.6, 0.95, 0.55], [0.75, 1.0, 0.5], [0.8, 0.95, 0.45], [0.7, 0.85, 0.4]], [0.1, 0.02, -0.06, -0.14], [0.9, 0.2, 0.25, 0.2]),
+  // (Bent well over: nearer straight, the fretting hand lay beside the neck like a rake, the critics' second review.)
+  chord: S([[0.78, 1.12, 0.66], [0.92, 1.16, 0.62], [0.96, 1.1, 0.56], [0.86, 1.0, 0.5]], [0.1, 0.02, -0.06, -0.14], [0.9, 0.2, 0.25, 0.2]),
   // Holding a pick: the thumb and the bent index together, the others easy.
-  pick: S([[0.85, 1.05, 0.6], [0.45, 0.55, 0.3], [0.5, 0.6, 0.32], [0.55, 0.62, 0.34]], [0, 0.04, 0, -0.06], [1.66, 0.95, 0.85, 0.04]),
+  pick: S([[0.85, 1.05, 0.6], [0.7, 0.86, 0.5], [0.78, 0.9, 0.52], [0.85, 0.92, 0.54]], [0, 0.04, 0, -0.06], [1.66, 0.95, 0.85, 0.04]),
   // A hand gone slack (a fall, the dead): looser than at rest.
   limp: S([[0.3, 0.42, 0.28], [0.36, 0.48, 0.3], [0.42, 0.5, 0.32], [0.48, 0.52, 0.34]], [0.02, 0, -0.03, -0.06], [0.3, 0.1, 0.25, 0.25]),
 };

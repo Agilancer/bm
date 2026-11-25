@@ -140,8 +140,10 @@ const MAUL_GUARD = { h: [0.26, -0.12, 0.3], a: [0.74, -0.14, 0.66], tw: -0.18, l
 const MAUL_SWINGS = {
   // Overhead: lifted over the right shoulder, the head dropped behind it, then over the top and down through the line.
   smash: [
-    { p: 0.45, e: 'io', h: [0.18, 0.0, 0.05], a: [-0.1, 0.12, 0.99], tw: -0.3, ln: -0.04, pr: [0.1, 0.75, -0.3], pl: [0.3, -0.5, -0.6], g: -0.12 },
-    { p: 0.8, e: 'out', h: [0.06, 0.05, -0.16], a: [-0.68, 0.18, 0.71], tw: -0.38, ln: -0.14, pr: [0.35, 0.8, 0.25], pl: [0.6, -0.45, -0.3], g: -0.11 },
+    // (The lift goes up past his right ear, the fists a forearm before the helm and then over it: stood upright a hand
+    // before his chest the haft crossed the visor, and the blow had no load to it, the critics' second review, 2026-11-20.)
+    { p: 0.45, e: 'io', h: [0.31, 0.08, -0.02], a: [0.12, 0.22, 0.97], tw: -0.3, ln: -0.04, pr: [0.1, 0.8, -0.3], pl: [0.3, -0.5, -0.6], g: -0.12 },
+    { p: 0.8, e: 'out', h: [0.1, 0.1, -0.36], a: [-0.74, 0.2, 0.64], tw: -0.4, ln: -0.16, pr: [0.35, 0.85, 0.3], pl: [0.6, -0.45, -0.2], g: -0.11 },
     { p: 1, e: 'in', h: [0.34, -0.16, 0.2], a: [0.95, -0.08, -0.25], tw: 0.18, ln: 0.28, pr: [-0.2, 0.55, -0.8], pl: [-0.1, -0.6, -0.8], g: -0.11 },
     { p: 1.35, e: 'out', h: [0.28, -0.2, 0.26], a: [0.75, -0.15, -0.62], tw: 0.22, ln: 0.32, pr: [-0.4, 0.5, -0.75], pl: [-0.2, -0.6, -0.75], g: -0.11 },
   ],
@@ -162,8 +164,8 @@ const MAUL_SWINGS = {
 // Driven into the ground at his feet (a paladin's consecration): up over his shoulder as for the overhead, and down,
 // the head into the earth a stride before him, the body bowed over it, and held there.
 MAUL_SWINGS.ground = [
-  { p: 0.45, e: 'io', h: [0.18, 0.0, 0.05], a: [-0.1, 0.12, 0.99], tw: -0.3, ln: -0.04, pr: [0.1, 0.75, -0.3], pl: [0.3, -0.5, -0.6], g: -0.12 },
-  { p: 0.8, e: 'out', h: [0.06, 0.05, -0.16], a: [-0.68, 0.18, 0.71], tw: -0.38, ln: -0.14, pr: [0.35, 0.8, 0.25], pl: [0.6, -0.45, -0.3], g: -0.11 },
+  { p: 0.45, e: 'io', h: [0.31, 0.08, -0.02], a: [0.12, 0.22, 0.97], tw: -0.3, ln: -0.04, pr: [0.1, 0.8, -0.3], pl: [0.3, -0.5, -0.6], g: -0.12 },
+  { p: 0.8, e: 'out', h: [0.1, 0.1, -0.36], a: [-0.74, 0.2, 0.64], tw: -0.4, ln: -0.16, pr: [0.35, 0.85, 0.3], pl: [0.6, -0.45, -0.2], g: -0.11 },
   { p: 1, e: 'in', h: [0.3, -0.15, 0.27], a: [0.55, -0.08, -0.83], tw: 0.1, ln: 0.3, pr: [-0.3, 0.55, -0.75], pl: [-0.2, -0.6, -0.75], g: -0.11 },
   { p: 1.5, e: 'out', h: [0.29, -0.15, 0.29], a: [0.52, -0.08, -0.85], tw: 0.1, ln: 0.32, pr: [-0.3, 0.55, -0.75], pl: [-0.2, -0.6, -0.75], g: -0.11 },
 ];
@@ -175,7 +177,7 @@ const MAUL_HELD = {
   sky: { h: [0.08, -0.12, -0.28], a: [0.12, -0.08, 0.99], tw: -0.1, ln: -0.08, pr: [0.1, 0.9, -0.1], pl: [0.1, -0.9, -0.2], g: -0.13 },
   level: { h: [0.3, -0.14, 0.24], a: [0.98, -0.12, 0.12], tw: 0, ln: 0.12, pr: [-0.5, 0.6, -0.6], pl: [-0.3, -0.6, -0.75], g: -0.15 },
   charge: { h: [0.26, -0.12, 0.32], a: [0.9, -0.1, 0.42], tw: -0.12, ln: 0.18, pr: [-0.6, 0.5, -0.6], pl: [-0.3, -0.6, -0.75], g: -0.15 },
-  present: { h: [0.24, -0.17, 0.22], a: [0.25, -0.05, 0.97], tw: -0.05, ln: 0.02, pr: [-0.5, 0.6, -0.6], pl: [-0.3, -0.6, -0.75], g: -0.12 },
+  present: { h: [0.37, -0.17, 0.2], a: [0.34, -0.05, 0.94], tw: -0.05, ln: 0.02, pr: [-0.5, 0.6, -0.6], pl: [-0.3, -0.6, -0.75], g: -0.12 },
 };
 // A maul's held way (MAUL_HELD) over where it is, k of the way.
 function maulMix(o, H, k) {
@@ -410,7 +412,10 @@ export class Hero extends Knight {
       this.stowHold = hold;
       if (long) {
         // (Its middle at the middle of the back; a lance, twice his height, as low as keeps its butt off the ground.)
-        const y = norm([-0.26, 0.96, -0.06]), up = M.kind === 'bow' ? 0 : (M.reach - M.butt) / 2;
+        // (A great mace is canted well over, its head out past his right shoulder: nearly upright, the spiked ball sat
+        // behind his helm and read as his head from behind, the critics' third review.)
+        const heavy = this.style === 'two_hand';
+        const y = norm(heavy ? [-0.64, 0.76, -0.06] : [-0.26, 0.96, -0.06]), up = M.kind === 'bow' ? 0 : (M.reach - M.butt) / 2;
         const gy = Math.max(hold.y(sj) - 0.1 * u - y[1] * up, 0.3 + (M.butt || 0) * y[1]), over = (gy - (hold.y(sj) - 0.1 * u)) / y[1];
         // (A lance, with its bell of a vamplate, stands at his right shoulder blade, for when the board isn't on his back
         // with it: in his hand or under his feet. With the board there it goes under it: lanceSlot.)
