@@ -33,7 +33,9 @@ layered:
   next ~48 m of the route on half-metre cells, using the live world, so it never cuts through a wall or walks
   off a ledge.
 - The coarse A\* and the walk out both weigh a metre by where it is (`WAY_COST`): a street's 1, the alleys and yards on the
-  ground 2.5, a floor (a house, a stair, the wall-walk, a roof) 4, inside the city's wall; the castle and the plain 1. So
+  ground 2.5, a floor (a house, a stair, the wall-walk, a roof) 4, inside the city's wall. Outside it, on the plain under
+  the Sill, a metre of the land's own roads (the Throne Road down to the Drawbridge Gate) costs 1 and one off them 1.5
+  (`plain`): from the Sill to the gate 91% on the road, was 13%; the gate to the Redoubt 58%, was 4%. The castle's floors 1. So
   a way keeps to the King's Mile and its loops and leaves them nearest to where it's going (`tools/paths/streets.mjs`:
   95% on the streets over eight trips across the city, from 88%; Chainmarket to the Pennyless' Purse from 0%).
 - `src/ui/autobrain.js` `eastWalk`:

@@ -814,7 +814,9 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
     Low Road, the High Loop or the Corpse Quay costs a metre; a metre of the alleys between the blocks costs two and a
     half, and one through a house, up a stair or along the wall-walk four. It used to take whatever was shortest: from
     Chainmarket to the Pennyless' Purse, 360 m of back alleys and not a metre of street. Now 95% of its way across the
-    city is on a street (`node tools/paths/streets.mjs`, `tests/east-streets.test.mjs`).
+    city is on a street (`node tools/paths/streets.mjs`, `tests/east-streets.test.mjs`). Outside the wall, on the plain
+    under the Sill, it keeps to the Throne Road down to the Drawbridge Gate (`plain`: a metre off the land's roads costs
+    1.5 there): it used to cut straight across the plain, 13% of the way on the road, now 91%.
   - **Not back into what it ran from** (`DREAD_FOR`, `DREAD_R`). Something it can't beat yet, which it runs from, is kept
     32 m clear of, where it was last seen, for 45 s, and its way is worked out again round it. It used to run, then walk
     straight back the way it had been going, into its sight again: two minutes to and fro at the east edge of the town

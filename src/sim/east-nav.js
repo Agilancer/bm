@@ -21,7 +21,11 @@
 // along back alleys and over the wall-walk, door to door. (The castle's all floors and stairs, and is walked as it was.)
 import { PHOBOS } from '../core/phobos-data.js';
 import { cityIn } from '../core/east.js';
-export const WAY_COST = { street: 1, ground: 2.5, floor: 4 };
+import { allWays } from '../core/roads.js';
+// (And out on the plain under the Sill, outside the wall, the land's own roads: the Throne Road down from the Sill to the
+// Drawbridge Gate. A metre of the plain off a road costs `plain`: it used to cut straight across, off the road it winds down
+// by. A floor out there, the castle's, costs a metre as it did.)
+export const WAY_COST = { street: 1, ground: 2.5, floor: 4, plain: 1.5 };
 export const CELL = 0.5, X0 = 9000, Z0 = -860, X1 = 11720, Z1 = 860, TILE = 4;
 // (RISE: the land's own slope never stops the sim's feet, steep as it is: only a deck more than a step over them, or a box
 // they'd walk into. So a cell's climb is let up to RISE, dear past STEEP; a drop of more than DROP isn't taken.)
@@ -97,12 +101,18 @@ export class EastNav {
       for (let h = 0; h < q.length; h++) { const n = q[h]; for (let e = this.eStart[n]; e < this.eStart[n + 1]; e++) { const m = this.eTo[e]; if (!this.live[m]) { this.live[m] = 1; q.push(m); } } } }
     this.tmp = [0, 0, 0];
     // (Which TILE squares a street runs through, to within its width: the same raster for the long way and the walk out.)
-    // (0: out of the city; 1: in it, off the streets; 2: on one.)
+    // (0: out of the city; 1: in it, off the streets; 2: on one; 3: out of it, on one of the land's roads.)
     this.street = new Uint8Array(TW * TH);
     for (let k = 0; k < TW * TH; k++) if (cityIn(X0 + (k % TW + 0.5) * TILE, Z0 + (((k / TW) | 0) + 0.5) * TILE) < 0.97) this.street[k] = 1;
     for (const st of PHOBOS.streets) for (let i = 0; i + 1 < st.pts.length; i++) {
       const [ax, az] = st.pts[i], [bx, bz] = st.pts[i + 1], L = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / L, uz = (bz - az) / L, w = st.w + 0.5;
       for (let t = 0; t <= L; t += 1) for (let o = -w; o <= w; o += 1) { const k = this.tileOf(ax + ux * t - uz * o, az + uz * t + ux * o); if (k >= 0 && this.street[k]) this.street[k] = 2; }
+    }
+    for (const way of allWays()) for (let i = 0; i + 1 < way.pts.length; i++) {
+      const [ax, az] = way.pts[i], [bx, bz] = way.pts[i + 1];
+      if (Math.max(ax, bx) < X0 || Math.min(ax, bx) > X1 || Math.max(az, bz) < Z0 || Math.min(az, bz) > Z1) continue;
+      const L = Math.hypot(bx - ax, bz - az) || 1, ux = (bx - ax) / L, uz = (bz - az) / L, w = way.w + 1;
+      for (let t = 0; t <= L; t += 1) for (let o = -w; o <= w; o += 1) { const k = this.tileOf(ax + ux * t - uz * o, az + uz * t + ux * o); if (k >= 0 && !this.street[k]) this.street[k] = 3; }
     }
     // (Each node's cost a metre, worked out the first time a search comes to it: 0 not yet.)
     this.wcost = new Float32Array(nodes);
@@ -111,8 +121,10 @@ export class EastNav {
   // What a metre at (x, z), at height y, costs (WAY_COST): a street's, the ground's off one, or a floor's. Out of the city, a metre.
   wayCost(x, z, y, onLand) {
     const k = this.tileOf(x, z), s = k >= 0 ? this.street[k] : 0;
-    if (!s) return 1;
-    if (!(onLand ?? y <= this.world.landAt(x, z) + 0.05)) return WAY_COST.floor;
+    if (s === 3) return 1;
+    const land = onLand ?? y <= this.world.landAt(x, z) + 0.05;
+    if (!s) return land ? WAY_COST.plain : 1;
+    if (!land) return WAY_COST.floor;
     return s === 2 ? WAY_COST.street : WAY_COST.ground;
   }
   costOf(n) { return this.wcost[n] || (this.wcost[n] = this.wayCost(this.x[n], this.z[n], this.y[n])); }

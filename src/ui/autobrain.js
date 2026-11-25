@@ -2501,7 +2501,12 @@ export class Brain {
         const job = this.questJob(id, m, LEVEL_OF[id]);
         if (job) jobs.push(job);
       }
-      if (jobs.length) return jobs.reduce((a, b) => (this.jobDist(a, m) <= this.jobDist(b, m) ? a : b));
+      // (Keeping to the one it's at unless another's a good deal nearer: leaving Fennick, two yards about as far off, it
+      // turned from one to the other and back as it walked.)
+      if (jobs.length) {
+        const best = jobs.reduce((a, b) => (this.jobDist(a, m) <= this.jobDist(b, m) ? a : b)), cur = jobs.find((j) => j.why === this.job?.why && j.kind === this.job?.kind);
+        return cur && this.jobDist(best, m) > this.jobDist(cur, m) * 0.7 ? cur : best;
+      }
       const offer = this.offerJob(m, FIRST_VISIT);
       if (offer) return offer;
       // (Just through the door, with its word with Wenna still to have and her not placed yet for a second or two: it keeps
