@@ -96,6 +96,13 @@ const BOLD_LEVELS = 2;
 const TOWN_CHEST = 9, TOWN_CHEST_GAP = 90;
 // How long it stands at each spot of a hunt's round before it goes on to the next, seconds (hunt).
 const PATROL_LOOK = 1.2;
+// A seal that hasn't woken, this near: a step onto it on the way (choose); once set out for it, kept to this far.
+const SEAL_NEAR = 90, SEAL_KEEP = 140;
+// Flipping between the same two jobs (plan): how long it keeps to the one it has, seconds.
+const FLIP_HOLD = 20;
+// Out on the first visit, the pack's free cells under which it leaves gear lying (loot; a shield takes six): never full enough to send it
+// home to sell (choose: on the visit, three or fewer).
+const VISIT_LIGHT = 10;
 // But never one of Bellmourn's own: the chests in the town's houses are its people's, and it isn't a thief (the owner: it
 // went round robbing every house in the town). All of them stand inside the town's box; the woods' are out past it, and
 // the catacombs' are under it.
@@ -2206,9 +2213,13 @@ export class Brain {
     // (On the way somewhere, not what's behind it: a turn about for a drop five metres back looked like a bot's twitch,
     // 8 to 23 in ten minutes on the runs. Ahead of it, or right by it, as before.)
     const J = !hunting && this.job, w = J && (J.kind === 'talk' ? this.o.townUI.whereOf(J.who) : Number.isFinite(J.x) ? J : null);
+    // (Out on the first visit with the pack all but full, it travels light: gear's left lying, coin and the like taken. A full
+    // pack sends it home through the seal to sell, and with Fennick's three yards to clear as well it filled, went home with
+    // the Redoubt still to do, and was drawn into the town's work there.)
+    const light = this.freeCells() < VISIT_LIGHT && this.firstVisit(m);
     for (const d of g.drops.list) {
       if (Math.abs(d.y - m.y) > 3 || this.skipping(d) || this.kept(m, d.x, d.z)) continue;
-      if (!d.auto && !d.coins && (!this.allow('aiLoot') || !this.roomFor(d.item))) continue;
+      if (!d.auto && !d.coins && (light || !this.allow('aiLoot') || !this.roomFor(d.item))) continue;
       const k = dist(m.x, m.z, d.x, d.z);
       if (w && k > 5 && (d.x - m.x) * (w.x - m.x) + (d.z - m.z) * (w.z - m.z) < 0) continue;
       if (k < bd) { bd = k; best = d; }
@@ -2346,6 +2357,18 @@ export class Brain {
     // (By a lair on the way: see viaLair.)
     job = this.viaLair(m, job) || job;
     const key = job ? `${job.kind}:${job.why}:${job.who ?? ''}:${job.x ?? ''}` : '';
+    // (Flipping between the same two jobs, back and forth, a few seconds each: the way to each leads it to where the other's
+    // chosen. It keeps to the one it has for FLIP_HOLD seconds. A seal and a hunt's yard inside the Drawbridge Gate held it
+    // fifteen minutes so: SEAL_KEEP.)
+    const F = this.flips ||= [];
+    if (key !== prev && prev && this.job && job) {
+      F.push({ from: prev, to: key, t: this.t });
+      while (F.length && this.t - F[0].t > 20) F.shift();
+      const back = F.filter((f) => (f.from === key && f.to === prev) || (f.from === prev && f.to === key)).length;
+      if (back >= 3 && !this.fighting) { this.flipHold = { key: prev, until: this.t + FLIP_HOLD }; F.length = 0; }
+    }
+    const H = this.flipHold;
+    if (H && this.t < H.until && H.key === prev && this.job && key !== prev && job?.kind !== 'boss' && !/^(sell|town|bed|mend)$/.test(job?.why || '')) return;
     if (key !== prev || !this.job) { this.job = job; this.jobKey = key; this.patrol = null; this.jobT = this.t; }
     else if (job && this.job) { delete this.job.quest; delete this.job.offer; Object.assign(this.job, job); }
   }
@@ -2409,7 +2432,11 @@ export class Brain {
     const lands = this.o.lands;
     for (const sl of SEALS) {
       if (lands.awake.has(sl.key) || this.skipping(`seal:${sl.key}`)) continue;
-      if (dist(m.x, m.z, sl.x, sl.z) < 90) { if (!this.job || this.job.why !== `seal:${sl.key}`) this.sealSince = this.t; if (this.t - (this.sealSince || this.t) > 40) { this.giveUp(`seal:${sl.key}`, 900); break; } return { kind: 'go', why: `seal:${sl.key}`, x: sl.x, z: sl.z, r: 1.6, say: `Waking the seal of ${sl.name}.` }; }
+      // (Once set out for it, kept to out to SEAL_KEEP: its way to the Barbican's seal first goes round the gatehouse, out past
+      // 90 m, and it turned to its other work, whose way brought it back inside 90 m, and turned again: fifteen minutes to
+      // and fro inside the Drawbridge Gate.)
+      const on = this.job?.why === `seal:${sl.key}`;
+      if (dist(m.x, m.z, sl.x, sl.z) < (on ? SEAL_KEEP : SEAL_NEAR)) { if (!on) this.sealSince = this.t; if (this.t - (this.sealSince || this.t) > 40) { this.giveUp(`seal:${sl.key}`, 900); break; } return { kind: 'go', why: `seal:${sl.key}`, x: sl.x, z: sl.z, r: 1.6, say: `Waking the seal of ${sl.name}.` }; }
     }
     // A full pack, or a deal of things to sell: to the town.
     const junk = this.allow('aiSell') ? [...this.junk(), ...(this.o.game.party?.bagJunk?.() || [])] : [];
@@ -2464,8 +2491,9 @@ export class Brain {
     // and her offers taken as they come (she's there on the Sill, by the door home). And back home through the door, the
     // word with Lisandra before the town's own errands and offers.
     if (visiting) {
-      // (The work first, nearest first, then the words: Fennick's three yards down in the city are each told to Wenna up on
-      // the Sill, and it walked up to her after each, five minutes there and back, with the next yard a street away.)
+      // (Whichever's nearest, the work or a word: Fennick's three yards down in the city are each told to Wenna up on the
+      // Sill, and taken in order it walked up to her after each, five minutes there and back, with the next yard a street
+      // away. All the work first, it went from the Gibbet Field down into the city, back up for the carrion, and down again.)
       const jobs = [];
       for (const id of FIRST_VISIT) {
         const s = Q.state(id);
@@ -2473,9 +2501,7 @@ export class Brain {
         const job = this.questJob(id, m, LEVEL_OF[id]);
         if (job) jobs.push(job);
       }
-      const work = jobs.filter((j) => j.kind !== 'talk');
-      if (work.length) return work.reduce((a, b) => (this.jobDist(a, m) <= this.jobDist(b, m) ? a : b));
-      if (jobs.length) return jobs[0];
+      if (jobs.length) return jobs.reduce((a, b) => (this.jobDist(a, m) <= this.jobDist(b, m) ? a : b));
       const offer = this.offerJob(m, FIRST_VISIT);
       if (offer) return offer;
       // (Just through the door, with its word with Wenna still to have and her not placed yet for a second or two: it keeps
@@ -2835,6 +2861,10 @@ export class Brain {
   jobDist(job, m) {
     if (job.kind === 'talk') { const w = this.o.townUI.whereOf(job.who); return w ? dist(m.x, m.z, w.x, w.z) : 1e9; }
     if (job.spots?.length) return Math.min(...job.spots.map(([x, z]) => dist(m.x, m.z, x, z)));
+    // (A delve's: as far as its portal, unless it's down it already. The Redoubt under the Sill counted as no way off at all,
+    // and on the first visit went before everything near by.)
+    const dv = job.delve && !inDungeon(m.x, m.z) ? delveByKey(job.delve) : null;
+    if (dv?.portal) return dist(m.x, m.z, dv.portal.x, dv.portal.z);
     return Number.isFinite(job.x) ? dist(m.x, m.z, job.x, job.z) : 0;
   }
 

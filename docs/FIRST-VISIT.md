@@ -59,8 +59,12 @@ takes Lisandra's work, then Bram's errand, before any other offer in the square 
 her round of the givers starts at Bram (`questJob`; `src/ui/trail.js` leads a player the same way). A run that took every
 other offer first came to the door at a quarter past.
 
-On the visit, auto-play goes home to sell only when the pack is all but full (three slots or fewer free), and there it
-only sells. It used to go home with the Redoubt in hand and take the square's offers. Time spent talking counts as getting
+On the visit, auto-play takes whichever of its first-visit work is nearest next, the fighting or a word (so it clears
+Fennick's three yards while it's down in the city, and hands in to Wenna while it's up on the Sill: taken in order it walked
+up to her after each yard; all the fighting first, it went down into the city from the Gibbet Field and back up for the
+carrion). A run from the door to the Candle Door home took 30 minutes. With ten cells or fewer free in its pack it leaves
+gear lying (`VISIT_LIGHT`), so it's never full enough to go home to sell. If it does go home to sell (three slots or fewer
+free), it only sells. It used to go home with the Redoubt in hand and take the square's offers. Time spent talking counts as getting
 nearer, so Wenna's long talk (her door and three offers in a row) no longer runs past the 75 s after which auto-play
 gives someone up for four minutes (`converse` in `src/ui/autobrain.js`).
 
