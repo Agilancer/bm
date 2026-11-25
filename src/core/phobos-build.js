@@ -1618,17 +1618,43 @@ function streets(K) {
   }
   if (K.lean) return;
   // Chainmarket: lanes of stalls under awnings round the gibbet tower, carts and crates among them, lanterns on poles.
-  const d = PHOBOS.districts.find((q) => q.key === 'market'), n0 = K.colliders.length, mx = d.x + 4, mz = d.z - 34;
-  for (let i = -5; i <= 5; i++) for (let j = -5; j <= 5; j++) {
-    const x = mx + i * 7.5 + (j & 1) * 2, z = mz + j * 6.5, rr = Math.hypot(x - mx, z - mz), v = hash2(i + 9, j + 5);
-    if (rr < 13 || rr > 47 || streetNear(x, z).d < 11 || v < 0.12) continue;
+  const n0 = K.colliders.length;
+  for (const { x, z, i, j, v } of marketSpots()) {
     if (v > 0.9) K.cart(x, z, v * 6);
     else if (v > 0.82) { K.goods(x, z, 6, 1.2); K.barrel(x + 1.2, z + 0.4); }
-    else K.stall(x, z, (j & 1) ? 0 : Math.PI, ['cloth_oat', 'cloth_red', 'cloth_oat'][(i + j + 12) % 3], (i * 3 + j + 40) % 4);
+    else K.stall(x, z, marketYaw(j), ['cloth_oat', 'cloth_red', 'cloth_oat'][(i + j + 12) % 3], (i * 3 + j + 40) % 4);
     if ((i + j) % 4 === 0 && v > 0.3) { K.lantern(x + 3.4, z + 2.6, 3.2, v * 6, 'dark:wood'); (K.lamps ||= []).push({ p: [x + 3.4, Y(x, z) + 2.8, z + 2.6], c: [1, 0.66, 0.34], r: 30, i: 18, flicker: 0.3 }); }
   }
   K.colliders.length = n0;
 }
+// Chainmarket's grid round the gibbet tower: each place something stands (v: a cart over 0.9, goods and a barrel over 0.82,
+// else a stall), and the way a stall there faces (its rows face each other in pairs across a lane).
+function marketSpots() {
+  const d = PHOBOS.districts.find((q) => q.key === 'market'), mx = d.x + 4, mz = d.z - 34, out = [];
+  for (let i = -5; i <= 5; i++) for (let j = -5; j <= 5; j++) {
+    const x = mx + i * 7.5 + (j & 1) * 2, z = mz + j * 6.5, rr = Math.hypot(x - mx, z - mz), v = hash2(i + 9, j + 5);
+    if (rr < 13 || rr > 47 || streetNear(x, z).d < 11 || v < 0.12) continue;
+    out.push({ x, z, i, j, v });
+  }
+  return out;
+}
+const marketYaw = (j) => ((j & 1) ? 0 : Math.PI);
+
+// Every stall in the city, and where its keeper stands: behind its counter, facing out the way it faces (places.js stall:
+// its front, the customers' side, is its local +z). Chainmarket's, and those at the King's Mile's kerb (src/core/phobos-houses.js
+// streetLife, run here with nothing built, only its stalls noted). The crowd keeps them (src/folk/brain.js keepStall).
+// [{ x, z, yaw (the way it faces), kx, kz (its keeper's place), district, market (one of Chainmarket's: not on a phone) }]
+let STALLS = null;
+export function phobosStalls() {
+  if (STALLS) return STALLS;
+  const out = [], add = (x, z, yaw, market = false) => out.push({ x, z, yaw, kx: x - Math.sin(yaw) * STALL_BACK, kz: z - Math.cos(yaw) * STALL_BACK, district: districtAt(x, z).key, market });
+  for (const { x, z, j, v } of marketSpots()) if (v <= 0.82) add(x, z, marketYaw(j), true);
+  const nop = () => {}, K = new Proxy({ colliders: [], lamps: [], lean: false, stall: (x, z, yaw) => add(x, z, yaw) }, { get: (t, k) => (k in t ? t[k] : nop) });
+  streetLife(K, '*', { streets: STREETS, cellOf: () => '*', districtAt, cityIn, sloughD, segD, BANNER, inSquare: (x, z) => inSealSquare(x, z, 2) || inHub(x, z, 2) || SEWER_MOUTHS.some((m) => Math.hypot(x - m.x, z - m.z) < MOUTH_SQUARE + 12) });
+  return (STALLS = out);
+}
+// (How far behind a stall's middle its keeper stands: back of the counter, under the awning's high edge.)
+const STALL_BACK = 0.55;
 // (Every tower of the city's last: the wall's, the landmarks', the spires', each in its cell's group: src/core/phobos-towers.js.)
 export function phobosCity(K) { wall(K); districts(K); streets(K); landmarks(K); hubFar(K); for (const t of cityTowers()) towerFar(K, t); }
 

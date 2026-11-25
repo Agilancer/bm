@@ -40,6 +40,21 @@ gallery's front is boarded (no rails on balusters); no decals (the near cells dr
 on a phone (unchanged); the whole land 1,683,955 and 930,618 (`node tools/phobos/corners.mjs`). Colliders and floors are
 what they were (61,773 and 10,423 in the city). Near cells are 3 to 12% more corners (`node tools/phobos/cell_times.mjs`).
 
+## The stalls and their keepers (`phobosStalls` in `src/core/phobos-build.js`, `manStalls` in `src/folk/brain.js`)
+
+Chainmarket's stalls stand in rows round the gibbet tower, each pair facing across a lane; the King's Mile's stand at its
+kerb, their counters to the street and their backs to the houses (they used to stand side on, looking down the street: the
+owner, "turned 90 degrees so the stalls are actually facing the street"). `phobosStalls()` lists every one, and where its
+keeper stands, from the same placing the build uses (Chainmarket's grid, `marketSpots`; the King's Mile's by running
+`streetLife` with nothing built).
+
+Every stall within 45 m of you has a keeper (`KEEP_NEAR`): one of the street crowd, parked or out of your sight, set down
+behind its counter, facing out over it and turning to you when you come up to it. A trade's people are taken before the
+rest (bakers, butchers, tanners, fishwives, apothecaries...), their own district's first, and never a child, one abed, or
+anyone a quest wants. At most 72 at once (`KEEP_MAX`), or three in ten of the crowd on a phone, which has only the King's
+Mile's stalls (Chainmarket's aren't built on one). Walk 65 m off and the keeper's let go, back to the streets
+(`KEEP_LET`). `node --test tests/phobos-crowd.test.mjs`.
+
 ## Lookouts and finds (`src/core/phobos-finds.js`, `src/core/delve-sewers.js`)
 
 Sixteen lookouts in the city, each on a floor that's walked: eight rooms the wall-walk runs through (the four gates'

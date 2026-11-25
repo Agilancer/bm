@@ -260,7 +260,9 @@ for (const l of LAIRS) if (!l.wild && Math.hypot(l.x, l.z) < NEAR && !nodes.some
 for (const c of TUMBLER_CAMPS) if (c.r && !nodes.some((n) => Math.hypot(n.x - c.x, n.z - c.z) < 80)) node(c.x, c.z, { key: 'camp', name: 'the camp', kind: c.x * c.x + c.z * c.z < NEAR * NEAR ? 'near' : 'site', r: c.r * 0.5 });
 // And each far lair that isn't a wild one, on a lane: the land's named fights. (Not one stood beside a road for those going by
 // to meet, `roadside`: the road's its way, and a lane of its own was 5,000 corners more on a phone. tools/quests/errands.mjs.)
-for (const l of LAIRS) if (!l.wild && !l.roadside && Math.hypot(l.x, l.z) >= NEAR && !nodes.some((n) => Math.hypot(n.x - l.x, n.z - l.z) < 220)) node(l.x, l.z, { key: l.key, name: 'the lair', kind: 'lair', r: l.r });
+// (Nor one off a city's own streets, `streets`: those are its ways. Fennick's yards in Phobos, src/folk/first-visit.js, laid
+// lanes out over the city's roofs, and some 6,700 corners more on a phone.)
+for (const l of LAIRS) if (!l.wild && !l.roadside && !l.streets && Math.hypot(l.x, l.z) >= NEAR && !nodes.some((n) => Math.hypot(n.x - l.x, n.z - l.z) < 220)) node(l.x, l.z, { key: l.key, name: 'the lair', kind: 'lair', r: l.r });
 
 // Rings of crossings in the woods round Bellmourn, and a loose lattice of them over all the land: where the footpaths meet,
 // so there's a way through every stretch of country, not only out to its places.
@@ -426,7 +428,7 @@ log(`${foot} footpaths to outposts and finds`);
       if (typeof k !== 'string' || !(k.startsWith('lair:') || k.startsWith('outpost:'))) continue;
       const t = k.startsWith('lair:') ? LAIRS.find((l) => l.key === k.slice(5)) : OUTPOSTS.find((o) => o.key === k.slice(8));
       const key = `${g.where}>${k}`;
-      if (!t || seen.has(key) || Math.hypot(t.x - from[0], t.z - from[1]) > 720) continue;
+      if (!t || seen.has(key) || t.streets || Math.hypot(t.x - from[0], t.z - from[1]) > 720) continue;
       // (A den whose own trail sets out from this hub has its way already: tools/wilds/place.mjs.)
       if (t.trail && Math.hypot(t.trail[0][0] - g.x, t.trail[0][1] - g.z) < 60) { seen.add(key); continue; }
       seen.add(key);

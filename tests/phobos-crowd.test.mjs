@@ -15,7 +15,7 @@ import { Talk } from '../src/folk/talk.js';
 import { CROWD, FOLK, PEOPLE } from '../src/folk/people.js';
 import { LINES } from '../src/folk/lines/phobos.js';
 import { HAUNTS, cityIn } from '../src/core/east.js';
-import { phobosHouses, phobosLanes } from '../src/core/phobos-build.js';
+import { phobosHouses, phobosLanes, phobosStalls } from '../src/core/phobos-build.js';
 import { bedOf, phobosHomes } from '../src/folk/phobos-homes.js';
 import { abedNow } from '../src/folk/brain.js';
 import { BAKED, bakedText } from '../tools/homes/bake-beds.mjs';
@@ -83,6 +83,8 @@ test('in the street: parked out of the city, up and about inside it, and along w
     for (const me of crowd) {
       // (A baker abed already, early in the evening: src/folk/brain.js abedNow. Below.)
       if (me.abed) continue;
+      // (Keeping one of the stalls near: behind its counter. Below.)
+      if (me.stall) { assert.ok(!me.parked && Math.hypot(me.x - me.stall.kx, me.z - me.stall.kz) < 0.3, `${me.id} isn't at their stall`); continue; }
       const D = me.p.area && DISTRICTS[me.p.area];
       if (D && Math.hypot(px - D.x, pz - D.z) > D.r + 120) { assert.ok(me.parked, `${me.id} is up away from ${me.p.area}`); continue; }
       assert.ok(!me.parked, `${me.id} isn't up in the city`);
@@ -163,4 +165,59 @@ test('abed at night: a bed each, in it when you come by, woken and back down, up
   assert.ok(abedNow({ p: watch }, 11) && !abedNow({ p: watch }, 23), 'the watch sleeps by day');
   // Those quests want are never abed.
   assert.ok(!abedNow({ p: { id: 'ph_garrow', kind: 'merchant' } }, 2));
+});
+
+// The stalls (src/core/phobos-build.js phobosStalls, src/folk/brain.js manStalls): every one near you has a keeper behind its
+// counter, facing out over it, and let go back to the streets when you've gone. The owner: "make sure the vendor stalls have
+// vendors in them, and that they are turned 90 degrees so the stalls are actually facing the street".
+test('the stalls: a keeper behind every counter near you, facing out; the King\'s Mile\'s face the street', () => {
+  const S = phobosStalls();
+  assert.ok(S.length > 40, `only ${S.length} stalls`);
+  // (The King's Mile's: faced across the street, square to it, not down it.)
+  const kerb = S.filter((q) => !q.market);
+  assert.ok(kerb.length > 5);
+  const spine = PHOBOS.streets.filter((st) => st.w > 5);
+  for (const q of kerb) {
+    let best = null, bd = 1e9;
+    for (const st of spine) for (let i = 0; i + 1 < st.pts.length; i++) {
+      const [ax, az] = st.pts[i], [bx, bz] = st.pts[i + 1], L = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / L, uz = (bz - az) / L;
+      const t = Math.max(0, Math.min(L, (q.x - ax) * ux + (q.z - az) * uz)), d = Math.hypot(ax + ux * t - q.x, az + uz * t - q.z);
+      if (d < bd) { bd = d; best = { ux, uz, cx: ax + ux * t, cz: az + uz * t }; }
+    }
+    const fx = Math.sin(q.yaw), fz = Math.cos(q.yaw);
+    assert.ok(Math.abs(fx * best.ux + fz * best.uz) < 0.2, `the stall at ${q.x | 0}, ${q.z | 0} faces down the street`);
+    assert.ok(fx * (best.cx - q.x) + fz * (best.cz - q.z) > 0, `the stall at ${q.x | 0}, ${q.z | 0} turns its back on the street`);
+  }
+  const clips = new FolkClips(J('assets/game/folk/clips.json'), AB('assets/game/folk/clips.bin'));
+  const village = J('assets/game/village.json'), interior = J('assets/game/interior/interior.json'), folk = J('assets/game/folk/folk.json');
+  const town = new Town(village, interior, J('assets/game/folk/spots.json'));
+  const life = new Life({ ground: new Ground(village, interior, [-80, -75, 110, 80]), town, clips, emit: () => {}, people: FOLK });
+  const rigs = new Map();
+  for (const me of life.folk) {
+    let m = me.p.body;
+    if (!folk.models[m]) m = folk.swaps?.[m]?.base || (me.child ? 'boy_1' : 'worker');
+    if (!rigs.has(m)) rigs.set(m, new FolkRig(parseGLB(AB(`assets/game/folk/${folk.models[m].glb}`)), clips, {}));
+    life.setRig(me.i, rigs.get(m));
+  }
+  const dt = 1 / 20, run = (n, hour, player) => { for (let k = 0; k < n; k++) life.update(dt, { hour, day: 0, player, dangers: [], yaw: 0 }); };
+  // In the middle of Chainmarket at eight in the morning, as you first come down to it.
+  const M = PHOBOS.districts.find((d) => d.key === 'market'), at = [M.x + 4, 0, M.z - 34];
+  run(400, 8, at);
+  const near = S.filter((q) => Math.hypot(q.x - at[0], q.z - at[2]) < 45);
+  assert.ok(near.length > 10, `only ${near.length} stalls near`);
+  const kept = life.stalls.filter((q) => q.keeper && Math.hypot(q.x - at[0], q.z - at[2]) < 45);
+  assert.equal(kept.length, near.length, `${kept.length} of ${near.length} stalls kept`);
+  const who = new Set();
+  for (const q of kept) {
+    const me = q.keeper;
+    assert.ok(!who.has(me), `${me.id} keeps two`); who.add(me);
+    assert.equal(me.stall, q);
+    assert.ok(!me.parked && !me.child, `${me.id} keeps a stall parked or a child`);
+    assert.ok(Math.hypot(me.x - q.kx, me.z - q.kz) < 0.3, `${me.id} isn't behind their stall`);
+    assert.ok(Math.abs(Math.atan2(Math.sin(me.yaw - q.yaw), Math.cos(me.yaw - q.yaw))) < 0.1, `${me.id} doesn't face out over their stall`);
+  }
+  // Gone home: every keeper let go, and parked.
+  run(40, 8, [0, 0, 0]);
+  assert.ok(life.stalls.every((q) => !q.keeper), 'a stall is kept with you gone');
+  assert.ok(life.folk.filter((me) => me.crowd).every((me) => me.parked && !me.stall), 'a keeper stayed up');
 });

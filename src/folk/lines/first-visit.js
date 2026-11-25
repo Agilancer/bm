@@ -125,7 +125,100 @@ export const QUESTS = {
       ph_penny: [
         "Wenna's lamps are lit? ...In. Off the street. Quick.",
         "Wenna Coyle doesn't send anyone. Forty years she's kept those lamps and never sent one soul down to me. You must be something.",
-        "Here. If you're Wenna's, you're welcome in this yard. You're not ready for the work I've got. Not yet. Come back when you've teeth.",
+        "Here. If you're Wenna's, you're welcome in this yard. You're not ready for the real work. Not yet. But there's small work, three yards of it, if you want the coin.",
+      ],
+    },
+  },
+
+  fv_toll_runners: {
+    title: "The Toll's Runners",
+    giver: 'ph_penny',
+    giverName: 'Fennick Lowe',
+    about: "The gate's clerks take their toll, and a pack of red goblins runs the rest of it for them: they lie up in a back court off the Barbican, north of the square inside the Drawbridge Gate, and take a second toll off anyone the clerks missed. Fennick wants five of them dead.",
+    offer: [
+      "The clerks at the gate write you down and take their cut. That's the toll. Then there's the other toll.",
+      "Red goblins. They run for the clerks, and keep half. They lie up in a back court north of the Barbican's square, and anyone of mine coming in pays twice. Kill five and the rest'll find another court.",
+    ],
+    accept: "I'll see to the runners.",
+    acceptLine: "North of the square inside the gate. Through the arch with no door on it. When it's done, tell Wenna. She and I keep the one purse; she'll pay you.",
+    decline: 'Not now.',
+    declineLine: "They'll still be there. They're always still there.",
+    journal: [
+      "Kill five of the red goblins who run the second toll, in a back court north of the Barbican's square inside the Drawbridge Gate.",
+      "The toll's runners are dead. Go back up to Wenna on the Sill and tell her: she and Fennick keep the one purse.",
+    ],
+    progress: [
+      "North of the Barbican's square. They wear red. They think it makes them official.",
+    ],
+    done: [
+      "Fennick's runners pay the once at the gate now? Good. That's his coin, out of my purse. Same purse.",
+    ],
+    others: {
+      fv_wenna: [
+        "The runners off the Barbican? All five? ...Fennick'll be insufferable.",
+        "That's his coin, out of my purse. We've kept the one purse forty years; he lends it, I spend it. Here.",
+      ],
+    },
+  },
+
+  fv_chain_thieves: {
+    title: 'The Chain-Thieves',
+    giver: 'ph_penny',
+    giverName: 'Fennick Lowe',
+    about: "Kobolds have dug in under the yard behind Chainmarket's stalls, north of the gibbet tower's ring, and come up at night to strip the stalls and the carts. Fennick lends the stall-keepers their stock. Kill five of the thieves.",
+    offer: [
+      "Half the stalls in the Chainmarket are stocked on my coin. Half the stock walks off at night.",
+      "Kobolds. They've dug in under the yard behind the stalls, north of the gibbet tower, and they come up the moment the keepers pack up. Five of them dead and the rest'll go and rob somebody who isn't me.",
+    ],
+    accept: "I'll clear the yard.",
+    acceptLine: "Behind the stalls on the gate side of the market. The keepers will point. Then go up and tell Wenna; she pays for me.",
+    decline: 'Not now.',
+    declineLine: "Mind your pockets in the market, then.",
+    journal: [
+      "Kill five of the kobolds that come up into the yard behind Chainmarket's stalls, north of the gibbet tower.",
+      "The yard behind Chainmarket is clear. Go back up to Wenna on the Sill and tell her: she pays for Fennick.",
+    ],
+    progress: [
+      "Behind the stalls. Follow the gnawed crates.",
+    ],
+    done: [
+      "The Chainmarket's keepers will sleep tonight. Fennick's coin. My purse.",
+    ],
+    others: {
+      fv_wenna: [
+        "The yard behind the stalls? He's been on about that yard all month. You'll have saved me hearing about it.",
+        "Here. His coin, my purse. Don't tell him I said it was worth it.",
+      ],
+    },
+  },
+
+  fv_gutter_nest: {
+    title: 'Under the Rookeries',
+    giver: 'ph_penny',
+    giverName: 'Fennick Lowe',
+    about: "Something's been coming up the drain in the Rookeries, in a yard back from the Low Road, north of the drain's mouth: spiders the size of dogs, out of the West Drains. They've taken two of Fennick's runners. Kill four of them.",
+    offer: [
+      "I had two runners went into the Rookeries last week and didn't come out. Not knifed. Wrapped.",
+      "Spiders. Up out of the West Drains, into a yard north of the drain's mouth, back from the Low Road. Four of them, and big. Don't go down the drain after them; you're not ready for what's down there. Just the yard.",
+    ],
+    accept: "I'll go and look.",
+    acceptLine: "North of the drain, back from the Low Road. Where the cobbles go wet. If it's quiet, it isn't. Wenna pays for it; tell her when it's done.",
+    decline: 'Not now.',
+    declineLine: "Don't go up the Rookeries alone, then. Not that way.",
+    journal: [
+      "Kill four of the spiders come up out of the drain into a yard north of its mouth, back from the Low Road in the Rookeries.",
+      "The spiders in the Rookeries are dead. Go back up to Wenna on the Sill and tell her: she pays for Fennick.",
+    ],
+    progress: [
+      "North of the drain's mouth in the Rookeries, back from the Low Road. Where the cobbles go wet.",
+    ],
+    done: [
+      "Four of them. He'll send someone for what's left of his runners. You'll want to wash.",
+    ],
+    others: {
+      fv_wenna: [
+        "Spiders. Out of the drains. ...And his two runners? Wrapped. I knew one of them. He trimmed wicks for me, once.",
+        "Here. His coin, my purse, and something for the washing. You'll want to wash.",
       ],
     },
   },

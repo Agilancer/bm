@@ -145,13 +145,17 @@ const caveNav = (x, z) => { const d = delveOf(x, z) || DELVES[0]; let n = navs.g
 // ---- hiring ----------------------------------------------------------------------------------------------------------------
 
 // A job to go and hire, if it wants a party and can pay for one: to the nearer quartermaster.
-export function hireJob(b, m) {
+// door: before Lisandra's door east the first time (src/folk/first-visit.js): a party at its back for the Sill, whatever its
+// level, as many of them as it can pay for (a tank and a healer first: hiring), from Aldous Fenn by the square. The owner:
+// "make sure the character picks up the NPC players before heading to Phobos for the first time".
+export function hireJob(b, m, door = false) {
   const P = b.o.game.party;
-  if (!P || P.fit() || m.lvl < HIRE_LEVEL || b.skipping('hire') || !b.allow('aiHire')) return null;
-  // (What's still to hire, and what it costs: it keeps a little back.)
+  if (!P || (door ? P.full() : P.fit() || m.lvl < HIRE_LEVEL) || b.skipping('hire') || !b.allow('aiHire')) return null;
+  // (What's still to hire, and what it costs: it keeps a little back. For the door, enough for one will do.)
   const r = P.roles(), want = PARTY.size - P.members.length;
-  const cost = hirePrice(m.lvl + 1) * want;
-  if (b.o.pack.purse() < cost + 100) return null;
+  const cost = hirePrice(m.lvl + 1) * (door ? 1 : want);
+  if (b.o.pack.purse() < cost + (door ? 0 : 100)) return null;
+  if (door) { const [x, z] = BROKER_SPOTS.town; return { kind: 'hire', why: 'hire', which: 'town', x, z, say: "To Aldous Fenn by the square, to hire a party before Lisandra's door." }; }
   // (Whichever post is nearest: the town's, the Warrens', one at a later delve's portal. Not the Test Dungeon's keeper.)
   const which = Object.keys(BROKER_SPOTS).filter((k) => k !== 'hall').sort((p, q) => dist(m.x, m.z, BROKER_SPOTS[p][0], BROKER_SPOTS[p][1]) - dist(m.x, m.z, BROKER_SPOTS[q][0], BROKER_SPOTS[q][1]))[0];
   const [x, z] = BROKER_SPOTS[which], post = POSTS.find((q) => q.broker === which);

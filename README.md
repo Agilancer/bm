@@ -803,6 +803,30 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
   - **It takes corners at the corner.** It turns for the next stretch once it's at the corner, not a stride short of it,
     and it walks rather than runs by a wall, through a door, and coming up to a sharp turn (a run takes a corner wide,
     into the far wall). Down a long straight street it still runs.
+  - **No turning back to where it asked from** (`trimWay`, `aheadOn` in `src/ui/autobrain.js`). A way from the nav thread
+    starts where it stood when it asked, and it's gone on since. It used to turn back to that first point, touch it and
+    turn round again each time a way came in: in Phobos, whose ways take the thread seconds to work out, it walked ten
+    metres on and ten back down every street, every seven seconds (the owner's "weird back and forth"). Now the next of
+    Phobos's ways is asked for from a point 14 m on down the one it's walking and joined on there, and any way that comes
+    in is taken up from the stretch it's beside, not its first point. `node tools/autoplay/trace.mjs` watches it play
+    headless and counts the turns about (`tools/autoplay/trace-read.mjs`).
+  - **Phobos by its streets** (`WAY_COST` in `src/sim/east-nav.js`). In the city a metre of the King's Mile, Ash Lane, the
+    Low Road, the High Loop or the Corpse Quay costs a metre; a metre of the alleys between the blocks costs two and a
+    half, and one through a house, up a stair or along the wall-walk four. It used to take whatever was shortest: from
+    Chainmarket to the Pennyless' Purse, 360 m of back alleys and not a metre of street. Now 95% of its way across the
+    city is on a street (`node tools/paths/streets.mjs`, `tests/east-streets.test.mjs`).
+  - **Not back into what it ran from** (`DREAD_FOR`, `DREAD_R`). Something it can't beat yet, which it runs from, is kept
+    32 m clear of, where it was last seen, for 45 s, and its way is worked out again round it. It used to run, then walk
+    straight back the way it had been going, into its sight again: two minutes to and fro at the east edge of the town
+    before one of Velscour's knights, on its way to the catacombs.
+  - **Not torn between two jobs** (`SEAL_NEAR`, `SEAL_KEEP`, `FLIP_HOLD`). A seal it sets out to wake within 90 m it keeps to
+    out to 140 m: inside the Drawbridge Gate the way to the Barbican's seal went round the gatehouse, out past 90 m, and it
+    turned to a hunt whose way brought it back inside, and turned again, for fifteen minutes. And whenever its job flips
+    back and forth between the same two three times in twenty seconds, it keeps to the one it has for twenty.
+  - **A moment at each spot of a hunt's round** (`PATROL_LOOK`), its eyes on its way: it used to stand four seconds at each,
+    spinning on the spot, which down the catacombs' passages was its eyes going round and round the walls.
+  - **Not into a wall when it backs off in a fight** (`escape`). It asks the nav thread how clear each of sixteen ways
+    round it is (`ring` in `src/sim/nav.worker.js`) and backs off where there's room, not into the catacombs' walls.
   - **Through a door, square on, from outside and from in.** A path that goes through a doorway is taken to a place a
     pace before its middle and then to one a pace beyond (`DOORWAYS`), so it comes up to the door facing it, opens it,
     and walks through down the middle, and leaves a house the same way. It opens only the doors its path goes through,
@@ -989,12 +1013,13 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
   Not watched: Cinderford, Frostwatch's and Ser Hale's own work, the Waste, a lair with its tricks on.
 - **The run.** Shift is held for the run whenever it's going somewhere more than a few strides off, in long stretches:
   it lets go when its breath is short and takes it up again once it's back, rather than flickering between the two.
-- **Loot and gear.** It picks up what falls and opens every chest near by: out in the land, down in the catacombs, and in
-  the town's houses (in at the door, a hand to the chest with nothing between, and what spills out picked up). In the
-  town it opens only a chest it's passing (within `TOWN_CHEST` metres), one at a time and no sooner than `TOWN_CHEST_GAP`
-  seconds after the last: it used to go round every house for all fifteen before it took a quest, three minutes of a
-  new game. Once it's going for a chest it keeps to that one till it's open or given up. A chest upstairs it leaves: it
-  doesn't take stairs. It wears the best of what it carries, sets gems
+- **Loot and gear.** It picks up what falls and opens every chest near by: out in the land, in the woods round the town,
+  and down in the catacombs (a hand to the chest with nothing between, and what spills out picked up). **Never one of
+  Bellmourn's own** (`bellmourns`): the chests in the town's houses are its people's, and it leaves them shut. It used to
+  go in at their doors and empty them, one after another, the owner's "robbing everyone in the main town". (Elsewhere,
+  in a town it opens only a chest it's passing, within `TOWN_CHEST` metres, one at a time, `TOWN_CHEST_GAP` apart.) Once
+  it's going for a chest it keeps to that one till it's open or given up. A chest upstairs it leaves: it doesn't take
+  stairs. It wears the best of what it carries, sets gems
   in open sockets, sells what it won't wear, and buys upgrades, scrolls it lacks and a mending in the town's shops.
 - **Grinding.** It grinds for levels when no quest suits it yet.
 - **The Test Dungeon.** It fights whatever's been summoned, going in after it once the door's up, and otherwise waits in the
@@ -1167,14 +1192,18 @@ bought as written (it's played through from level 1 to 50), and a new block of m
   Not watched: a quest handed in indoors, the shops, and the catacombs' doors since. Nobody has watched it with their
   own eyes.
 - **It keeps to the paths in town.** When it walks to an errand in or near Bellmourn (a shop, someone with a quest, its bed), it asks the nav
-  worker for a polite way (`politePath`, `src/sim/nav.worker.js`). Inside Bellmourn and 24 m round it, grass costs 0.8 more
-  per metre, less where the ground is worn. The roads, lanes and the square are free (the same `PATHS` and `allWays()` the
+  worker for a polite way (`politePath`, `src/sim/nav.worker.js`). Inside Bellmourn and 24 m round it, grass costs 2 more
+  per metre (three times a metre of road), less where the ground is worn. It was 0.8, and in a watched run two thirds of
+  its walking in the town, on its way out to the woods, was round the backs of the houses (the owner: "stays on the paths
+  in town, not cutting around the outside of the buildings"; `node tools/autoplay/town-grass.mjs` reads a run for it). The roads, lanes and the square are free (the same `PATHS` and `allWays()` the
   townsfolk keep to). When the path is straightened, a shortcut is only taken if it crosses no more grass than the path it
   replaces, so it doesn't cut round the sides of houses. Indoors and out in the land nothing changes, and neither do
-  its lines on a foe. `tests/town-polite.test.mjs` walks eight trips across the town: 41 m on grass in all, where the
-  shortest ways had 317 m, and none of them more than a few metres longer.
+  its lines on a foe. `tests/town-polite.test.mjs` walks eight trips across the town: 11 m on grass in all (41 m at 0.8),
+  where the shortest ways had 317 m, none of them more than 20 m longer.
   `node tools/autoplay/polite-sweep.mjs` checks the polite way against the plain one on 4,085 trips across the town
-  (14 s). The polite way reached every place the plain one did, none was much further round, and none took over 60 ms.
+  (26 s). The polite way reached every place the plain one did, and only one took over 60 ms. 33 go much further round
+  (more than 1.8 times as far, and 10 m): to a back garden or a field with no way to it, it goes by the ways to the
+  nearest point and over the grass from there.
 - **The beacon stone.** When the job it has picked is in Bellmourn (to sell, to be mended, a quest to hand in) and is
   more than 300 m off, the stone is lit, and nothing is within 20 m, it uses the stone instead of walking. It stands
   still for the fifteen seconds unless something comes within 14 m, and then it fights. Settings' auto-play "Getting

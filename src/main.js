@@ -107,6 +107,8 @@ window.bmTitle = title;
 // (From 11 on, the Tripo monsters' groups: src/core/tripo-monsters.js.)
 // How far off a death still pays you its experience: your spells, your party and your dead all fight well inside it.
 const KILL_REACH = 90;
+// The hour it is on the Sill the first time Lisandra's door sets you down there (the door, below).
+const PHOBOS_FIRST_HOUR = 8;
 const XP_LAIRS = LAIRS.filter((l) => l.xpScale);
 const FOE_NAMES = ['KNIGHT OF VELSCOUR', 'KNIGHT OF TESSARIEL', 'GREAT CRAB', 'GRAVEHART', 'BONE HYDRA', 'THE RISEN', 'OGRE', '', '', 'WEREWOLF', 'ABYSSAL MOUTH',
   ...GROUP_KEYS.map((g) => GROUPS[g].name)];
@@ -779,8 +781,12 @@ async function boot(plan, poolSize) {
         lands.o.cmd(28, at.yaw, at.x, at.z);
         // (morning: the door east, out of the dark or the evening, opens on the next morning: the first sight of his city is a
         // lit one. As a night's sleep turns the day. src/ui/folk.js lisDoor.)
-        if (morning && (renderer.hour < 6.5 || renderer.hour > 16.5)) { if (renderer.hour > 6.1) { town.day++; town.lastHour = -1; } renderer.setHour(7.5); }
-        if (to && Math.hypot(to.x - 8931, to.z - 19) < 40 && !lands.awake.has('sill')) { lands.awake.add('sill'); lands.showPortals(); }
+        // The first time through, whatever the hour, it's eight in the morning there (the next morning, if it's past eight
+        // here): the owner's ask, so his streets are full when you first walk down into them, not shut up for the night.
+        const sill = to && Math.hypot(to.x - 8931, to.z - 19) < 40, first = sill && !lands.awake.has('sill');
+        if (morning && first) { if (renderer.hour > 8) { town.day++; town.lastHour = -1; } renderer.setHour(PHOBOS_FIRST_HOUR); }
+        else if (morning && (renderer.hour < 6.5 || renderer.hour > 16.5)) { if (renderer.hour > 6.1) { town.day++; town.lastHour = -1; } renderer.setHour(7.5); }
+        if (first) { lands.awake.add('sill'); lands.showPortals(); }
       },
       // (Abandoning a quest: asked first, in the title's "are you sure" box.)
       confirm: (o) => title.confirm(o),

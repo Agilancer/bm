@@ -13,6 +13,15 @@
 // topUnder) from where they were; free where resolve doesn't push a body) on a half-metre grid round it, one over another.
 //
 // Every door is open to it (auto-play opens a Phobos door on its way: src/ui/autobrain.js phDoor).
+//
+// In the city it keeps to the streets, as a person going somewhere does (WAY_COST): a metre down the King's Mile, Ash Lane,
+// the Low Road, the High Loop or the Corpse Quay costs a metre; one along an alley or across a yard on the ground, more; one
+// through a house, up a stair, along the wall-walk or over a roof, more again. So it goes by the streets unless what it's
+// going to is in off them, and leaves them nearest to it. It used to take whatever was shortest: through people's houses,
+// along back alleys and over the wall-walk, door to door. (The castle's all floors and stairs, and is walked as it was.)
+import { PHOBOS } from '../core/phobos-data.js';
+import { cityIn } from '../core/east.js';
+export const WAY_COST = { street: 1, ground: 2.5, floor: 4 };
 export const CELL = 0.5, X0 = 9000, Z0 = -860, X1 = 11720, Z1 = 860, TILE = 4;
 // (RISE: the land's own slope never stops the sim's feet, steep as it is: only a deck more than a step over them, or a box
 // they'd walk into. So a cell's climb is let up to RISE, dear past STEEP; a drop of more than DROP isn't taken.)
@@ -87,7 +96,26 @@ export class EastNav {
     { const q = []; for (const n of this.nodesNear(EAST_DOOR[0], EAST_DOOR[1], null, 8)) { this.live[n] = 1; q.push(n); }
       for (let h = 0; h < q.length; h++) { const n = q[h]; for (let e = this.eStart[n]; e < this.eStart[n + 1]; e++) { const m = this.eTo[e]; if (!this.live[m]) { this.live[m] = 1; q.push(m); } } } }
     this.tmp = [0, 0, 0];
+    // (Which TILE squares a street runs through, to within its width: the same raster for the long way and the walk out.)
+    // (0: out of the city; 1: in it, off the streets; 2: on one.)
+    this.street = new Uint8Array(TW * TH);
+    for (let k = 0; k < TW * TH; k++) if (cityIn(X0 + (k % TW + 0.5) * TILE, Z0 + (((k / TW) | 0) + 0.5) * TILE) < 0.97) this.street[k] = 1;
+    for (const st of PHOBOS.streets) for (let i = 0; i + 1 < st.pts.length; i++) {
+      const [ax, az] = st.pts[i], [bx, bz] = st.pts[i + 1], L = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / L, uz = (bz - az) / L, w = st.w + 0.5;
+      for (let t = 0; t <= L; t += 1) for (let o = -w; o <= w; o += 1) { const k = this.tileOf(ax + ux * t - uz * o, az + uz * t + ux * o); if (k >= 0 && this.street[k]) this.street[k] = 2; }
+    }
+    // (Each node's cost a metre, worked out the first time a search comes to it: 0 not yet.)
+    this.wcost = new Float32Array(nodes);
   }
+
+  // What a metre at (x, z), at height y, costs (WAY_COST): a street's, the ground's off one, or a floor's. Out of the city, a metre.
+  wayCost(x, z, y, onLand) {
+    const k = this.tileOf(x, z), s = k >= 0 ? this.street[k] : 0;
+    if (!s) return 1;
+    if (!(onLand ?? y <= this.world.landAt(x, z) + 0.05)) return WAY_COST.floor;
+    return s === 2 ? WAY_COST.street : WAY_COST.ground;
+  }
+  costOf(n) { return this.wcost[n] || (this.wcost[n] = this.wayCost(this.x[n], this.z[n], this.y[n])); }
 
   // ---- the sim's rules, at a half-metre cell's middle (kept: the ground never changes; the doors are all open to it)
   // (Settled: feet set down on a stair's last tread are lifted onto the deck it runs into the next tick, as heightFor takes
@@ -152,7 +180,7 @@ export class EastNav {
       for (let e = this.eStart[n]; e < this.eStart[n + 1]; e++) {
         const m = this.eTo[e];
         if (this.shut[m] === S) continue;
-        const ng = this.g[n] + this.eLen[e] * 0.1;
+        const ng = this.g[n] + this.eLen[e] * 0.1 * (this.costOf(n) + this.costOf(m)) * 0.5;
         if (this.seen[m] === S && ng >= this.g[m]) continue;
         this.seen[m] = S; this.g[m] = ng; this.par[m] = n;
         push(m, ng + h(m));
@@ -209,7 +237,8 @@ export class EastNav {
         if (!st) continue;
         const [ni, nj, ny, c] = st, nk = key(ni, nj, ny);
         if (shut.has(nk)) continue;
-        const ng = G.get(k) + c * CELL + Math.max(0, ny - y) * 0.6 + Math.max(0, Math.abs(ny - y) - STEEP) * 6;
+        const nx = X0 + (ni + 0.5) * CELL, nz = Z0 + (nj + 0.5) * CELL;
+        const ng = G.get(k) + c * CELL * this.wayCost(nx, nz, ny, this.land(ni, nj, y)[3]) + Math.max(0, ny - y) * 0.6 + Math.max(0, Math.abs(ny - y) - STEEP) * 6;
         const old = G.get(nk);
         if (old !== undefined && ng >= old) continue;
         G.set(nk, ng); P.set(nk, k); Y.set(nk, ny);

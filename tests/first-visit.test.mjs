@@ -38,7 +38,7 @@ test('the first visit follows Bram\'s first errand, and stays at a new player\'s
   assert.deepEqual(FIRST_VISIT, FIRST_VISIT_LEVELS.map(([id]) => id));
   for (const id of IDS) { assert.equal(RULES[id], FIRST_VISIT_RULES[id], id); assert.ok(questLevel(id) <= 5, `${id}: level ${questLevel(id)}`); }
   // (The two lairs it sends you to are of its levels: the city's own are of twenty and more.)
-  for (const k of ['sill_gibbets', 'sill_carrion']) { const l = LAIRS.find((q) => q.key === k); assert.ok(l && l.lvl <= 5, `${k}: level ${l?.lvl}`); }
+  for (const k of ['sill_gibbets', 'sill_carrion', 'ph_toll_runners', 'ph_chain_thieves', 'ph_gutter_nest']) { const l = LAIRS.find((q) => q.key === k); assert.ok(l && l.lvl <= 5, `${k}: level ${l?.lvl}`); }
   assert.ok(REDOUBT.level <= 6 && REDOUBT.party === false);
   assert.equal(DOOR_STEP.length > 0, true);
 });
@@ -143,4 +143,31 @@ test("the visit's kills don't count as Bellmourn's woods, so Corran's pines are 
   assert.equal(q.q.pines.n, 0, 'five kills on the Sill move nothing');
   q.kill(-45, terrainHeight(-45, 150), 150, 0, 'The Possessed');
   assert.equal(q.q.pines.n, 1, 'one in the pines does');
+});
+
+// Fennick Lowe's three (the owner: "a few quests to kill enemies in certain parts of Phobos during the initial questing
+// before returning to Bellmourn"): offered once you've found him, each a yard inside the wall in a district you walked
+// through, well clear of the city's own haunts; and the door home waits on them.
+test("Fennick's three yards: inside the wall, in the districts on the way in, clear of the haunts, before the door home", async () => {
+  const { HAUNTS, cityIn } = await import('../src/core/east.js');
+  const { PHOBOS } = await import('../src/core/phobos-data.js');
+  const want = { fv_toll_runners: 'barbican', fv_chain_thieves: 'market', fv_gutter_nest: 'rookeries' };
+  for (const [id, district] of Object.entries(want)) {
+    assert.equal(QUESTS[id].giver, 'ph_penny', id);
+    assert.equal(FIRST_VISIT_RULES[id].needs, 'fv_the_way_down', id);
+    assert.ok([FIRST_VISIT_RULES.fv_home.needs].flat().includes(id), `the door home doesn't wait on ${id}`);
+    const l = LAIRS.find((q) => q.key === FIRST_VISIT_RULES[id].steps[0].kill.slice(5));
+    assert.ok(cityIn(l.x, l.z) < 0.9, `${l.key} isn't inside the wall`);
+    const d = PHOBOS.districts.find((q) => q.key === district);
+    assert.ok(Math.hypot(l.x - d.x, l.z - d.z) < d.r, `${l.key} isn't in ${district}`);
+    for (const h of HAUNTS) assert.ok(Math.hypot(l.x - h.x, l.z - h.z) > h.clear + 60, `${l.key} is ${Math.hypot(l.x - h.x, l.z - h.z) | 0} m from ${h.key}`);
+    assert.ok(l.xpScale && l.lvl <= 5, l.key);
+  }
+  const b = book();
+  for (const id of ['the_door_east', 'fv_gibbet_field', 'fv_carrion', 'fv_the_redoubt']) b.q[id] = { stage: 'done' };
+  assert.ok(!b.offers('fv_wenna').includes('fv_home'), 'home offered before the way down and Fennick\'s yards');
+  b.q.fv_the_way_down = { stage: 'done' };
+  assert.deepEqual(b.offers('ph_penny').sort(), Object.keys(want).sort());
+  for (const id of Object.keys(want)) b.q[id] = { stage: 'done' };
+  assert.ok(b.offers('fv_wenna').includes('fv_home'), 'home not offered with all done');
 });

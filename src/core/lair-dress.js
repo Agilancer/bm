@@ -102,6 +102,9 @@ export function dressLairs(K, seals = []) {
     // (An outpost has what's built round it, src/core/wild-dress.js: its own ground gets a fire and a few bones, no more.
     // There are hundreds of them, and every corner laid here is held on a phone's GPU.)
     if (l.wild && K.lean) continue;
+    // (Nor, on a phone, one of the yards off a city's streets, `streets`: the city's own crates and carts round it do. Fennick's
+    // three in Phobos, dressed, were some 2,000 corners past a phone's.)
+    if (l.streets && K.lean) continue;
     if (l.thin) { fire(...at(h(1), R * 0.3), kind === 'camp'); bones(...at(h(10), R * 0.6), 20); continue; }
     if (kind === 'camp') {
       // The fire off its middle, logs to sit on round it, the dinners' bones, a midden, stakes round the rim.
