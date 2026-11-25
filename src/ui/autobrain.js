@@ -3455,7 +3455,9 @@ export class Brain {
     if (++T.n > 40) { townUI.close(true); this.giveUp(`p:${T.who}`, 120); return; }
     const opts = townUI.view?.opts || [];
     const label = (o) => o.label;
-    const at = (f) => opts.findIndex((o) => o.cls !== 'dim' && f(o));
+    // (Not an option it's already taken three times on this same line in this talk: one that changes nothing, chosen over and
+    // over, ran the talk to its forty turns, a minute and a half stood before Nan Dray at the Forkstone with things to sell.)
+    const at = (f) => opts.findIndex((o) => o.cls !== 'dim' && !T.ban?.has(o.label) && f(o));
     const id = townUI.people[T.who]?.id;
     // On through what's being said.
     // (And through Lisandra's door, once a quest's opened it: src/ui/folk.js lisDoor.)
@@ -3471,7 +3473,13 @@ export class Brain {
       const rested = new Set(Object.keys(RULES).filter((qid) => Q.droppedLately?.(qid, DROP_REST)).map((qid) => QUESTS[qid].title));
       k = at((o) => !held(o) && (want.has(label(o)) || (o.cls === 'offer' && !rested.has(label(o)))));
     }
-    if (k >= 0) { townUI.choose(k); return; }
+    if (k >= 0) {
+      const said = `${label(opts[k])}|${line}`, n = ((T.picked ||= new Map()).get(said) || 0) + 1;
+      T.picked.set(said, n);
+      if (n >= 3) (T.ban ||= new Set()).add(label(opts[k]));
+      townUI.choose(k);
+      return;
+    }
     // Wes Harrow letting the pack out: asked, then a pocket at a time while it's still worth the coin (wantsRoom).
     if (T.why === 'room') {
       const one = at((o) => label(o).startsWith(ONE_MORE));

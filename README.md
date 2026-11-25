@@ -825,6 +825,9 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
     out to 140 m: inside the Drawbridge Gate the way to the Barbican's seal went round the gatehouse, out past 90 m, and it
     turned to a hunt whose way brought it back inside, and turned again, for fifteen minutes. And whenever its job flips
     back and forth between the same two three times in twenty seconds, it keeps to the one it has for twenty.
+  - **Not stood talking in circles.** An option it's taken three times on the same line in one talk isn't taken again:
+    one that changed nothing, chosen over and over, ran a talk to its forty turns, a minute and a half stood before Nan Dray
+    at the Forkstone with things to sell.
   - **A moment at each spot of a hunt's round** (`PATROL_LOOK`), its eyes on its way: it used to stand four seconds at each,
     spinning on the spot, which down the catacombs' passages was its eyes going round and round the walls.
   - **Not into a wall when it backs off in a fight** (`escape`). It asks the nav thread how clear each of sixteen ways
