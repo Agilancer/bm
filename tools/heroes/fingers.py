@@ -6,7 +6,10 @@ joints, and they lie along the modelled fingers. This rebinds only: no vertex mo
 
 For each hand: every vertex that follows the wrist and lies along a finger (past its knuckle, within a finger's
 thickness of its bones) is given to that finger's three joints by how far along the finger it is, eased across each
-joint. The palm, the back of the hand, the cuff and the thumb stay on the wrist. A second run changes nothing.
+joint. Then the thumb: what lies along its bones (nearer them than any finger's, or the index's own bone in the palm) goes
+to its three joints the same way, the ball of the thumb only partly, so it swells and folds with the thumb as it crosses
+the palm instead of the palm tearing. The palm, the back of the hand and the cuff stay on the wrist. A second run changes
+nothing.
 
     python tools/heroes/fingers.py [ids...]      (after build.py, rebind.py and mail.py; all 44 with no ids)
 
@@ -26,6 +29,7 @@ CT = {5121: "u1", 5123: "u2", 5126: "f4", 5125: "u4"}
 NC = {"VEC4": 4, "VEC3": 3, "VEC2": 2, "SCALAR": 1, "MAT4": 16}
 REACH = 0.034     # how far from a finger's bones a vertex may be and still be that finger's (a gauntlet's finger is thick)
 EASE = 0.006      # half the length over which a vertex passes from one joint to the next
+THUMB_REACH = 0.03    # the thumb past its knuckle; its ball, nearer the wrist, from 0.022 to this
 
 
 def smooth(a, b, x):
@@ -88,6 +92,62 @@ def polyline(V, pts):
     return best, along
 
 
+def segdist(V, a, b):
+    ab = b - a
+    t = np.clip(((V - a) @ ab) / max(1e-12, ab @ ab), 0, 1)
+    return np.linalg.norm(V - (a + t[:, None] * ab), axis=1)
+
+
+def thumb(P, Jn, Wn, names, pos, sd, hand, chains):
+    """The thumb of one hand (after its fingers): Jn, Wn changed in place. Returns how many vertices it took."""
+    try:
+        tch = [names.index(f"thumb_0{n}_{sd}") for n in (1, 2, 3)]
+    except ValueError:
+        return 0
+    t1, t2, t3 = (pos[names[x]] for x in tch)
+    leaf = pos.get(f"thumb_04_leaf_{sd}")
+    if leaf is None:
+        leaf = t3 + (t3 - t2)
+    tip = leaf + (leaf - t3) / max(1e-6, np.linalg.norm(leaf - t3)) * 0.012
+    fset = [x for c in chains.values() for x in c]
+    allj = set([hand] + fset + tch)
+    share = np.where(np.isin(Jn, list(allj)), Wn, 0).sum(axis=1)
+    onf = np.where(np.isin(Jn, fset), Wn, 0).sum(axis=1)
+    cand = np.nonzero((share >= 0.5) & (onf < 0.3))[0]
+    if not len(cand):
+        return 0
+    V = P[cand]
+    dt, st = polyline(V, [t1, t2, t3, leaf, tip])
+    # (Nearer the thumb than anything else of the hand's that bends: each finger past its knuckle, and the index's bone
+    # across the palm, so the palm's middle stays the palm's.)
+    other = np.full(len(V), 1e9)
+    for c in chains.values():
+        p1, p2, p3 = (pos[names[x]] for x in c)
+        d, s = polyline(V, [p1, p2, p3, p3 + (p3 - p2)])
+        other = np.minimum(other, np.where(s < -EASE, 1e9, d))
+    if "index" in chains:
+        other = np.minimum(other, segdist(V, pos[names[hand]], pos[names[chains["index"][0]]]))
+    L1, L2 = np.linalg.norm(t2 - t1), np.linalg.norm(t3 - t2)
+    reach = np.where(st < L1, 0.022 + 0.008 * np.clip(st / L1, 0, 1), THUMB_REACH)
+    take = np.nonzero((dt < reach) & (dt < other) & (st > -EASE))[0]
+    for n in take:
+        v, s = cand[n], st[n]
+        a1 = smooth(0.15 * L1, 0.85 * L1, s)           # the ball of the thumb, off the wrist bit by bit
+        a2 = smooth(L1 - EASE, L1 + EASE, s)
+        a3 = smooth(L1 + L2 - EASE, L1 + L2 + EASE, s)
+        w = {hand: 1 - a1, tch[0]: a1 * (1 - a2), tch[1]: a2 * (1 - a3), tch[2]: a3}
+        w = {k: x * share[v] for k, x in w.items() if x > 1e-4}
+        for q in range(4):
+            if Wn[v, q] > 0 and int(Jn[v, q]) not in allj:
+                w[int(Jn[v, q])] = w.get(int(Jn[v, q]), 0) + Wn[v, q]
+        top = sorted(w.items(), key=lambda kv: -kv[1])[:4]
+        tot = sum(x for _, x in top) or 1
+        Jn[v], Wn[v] = 0, 0
+        for q, (jj, x) in enumerate(top):
+            Jn[v, q], Wn[v, q] = jj, x / tot
+    return len(take)
+
+
 def fingers(path):
     g = Glb(path)
     j = g.json
@@ -118,6 +178,9 @@ def fingers(path):
                     except ValueError:
                         pass
                 mine = set([hand] + [x for c in chains.values() for x in c])
+                for n in (1, 2, 3):
+                    if f"thumb_0{n}_{sd}" in names:
+                        mine.add(names.index(f"thumb_0{n}_{sd}"))
                 # What of each vertex is the hand's (the wrist's and, after a first run, its fingers').
                 share = np.where(np.isin(J, list(mine)), W, 0).sum(axis=1)
                 cand = np.nonzero(share >= 0.5)[0]
@@ -157,6 +220,7 @@ def fingers(path):
                     Jn[v], Wn[v] = 0, 0
                     for q, (jj, x) in enumerate(top):
                         Jn[v, q], Wn[v, q] = jj, x / tot
+                moved += thumb(P, Jn, Wn, names, pos, sd, hand, chains)
             g.write(at["JOINTS_0"], Jn)
             if unit == 1.0:
                 g.write(at["WEIGHTS_0"], Wn)
