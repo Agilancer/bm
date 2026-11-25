@@ -12,12 +12,23 @@ full of Velscour's Knights and other things worth seeing early. Then you go back
 | The Gibbet Field (`fv_gibbet_field`) | Wenna | Put down the eight hanged debtors walking under the gibbets on the plain (lair `sill_gibbets`, level 3, new `gibbets` lair dress: the hanged in the cages, the fallen ones' dead beside them). | 3 | 45 g, 110 xp |
 | Carrion on the Sill (`fv_carrion`) | Wenna | Kill five carrion birds (lair `sill_carrion`, now level 4, was 20; nests in the perches, a picked body under them). | 3 | 45 g, 80 xp |
 | The Way Down (`fv_the_way_down`) | Wenna Coyle | Walk in through the Drawbridge Gate and the Barbican to the Chainmarket (overheard lines on the way), then find Fennick Lowe of the Pennyless. | 3 | 40 g, 100 xp |
+| The Toll's Runners (`fv_toll_runners`) | Fennick Lowe (after the way down) | Kill five red goblins, TOLL-RUNNERS, in a back court north of the Barbican's square (lair `ph_toll_runners`, level 3), then tell Wenna: she and Fennick keep the one purse. | 3 | 30 g, 50 xp |
+| The Chain-Thieves (`fv_chain_thieves`) | Fennick Lowe | Kill five kobolds, CHAIN-THIEVES, in the yard behind Chainmarket's stalls (lair `ph_chain_thieves`, level 3), then tell Wenna. | 3 | 30 g, 50 xp |
+| Under the Rookeries (`fv_gutter_nest`) | Fennick Lowe | Kill four GUTTER SPIDERS come up out of the West Drains into a yard north of the drain's mouth in the Rookeries (lair `ph_gutter_nest`, level 4), then tell Wenna. | 4 | 35 g, 60 xp |
 | The Redoubt under the Sill (`fv_the_redoubt`) | Wenna (after the Gibbet Field and the carrion: the last of hers) | Go into **the Redoubt under the Sill**, past his two gate-wards (lair `redoubt_gate`), and kill Knight-Commander Rothgar. | 4 | 120 g, 200 xp, staff "Wenna's Lamp-Iron" |
-| The Candle Door (`fv_home`) | Wenna | She opens Lisandra's door back; you're set down a stride from Lisandra in Bellmourn and tell her what you saw. | 4 | 60 g, 80 xp, a scroll |
+| The Candle Door (`fv_home`) | Wenna (once the Redoubt's broken and Fennick's three are done) | She opens Lisandra's door back; you're set down a stride from Lisandra in Bellmourn and tell her what you saw. | 4 | 60 g, 80 xp, a scroll |
 
 Wenna gives the hunts on the plain first, straight after the long look at the city, then the walk down into it, and the
 Redoubt last. The Redoubt is offered once the two hunts are done, so a player can go down it before the walk into the
 city. Auto-play has done it both ways.
+
+Fennick's three (the owner: "a few quests to kill enemies in certain parts of Phobos during the initial questing before
+returning to Bellmourn") are packs of the city's kinds made low for a new player, as the Sill's are (`xpScale` 0.4), in
+yards off the way in, well clear of the city's own haunts (level 24 and up) and of the streets the crowd walks.
+`streets: true` on their lairs: no lane is laid out to them (`tools/roads/lay.mjs`; the city's streets are their way), and on
+a phone they aren't dressed (`src/core/lair-dress.js`), so the land's corners stay inside a phone's. The door home waits on
+all three, and each is told to Wenna, so nobody on the Sill has to know what was done in the city without being told
+(`tests/quest-loop.test.mjs`).
 
 Rules are in `src/folk/first-visit.js` and the words in `src/folk/lines/first-visit.js`. Wenna is `fv_wenna`, a posted
 person on the Sill with `firstVisit: true`, a recoloured chandler body made by `tools/firstvisit/wenna_swap.py`.

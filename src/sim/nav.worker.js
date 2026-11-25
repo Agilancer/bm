@@ -102,10 +102,13 @@ function closeCell(k) {
 // Keeping off the grass. In the town and just round it (POLITE metres out from TOWN), a walk asked for politely (auto-play
 // going about its errands: `polite` in the ask) keeps to the streets, the lanes, the paths to the doors and the worn square
 // by the well, as the townsfolk do (GRASS in src/folk/ground.js): a step over grass costs GRASS more than one on a worn way,
-// so it goes most of twice as far round to stay on one, and only crosses the grass where there's no way round (up to a
+// so it goes up to three times as far round to stay on one, and only crosses the grass where there's no way round (up to a
 // stall, or someone stood in their yard). Indoors every step costs the same. It used to take the straight line between any
-// two places in the town, round the sides of the houses and over their gardens.
-const GRASS = 0.8, POLITE = 24, SQUARE = [-1.5, 1, 8];
+// two places in the town, round the sides of the houses and over their gardens; and at 0.8 more (under twice as dear) it
+// still cut round the backs of the houses on its way out to the woods, two thirds of a run's walking in the town over the
+// grass (the owner: "stays on the paths in town, not cutting around the outside of the buildings").
+// tools/autoplay/town-grass.mjs reads a run's walking for it.
+const GRASS = 2, POLITE = 24, SQUARE = [-1.5, 1, 8];
 const PB = { x0: TOWN.x0 - POLITE, x1: TOWN.x1 + POLITE, z0: TOWN.z0 - POLITE, z1: TOWN.z1 + POLITE };
 let polite = false;
 // How worn each cell is, worked out the first time it's asked: 0 not yet, else 1 + 254 times how worn (0 grass, 1 a way's middle).

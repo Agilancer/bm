@@ -278,6 +278,15 @@ export const LAIRS = [
   { key: 'redoubt_gate', lvl: 4, x: 9061, z: 262, r: 4, pick: VKNIGHTS, n: 2, pal: ['Oxblood'], dress: 'gate', xpScale: 0.25, tough: { hp: 1, damage: 0.6 }, names: { "Velscour's Knights": 'REDOUBT KNIGHT' } },
   // His debtors, hanged on the plain in sight of the gate and walking again: gibbets, and what was left in them.
   { key: 'sill_gibbets', lvl: 3, x: 9160, z: 236, r: 10, pick: POSSESSED, n: 8, pal: ['Ashen', 'Bone-white'], dress: 'gibbets', xpScale: 0.5, names: { 'The Possessed': 'HANGED DEBTOR' } },
+  // Inside the wall, on the first visit: Fennick Lowe's three (src/folk/first-visit.js), in yards off the way in, each well
+  // clear of the city's own haunts and off the streets the crowd walks. Made low for a new player, as the Sill's are. The
+  // toll's runners in a back court off the Barbican; the chain-thieves in the yard behind Chainmarket's stalls; and what
+  // comes up the Rookeries' drain, in a yard north of its mouth. (The owner: "a few quests to kill enemies in certain parts of
+  // Phobos during the initial questing before returning to Bellmourn".) (streets: got to by the city's own streets, no lane laid
+  // to it: tools/roads/lay.mjs.)
+  { key: 'ph_toll_runners', streets: true, lvl: 3, x: 9425, z: 54, r: 6, pick: RED_GOBLINS, n: 5, pal: ['Base', 'Infernal'], xpScale: 0.4, names: { Goblins: 'TOLL-RUNNER' } },
+  { key: 'ph_chain_thieves', streets: true, lvl: 3, x: 9805, z: -42, r: 6, pick: KOBOLDS, n: 5, pal: ['Base', 'Abyssal'], xpScale: 0.4, names: { Kobolds: 'CHAIN-THIEF' } },
+  { key: 'ph_gutter_nest', streets: true, lvl: 4, x: 9619, z: 406, r: 6, pick: SPIDERS, n: 4, pal: ['Base', 'Ashen'], xpScale: 0.4, names: { 'Giant Spiders': 'GUTTER SPIDER' } },
   // City State Phobos (src/core/east.js HAUNTS): where the dead, the Loyal and the other horrors keep inside the wall. The
   // street crowd keeps away from these (src/folk/people.js CROWD). His own in blood red, as everywhere in his area.
   { ...HAUNT('phobos_boneyards'), lvl: 24, boss: ['skeleton_knight_giant', 'bone_golem'], pick: CHILDREN.concat(['plague_knight_black']), n: 5, pal: ['Bone-white', 'Ashen'] },

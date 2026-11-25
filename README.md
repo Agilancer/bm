@@ -1188,14 +1188,18 @@ bought as written (it's played through from level 1 to 50), and a new block of m
   Not watched: a quest handed in indoors, the shops, and the catacombs' doors since. Nobody has watched it with their
   own eyes.
 - **It keeps to the paths in town.** When it walks to an errand in or near Bellmourn (a shop, someone with a quest, its bed), it asks the nav
-  worker for a polite way (`politePath`, `src/sim/nav.worker.js`). Inside Bellmourn and 24 m round it, grass costs 0.8 more
-  per metre, less where the ground is worn. The roads, lanes and the square are free (the same `PATHS` and `allWays()` the
+  worker for a polite way (`politePath`, `src/sim/nav.worker.js`). Inside Bellmourn and 24 m round it, grass costs 2 more
+  per metre (three times a metre of road), less where the ground is worn. It was 0.8, and in a watched run two thirds of
+  its walking in the town, on its way out to the woods, was round the backs of the houses (the owner: "stays on the paths
+  in town, not cutting around the outside of the buildings"; `node tools/autoplay/town-grass.mjs` reads a run for it). The roads, lanes and the square are free (the same `PATHS` and `allWays()` the
   townsfolk keep to). When the path is straightened, a shortcut is only taken if it crosses no more grass than the path it
   replaces, so it doesn't cut round the sides of houses. Indoors and out in the land nothing changes, and neither do
-  its lines on a foe. `tests/town-polite.test.mjs` walks eight trips across the town: 41 m on grass in all, where the
-  shortest ways had 317 m, and none of them more than a few metres longer.
+  its lines on a foe. `tests/town-polite.test.mjs` walks eight trips across the town: 11 m on grass in all (41 m at 0.8),
+  where the shortest ways had 317 m, none of them more than 20 m longer.
   `node tools/autoplay/polite-sweep.mjs` checks the polite way against the plain one on 4,085 trips across the town
-  (14 s). The polite way reached every place the plain one did, none was much further round, and none took over 60 ms.
+  (26 s). The polite way reached every place the plain one did, and only one took over 60 ms. 33 go much further round
+  (more than 1.8 times as far, and 10 m): to a back garden or a field with no way to it, it goes by the ways to the
+  nearest point and over the grass from there.
 - **The beacon stone.** When the job it has picked is in Bellmourn (to sell, to be mended, a quest to hand in) and is
   more than 300 m off, the stone is lit, and nothing is within 20 m, it uses the stone instead of walking. It stands
   still for the fifteen seconds unless something comes within 14 m, and then it fights. Settings' auto-play "Getting

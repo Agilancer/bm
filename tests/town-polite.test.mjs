@@ -47,7 +47,8 @@ test('asked politely, a way across the town keeps to its streets, and is no grea
     const end = polite.at(-1);
     assert.ok(Math.hypot(end[0] - to[0], end[1] - to[1]) < 1.5, `${a} to ${b} ends there`);
   }
-  assert.ok(politeGrass < plainGrass * 0.4, `over all, well under half the grass (${politeGrass.toFixed(0)} m against ${plainGrass.toFixed(0)} m)`);
+  // (At GRASS 0.8 it was 41 m of 317; the owner wanted it off the grass, not round the backs of the houses: now a tenth.)
+  assert.ok(politeGrass < plainGrass * 0.1, `over all, a tenth of the grass at most (${politeGrass.toFixed(0)} m against ${plainGrass.toFixed(0)} m)`);
 });
 
 test('asked plainly, nothing changes: the shortest way, as for a line on a foe', () => {

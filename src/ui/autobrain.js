@@ -2464,12 +2464,18 @@ export class Brain {
     // and her offers taken as they come (she's there on the Sill, by the door home). And back home through the door, the
     // word with Lisandra before the town's own errands and offers.
     if (visiting) {
+      // (The work first, nearest first, then the words: Fennick's three yards down in the city are each told to Wenna up on
+      // the Sill, and it walked up to her after each, five minutes there and back, with the next yard a street away.)
+      const jobs = [];
       for (const id of FIRST_VISIT) {
         const s = Q.state(id);
         if (!s || s.stage === 'done' || this.skipping(`q:${id}`)) continue;
         const job = this.questJob(id, m, LEVEL_OF[id]);
-        if (job) return job;
+        if (job) jobs.push(job);
       }
+      const work = jobs.filter((j) => j.kind !== 'talk');
+      if (work.length) return work.reduce((a, b) => (this.jobDist(a, m) <= this.jobDist(b, m) ? a : b));
+      if (jobs.length) return jobs[0];
       const offer = this.offerJob(m, FIRST_VISIT);
       if (offer) return offer;
       // (Just through the door, with its word with Wenna still to have and her not placed yet for a second or two: it keeps
