@@ -3392,6 +3392,8 @@ export class Brain {
   // Up to someone in the town, face to face, and a word.
   approach(m, j) {
     const { townUI, game } = this.o;
+    // (A counter it's just been to and done with, for now: not walked back to. converse.)
+    if ((j.why === 'sell' || j.why === 'buy') && this.skipping(`${j.why}:${j.who}`)) { this.job = null; this.jobKey = ''; return; }
     const w = townUI.whereOf(j.who);
     this.say(j.say);
     if (!w || !this.reachable(j.who)) { this.giveUp(`p:${j.who}`, 60); this.job = null; return; }
@@ -3517,6 +3519,7 @@ export class Brain {
         const items = townUI.stockOf(p.trade), k = items.indexOf(this.job?.item);
         if (k >= 0) townUI.buyItem(k, (items[k].type === 'spell' ? 120 : worth(items[k])) * 10);
         this.giveUp(`buy:${T.who}`, 120);
+        if (this.job?.why === 'buy') { this.job = null; this.jobKey = ''; }
         return;
       }
       else if (T.why === 'bed' && !T.done) {
@@ -3529,6 +3532,8 @@ export class Brain {
       // (Nothing sold: they don't buy what it carries. Not back to them for a good while: in the Fells it went back to
       // Fellfoot's sutler every minute, a 300 m walk each way, and turned round 120 m out on an errand to.)
       if (T.why === 'sell') this.giveUp(`sell:${T.who}`, T.sold ? 60 : 600);
+      // (And that errand's done: it kept the job, walked back up to the same counter and talked again, every five seconds.)
+      if (this.job?.who === T.who && /^(sell|buy|mend)$/.test(this.job.why)) { this.job = null; this.jobKey = ''; }
       return;
     }
     townUI.close(true);
