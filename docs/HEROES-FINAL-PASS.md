@@ -24,25 +24,28 @@ Their briefs and notes: `tools/build/h3/critics/` (not in git: tools/build is ig
 - paladin_m1's arm-draped cloak cloth hung down (tools/heroes/drape.py), after the last critic round.
 - Neck covers flared over the collar bones; mail covers darker; plate insides lit dark iron.
 
-## Open, most important first (the critics' last lists, merged)
+## After the critics (PR 271's follow-up; they did not see these)
 
-1. paladin_m1's raised arm still lifts the pauldron over the helm (see 3). His black blades under the left pauldron
-   are FIXED after round 4 (the critics did not see this): his cloak was modelled draped along the outstretched arms,
-   and tools/heroes/drape.py hangs that cloth down and ties it to the trunk. This is the one place a model's cloth
-   was re-shaped; the body before it is tools/build/h3/prer5/paladin_m1.glb.
-2. paladin_m2: the chop has no arc, the bash barely travels, the cloak is two stiff boards, flecks on the breastplate,
-   pale ribbed thigh and knee covers.
-3. Raised arms in plate: the pauldron covers the helm and the sleeve cover is a fat cone (lancers, bard_m1/m3,
-   paladin_m1). Wants a helper joint for pauldrons and a sleeve cover that narrows to the elbow.
-4. Cloth still in flat planes in a crouch or run: archer_f5 (worst), bard_f3, bard_f1, bard_m1, bard_m3; dragoon_f1
-   needles in a crouch; thin spike under the skirt on lancer_m4 and paladin_f1.
-5. Necks: dragoon_f1 and boomerang_f3 still a tall mail tube (held in by collar plates); lancer_f1 a wide bib.
-6. Ninjas: quilted patch with a square hole at the shoulder, notch in the cowl.
-7. bard_f1-f3 chalk-white upper arms; bard_m1/m3 black tabs by the neck; bard_m2 loose hoop.
-8. Carried things: back shield flat like a lid in a crouch; shield inner faces flat black; dragoon spear heads above
-   the helm; lance held crosswise when armed; paladin_f1's stowed mace sticks out sideways.
-9. Small: dragoon_f4 pauldron notch, dragoon_f3 belly gap, boomerang_m1 elbow fragments, rogue_m2/m3 small holes.
-10. Never shown readably to the critics: the rogue's attack, paladin_m2's blows from the front. Watch them in play.
+- A joint of its own for each pauldron (tools/heroes/pauldrons.py, Hero.posePauldrons): it follows the arm while the
+  arm is at or below level and is held back past that, so the helm shows in a cheer or an overhead blow.
+- paladin_m2: his cloak hung as cloth (tools/heroes/cloakhang.py); the chop, the cut and the shield bash have keyed
+  arm arcs (BOARD_ARCS in src/sim/hero.js).
+- Cloth weighted by where it hangs wherever that tears less (tools/build/h3/r6_hang.py, 20 heroes: archer_f5, the
+  bards, rogues, ninjas). Edges drawn out past 3x now: standing 896, cheer 2929, fights 6844, run and crouch 5365.
+- Stowed spears canted off the helm.
+
+## Open, most important first
+
+1. paladin_m2: dark flecks on the breastplate; pale ribbed thigh and knee covers.
+2. dragoon_f1 and boomerang_f3: the tall neck tube is the suits' own modelled neck piece (a plate all round the
+   throat), not the mail cover. Changing it means editing the armour.
+3. Ninjas: quilted patch with a square hole at the shoulder, notch in the cowl.
+4. bard_f1-f3 chalk-white upper arms; bard_m1/m3 black tabs by the neck; bard_m2 loose hoop.
+5. Carried things: back shield flat like a lid in a crouch; shield inner faces flat black; lance held crosswise when
+   armed; paladin_f1's stowed mace sticks out sideways.
+6. The sleeve cover on a raised arm is still a fat cone. lancer_f1's neck mantle is wide.
+7. Small: dragoon_f4 pauldron notch, dragoon_f3 belly gap, boomerang_m1 elbow fragments.
+8. Not seen by the critics: everything in "After the critics", and paladin_m1's re-draped cloak.
 
 ## Trade made
 
