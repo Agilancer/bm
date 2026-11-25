@@ -1,4 +1,5 @@
-// Lisandra's cloth: her skirt, tabard and hanging sleeves are chains of bones (tools/lisandra/cloth_rig.py) that hang
+// Cloth that hangs: the back of the wizard's robe (tools/player/robe_rig.py, src/sim/playerbody.js), and once Lisandra's.
+// Her skirt, tabard and hanging sleeves were chains of bones (tools/lisandra/cloth_rig.py) that hang
 // with gravity, trail behind her, and are kept out of her legs, hands and body. Each chain is a line of points: the first
 // rides on the body bone it hangs from, the rest swing. A skirt point is pulled a little toward where the sculpt put it,
 // so the dress keeps its cut; a sleeve hangs straight down from the arm. Every segment is pushed out of whatever it
@@ -25,6 +26,11 @@ const KINDS = {
   // only sways about that; it is one chain down its middle, so its colliders are padded a little toward its edges.
   tabard: { follow: [0.25, 0.2, 0.15], keep: 0.95, hits: ['legs', 'feet', 'hands'], pad: 0.02, skinned: true },
   sleeve: { follow: [0.06, 0.05, 0.04], keep: 0.95, hits: ['dress', 'legs'], hang: true },
+};
+
+const MIXAMO = {
+  hips: 'mixamorig:Hips', upLeg: (s) => `mixamorig:${s}UpLeg`, leg: (s) => `mixamorig:${s}Leg`, foot: (s) => `mixamorig:${s}Foot`,
+  toe: (s) => `mixamorig:${s}ToeBase`, foreArm: (s) => `mixamorig:${s}ForeArm`, hand: (s) => `mixamorig:${s}Hand`, fingers: (s) => `mixamorig:${s}HandMiddle2`,
 };
 
 export class Cloth {
@@ -65,20 +71,23 @@ export class Cloth {
       a.ringTo = a.ringTo || [];
       a.ringTo.push([b, d]);
     }
-    // Colliders: capsules between joints, radius at each end, in metres (form.legs, form.hand).
-    const J = (n) => rig.index.get('mixamorig:' + n);
+    // Colliders: capsules between joints, radius at each end, in metres (form.legs, form.hand). The joints by their names in
+    // a Mixamo skeleton (hers), or as form.bones names them (the wizard's: src/sim/playerbody.js).
+    const named = form.bones || MIXAMO;
+    const J = (n, s) => rig.index.get(typeof named[n] === 'function' ? named[n](s) : named[n]);
     // ext carries a capsule on past its far joint, as a fraction of its length: the shin's covers the boot's heel.
-    const cap = (a, b, ra, rb, group, ext = 0) => ({ a: J(a), b: J(b), ra, rb, group, ext });
+    const cap = (s, a, b, ra, rb, group, ext = 0) => ({ a: J(a, s), b: J(b, s), ra, rb, group, ext });
     this.colliders = [];
     for (const s of ['Left', 'Right']) {
-      this.colliders.push(cap(s + 'UpLeg', s + 'Leg', form.legs[0], form.legs[1], 'legs'));
-      this.colliders.push(cap(s + 'Leg', s + 'Foot', form.legs[1], form.legs[2] + 0.02, 'legs', 0.32));
-      this.colliders.push(cap(s + 'Foot', s + 'ToeBase', form.legs[2] * 0.85, form.legs[2] * 0.7, 'feet'));
-      this.colliders.push(cap(s + 'ForeArm', s + 'Hand', form.hand * 0.8, form.hand, 'hands'));
-      this.colliders.push(cap(s + 'Hand', s + 'HandMiddle2', form.hand, form.hand * 0.8, 'hands'));
+      this.colliders.push(cap(s, 'upLeg', 'leg', form.legs[0], form.legs[1], 'legs'));
+      this.colliders.push(cap(s, 'leg', 'foot', form.legs[1], form.legs[2] + 0.02, 'legs', 0.32));
+      this.colliders.push(cap(s, 'foot', 'toe', form.legs[2] * 0.85, form.legs[2] * 0.7, 'feet'));
+      this.colliders.push(cap(s, 'foreArm', 'hand', form.hand * 0.8, form.hand, 'hands'));
+      this.colliders.push(cap(s, 'hand', 'fingers', form.hand, form.hand * 0.8, 'hands'));
     }
-    this.hipsJoint = J('Hips');
-    this.thighs = ['Left', 'Right'].map((s) => [J(s + 'UpLeg'), J(s + 'Leg')]);
+    for (const c of this.colliders) if (c.a === undefined || c.b === undefined) throw new Error('cloth: a collider joint is missing');
+    this.hipsJoint = J('hips');
+    this.thighs = ['Left', 'Right'].map((s) => [J('upLeg', s), J('leg', s)]);
     // How far her body and dress reach at her sides, by depth under the hips: the sleeves hang outside it.
     this.dress = (def.dress || []).map(([d, r]) => [d * scale, r * scale + (form.sleeveGap ?? 0.02)]);
     this.fresh = true;
