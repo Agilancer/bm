@@ -116,7 +116,7 @@ const BLOWS = {
   two_hand: [{ clip: 'Sword_Attack', rate: 0.95, hit: [0.28], dmg: 16, reach: 2.4, end: 0.55, soft: 0.6, maul: 'smash' }, { clip: 'Sword_Regular_B', rate: 0.7, hit: [0.47], dmg: 15, reach: 2.3, soft: 0.55, maul: 'cleave' }, { clip: 'Sword_Regular_A', rate: 0.62, hit: [0.52], dmg: 14, reach: 2.4, soft: 0.55, maul: 'rise' }],
   // (A mace and board: brought down from over his head, and cut down across from over his shoulder, the board kept square
   // before him through both; the sword-dancer's spinning pair turned him right round, the board face down or behind him.)
-  sword_board: [{ clip: 'L_Chop', rate: 1.5, hit: [0.5], dmg: 10, reach: 2.1, end: 0.78 }, { clip: 'LP_Overhand_cleaver_downward_ch', rate: 1.9, hit: [0.27], dmg: 10, reach: 2.1, end: 0.45 }, { clip: 'L_ShieldJab', rate: 1.1, hit: [0.55], dmg: 6, reach: 1.5, knock: 4 }],
+  sword_board: [{ clip: 'L_Chop', rate: 1.5, hit: [0.5], dmg: 10, reach: 2.1, end: 0.78, arc: 'chop' }, { clip: 'LP_Overhand_cleaver_downward_ch', rate: 1.9, hit: [0.27], dmg: 10, reach: 2.1, end: 0.45, arc: 'cut' }, { clip: 'L_ShieldJab', rate: 1.1, hit: [0.55], dmg: 6, reach: 1.5, knock: 4, arc: 'bash' }],
   // (A lance or a spear goes in point first: a straight arm down the line, the body behind it. THRUST below.)
   lance: [{ clip: 'Punch_Cross', rate: 1.15, hit: [0.42], dmg: 14, reach: 3.1, thrust: true }, { clip: 'L_ShieldJab', rate: 1.75, from: 0.25, hit: [0.55], dmg: 7, reach: 1.9, knock: 5, shove: 1.7 }, { clip: 'Punch_Cross', rate: 1.35, hit: [0.42], dmg: 11, reach: 2.9, thrust: true }],
   // (Knives cut: slashes, a hook from the off hand, an overhand rip. Not a fist held out over its head.)
@@ -161,6 +161,31 @@ const MAUL_SWINGS = {
     { p: 1.4, e: 'out', h: [0.12, -0.34, -0.02], a: [-0.25, -0.6, 0.75], tw: 0.5, ln: -0.1, pr: [0.2, 0.6, -0.4], pl: [-0.3, -0.8, -0.3], g: -0.11 },
   ],
 };
+// A mace and board's blows, the arm that strikes: where its wrist is from its own shoulder through the blow ([forward, to
+// that side, up], a 1.8 m body's metres), p as a maul's keys (0 the start, 1 the blow, 2 the end), e how it comes to the
+// key, pole where the elbow points, tw the shoulders round toward that arm's side. The clips under them (L_Chop, the
+// cleaver, L_ShieldJab) held the mace hand out at shoulder height for half the blow and dropped it in a frame, and the
+// board's jab hardly left his chest (the critics, rounds 2 to 4): here the chop is lifted over and behind his head and
+// brought down through the line, the cut comes from over his shoulder down across him, and the board is drawn back to
+// his ribs and driven out to a straight arm with his shoulders behind it.
+const PAULDRON_FROM = -0.2;   // radians above level from which a pauldron stops following its arm all the way
+const PAULDRON_HOLD = 0.62;   // and how much of the arm's rise past that it's held back
+const BOARD_ARCS = {
+  chop: { side: 'r', keys: [
+    { p: 0.3, e: 'io', h: [0.12, 0.16, 0.2], pole: [-0.2, 0.8, -0.5], tw: -0.1 },
+    { p: 0.72, e: 'out', h: [-0.1, 0.12, 0.44], pole: [0.3, 0.9, 0.2], tw: -0.3 },
+    { p: 1, e: 'in', h: [0.56, 0.0, 0.02], pole: [-0.2, 0.6, -0.8], tw: 0.28 },
+    { p: 1.4, e: 'out', h: [0.42, -0.06, -0.3], pole: [-0.4, 0.5, -0.7], tw: 0.34 }] },
+  cut: { side: 'r', keys: [
+    { p: 0.6, e: 'out', h: [-0.06, 0.26, 0.34], pole: [0.2, 0.95, 0.1], tw: -0.38 },
+    { p: 1, e: 'in', h: [0.5, -0.1, 0.0], pole: [-0.2, 0.6, -0.8], tw: 0.3 },
+    { p: 1.45, e: 'out', h: [0.28, -0.34, -0.28], pole: [-0.5, 0.4, -0.7], tw: 0.5 }] },
+  bash: { side: 'l', keys: [
+    { p: 0.6, e: 'out', h: [0.08, 0.1, -0.06], pole: [-0.8, 0.6, -0.3], tw: -0.32 },
+    { p: 1, e: 'in', h: [0.6, -0.04, 0.03], pole: [-0.3, 0.7, -0.6], tw: 0.36 },
+    { p: 1.35, e: 'out', h: [0.5, -0.02, 0.0], pole: [-0.3, 0.7, -0.6], tw: 0.3 }] },
+};
+
 // Driven into the ground at his feet (a paladin's consecration): up over his shoulder as for the overhead, and down,
 // the head into the earth a stride before him, the body bowed over it, and held there.
 MAUL_SWINGS.ground = [
@@ -369,6 +394,8 @@ export class Hero extends Knight {
     const under = (top) => { const out = []; for (let j = 0; j < rig.count; j++) { let k = rig.parent[j]; while (k >= 0 && k !== top) k = rig.parent[k]; if (k === top) out.push(j); } return out; };
     this.arms = { l: { u: ji('upperarm_l'), f: ji('lowerarm_l'), h: ji('hand_l'), fingers: under(ji('hand_l')) }, r: { u: ji('upperarm_r'), f: ji('lowerarm_r'), h: ji('hand_r'), fingers: under(ji('hand_r')) } };
     this.upperBody = [ji('spine_01'), ...under(ji('spine_01'))];
+    // (Each pauldron's own joint, tools/heroes/pauldrons.py: posePauldrons. A body without them has none to set.)
+    this.pauldronJ = ['l', 'r'].map((sd) => ({ p: rig.index.get('pauldron_' + sd), u: ji('upperarm_' + sd), f: ji('lowerarm_' + sd) })).filter((x) => x.p !== undefined);
     this.headBits = [this.J.head, ...under(this.J.head)];
     // The legs, for the board (poseRide): hip, knee and ankle as an arm's are, the ball of the foot, and how high the ankle
     // and the ball stand off the sole as modelled (Knight's this.ground has them).
@@ -415,7 +442,9 @@ export class Hero extends Knight {
         // (A great mace is canted well over, its head out past his right shoulder: nearly upright, the spiked ball sat
         // behind his helm and read as his head from behind, the critics' third review.)
         const heavy = this.style === 'two_hand';
-        const y = norm(heavy ? [-0.64, 0.76, -0.06] : [-0.26, 0.96, -0.06]), up = M.kind === 'bow' ? 0 : (M.reach - M.butt) / 2;
+        // (A spear's or a pike's the same, by less: its head stood straight up over the helm like a second crest.)
+        const pole = M.kind === 'spear' || M.kind === 'pike' || M.kind === 'halberd';
+        const y = norm(heavy ? [-0.64, 0.76, -0.06] : pole ? [-0.46, 0.88, -0.06] : [-0.26, 0.96, -0.06]), up = M.kind === 'bow' ? 0 : (M.reach - M.butt) / 2;
         const gy = Math.max(hold.y(sj) - 0.1 * u - y[1] * up, 0.3 + (M.butt || 0) * y[1]), over = (gy - (hold.y(sj) - 0.1 * u)) / y[1];
         // (A lance, with its bell of a vamplate, stands at his right shoulder blade, for when the board isn't on his back
         // with it: in his hand or under his feet. With the board there it goes under it: lanceSlot.)
@@ -883,7 +912,7 @@ export class Hero extends Knight {
         // (A blade in each hand: the arc each one cuts, in the class's colour. A kick leaves none.)
         if (!/kick/i.test(b.clip)) cutArc(this, sim, this.combo);
       }
-    }, { lunge: 2.2, aimed: thrust || b.sweep, stab: thrust, from: b.from, end: b.end, soft: thrust ? 0.75 : b.soft, blow: true, bash: this.style === 'lance' && b.clip === 'L_ShieldJab', maul: this.style === 'two_hand' ? b.maul : null });
+    }, { lunge: 2.2, aimed: thrust || b.sweep, stab: thrust, from: b.from, end: b.end, soft: thrust ? 0.75 : b.soft, blow: true, bash: this.style === 'lance' && b.clip === 'L_ShieldJab', arc: this.style === 'sword_board' ? b.arc : null, maul: this.style === 'two_hand' ? b.maul : null });
     this.shotCd = rand(0.25, 0.7);
   }
 
@@ -946,7 +975,7 @@ export class Hero extends Knight {
     // (from: begun part-way in, past a clip's slow start. hold: [where, seconds], the pose kept there that long: an arm held
     // up for as long as what it called down is still coming.)
     if (o.from) this.actT = o.from * this.bank.clips[clip].dur;
-    this.swing = { clip: this.bank.clips[clip], hits, fn, done: 0, end: o.end ?? 0.92, lunge: o.lunge || 0, still: o.still, root: o.root, after: o.after, tick: o.tick, cut: o.cut, aimed: o.aimed, stab: o.stab, hold: o.hold ? [o.hold[0], o.hold[1]] : null, from: o.from || 0, loop: !!o.loop, blow: !!o.blow, bash: !!o.bash, maul: (o.maul && MAUL_SWINGS[o.maul]) || null, maulHeld: (o.maul && MAUL_HELD[o.maul]) || null };
+    this.swing = { clip: this.bank.clips[clip], hits, fn, done: 0, end: o.end ?? 0.92, lunge: o.lunge || 0, still: o.still, root: o.root, after: o.after, tick: o.tick, cut: o.cut, aimed: o.aimed, stab: o.stab, hold: o.hold ? [o.hold[0], o.hold[1]] : null, from: o.from || 0, loop: !!o.loop, blow: !!o.blow, bash: !!o.bash, arc: (o.arc && BOARD_ARCS[o.arc]) || null, maul: (o.maul && MAUL_SWINGS[o.maul]) || null, maulHeld: (o.maul && MAUL_HELD[o.maul]) || null };
   }
 
   runSwing(dt, sim) {
@@ -1797,6 +1826,7 @@ export class Hero extends Knight {
           if (runK - this.shutNow[sd] > 0.01) this.shutHand(sd, runK - this.shutNow[sd], 'fist');
         }
       }
+      if (this.swing?.arc || this.arcW > 0.01) this.poseArc(dt);
       if (this.luteP && this.luteW > 0.01) this.poseLute();
       if (this.readyW > 0.01) this.poseReady();
       if (this.bowW > 0.01) this.poseBow();
@@ -1807,6 +1837,7 @@ export class Hero extends Knight {
     }
     this.poseHands(dt, sim);
     if (this.bodyFlip || this.bodyRoll) this.tumble();
+    if (this.pauldronJ.length) this.posePauldrons();
     if (this.backRefs) this.poseBack(dt);
   }
 
@@ -2311,6 +2342,51 @@ export class Hero extends Knight {
   }
 
   // Everything above the hips turned about the upright: to his left for more, to his right for less.
+  // The pauldrons' joints (tools/heroes/pauldrons.py), set last of all: each is its upper arm, place and turn, while the
+  // arm is at or below PAULDRON_FROM of level; past that it's turned back down about the shoulder by PAULDRON_HOLD of
+  // the rise, as a pauldron hung from the shoulder lets the arm lift under it. (Riding the arm all the way, a cheer or
+  // an overhead blow stood the plate up over the helm and hid the head: the critics, all four rounds.)
+  posePauldrons() {
+    const { wq, wt } = this.pose;
+    for (const { p, u, f } of this.pauldronJ) {
+      const U = u * 3, F = f * 3;
+      let dx = wt[F] - wt[U], dy = wt[F + 1] - wt[U + 1], dz = wt[F + 2] - wt[U + 2];
+      const l = Math.hypot(dx, dy, dz) || 1; dx /= l; dy /= l; dz /= l;
+      const rise = Math.asin(clamp(dy, -1, 1)) - PAULDRON_FROM;
+      wt[p * 3] = wt[U]; wt[p * 3 + 1] = wt[U + 1]; wt[p * 3 + 2] = wt[U + 2];
+      const h = Math.hypot(dx, dz);
+      if (rise <= 0 || h < 1e-3) { wq[p * 4] = wq[u * 4]; wq[p * 4 + 1] = wq[u * 4 + 1]; wq[p * 4 + 2] = wq[u * 4 + 2]; wq[p * 4 + 3] = wq[u * 4 + 3]; continue; }
+      // (About the level line square to the arm, (d x up): a turn of +a about it raises the arm's line, so -a lowers it.)
+      quatAxisAngle(ikQ, 0, -dz / h, 0, dx / h, -PAULDRON_HOLD * rise);
+      quatMul(wq, p * 4, ikQ, 0, wq, u * 4);
+    }
+  }
+
+  // A mace and board's blow, laid over its clip (BOARD_ARCS): the striking arm's wrist carried through its keys, the
+  // shoulders turned with it; eased in at the start of the blow and out after it.
+  poseArc(dt) {
+    const sw = this.swing, A = sw?.arc;
+    this.arcW = damp(this.arcW || 0, A ? 1 : 0, A ? 12 : 7, dt);
+    if (A) { this.arcOf = A; const at = sw.hits.length ? sw.hits[0] : 1, f = this.actT / sw.clip.dur; this.arcP = f < at ? f / at : 1 + (f - at) / Math.max(0.05, sw.end - at); }
+    const B = this.arcOf, w = ease(this.arcW);
+    if (!B || w < 0.01) return;
+    const K = B.keys, p = this.arcP, sg = B.side === 'r' ? 1 : -1, u = this.rig.height / 1.8;
+    let i = 0; while (i < K.length && K[i].p < p) i++;
+    const b = K[Math.min(i, K.length - 1)], a = i ? K[Math.min(i - 1, K.length - 1)] : null;
+    let k = a && i < K.length ? clamp((p - a.p) / Math.max(1e-4, b.p - a.p), 0, 1) : 1;
+    k = b.e === 'in' ? k * k : b.e === 'out' ? 1 - (1 - k) * (1 - k) : ease(k);
+    // (Before its first key the arm is where the clip has it: the first key is come to as the arc comes on.)
+    const mix = (n, j) => (a && i < K.length ? a[n][j] + (b[n][j] - a[n][j]) * k : b[n][j]);
+    const lead = a ? 1 : clamp(p / Math.max(1e-4, b.p), 0, 1), ww = w * (i >= K.length ? clamp(1 - (p - K[K.length - 1].p) / 0.5, 0, 1) : ease(lead));
+    const tw = (a && i < K.length ? a.tw + (b.tw - a.tw) * k : b.tw) * sg;
+    if (tw) this.twistTorso(-tw * ww);
+    const { wt } = this.pose, U = this.arms[B.side].u * 3, s = Math.sin(this.yaw), c = Math.cos(this.yaw);
+    // (Forward is (s, c); his right is (-c, s).)
+    const h = [mix('h', 0) * u, mix('h', 1) * u * sg, mix('h', 2) * u], q = [mix('pole', 0), mix('pole', 1) * sg, mix('pole', 2)];
+    this.reachTo(B.side, wt[U] + s * h[0] - c * h[1], wt[U + 1] + h[2], wt[U + 2] + c * h[0] + s * h[1],
+      [s * q[0] - c * q[1], q[2], c * q[0] + s * q[1]], ww);
+  }
+
   twistTorso(a) {
     const { wt } = this.pose, sj = this.upperBody[0] * 3;
     quatAxisAngle(ikQ, 0, 0, 1, 0, a);
