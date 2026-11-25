@@ -4,6 +4,7 @@
 //
 //   python tools/serve.py 8475 --no-open          (the server, first)
 //   node tools/heroes/moves.mjs plan.json [port]
+//   node tools/heroes/moves.mjs plan.json [port] --disk     (or no server: the checkout read from disk by the browser itself)
 //
 // plan.json: { "size": [w, h], "hour": 17, "level": 30, "at": [x, z], "strips": [ strip, ... ] }, a strip being
 //   { "name", "cls" (which class does it), "key" (the move; or "tune": 0-2 for a bard at the lute, or "clip" for a clip of the
@@ -27,6 +28,9 @@ const plan = args[0] === 'all' ? await planAll(args.slice(1).filter((a, i, l) =>
 // (--real: the real Chrome on the real GPU, its window parked off screen, at the plan's own "gfx" (high, if it names none):
 // what the game looks like, for judging armour and paint. Without it, headless on a software GPU.)
 const real = args.includes('--real');
+// (--disk: no server. Every request to the port is answered from this checkout as tools/serve.py would, its headers and
+// /shot included, so a review can be filmed when no server can be started.)
+const disk = args.includes('--disk');
 // (--plan: say what would be drawn, and stop.)
 if (args.includes('--plan')) { console.log(JSON.stringify(plan, null, 1)); process.exit(0); }
 
@@ -69,9 +73,26 @@ fs.mkdirSync(root, { recursive: true });
 const [W, H] = plan.size || [800, 450];
 
 const b = real
-  ? await chromium.launchPersistentContext(fs.mkdtempSync(path.join(os.tmpdir(), 'bm-moves-')), { channel: 'chrome', headless: false, viewport: { width: W, height: H }, args: ['--enable-unsafe-webgpu', '--ignore-gpu-blocklist', '--window-position=-3000,0', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows', '--disable-background-timer-throttling'] })
+  ? await chromium.launchPersistentContext(fs.mkdtempSync(path.join(os.tmpdir(), 'bm-moves-')), { channel: 'chrome', headless: false, viewport: { width: W, height: H }, ...(disk ? { serviceWorkers: 'block' } : {}), args: ['--enable-unsafe-webgpu', '--ignore-gpu-blocklist', '--window-position=-3000,0', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows', '--disable-background-timer-throttling'] })
   : await chromium.launch({ headless: true, args: ['--enable-unsafe-webgpu', '--ignore-gpu-blocklist', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox', '--disable-gpu-watchdog'] });
-const page = real ? (b.pages()[0] || await b.newPage()) : await b.newPage({ viewport: { width: W, height: H } });
+const page = real ? (b.pages()[0] || await b.newPage()) : await b.newPage({ viewport: { width: W, height: H }, ...(disk ? { serviceWorkers: 'block' } : {}) });
+if (disk) {
+  const REPO = path.resolve(root, '..', '..', '..');
+  const HEAD = { 'Cross-Origin-Opener-Policy': 'same-origin', 'Cross-Origin-Embedder-Policy': 'require-corp', 'Cross-Origin-Resource-Policy': 'same-origin', 'Cache-Control': 'no-cache' };
+  const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.wasm': 'application/wasm', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.glb': 'model/gltf-binary', '.ktx2': 'image/ktx2', '.ogg': 'audio/ogg', '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.woff2': 'font/woff2', '.wgsl': 'text/plain', '.txt': 'text/plain' };
+  await (real ? b : page.context()).route(`http://localhost:${port}/**`, async (route) => {
+    const req = route.request(), u = new URL(req.url());
+    if (req.method() === 'POST' && u.pathname === '/shot') {
+      const name = (u.searchParams.get('name') || 'shot').replace(/[^\w.-]/g, '_');
+      fs.writeFileSync(path.join(root, name + '.png'), req.postDataBuffer() || Buffer.alloc(0));
+      return route.fulfill({ status: 200, headers: HEAD, body: '' });
+    }
+    let p = decodeURIComponent(u.pathname); if (p.endsWith('/')) p += 'index.html';
+    const f = path.join(REPO, p);
+    if (!f.startsWith(REPO) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) return route.fulfill({ status: 404, headers: HEAD, body: 'not found' });
+    return route.fulfill({ status: 200, headers: { ...HEAD, 'Content-Type': MIME[path.extname(f).toLowerCase()] || 'application/octet-stream' }, body: fs.readFileSync(f) });
+  });
+}
 await page.addInitScript((gfx) => { localStorage.setItem('velscour.settings', JSON.stringify({ gfx, keep: 'no', heroes: 'auto', volume: 0 })); }, plan.gfx || (real ? 'high' : 'mobile'));
 let errs = 0;
 page.on('pageerror', (e) => { if (errs++ < 12) console.log('PAGE ERROR', String(e).slice(0, 500)); });

@@ -414,7 +414,8 @@ export class Knight {
     }
     // The shield arm keeps its guard, whole joints from the guard idle, through a blow whose clip has no shield in it.
     const atk = this.attack || this.reviewAttack, mine = atk && this.action === clips[atk.clip];
-    const holdOn = (mine && atk.hold) || (this.action && !this.down && HOLD_CLIPS.has(this.action.name)) ? 1 : 0;
+    // (A hero says for himself which of his moves keep it: src/sim/hero.js keepBoard.)
+    const holdOn = (mine && atk.hold) || (this.action && !this.down && (HOLD_CLIPS.has(this.action.name) || this.keepBoard?.(this.action))) ? 1 : 0;
     this.holdW = holdOn ? Math.min(1, this.holdW + dt / 0.1) : Math.max(0, this.holdW - dt / 0.15);
     if (this.holdW > 0.001) {
       bank.sample(clips.Idle_Shield_Loop, sim.time, this.rH, null);

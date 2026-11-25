@@ -1462,11 +1462,11 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
       mailH = ring * 0.0012 * tFade;
       // (The dark between the rings not a black: at 0.015 under crowns of 0.4 it was the most contrast on the hero, and
       // it shimmered. A pale suit's a step lighter again, crowns and all: its mail was the darkest thing on an ivory suit.)
-      let crown = select(select(vec3f(0.40, 0.40, 0.41), vec3f(0.48, 0.48, 0.47), paleCoat), vec3f(0.14, 0.14, 0.15), darkSuit);
+      let crown = select(select(vec3f(0.31, 0.31, 0.32), vec3f(0.27, 0.27, 0.268), paleCoat), vec3f(0.14, 0.14, 0.15), darkSuit);
       let gap = select(select(vec3f(0.05), vec3f(0.09), paleCoat), vec3f(0.015), darkSuit);
       // (Melted: a stop under the plate beside it, its rows still banding it light and dark.)
       let band = 1.0 + 0.25 * (abs(fract(tg.y * 0.5) - 0.5) * 4.0 - 1.0) * rowFade;
-      let melt = select(select(vec3f(0.3, 0.3, 0.305), vec3f(0.36, 0.36, 0.355), paleCoat), vec3f(0.06, 0.06, 0.062), darkSuit) * band;
+      let melt = select(select(vec3f(0.22, 0.22, 0.225), vec3f(0.19, 0.19, 0.188), paleCoat), vec3f(0.06, 0.06, 0.062), darkSuit) * band;
       albedo = mix(melt, mix(gap, crown, ring), tFade);
       rough = mix(0.6, mix(0.9, 0.25 + 0.2 * jit, ring), tFade);
       metal = mix(select(0.25, 0.4, darkSuit), ring, tFade);
@@ -1479,8 +1479,9 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
       mailH = puff * 0.0016 * qFade;
       // (A dyed party member's padded coat is in their coat's colour and about its light, or a brown linen under a navy coat
       // is a stain at the hips. Its colour rides in info.z's fraction, a code: hue in 32, colour in 2, light in 4. herolook.js
-      // coverCode. None: the brown linen.)
-      var linen = vec3f(0.07, 0.05, 0.035);
+      // coverCode. None: the brown linen, or under a suit of black leather a near-black one: brown, it showed through the
+      // gaps of the rogues' and the ninjas' black suits as patches of sacking, the critics' neck review, 2026-11-20.)
+      var linen = select(vec3f(0.07, 0.05, 0.035), vec3f(0.03, 0.028, 0.027), darkBake);
       let zf = -C.info.z - floor(-C.info.z);
       if (zf > 0.005) {
         let code = round((zf - 0.01) / 0.0015);
@@ -1516,9 +1517,15 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
     // (And it has a little light of its own: where a piece cut from another body leaves a hole into the hollow suit, its
     // far inside, wholly in shadow, was a black void in ivory.)
     if (C.info.z < -1.5 && paleCoat) { albedo = vec3f(0.46, 0.45, 0.43); metal = 0.0; rough = 0.85; paleIn = 1.0; }
-    else if (C.info.z < -1.5) { albedo = vec3f(0.10, 0.098, 0.095); metal = 1.0; rough = 0.6; }
+    else if (C.info.z < -1.5) {
+      // (Iron with the plate's own lights and darks faintly through it, and enough light of its own to read as metal in
+      // shadow: flat black, the underside of a pauldron on a raised arm was a slab cut out of the picture, the critics'
+      // second review, 2026-11-20.)
+      let lumIn = clamp(dot(albedo, vec3f(0.2126, 0.7152, 0.0722)), 0.0, 0.6);
+      albedo = vec3f(0.17, 0.165, 0.16) * (0.75 + 0.9 * lumIn); metal = 0.8; rough = 0.55;
+    }
     else { albedo = albedo * 0.35; metal = 0.0; rough = 0.85; }
-    backAO = 0.45;
+    backAO = select(0.45, 0.6, C.info.z < -1.5 && !paleCoat);
     rimK = 0.3;
     n = n0;
   } else if (heroLook && !front && paleCoat) {
