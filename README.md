@@ -815,6 +815,12 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
     half, and one through a house, up a stair or along the wall-walk four. It used to take whatever was shortest: from
     Chainmarket to the Pennyless' Purse, 360 m of back alleys and not a metre of street. Now 95% of its way across the
     city is on a street (`node tools/paths/streets.mjs`, `tests/east-streets.test.mjs`).
+  - **Not back into what it ran from** (`DREAD_FOR`, `DREAD_R`). Something it can't beat yet, which it runs from, is kept
+    32 m clear of, where it was last seen, for 45 s, and its way is worked out again round it. It used to run, then walk
+    straight back the way it had been going, into its sight again: two minutes to and fro at the east edge of the town
+    before one of Velscour's knights, on its way to the catacombs.
+  - **A moment at each spot of a hunt's round** (`PATROL_LOOK`), its eyes on its way: it used to stand four seconds at each,
+    spinning on the spot, which down the catacombs' passages was its eyes going round and round the walls.
   - **Not into a wall when it backs off in a fight** (`escape`). It asks the nav thread how clear each of sixteen ways
     round it is (`ring` in `src/sim/nav.worker.js`) and backs off where there's room, not into the catacombs' walls.
   - **Through a door, square on, from outside and from in.** A path that goes through a doorway is taken to a place a

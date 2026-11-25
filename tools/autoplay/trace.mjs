@@ -3,7 +3,9 @@
 //
 //   NODE_PATH=$(npm root -g) node tools/autoplay/trace.mjs <minutes> [level]
 //
-// Env as tools/autoplay/watch.mjs (PRE, SAFE, PORT, Q). OUT=<file> writes the samples as JSON.
+// Env as tools/autoplay/watch.mjs (PRE, SAFE, PORT, Q); POST: page code run once auto-play's on (its brain is made then);
+// EVAL: page code whose answer is printed each minute; GFX: the graphics setting (Low, 'mobile', unless given).
+// OUT=<file> writes the samples as JSON, each minute.
 // It prints, a minute at a time, where it went and what at, and at the end:
 //   - to and fro: each time it turned about (more than 135 degrees) and turned back again within four seconds, walking,
 //     with where and what at. A person going somewhere doesn't do that.
@@ -33,7 +35,7 @@ await page.goto(`http://localhost:${process.env.PORT || 8481}/?auto&noopening&ti
 // (Drawing stubbed, but who's where among the townsfolk still read each frame, as the renderer's cull reads it: whereOf
 // and everyone auto-play talks to come from there.)
 await page.waitForFunction(() => { const r = window.bm?.view?.renderer; if (r && !r.__stub) { r.__stub = true; import('/src/folk/layout.js').then(({ readFolk }) => { r.frame = function () { if (this.folk?.map) this.folk.slot = readFolk(this.folk.map) || this.folk.slot; }; }); } return window.bm && bm.snap && bm.snap(); }, null, { timeout: 900000, polling: 250 });
-await page.evaluate(`bm.view.lands.cheats.noDamage = ${process.env.SAFE ? 'true' : 'false'}; ${level ? `bm.skills('level', ${level}); bm.skills('give', 30);` : ''} ${process.env.PRE || ''}; if (!bm.view.autoplay.on) bm.view.autoplay.toggle(true);
+await page.evaluate(`bm.view.lands.cheats.noDamage = ${process.env.SAFE ? 'true' : 'false'}; ${level ? `bm.skills('level', ${level}); bm.skills('give', 30);` : ''} ${process.env.PRE || ''}; if (!bm.view.autoplay.on) bm.view.autoplay.toggle(true); ${process.env.POST || ''};
   { const B = bm.view.autoplay.brain, giveUp = B.giveUp.bind(B);
     B.giveUp = (k, s) => { if (typeof k === 'string' && s >= 30 && !k.startsWith('foe:')) { const m = B.me(bm.snap()); console.log('auto-play: gives up ' + k + ' for ' + s + ' s at ' + Math.round(m.x) + ', ' + Math.round(m.z) + ' (' + Math.round(B.t) + ' s)'); } giveUp(k, s); };
     window.__tr = [];

@@ -94,6 +94,8 @@ const MAX_SIGHT = 26;   // how far off it'll take on what it's hunting
 const BOLD_LEVELS = 2;
 // In the town it opens a chest only when it's passing one (it used to go round every house for them before it took a quest).
 const TOWN_CHEST = 9, TOWN_CHEST_GAP = 90;
+// How long it stands at each spot of a hunt's round before it goes on to the next, seconds (hunt).
+const PATROL_LOOK = 1.2;
 // But never one of Bellmourn's own: the chests in the town's houses are its people's, and it isn't a thief (the owner: it
 // went round robbing every house in the town). All of them stand inside the town's box; the woods' are out past it, and
 // the catacombs' are under it.
@@ -122,6 +124,9 @@ const POSTS = [
 ];
 // How long the catacombs are left once a round of them finds nobody (src/sim/undead.js RISE_AGAIN: their dead are up
 // again once it's been out of them four minutes).
+// What it's run from (combat): how long, seconds, its ways keep clear of where it was last seen, and by how far, metres (a
+// little past the 26 m inside which it runs).
+const DREAD_FOR = 45, DREAD_R = 32;
 const DRY_LOOK = 40, DRY_FOR = 300, HUNT_DRY_FOR = 600;   // (seconds. The first: how long a round of looking has to have gone on. The last: any other quest's hunt that finds its grounds empty)
 // The lairs out in the land (src/core/tripo-monsters.js), by the level it wants before it goes near one.
 // What it says of each thing the living land calls it to (WILD_CALLS in src/core/wilds.js; src/ui/wilds.js calls), and
@@ -937,7 +942,7 @@ export class Brain {
     this.talk = null; this.waitT = 0; this.hold = 0;
     this.track = new Map();
     this.engage = new Map();   // what it's been fighting, and since when it last hurt it
-    this.kite = null; this.kiteCool = 0; this.dodgeCool = 0; this.dodgeSide = 1; this.reactT = 0; this.backedUp = 0; this.esc = null;
+    this.kite = null; this.kiteCool = 0; this.dodgeCool = 0; this.dodgeSide = 1; this.reactT = 0; this.backedUp = 0; this.esc = null; this.ring = null; this.dread = null; this.eastPre = null;
     this.guardT = 0; this.guardFor = 0; this.guardCool = 0; this.tapAt = -9; this.staffAt = -9; this.owed = null; this.spellAt = 0; this.comboAt = 0; this.frozenT = -99; this.pulledT = -99; this.fightSince = -99;
     this.sightMap = new Map(); this.sightBusy = false; this.sightT = 0; this.round = null;   // what it has a clean line to
     this.reachMap = new Map(); this.reachBusy = false;                                       // what it could put a hand to
@@ -1086,6 +1091,8 @@ export class Brain {
     }
     const qg = this.questGround(m);
     for (const l of LAIRS) if (m.lvl < (lairLevel(l) || 10) && !(qg && dist(l.x, l.z, qg.x, qg.z) < 30)) out.push([l.x, l.z, passing ? lairPass(l) : (l.wake || 110) + 15]);
+    // (And whatever it's lately run from, where it last saw it: combat, DREAD.)
+    for (const d of this.dread?.values() || []) if (this.t - d.t < DREAD_FOR) out.push([d.x, d.z, DREAD_R]);
     return out;
   }
 
@@ -1808,6 +1815,12 @@ export class Brain {
     const scary = foes.filter((f) => !fightable(f.kind, lvl, f.maxHp, f.slime, f) && !inLowLair(f, m.lvl) && f.kind !== 1 && f.hostile && f.d < 26 && !(boss && f.id === 0));
     if (scary.length) {
       const f = scary.reduce((a, b) => (a.d < b.d ? a : b));
+      // (Kept clear of for a while, where it was last seen, and the way there worked out again round it: it used to run,
+      // and then walk straight back the way it had been going, into its sight again. Two minutes at the edge of the town,
+      // to and fro before one of Velscour's knights, on its way to the catacombs. The owner's "back and forth".)
+      const D = (this.dread ||= new Map()), was = D.get(f.id);
+      if (!was || this.t - was.t > DREAD_FOR || dist(was.x, was.z, f.x, f.z) > 10) { this.macro = null; this.sub = null; this.subFor = null; this.eastWay = null; this.eastPre = null; }
+      D.set(f.id, { x: f.x, z: f.z, t: this.t });
       const [ex, ez] = this.escape(m, scary, true);
       noRide();
       this.face = null;
@@ -2402,7 +2415,7 @@ export class Brain {
     const junk = this.allow('aiSell') ? [...this.junk(), ...(this.o.game.party?.bagJunk?.() || [])] : [];
     const room = this.freeCells();
     // (Only while there's someone open to buy it: at night the town's counters are shut, and it keeps at its work.)
-    const buyer = junk.length > 0 && PEOPLE.some((p, i) => TRADES[p.trade]?.buys && this.o.townUI.isOpen(i));
+    const buyer = junk.length > 0 && PEOPLE.some((p, i) => TRADES[p.trade]?.buys && this.o.townUI.isOpen(i) && !this.skipping(`sell:${i}`) && junk.some((e) => offerFor(p.trade, e.item) > 0));
     // (Out on the first visit to Phobos, home to sell only once the pack's all but full: home's a beacon stone and a seal back
     // away, and a run that went home with the Redoubt in hand stopped to take the square's offers. src/folk/first-visit.js.)
     const visiting = this.firstVisit(m);
@@ -3009,7 +3022,9 @@ export class Brain {
       let best = null, most = 0;
       for (let i = 0; i < PEOPLE.length; i++) {
         const t = PEOPLE[i].trade;
-        if (!TRADES[t]?.buys || this.skipping(`p:${i}`) || !townUI.isOpen(i) || !this.reachable(i)) continue;
+        // (Nor one it's just been to and couldn't sell to, sell:<i>: it walked back from the catacombs to Magda's stall to sell
+        // the same thing she wouldn't take, then out again, and back, to and fro across the field.)
+        if (!TRADES[t]?.buys || this.skipping(`p:${i}`) || this.skipping(`sell:${i}`) || !townUI.isOpen(i) || !this.reachable(i)) continue;
         const sum = junk.reduce((n, e) => n + offerFor(t, e.item), 0);
         if (sum > most) { most = sum; best = i; }
       }
@@ -3297,10 +3312,11 @@ export class Brain {
     }
     const [px, pz] = this.patrol;
     if (dist(m.x, m.z, px, pz) < 4) {
-      // A look round, and on to the next.
+      // A moment's look, and on to the next. (It used to stand four seconds spinning on the spot, nine-tenths of a turn a
+      // think: down in the catacombs' passages its eyes went round and round the walls. What's there it sees anyway.)
       this.halt();
-      this.face = this.o.input.yaw + 0.9;
-      if ((this.patrolT += 0.12) > 4) {
+      this.face = null;
+      if ((this.patrolT += 0.12) > PATROL_LOOK) {
         (this.lastSpots ||= []).push(`${px},${pz}`);
         if (this.lastSpots.length > Math.max(1, j.spots.length - 1)) this.lastSpots.shift();
         this.patrol = null;
@@ -3687,6 +3703,12 @@ export class Brain {
   // time; its doors opened on the way (phDoor). False till the first way's in (it goes on across country meanwhile). With
   // no way there three times running, it's lost: whatever it was after is left.
   eastWalk(dt, m, W, g, d) {
+    // (Come to a new leg: the way to it asked for already, from where the last leg ended, as it came up to that. eastPre.)
+    { const Q = this.eastPre;
+      if (this.eastWay?.leg !== W && Q?.for === W && Q.pts?.length && dist(m.x, m.z, Q.pts[0][0], Q.pts[0][1]) < 8) {
+        this.eastWay = { leg: W, t: this.t, to: [W.x, W.z], pts: Q.pts, pending: false };
+        Q.pts.trim = true; this.eastPre = null;
+      } }
     const E = this.eastWay, P0 = E?.leg === W ? E.pts : null;
     // (No nearer for half a minute of walking: lost, as across country. Nearer down its way, with one: a tower's stair winds
     // round and round under the deck it's going to, no nearer as the crow flies for a long while.)
@@ -3736,6 +3758,16 @@ export class Brain {
     }
     const [tx, tz] = P[0], k = dist(m.x, m.z, tx, tz);
     if (P.length === 1 && k < 0.35) { this.halt(); return true; }
+    // Coming up to the end of this leg with another after it in the east: that one's way asked for now, from where this one
+    // ends, so it's in hand when it gets there. (Asked for on arrival, it took seconds, and came back starting from where it
+    // had stood when it asked: a few metres back, and it turned to walk back to it.)
+    const N = this.macro?.[1], end = P.at(-1);
+    if (N && !N.seal && W !== this.macro.at(-1) && inEast(N.x, N.z) && !this.eastPreAsk && this.eastPre?.for !== N && dist(m.x, m.z, W.x, W.z) < 25 && dist(end[0], end[1], W.x, W.z) < (W.r ?? 3.5) + 1) {
+      const ask = this.eastPre = { for: N, pts: null };
+      this.eastPreAsk = true;
+      const r = Math.max(0.5, (N === this.macro.at(-1) ? g.near : N.r ?? 3.5) - 0.3);
+      this.nav.ask('east', { from: [end[0], end[4] ?? m.y, end[1]], to: [N.x, N.z, N.y ?? null], r }).then((pts) => { this.eastPreAsk = false; if (this.eastPre === ask) ask.pts = pts; });
+    }
     if (this.phDoor(dt, m, P)) return true;
     // (A run down a long straight; a walk round a bend, on a stair, at a door.)
     let run = g.run && d > 8 && !W.walk;
@@ -4109,7 +4141,7 @@ export class Brain {
     // (One thing to gather that can't be got to: that one left a while, not the whole quest.)
     else if (j?.mark) this.giveUp(j.mark, 600);
     else if (j) this.giveUp(j.why, 90);
-    this.job = null; this.goal = null; this.macro = null; this.sub = null; this.subFor = null; this.patrol = null; this.eastWay = null;
+    this.job = null; this.goal = null; this.macro = null; this.sub = null; this.subFor = null; this.patrol = null; this.eastWay = null; this.eastPre = null;
   }
 
   // The doors it can't open yet (the Sexton's, before his quest), as circles for its paths to keep out of.
