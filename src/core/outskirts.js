@@ -76,6 +76,11 @@ export function delfDepth(x, z) {
   // (The ramp: a cart's width along the south-east side, from the rim at the west end down to the floor two thirds along.)
   const lane = 1 - sstep(2.6, 5, Math.abs(v - (DELF.hv - 7))), down = 3 * DELF.bench * Math.max(0, Math.min(1, (u + DELF.hu + 8) / (DELF.hu * 1.55)));
   if (lane > 0 && u > -DELF.hu - 14 && u < DELF.hu * 0.6) dep += (down - dep) * lane * sstep(-DELF.hu - 14, -DELF.hu - 6, u);
+  // (And a second, out the north-east corner to the Masons' Path's head on the rim: there were only the benches, four metres
+  // a step, and auto-play climbed them, slipped back and climbed again on every errand from the Delf to Ashfold. Round 4's
+  // runs. Straight from the floor to the path's head, 45 m at about 13 degrees.)
+  { const s = (u - 4.7 + v - 6.6) * Math.SQRT1_2, w = (v - 6.6 - (u - 4.7)) * Math.SQRT1_2, lane2 = 1 - sstep(3.5, 6, Math.abs(w));
+    if (lane2 > 0 && s > -6 && s < 52) dep += (3 * DELF.bench * Math.max(0, 1 - s / 45) - dep) * lane2 * sstep(-6, 0, s); }
   return Math.max(0, dep);
 }
 // The spoil the Delf came out as: heaps beside it, west and north. [u, v, height, radius] in the Delf's frame.
@@ -174,9 +179,12 @@ export const gateShelf = (x) => 1 - 0.7 * (1 - sstep(60, 210, Math.min(Math.abs(
 // The ways (taken into src/core/lands.js ROUTES, laid by tools/roads/bed.mjs like any other): name, half-width, [x, z]s.
 // The Ditch Road goes round the moat's outer bank both ways from the causeway's foot; the rest are footpaths, two of them
 // down off the causeway's sides in steps. (Run through tools/roads/bed.mjs: a way too steep for its kind is stepped.)
+// (The Ditch Road's two arms leave the Throne Road on the bank before the Drawbridge (9276, 0). From the deck's middle
+// (9300, 0) they went out through its rail: auto-play stepped onto the deck, met the rail, backed off and tried again, at
+// the causeway foot on every run. Round 4's runs; tools/lands/check-sites.mjs had flagged it too.)
 export const OUT_ROUTES = [
-  { name: 'the Ditch Road', w: 2.2, cls: 'lane', pts: [[9300, 0], [9282, -40], [9262, -110], [9248, -200], [9252, -300], [9285, -420], [9338, -540], [9402, -640], [9462, -720], [9520, -800], [9560, -852], [9620, -880], [9700, -888], [9790, -893], [9860, -893], [9935, -893], [10000, -895], [10080, -910], [10160, -935], [10250, -948], [10330, -955], [10420, -945], [10520, -912], [10600, -860], [10660, -770]] },
-  { name: 'the Ditch Road', w: 2.2, cls: 'lane', pts: [[9300, 0], [9282, 40], [9262, 110], [9250, 200], [9256, 300], [9290, 420], [9340, 540], [9398, 640], [9466, 722], [9520, 790], [9560, 835], [9620, 845], [9700, 845], [9790, 870], [9870, 893], [9935, 893], [10000, 895], [10080, 912], [10170, 960], [10270, 1000], [10360, 1035], [10430, 1040], [10520, 1010], [10600, 950], [10660, 860]] },
+  { name: 'the Ditch Road', w: 2.2, cls: 'lane', pts: [[9276, 0], [9282, -40], [9262, -110], [9248, -200], [9252, -300], [9285, -420], [9338, -540], [9402, -640], [9462, -720], [9520, -800], [9560, -852], [9620, -880], [9700, -888], [9790, -893], [9860, -893], [9935, -893], [10000, -895], [10080, -910], [10160, -935], [10250, -948], [10330, -955], [10420, -945], [10520, -912], [10600, -860], [10660, -770]] },
+  { name: 'the Ditch Road', w: 2.2, cls: 'lane', pts: [[9276, 0], [9282, 40], [9262, 110], [9250, 200], [9256, 300], [9290, 420], [9340, 540], [9398, 640], [9466, 722], [9520, 790], [9560, 835], [9620, 845], [9700, 845], [9790, 870], [9870, 893], [9935, 893], [10000, 895], [10080, 912], [10170, 960], [10270, 1000], [10360, 1035], [10430, 1040], [10520, 1010], [10600, 950], [10660, 860]] },
   // Off the causeway's north side, down past the carrion's perches to the Ditch Road.
   { name: 'the Carrion Steps', w: 1.3, cls: 'path', pts: [[9206, 18], [9196, -10], [9178, -48], [9150, -92], [9112, -128], [9070, -150], [9100, -190], [9170, -210], [9248, -205]] },
   // Off its south side, down to the Gibbet Field and on to the fields.

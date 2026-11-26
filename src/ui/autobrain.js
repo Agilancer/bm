@@ -31,6 +31,7 @@ import { CAVE_MOUTH, CAVE_OUT, HERD_CONTROL, OPENING, RUN_OUT, WAY, WAY_FOOT } f
 import { CUE_IDS } from '../core/opening-script.js';
 import { ROUTE, cornerAhead, routeAt, routeDir, routeNear } from '../core/escort.js';
 import { terrainHeight } from '../core/terrain.js';
+import { cityIn } from '../core/east.js';
 import { SITES } from '../core/lands.js';
 import { roadGraph } from '../core/roads.js';
 import { SEALS, portalStair } from '../core/sites.js';
@@ -2426,6 +2427,9 @@ export class Brain {
       // kept off, not the ground a hundred and fifty metres round it: round a camp that was every lair there was, and on
       // the runs it never once went by one.)
       const ok = here > 40 && ((here < 200 && along > -60) || (d >= 600 && off < (d >= 900 ? 250 : 150) && along > 0 && along < d - 100));
+      // (And on its own side of Phobos's wall: from the Ditch Road outside, the Boneyards' lair inside was "on the way", and
+      // it went in at the Charnel Gate and back out, turning about on every run. Phobos's Outwall, round 4's runs.)
+      if ((cityIn(l.x, l.z) < 1) !== (cityIn(m.x, m.z) < 1)) continue;
       if (!ok || avoid.some(([x, z, r]) => dist(l.x, l.z, x, z) < r * 0.6) || owed.some(([x, z]) => dist(l.x, l.z, x, z) < 40)) continue;
       if (along < bt) { bt = along; best = l; }
     }
