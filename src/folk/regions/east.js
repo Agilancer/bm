@@ -82,7 +82,7 @@ export const RULES = {
   // one trip; then the spiders on the Middens, past the gate under the north cliff. Then round the wall's west end to the
   // Hithe, past what's in the Sump ----
   the_pyre_ground: { steps: [{ kill: 'lair:out_pyre', n: 4 }, { back: true, say: 'Four of the ash-walkers are down.' }], gold: 52, xp: 520 },
-  white_ash: { steps: [{ gather: 'lair:out_pyre', n: 5, what: 'sacks of white ash' }, { back: true, say: 'Five sacks. White.' }], gold: 50, xp: 500 },
+  white_ash: { steps: [{ gather: 'lair:out_pyre', n: 5, what: 'sacks of white ash', spots: [[-6, -18], [3, -20], [11, -23], [16, -25], [1, -12]] }, { back: true, say: 'Five sacks. White.' }], gold: 50, xp: 500 },
   the_middens: { needs: 'the_pyre_ground', steps: [{ kill: 'lair:out_middens', n: 4 }, { back: true, say: 'The Middens are clear. The red one first.' }], gold: 100, xp: 1000, item: 'gem' },
   the_lazar_house: { needs: 'the_middens', steps: [{ kill: 'lair:out_lazar', n: 3 }, { back: true, say: 'Three of the lazars are down. They are back in the ground.' }], gold: 110, xp: 1100 },
   round_to_the_hithe: { needs: 'the_middens', steps: [{ kill: 'lair:out_sump', n: 2 }, { talk: 'out_tanner', say: "Hode Callow says the white ash is coming.", end: true }], gold: 75, xp: 760 },

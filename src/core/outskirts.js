@@ -199,6 +199,12 @@ export const OUT_ROUTES = [
   // From where each arm of the Ditch Road ends, in at a gate: the Lazar House's in the north, the Knackers' Yard's in the south.
   { name: 'the Lazar Walk', w: 1.2, cls: 'path', pts: [[10660, -770], [10664, -746]] },
   { name: "the Knackers' Lane", w: 1.4, cls: 'path', pts: [[10660, 860], [10669, 816]] },
+  // Through the yards, trodden: in from the road between the shanties to the reeve and the carter and out at the gate
+  // (Ashfold); up from the road past the master's door to the plank bridge (the Hithe); down the Tan Pits' east side, between
+  // the vats and the beam-house. (Round 2's critics: inside the places only 46% of the hero's walking was on a way.)
+  { name: 'the Ash Yard', w: 1.1, cls: 'path', pts: [[9561, -854], [9560, -864], [9557, -872], [9550, -880], [9552, -888], [9544, -898]] },
+  { name: 'the Hithe Landing', w: 1.1, cls: 'path', pts: [[9560, 836], [9561, 846], [9562, 853], [9562, 860]] },
+  { name: 'the Pits Walk', w: 1.1, cls: 'path', pts: [[9672, 845], [9672, 856], [9670, 868]] },
 ];
 
 // What the ground's made of, for the land's far map (src/sim/job.worker.js buildFarRows): every bit of the plain was the same
@@ -211,15 +217,26 @@ export function outskirtsGround(x, z) {
   const near = (p, r, fade) => 1 - sstep(r, r + fade, Math.hypot(x - p.x, z - p.z) + wob);
   for (const k of ['ashfold', 'hithe', 'tanpits', 'lazar', 'knackers']) g.dirt = Math.max(g.dirt, 0.85 * near(OUT[k], OUT[k].r - 4, 14));
   g.wet = Math.max(g.wet, 0.55 * near(OUT.knackers, 14, 16));   // (the knackers' yard's mire, where the pens drain)
-  g.ash = Math.max(near(OUT.pyre, 24, 22), 0.85 * near(OUT.middens, 70, 40), 0.7 * near(OUT.ashfold, 30, 30));
+  g.ash = Math.max(near(OUT.pyre, 24, 22), 0.45 * near(OUT.middens, 70, 40), 0.85 * near(OUT.ashfold, 30, 30));
+  // (The Middens' heaps, each its own: wet brown-black rot round its foot where the rain runs off it, rotten brown-black over
+  // it, on a floor of paler, trodden ash between, so a heap stands off the floor. Round 2's critics saw heap, floor and cliff
+  // all one grey.)
+  if (Math.abs(x - OUT.middens.x) < 140 && Math.abs(z - OUT.middens.z) < 120) for (const [hx, hz, , r] of HEAPS) {
+    const q = Math.hypot(x - hx, z - hz) + wob * 0.4;
+    if (q > r + 8) continue;
+    const toe = sstep(r * 0.45, r * 0.8, q) * (1 - sstep(r, r + 8, q)), body = 1 - sstep(r * 0.6, r * 0.9, q);
+    g.wet = Math.max(g.wet, 0.9 * toe); g.dirt = Math.max(g.dirt, 0.95 * toe, 0.9 * body); g.ash = Math.max(g.ash, 0.95 * body);
+  }
+  // (Sludge round the Tan Pits' vats, where they're baled out and slopped.)
+  { const [u, v] = frame(OUT.tanpits, x, z); if (Math.abs(u + 7) < 12 && Math.abs(v + 4.6) < 9) g.wet = Math.max(g.wet, 0.75 * (1 - sstep(6, 9, Math.abs(v + 4.6))) * (1 - sstep(9, 12, Math.abs(u + 7)))); }
   // (Between the places, the basin's own ground: heath in patches, worn grass and bare, not one grey.)
   g.green = 0.5 * sstep(0.48, 0.66, fbm(x * 0.007 - 11, z * 0.007 + 5, 3));
   g.dirt = Math.max(g.dirt, 0.8 * near(OUT.pyre, 20, 12), 0.5 * near(OUT.middens, 60, 30));
-  g.chalk = Math.max(near(OUT.kilns, 45, 30), 0.7 * near(OUT.delf, 55, 30));
+  g.chalk = Math.max(g.chalk, near(OUT.kilns, 45, 30), 0.7 * near(OUT.delf, 55, 30), 0.95 * sstep(0.5, 2.5, delfDepth(x, z)));
   g.green *= 1 - 0.9 * Math.max(g.ash, g.chalk, g.dirt);
   {
     const sd = Math.hypot(x - OUT.sump.x, z - OUT.sump.z) + wob;
-    g.wet = 1 - sstep(OUT.sump.r, OUT.sump.r + 35, sd);
+    g.wet = Math.max(g.wet, 1 - sstep(OUT.sump.r, OUT.sump.r + 35, sd));
     g.green = Math.max(g.green, 0.8 * (1 - sstep(OUT.sump.r + 10, OUT.sump.r + 60, sd)));
     if (x > 9380 && z > 680 && z < 960) g.wet = Math.max(g.wet, 1 - sstep(4, 16, leatAt(x, z)[0]));
   }
@@ -237,7 +254,11 @@ export function outskirtsGround(x, z) {
   }
   {
     const [u, v] = frame(OUT.mounds, x, z);
-    if (Math.abs(u) < 70 && Math.abs(v) < 30) g.dirt = Math.max(g.dirt, 0.45 * (1 - sstep(45, 65, Math.abs(u))) * (1 - sstep(16, 28, Math.abs(v))));
+    if (Math.abs(u) < 70 && Math.abs(v) < 30) {
+      g.dirt = Math.max(g.dirt, 0.45 * (1 - sstep(45, 65, Math.abs(u))) * (1 - sstep(16, 28, Math.abs(v))));
+      // (Each mound's own earth, turned and dark; the newest row darker and wetter still.)
+      MOUNDS.forEach(([mu, mv], k) => { const d = rrect(u - mu, v - mv, 6.5, 2.25, 2.2); const w = 1 - sstep(-0.5, 1.5, -d); if (w > 0) { g.dirt = Math.max(g.dirt, w); g.wet = Math.max(g.wet, w * (k >= 9 ? 0.75 : 0.5)); } });
+    }
   }
   return g;
 }
