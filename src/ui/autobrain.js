@@ -671,8 +671,11 @@ function trimWay(P, m, y = null) {
     // (At its height where it's beside the stretch, from the stretch's two ends: both ends within 0.8 of it, as it was, and
     // on any slope the far end of a 12 m stretch was a metre and more below. Coming down off the Sill, every way that came in
     // kept its first point, where it had stood when it asked, a few metres back: it turned, walked back to it, and on again,
-    // every six seconds all the way down. A bridge over the street is still not the street.)
-    if (y) { const t = L > 0.01 ? Math.max(0, Math.min(1, ((m.x - a[0]) * (b[0] - a[0]) + (m.z - a[1]) * (b[1] - a[1])) / (L * L))) : 0; if (Math.abs(y(a) + (y(b) - y(a)) * t - m.y) > 0.8) break; }
+    // every six seconds all the way down. A bridge over the street is still not the street: it's three metres and more over it.)
+    // (Within 2.2, not 0.8: the way's heights are smoothed, and in Phobos's gates the ground dips nearly two metres under a
+    // stretch, in a trough before the gate's rise. Each fresh way there kept its first point four metres back, and it stepped
+    // back to it, at the Charnel Gate and the Tanners' gate, the Outwall's round-3 run A.)
+    if (y) { const t = L > 0.01 ? Math.max(0, Math.min(1, ((m.x - a[0]) * (b[0] - a[0]) + (m.z - a[1]) * (b[1] - a[1])) / (L * L))) : 0; if (Math.abs(y(a) + (y(b) - y(a)) * t - m.y) > 2.2) break; }
     // (Past the stretch's start, the way it runs: not stood short of it.)
     if ((m.x - a[0]) * (b[0] - a[0]) + (m.z - a[1]) * (b[1] - a[1]) > 0) {
       const d = segNear(a[0], a[1], b[0], b[1], m.x, m.z);
@@ -3812,6 +3815,10 @@ export class Brain {
     }
     const P = this.eastWay?.leg === W ? this.eastWay.pts : null;
     if (P?.trim) { P.trim = false; trimWay(P, m, (p) => p[4] ?? m.y); }
+    // (A new leg with no way in yet: stood a moment for it, up to a second and a half, not set off across country. Straight at
+    // the place, then the way coming in a second later round the other side of a yard or down a gate's flight, it turned back
+    // three to six metres, after every pick-up and every errand begun: the Outwall's round-3 run B.)
+    if (!P && this.eastWay?.leg === W && this.eastWay.pending && !P0 && this.t - this.eastWay.t < 1.5) { this.halt(); return true; }
     if (!P) {
       if ((this.eastMiss || 0) >= 3) { this.eastMiss = 0; this.eastWay = null; this.say('No way there from here.'); this.lost(); return true; }
       return false;
