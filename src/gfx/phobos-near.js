@@ -79,8 +79,8 @@ export class PhobosNear {
     for (const c of this.cells.values()) {
       if (!c.smokes?.length || Math.hypot(c.x - cam.x, c.z - cam.z) > 160) continue;
       for (let k = 0; k < c.smokes.length && n < 14; k += 1 + ((Math.random() * 3) | 0)) {
-        const [x, y, z] = c.smokes[k];
-        r.emit(4, 1, x, y, z, 0.35, 1, 0.15, 0.25, 0.6, 1.1, 0.5, 1.6, 4, 7);
+        const [x, y, z, dark = 0] = c.smokes[k];
+        r.emit(4, 1, x, y, z, 0.35, 1, 0.15, 0.25, 0.6, 1.1, dark ? 0.8 : 0.5, dark ? 2.4 : 1.6, 4, 7, dark);
         n++;
       }
     }

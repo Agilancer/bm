@@ -31,6 +31,7 @@ import { CAVE_MOUTH, CAVE_OUT, HERD_CONTROL, OPENING, RUN_OUT, WAY, WAY_FOOT } f
 import { CUE_IDS } from '../core/opening-script.js';
 import { ROUTE, cornerAhead, routeAt, routeDir, routeNear } from '../core/escort.js';
 import { terrainHeight } from '../core/terrain.js';
+import { cityIn } from '../core/east.js';
 import { SITES } from '../core/lands.js';
 import { roadGraph } from '../core/roads.js';
 import { SEALS, portalStair } from '../core/sites.js';
@@ -671,8 +672,11 @@ function trimWay(P, m, y = null) {
     // (At its height where it's beside the stretch, from the stretch's two ends: both ends within 0.8 of it, as it was, and
     // on any slope the far end of a 12 m stretch was a metre and more below. Coming down off the Sill, every way that came in
     // kept its first point, where it had stood when it asked, a few metres back: it turned, walked back to it, and on again,
-    // every six seconds all the way down. A bridge over the street is still not the street.)
-    if (y) { const t = L > 0.01 ? Math.max(0, Math.min(1, ((m.x - a[0]) * (b[0] - a[0]) + (m.z - a[1]) * (b[1] - a[1])) / (L * L))) : 0; if (Math.abs(y(a) + (y(b) - y(a)) * t - m.y) > 0.8) break; }
+    // every six seconds all the way down. A bridge over the street is still not the street: it's three metres and more over it.)
+    // (Within 2.2, not 0.8: the way's heights are smoothed, and in Phobos's gates the ground dips nearly two metres under a
+    // stretch, in a trough before the gate's rise. Each fresh way there kept its first point four metres back, and it stepped
+    // back to it, at the Charnel Gate and the Tanners' gate, the Outwall's round-3 run A.)
+    if (y) { const t = L > 0.01 ? Math.max(0, Math.min(1, ((m.x - a[0]) * (b[0] - a[0]) + (m.z - a[1]) * (b[1] - a[1])) / (L * L))) : 0; if (Math.abs(y(a) + (y(b) - y(a)) * t - m.y) > 2.2) break; }
     // (Past the stretch's start, the way it runs: not stood short of it.)
     if ((m.x - a[0]) * (b[0] - a[0]) + (m.z - a[1]) * (b[1] - a[1]) > 0) {
       const d = segNear(a[0], a[1], b[0], b[1], m.x, m.z);
@@ -2423,6 +2427,9 @@ export class Brain {
       // kept off, not the ground a hundred and fifty metres round it: round a camp that was every lair there was, and on
       // the runs it never once went by one.)
       const ok = here > 40 && ((here < 200 && along > -60) || (d >= 600 && off < (d >= 900 ? 250 : 150) && along > 0 && along < d - 100));
+      // (And on its own side of Phobos's wall: from the Ditch Road outside, the Boneyards' lair inside was "on the way", and
+      // it went in at the Charnel Gate and back out, turning about on every run. Phobos's Outwall, round 4's runs.)
+      if ((cityIn(l.x, l.z) < 1) !== (cityIn(m.x, m.z) < 1)) continue;
       if (!ok || avoid.some(([x, z, r]) => dist(l.x, l.z, x, z) < r * 0.6) || owed.some(([x, z]) => dist(l.x, l.z, x, z) < 40)) continue;
       if (along < bt) { bt = along; best = l; }
     }
@@ -3812,6 +3819,10 @@ export class Brain {
     }
     const P = this.eastWay?.leg === W ? this.eastWay.pts : null;
     if (P?.trim) { P.trim = false; trimWay(P, m, (p) => p[4] ?? m.y); }
+    // (A new leg with no way in yet: stood a moment for it, up to a second and a half, not set off across country. Straight at
+    // the place, then the way coming in a second later round the other side of a yard or down a gate's flight, it turned back
+    // three to six metres, after every pick-up and every errand begun: the Outwall's round-3 run B.)
+    if (!P && this.eastWay?.leg === W && this.eastWay.pending && !P0 && this.t - this.eastWay.t < 1.5) { this.halt(); return true; }
     if (!P) {
       if ((this.eastMiss || 0) >= 3) { this.eastMiss = 0; this.eastWay = null; this.say('No way there from here.'); this.lost(); return true; }
       return false;
