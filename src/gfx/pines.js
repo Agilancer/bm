@@ -209,11 +209,20 @@ fn snagAt(pIn: vec3f, layer: u32, at: vec4f) -> vec3f {
   let snap = 0.5 + 0.3 * h;
   var q = pIn;
   if (layer == PINE_LAYERu) {
+    // (A few dead limbs, not a fuzz of stubs all up it: boughs left long in three or four whorls and three sectors round the
+    // trunk, cocked upward, the rest cut to nubs. Smoothly, never culled a corner at a time: a bough card half culled
+    // stretched to the tree's foot as a long panel. Every bough cut to a sixth read as one grey pole: round 3's critics.)
     if (q.y < 0.2 || q.y > snap) { return vec3f(0.0); }
-    q = vec3f(q.x * 0.16, q.y + 0.01, q.z * 0.16);
+    let whorl = pow(max(0.0, sin(q.y * 44.0 + h * 20.0)), 6.0);
+    let side = pow(max(0.0, cos(atan2(q.z, q.x) * 3.0 + h * 30.0)), 2.0);
+    let r = length(q.xz);
+    let k = 0.1 + 0.3 * whorl * side;
+    q = vec3f(q.x * k, q.y + 0.01 + r * k * 0.6, q.z * k);
   } else {
-    q = vec3f(q.x * (0.5 + 0.25 * h), q.y, q.z * (0.5 + 0.25 * h));
-    if (q.y > snap) { q = vec3f(q.x * 0.35, snap + (q.y - snap) * 0.12, q.z * 0.35); }
+    // (Thinned, and tapering to a third over the stretch below the break, then a jagged stub: it stopped square, a pole.)
+    let th = (0.5 + 0.25 * h) * mix(1.0, 0.3, smoothstep(snap - 0.16, snap, q.y));
+    q = vec3f(q.x * th, q.y, q.z * th);
+    if (q.y > snap) { let jag = 0.025 * (0.5 + 0.5 * sin(atan2(q.z, q.x) * 5.0 + h * 9.0)); q = vec3f(q.x * 0.6, snap + min(q.y - snap, jag), q.z * 0.6); }
   }
   let a = h * 6.2832;
   return q + vec3f(cos(a), 0.0, sin(a)) * q.y * 0.035 * (0.4 + h);

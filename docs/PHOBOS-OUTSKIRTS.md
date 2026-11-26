@@ -55,16 +55,18 @@ get down off the main road … paths, proper areas … a cool, fleshed out part 
 ## Trees and ground
 
 - **Trees:** every tree on the Outwall is a snag. `lands.js treeCode` gives 4 there; `src/gfx/pines.js` folds a code-4 tree's needles below its top fifth away (in its shadow too) and colours it grey.
-- **Snags:** `snagAt` in `src/gfx/pines.js` (the tree and its shadow) snaps each code-4 tree at its own height, between half and four-fifths up. It thins the trunk by 25 to 50%, leaves short broken stubs where the boughs were, and leans it a little.
+- **Snags:** `snagAt` in `src/gfx/pines.js` (the tree and its shadow) snaps each code-4 tree at its own height, between half and four-fifths up. It thins the trunk by 25 to 50%, tapers it to a third over the stretch below the break, ends it in a jagged stub, and leans it a little.
+  - The boughs are scaled smoothly to nubs, left longer in a few whorls and three sectors. Never cull a bough's corners one at a time: a half-culled card stretches to the tree's foot as a long panel (round 4).
+  - The field-edge snag lines stand at 0.2, a third fewer than at first (`outskirtsTrees`).
 - **Ground:** `outskirtsGround` gives heath patches between the places, and nothing green in a yard. `job.worker.js` darkens ash, whitens chalk, and browns mud and the trodden yards.
-  - Each Middens heap is rotten brown-black, with a wet toe, on a paler trodden-ash floor.
+  - Each Middens heap is rotten brown-black, with a wet toe, on a paler trodden-ash floor. The top fifth of each heap's height is pale fresh ash.
   - The fresh mounds are darker earth, the Tan Pits' vats have sludge round them, and the Kilns have a chalk apron.
   - Each part of `g` is raised with `Math.max`, never set outright: setting the Sump's wet outright once wiped the Knackers' mire.
 - **The terrain shader on the Outwall's places** (`outwallK` in `src/gfx/materials.js`, each `OUT` place out to r × 1.25 + 12 m):
   - none of the walls' cliff rock, the steeps' rock or the talus scree;
   - none of the low "fen mist" over wet ground.
   - All four painted the heaps and banks one pale grey, and from the air the mist read as a white fog bowl (round 2's critics).
-- **Water:** the Sump is fan quads of `dark:p2_moat_water`, laid by world x and z. The game's glassy water, plain or `mire:`, took the sky and read as snow. A fan of `K.tri` has no texture coordinates, so the moat picture smeared into spokes.
+- **Water:** the Sump is fan quads of `soot:p2_moat_water` (matte: `dark:` went pale at a grazing look), laid by world x and z. The game's glassy water, plain or `mire:`, took the sky and read as snow. A fan of `K.tri` has no texture coordinates, so the moat picture smeared into spokes.
 - **The V/T rule here:**
   - The old wreck cart's spoked `K.wheel` is replaced by the board `disc` (`wreck()`).
   - The open grave's spade is a handle only, no blade.

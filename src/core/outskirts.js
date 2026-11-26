@@ -225,10 +225,12 @@ export function outskirtsGround(x, z) {
     const q = Math.hypot(x - hx, z - hz) + wob * 0.4;
     if (q > r + 8) continue;
     const toe = sstep(r * 0.45, r * 0.8, q) * (1 - sstep(r, r + 8, q)), body = 1 - sstep(r * 0.6, r * 0.9, q);
-    g.wet = Math.max(g.wet, 0.9 * toe); g.dirt = Math.max(g.dirt, 0.95 * toe, 0.9 * body); g.ash = Math.max(g.ash, 0.95 * body);
+    // (The crown, the top fifth of its height, dried out to pale ash where the new loads are tipped: round 3's critics.)
+    const crown = 1 - sstep(r * 0.12, r * 0.24, q);
+    g.wet = Math.max(g.wet, 0.9 * toe); g.dirt = Math.max(g.dirt, 0.95 * toe, 0.9 * body * (1 - 0.8 * crown)); g.ash = Math.max(g.ash, 0.95 * body);
   }
   // (Sludge round the Tan Pits' vats, where they're baled out and slopped.)
-  { const [u, v] = frame(OUT.tanpits, x, z); if (Math.abs(u + 7) < 12 && Math.abs(v + 4.6) < 9) g.wet = Math.max(g.wet, 0.75 * (1 - sstep(6, 9, Math.abs(v + 4.6))) * (1 - sstep(9, 12, Math.abs(u + 7)))); }
+  { const [u, v] = frame(OUT.tanpits, x, z); if (Math.abs(u + 6.5) < 14 && Math.abs(v + 4.6) < 11) { const k = (1 - sstep(7, 11, Math.abs(v + 4.6) + wob * 0.3)) * (1 - sstep(10, 14, Math.abs(u + 6.5) + wob * 0.3)); g.wet = Math.max(g.wet, 0.9 * k); g.dirt = Math.max(g.dirt, 0.95 * k); g.ash = Math.max(g.ash, 0.55 * k); } }
   // (Between the places, the basin's own ground: heath in patches, worn grass and bare, not one grey.)
   g.green = 0.5 * sstep(0.48, 0.66, fbm(x * 0.007 - 11, z * 0.007 + 5, 3));
   g.dirt = Math.max(g.dirt, 0.8 * near(OUT.pyre, 20, 12), 0.5 * near(OUT.middens, 60, 30));
@@ -237,6 +239,8 @@ export function outskirtsGround(x, z) {
   {
     const sd = Math.hypot(x - OUT.sump.x, z - OUT.sump.z) + wob;
     g.wet = Math.max(g.wet, 1 - sstep(OUT.sump.r, OUT.sump.r + 35, sd));
+    // (A band of black mud a metre or two wide at the water's edge, the water's own ellipse: the edge cue, round 3's critics.)
+    { const e = Math.hypot((x - OUT.sump.x) / 1.1, z - OUT.sump.z) / OUT.sump.r + wob * 0.004, k = sstep(0.56, 0.6, e) * (1 - sstep(0.66, 0.72, e)); g.dirt = Math.max(g.dirt, 0.95 * k); g.ash = Math.max(g.ash, 0.7 * k); g.wet = Math.max(g.wet, k); }
     g.green = Math.max(g.green, 0.8 * (1 - sstep(OUT.sump.r + 10, OUT.sump.r + 60, sd)));
     if (x > 9380 && z > 680 && z < 960) g.wet = Math.max(g.wet, 1 - sstep(4, 16, leatAt(x, z)[0]));
   }
@@ -279,7 +283,7 @@ export function outskirtsTrees(x, z) {
   }
   {
     const [u, v] = frame(OUT.fields, x, z);
-    for (const [v0, , u0, u1] of STRIPS) if (Math.abs(v - (v0 - 3)) < 2.5 && u > u0 && u < u1) t = Math.max(t, 0.3);
+    for (const [v0, , u0, u1] of STRIPS) if (Math.abs(v - (v0 - 3)) < 2.5 && u > u0 && u < u1) t = Math.max(t, 0.2);   // (a third fewer than at first: round 3's critics)
   }
   return t;
 }

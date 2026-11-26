@@ -75,3 +75,5 @@ for (const v of views) {
   }
 }
 await ctx.close();
+// (Each run's browser profile let go: they are hundreds of megabytes, and 80 of them once filled the disk.)
+fs.rmSync(profile, { recursive: true, force: true });
