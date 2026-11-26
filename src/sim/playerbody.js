@@ -30,6 +30,11 @@ const TAU = Math.PI * 2;
 // it keeps clear of, in metres from each bone's line (the thigh, knee and ankle, and the hand), and his joints' names.
 const ROBE = {
   legs: [0.1, 0.085, 0.075], hand: 0.05,
+  // Its pace (src/sim/cloth.js pace): a heavy wool tabard. Left to itself its hem swings back in under a second and
+  // settles in one or two; walking it sways once a stride, running once a step, as each leg goes back under it.
+  // (tools/player/robe_swing.mjs measures it. It had waved 7 to 16 times a second.)
+  // (Its cut is kept `clear` of his thighs, so a leg coming forward carries it aside smoothly: src/sim/cloth.js step.)
+  motion: { hz: [2.0, 1.6, 1.3], damp: 1.4, air: 1.0, gravity: 0.15, clear: 0.015 },
   bones: { hips: 'Pelvis', upLeg: (s) => `${s[0]}_Thigh`, leg: (s) => `${s[0]}_Calf`, foot: (s) => `${s[0]}_Foot`, toe: (s) => `${s[0]}_ToeBase`, foreArm: (s) => `${s[0]}_Forearm`, hand: (s) => `${s[0]}_Hand`, fingers: (s) => `${s[0]}_Mid2` },
 };
 // The gaits, slowest first, and the paces (m/s) over which each gives way to the next. Every loop is STEPS steps and
@@ -772,15 +777,25 @@ export class PlayerBody {
     snap[off + C.HP] = 1; snap[off + C.MAX_HP] = 1;
     if (!shown) { this.cloth?.reset(); return; }
     quatYaw(rig.rootQ, 0, this.yaw);
-    rig.rootT[0] = s.x; rig.rootT[1] = s.y; rig.rootT[2] = s.z;
+    // Solved about his own feet, the robe swung there, and only then the whole of him put where he stands (ArmsRig.shift):
+    // kilometres out, his joints worked out in the world's own numbers moved a millimetre at a time, and the robe that
+    // hangs from them jittered and stood off its cut.
+    const at = this.at ??= new Float64Array(3);
+    at[0] = s.x; at[1] = s.y; at[2] = s.z;
+    rig.rootT[0] = 0; rig.rootT[1] = 0; rig.rootT[2] = 0;
     rig.solve(rig.clips.walk, 0, 1, snap, off + C_PALETTE);
     if (this.cloth) {
-      // (Put somewhere else at a stroke, a door or a portal: the robe starts again hanging, not flung across the gap.)
-      const c = this.clothAt ??= new Float32Array([s.x, s.y, s.z]);
-      if (Math.hypot(s.x - c[0], s.y - c[1], s.z - c[2]) > 1.5) this.cloth.reset();
-      c[0] = s.x; c[1] = s.y; c[2] = s.z;
-      this.cloth.step(this.dt || 0, snap, off + C_PALETTE, 0, s.y);
+      // (Put somewhere else at a stroke, a door or a portal: the robe goes along with him as it hangs, not flung across
+      // the gap; turned about as well, it starts again hanging on its cut.)
+      const c = this.clothAt ??= new Float64Array([s.x, s.y, s.z, this.yaw]);
+      if (Math.hypot(s.x - c[0], s.y - c[1], s.z - c[2]) > 1.5) {
+        const turn = Math.abs(Math.atan2(Math.sin(this.yaw - c[3]), Math.cos(this.yaw - c[3])));
+        if (turn < 0.5) this.cloth.carry(); else this.cloth.reset();
+      }
+      c[0] = s.x; c[1] = s.y; c[2] = s.z; c[3] = this.yaw;
+      this.cloth.step(this.dt || 0, snap, off + C_PALETTE, 0, s.y, at);
     }
+    rig.shift(at, snap, off + C_PALETTE);
     this.hold(snap, off + C_PROPS);
   }
 

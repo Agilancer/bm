@@ -397,6 +397,25 @@ export class ArmsRig {
     }
   }
 
+  // The whole solved pose moved by n (metres, in the world): every joint, and the palette written at out[off]. For a body
+  // solved about its own feet (rootT 0) and only then put where it stands: thousands of metres out a 32-bit number only
+  // tells a millimetre or so from the next, and what's worked out from the joints (the player's robe, src/sim/cloth.js)
+  // jittered on that grid. (Each joint's turn is read from the palette: cloth rewrites its own bones' there.)
+  shift(n, out, off) {
+    const { pt, wt, count } = this;
+    const [nx, ny, nz] = n;
+    for (let j = 0; j < count; j++) {
+      wt[j * 3] += nx; wt[j * 3 + 1] += ny; wt[j * 3 + 2] += nz;
+      pt[j * 3] += nx; pt[j * 3 + 1] += ny; pt[j * 3 + 2] += nz;
+      // (A dual quaternion's translation part is linear in the move: the move's own share added.)
+      const o = off + j * 8, x = out[o], y = out[o + 1], z = out[o + 2], w = out[o + 3];
+      out[o + 4] += 0.5 * (nx * w + ny * z - nz * y);
+      out[o + 5] += 0.5 * (-nx * z + ny * w + nz * x);
+      out[o + 6] += 0.5 * (nx * y - ny * x + nz * w);
+      out[o + 7] += -0.5 * (nx * x + ny * y + nz * z);
+    }
+  }
+
   // Crossfades from a previous pose (rot2, tr2) by fade (0 = previous, 1 = current).
   solve(clip, t, fade, out, off) {
     this.sampleInto(clip, t, this.rot, this.tr);
