@@ -2501,7 +2501,12 @@ export class Brain {
         const job = this.questJob(id, m, LEVEL_OF[id]);
         if (job) jobs.push(job);
       }
-      if (jobs.length) return jobs.reduce((a, b) => (this.jobDist(a, m) <= this.jobDist(b, m) ? a : b));
+      // (Keeping to the one it's at unless another's a good deal nearer: leaving Fennick, two yards about as far off, it
+      // turned from one to the other and back as it walked.)
+      if (jobs.length) {
+        const best = jobs.reduce((a, b) => (this.jobDist(a, m) <= this.jobDist(b, m) ? a : b)), cur = jobs.find((j) => j.why === this.job?.why && j.kind === this.job?.kind);
+        return cur && this.jobDist(best, m) > this.jobDist(cur, m) * 0.7 ? cur : best;
+      }
       const offer = this.offerJob(m, FIRST_VISIT);
       if (offer) return offer;
       // (Just through the door, with its word with Wenna still to have and her not placed yet for a second or two: it keeps
@@ -3387,6 +3392,8 @@ export class Brain {
   // Up to someone in the town, face to face, and a word.
   approach(m, j) {
     const { townUI, game } = this.o;
+    // (A counter it's just been to and done with, for now: not walked back to. converse.)
+    if ((j.why === 'sell' || j.why === 'buy') && this.skipping(`${j.why}:${j.who}`)) { this.job = null; this.jobKey = ''; return; }
     const w = townUI.whereOf(j.who);
     this.say(j.say);
     if (!w || !this.reachable(j.who)) { this.giveUp(`p:${j.who}`, 60); this.job = null; return; }
@@ -3450,7 +3457,9 @@ export class Brain {
     if (++T.n > 40) { townUI.close(true); this.giveUp(`p:${T.who}`, 120); return; }
     const opts = townUI.view?.opts || [];
     const label = (o) => o.label;
-    const at = (f) => opts.findIndex((o) => o.cls !== 'dim' && f(o));
+    // (Not an option it's already taken three times on this same line in this talk: one that changes nothing, chosen over and
+    // over, ran the talk to its forty turns, a minute and a half stood before Nan Dray at the Forkstone with things to sell.)
+    const at = (f) => opts.findIndex((o) => o.cls !== 'dim' && !T.ban?.has(o.label) && f(o));
     const id = townUI.people[T.who]?.id;
     // On through what's being said.
     // (And through Lisandra's door, once a quest's opened it: src/ui/folk.js lisDoor.)
@@ -3466,7 +3475,13 @@ export class Brain {
       const rested = new Set(Object.keys(RULES).filter((qid) => Q.droppedLately?.(qid, DROP_REST)).map((qid) => QUESTS[qid].title));
       k = at((o) => !held(o) && (want.has(label(o)) || (o.cls === 'offer' && !rested.has(label(o)))));
     }
-    if (k >= 0) { townUI.choose(k); return; }
+    if (k >= 0) {
+      const said = `${label(opts[k])}|${line}`, n = ((T.picked ||= new Map()).get(said) || 0) + 1;
+      T.picked.set(said, n);
+      if (n >= 3) (T.ban ||= new Set()).add(label(opts[k]));
+      townUI.choose(k);
+      return;
+    }
     // Wes Harrow letting the pack out: asked, then a pocket at a time while it's still worth the coin (wantsRoom).
     if (T.why === 'room') {
       const one = at((o) => label(o).startsWith(ONE_MORE));
@@ -3504,6 +3519,7 @@ export class Brain {
         const items = townUI.stockOf(p.trade), k = items.indexOf(this.job?.item);
         if (k >= 0) townUI.buyItem(k, (items[k].type === 'spell' ? 120 : worth(items[k])) * 10);
         this.giveUp(`buy:${T.who}`, 120);
+        if (this.job?.why === 'buy') { this.job = null; this.jobKey = ''; }
         return;
       }
       else if (T.why === 'bed' && !T.done) {
@@ -3516,6 +3532,8 @@ export class Brain {
       // (Nothing sold: they don't buy what it carries. Not back to them for a good while: in the Fells it went back to
       // Fellfoot's sutler every minute, a 300 m walk each way, and turned round 120 m out on an errand to.)
       if (T.why === 'sell') this.giveUp(`sell:${T.who}`, T.sold ? 60 : 600);
+      // (And that errand's done: it kept the job, walked back up to the same counter and talked again, every five seconds.)
+      if (this.job?.who === T.who && /^(sell|buy|mend)$/.test(this.job.why)) { this.job = null; this.jobKey = ''; }
       return;
     }
     townUI.close(true);
