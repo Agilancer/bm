@@ -3,6 +3,7 @@ import { COMMON } from './shaders.js';
 import { CHURCH_SITE, CHURCH_Z } from '../core/church.js';
 import { CRAG, PLAIN } from '../core/east.js';
 import { SITES } from '../core/lands.js';
+import { OUT } from '../core/outskirts.js';
 import { terrainHeight } from '../core/terrain.js';
 import { RD_CELL, RD_HALF, RD_MAX, RD_N, RD_NX } from '../core/roads.js';
 
@@ -219,7 +220,13 @@ fn untileC(l: i32, uv: vec2f, dx: vec2f, dy: vec2f, k: f32) -> vec4f {
   // Roads: worn gravel and set stones wherever the ground's trodden hard. Rock: on the steeps and the far map's bare ground.
   let roadAmt = smoothstep(0.42, 0.78, dirtBase + (macro2.g - 0.5) * 0.25);
   let rock0 = max(fm.a, smoothstep(0.2, 0.42, steep));
-  let rockAmt = rock0 * smoothstep(0.1, 0.4, rock0 + (macro2.b - 0.5) * 0.3) * (1.0 - roadAmt * 0.8);
+  // (The Outwall's places: their own tinted ground on their heaps and banks, not the steeps' rock or the talus's scree. Below.)
+  var outwallK = 0.0;
+  if (p.x > 8990.0 && p.x < 10800.0 && abs(p.z) < 1350.0) {
+    var OW = array<vec3f, ${Object.keys(OUT).length}>(${Object.values(OUT).map((q) => `vec3f(${f1(q.x)}, ${f1(q.z)}, ${f1(q.r * 1.25 + 12)})`).join(', ')});
+    for (var i = 0; i < ${Object.keys(OUT).length}; i++) { outwallK = max(outwallK, 1.0 - smoothstep(OW[i].z, OW[i].z + 20.0, distance(p.xz, OW[i].xy))); }
+  }
+  let rockAmt = rock0 * smoothstep(0.1, 0.4, rock0 + (macro2.b - 0.5) * 0.3) * (1.0 - roadAmt * 0.8) * (1.0 - 0.85 * outwallK);
   let snowAmt = smoothstep(0.25, 0.6, fm.b + (macro2.r - 0.5) * 0.3) * smoothstep(0.55, 0.8, in.n.y) * (1.0 - 0.7 * roadIn);
   var grassCol: vec4f; var grassDet: vec4f; var dirtCol: vec4f; var dirtDet: vec4f;
   var rockCol = vec3f(0.0); var rockDet = vec4f(0.5, 0.5, 0.9, 0.5); var haveRock = false;
@@ -438,13 +445,17 @@ fn untileC(l: i32, uv: vec2f, dx: vec2f, dy: vec2f, k: f32) -> vec4f {
   // and paints the floor with rock drawn out along it. By the cell's own lie as well as its corners', and gently, or the
   // cells of a far slope came out rock and ground by turns, in squares and zigzags.)
   if (!skin) { cliffK *= 1.0 - 0.85 * smoothstep(0.7, 0.95, geoN.y); }
+  // (Nor the Outwall's heaps and banks, src/core/outskirts.js: steep as they are, they're earth and ash, not the walls' rock.)
+  if (!skin) { cliffK *= 1.0 - outwallK; }
   var cliffN = normalize(in.n);
   var cliffDet = vec4f(0.5, 0.5, 0.85, 0.5);
   // The high ground out east and the slopes at the walls' feet: dead grass and scree, dark, never the pale ash of the
   // country west of the ridge, so the rock and the ground over it are the one country. (Never on a way.)
   let highK = eastK * smoothstep(${(PLAIN + 55).toFixed(1)}, ${(PLAIN + 95).toFixed(1)}, p.y) * (1.0 - roadIn) * (1.0 - cliffK);
-  // (The talus at the walls' feet too, lying at a gentle slope: left the country's pale ash, it read as a snowdrift.)
-  let footK = eastK * smoothstep(0.04, 0.15, steep) * (1.0 - roadIn) * (1.0 - cliffK);
+  // (The talus at the walls' feet too, lying at a gentle slope: left the country's pale ash, it read as a snowdrift. But not on
+  // the Outwall's places, src/core/outskirts.js: the Middens' heaps, the mounds, the spoil, each tinted its own (the far map,
+  // src/sim/job.worker.js), were all painted over with the one pale scree, and round 2's critics saw one grey.)
+  let footK = eastK * smoothstep(0.04, 0.15, steep) * (1.0 - roadIn) * (1.0 - cliffK) * (1.0 - outwallK);
   if (highK + footK > 0.01) {
     let gn = textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.011 + 0.23, 0.0);
     let sc = textureSampleGrad(p2Color, repeatSmp, uT, P2_SCREE_L, dT1, dT2).rgb;
@@ -599,7 +610,8 @@ fn untileC(l: i32, uv: vec2f, dx: vec2f, dy: vec2f, k: f32) -> vec4f {
   let shadow = shadowAt(p, normalize(in.n), in.viewZ, seed);
   var c = shadePBR(p, n, v, albedo, rough, 0.0, 1.0, shadow);
   // Low mist lying over the fen's wet ground, thicker out from you.
-  if (!LEAN) { c = mix(c, F.skyAmb.rgb * 0.62 + F.sunColor.rgb * 0.05, ft.a * smoothstep(6.0, 70.0, dist) * 0.38 * (0.7 + 0.6 * macro2.g)); }
+  // (Not on the Outwall's places, src/core/outskirts.js: the rot round the Middens' heaps is wet, and the mist laid them white.)
+  if (!LEAN) { c = mix(c, F.skyAmb.rgb * 0.62 + F.sunColor.rgb * 0.05, ft.a * smoothstep(6.0, 70.0, dist) * 0.38 * (0.7 + 0.6 * macro2.g) * (1.0 - outwallK)); }
   c = applyFog(c, p, -v, dist);
   var o: Out;
   o.color = vec4f(c, 1.0);

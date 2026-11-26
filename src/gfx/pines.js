@@ -142,17 +142,15 @@ export const PINE = STATIC
   var o: V;
   var p = pIn;`, `@location(3) layer: u32, @location(5) at: vec4f, @location(6) spin: vec4f) -> V {
   var o: V;
-  let w = pIn.xz * spin.z * at.w;
-  var p = vec3f(w.x * spin.x - w.y * spin.y, pIn.y * at.w, w.x * spin.y + w.y * spin.x) + at.xyz;
+  let q = select(pIn, snagAt(pIn, layer, at), floor((spin.w - floor(spin.w / 100.0) * 100.0) / 10.0) == 4.0);
+  let w = q.xz * spin.z * at.w;
+  var p = vec3f(w.x * spin.x - w.y * spin.y, q.y * at.w, w.x * spin.y + w.y * spin.x) + at.xyz;
   // (spin.w: how dark, plus ten times the country's tint, plus a hundred for a tree with its low boughs off. Those boughs
   // carry LOW more on their u: on a trimmed tree every corner of one goes to the tree's foot, and it's nothing.)
   let trim = floor(spin.w / 100.0);
   let tw = spin.w - trim * 100.0;
   let low = uv.x > ${LOW - 0.5};
   if (low && trim > 0.0) { p = at.xyz; }
-  // (A snag: lands.js treeCode 4, the Outwall's. Its needles folded away all but a ragged crown, the trunk and the stubs of
-  // the top boughs left standing grey.)
-  if (floor(tw / 10.0) == 4.0 && layer == PINE_LAYERu && pIn.y < 0.8) { p = at.xyz; }
   let nw = vec3f(n.x * spin.x - n.z * spin.y, n.y, n.x * spin.y + n.z * spin.x);
   // (The tint is src/core/lands.js treeCode. Handed on as a hundred times the tint plus the tone.)
   let tcode = floor(tw / 10.0);
@@ -201,15 +199,37 @@ export function softDepth(code, samples) {
 }`) + cutMaskWGSL(samples);
 }
 
+// A snag (src/core/lands.js treeCode 4, the Outwall's dead trees), from a pine's own corners, in its unit frame (y up its height):
+// snapped off somewhere between half and four-fifths up, the break tapering; the trunk two-thirds as thick as a living one's
+// and leaning; no needles, only the stubs of the boughs between a fifth up and the break. A corner that's gone goes to the
+// tree's foot. (Round 2's critics: two-metre columns with a ragged crown read as pillars, and down the fields as spears.)
+const SNAG = /* wgsl */ `
+fn snagAt(pIn: vec3f, layer: u32, at: vec4f) -> vec3f {
+  let h = fract(sin(dot(at.xz, vec2f(7.13, 3.71))) * 4375.85);
+  let snap = 0.5 + 0.3 * h;
+  var q = pIn;
+  if (layer == PINE_LAYERu) {
+    if (q.y < 0.2 || q.y > snap) { return vec3f(0.0); }
+    q = vec3f(q.x * 0.16, q.y + 0.01, q.z * 0.16);
+  } else {
+    q = vec3f(q.x * (0.5 + 0.25 * h), q.y, q.z * (0.5 + 0.25 * h));
+    if (q.y > snap) { q = vec3f(q.x * 0.35, snap + (q.y - snap) * 0.12, q.z * 0.35); }
+  }
+  let a = h * 6.2832;
+  return q + vec3f(cos(a), 0.0, sin(a)) * q.y * 0.035 * (0.4 + h);
+}
+`;
+
 const SHADOW_PINE = SHADOW + /* wgsl */ `
 @vertex fn vsPine(@location(0) pIn: vec3f, @location(2) uv: vec2f, @location(3) layer: u32, @location(5) at: vec4f, @location(6) spin: vec4f) -> VC {
   var o: VC;
-  let w = pIn.xz * spin.z * at.w;
-  // (A trimmed tree's low boughs, folded away as in PINE.)
+  // (A trimmed tree's low boughs, folded away as in PINE; a snag shaped as in PINE.)
   let low = uv.x > ${LOW - 0.5};
   let tw = spin.w - floor(spin.w / 100.0) * 100.0;
-  let gone = (low && spin.w >= 100.0) || (floor(tw / 10.0) == 4.0 && layer == PINE_LAYERu && pIn.y < 0.8);
-  o.pos = U_.m * vec4f(select(vec3f(w.x * spin.x - w.y * spin.y, pIn.y * at.w, w.x * spin.y + w.y * spin.x), vec3f(0.0), gone) + at.xyz, 1.0);
+  let q = select(pIn, snagAt(pIn, layer, at), floor(tw / 10.0) == 4.0);
+  let w = q.xz * spin.z * at.w;
+  let gone = low && spin.w >= 100.0;
+  o.pos = U_.m * vec4f(select(vec3f(w.x * spin.x - w.y * spin.y, q.y * at.w, w.x * spin.y + w.y * spin.x), vec3f(0.0), gone) + at.xyz, 1.0);
   o.uv = vec2f(uv.x - select(0.0, ${LOW}.0, low), uv.y); o.layer = layer;
   return o;
 }
@@ -302,7 +322,7 @@ export class Pines {
     const { r } = this;
     const { device } = r;
     const at = (n) => `${this.names.indexOf(n)}u`;
-    const code = PINE.replaceAll('PINE_LAYERu', at('pine')).replace('PINE_2u', at('pine_2')).replace('BARK_LAYERu', at('pine_bark')).replace('BARK_2u', at('pine_bark_2'));
+    const code = (PINE + SNAG).replaceAll('PINE_LAYERu', at('pine')).replace('PINE_2u', at('pine_2')).replace('BARK_LAYERu', at('pine_bark')).replace('BARK_2u', at('pine_bark_2'));
     // On a PC the trees go in twice: their depth, then their colour where it matched (the cut-out already done, so no
     // discard to keep the GPU from skipping what's hidden). A phone's GPU sorts what's hidden for itself.
     const twice = !this.lean;
@@ -336,7 +356,7 @@ export class Pines {
       fragment: { module: one, entryPoint: 'fs', targets },
       primitive: prim, depthStencil: depth(), multisample: ms,
     }) : this.pMain;
-    const sh = device.createShaderModule({ code: SHADOW_PINE.replaceAll('PINE_LAYERu', at('pine')) });
+    const sh = device.createShaderModule({ code: (SHADOW_PINE + SNAG).replaceAll('PINE_LAYERu', at('pine')) });
     this.pShadow = device.createRenderPipeline({
       layout: layout(bglShadow, bglShCut),
       vertex: { module: sh, entryPoint: 'vsPine', buffers },

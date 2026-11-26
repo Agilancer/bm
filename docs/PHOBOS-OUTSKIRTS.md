@@ -19,20 +19,21 @@ get down off the main road … paths, proper areas … a cool, fleshed out part 
 
 - **Ashfold** (9555, -880), under the north gate: the ash-gatherers' yard. It has eight shanties, a lean-to, a broken dry wall, carts, ash heaps and sacks, and a hearth. Hode Callow (ash-reeve, sutler) and Nell Sallow (ash-carter) are posted there.
 - **The Old Delf** (9350, -770): the stone-cutting the city was built from. Three benches and a ramp are cut 8 m into the plain, with spoil heaps, two shear-legs, cut blocks, a sled, ladders and a tool hut. Lair `out_delf` (kobolds).
-- **The Pauper Mounds** (9195, -395): three rows of long mounds, each with a plain board at its head (one plank, never a crosspiece), stakes, stones, a fresh grave and a sexton's lean-to, ringed by dead pines. The Mound Path stops at their edge, because a way's bed flattens 15 m round it.
+- **The Pauper Mounds** (9195, -395): three rows of long mounds, each a rounded earth ridge (three stacked gables) with a leaning grey board at its head (one plank, never a crosspiece). There are stakes and stones, darker earth on the fresh row, an open grave with its spoil, a spade handle and a bier, a hand-cart, and a sexton's lean-to, ringed by dead pines. The Mound Path stops at their edge, because a way's bed flattens 15 m round it.
 - **The Pyre Ground** (9712, -858): a raised, flagged burning floor with four pyres (one lit), the keepers' shed, a bone cart and ash heaps. Lair `out_pyre` (ash-walkers).
-- **The Middens** (10330, -1045), under the north cliff east of the gate: fourteen heaps of the city's rubbish, 4 to 10 m high, with the rag-pickers' three shelters and fire, and bone heaps. Lair `out_middens` (spiders, red mother).
+- **The Middens** (10330, -1045), under the north cliff east of the gate: fourteen heaps of the city's rubbish, 4 to 10 m high, each with three big things on it (a fallen hut roof, a barrel stack, a wrecked cart, a pair of ribs). Two of the heaps smoke. There are also the rag-pickers' three shelters and fire, and bone heaps. Lair `out_middens` (spiders, red mother).
 - **The Strip Fields** (9300, 470): ridge-and-furrow strips with broken dry walls, stooks and a roofless barn.
 - **The Leat and the Sump** (9425, 735): the old mill-race comes out under the south wall and runs to a reed-ringed pond in dead pines. It has plank bridges, a punt and eel-traps. Lair `out_sump` (worm, spiders).
 - **Tanners' Hithe** (9560, 858): five shanties on both banks of the Leat. Joss Harrow (master tanner, sutler) and Agna Ruddock (eel-wife) are posted there.
-- **The Tan Pits** (9668, 868): twelve vats sunk into the ground with wooden kerbs, a beam-house, hide frames, and the far row past the yard. Lair `out_tanpits` (drowned tanners).
-- **The Limekilns** (10430, 1085): a 7.5 m bank whose face toward the city is walled in dressed stone, with buttresses. Three kilns stand out of the wall, all lit. The yard in front has lime heaps, a cart and a shed; there are woodpiles on top. Lair `out_kilns` (plague giant, goat-men).
+- **The Tan Pits** (9668, 868): twelve vats sunk into the ground with thick wooden kerbs, the liquor in three colours (tannin brown, lime white, dung green) a hand below the lip, a beam-house, hide frames, and the far row past the yard. Lair `out_tanpits` (drowned tanners).
+- **The Limekilns** (10430, 1085): a 7.5 m bank whose face toward the city is walled in dressed stone, with buttresses. Three kilns stand out of the wall, all lit: a fire in each mouth, a lamp by it, lime stains down the face. The yard in front has lime heaps, a cart and a shed; there are woodpiles on top. Lair `out_kilns` (plague giant, goat-men).
 - **The Lazar House** (10665, -718), where the north arm of the Ditch Road ends: the stone hall the city put its lepers in, with a walled yard and one gate (the Lazar Walk), two cells, a well with no frame, the graves outside the east wall, and a cart of wraps. Lair `out_lazar` (plague knights, a necromancer).
 - **The Knackers' Yard** (10670, 790), where the south arm ends (the Knackers' Lane): the boiling-house and its cauldron, wattle pens, bone heaps and hide frames, on mired ground. Lair `out_knackers` (goblins, a werewolf).
 
 ## The ways (`OUT_ROUTES`)
 
 - **The Ditch Road** (lane, 2.2 m) runs north and south from the causeway's foot, round the moat's outer bank, over both gate fronts (on a widened shelf: `gateShelf`, and `BASIN_N`/`BASIN_S` pushed out at the gates) and on to the Middens and the Limekilns. It goes round the Middens and the Mounds, not through them.
+- **Yard paths** (1.1 m), for walking inside a place, not round it: the Ash Yard (Ashfold, gate to Hode's door), the Hithe Landing, the Pits Walk. `white_ash`'s gather `spots` lie at the pyres' ends, on the Pyre Ground's floor.
 - **Paths** (1 to 1.6 m) lead off it: the Carrion Steps and the Gibbet Steps down off the causeway, then the Delf Way, Mound Path, Pyre Path, Headland, Leat Path, Kiln Track, Masons' Path, Lazar Walk and Knackers' Lane. Steep grades are cut into steps by `tools/roads/bed.mjs`.
 
 ## The quests (levels 23 to 26)
@@ -54,7 +55,21 @@ get down off the main road … paths, proper areas … a cool, fleshed out part 
 ## Trees and ground
 
 - **Trees:** every tree on the Outwall is a snag. `lands.js treeCode` gives 4 there; `src/gfx/pines.js` folds a code-4 tree's needles below its top fifth away (in its shadow too) and colours it grey.
+- **Snags:** `snagAt` in `src/gfx/pines.js` (the tree and its shadow) snaps each code-4 tree at its own height, between half and four-fifths up. It thins the trunk by 25 to 50%, leaves short broken stubs where the boughs were, and leans it a little.
 - **Ground:** `outskirtsGround` gives heath patches between the places, and nothing green in a yard. `job.worker.js` darkens ash, whitens chalk, and browns mud and the trodden yards.
+  - Each Middens heap is rotten brown-black, with a wet toe, on a paler trodden-ash floor.
+  - The fresh mounds are darker earth, the Tan Pits' vats have sludge round them, and the Kilns have a chalk apron.
+  - Each part of `g` is raised with `Math.max`, never set outright: setting the Sump's wet outright once wiped the Knackers' mire.
+- **The terrain shader on the Outwall's places** (`outwallK` in `src/gfx/materials.js`, each `OUT` place out to r × 1.25 + 12 m):
+  - none of the walls' cliff rock, the steeps' rock or the talus scree;
+  - none of the low "fen mist" over wet ground.
+  - All four painted the heaps and banks one pale grey, and from the air the mist read as a white fog bowl (round 2's critics).
+- **Water:** the Sump is fan quads of `dark:p2_moat_water`, laid by world x and z. The game's glassy water, plain or `mire:`, took the sky and read as snow. A fan of `K.tri` has no texture coordinates, so the moat picture smeared into spokes.
+- **The V/T rule here:**
+  - The old wreck cart's spoked `K.wheel` is replaced by the board `disc` (`wreck()`).
+  - The open grave's spade is a handle only, no blade.
+  - The Middens' ribs have no spine.
+  - The mounds' boards are single planks.
 
 ## Auto-play fixes made here (`src/ui/autobrain.js`)
 
@@ -66,6 +81,7 @@ get down off the main road … paths, proper areas … a cool, fleshed out part 
   - Inside the map the road could not be seen, so auto-play crossed open ground 40 m off it.
   - Fixed by widening the map to z −920..920 (`src/sim/east-nav.js`, a full bake). A way in hand is now kept 12 m past the map's edge (`onEast`), and a way asked for from just outside is asked from the nearest point on the map (`intoEast`).
 - **Over the basin rim:** with two lairs kept off at level 20, the cheapest way from the Needle to the Hithe went over the basin's cliff. `overRoads` now charges heavily for crossing x 9050 more than 150 m from the causeway (`BASIN_RIM`).
+- **Chests on the moat towers (round 3, run 1):** the two chests on the decks of the towers at the causeway's outer end (y 20.2, over a moat floor at y 12) were within auto-play's 2.5 m height band from the bank. The way to them went down into the moat, out of the band, so the hero went back to its hunt, climbed out and saw them again: a minute of to-and-fro. A chest more than 2 m above the ground under it now counts only from within 1 m of its height (`level` in the chest code).
 
 ## After a change
 

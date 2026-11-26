@@ -78,6 +78,20 @@ function cart(K, x, z, yaw, load = null) {
     for (const sd of [-1, 1]) { const [ax, az] = P(1.4, sd * 0.45), [bx, bz] = P(3.0, sd * 0.38); K.beam('dark:wood', [ax, y + 0.75, az], [bx, Y(bx, bz) + 0.1, bz], 0.07); }
   });
 }
+// A cart thrown out: on its side, its bed standing, one board wheel under it and the other lying off. (The kit's own wreck has
+// a spoked wheel: a cross, which Velscour's land never shows.)
+function wreck(K, x, z, yaw) {
+  put(K, x, z, (nr) => {
+    const y = Y(x, z), c = Math.cos(yaw), s = Math.sin(yaw), P = (u, w) => [x + u * c + w * s, z - u * s + w * c];
+    K.box('dark:wood', x, y - 0.1, z, 1.5, 0.55, 0.12, yaw, { collide: false });
+    { const [bx, bz] = P(0, 0.75); K.box('dark:wood', bx, y - 0.1, bz, 1.5, 1.3, 0.1, yaw + 0.12, { collide: false }); }
+    K.collide(x, z, 1.6, 0.8, yaw, y + 1.3);
+    if (!nr) return;
+    { const [wx, wz] = P(0.3, -0.35); disc(K, wx, y + 0.55, wz, yaw + 0.2, 0.6); }
+    { const [wx, wz] = P(2.4, -1.2); K.drum('dark:wood', wx, Y(wx, wz) - 0.02, wz, 0.6, 0.1, 9, { collide: false }); }
+    { const [ax, az] = P(-1.5, 0.3), [bx, bz] = P(-3.1, 0.5); K.beam('dark:wood', [ax, y + 0.3, az], [bx, Y(bx, bz) + 0.05, bz], 0.07); }
+  });
+}
 // A pyre: logs laid one way only, three courses, a shrouded body on top; lit or not.
 function pyre(K, x, z, yaw, lit) {
   put(K, x, z, (nr) => {
@@ -98,10 +112,12 @@ function pyre(K, x, z, yaw, lit) {
 function vat(K, x, z, yaw, liquor) {
   put(K, x, z, (nr) => {
     let y = Y(x, z);
-    // (Sunk: the liquor a hand below the ground, a low kerb round it. Raised a half-metre, round 1's critics read garden beds.)
-    K.box('rubble', x, y - 0.9, z, 1.15, 1.0, 1.15, yaw, { top: liquor });
+    // (Sunk: the liquor at the ground, a kerb of black oak a third of a metre over it, its inner face showing. Raised a
+    // half-metre, round 1's critics read garden beds; level with a thin kerb, round 2's read floor tiles. The liquor's matte,
+    // not water: the water layer's a bright glossy grey from any way off.)
+    K.box('rubble', x, y - 0.9, z, 1.12, 1.0, 1.12, yaw, { top: liquor });
+    { const c = Math.cos(yaw), s = Math.sin(yaw); for (const [u, w, hx, hz] of [[0, 1.3, 1.5, 0.2], [0, -1.3, 1.5, 0.2], [1.3, 0, 0.2, 1.1], [-1.3, 0, 0.2, 1.1]]) K.box(nr ? 'char:wood' : 'dark:wood', x + u * c + w * s, y - 0.2, z - u * s + w * c, hx, 0.65, hz, yaw, { collide: false }); }
     if (!nr) return;
-    { const c = Math.cos(yaw), s = Math.sin(yaw); for (const [u, w, hx, hz] of [[0, 1.22, 1.3, 0.1], [0, -1.22, 1.3, 0.1], [1.22, 0, 0.1, 1.12], [-1.22, 0, 0.1, 1.12]]) K.box('dark:wood', x + u * c + w * s, y - 0.15, z - u * s + w * c, hx, 0.3, hz, yaw, { collide: false }); }
     y -= 0.38;
     // (A pole left standing in it, leaning; a hide half under.)
     const c = Math.cos(yaw), s = Math.sin(yaw), j = hash2(Math.round(x), Math.round(z));
@@ -131,10 +147,19 @@ function kiln(K, x, z, yaw, lit, y0 = null, top = null) {
     const h = top !== null ? top + 1.2 - (y - 0.5) : 7.5;
     K.drum('soot:rubble', x, y - 0.5, z, 3.6, h, 12, { r2: 3.0, lid: 'char:rubble' });
     const [mx, mz] = P(0, 3.4), my = y0 ?? Y(mx, mz);
-    if (lit) fire(K, mx, my + 0.2, mz, 0.7, 1.2, 'dark:flame');
+    if (lit) fire(K, mx, my + 0.2, mz, 1.0, 1.7, 'dark:flame');
+    // (The draw-arch's back glowing, seen from the yard: round 2's critics found a match-sized fire at a stump's foot. And the
+    // lime's white run down the kiln's face from its top, where it's drawn and spilt.)
+    if (lit) K.quad('flame', [mx - 0.8 * c - 0.3 * s, my, mz + 0.8 * s - 0.3 * c], [mx + 0.8 * c - 0.3 * s, my, mz - 0.8 * s - 0.3 * c], [mx + 0.8 * c - 0.3 * s, my + 1.9, mz - 0.8 * s - 0.3 * c], [mx - 0.8 * c - 0.3 * s, my + 1.9, mz + 0.8 * s - 0.3 * c], [s, 0, c]);
+    for (const [e, w, d] of [[-1.6, 0.5, 0.55], [0.4, 0.9, 0.75], [2.1, 0.4, 0.45]]) {
+      const a0 = (e - w) / 3.62, a1 = (e + w) / 3.62, R = 3.64, yt = y - 0.5 + h, yb = yt - h * d;
+      const E = (a, yy) => [x + (Math.sin(a) * c + Math.cos(a) * s) * R, yy, z + (-Math.sin(a) * s + Math.cos(a) * c) * R];
+      const nx = Math.cos((a0 + a1) / 2) * s + Math.sin((a0 + a1) / 2) * c, nz = Math.cos((a0 + a1) / 2) * c - Math.sin((a0 + a1) / 2) * s;
+      K.quad('pale:rubble', E(a0, yb), E(a1, yb), E(a1, yt), E(a0, yt), [nx, 0, nz]);
+    }
     if (!nr) return;
+    if (lit) lamp(K, mx + 1.2 * s, my + 1.0, mz + 1.2 * c, 16, 14);
     K.arch('dark:rubble', mx, mz, yaw, { a: 0.8, pw: 0.9, hs: 0.9, t: 1.4, ring: 0.45, top: 2.6, y: my, collide: false });
-    K.quad('char:stone', [mx - 0.8 * c, my, mz + 0.8 * s], [mx + 0.8 * c, my, mz - 0.8 * s], [mx + 0.8 * c, my + 1.6, mz - 0.8 * s], [mx - 0.8 * c, my + 1.6, mz + 0.8 * s], [s, 0, c]);
     K.drum('char:rubble', x, y - 0.5 + h - 1.0, z, 3.0, 0.4, 12, { r2: 2.6, open: true, collide: false });
   });
 }
@@ -268,9 +293,33 @@ function paupers(K) {
   MOUNDS.forEach(([u, v], k) => { const [x, z] = at(u + 7.2, v); stake(K, x, z, k); });
   // (A plain board at every head, a single plank stood in the earth, some leaning off true by the turn: no crosspiece, ever.
   // Seen from the road, which the stakes alone weren't.)
-  MOUNDS.forEach(([u, v], k) => { const [x, z] = at(u + 6.3, v + (hash2(k, 8) - 0.5) * 0.8); put(K, x, z, () => K.box(k % 3 ? 'dark:wood' : 'soot:wood', x, Y(x, z) - 0.3, z, 0.05, 1.05 + hash2(k, 9) * 0.5, 0.26 + hash2(k, 10) * 0.08, p.yaw + (hash2(k, 11) - 0.5) * 0.35, { collide: false })); });
-  // (A fresh one, open: the earth heaped beside it, the spade left in.)
-  near(K, ...at(48, -2), () => { const [x, z] = at(48, -2); K.heap('dark:rubble', x, z, 1.8, 1.0, 8, { collide: false }); const y = Y(x, z); K.beam('dark:wood', [x + 0.3, y + 0.4, z], [x + 0.5, y + 1.7, z + 0.1], 0.04); });
+  // (Round 2's critics: the mounds read as faint bumps and the boards as matchsticks. Each mound's earth built up over the
+  // ground's own swell, dark and turned, half a metre and more; each board a metre and more of weathered grey plank, leaning
+  // as they do when the earth settles.)
+  MOUNDS.forEach(([u, v], k) => {
+    const fresh = k >= 9;
+    // (A long earth ridge, not drums: three heaps side by side read as sawn stumps. Three gables stacked, each narrower, round its back.)
+    { const [x, z] = at(u, v); put(K, x, z, () => { let y = 1e9; for (const [a, b] of [[-6, -2], [6, -2], [-6, 2], [6, 2], [0, 0]]) y = Math.min(y, Y(...at(u + a, v + b))); const L = fresh ? 'umber:p2_ash_clay_ground' : 'dark:p2_ash_clay_ground', h = fresh ? 0.85 : 0.65; for (const [hx, hz, lift, rise] of [[6.2, 2.3, 0, 0.4], [5.8, 1.6, 0.15, 0.6], [5.2, 0.9, 0.45, 0.55]]) K.gable(L, L, x, y - 0.1 + lift * h, z, hx, hz, rise * h, p.yaw, 0); }); }
+    const [x, z] = at(u + 6.6, v + (hash2(k, 8) - 0.5) * 0.8), y = Y(x, z), lean = (hash2(k, 11) - 0.5) * 0.5, tall = 1.0 + hash2(k, 9) * 0.45;
+    const [tx, tz] = at(u + 6.6 + lean, v + (hash2(k, 8) - 0.5) * 0.8 + (hash2(k, 12) - 0.5) * 0.3);
+    put(K, x, z, () => K.beam(k % 3 ? 'pale:wood' : 'wood', [x, y - 0.3, z], [tx, y + tall, tz], 0.18, 0.05));
+  });
+  // (A fresh one, open: a black hole in the turned earth, the spoil heaped beside it, the spade stood in the spoil; the bier
+  // the dead came out on, its two poles laid along it, and the cart that brought them.)
+  {
+    const [x, z] = at(46, -2), y = Y(x, z), c = Math.cos(p.yaw), s = Math.sin(p.yaw), P = (uu, ww, vv = 0) => [x + uu * c + ww * s, y + vv, z - uu * s + ww * c];
+    put(K, x, z, (nr) => {
+      K.quad('char:stone', P(-1.0, -0.45, 0.06), P(1.0, -0.45, 0.06), P(1.0, 0.45, 0.06), P(-1.0, 0.45, 0.06), [0, 1, 0]);
+      for (const [a, b] of [[P(-1.05, -0.5, 0.05), P(1.05, -0.5, 0.05)], [P(1.05, 0.5, 0.05), P(-1.05, 0.5, 0.05)]]) K.quad('umber:rubble', a, b, [b[0], b[1] + 0.25, b[2]], [a[0], a[1] + 0.25, a[2]]);
+      const [hx, , hz] = P(0, 1.9); K.heap('umber:rubble', hx, hz, 1.4, 0.95, 8, { collide: false });
+      if (!nr) return;
+      // (The spade's handle only, stood in the spoil: its blade across the shaft's foot would be a T.)
+      K.beam('dark:wood', P(0.2, 1.9, 0.5), P(0.35, 2.0, 1.75), 0.04);
+      for (const ww of [-0.32, 0.32]) K.beam('wood', P(-1.4, -1.6 + ww, 0.12), P(1.4, -1.6 + ww, 0.12), 0.04);
+      { const [sx, , sz] = P(0, -1.6); K.box('pale:cloth_oat', sx, y + 0.14, sz, 0.85, 0.12, 0.26, p.yaw, { collide: false }); }
+    });
+    const [cx, cz] = at(50, 4); cart(K, cx, cz, p.yaw + 2.2, 'pale:cloth_oat');
+  }
   { const [x, z] = at(-48, 0); put(K, x, z, (nr) => { if (nr) K.rock('dark:stone', x, z, 0.8, 1.6); }); }
   // (Small field stones laid at the feet of the older mounds, and a sexton's lean-to at the end of the rows.)
   MOUNDS.forEach(([u, v], k) => { if (k % 2) near(K, ...at(u - 7, v), () => { const [x, z] = at(u - 7, v); K.rock('dark:stone', x, z, 0.35 + hash2(k, 91) * 0.2, 0.5); }); });
@@ -293,7 +342,27 @@ function middens(K) {
       }
     });
   });
-  { const [x, z] = [p.x + 34, p.z + 30]; put(K, x, z, (nr) => { if (nr) { K.cart(x, z, 0.4, { wreck: true }); } }); }
+  { const [x, z] = [p.x + 34, p.z + 30]; wreck(K, x, z, 0.4); }
+  // (Round 2's critics: grey dunes and three sheds; the junk too small to see from thirty metres. So on every heap, things
+  // a man's height and more that break its outline from the road: a hut's roof fallen in whole, a stack of barrels, a cart
+  // on its side, the ribs of a horse the knackers didn't want. Smoke off two, where something's always smouldering.)
+  HEAPS.forEach(([hx, hz, h, r], i) => {
+    for (let k = 0; k < 3; k++) {
+      const a = hash2(i, k * 7 + 300) * TAU, d = r * (0.3 + hash2(k, i + 301) * 0.3), x = hx + Math.cos(a) * d, z = hz + Math.sin(a) * d, yaw = a + 1.3 + hash2(i, k) * 0.8;
+      const kind = (i + k) % 4;
+      if (kind === 0) put(K, x, z, (nr) => { const y = Y(x, z); K.gable('soot:roof_1', 'soot:wood', x, y - 0.5, z, 2.6, 1.9, 1.3, yaw, 0.3); if (nr) for (let q = 0; q < 3; q++) { const e = (q - 1) * 1.7; K.beam('soot:wood', [x + Math.cos(yaw) * e, y + 0.1, z - Math.sin(yaw) * e], [x + Math.cos(yaw) * (e + 0.6) + Math.sin(yaw) * 2.4, y + 1.6, z - Math.sin(yaw) * (e + 0.6) + Math.cos(yaw) * 2.4], 0.08); } });
+      else if (kind === 1) put(K, x, z, (nr) => { const y = Y(x, z); if (!nr) { K.box('umber:wood', x, y - 0.1, z, 1.3, 1.6, 0.8, yaw, { collide: false }); return; } for (let q = 0; q < 4; q++) { const e = (q - 1.5) * 0.85, [bx, bz] = [x + Math.cos(yaw) * e, z - Math.sin(yaw) * e]; K.barrel(bx, bz, 0.42, 1.05, Y(bx, bz) - 0.1); } for (const e of [-0.42, 0.42]) K.barrel(x + Math.cos(yaw) * e, z - Math.sin(yaw) * e, 0.42, 1.05, Math.max(Y(x, z), Y(x + 0.5, z)) + 0.9); });
+      else if (kind === 2) wreck(K, x, z, yaw);
+      else put(K, x, z, (nr) => {
+        // (Ribs: a pair of curved bones every half-metre along the heap's flank, the two of a pair never meeting, and no spine
+        // laid across their feet: each rib on a spine would be a T.)
+        const y = Y(x, z), c = Math.cos(yaw), s = Math.sin(yaw), P = (u, w, v) => [x + u * c + w * s, y + v, z - u * s + w * c];
+        for (let q = 0; q < 6; q++) { const u = -1.3 + q * 0.5, L = 1.0 + Math.sin(q / 5 * Math.PI) * 0.6; for (const sd of [-1, 1]) { K.beam('pale:stone', P(u, sd * 0.1, 0.25), P(u + 0.05, sd * L * 0.7, 0.25 + L * 0.8), 0.05); if (nr) K.beam('pale:stone', P(u + 0.05, sd * L * 0.7, 0.25 + L * 0.8), P(u + 0.1, sd * L * 0.35, 0.25 + L * 1.25), 0.04); } }
+        if (nr) K.heap('pale:stone', ...P(-2.1, 0, 0).filter((_, n) => n !== 1), 0.35, 0.4, 6, { collide: false });
+      });
+    }
+    if (i === 3 || i === 9) { const y = Y(hx, hz); put(K, hx, hz, (nr) => { if (!nr) (K.smokes ||= []).push([hx, y + 1.2, hz]); else fire(K, hx + 0.8, y - 0.2, hz, 0.5, 0.7); }); }
+  });
   // The rag-pickers' two shelters and their fire, at the heaps' edge by the road.
   shack(K, p.x - 40, p.z + 48, 0.2, 2.2, 1.8, 1.9, { roof: 'soot:roof_1', pipe: false });
   shack(K, p.x - 30, p.z + 54, -0.3, 2.0, 1.7, 1.8, { roof: 'soot:roof_1', pipe: false });
@@ -327,7 +396,11 @@ function leatAndSump(K) {
   put(K, s.x, s.z, () => {
     for (let i = 0; i < 20; i++) {
       const a = i / 20 * TAU, b = (i + 1) / 20 * TAU, r = s.r * 0.62;
-      K.tri('water', [s.x, sy, s.z], [s.x + Math.cos(b) * r * 1.1, sy, s.z + Math.sin(b) * r], [s.x + Math.cos(a) * r * 1.1, sy, s.z + Math.sin(a) * r]);
+      // (The moat's dark, still water, its picture laid by the world's x and z: as the game's glassy water, plain or fen, it took
+      // the sky and read as a patch of snow, round 2's critics; on a fan of plain triangles it had no texture coordinates and
+      // smeared into spokes.)
+      const C = [s.x, sy, s.z];
+      K.quad('dark:p2_moat_water', C, C, [s.x + Math.cos(b) * r * 1.1, sy, s.z + Math.sin(b) * r], [s.x + Math.cos(a) * r * 1.1, sy, s.z + Math.sin(a) * r], [0, 1, 0]);
     }
   });
   let prev = null;
@@ -352,13 +425,14 @@ function tanPits(K) {
   const p = OUT.tanpits, at = (u, v) => unframe(p, u, v);
   // Three rows of vats: lime nearest the shed, then the dark bark liquor, then the dyes the Quiet Watch's works buy (oxblood,
   // ochre, the green of the walnut).
-  const LIQ = ['pale:water', 'pale:water', 'umber:water', 'umber:water', 'blood:water', 'mire:water'];
+  // (Three liquors to tell apart from the road: lime white, tannin brown, the dung-green bate; and the oxblood dye.)
+  const LIQ = ['pale:ashlar', 'pale:ashlar', 'umber:cloth_oat', 'char:cloth_oat', 'mire:cloth_oat', 'blood:cloth_oat'];
   for (let r = 0; r < 3; r++) for (let k = 0; k < 4; k++) { const [x, z] = at(-12 + k * 3.4, -8 + r * 3.4); vat(K, x, z, p.yaw, LIQ[(r * 2 + (k % 2)) % LIQ.length]); }
   // The beam-house: an open shed over the fleshing beams; hide frames down the yard; stacked hides; lime barrels.
   { const [x, z] = at(9, -9); put(K, x, z, (nr) => { const y = Y(x, z), c = Math.cos(p.yaw), s = Math.sin(p.yaw); for (const [u, w] of [[-4, -3], [4, -3], [-4, 3], [4, 3]]) K.box('dark:wood', x + u * c + w * s, y - 0.3, z - u * s + w * c, 0.14, 3.2, 0.14, p.yaw); K.gable('soot:roof_3', 'dark:wood', x, y + 2.9, z, 4.2, 3.2, 1.5, p.yaw, 0.4); if (nr) for (const u of [-2, 1.5]) K.beam('bark', [x + u * c, y + 0.15, z - u * s], [x + (u + 0.4) * c + 1.4 * s, y + 1.0, z - (u + 0.4) * s + 1.4 * c], 0.22); }); }
   for (const [u, v] of [[-10, 6], [-3, 7], [4, 6]]) { const [x, z] = at(u, v); hideFrame(K, x, z, p.yaw); }
   // (The far row: the old pits, out past the yard's end toward the gate, deep, and not emptied since anyone's father's day.)
-  for (let k = 0; k < 4; k++) { const x = 9706 + k * 3.3, z = 875 + k * 0.4; vat(K, x, z, p.yaw, 'mire:water'); }
+  for (let k = 0; k < 4; k++) { const x = 9706 + k * 3.3, z = 875 + k * 0.4; vat(K, x, z, p.yaw, k % 2 ? 'mire:cloth_oat' : 'char:cloth_oat'); }
   near(K, ...at(14, 2), () => { const [x, z] = at(14, 2), y = Y(x, z); for (let i = 0; i < 6; i++) K.box(i % 2 ? 'umber:cloth_oat' : 'dark:cloth_oat', x, y + i * 0.09, z, 0.9 - i * 0.04, 0.09, 0.7, p.yaw + i * 0.07, { collide: false }); for (let i = 0; i < 3; i++) K.barrel(...at(15.5 + i * 0.85, -2)); });
 }
 

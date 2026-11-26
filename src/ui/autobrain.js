@@ -2263,14 +2263,18 @@ export class Brain {
     let ch = null, cd = hunting ? 40 : m.town ? TOWN_CHEST : 14;
     // (The one it's already going for, it keeps going for: the way to a chest in a house starts by walking away from it, round
     // to the door, and with two about the same way off it would turn from one to the other and back for ever.)
+    // (One up on a deck or a tower's top, over two metres above the ground under it, only from up there with it: from the
+    // bank by Phobos's causeway foot the two on the moat towers' decks were near enough its height, but the way to them went
+    // down into the moat, where they weren't, so it turned back to its hunt, climbed out, saw them again; a minute to and fro.)
+    const level = (c) => Math.abs(c.y - m.y) <= ((c.raised ??= c.y - terrainHeight(c.x, c.z) > 2) ? 1 : 2.5);
     let cur = this.chestFor;
     // (In the town, one at a time and not one after another: the next it passes, a while after. It used to go from house to
     // house for all fifteen before it took a quest.)
     if (cur?.open) { if (m.town) this.townChestAt = this.t; cur = this.chestFor = null; }
     if (m.town && !cur && this.t - (this.townChestAt ?? -999) < TOWN_CHEST_GAP) return false;
-    if (cur && !cur.open && Math.abs(cur.y - m.y) <= 2.5 && !this.skipping(cur) && this.t - (this.chestSeen ?? -9) < 1 && dist(m.x, m.z, cur.x, cur.z) < 34) { ch = cur; cd = dist(m.x, m.z, cur.x, cur.z); }
+    if (cur && !cur.open && level(cur) && !this.skipping(cur) && this.t - (this.chestSeen ?? -9) < 1 && dist(m.x, m.z, cur.x, cur.z) < 34) { ch = cur; cd = dist(m.x, m.z, cur.x, cur.z); }
     else for (const c of g.chests.list) {
-      if (c.open || Math.abs(c.y - m.y) > 2.5 || this.skipping(c) || this.kept(m, c.x, c.z) || bellmourns(c)) continue;
+      if (c.open || !level(c) || this.skipping(c) || this.kept(m, c.x, c.z) || bellmourns(c)) continue;
       const k = dist(m.x, m.z, c.x, c.z);
       if (k < cd) { cd = k; ch = c; }
     }
