@@ -31,6 +31,12 @@ export const PEOPLE = [
   // Widow's Lee: the sergeant of a watch that isn't, and her fletcher.
   { id: 'ines', name: 'Ines Mar', title: "Sergeant, at Widow's Lee", body: 'c_worker_f_2', sex: 'f', age: 41, ...at('widowslee'), idles: ['look_around', 'fold_arms', 'idle'] },
   { id: 'oswy', name: 'Oswy Holm', title: "Fletcher, at Widow's Lee", body: 'c_dude_3', sex: 'm', age: 20, ...by('widowslee'), idles: ['scratch', 'look_around', 'wait'] },
+  // Phobos's Outwall (src/core/outskirts.js), the basin floor outside the moat: Ashfold, the ash-gatherers' yard under the
+  // north gate, and Tanners' Hithe on the Leat under the south gate. Old places, so a post of their own, no camp.
+  { id: 'out_reeve', name: 'Hode Callow', title: 'Ash-reeve of Ashfold', body: 'c_old_man_2', sex: 'm', age: 58, post: [9552.2, -871], face: 2.845, trade: 'sutler', idles: ['fold_arms', 'scratch', 'idle'] },
+  { id: 'out_nell', name: 'Nell Sallow', title: 'Ash-carter, at Ashfold', body: 'c_worker_f_1', sex: 'f', age: 34, post: [9554, -887.5], face: -2.403, idles: ['look_around', 'wait', 'fold_arms'] },
+  { id: 'out_tanner', name: 'Joss Harrow', title: "Master of Tanners' Hithe", body: 'c_smith_2', sex: 'm', age: 47, post: [9556, 849.1], face: 0.42, trade: 'sutler', idles: ['fold_arms', 'idle', 'look_around'] },
+  { id: 'out_agna', name: 'Agna Ruddock', title: "Eel-wife, at Tanners' Hithe", body: 'c_crone_2', sex: 'f', age: 71, post: [9568.7, 851.9], face: -0.96, speed: 0.8, idles: ['idle', 'scratch', 'wait'] },
 ];
 
 export const RULES = {
@@ -68,6 +74,27 @@ export const RULES = {
   smoke_in_the_east: { needs: 'down_to_the_sill', steps: [{ kill: 'lair:phobos_cinder', n: 2 }, { talk: 'ph_penny', say: 'Wenna Coyle of the Sill sent me to see if you were still real.', end: true }], gold: 50, xp: 500 },
   wardens_of_ash: { needs: 'down_to_the_sill', steps: [{ kill: 'lair:phobos_boneyards', n: 2 }, { talk: 'ph_ash', say: 'Wenna Coyle of the Sill asks if her apprentice is any good.', end: true }], gold: 50, xp: 500 },
   quiet_men: { needs: 'down_to_the_sill', steps: [{ kill: 'lair:phobos_wharf', n: 2 }, { talk: 'ph_watch', say: "Ines Mar of Widow's Lee sends word: the oath still holds.", end: true }], gold: 55, xp: 550, item: 'scroll' },
+  // A fourth word from Wenna, down off the causeway onto the Outwall (src/core/outskirts.js), past the Old Delf to Ashfold.
+  the_ash_road: { needs: 'down_to_the_sill', steps: [{ kill: 'lair:out_delf', n: 4 }, { talk: 'out_reeve', say: "Wenna Coyle of the Sill asks after her ash.", end: true }], gold: 60, xp: 640 },
+
+  // ---- Ashfold, the ash-gatherers' yard on the Outwall under the north gate, levels 23 to 24 (Hode Callow; Nell Sallow): the
+  // ash-walkers on the Pyre Ground east of it, and the white ash sacked at the pyres' ends (Nell's), given together, done in
+  // one trip; then the spiders on the Middens, past the gate under the north cliff. Then round the wall's west end to the
+  // Hithe, past what's in the Sump ----
+  the_pyre_ground: { steps: [{ kill: 'lair:out_pyre', n: 4 }, { back: true, say: 'Four of the ash-walkers are down.' }], gold: 52, xp: 520 },
+  white_ash: { steps: [{ gather: 'lair:out_pyre', n: 5, what: 'sacks of white ash' }, { back: true, say: 'Five sacks. White.' }], gold: 50, xp: 500 },
+  the_middens: { needs: 'the_pyre_ground', steps: [{ kill: 'lair:out_middens', n: 4 }, { back: true, say: 'The Middens are clear. The red one first.' }], gold: 100, xp: 1000, item: 'gem' },
+  the_lazar_house: { needs: 'the_middens', steps: [{ kill: 'lair:out_lazar', n: 3 }, { back: true, say: 'Three of the lazars are down. They are back in the ground.' }], gold: 110, xp: 1100 },
+  round_to_the_hithe: { needs: 'the_middens', steps: [{ kill: 'lair:out_sump', n: 2 }, { talk: 'out_tanner', say: "Hode Callow says the white ash is coming.", end: true }], gold: 75, xp: 760 },
+
+  // ---- Tanners' Hithe, on the Leat under the south gate, levels 25 to 26 (Joss Harrow; Agna Ruddock): the drowned tanners
+  // in the pits east of it, and Agna's eel-traps in the Sump's reeds; then the thing at the Limekilns, past the gate under
+  // the south cliff. Then in at the Water Gate to the dye works, with a number ----
+  the_far_row: { steps: [{ kill: 'lair:out_tanpits', n: 3 }, { back: true, say: 'Three of them are down. The far row is quiet.' }], gold: 56, xp: 560 },
+  agnas_traps: { steps: [{ gather: 'lair:out_sump', n: 5, what: 'eel-traps', spots: [[23, 23], [37, 10], [34, -6], [33, -23], [17, -30]] }, { back: true, say: 'Five traps, out of the reeds.' }], gold: 55, xp: 550 },
+  the_lime_burnt: { needs: 'the_far_row', steps: [{ kill: 'lair:out_kilns', n: 3 }, { back: true, say: 'The kilns are yours again.' }], gold: 130, xp: 1300, item: 'staff' },
+  the_knackers: { needs: 'the_far_row', steps: [{ kill: 'lair:out_knackers', n: 3 }, { back: true, say: "Three are down at the knackers'. The wolf too." }], gold: 120, xp: 1200 },
+  cured_hides: { needs: 'the_lime_burnt', steps: [{ talk: 'ph_watch', say: "Joss Harrow says the Hithe's hides are cured. Twelve.", end: true }], gold: 70, xp: 720 },
 };
 // The level each wants (src/ui/autobrain.js PLAN; the quest log suggests the same). Each hub steps up; each errand on is
 // at the top of its hub's band, so the hub's done before it's followed. The Sill's three are of the city's lairs they
@@ -77,4 +104,7 @@ export const LEVELS = [
   ['waiting_their_turn', 18], ['the_long_queue', 18], ['over_the_hill', 18],
   ['oswys_quills', 19], ['the_birds_go_up', 19], ['the_toll_giant', 20], ['down_to_the_sill', 21],
   ['smoke_in_the_east', 22], ['wardens_of_ash', 22], ['quiet_men', 23],
+  // (Phobos's Outwall: Wenna's word down to Ashfold, its work, round to the Hithe, its work, and in at the Water Gate.)
+  ['the_ash_road', 23], ['the_pyre_ground', 23], ['white_ash', 23], ['the_middens', 24], ['the_lazar_house', 24], ['round_to_the_hithe', 25],
+  ['the_far_row', 25], ['agnas_traps', 25], ['the_lime_burnt', 26], ['the_knackers', 26], ['cured_hides', 26],
 ];

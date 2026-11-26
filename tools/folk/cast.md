@@ -947,6 +947,35 @@ loads, the sergeant kills her own lookouts, the people go back in.
   to read the smoke), **Wardens of Ash** (her apprentice Bet watched the Ashwardens' pyres from the Sill one night and
   went down to them: is she any good? Edda Grail: "the best I've got, and she can't have her back"), and **Quiet Men**
   (Ser Hale's once: to Maud Treller at the dye works, the oath still holds; "Tell her we're fifteen"; pays a scroll).
+  And a fourth, down off the causeway onto the Outwall: **The Ash Road** (her wick-lye hasn't come up from Ashfold in a
+  month; past the Old Delf, whose kobolds have the boy's sack, to Hode Callow).
+
+### Phobos's Outwall (`src/core/outskirts.js`; people and quests in `src/folk/regions/east.js`)
+
+The basin floor outside the moat: what a city keeps outside its wall. Ashfold under the north gate, where the city's dead
+come out as ash in carts; Tanners' Hithe on the Leat under the south gate, where the stink is. Plain folk, as on the Sill:
+"the city", "the castle", nobody named. Levels 23 to 26.
+
+- **Hode Callow**, 58, ash-reeve of **Ashfold** (`c_old_man_2`; its sutler). A sexton when the city had yards to bury in;
+  now he counts the sacks off the Pyre Ground and sends the fine ash to the Hithe for lye, the bone to the fields, the rest
+  to the Middens. Dry, tired, decent. Sent to by Wenna. Gives **The Pyre Ground** (the rows sit up on the flags before
+  they're lit: four ash-walkers; the keepers tie the feet now), **The Middens** (the red mother and three of her brood on
+  the city's rubbish-heaps under the north cliff; the rag-pickers go back out and find a whole door; pays a gem), and on:
+  **Round to the Hithe** (the long way, west and south outside the wall, past what's in the Sump, to tell Joss the white
+  ash is coming). "Ash is ash. It doesn't care whose it was."
+- **Nell Sallow**, 34, his ash-carter (`c_worker_f_1`): drives the white cart to the Hithe twice a day, round the long way,
+  with a mule called Penny. Gives **White Ash** (five sacks of the clean ash from the pyres' ends: Joss "makes a face" at
+  the grey).
+- **Joss Harrow**, 47, master of **Tanners' Hithe** (`c_smith_2`; its sutler). Sells every hide to the dye works on the
+  Tanners' Steps and to nobody else, and they ask nothing. Gives **The Far Row** (two of his men went into the old pits in
+  spring and climbed out in autumn, still good with a fleshing knife: three down, the row filled, no names cut), **The
+  Lime-Burnt** (something huge keeps the Limekilns lit, goat-men stoking; the burners hid a month in the chalk; pays the
+  master burner's staff, "always warm"), and on: **Cured Hides** (in at the Water Gate to Maud Treller: "the Hithe's hides
+  are cured, and there are twelve": twelve blades under the hides in lime. "Twelve. And fifteen. It's beginning to be a
+  number.").
+- **Agna Ruddock**, 71, eel-wife on the Leat (`c_crone_2`): sixty years at the Sump, her man went in after an eel. Gives
+  **Agna's Traps** (five eel-traps dragged into the Sump's reeds by something bigger than an eel; the first is her man's,
+  she knows the knot). "Sit down if you like. Everyone else stands."
 
 ## The Rustwood (`src/folk/regions/rustwood.js`, lines in `src/folk/lines/regions/rustwood.js`)
 

@@ -175,6 +175,122 @@ export const LINES = {
       magic: ["Can you do that to a feather? Make it more feathers?"],
     },
   },
+
+  // ---------------------------------------------------------------- Ashfold, on the Outwall under the north gate
+  out_reeve: {
+    first: [
+      "Mind the sacks. That's somebody's grandmother, sieved. Hode Callow. Ash-reeve of Ashfold, which is the name for this yard and everyone in it. The city burns its dead now. We cart what's left.",
+    ],
+    greet: {
+      morning: ["Carts go out at first light. You're in the way of one. There, now you're not.", "Morning. The pyre's still warm from the night. It's always warm."],
+      day: ["Sixteen sacks to the Hithe today, eight to the fields, and none back to the city. Nothing goes back in.", "If you're buying, buy. If you're looking, the Delf's a better view."],
+      evening: ["They light the big pyre at dusk. Don't stand downwind of it. Don't stand upwind either, if you can help it."],
+      night: ["Keep to the lamps. What's on the burning ground at night isn't the keepers."],
+    },
+    about: [
+      "Hode Callow. I was a sexton, in the city, when the city had yards to bury in. They filled. Now there's the Pyre Ground and the keepers, and the ash comes out here in carts, and I count it.",
+      "Ashfold sieves it. Fine ash goes to the Hithe, for the lye: the tanners can't take a hair off a hide without it. The bone goes to the fields. The rest goes on the Middens with everything else nobody wants.",
+    ],
+    ask: {
+      pyre: ["The Pyre Ground's east, along the ditch, under the gate. The keepers lay them out on the flags and burn them in rows. Lately a row sits up before it's lit. The keepers have gone careful. So have I."],
+      delf: ["The Old Delf. Where the city's stone came from, west, down the Delf Way. Three benches cut down into the plain and a ramp to haul out by. Nobody's cut there since. Something's moved in and taken to the work."],
+    },
+    topics: { pyre: 'The Pyre Ground', delf: 'The Old Delf' },
+    bye: ["Mind the sacks.", "Go on, then."],
+    barks: {
+      player: ["Not in the ash. Round it.", "That's a sack, not a seat."],
+      morning: ["Carts out!"],
+      evening: ["They're lighting it."],
+      magic: ["Don't burn anything here. It's been burnt."],
+    },
+    shop: { open: ["I'll buy what you've got. I sell a loaf and a dressing and nothing grey, I promise you that."], closed: ["Not now. I'm counting."] },
+  },
+
+  out_nell: {
+    first: [
+      "You've a face that's not been ashed. Give it a week. Nell Sallow. I drive the white cart: the good ash, the fine, to the Hithe for the tanners. Twice a day, round the long way, because the short way's the city.",
+    ],
+    greet: {
+      morning: ["The mule's in a mood. He knows where we're going.", "First load's on. You can ride the tail if you don't mind the company."],
+      day: ["Hithe and back. Hithe and back. I could do it asleep. Some days I think I have."],
+      evening: ["Last load. The tanners pay at dusk, so I'm there at dusk."],
+      night: ["Mule's in. I'm in. Lamps are lit. That's Ashfold done."],
+    },
+    about: [
+      "Nell Sallow. My mother drove the cart before me, and she sieved before that. It's not a trade anyone chooses. It's the one that was left when the city closed its gates on the ones outside them.",
+      "The white ash is the best of it. It's what's left at the heart of the pyre, burnt clean. The tanners swear by it. I swear at it. It gets in everything.",
+    ],
+    ask: {
+      hithe: ["Tanners' Hithe. South side, past the fields and the Sump, where the Leat comes out from under the wall. Joss Harrow's yard. He pays fair and he talks less, which I like in a man who handles skins."],
+      mule: ["He's called Penny, because that's what he cost. He's worth more. Don't tell him."],
+    },
+    topics: { hithe: "Tanners' Hithe", mule: 'The mule' },
+    bye: ["Watch your feet.", "Hithe and back."],
+    barks: {
+      player: ["You've got ash on you. Everyone has.", "Mind the mule. He bites."],
+      morning: ["Come on, Penny."],
+      evening: ["Last load!"],
+      magic: ["Don't. Penny hates that."],
+    },
+  },
+
+  // ---------------------------------------------------------------- Tanners' Hithe, on the Leat under the south gate
+  out_tanner: {
+    first: [
+      "You'll get used to the smell, or you won't, and either way you'll stop telling me about it. Joss Harrow, master of the Hithe. Hides in, leather out, and the Leat takes the rest down to the Sump.",
+    ],
+    greet: {
+      morning: ["Pits first. Then talk. The pits don't wait.", "Morning. Mind the edges. They're slick, and the liquor takes the skin off a man as well as a cow."],
+      day: ["Every hide that goes in at the Water Gate was cured here. Every one. Think on that next time you buy a belt in there."],
+      evening: ["Nell's cart's late. It's never late. ...There she is."],
+      night: ["Pits are covered. Lamps are lit. If you hear a splash, it wasn't me."],
+    },
+    about: [
+      "Joss Harrow. The tanners were always outside the wall. The city likes its leather and doesn't like where it comes from. Fair enough. I wouldn't have us inside either.",
+      "Lime first, to loosen the hair. Bark liquor, months of it. Then the dyers in the city take them, at the works on the Tanners' Steps. I sell to the works and to nobody else. They pay in good coin, and they ask nothing about it.",
+    ],
+    ask: {
+      pits: ["Twelve pits. Two of my men went in the far row in the spring, and came out of it in the autumn. They walk the yard at night. I'd rather they didn't. They were good with a fleshing knife, and they still are."],
+      kilns: ["The Limekilns are east, under the cliff, past the gate. The lime-burners went quiet a month back. Something big's been keeping the kilns hot since. My lime's running low."],
+    },
+    topics: { pits: 'The pits', kilns: 'The Limekilns' },
+    bye: ["Mind the edges.", "Go on."],
+    barks: {
+      player: ["Not that pit. Or that one.", "Leave the hides be. They're not done."],
+      morning: ["Turn the hides!"],
+      evening: ["Cover the pits."],
+      magic: ["Not near the liquor! It'll go up."],
+    },
+    shop: { open: ["I'll buy. I sell a roll and a dressing and leather, but you'd not want the leather yet. Give it a year."], closed: ["Not now. I'm up to the elbow."] },
+  },
+
+  out_agna: {
+    first: [
+      "Sit down if you like. Everyone else stands. Agna Ruddock. I've lived on the Leat sixty years and I'll die on it, and it'll carry me down to the Sump and the eels will have me. It's fair. I've had a lot of them.",
+    ],
+    greet: {
+      morning: ["Mist's on the Sump. Good for eels. Bad for knees."],
+      day: ["The Leat's low. When it's low you can see what's in it. I'd rather not."],
+      evening: ["Lamps on the water. That's the dyers in the city, letting their pits out. The Leat goes red for an hour."],
+      night: ["Go to bed. I'm not, but you should."],
+    },
+    about: [
+      "Agna Ruddock. My man laid the eel-traps in the Sump, and I've laid them since he went in after one. Wicker, bark-tied. The tanners eat the eels and I eat what they don't.",
+      "The Sump's where the Leat ends. Everything the city lets go down its drains comes out under the south wall, and down the Leat, and stops there. The eels like it. Eels like anything.",
+    ],
+    ask: {
+      sump: ["Down past the fields' end, west. Still water and reeds round it and the dead pines. There's something in it bigger than an eel. It's been turning my traps over."],
+      leat: ["The Leat's the old mill-race. It ran the city's mills when the city had mills. Now it runs the city's leavings. Same water. Different job."],
+    },
+    topics: { sump: 'The Sump', leat: 'The Leat' },
+    bye: ["Mind the water.", "Off you go."],
+    barks: {
+      player: ["Sit, if you're stopping.", "You've wet boots. Everyone's got wet boots."],
+      morning: ["Eels!"],
+      evening: ["Red water."],
+      magic: ["Pretty. Does it catch eels?"],
+    },
+  },
 };
 
 export const QUESTS = {
@@ -618,6 +734,287 @@ export const QUESTS = {
       ph_watch: [
         "A message? Not at the gate. By the vats, where the steam covers what's said. ...It holds. Does it. Four years we've had nothing, and now a stranger walks in with madder on their boots and says it holds.",
         "Ines. She got out, then. Stand, the dyers are watching. Take this, it's for your road. Tell her: fifteen. Tell her we're fifteen.",
+      ],
+    },
+  },
+
+  // ---------------------------------------------------------------- the Outwall: Wenna's word down to Ashfold
+  the_ash_road: {
+    title: 'The Ash Road',
+    giver: 'fv_wenna',
+    needs: 'down_to_the_sill',
+    about: "Wenna Coyle's lamp-wicks are soaked in lye from Ashfold, the ash-gatherers' yard on the Outwall under the north gate. The ash hasn't come up in a month. Go down past the Old Delf and ask the ash-reeve, Hode Callow, why.",
+    offer: [
+      "My wicks want lye, and the lye wants ash, and the ash comes from Ashfold, down on the Outwall under the north gate. Hode Callow sends a sack up every new moon. Not this one. Not the last one.",
+      "Go down and ask him. The Delf Way goes past the old stone-cutting on the way, and something's living in it that throws rocks. Take the Carrion Steps down off the causeway and keep to the path.",
+    ],
+    accept: "I'll go and ask him.",
+    acceptLine: "Down the steps by the carrion, then the Delf Way north. Hode's the old one counting sacks. If he's not counting sacks, something's wrong.",
+    decline: 'Buy your ash elsewhere.',
+    declineLine: "There is no elsewhere. There's Ashfold. I'll burn tallow, then. It smokes.",
+    journal: [
+      "Wenna Coyle's lye-ash hasn't come up from Ashfold in a month. Take the Carrion Steps down off the causeway and the Delf Way north, and put down four of what's in the Old Delf.",
+      "Find Hode Callow, the ash-reeve of Ashfold, under the north gate, and ask him about Wenna's ash.",
+    ],
+    progress: ["The steps, the Delf, then Ashfold. Hode's the one counting."],
+    done: [
+      "Wenna's sack? It went up the Delf Way with the boy at new moon. The boy came back without it. So that's where it went: whatever's in the Delf has my sack and Wenna's lye, and I suppose you've put a few of them down.",
+      "Here. And tell her she'll have two next month. If you're stopping, I've work. The city's dead won't stay lying down on the burning ground, and I've nobody to send.",
+    ],
+    after: ["Two sacks up to the Sill, new moon. I'll send them by the road. The long way."],
+    others: {
+      out_reeve: [
+        "Wenna's sack? It went up the Delf Way with the boy at new moon. The boy came back without it. So that's where it went: whatever's in the Delf has my sack and Wenna's lye, and I suppose you've put a few of them down.",
+        "Here. And tell her she'll have two next month. If you're stopping, I've work. The city's dead won't stay lying down on the burning ground, and I've nobody to send.",
+      ],
+    },
+  },
+
+  // ---------------------------------------------------------------- Ashfold (Hode Callow; Nell Sallow)
+  the_pyre_ground: {
+    title: 'The Pyre Ground',
+    giver: 'out_reeve',
+    about: "On the Pyre Ground east of Ashfold, the city's dead are sitting up on the flags before they're lit. The keepers have stopped going near. Put four of the ash-walkers down so the burning can go on.",
+    offer: [
+      "The keepers lay them out in rows on the Pyre Ground and light them at dusk. Lately, a row sits up first. Then it walks. Ash-walkers, Nell calls them. They don't go anywhere. They just stand on the flags, waiting to be lit.",
+      "No burning, no ash. No ash, no lye, no leather, and the Hithe goes hungry. East along the ditch, under the gate. Four of them down, and the keepers will do the rest.",
+    ],
+    accept: "I'll put them down.",
+    acceptLine: "East along the Ditch Road, then the Pyre Path. You'll see the fire. Don't stand in it.",
+    decline: 'Burn them yourself.',
+    declineLine: "I've tried. They don't stand still for it. That's the trouble.",
+    journal: [
+      "The dead on the Pyre Ground east of Ashfold are getting up before they're burnt. Put down four of the ash-walkers.",
+      "Go back to Hode Callow at Ashfold.",
+    ],
+    progress: ["East, the Pyre Path. Four of them."],
+    done: [
+      "Four. The keepers saw. They're laying the rows again already, and this time they're tying the feet. I don't ask. I count.",
+      "For your trouble. Ash is ash. It doesn't care whose it was. I try not to care either. Some days that's harder.",
+    ],
+    after: ["They light at dusk again. Rows and rows. The carts are full."],
+  },
+  white_ash: {
+    title: 'White Ash',
+    giver: 'out_nell',
+    about: "Nell Sallow drives the white ash, the finest, from the heart of the pyres to the tanners at the Hithe. Nobody will go out on the Pyre Ground to sack it now. Bring her five sacks of it.",
+    offer: [
+      "The white ash is the heart of the fire. Clean as snow. The tanners won't have anything else for the fine hides, and Joss Harrow's had grey off me three weeks running. He's too polite to say so. He makes a face.",
+      "The keepers leave it sacked at the pyres' ends, and none of us will go and fetch it while those things are standing about. Five sacks. You'll find them in the ash.",
+    ],
+    accept: "Five sacks. I'll fetch them.",
+    acceptLine: "At the ends of the pyres. White sacks. If it's grey, it's not mine, and if it's moving, it's not ash.",
+    decline: 'Not ash. Not today.',
+    declineLine: "Grey again, then. He'll make the face.",
+    journal: [
+      "Nell Sallow wants the white ash the keepers sacked at the ends of the pyres on the Pyre Ground. Bring her five sacks.",
+      "Take the sacks back to Nell Sallow at Ashfold.",
+    ],
+    progress: ["White sacks. Five. Pyre Ground."],
+    done: [
+      "That's it. That's the good stuff. Look at it, it squeaks. Joss will weep. He won't, but his face will do something new.",
+      "Here. And if you're ever at the Hithe, tell Joss the white came by somebody else's hand, so he knows I didn't go out there.",
+    ],
+    after: ["White ash to the Hithe. He made a new face. I think it was a smile."],
+  },
+  the_middens: {
+    title: 'The Middens',
+    giver: 'out_reeve',
+    needs: 'the_pyre_ground',
+    about: "Everything the city throws out ends up on the Middens, east under the north cliff, and now spiders the size of carts have taken the heaps. Ashfold's rag-pickers won't go out. Put down four of them, the red mother among them.",
+    offer: [
+      "East, past the gate, under the cliff: the Middens. Every broken crate and every bad barrel and every bone the knackers don't want. The rag-pickers live off it. Lived. The spiders came up out of the heaps in the summer.",
+      "There's one bigger than the rest, red. The pickers say it's the mother. Put her down, and three of hers, and the pickers can go back to their heaps. I've three families eating out of my sacks while they can't.",
+    ],
+    accept: "I'll clear the heaps.",
+    acceptLine: "Along the Ditch Road east, past the north gate, under the cliff. The heaps are the hills that smell. The red one first. She'll come.",
+    decline: 'Spiders. No.',
+    declineLine: "No. Nor me. That's why I asked you.",
+    journal: [
+      "Spiders have taken the Middens, the city's rubbish-heaps under the north cliff east of the gate. Put down four of them, the red mother among them.",
+      "Go back to Hode Callow at Ashfold.",
+    ],
+    progress: ["The Middens, east past the gate. The red one."],
+    done: [
+      "The pickers saw you go up the heaps from the road. They came running back to say. They've gone out already with their hooks. There's a lot of city in those heaps that the city doesn't know it threw away.",
+      "This came out of the heaps last year. Somebody's, once. Yours now. Then go south. The Hithe needs a hand more than I do.",
+    ],
+    after: ["The pickers are back on the heaps. They found a door. A whole door. They're very pleased."],
+  },
+  the_lazar_house: {
+    title: 'The Lazar House',
+    giver: 'out_reeve',
+    about: "The lazar house stands where the north arm of the Ditch Road gives out, east past the Middens: the city put its lepers there, when it kept any. Its dead have got up in plate, and something in a robe walks with them. Put three of them down.",
+    offer: [
+      "There's a house at the end of the north road, past the Middens, where the road gives up. The lazar house. The city sent its lepers there, back when it sent them anywhere. The last of them died in the winter. I carted them myself. Wrapped, the way you do.",
+      "Except they're up. Not in their wraps. In plate, black and red, walking the yard inside the wall, and something in a robe walking with them. I want them back in the ground. Three will do for a start.",
+    ],
+    accept: "I'll go to the lazar house.",
+    acceptLine: "The north road, east, past the heaps. Where it stops, that's their wall. Go in at the gate. Don't drink from the well.",
+    decline: 'Not the lazar house.',
+    declineLine: "Nobody goes. That's what it was built for.",
+    journal: [
+      "Hode Callow says the lepers buried at the lazar house, at the end of the north road east of the Middens, are walking again in plate. Put down three of them.",
+      "Go back to Hode Callow at Ashfold.",
+    ],
+    progress: ["The lazar house. The end of the north road. Three of them."],
+    done: [
+      "Three. I'll go out with the cart tomorrow and wrap them again. Properly, this time, and nothing in a robe walking behind me.",
+      "Here. That's out of the ash-tithe. Nobody else was ever going to spend it on lepers.",
+    ],
+    after: ["The lazar house is quiet. I put a lamp on its wall. Somebody should."],
+  },
+  round_to_the_hithe: {
+    title: 'Round to the Hithe',
+    giver: 'out_reeve',
+    needs: 'the_middens',
+    about: "Hode Callow's ash goes to Tanners' Hithe, under the south gate, the long way round outside the wall. Something in the Sump has turned the eel-traps over and taken the road there. Go round, put it down, and tell Joss Harrow the white ash is coming.",
+    offer: [
+      "The Hithe is the other side of the city: south gate, by the Leat. Nell takes the long way round, back west past the causeway's foot and down past the fields to the Sump, because nothing outside the wall gets in through the city.",
+      "Something in the Sump came up on the path last week and turned her cart. Put it down, and go on to Joss Harrow at the Hithe. Tell him the white ash is coming. He'll have work. He always has work.",
+    ],
+    accept: "I'll go round.",
+    acceptLine: "West along the ditch, under the causeway, and south. Past the fields, round the Sump. Joss is the one with the arms.",
+    decline: 'Not the long way.',
+    declineLine: "There's no short way. There's the city. You'd not like the short way.",
+    journal: [
+      "Something in the Sump, at the end of the Leat, has been coming up on the road round to Tanners' Hithe. Go round the Outwall by the Ditch Road and put down two of what's in the Sump.",
+      "Find Joss Harrow, master of Tanners' Hithe under the south gate, and tell him the white ash is coming.",
+    ],
+    progress: ["West, south, past the fields. The Sump. Then the Hithe."],
+    done: [
+      "White? Nell's white? Then I can finish the fine hides. And you came round by the Sump, did you. Not many come that way twice.",
+      "Here. And stop, if you've a strong stomach. The Hithe has troubles the Sump only starts.",
+    ],
+    after: ["White ash. Proper white. You can see your face in a hide."],
+    others: {
+      out_tanner: [
+        "White? Nell's white? Then I can finish the fine hides. And you came round by the Sump, did you. Not many come that way twice.",
+        "Here. And stop, if you've a strong stomach. The Hithe has troubles the Sump only starts.",
+      ],
+    },
+  },
+
+  // ---------------------------------------------------------------- Tanners' Hithe (Joss Harrow; Agna Ruddock)
+  the_far_row: {
+    title: 'The Far Row',
+    giver: 'out_tanner',
+    about: "Two of Joss Harrow's men went into the far row of the tan pits in the spring and climbed out in the autumn. They walk the yard by night, and they've brought others up with them. Put three of the drowned tanners down.",
+    offer: [
+      "The far row's the old pits. Deep, and nobody's emptied them since my father's day. Two of my men went in, in the spring. A rope went. In the autumn they came out, with the hides they'd gone in for still in their hands.",
+      "There's more than two now. They come out of the liquor at night and work. Flesh hides. Turn them. They're good at it. That's the worst of it. Put three of them down. I'll pay, and I'll say a word for them.",
+    ],
+    accept: "I'll put them down.",
+    acceptLine: "East along the Leat, past the bridge: the pits, in rows. The far row's the dark one. They don't come out by day unless you lean over.",
+    decline: 'Not into the pits.',
+    declineLine: "Nobody goes into the pits. That's the rule. It was the rule before, too.",
+    journal: [
+      "Joss Harrow's drowned tanners climb out of the far row of the tan pits east of the Hithe. Put down three of them.",
+      "Go back to Joss Harrow at Tanners' Hithe.",
+    ],
+    progress: ["The pits. The far row. Three of them."],
+    done: [
+      "Three. I'll have the row filled in. Lime and rubble, and a stone over it with their names, though I'll not cut the names. They'd not want it known they were tanners.",
+      "Here. You've earned it, and the yard's quieter for it. One more thing, and it's a big one, and then I'll stop asking.",
+    ],
+    after: ["The far row's filled. We work the near rows. It's enough."],
+  },
+  agnas_traps: {
+    title: "Agna's Traps",
+    giver: 'out_agna',
+    about: "Agna Ruddock has laid eel-traps in the Sump for sixty years. Something big has been turning them over and scattering them in the reeds. Bring her five of them back.",
+    offer: [
+      "Something in the Sump's taken against my traps. Wicker, bark-tied, my man made the first and I've made the rest. It turns them over and pulls them into the reeds and leaves them. It doesn't even eat the eels. It's spite.",
+      "Five of them. In the reeds round the water, west of here. I'd go, but my knees went in first, years ago, and the rest of me's waiting for them to come back.",
+    ],
+    accept: 'Five traps. I can find them.',
+    acceptLine: "In the reeds. Mind the water. Mind what's in the water more.",
+    decline: 'Not in the reeds.',
+    declineLine: "No. Nor anyone. I'll weave new. It takes a winter.",
+    journal: [
+      "Agna Ruddock's eel-traps have been dragged into the reeds round the Sump, west of the Hithe. Bring her five of them.",
+      "Take the traps back to Agna Ruddock at Tanners' Hithe.",
+    ],
+    progress: ["Five traps. The Sump's reeds."],
+    done: [
+      "That's his. The first one, my man's. I knew it by the knot. You found it. Sit a moment. No? No. Nobody sits.",
+      "Here. It's eel money. It spends the same.",
+    ],
+    after: ["Five traps in. Three eels this morning. And a boot, but it was a good boot."],
+  },
+  the_lime_burnt: {
+    title: 'The Lime-Burnt',
+    giver: 'out_tanner',
+    needs: 'the_far_row',
+    about: "The lime-burners at the Limekilns, east under the south cliff, went quiet a month ago. Something huge has kept the kilns lit since, and goat-men stoke them. Without lime the Hithe stops. Put it down, and three of what serves it.",
+    offer: [
+      "No lime, no hair off a hide, no leather. And my lime's from the Limekilns, east, under the cliff past the south gate: three kilns in a bank, and six burners. The burners went quiet a month back. The kilns didn't.",
+      "Something big's been keeping them hot. Goat-men carry the chalk in for it. My boy went to look and came back white to the eyes. Put it down, and three of the goats. Then I can buy lime from men again.",
+    ],
+    accept: "I'll go to the kilns.",
+    acceptLine: "East along the Ditch Road, past the south gate, and up the Kiln Track. You'll see the smoke. You'll smell it before that.",
+    decline: 'Buy your lime elsewhere.',
+    declineLine: "There's nowhere else. There's the kilns. I'll close the pits.",
+    journal: [
+      "Something huge has taken the Limekilns, east under the south cliff past the gate, and goat-men stoke the kilns for it. Put it down, and three of what serves it.",
+      "Go back to Joss Harrow at Tanners' Hithe.",
+    ],
+    progress: ["The Kiln Track, east past the south gate. The big one."],
+    done: [
+      "The burners are back. Two of them. They'd been hiding in the chalk-cave behind the bank, the whole month, eating chalk, near enough. They'll have the kilns cold by tonight and lit again by morning, properly.",
+      "This was the master burner's. He gave it me for you. He says it's warm. He says it's always been warm. Then one more errand, and it's into the city, and it's not for me.",
+    ],
+    after: ["Lime by the cart. The pits are full. It's a good smell, if you know what it means."],
+  },
+  the_knackers: {
+    title: "The Knackers' Yard",
+    giver: 'out_tanner',
+    about: "Joss Harrow's hides start at the knackers' yard, where the south arm of the Ditch Road gives out, east past the Limekilns. The knackers are gone. Goblins boil what's in the pens, and a wolf that walks on two legs eats what they leave. Put three of them down.",
+    offer: [
+      "Every hide I tan starts at the knackers' yard. The end of the south road, east, past the kilns. Dead horses in; hides, bone and glue out. Old Pell and his boys ran it. Pell's gone.",
+      "Goblins have the yard now. They boil what's in the pens, and they're not particular what's in the pens. There's a wolf with them that walks on two legs and eats what they don't. Put three of them down.",
+    ],
+    accept: "I'll clear the yard.",
+    acceptLine: "The south road, east, past the kilns, to where it stops. You'll smell it before you see it. You'll smell it after, too.",
+    decline: 'Not the knackers.',
+    declineLine: "No. Nobody likes the knackers. Not even the goblins, by the look of it.",
+    journal: [
+      "Goblins and a wolf on two legs hold the knackers' yard at the end of the south road, east of the Limekilns. Put down three of them for Joss Harrow.",
+      "Go back to Joss Harrow at Tanners' Hithe.",
+    ],
+    progress: ["The knackers'. The end of the south road. Three."],
+    done: [
+      "Three, and the wolf. Good. I'll send the boys for what hides are left. Pell would have wanted them used.",
+      "Here. And leather, when it's cured. Not now. In a year.",
+    ],
+    after: ["There's a new knacker. Pell's nephew. He doesn't talk either."],
+  },
+  cured_hides: {
+    title: 'Cured Hides',
+    giver: 'out_tanner',
+    needs: 'the_lime_burnt',
+    about: "Joss Harrow sells his hides to the dye works on the Tanners' Steps, inside the south gate, and to nobody else. He wants its captain told, word for word: the Hithe's hides are cured, and there are twelve.",
+    offer: [
+      "The dye works on the Tanners' Steps buys every hide I cure. In by the Water Gate, up the steps, the yard with the vats. Ask for the captain. Not the foreman. The captain.",
+      "Tell her this, and only this: the Hithe's hides are cured, and there are twelve. She'll know. If anyone else asks, you're selling leather.",
+    ],
+    accept: "Twelve hides. I'll tell her.",
+    acceptLine: "The Water Gate's just east. Up the Tanners' Steps. The captain. Twelve. That's all.",
+    decline: 'Not my business.',
+    declineLine: "No. It's hers. And mine, a little. I'll send Nell. She'll forget the number.",
+    journal: [
+      "Joss Harrow of Tanners' Hithe has a word for the captain of the dye works on the Tanners' Steps, in at the Water Gate: the Hithe's hides are cured, and there are twelve.",
+    ],
+    progress: ["The Water Gate. The Tanners' Steps. Twelve."],
+    done: [
+      "Twelve. Harrow said twelve? ...He's had them in the pits all this time. Under the hides. Twelve good blades, cured in lime, and not a spot of rust, I'll wager. The old fox.",
+      "Not here. By the vats. Take this, for the walk. And if you go back that way, tell him: the dyers will fetch the hides on a dark night. He'll know which.",
+    ],
+    after: ["Twelve. And fifteen. It's beginning to be a number."],
+    others: {
+      ph_watch: [
+        "Twelve. Harrow said twelve? ...He's had them in the pits all this time. Under the hides. Twelve good blades, cured in lime, and not a spot of rust, I'll wager. The old fox.",
+        "Not here. By the vats. Take this, for the walk. And if you go back that way, tell him: the dyers will fetch the hides on a dark night. He'll know which.",
       ],
     },
   },

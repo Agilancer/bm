@@ -6,6 +6,7 @@
 import { fbm, sstep } from './terrain-noise.js';
 import { PHOBOS } from './phobos-data.js';
 import { chasmLie, cragFaceY, faceY, fanOf, terraceY, wallLie } from './cliffs.js';
+import { gateShelf, outskirtsLift } from './outskirts.js';
 
 // Where the old world ended on this side, and where it ends now. (North, south and west are still WORLD_EDGE: lands.js.)
 export const EAST_FROM = 5600, WORLD_EAST = 11700;
@@ -81,8 +82,8 @@ const gateWay = (x, z) => (Math.abs(z) < 16 && x - CITY.x > 600) || (Math.abs(x 
 // (the two sides differ, and both wander): a point at the Sill, bays either side of the plain, pinched in to 40 m outside
 // the wall at the Charnel Gate (north) and the Tanners' Water Gate (south), wide again behind the city, then drawn in hard against the castle's crag, north and south, so the castle fills the
 // basin's head from wall to wall.
-const BASIN_N = [[8935, 0], [8960, 150], [9080, 520], [9300, 1010], [9560, 1180], [9760, 930], [9900, 836], [10040, 900], [10300, 1190], [10600, 1040], [10780, 640], [10930, 372], [11075, 338], [11300, 330], [11450, 240], [11560, 0]];
-const BASIN_S = [[8935, 0], [8960, 130], [9100, 430], [9330, 760], [9600, 1000], [9820, 900], [9950, 848], [10100, 930], [10380, 1300], [10660, 1240], [10840, 660], [10990, 384], [11075, 346], [11300, 338], [11470, 230], [11560, 0]];
+const BASIN_N = [[8935, 0], [8960, 150], [9080, 520], [9300, 1010], [9560, 1180], [9760, 945], [9900, 925], [10040, 950], [10300, 1190], [10600, 1040], [10780, 640], [10930, 372], [11075, 338], [11300, 330], [11450, 240], [11560, 0]];
+const BASIN_S = [[8935, 0], [8960, 130], [9100, 430], [9330, 760], [9600, 1000], [9820, 950], [9950, 930], [10100, 970], [10380, 1300], [10660, 1240], [10840, 660], [10990, 384], [11075, 346], [11300, 338], [11470, 230], [11560, 0]];
 const GATE_N = 9900, GATE_S = 9950;
 function edgeAt(T, x) {
   for (let i = 0; i + 1 < T.length; i++) if (x <= T[i + 1][0]) { const t = sstep(T[i][0], T[i + 1][0], x); return T[i][1] + (T[i + 1][1] - T[i][1]) * t; }
@@ -110,7 +111,7 @@ const TALUS = 21;
 const talusAt = (x) => sstep(8990, 9080, x);
 export function basinWall(x, z) {
   const [n, so] = basinEdges(x), side = -n - z > z - so ? 0 : 1, zf = side ? so : -n, lie = wallLie(x, side);
-  const foot = PLAIN + (fbm(x * 0.02, zf * 0.02 + 40, 3) - 0.5) * 3 + (TALUS + fanOf(lie, 0)) * talusAt(x);
+  const foot = PLAIN + (fbm(x * 0.02, zf * 0.02 + 40, 3) - 0.5) * 3 + (TALUS + fanOf(lie, 0)) * talusAt(x) * gateShelf(x);
   return { side, zf, lie, foot };
 }
 
@@ -319,6 +320,9 @@ export function eastHeight(x, z, h) {
     let floor = PLAIN + (fbm(x * 0.02, z * 0.02 + 40, 3) - 0.5) * 3 + cityRise(x, z) * (1 - sstep(0.96, 1.12, cw));
     // The moat, a ditch 40 m wide round the wall's foot (left whole at the gates); and the Slough through the city.
     if (cw > 1.012 && cw < 1.085 && !gateWay(x, z)) floor -= 8 * sstep(1.012, 1.026, cw) * (1 - sstep(1.068, 1.085, cw));
+    // The Outwall: the basin's floor outside the moat, shaped (src/core/outskirts.js): its swells, the Delf, the mounds, the heaps,
+    // the fields, the Leat and the Sump, the kilns' bank.
+    floor += outskirtsLift(x, z, cw);
     if (cw < 1.02 && x > 9780 && x < 10030) {
       const sd = sloughNear(x, z);
       // (Left whole where a street crosses it: a causeway with the water, when there is water, let through under it.)
@@ -338,7 +342,7 @@ export function eastHeight(x, z, h) {
     const W = m < 48 ? basinWall(x, z) : null;
     const c = cragC(x, z);
     // (But not heaped into the slots between the walls and the crag: there it buried the crag's foot in one smooth dome.)
-    if (W) floor += (TALUS * Math.pow(1 - Math.min(1, Math.max(0, m) / 30), 1.5) + fanOf(W.lie, m)) * talusAt(x) * sstep(1.08, 1.4, c);
+    if (W) floor += (TALUS * Math.pow(1 - Math.min(1, Math.max(0, m) / 30), 1.5) + fanOf(W.lie, m)) * talusAt(x) * gateShelf(x) * sstep(1.08, 1.4, c);
     // (Each only lifts the ground where it has something to lift: as a floor of PLAIN they filled the moat back in.)
     // (Its sides in the rock's beds, src/core/cliffs.js: cliff, ledge, cliff, from the foot to the ward's edge.)
     // (And cut by gullies between buttresses, ten metres back, every sixty or so round it, from its foot to near its top: the

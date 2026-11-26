@@ -25,8 +25,11 @@ import { allWays } from '../core/roads.js';
 // (And out on the plain under the Sill, outside the wall, the land's own roads: the Throne Road down from the Sill to the
 // Drawbridge Gate. A metre of the plain off a road costs `plain`: it used to cut straight across, off the road it winds down
 // by. A floor out there, the castle's, costs a metre as it did.)
-export const WAY_COST = { street: 1, ground: 2.5, floor: 4, plain: 1.5 };
-export const CELL = 0.5, X0 = 9000, Z0 = -860, X1 = 11720, Z1 = 860, TILE = 4;
+// (plain 1.8, not 1.5: on Phobos's Outwall, with paths to every place, it still walked half its way off them.)
+export const WAY_COST = { street: 1, ground: 2.5, floor: 4, plain: 1.8 };
+// (North and south, out to the Outwall's Ditch Road, z -893 and 893, and the places on it: at 860, the road was off the map, and
+// auto-play crossed open ground forty metres off it, along the edge, from Ashfold and the Hithe east.)
+export const CELL = 0.5, X0 = 9000, Z0 = -920, X1 = 11720, Z1 = 920, TILE = 4;
 // (RISE: the land's own slope never stops the sim's feet, steep as it is: only a deck more than a step over them, or a box
 // they'd walk into. So a cell's climb is let up to RISE, dear past STEEP; a drop of more than DROP isn't taken.)
 export const BODY = 0.36, RISE = 3, STEEP = 0.75, DROP = 1.1;
@@ -46,6 +49,14 @@ export const FLOOR_RISE = 1.0;
 export const GW = Math.round((X1 - X0) / CELL), GH = Math.round((Z1 - Z0) / CELL);
 // (In it, with room round the edge for a search.)
 export const inEast = (x, z) => x > X0 + 12 && x < X1 - 12 && z > Z0 + 12 && z < Z1 - 12;
+// (Still on it, for a walker with a way on it in hand: inside the box itself, by a few metres. Out on the Outwall, the Tan Pits'
+// yard lies on inEast's own edge, z 848: in, the way steered it south to the road; out, across country steered it north at
+// the wall; a frame each, and it stood there pressed, going nowhere. src/ui/autobrain.js eastWalk. And not only inside: Ashfold
+// stands just north of the box, z -870, and the way east from it runs the box's own edge row; with the line at z -857, it
+// stood on it, a frame in and a frame out, for minutes in all. A way in hand is kept a dozen metres past the edge, then.)
+export const onEast = (x, z) => x > X0 - 12 && x < X1 + 12 && z > Z0 - 12 && z < Z1 + 12;
+// (A point brought onto the box, for asking a way from just outside it.)
+export const intoEast = (x, z) => [Math.min(X1 - 1, Math.max(X0 + 1, x)), Math.min(Z1 - 1, Math.max(Z0 + 1, z))];
 // Where the long way in starts from outside: the road before the Drawbridge Gate (tools/paths/map.mjs floods from it).
 export const EAST_DOOR = [9240, 0];
 

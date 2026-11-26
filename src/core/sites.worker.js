@@ -7,6 +7,7 @@ import { buildPhobosCell, buildSites, packCell, packSites } from './sites.js';
 import { setOpeningTerrain } from './terrain.js';
 import { CASTLE_CELLS, phobosHouses, towerCells, wallCells } from './phobos-build.js';
 import { cityDoors, cityTowers } from './phobos-towers.js';
+import { outCells } from './outskirts-build.js';
 
 self.onmessage = (e) => {
   try {
@@ -16,7 +17,7 @@ self.onmessage = (e) => {
     // game begins and would else work out itself. src/core/phobos-towers.js adoptCityDoors, src/gfx/phobos-near.js.)
     if (e.data.cell === undefined) {
       what.phDoors = cityDoors();
-      what.phCells = [...new Set([...phobosHouses().map((h) => h.cell), ...CASTLE_CELLS, ...towerCells(), ...wallCells(), ...cityTowers().map((t) => t.cell)])];
+      what.phCells = [...new Set([...phobosHouses().map((h) => h.cell), ...CASTLE_CELLS, ...towerCells(), ...wallCells(), ...cityTowers().map((t) => t.cell), ...outCells()])];
     }
     self.postMessage(what, transfer);
   } catch (err) {

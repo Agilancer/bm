@@ -10,6 +10,7 @@ import { stairDip } from '../core/roadbed.js';
 import { roadEdge, rocksAround } from '../core/rocks.js';
 import { COUNTRIES, COUNTRY_KEYS, MOUNT, SITES, SITE_KEYS, countryWeights, groundCover, routeDist } from '../core/lands.js';
 import { cityIn } from '../core/east.js';
+import { outskirtsGround } from '../core/outskirts.js';
 import { buildCliffSkin } from '../core/cliff-skin.js';
 
 async function decode(url, flags) {
@@ -226,7 +227,28 @@ function buildFarRows({ size, wide = size, half, span = 2 * half, rowStart, rowE
       }
       // (Inside Phobos's wall it's all trodden: no grass in its streets, or through its houses' floors.)
       if (x > 9300 && x < 10800 && cityIn(x, z) < 1.0) dirt = Math.max(dirt, 0.96);
-      const b = block(i >> 2, j >> 2);
+      let b = block(i >> 2, j >> 2);
+      // (Phobos's Outwall: ash, chalk, mud and trodden yards, a texel at a time, since its places are smaller than a block.)
+      const og = x > 8990 && x < 10800 && z > -1350 && z < 1350 ? outskirtsGround(x, z) : null;
+      if (og) {
+        b = b.slice();
+        // (Strong enough to tell one place from the next from the air: the critics' round 1 saw one grey gravel everywhere.)
+        const dark = 1 - 0.72 * og.ash, lift = og.chalk * 0.85, mud = Math.max(og.wet * 0.6, og.dirt * 0.45);
+        const tg = [0.82, 1.06, 0.68], tm = [0.62, 0.5, 0.36];
+        for (let q = 0; q < 3; q++) {
+          let t = b[2 + q] / 255 * 1.5;
+          t = t + (tg[q] - t) * og.green * 0.85;
+          t = t + (tm[q] - t) * mud;
+          t = (t + (1.45 - t) * lift) * dark;
+          b[2 + q] = Math.min(255, t / 1.5 * 255);
+        }
+        b[5] = Math.max(b[5], og.wet * 255);
+        // (Chalk is only paler: with less of the country's stone kinds the ground's own grass came through, and the Delf and the
+        // kilns' bank went green.)
+        b[6] = Math.max(b[6], og.ash * 255);
+        b[9] = b[9] * (1 - og.ash * 0.6);
+        dirt = Math.max(dirt, og.dirt);
+      }
       tint[o] = b[2]; tint[o + 1] = b[3]; tint[o + 2] = b[4]; tint[o + 3] = b[5];
       kind[o] = b[6]; kind[o + 1] = b[7]; kind[o + 2] = b[8]; kind[o + 3] = b[9];
       data[o++] = Math.round(dirt * 255);

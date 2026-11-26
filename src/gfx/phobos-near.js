@@ -12,6 +12,7 @@
 import { buildPhobosCell, buildSites, unpackCell } from '../core/sites.js';
 import { CASTLE_CELLS, CELL, cellOf, phobosHouses, towerCells, wallCells } from '../core/phobos-build.js';
 import { cityTowers } from '../core/phobos-towers.js';
+import { outCells } from '../core/outskirts-build.js';
 import { CITY, CRAG } from '../core/east.js';
 
 const NEAR = 150, FAR = 230, KEEP = 30;   // metres to build a cell at, and to let it go at; how many are kept at most
@@ -21,7 +22,7 @@ const NEAR = 150, FAR = 230, KEEP = 30;   // metres to build a cell at, and to l
 const LEAN = { near: 105, far: 165, keep: 14 };
 
 /** Every cell of the city with something in it to build from near. */
-export function phobosCells() { return [...new Set([...phobosHouses().map((h) => h.cell), ...CASTLE_CELLS, ...towerCells(), ...wallCells(), ...cityTowers().map((t) => t.cell)])]; }
+export function phobosCells() { return [...new Set([...phobosHouses().map((h) => h.cell), ...CASTLE_CELLS, ...towerCells(), ...wallCells(), ...cityTowers().map((t) => t.cell), ...outCells()])]; }
 
 export class PhobosNear {
   constructor(renderer) {

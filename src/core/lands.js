@@ -12,8 +12,9 @@
 import { fbm, hash2, sstep } from './terrain-noise.js';
 import { OUTPOSTS } from './wilds-data.js';
 import { WAYS } from './roads-data.js';
-import { CHASM, EAST_FROM, WORLD_EAST, eastHeight, eastSteep } from './east.js';
+import { CHASM, EAST_FROM, WORLD_EAST, cityIn, eastHeight, eastSteep } from './east.js';
 import { PHOBOS } from './phobos-data.js';
+import { OUT_ROUTES, outskirtsTrees } from './outskirts.js';
 import { CAMPS } from './camps-data.js';
 
 // How far the land goes: this far north, south and west of the well, and WORLD_EAST east of it, where the Marches run out to
@@ -162,6 +163,9 @@ export const SITES = {
   notch: { x: 7500, z: 0, r: 50, name: "Widow's Notch" },
   span: { x: 8400, z: 120, r: 50, name: 'The Broken Span' },
   sill: { x: 8950, z: 0, r: 45, name: 'The Sill', portal: true },
+  // Phobos's Outwall (src/core/outskirts.js): the ash-gatherers' yard under the north gate, the tanners' on the Leat under the south.
+  ashfold: { x: 9555, z: -880, r: 30, name: 'Ashfold' },
+  hithe: { x: 9560, z: 858, r: 30, name: "Tanners' Hithe" },
 };
 // And the camps (src/core/camps-data.js): each a place like any other, levelled, cleared of trees, named on the map and
 // linked by a way of its own (tools/roads/lay.mjs), with `camp: true`. Plain folk's, all of them.
@@ -224,6 +228,10 @@ if (!globalThis.__bmNoWays) for (const w of WAYS) ROUTES.push({ ...w, way: true 
 // And the trails off them to the outposts out in the land (src/core/wilds.js; laid by tools/wilds/place.mjs): narrow, worn
 // ways like any other, so nothing grows on them, the map draws them and the trail to a place follows them.
 for (const o of OUTPOSTS) if (o.trail) ROUTES.push({ name: `the trail to ${o.name}`, w: 1.2, pts: o.trail, trail: true, cls: 'path' });
+// And the Outwall's, outside Phobos's wall (src/core/outskirts.js): the Ditch Road round the moat both ways from the causeway's
+// foot, and the paths and steps off the causeway down to the plain and to its places. (Last, so every way before keeps its
+// place in the list: src/core/roadside.js throws each one's dice by it.)
+for (const r of OUT_ROUTES) ROUTES.push({ name: r.name, w: r.w, pts: r.pts, out: true, cls: r.cls });
 for (const r of ROUTES) {
   r.x0 = Math.min(...r.pts.map((p) => p[0])) - r.w - 40; r.x1 = Math.max(...r.pts.map((p) => p[0])) + r.w + 40;
   r.z0 = Math.min(...r.pts.map((p) => p[1])) - r.w - 40; r.z1 = Math.max(...r.pts.map((p) => p[1])) + r.w + 40;
@@ -427,6 +435,18 @@ export function waterAt(x, z) {
 
 // ---------------------------------------------------------------- what grows, and the ground's tint
 
+// The dead pines of Phobos's Outwall (src/core/outskirts.js outskirtsTrees), 0 to 1: not in the city, its moat, on a road or the
+// basin's cliffs. Null away from it. (Asked by src/core/forest.js before the woods' own stands, which would thin them to nothing.)
+export function outwallTrees(x, z) {
+  if (x < 9000 || x > 10800 || Math.abs(z) > 1350) return null;
+  if (x > 10650 || (x < 9340 && Math.abs(z) < 130)) return 0;   // (not on the castle's crag, nor down in the Chasm)
+  if (cityIn(x, z) < 1.12) return 0;
+  const rd = routeDist(x, z);
+  if (rd.road && rd.d < rd.road.w + 5) return 0;
+  if (eastSteep(x, z)) return 0;
+  return outskirtsTrees(x, z);
+}
+
 // How thick the pines stand out here (times the near woods' own amount), and their tint code.
 export function landTrees(x, z) {
   const r = Math.hypot(x, z);
@@ -451,6 +471,7 @@ export function landTrees(x, z) {
 
 export function treeCode(x, z) {
   if (Math.hypot(x, z) < 1300) return 0;
+  if (x > 9000 && x < 10800 && Math.abs(z) < 1350) return 4;   // (every tree on Phobos's Outwall is a bare snag: src/core/outskirts.js, src/gfx/pines.js)
   const md = Math.hypot(x - MOUNT.x, z - MOUNT.z);
   if (md < MOUNT.R * 0.75) return 2;
   // (Every tree on Blackvigil's hill is dead: his keep had the greenest pine in the country on top of it. The once-over.)

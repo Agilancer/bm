@@ -17,6 +17,7 @@ import { MOUTH_SQUARE, PHOBOS_SEALS, SEAL_SQUARE, SEWER_MOUTHS, inSealSquare } f
 import { cityTowers, towerFar, towerInner, towerNear, towerYards, wallTops, wallTowerAt } from './phobos-towers.js';
 import { furnish, partition, roomPlan } from './phobos-rooms.js';
 import { bridgeHouse, dressHouse, eavesOf, houseFarMore, jutOf, roofTop, roofs, streetLife, styleHouses } from './phobos-houses.js';
+import { outskirtsFar, outskirtsNear } from './outskirts-build.js';
 
 const TAU = Math.PI * 2;
 const Y = (x, z) => terrainHeight(x, z);
@@ -1527,6 +1528,8 @@ export function phobosCell(K, cell) {
   if (CASTLE_CELLS.has(cell) || TOWER_CELLS().has(cell)) castleNear(K, cell);
   sloughNear(K, cell);
   wallNear(K, cell);
+  // (The Outwall's places in it, outside the wall: src/core/outskirts-build.js.)
+  outskirtsNear(K, cell);
   // A seal's square: dark flags laid round it, an iron lantern at each corner. (The seal itself: src/core/sites.js.)
   for (const s of PHOBOS_SEALS) if (cellOf(s.x, s.z) === cell) {
     K.paving('dark:stone', s.x, s.z, SEAL_SQUARE, SEAL_SQUARE, s.yaw, 0.04);
@@ -2550,4 +2553,5 @@ export function castleFinds() {
   return FINDS;
 }
 
-export function phobos(K) { phobosCity(K); phobosCastle(K); phobosKeep(K); }
+// (And the Outwall, the land outside its wall: src/core/outskirts-build.js, its shapes from far and what stops a body.)
+export function phobos(K) { phobosCity(K); phobosCastle(K); phobosKeep(K); outskirtsFar(K); }
