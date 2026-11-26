@@ -226,7 +226,9 @@ struct V {
     case 4u: {
       let lit = sun * 0.13 + amb * 0.8;
       let born = 1.0 - smoothstep(0.92, 1.0, a);
-      col = vec4f(mix(vec3f(0.3), vec3f(0.44, 0.41, 0.39), pt.seed) * lit, 0.14 * a * born);
+      // (pad 1: rubbish burning, src/core/outskirts-build.js middens: a dark brown-grey core, thicker, paling as it rises.)
+      let dark = clamp(pt.pad, 0.0, 1.0) * smoothstep(0.25, 0.75, a);
+      col = vec4f(mix(mix(vec3f(0.3), vec3f(0.44, 0.41, 0.39), pt.seed), vec3f(0.11, 0.095, 0.085), dark) * lit, 0.14 * a * born * (1.0 + 1.6 * clamp(pt.pad, 0.0, 1.0)));
     }
     case 5u: {
       let tw = sin(F.camPos.w * 2.0 + pt.seed * 60.0) * 0.5 + 0.5;

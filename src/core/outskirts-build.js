@@ -146,7 +146,10 @@ function vat(K, x, z, yaw, liquor) {
     // (A pole left standing in it, leaning; a hide half under.)
     const c = Math.cos(yaw), s = Math.sin(yaw), j = hash2(Math.round(x), Math.round(z));
     if (j > 0.4) K.beam('dark:wood', [x + 0.3 * c, y + 0.35, z - 0.3 * s], [x + 0.9 * c + 0.4 * s, y + 2.3, z - 0.9 * s + 0.4 * c], 0.04);
-    if (j < 0.6) K.quad('umber:cloth_oat', [x - 0.8 * c, y + 0.52, z + 0.8 * s], [x + 0.2 * c, y + 0.52, z - 0.2 * s], [x + 0.2 * c + 0.9 * s, y + 0.75, z - 0.2 * s + 0.9 * c], [x - 0.8 * c + 0.9 * s, y + 0.75, z + 0.8 * s + 0.9 * c], [0, 1, 0]);
+    // (Half under: one edge gone below the liquor, the other lifted over the kerb's lip, dark and wet, its fold pale. Laid
+    // flat and tan over it, round 4's critics read sand or planks.)
+    if (j < 0.3) { K.quad('soot:cloth_oat', [x - 0.7 * c, y + 0.3, z + 0.7 * s], [x + 0.3 * c, y + 0.3, z - 0.3 * s], [x + 0.3 * c + 0.95 * s, y + 0.85, z - 0.3 * s + 0.95 * c], [x - 0.7 * c + 0.95 * s, y + 0.85, z + 0.7 * s + 0.95 * c], [0, 0.9, -0.45]);
+      K.quad('umber:cloth_oat', [x - 0.7 * c + 0.95 * s, y + 0.85, z + 0.7 * s + 0.95 * c], [x + 0.3 * c + 0.95 * s, y + 0.85, z - 0.3 * s + 0.95 * c], [x + 0.3 * c + 1.15 * s, y + 0.8, z - 0.3 * s + 1.15 * c], [x - 0.7 * c + 1.15 * s, y + 0.8, z + 0.7 * s + 1.15 * c], [0, 1, 0]); }
   });
 }
 // A frame of two legs meeting at the top each end (no crossing past it) and a pole laid in them, hides over the pole.
@@ -219,7 +222,7 @@ function hearth(K, x, z) { put(K, x, z, (nr) => { if (nr) { K.campfire(x, z, fal
 // Reeds: a clump of thin blades.
 // (From far, a tuft for each clump: near only, from the approach the Sump had three tufts, round 3's critics.)
 function reeds(K, x, z, n = 7) {
-  put(K, x, z, (nr) => { if (!nr) { K.cone('moss:cloth_oat', x, Y(x, z) - 0.1, z, 0.7, 1.7, 5); return; } for (let i = 0; i < n; i++) { const a = hash2(i, Math.round(x * 3)) * TAU, r = hash2(i, Math.round(z * 3)) * 1.1, px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r; K.cone(i % 3 ? 'moss:cloth_oat' : 'umber:cloth_oat', px, Y(px, pz) - 0.1, pz, 0.09, 1.2 + hash2(i, 5) * 0.9, 5); } });
+  put(K, x, z, (nr) => { if (!nr) { K.cone('moss:cloth_oat', x, Y(x, z) - 0.1, z, 1.0, 2.0, 5); return; } for (let i = 0; i < n; i++) { const a = hash2(i, Math.round(x * 3)) * TAU, r = hash2(i, Math.round(z * 3)) * 1.1, px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r; K.cone(i % 3 ? 'moss:cloth_oat' : 'umber:cloth_oat', px, Y(px, pz) - 0.1, pz, 0.12, 1.3 + hash2(i, 5) * 0.9, 5); } });
 }
 // A stake at a grave's head: one post, a rag tied on.
 function stake(K, x, z, k) {
@@ -409,8 +412,12 @@ function middens(K) {
         if (nr) K.heap('pale:stone', ...P(-2.1, 0, 0).filter((_, n) => n !== 1), 0.35 * S, 0.4 * S, 6, { collide: false });
       });
     }
-    // (Smoke off four heaps, not two, and thick: each column drawn three times over.)
-    if (i === 3 || i === 9 || i === 6 || i === hero) { const y = Y(hx, hz); put(K, hx, hz, (nr) => { if (!nr) (K.smokes ||= []).push([hx, y + 1.2, hz], [hx + 0.4, y + 1.0, hz - 0.3], [hx - 0.3, y + 1.1, hz + 0.4]); else fire(K, hx + 0.8, y - 0.2, hz, 0.5, 0.7); }); }
+    // (The fresh loads tipped on its crown, pale ash, so the top stands off the cliff behind: painting the ground alone
+    // didn't show, round 4's critics.)
+    put(K, hx, hz, () => K.heap('pale:rubble', hx, hz, r * 0.32, 0.45 + h * 0.03, 9, { collide: false }));
+    // (Smoke off four heaps, not two, and thick: each column drawn three times over, and flagged 1, rubbish smoke, dark:
+    // src/gfx/phobos-near.js.)
+    if (i === 3 || i === 9 || i === 6 || i === hero) { const y = Y(hx, hz); put(K, hx, hz, (nr) => { if (!nr) (K.smokes ||= []).push([hx, y + 1.2, hz, 1], [hx + 0.4, y + 1.0, hz - 0.3, 1], [hx - 0.3, y + 1.1, hz + 0.4, 1]); else fire(K, hx + 0.8, y - 0.2, hz, 0.5, 0.7); }); }
   });
   // The rag-pickers' two shelters and their fire, at the heaps' edge by the road.
   shack(K, p.x - 40, p.z + 48, 0.2, 2.2, 1.8, 1.9, { roof: 'soot:roof_1', pipe: false });
@@ -466,7 +473,10 @@ function leatAndSump(K) {
   }
   // Reeds round the Sump and along the Leat's last reach; a punt drawn up; eel-traps.
   // (Forty-eight clumps hugging the water's edge: twenty-six spread over the bank were three tufts from any way off, round 3's critics.)
-  for (let i = 0; i < 48; i++) { const a = i / 48 * TAU + hash2(i, 9) * 0.12, r = s.r * (0.57 + hash2(i, 11) * 0.12); reeds(K, s.x + Math.cos(a) * r * 1.1, s.z + Math.sin(a) * r, 6 + (i % 4)); }
+  // (In four dense stands round the shore, a dozen clumps each, and a few strays between: scattered evenly they were lost.
+  // Round 4's critics.)
+  for (const [a0, span] of [[0.5, 0.45], [2.1, 0.35], [3.3, 0.5], [4.9, 0.4]]) for (let i = 0; i < 12; i++) { const a = a0 + (i / 11 - 0.5) * span + hash2(i, a0 * 10) * 0.04, r = s.r * (0.56 + hash2(i, a0 * 7) * 0.1); reeds(K, s.x + Math.cos(a) * r * 1.1, s.z + Math.sin(a) * r, 9 + (i % 4)); }
+  for (let i = 0; i < 12; i++) { const a = i / 12 * TAU + 0.3, r = s.r * 0.6; reeds(K, s.x + Math.cos(a) * r * 1.1, s.z + Math.sin(a) * r, 5); }
   near(K, s.x + 34, s.z - 6, () => { K.boat(s.x + 34, Y(s.x + 34, s.z - 6) + 0.1, s.z - 6, 0.6, 4.2, { roll: 0.2 }); for (let i = 0; i < 3; i++) K.drum('bark', s.x + 30 + i * 0.9, Y(s.x + 30 + i, s.z - 12) - 0.1, s.z - 12, 0.3, 0.7, 7, { r2: 0.18, collide: false }); });
   // Plank bridges where the paths cross it: by the Hithe, and under the gate.
   for (const [x, z, yaw] of [[9562, 862, 1.2], [9905, 893, 1.33]]) put(K, x, z, () => { const y = Math.max(Y(x, z) + 1.0, Y(x + Math.cos(yaw) * 4, z - Math.sin(yaw) * 4), Y(x - Math.cos(yaw) * 4, z + Math.sin(yaw) * 4)); K.box('dark:wood', x, y - 0.25, z, 1.0, 0.25, 4.6, yaw, { collide: false }); K.deck?.([[x, z, 1.0, 4.6, yaw, y]]); });
@@ -480,14 +490,15 @@ function tanPits(K) {
   // (The liquor as the moat's picture, tinted, laid by the world's x and z: as cloth and ashlar it read as sand and powder in a
   // sandbox, round 3's critics. Tannin brown in most, the olive bate one in each row, so it's in front whichever way you
   // come; one of lime, one of oxblood.)
-  const T = 'dark:p2_moat_water', G = 'mire:p2_moat_water';
-  const LIQ = [[T, G, T, 'pale:ashlar'], [T, T, G, T], [G, T, 'blood:p2_moat_water', T]];
+  // (Round 4's critics: the moat's grey-teal read as slate water, not tannin, and no vat read green. Umber and moss now.)
+  const T = 'umber:p2_moat_water', G = 'moss:p2_moat_water';
+  const LIQ = [[T, G, T, 'pale:ashlar'], [T, T, G, T], [G, T, 'blood:p2_moat_water', G]];
   for (let r = 0; r < 3; r++) for (let k = 0; k < 4; k++) { const [x, z] = at(-12 + k * 3.4, -8 + r * 3.4); vat(K, x, z, p.yaw, LIQ[r][k]); }
   // The beam-house: an open shed over the fleshing beams; hide frames down the yard; stacked hides; lime barrels.
   { const [x, z] = at(9, -9); put(K, x, z, (nr) => { const y = Y(x, z), c = Math.cos(p.yaw), s = Math.sin(p.yaw); for (const [u, w] of [[-4, -3], [4, -3], [-4, 3], [4, 3]]) K.box('dark:wood', x + u * c + w * s, y - 0.3, z - u * s + w * c, 0.14, 3.2, 0.14, p.yaw); K.gable('soot:roof_3', 'dark:wood', x, y + 2.9, z, 4.2, 3.2, 1.5, p.yaw, 0.4); if (nr) for (const u of [-2, 1.5]) K.beam('bark', [x + u * c, y + 0.15, z - u * s], [x + (u + 0.4) * c + 1.4 * s, y + 1.0, z - (u + 0.4) * s + 1.4 * c], 0.22); }); }
   for (const [u, v] of [[-10, 6], [-3, 7], [4, 6]]) { const [x, z] = at(u, v); hideFrame(K, x, z, p.yaw); }
   // (The far row: the old pits, out past the yard's end toward the gate, deep, and not emptied since anyone's father's day.)
-  for (let k = 0; k < 4; k++) { const x = 9706 + k * 3.3, z = 875 + k * 0.4; vat(K, x, z, p.yaw, k % 2 ? 'mire:p2_moat_water' : 'dark:p2_moat_water'); }
+  for (let k = 0; k < 4; k++) { const x = 9706 + k * 3.3, z = 875 + k * 0.4; vat(K, x, z, p.yaw, k % 2 ? 'moss:p2_moat_water' : 'umber:p2_moat_water'); }
   near(K, ...at(14, 2), () => { const [x, z] = at(14, 2), y = Y(x, z); for (let i = 0; i < 6; i++) K.box(i % 2 ? 'umber:cloth_oat' : 'dark:cloth_oat', x, y + i * 0.09, z, 0.9 - i * 0.04, 0.09, 0.7, p.yaw + i * 0.07, { collide: false }); for (let i = 0; i < 3; i++) K.barrel(...at(15.5 + i * 0.85, -2)); });
   // (More hides stacked by the beam-house, and the lime in its barrels beside it: round 3's critics.)
   for (const [u, v, a] of [[5, -4, 0.3], [13, -5, -0.5]]) near(K, ...at(u, v), () => { const [x, z] = at(u, v), y = Y(x, z); for (let i = 0; i < 5; i++) K.box(i % 2 ? 'umber:cloth_oat' : 'dark:cloth_oat', x, y + i * 0.09, z, 0.85 - i * 0.04, 0.09, 0.65, p.yaw + a + i * 0.08, { collide: false }); });

@@ -226,11 +226,11 @@ export function outskirtsGround(x, z) {
     if (q > r + 8) continue;
     const toe = sstep(r * 0.45, r * 0.8, q) * (1 - sstep(r, r + 8, q)), body = 1 - sstep(r * 0.6, r * 0.9, q);
     // (The crown, the top fifth of its height, dried out to pale ash where the new loads are tipped: round 3's critics.)
-    const crown = 1 - sstep(r * 0.12, r * 0.24, q);
-    g.wet = Math.max(g.wet, 0.9 * toe); g.dirt = Math.max(g.dirt, 0.95 * toe, 0.9 * body * (1 - 0.8 * crown)); g.ash = Math.max(g.ash, 0.95 * body);
+    const crown = 1 - sstep(r * 0.24, r * 0.42, q);   // (the top fifth by height is only a few metres across: wider, round 4)
+    g.wet = Math.max(g.wet, 0.9 * toe); g.dirt = Math.max(g.dirt, 0.95 * toe, 0.9 * body * (1 - crown)); g.ash = Math.max(g.ash, 0.95 * body * (1 - crown)); g.chalk = Math.max(g.chalk, 0.85 * crown);   // (chalk: the lightening's no show as less dirt alone, round 4)
   }
   // (Sludge round the Tan Pits' vats, where they're baled out and slopped.)
-  { const [u, v] = frame(OUT.tanpits, x, z); if (Math.abs(u + 6.5) < 14 && Math.abs(v + 4.6) < 11) { const k = (1 - sstep(7, 11, Math.abs(v + 4.6) + wob * 0.3)) * (1 - sstep(10, 14, Math.abs(u + 6.5) + wob * 0.3)); g.wet = Math.max(g.wet, 0.9 * k); g.dirt = Math.max(g.dirt, 0.95 * k); g.ash = Math.max(g.ash, 0.55 * k); } }
+  { const [u, v] = frame(OUT.tanpits, x, z); if (Math.abs(u + 6.5) < 17 && Math.abs(v + 4.6) < 14) { const k = (1 - sstep(9, 14, Math.abs(v + 4.6) + wob * 0.3)) * (1 - sstep(12, 17, Math.abs(u + 6.5) + wob * 0.3)); g.wet = Math.max(g.wet, k); g.dirt = Math.max(g.dirt, 0.95 * k); g.ash = Math.max(g.ash, 0.95 * k); } }   // (ash as the heaps' dark: dirt alone matched the yard, round 4)
   // (Between the places, the basin's own ground: heath in patches, worn grass and bare, not one grey.)
   g.green = 0.5 * sstep(0.48, 0.66, fbm(x * 0.007 - 11, z * 0.007 + 5, 3));
   g.dirt = Math.max(g.dirt, 0.8 * near(OUT.pyre, 20, 12), 0.5 * near(OUT.middens, 60, 30));

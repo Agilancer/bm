@@ -87,6 +87,18 @@ function pineMeshes(pine, far, bark) {
   let from = mark();
   // Close: a dozen and more whorls of boughs, each flat and on edge.
   m.trunk(10, 4, bark);
+  // (Five dead limbs, a metre long and a hand thick, cocked up forty-odd degrees, for a snag only (treeCode 4): every other
+  // tree folds them away. Marked by 8 more on their u, and their root's height on v, so a snag's break takes each whole.)
+  for (let k = 0; k < 5; k++) {
+    const yb = 0.3 + 0.11 * k, a = k * 2.4 + 0.7, pt = 0.75, L = 0.045;
+    const d = [Math.cos(a) * Math.cos(pt), Math.sin(pt), Math.sin(a) * Math.cos(pt)], e1 = [-Math.sin(a), 0, Math.cos(a)];
+    const e2 = [d[1] * e1[2] - d[2] * e1[1], d[2] * e1[0] - d[0] * e1[2], d[0] * e1[1] - d[1] * e1[0]], base = m.n;
+    for (let j = 0; j <= 1; j++) for (let i = 0; i <= 4; i++) {
+      const th = i / 4 * Math.PI * 2, rad = j ? 0.0018 : 0.0045, o = [0, 1, 2].map((q) => (e1[q] * Math.cos(th) + e2[q] * Math.sin(th)));
+      m.vert(d[0] * L * j + o[0] * rad, yb + d[1] * L * j + o[1] * rad, d[2] * L * j + o[2] * rad, o[0], o[1], o[2], 8 + j, yb, bark);
+    }
+    for (let i = 0; i < 4; i++) m.quad(base + i, base + i + 1, base + i + 6, base + i + 5);
+  }
   {
     const R = rng(11);
     const whorls = 15;
@@ -142,24 +154,27 @@ export const PINE = STATIC
   var o: V;
   var p = pIn;`, `@location(3) layer: u32, @location(5) at: vec4f, @location(6) spin: vec4f) -> V {
   var o: V;
-  let q = select(pIn, snagAt(pIn, layer, at), floor((spin.w - floor(spin.w / 100.0) * 100.0) / 10.0) == 4.0);
+  let q = select(select(pIn, vec3f(0.0), uv.x > 7.5), snagAt(pIn, uv, layer, at), floor((spin.w - floor(spin.w / 100.0) * 100.0) / 10.0) == 4.0);
   let w = q.xz * spin.z * at.w;
   var p = vec3f(w.x * spin.x - w.y * spin.y, q.y * at.w, w.x * spin.y + w.y * spin.x) + at.xyz;
   // (spin.w: how dark, plus ten times the country's tint, plus a hundred for a tree with its low boughs off. Those boughs
   // carry LOW more on their u: on a trimmed tree every corner of one goes to the tree's foot, and it's nothing.)
   let trim = floor(spin.w / 100.0);
   let tw = spin.w - trim * 100.0;
-  let low = uv.x > ${LOW - 0.5};
+  let low = uv.x > ${LOW - 0.5} && uv.x < 7.5;   // (8 and up: a snag's limbs, below)
   if (low && trim > 0.0) { p = at.xyz; }
   let nw = vec3f(n.x * spin.x - n.z * spin.y, n.y, n.x * spin.y + n.z * spin.x);
   // (The tint is src/core/lands.js treeCode. Handed on as a hundred times the tint plus the tone.)
   let tcode = floor(tw / 10.0);
   o.tone = tcode * 100.0 + (tw - tcode * 10.0) * 1.8 * mix(0.5, 1.05, clamp(pIn.y * 1.5, 0.0, 1.0)) * mix(0.62, 1.1, clamp(length(pIn.xz) / max(0.012, 0.22 * (1.0 - pIn.y)), 0.0, 1.0));`)
   // Each tree its own bark and needles, of the five, from where it stands.
-  .replace('o.p = p; o.n = n; o.uv = uv; o.layer = layer;', `o.p = p; o.n = nw; o.uv = vec2f(uv.x - select(0.0, ${LOW}.0, low), uv.y); o.layer = layer;
+  .replace('o.p = p; o.n = n; o.uv = uv; o.layer = layer;', `o.p = p; o.n = nw; o.uv = vec2f(uv.x - select(0.0, ${LOW}.0, low), uv.y);
+  // (A snag's boughs, cut to limbs and nubs, are wood: in the needles' cut-out picture a limb a hand thick was all gaps.)
+  let ly = select(layer, BARK_LAYERu, tcode == 4.0 && layer == PINE_LAYERu);
+  o.layer = ly;
   let which = u32(fract(sin(dot(at.xz, vec2f(12.9898, 78.233))) * 43758.5453) * 5.0);
-  if (which > 0u && layer == PINE_LAYERu) { o.layer = PINE_2u + which - 1u; }
-  if (which > 0u && layer == BARK_LAYERu) { o.layer = BARK_2u + which - 1u; }`)
+  if (which > 0u && ly == PINE_LAYERu) { o.layer = PINE_2u + which - 1u; }
+  if (which > 0u && ly == BARK_LAYERu) { o.layer = BARK_2u + which - 1u; }`)
   // Rust: the needles turned the red-brown of a dying larch. Snow: white along the top of every bough. Dead: grey and bare-looking.
   .replace('albedo = tex.rgb;\n    rough = det.b;', `let tcode = floor(in.tone / 100.0);
     albedo = tex.rgb * (in.tone - tcode * 100.0);
@@ -204,28 +219,31 @@ export function softDepth(code, samples) {
 // and leaning; no needles, only the stubs of the boughs between a fifth up and the break. A corner that's gone goes to the
 // tree's foot. (Round 2's critics: two-metre columns with a ragged crown read as pillars, and down the fields as spears.)
 const SNAG = /* wgsl */ `
-fn snagAt(pIn: vec3f, layer: u32, at: vec4f) -> vec3f {
+fn snagAt(pIn: vec3f, uvIn: vec2f, layer: u32, at: vec4f) -> vec3f {
   let h = fract(sin(dot(at.xz, vec2f(7.13, 3.71))) * 4375.85);
-  let snap = 0.5 + 0.3 * h;
+  let snap = 0.42 + 0.4 * h;
   var q = pIn;
-  if (layer == PINE_LAYERu) {
-    // (A few dead limbs, not a fuzz of stubs all up it: boughs left long in three or four whorls and three sectors round the
-    // trunk, cocked upward, the rest cut to nubs. Smoothly, never culled a corner at a time: a bough card half culled
-    // stretched to the tree's foot as a long panel. Every bough cut to a sixth read as one grey pole: round 3's critics.)
-    if (q.y < 0.2 || q.y > snap) { return vec3f(0.0); }
-    let whorl = pow(max(0.0, sin(q.y * 44.0 + h * 20.0)), 6.0);
-    let side = pow(max(0.0, cos(atan2(q.z, q.x) * 3.0 + h * 30.0)), 2.0);
-    let r = length(q.xz);
-    let k = 0.1 + 0.3 * whorl * side;
-    q = vec3f(q.x * k, q.y + 0.01 + r * k * 0.6, q.z * k);
+  if (uvIn.x > 7.5) {
+    // (A limb, pines.js pineMeshes: whole, or into the trunk under the break if its root's above it.)
+    if (uvIn.y > snap - 0.04) { return vec3f(0.0, snap - 0.04, 0.0); }
+  } else if (layer == PINE_LAYERu) {
+    // (Every bough folded into the trunk's axis, every corner of it alike: a snag's limbs are its own, above. Cut to
+    // fractions of themselves the boughs read as mossy spindles, and their on-edge cards as planks: rounds 3 and 4.)
+    return vec3f(0.0, clamp(q.y, 0.0, snap - 0.04), 0.0);
   } else {
-    // (Thinned, and tapering to a third over the stretch below the break, then a jagged stub: it stopped square, a pole.)
-    let th = (0.5 + 0.25 * h) * mix(1.0, 0.3, smoothstep(snap - 0.16, snap, q.y));
+    // (Thinned, and tapering to two-fifths over the stretch below the break, then a jagged crown, one shard standing
+    // above the rest: it stopped square, a pole; tapered to a third it read as a spear.)
+    let th = (0.5 + 0.25 * h) * mix(1.0, 0.45, smoothstep(snap - 0.2, snap, q.y));
     q = vec3f(q.x * th, q.y, q.z * th);
-    if (q.y > snap) { let jag = 0.025 * (0.5 + 0.5 * sin(atan2(q.z, q.x) * 5.0 + h * 9.0)); q = vec3f(q.x * 0.6, snap + min(q.y - snap, jag), q.z * 0.6); }
+    if (q.y > snap) {
+      let a = atan2(q.z, q.x);
+      let jag = 0.02 * (0.5 + 0.5 * sin(a * 3.0 + h * 9.0)) + 0.035 * smoothstep(0.75, 1.0, cos(a - h * 20.0));
+      q = vec3f(q.x * 0.75, snap + min(q.y - snap, jag), q.z * 0.75);
+    }
   }
+  // (Each leant its own way, three to six degrees: a row of them stood like pickets.)
   let a = h * 6.2832;
-  return q + vec3f(cos(a), 0.0, sin(a)) * q.y * 0.035 * (0.4 + h);
+  return q + vec3f(cos(a), 0.0, sin(a)) * q.y * 0.06 * (0.8 + h);
 }
 `;
 
@@ -233,9 +251,9 @@ const SHADOW_PINE = SHADOW + /* wgsl */ `
 @vertex fn vsPine(@location(0) pIn: vec3f, @location(2) uv: vec2f, @location(3) layer: u32, @location(5) at: vec4f, @location(6) spin: vec4f) -> VC {
   var o: VC;
   // (A trimmed tree's low boughs, folded away as in PINE; a snag shaped as in PINE.)
-  let low = uv.x > ${LOW - 0.5};
+  let low = uv.x > ${LOW - 0.5} && uv.x < 7.5;   // (8 and up: a snag's limbs, below)
   let tw = spin.w - floor(spin.w / 100.0) * 100.0;
-  let q = select(pIn, snagAt(pIn, layer, at), floor(tw / 10.0) == 4.0);
+  let q = select(select(pIn, vec3f(0.0), uv.x > 7.5), snagAt(pIn, uv, layer, at), floor(tw / 10.0) == 4.0);
   let w = q.xz * spin.z * at.w;
   let gone = low && spin.w >= 100.0;
   o.pos = U_.m * vec4f(select(vec3f(w.x * spin.x - w.y * spin.y, q.y * at.w, w.x * spin.y + w.y * spin.x), vec3f(0.0), gone) + at.xyz, 1.0);
@@ -331,7 +349,7 @@ export class Pines {
     const { r } = this;
     const { device } = r;
     const at = (n) => `${this.names.indexOf(n)}u`;
-    const code = (PINE + SNAG).replaceAll('PINE_LAYERu', at('pine')).replace('PINE_2u', at('pine_2')).replace('BARK_LAYERu', at('pine_bark')).replace('BARK_2u', at('pine_bark_2'));
+    const code = (PINE + SNAG).replaceAll('PINE_LAYERu', at('pine')).replace('PINE_2u', at('pine_2')).replaceAll('BARK_LAYERu', at('pine_bark')).replace('BARK_2u', at('pine_bark_2'));
     // On a PC the trees go in twice: their depth, then their colour where it matched (the cut-out already done, so no
     // discard to keep the GPU from skipping what's hidden). A phone's GPU sorts what's hidden for itself.
     const twice = !this.lean;
