@@ -6,7 +6,7 @@
 // on the sim thread, src/gfx/tripo-slots.js on the render thread). Each one wears a palette from palettes.json, baked into its
 // colour map when it's built.
 
-import { WILD_VARIANTS, battleLairs, outpostLair } from './wilds.js';
+import { FACTIONS, WILD_VARIANTS, battleLairs, outpostLair } from './wilds.js';
 import { BATTLES, OUTPOSTS } from './wilds-data.js';
 import { HAUNTS } from './east.js';
 import { VARIANTS_H } from './delve-highward.js';
@@ -155,11 +155,16 @@ export const VARIANTS = {
 Object.assign(VARIANTS, WILD_VARIANTS);
 // And Castle Velscour's later delves' (src/core/delve-highward.js, delve-castle-a.js, delve-castle-b.js).
 Object.assign(VARIANTS, VARIANTS_H, VARIANTS_A, VARIANTS_B);
+// An outpost's chief (FACTIONS there), never one of the many in any outpost: a boss you walk up to, however tall it
+// stands, so its pictures are a boss's on a phone (chief in its roster entry: src/gfx/picsize.js monsterRule).
+export const CHIEFS = new Set(Object.values(FACTIONS).flatMap((f) => f.chief));
+for (const f of Object.values(FACTIONS)) for (const id of [...f.rank, ...f.elite]) CHIEFS.delete(id);
 export function withVariants(roster) {
   for (const [id, v] of Object.entries(VARIANTS)) {
     const src = roster[v.src] ? v.src : v.alt;
     if (roster[src] && !roster[id]) roster[id] = { ...roster[src], ...v, src, id };
   }
+  for (const id of CHIEFS) if (roster[id]) roster[id].chief = true;
   return roster;
 }
 

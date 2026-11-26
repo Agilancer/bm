@@ -197,56 +197,42 @@ test('the key reads the same three samples as the tool, whatever the length', ()
   assert.notEqual(of(20000), of(20001));
 });
 
-test("a dyed skin is baked from the copy at the scale that makes it the same size, and from the picture where it can't be", async () => {
+test("a dyed skin is baked from the copy, sized from the original's sides, and from the picture where it can't be", async () => {
   const bytes = new Uint8Array(30000).map((_, i) => (i * 13) >> 2), key = pictureKey(bytes), small = new Blob(['copy']);
   const entry = { file: 'c.jpg', size: [4096, 4096], copy: [1024, 1024] };
   let copyFails = false;
   const L = new LeanPictures('', true, async (url) => { if (url.endsWith('.json')) return { pictures: { [key]: entry } }; if (copyFails) throw new Error('offline'); return small; });
   const blob = pictureOf(glbOf(bytes), 0);
-  const was = console.warn; console.warn = () => {};
-  try {
-    // A phone's 4096 picture, a quarter: the copy at its own size (the worker resizes nothing at 1).
-    assert.deepEqual(await L.forScale(blob, 0.25), { blob: small, scale: 1 });
-    // Medium's half is more than the copy holds.
-    assert.deepEqual(await L.forScale(blob, 0.5), { blob, scale: 0.5 });
-    // A 2048: the copy at a half.
-    const set = (e) => { L.list[key] = e; };
-    set({ ...entry, size: [2048, 2048] });
-    assert.deepEqual(await L.forScale(blob, 0.25), { blob: small, scale: 0.5 });
-    // A long one: one scale for both sides still comes out the original's size, 768 by 256.
-    set({ ...entry, size: [3072, 1024], copy: [1024, 341] });
-    assert.deepEqual(await L.forScale(blob, 0.25), { blob: small, scale: 0.75 });
-    // Where one scale couldn't make the copy the original's size exactly (the copy's sides out of proportion), the picture.
-    set({ ...entry, size: [3000, 1000], copy: [1000, 300] });
-    assert.deepEqual(await L.forScale(blob, 0.25), { blob, scale: 0.25 });
-    // And where the copy can't be had.
-    set(entry); copyFails = true;
-    assert.deepEqual(await L.forScale(blob, 0.25), { blob, scale: 0.25 });
-  } finally { console.warn = was; }
-
-  // In a monster's skin (src/gfx/tripo-slots.js): baked from the copy; if that bake fails, from the picture.
-  copyFails = false;
+  // In a monster's skin (src/gfx/tripo-slots.js picture): the bake worker is handed the copy and the original's sides, and
+  // the rule (src/gfx/picsize.js) it's sized by; if that bake fails, the picture itself, with no sides.
   const posted = [];
   let copyBakeFails = true;
   globalThis.Worker = class {
     postMessage(msg) {
-      posted.push([msg.blob === small ? 'copy' : msg.blob === blob ? 'picture' : '?', msg.scale]);
-      setTimeout(() => this.onmessage({ data: msg.blob === small && copyBakeFails ? { id: msg.id, error: 'bad copy' } : { id: msg.id, bmp: { width: 1024, height: 1024, close() {} } } }));
+      posted.push([msg.blob === small ? 'copy' : msg.blob === blob ? 'picture' : '?', msg.size, msg.rule]);
+      setTimeout(() => this.onmessage({ data: msg.blob === small && copyBakeFails ? { id: msg.id, error: 'bad copy' } : { id: msg.id, bmp: { width: 256, height: 256, close() {} } } }));
     }
   };
   const { TripoSlots } = await import('../src/gfx/tripo-slots.js');
-  const thing = () => ({ destroy() {}, createView() {} });
-  const r = {
-    chars: [], tier: { texScale: 0.25 }, astc: { ready: Promise.resolve(), on: false, pack: async (t) => t }, leanPics: L,
-    mip: { generate() {} }, device: { createTexture: () => thing(), createCommandEncoder: () => ({ finish() {} }), queue: { copyExternalImageToTexture() {}, submit() {} } },
-  };
+  const mobile = { lean: true, texScale: 0.25, mapScale: 0.5, texCap: 256, texCapNear: 512 };
+  const r = { chars: [], tier: mobile, astc: { ready: Promise.resolve(), on: true }, leanPics: L, pictureTexture: async () => ({ destroy() {} }) };
   const wasFetch = globalThis.fetch;
   globalThis.fetch = async () => ({ ok: true, json: async () => ({}) });
-  const t = new TripoSlots(r, '', {}, { plain: {}, red: { hue: 0.4 } }, 0, 1);
+  const t = new TripoSlots(r, '', { boss: { height: 3.4 }, knight: { height: 2.05 } }, { plain: {}, red: { hue: 0.4 }, blue: { hue: 0.7 } }, 0, 1);
   globalThis.fetch = wasFetch;
-  await t.skin({ alb: blob }, 'x', 1);
-  assert.deepEqual(posted, [['copy', 1], ['picture', 0.25]]);
-  copyBakeFails = false;
-  await t.skin({ alb: blob }, 'y', 1);
-  assert.deepEqual(posted.at(-1), ['copy', 1]);
+  const knight = { scale: 0.25, cap: 256, step: 4 }, boss = { scale: 1, cap: 512, step: 4 };
+  const was = console.warn; console.warn = () => {};
+  try {
+    // A knight of the rank and file: 256, from the copy; its bake failing, from the picture.
+    await t.skin({ alb: blob }, 'knight', 1);
+    assert.deepEqual(posted, [['copy', [4096, 4096], knight], ['picture', null, knight]]);
+    // A boss, seen close: 512, from the copy (src/gfx/picsize.js fill).
+    copyBakeFails = false; posted.length = 0;
+    await t.skin({ alb: blob }, 'boss', 1);
+    assert.deepEqual(posted, [['copy', [4096, 4096], boss]]);
+    // Where the copy can't be had: the picture, by the same rule.
+    copyFails = true; posted.length = 0;
+    await t.skin({ alb: blob }, 'boss', 2);
+    assert.deepEqual(posted, [['picture', null, boss]]);
+  } finally { console.warn = was; delete globalThis.Worker; }
 });

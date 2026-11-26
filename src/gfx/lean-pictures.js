@@ -99,8 +99,8 @@ export class LeanPictures {
   /**
    * What to decode for a picture of a model's (pictureOf), to make of it what want([width, height]) says (the size it
    * comes out, from the original's sides): { blob: its copy, size: the original's [width, height] } where the copy is at
-   * least that big (src/gfx/gpu.js decodeScaledBitmap's size); { blob: the picture itself, size: null } otherwise, or
-   * where the copy can't be had.
+   * least that big (src/gfx/picsize.js decodeScaledBitmap's size); { blob: the picture itself, size: null } otherwise, or
+   * where the copy can't be had. (A dyed skin's too: its bake worker is handed both, src/gfx/tripo-slots.js picture.)
    */
   async source(blob, want) {
     await this.ready;
@@ -111,20 +111,5 @@ export class LeanPictures {
       if (small) return { blob: small, size: e.size, file: e.file };
     }
     return { blob, size: null };
-  }
-
-  /**
-   * For the dyed skins' bake worker (src/gfx/bake.worker.js), which shrinks a picture by one scale on both sides: the copy
-   * and the scale that makes it come out exactly the size the original would have; or the picture and scale as given.
-   */
-  async forScale(blob, scale) {
-    await this.ready;
-    const e = this.find(blob);
-    if (e) {
-      const [w, h] = e.size, [cw, ch] = e.copy, k = scale * w / cw, side = (n, s) => Math.max(1, Math.round(n * s));
-      const small = k <= 1 && side(cw, k) === side(w, scale) && side(ch, k) === side(h, scale) ? await this.copy(e) : null;
-      if (small) return { blob: small, scale: k };
-    }
-    return { blob, scale };
   }
 }
