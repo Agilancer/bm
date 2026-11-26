@@ -105,6 +105,8 @@ export function dressLairs(K, seals = []) {
     // (Nor, on a phone, one of the yards off a city's streets, `streets`: the city's own crates and carts round it do. Fennick's
     // three in Phobos, dressed, were some 2,000 corners past a phone's.)
     if (l.streets && K.lean) continue;
+    // (Nor one in a place of Phobos's Outwall, `placed`: the place's own shacks, vats and heaps dress it. src/core/outskirts-build.js.)
+    if (l.placed && K.lean) continue;
     if (l.thin) { fire(...at(h(1), R * 0.3), kind === 'camp'); bones(...at(h(10), R * 0.6), 20); continue; }
     if (kind === 'camp') {
       // The fire off its middle, logs to sit on round it, the dinners' bones, a midden, stakes round the rim.

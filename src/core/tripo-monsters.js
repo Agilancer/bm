@@ -295,6 +295,17 @@ export const LAIRS = [
   { ...HAUNT('phobos_approach'), lvl: 28, boss: VLORDS, pick: VKNIGHTS.concat(VLANCERS), n: 6, pal: ['Bloodsoaked'] },
   { ...HAUNT('phobos_wharf'), lvl: 25, boss: ['worm_2'], pick: SPIDERS, n: 3, pal: ['Blighted', 'Abyssal'] },
   { ...HAUNT('phobos_mages'), lvl: 27, boss: ['necromancer_lord_2'], pick: NECROS, n: 3, pal: ['Abyssal', 'Bloodsoaked'] },
+  // Phobos's Outwall, the basin floor outside the moat (src/core/outskirts.js): what's got into the city's leavings. Each in its
+  // own ground, off the Ditch Road and the paths to the places, so a party fights it there and not on the road. (Their ways in
+  // are the Outwall's own paths, OUT_ROUTES: no lane laid. src/core/outskirts.js.)
+  { key: 'out_delf', roadside: true, placed: true, lvl: 23, x: 9338, z: -760, r: 8, pick: KOBOLDS, n: 5, pal: ['Bone-white', 'Ashen'], names: { Kobolds: 'DELF KOBOLD' } },
+  { key: 'out_pyre', roadside: true, placed: true, lvl: 23, x: 9706, z: -840, r: 7, pick: POSSESSED, n: 5, pal: ['Ashen'], names: { 'The Possessed': 'ASH-WALKER' } },
+  { key: 'out_middens', roadside: true, placed: true, lvl: 24, x: 10320, z: -1050, r: 9, boss: ['spider_red'], pick: SPIDERS, n: 4, pal: ['Blighted', 'Ashen'], names: { 'Giant Spiders': 'MIDDEN SPIDER' } },
+  { key: 'out_tanpits', roadside: true, placed: true, lvl: 25, x: 9720, z: 878, r: 6, pick: POSSESSED, n: 4, pal: ['Blighted'], names: { 'The Possessed': 'DROWNED TANNER' } },
+  { key: 'out_sump', roadside: true, placed: true, lvl: 24, x: 9385, z: 725, r: 7, boss: ['worm_1'], pick: SPIDERS, n: 2, pal: ['Blighted', 'Abyssal'], names: { 'Giant Worms': 'SUMP WORM' } },
+  { key: 'out_kilns', roadside: true, placed: true, lvl: 26, x: 10480, z: 1074, r: 8, boss: ['plague_giant_1'], pick: GOATS, n: 3, pal: ['Bone-white', 'Ashen'], names: { 'Goat Men': 'KILN-GOAT', 'Plague Giants': 'THE LIME-BURNT' } },
+  { key: 'out_lazar', roadside: true, placed: true, lvl: 25, x: 10665, z: -712, r: 8, boss: ['necromancer_2'], pick: ['plague_knight_black', 'plague_knight_red'], n: 3, pal: ['Bone-white', 'Blighted'], names: { 'Plague Knights': 'RISEN LAZAR', Necromancers: 'THE WRAPPER' } },
+  { key: 'out_knackers', roadside: true, placed: true, lvl: 26, x: 10670, z: 788, r: 8, boss: ['werewolf_brown'], pick: GOBLINS, n: 4, pal: ['Base', 'Bloodsoaked'], names: { Goblins: 'KNACKER-GOBLIN', Werewolf: 'THE YARD-WOLF' } },
   // Castle Velscour's own ground (docs/PHOBOS-CASTLE.md): what's out in its wards and on its back road, not only down its
   // delves. The scullions' yard north of the Kitchens, the garrison at drill between the Barracks hall and the Armoury, the
   // pale harpies that roost in the piers under the Crown Court, his lancers on the Sally road and what watches the Ash

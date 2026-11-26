@@ -62,7 +62,7 @@ import { MAX_EXTRA, slotPrice } from '../items/pack.js';
 import { CHANNEL } from '../items/beacon.js';
 import { PHOBOS_LEVELS } from '../folk/phobos-quests.js';
 import { DOOR_STEP, FIRST_VISIT, FIRST_VISIT_LEVELS, SILL_DOOR } from '../folk/first-visit.js';
-import { EAST_DOOR, inEast } from '../sim/east-nav.js';
+import { EAST_DOOR, inEast, onEast, intoEast } from '../sim/east-nav.js';
 
 // The beacon stone (src/ui/beacon.js): used when the work's in Bellmourn and further off than BEACON_FAR, with nothing
 // within BEACON_CLEAR to break it off; while it's at work, it stands still for it unless something's within BEACON_HOLD.
@@ -666,8 +666,13 @@ function trimWay(P, m, y = null) {
   let best = -1, bd = TRIM_NEAR, along = 0;
   for (let i = 0; i + 1 < Math.min(P.length, 12) && along <= came; i++) {
     const a = P[i], b = P[i + 1];
-    if (a[3] >= 0 || b[3] >= 0 || (y && (Math.abs(y(a) - m.y) > 0.8 || Math.abs(y(b) - m.y) > 0.8))) break;
+    if (a[3] >= 0 || b[3] >= 0) break;
     const L = dist(a[0], a[1], b[0], b[1]);
+    // (At its height where it's beside the stretch, from the stretch's two ends: both ends within 0.8 of it, as it was, and
+    // on any slope the far end of a 12 m stretch was a metre and more below. Coming down off the Sill, every way that came in
+    // kept its first point, where it had stood when it asked, a few metres back: it turned, walked back to it, and on again,
+    // every six seconds all the way down. A bridge over the street is still not the street.)
+    if (y) { const t = L > 0.01 ? Math.max(0, Math.min(1, ((m.x - a[0]) * (b[0] - a[0]) + (m.z - a[1]) * (b[1] - a[1])) / (L * L))) : 0; if (Math.abs(y(a) + (y(b) - y(a)) * t - m.y) > 0.8) break; }
     // (Past the stretch's start, the way it runs: not stood short of it.)
     if ((m.x - a[0]) * (b[0] - a[0]) + (m.z - a[1]) * (b[1] - a[1]) > 0) {
       const d = segNear(a[0], a[1], b[0], b[1], m.x, m.z);
@@ -781,6 +786,7 @@ export function planWay(m, end, o = {}) {
 }
 
 // From a to b over the roads (planWay): the points from the first after a, to b (not b itself).
+const BASIN_RIM = 9050;   // (Phobos's basin's west rim, x: src/core/east.js)
 const SEAL_ROAD = new Map();   // (each seal's nearest point of a road: they don't move)
 let HOT = null, DIST = null, PREV = null, DONE = null;   // (kept from one way to the next: the graph's the size of the land)
 function overRoads(a, b, seals, avoid) {
@@ -805,6 +811,12 @@ function overRoads(a, b, seals, avoid) {
   const across = (i, j) => {
     const ax = px(i), az = pz(i), bx = px(j), bz = pz(j);
     let c = dist(ax, az, bx, bz) * ACROSS;
+    // (Over the rim of Phobos's basin anywhere but down the causeway: a hundred metres of cliff. Across country knew no
+    // cliffs, and at level 20, with the Sill's road dear for the lairs by it, the Needle to Tanners' Hithe went straight
+    // over the edge, 2.5 km off any road. tests/auto-roads.test.mjs.)
+    // (Nor a long leap that only happens to cross it by the causeway: from the Needle to the road before the gate, the line
+    // crosses the rim within 150 m of it, two kilometres over the mountains. Both ends near the causeway, or dear.)
+    if ((ax < BASIN_RIM) !== (bx < BASIN_RIM) && (Math.abs(az + (bz - az) * (BASIN_RIM - ax) / (bx - ax)) > 150 || dist(ax, az, BASIN_RIM, 0) > 400 || dist(bx, bz, BASIN_RIM, 0) > 400)) c += 1e5;
     const i0 = Math.floor(Math.min(ax, bx) / AC), i1 = Math.floor(Math.max(ax, bx) / AC), j0 = Math.floor(Math.min(az, bz) / AC), j1 = Math.floor(Math.max(az, bz) / AC);
     const each = (k) => {
       const [x, z, r] = avoid[k];
@@ -3708,7 +3720,7 @@ export class Brain {
         this.preAsk = true;
         this.nav.ask('path', { from: [W.x, W.z], to: [N.x, N.z], avoid: this.avoid(m, true).concat(this.lockedDoors()), touch: N === g ? g.touch : null, polite: true }).then((pts) => { this.preAsk = false; ask.pts = pts; });
       }
-    } else if (inEast(m.x, m.z) && inEast(W.x, W.z) && !m.below && this.eastWalk(dt, m, W, g, d)) {
+    } else if ((inEast(m.x, m.z) || (this.eastWay?.leg === W && this.eastWay.pts && onEast(m.x, m.z))) && inEast(W.x, W.z) && !m.below && this.eastWalk(dt, m, W, g, d)) {
       // (In City State Phobos and Castle Velscour: by the east's own map, eastWalk below.)
     } else {
       // Across country: a stretch at a time, by a short path round whatever stands in the way (a wall, a light well, a stand of
@@ -3782,7 +3794,7 @@ export class Brain {
       // starting from a place ten metres and more behind it. It walked back to it, then on again: to and fro down every
       // street, every seven seconds. The owner's "weird back and forth".)
       const same = P0?.length > 1 && dist(W.x, W.z, E.to[0], E.to[1]) <= 2.5 ? P0 : null, S = same && aheadOn(same, m, AHEAD_ASK);
-      const from = S ? [S[0], S[4] ?? m.y, S[1]] : [m.x, m.y, m.z];
+      const from = S ? [S[0], S[4] ?? m.y, S[1]] : (([x, z]) => [x, m.y, z])(intoEast(m.x, m.z));
       const ask = this.eastWay = { leg: W, t: this.t, to: [W.x, W.z], pts: P0, pending: true };
       this.nav.ask('east', { from, to: [W.x, W.z, W.y ?? null], r }).then((pts) => {
         if (this.eastWay !== ask) return;

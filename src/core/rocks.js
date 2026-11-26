@@ -12,6 +12,7 @@ import { forestAmount } from './forest.js';
 import { inCaveBox, onWay } from './opening.js';
 import { CLIFF, COUNTRY_KEYS, MOUNT, WATERS, countryWeights, groundCover, routeDist, siteAt } from './lands.js';
 import { CRAG as CASTLE_CRAG, cityIn } from './east.js';
+import { outskirtsYard } from './outskirts.js';
 import { churchSite } from './church.js';
 import { PORTAL } from './dungeon.js';
 import { REDOUBT } from './delve-redoubt.js';
@@ -100,7 +101,8 @@ export function roadEdge(x, z) {
 
 // Nowhere a stone may lie: the town, the church's ground, the houses' plots, the cave, the places, the water, the cliff's face.
 function barred(x, z) {
-  if (x > 9200 && x < 10900 && cityIn(x, z) < 1.105) return true;   // (nothing lies about in Phobos's streets: src/core/phobos-build.js dresses them; nor in its moat, under the water, nor on its lip)
+  if (x > 9200 && x < 10900 && cityIn(x, z) < 1.105) return true;
+  if (x > 9100 && outskirtsYard(x, z)) return true;   // (nor in the Outwall's yards and grounds: src/core/outskirts.js)   // (nothing lies about in Phobos's streets: src/core/phobos-build.js dresses them; nor in its moat, under the water, nor on its lip)
   // (Nor on the castle's crag, among its wards and under its Keep: paved yards and bare rock, his. src/core/east.js CRAG.)
   if (x > 10700 && ((x - CASTLE_CRAG.x) / (CASTLE_CRAG.a + 20)) ** 2 + ((z - CASTLE_CRAG.z) / (CASTLE_CRAG.b + 20)) ** 2 < 1) return true;
   if (Math.hypot(x, z) < TOWN) return true;
